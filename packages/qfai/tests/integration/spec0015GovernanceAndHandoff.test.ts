@@ -1,7 +1,7 @@
 /**
  * Integration acceptance for spec-0015 CHG-006 test cases
  * TC-0015-0020..0033 (autopilot policy gate, envelope-deviation
- * audit-log, handoff schema drift, eight-code finding catalog,
+ * audit-log, handoff schema drift, seven-code finding catalog,
  * `qfai audit log` CLI, `qfai handoff upgrade` legacy adapter, doc
  * realignment / stale-reference report).
  *
@@ -196,30 +196,12 @@ describe("spec-0015 handoff schema CHG-006", () => {
 });
 
 describe("spec-0015 finding-code catalog CHG-006", () => {
-  it("QFAI:EX-0001-0178-01 — normal: 8 catalog codes registered; the catalog declares membership only, no severity", () => {
+  it("QFAI:EX-0001-0178-01 — normal: 7 catalog codes registered; the catalog declares membership only, no severity", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
-    expect(codes.length).toBe(8);
-    expect(codes).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+    expect(codes.length).toBe(7);
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(Object.keys(entry).sort()).toEqual(["code", "description"]);
     }
-  });
-
-  it("QFAI:EX-0001-0178-01 — normal: ingestion rejects an empty justification at error even for a code its own detector emits at warning", async () => {
-    const dir = path.join(root, ".qfai", "review");
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "out-of-zone.json"),
-      JSON.stringify({
-        findings: [{ code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE", justification: "" }],
-      }),
-      "utf-8",
-    );
-    const { config } = await loadConfig(root);
-    const issues = await validateReviewerJustification(root, config);
-    const flagged = issues.filter((i) => i.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE");
-    expect(flagged.length).toBe(1);
-    expect(flagged[0]?.severity).toBe("error");
   });
 
   it("QFAI:EX-0001-0178-01 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {

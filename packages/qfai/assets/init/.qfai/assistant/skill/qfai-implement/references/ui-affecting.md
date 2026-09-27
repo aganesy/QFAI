@@ -2,7 +2,7 @@
 
 ## Inputs
 
-Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, the root DESIGN.md if present for the brand tokens, and the design files under its design/ directory.
+Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, and the root DESIGN.md if present for the brand tokens.
 When a prototyping loop ran in this checkout, read its handoff at .qfai/evidence/prototyping/prototyping.json#handoff: the final prototype, its procurement and the implementation notes.
 Read the flow, story, acceptance criterion, and example that the implementation changes.
 

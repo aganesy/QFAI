@@ -17,7 +17,7 @@ import { exists, issue } from "./utils.js";
 // The set is composed from three sources:
 //   1. R-REJECTED-READOPT (REQ-0006 contract).
 //   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
-//   3. The 8-code spec governance catalog sourced
+//   3. The 7-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
   "R-REJECTED-READOPT",
@@ -26,7 +26,7 @@ const ADVISORY_FAILING_CODES = new Set<string>([
   // as advisory-failing to enforce non-empty justifications across spec families.
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-PROMPT-SCANNER-DRIFT",
-  // The 8-code spec governance catalog is
+  // The 7-code spec governance catalog is
   // merged in via the catalog SSOT so this set stays in lockstep with
   // the catalog by construction. The catalog contributes membership
   // only — it declares no severity, and the ingestion issue below is
@@ -230,8 +230,7 @@ export async function validateReviewerJustification(
         // Severity is `error` for every advisory-failing code, without
         // exception: the violation reported here is the missing
         // justification, not the finding itself. A code whose own
-        // detector emits `warning` (e.g. R-DESIGN-MD-PATCH-OUT-OF-ZONE)
-        // is still an `error` on this path.
+        // detector emits `warning` is still an `error` on this path.
         issues.push(
           issue(
             code,

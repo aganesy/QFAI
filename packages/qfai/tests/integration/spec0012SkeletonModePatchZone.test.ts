@@ -1,6 +1,6 @@
 /**
  * Integration acceptance for spec-0012 CHG-006 test cases
- * Emit-skeletons coverage, DESIGN.md patch-zone,
+ * Emit-skeletons coverage,
  * prototyping.mode discriminator, taskFidelity keywords, mutation-log).
  *
  * Converted from `.skip` test-first skeletons to deterministic
@@ -17,10 +17,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
-import {
-  computeDesignMdHashes,
-  parseDesignMdPatchZone,
-} from "../../src/core/design/designMdPatchZone.js";
 import { buildSkeletonsForUnion } from "../../src/core/prototyping/emitSkeletons.js";
 import { detectEvidenceMutationUnlogged } from "../../src/core/validators/evidenceMutationUnlogged.js";
 import {
@@ -208,53 +204,6 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
     });
     expect(skeletons[0].html).toContain("Inter"); // token still consumed
     expect(skeletons[0].html).toContain("skeleton-mode=full");
-  });
-});
-
-// ─── DESIGN.md patch_zone ────────────────────
-
-const PATCH_ZONE_FIXTURE = `---
-brand:
-  name: "Acme"
-visual:
-  colors:
-    primary: "#2563eb"
-    accent: "#f59e0b"
-  radius:
-    sm: "4px"
-    md: "8px"
-patch_zone:
-  tokens:
-    - visual.colors.accent
-    - visual.radius.md
----
-# DESIGN.md body content
-`;
-
-describe("in-zone edit updates only patchHash", () => {
-  it("an in-zone color-token value edit keeps majorHash byte-stable and bumps patchHash", () => {
-    const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
-    const DESIGN_AFTER = DESIGN_BEFORE.replace('"#f59e0b"', '"#fa6500"');
-    const before = computeDesignMdHashes(DESIGN_BEFORE);
-    const after = computeDesignMdHashes(DESIGN_AFTER);
-    expect(before.majorHash).toBe(after.majorHash);
-    expect(before.patchHash).not.toBe(after.patchHash);
-  });
-});
-
-describe("out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
-  it("an out-of-zone token value (visual.colors.primary) bumps majorHash", () => {
-    const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
-    const DESIGN_AFTER = DESIGN_BEFORE.replace('"#2563eb"', '"#7777FF"');
-    const before = computeDesignMdHashes(DESIGN_BEFORE);
-    const after = computeDesignMdHashes(DESIGN_AFTER);
-    expect(before.majorHash).not.toBe(after.majorHash);
-  });
-
-  it("a DESIGN.md without a patch_zone block leaves parseDesignMdPatchZone with ok=false", () => {
-    const DESIGN_NO_ZONE = ["---", "brand:", '  name: "Acme"', "---", "# body"].join("\n");
-    const parsed = parseDesignMdPatchZone(DESIGN_NO_ZONE);
-    expect(parsed.ok).toBe(false);
   });
 });
 
