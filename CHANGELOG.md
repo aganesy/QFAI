@@ -169,6 +169,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The patterns that mark a design as generated are named** (#2241). A new
+  `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
+  color and typography to copy, flow and untouched library defaults. Each one
+  is a sentence a reviewer can check a screen against. It also pairs each
+  banned default with the substitute a model falls back to, such as cream and
+  terracotta after the purple gradient.
+  - The brand catalog, the review bundle and the UIX comparison review point
+    at that file. The review bundle's "AI slop" item is replaced by one that
+    fails on a named pattern the recorded brand direction does not ask for. The
+    comparison review no longer cites a pattern list that did not exist.
+  - All eight archetypes were checked against the list. None of them now
+    prescribes a listed pattern, such as `Tech`'s all-caps labels, `Organic`'s
+    terracotta or `Elegant`'s wide letter-spacing.
+  - Each archetype names two or three candidate typeface families, and the
+    catalog adds candidates for Japanese, Chinese and Cyrillic text. No
+    candidate is a default family or one of the families models fall back to.
+
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
   - `--primary-ui-contract`, `prototyping.primaryUiContract` and
