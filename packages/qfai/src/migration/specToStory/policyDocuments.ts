@@ -147,12 +147,6 @@ export function newPolicyDraft(target: string): PolicyDraft {
 /** A thematic break, which the list and prose sections of the policy schemas reject. */
 const THEMATIC_BREAK = /^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 
-const nonBlank = (body: string): string[] =>
-  body
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter((line) => line.trim() !== "");
-
 /**
  * The items of a body that holds one list and nothing else, as the list sections of
  * the policy schemas accept it, or null. A line under an item continues that item.
@@ -212,6 +206,21 @@ export function paragraphsOf(body: string): string[] | null {
   return blocks.map((block) => block.trim());
 }
 
+/** A line that opens a block other than a table row, which ends a table. */
+const OTHER_BLOCK = /^\s*(?:(?:[-*+]|\d+[.)])\s|>|```|~~~|#)|^ {0,3}<[!/?A-Za-z]|^(?: {4}|\t)/;
+
+/**
+ * A table line with its leading and trailing pipes, which GFM lets a table leave out,
+ * or null for a line that is not a table line: one with no pipe, or one that opens
+ * another block.
+ */
+function withOuterPipes(line: string): string | null {
+  const trimmed = line.trim();
+  if (trimmed.startsWith("|")) return /(?<!\\)\|$/.test(trimmed) ? trimmed : `${trimmed} |`;
+  if (OTHER_BLOCK.test(line) || !/(?<!\\)\|/.test(trimmed)) return null;
+  return /(?<!\\)\|$/.test(trimmed) ? `| ${trimmed}` : `| ${trimmed} |`;
+}
+
 /**
  * The rows of a body that holds one table and nothing else, in the given columns, or
  * null. The second value names every other column that holds text.
@@ -221,9 +230,15 @@ export function tableRows(
   columns: readonly string[],
   aliases: Readonly<Record<string, string[]>> = {},
 ): { rows: string[][]; dropped: string[] } | null {
-  const lines = nonBlank(body);
-  if (lines.length < 2 || lines.some((line) => !line.trimStart().startsWith("|"))) return null;
-  const tables = parseAllMarkdownTables(body.replace(/\r\n/g, "\n").trim());
+  const piped: string[] = [];
+  for (const line of body.replace(/\r\n/g, "\n").trim().split("\n")) {
+    const tableLine = line.trim() === "" ? "" : withOuterPipes(line);
+    if (tableLine === null) return null;
+    piped.push(tableLine);
+  }
+  const lines = piped.filter((line) => line !== "");
+  if (lines.length < 2) return null;
+  const tables = parseAllMarkdownTables(piped.join("\n"));
   const table = tables[0];
   if (tables.length !== 1 || table === undefined || table.rows.length !== lines.length - 2) {
     return null;

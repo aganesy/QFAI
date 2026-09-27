@@ -59,8 +59,12 @@ function ownershipBody(body: string): string | null {
   return paragraphs.join("\n\n");
 }
 
-/** One `BR-ID | Statement | Examples` table whose rows name no other rule, kept as written. */
+/**
+ * One `BR-ID | Statement | Examples` table whose rows open with a pipe and name no
+ * other rule, kept as written.
+ */
 function rulesBody(body: string): string | null {
+  if (body.split("\n").some((line) => !line.startsWith("|"))) return null;
   const table = tableRows(body, RULE_COLUMNS);
   const header = splitMarkdownRow(body.split("\n")[0] ?? "");
   if (!table || table.dropped.length > 0 || header.join("|") !== RULE_COLUMNS.join("|")) {

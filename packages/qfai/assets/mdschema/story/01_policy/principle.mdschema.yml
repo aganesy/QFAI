@@ -59,6 +59,10 @@ structure:
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
       - heading:
           pattern: "^## Compatibility vs Change Rubric$"
           regex: true

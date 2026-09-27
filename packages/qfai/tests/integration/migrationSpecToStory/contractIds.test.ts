@@ -396,7 +396,7 @@ describe("migration CLI contract shape", () => {
 
   // QFAI:AC-0004-0006-05
   it("keeps the H1 and the ownership boundary and lists every other part for a person", async () => {
-    // QFAI:EX-0004-0006-19
+    // QFAI:EX-0004-0006-20
     const root = await project();
     await put(root, OLD, WITH_LEFTOVERS);
     const result = await run(step03, root);
@@ -414,7 +414,7 @@ describe("migration CLI contract shape", () => {
   });
 
   it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
-    // QFAI:EX-0004-0006-20
+    // QFAI:EX-0004-0006-21
     const root = await project();
     await put(root, OLD, "# Contract: Orders command\n");
     const result = await run(step03, root);
@@ -429,10 +429,10 @@ describe("migration CLI contract shape", () => {
   });
 
   it("names the template section for an ownership boundary or a rules table it cannot keep", async () => {
-    // QFAI:EX-0004-0006-21
+    // QFAI:EX-0004-0006-22
     const root = await project();
     const old =
-      "# Contract: Orders command\n\n## Ownership boundary\n\n- Orders only.\n\n## Rules\n\n| ID | Rule |\n| --- | --- |\n| R1 | List newest first. |\n";
+      "# Contract: Orders command\n\n## Ownership boundary\n\n- Orders only.\n\n## Business rules\n\nBR-ID | Statement | Examples\n--- | --- | ---\n\n## Rules\n\n| ID | Rule |\n| --- | --- |\n| R1 | List newest first. |\n";
     await put(root, OLD, old);
     const result = await run(step03, root);
     expect(result.code).toBe(3);
@@ -442,13 +442,14 @@ describe("migration CLI contract shape", () => {
     const kept = `by hand (kept at ${ARCHIVE})`;
     expect(forAPerson(result.output).filter((item) => item.startsWith(NEW))).toEqual([
       `${NEW} ## Ownership boundary: rewrite "## Ownership boundary" of ${OLD} ${kept}`,
+      `${NEW} ## Business rules: rewrite "## Business rules" of ${OLD} ${kept}`,
       `${NEW} ## Business rules: rewrite "## Rules" of ${OLD} ${kept}`,
     ]);
     expect(await text(root, ARCHIVE)).toBe(old);
   });
 
   it("leaves a contract that passes the CLI schema once its rules are written", async () => {
-    // QFAI:EX-0004-0006-22
+    // QFAI:EX-0004-0006-23
     const root = await project();
     await put(root, OLD, WITH_LEFTOVERS);
     await putPack(
