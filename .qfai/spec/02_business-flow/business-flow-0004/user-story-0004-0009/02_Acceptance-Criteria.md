@@ -18,4 +18,11 @@ Feature: Write the business rules into their contracts
     When step 7 runs
     Then each is listed under For a person with its file and the reason
     And the Applicable NFR entry names the contracts that spec's rules went to
+
+  # AC-0004-0009-03
+  Scenario: A statement a CLI contract cannot hold goes to a person
+    Given a plan placing in a Markdown CLI contract a rule whose statement names another rule
+    When step 7 runs
+    Then the rule is written as a row of the contract's Business rules table
+    And the rule and the rule its statement names are listed under For a person
 ```

@@ -384,6 +384,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `And` when they hold one step. A cell holding more steps is written as it
     stands, and the step lists it under `## For a person` and exits 3.
 
+- **Migration step 3 writes CLI contracts in the template's shape.**
+  - A Markdown contract under `cli/` holds its `# CLI-NNNN: <title>` heading,
+    `## Ownership boundary` and a `## Business rules` table, and nothing else,
+    so the migrated contract passes the CLI contract schema.
+  - An old ownership boundary of one to three paragraphs that name no rule is
+    kept. Where there is none, the section holds the template's placeholder and
+    the contract is listed under `## For a person`.
+  - The text before the first section and every other section are left out
+    and listed under `## For a person` with the old file and its copy under
+    `.qfai/evidence/migration-spec-to-story/retired/contract/`. Step 3 exits 3.
+  - Step 7 lists a rule it writes into a CLI contract whose statement names
+    another rule, which that contract's table does not admit, and exits 3.
+
 - **The business-flow and story documents have closed schemas.** The document
   lane now refuses any section, table, list or code block in these six
   documents that their `qfai-sdd` template does not declare, and the templates
@@ -830,6 +843,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger columns the removed code read.
 
 ### Fixed
+
+- **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
+  - A business-flow `traceability-graph.json` names a Markdown, CLI or design
+    contract by the `<KIND>-NNNN` ID it declares, not by its file path.
+  - `## Business rules ##` and `## Contract Index ##` are read as the rules
+    section and the index: a closing run of `#` is part of the heading syntax,
+    not of the title.
+  - `QFAI-CONTRACT-000` no longer reports `api/`, `db/` or `ui/` as empty when
+    its only contracts are Markdown files that declare an ID of that kind in
+    their H1.
 
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config

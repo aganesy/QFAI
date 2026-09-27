@@ -24,4 +24,11 @@ Feature: Contract index and contract-layer validation
     When `qfai validate --profile sdd` runs
     Then `QFAI-CONTRACT-034` is raised at error for each contract file under a kind directory that declares no contract ID of its directory's kind, is not named `<kind>-NNNN-<slug>.<ext>` after that ID, or has no row whose ID and File agree with it
     And it is also raised for a row that names no contract file, and for a contract number that more than one contract declares
+
+  # AC-0001-0054-04
+  Scenario: A kind directory holding only Markdown contracts is not reported empty
+    Given the story tree, and `api/`, `db/` or `ui/` under `paths.contractsDir` whose only contract is a Markdown file declaring an ID of that kind in its H1
+    When `qfai validate` runs
+    Then `QFAI-CONTRACT-000` is not raised for that directory
+    And it is still raised for a kind directory that holds no contract of its kind
 ```

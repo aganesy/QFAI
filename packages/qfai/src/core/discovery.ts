@@ -1,8 +1,12 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
+
+import { declaredContractId } from "./contractsDecl.js";
 import { collectFiles } from "./fs.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
+import { readSafe } from "./validators/utils.js";
 
 export type ContractFiles = {
   api: string[];
@@ -95,6 +99,17 @@ export async function collectApiContractFiles(apiRoot: string): Promise<string[]
 
 export async function collectDbContractFiles(dbRoot: string): Promise<string[]> {
   return collectFiles(dbRoot, { extensions: [".sql"] });
+}
+
+/** The IDs matching `pattern` that Markdown contracts under `root` declare in their H1. */
+export async function collectMarkdownContractIds(root: string, pattern: RegExp): Promise<string[]> {
+  const files = await fg("**/*.md", { cwd: root, absolute: true, onlyFiles: true });
+  const ids: string[] = [];
+  for (const file of files.sort()) {
+    const id = declaredContractId(file, await readSafe(file));
+    if (id !== null && pattern.test(id)) ids.push(id);
+  }
+  return ids;
 }
 
 export async function collectContractFiles(

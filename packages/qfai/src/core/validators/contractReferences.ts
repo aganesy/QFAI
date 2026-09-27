@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { headingText } from "../parse/markdown.js";
 import { looksLikeTableRow, maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
@@ -176,7 +177,7 @@ function parseIndexTables(text: string): IndexTable[] {
     // The enclosing section: a deeper heading stays inside the H2 above it.
     const headingMatch = /^ {0,3}(#{1,6})[ \t]+(.*)$/.exec(headerLine);
     if (headingMatch) {
-      if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
+      if ((headingMatch[1] ?? "").length <= 2) heading = headingText(headingMatch[2] ?? "");
       continue;
     }
     if (!looksLikeTableRow(headerLine) || !isDelimiterRow(separatorLine)) {
