@@ -19,12 +19,12 @@
 
 ## Success criteria
 
-| ID     | Observable result                                          | Measurement                                                                                                          |
-| ------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| OBJ-01 | Structural or traceability drift is visible.               | `qfai validate --fail-on error` emits an actionable finding and fails on an error-class violation.                   |
-| OBJ-02 | Active behavior is traceable to tests.                     | BF, AC, and EX obligations resolve to their required test layers or an explicit permitted decision.                  |
-| OBJ-03 | The shipped workflow is runnable in an adopter repository. | `qfai init` seeds the supported assistant and CI surfaces, and the package's integrity gates verify them.            |
-| OBJ-04 | Completion claims cite current evidence.                   | Stage reports name the command, result, scope, revision, and independent review outcome required by their contracts. |
+| Observable result                                          | Measurement                                                                                                          |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Structural or traceability drift is visible.               | `qfai validate --fail-on error` emits an actionable finding and fails on an error-class violation.                   |
+| Active behavior is traceable to tests.                     | BF, AC, and EX obligations resolve to their required test layers or an explicit permitted decision.                  |
+| The shipped workflow is runnable in an adopter repository. | `qfai init` seeds the supported assistant and CI surfaces, and the package's integrity gates verify them.            |
+| Completion claims cite current evidence.                   | Stage reports name the command, result, scope, revision, and independent review outcome required by their contracts. |
 
 ## Non-goals
 
