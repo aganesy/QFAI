@@ -81,26 +81,6 @@ describe("qfai report on a story tree", () => {
     );
   });
 
-  it("includes policy guardrails in the JSON report", async () => {
-    const root = await storyRoot();
-    const policy = path.join(root, ".qfai/spec/01_policy/policy.md");
-    await mkdir(path.dirname(policy), { recursive: true });
-    await writeFile(
-      policy,
-      "## Decision Guardrails\n### DG-0001: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n",
-      "utf8",
-    );
-    await writeValidation(root, []);
-    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
-    const output = JSON.parse(
-      await readFile(path.join(root, ".qfai/report/report.json"), "utf8"),
-    ) as {
-      guardrails: { total: number; items: Array<{ id: string }> };
-    };
-    expect(output.guardrails.total).toBe(1);
-    expect(output.guardrails.items.map((item) => item.id)).toContain("DG-0001");
-  });
-
   it("uses loaded findings for the exit gate even when stored counts are stale", async () => {
     const root = await storyRoot();
     await writeValidation(root, [issue("error")]);

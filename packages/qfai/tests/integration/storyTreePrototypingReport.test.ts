@@ -143,7 +143,7 @@ describe("story-tree prototyping report", () => {
     // The report's closing `## Findings` lists every issue, so the finding and
     // the rerun line are read from the prototyping section alone.
     const start = markdown.indexOf("## Prototyping");
-    const end = markdown.indexOf("## Decision Guardrails");
+    const end = markdown.indexOf("\n## ", start + 1);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const section = markdown.slice(start, end);

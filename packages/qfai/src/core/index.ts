@@ -1,6 +1,5 @@
 export * from "./config.js";
 export * from "./atddTraceability.js";
-export * from "./decisionGuardrails.js";
 export * from "./ids.js";
 export * from "./review/prototyping.js";
 export * from "./preflight/sddPreflight.js";

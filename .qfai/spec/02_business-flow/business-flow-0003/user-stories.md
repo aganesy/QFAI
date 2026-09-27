@@ -16,7 +16,3 @@
 | US-0003-0010 | per-skill manifest runtimeDependencies probe        | `user-story-0003-0010/` |
 | US-0003-0011 | shipped workflow drift detection (detection half)   | `user-story-0003-0011/` |
 | US-0003-0012 | Doctor failure threshold                            | `user-story-0003-0012/` |
-| US-0003-0013 | ガードレール一覧                                    | `user-story-0003-0013/` |
-| US-0003-0014 | ガードレール抽出                                    | `user-story-0003-0014/` |
-| US-0003-0015 | ガードレール整合性チェック                          | `user-story-0003-0015/` |
-| US-0003-0016 | ガードレール入力エラー                              | `user-story-0003-0016/` |
