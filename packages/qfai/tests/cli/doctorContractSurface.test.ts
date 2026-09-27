@@ -1,24 +1,22 @@
 /**
  * The `qfai doctor` CLI contract must describe the command that ships.
  *
- * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` declared a one-flag surface
- * (`qfai doctor [--profile <name>]`), labelled its inputs "read; never
- * written", and asserted in Non-goals that doctor "is read-only". The binary
- * accepts `--clean` and `--autoremediate` as well, and those two rewrite
- * `qfai.config.yaml`, the root `.gitignore`, and rename directories under
+ * The contract once declared a one-flag surface and called doctor read-only,
+ * while the binary accepted `--clean` and `--autoremediate`, which rewrite
+ * `qfai.config.yaml` and the root `.gitignore` and rename directories under
  * `.qfai/review/`. A contract that does not know a flag exists cannot gate a
- * change to what that flag writes, so the two flags with the widest blast
- * radius were the two with no declared behaviour.
+ * change to what that flag writes.
  *
- * These assertions read the contract against the parser and the module tree,
- * so a doctor-only flag added to `args.ts` — or a module added under
- * `src/core/doctor/` — fails here until the contract names it.
+ * These assertions read the contract's business rules against the parser, so
+ * a doctor-only flag added to `args.ts` fails here until a rule names it.
  */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 
 // tests/cli/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -32,10 +30,6 @@ const CONTRACT = path.join(
   "cli-0008-qfai-doctor.md",
 );
 const ARGS = path.join(repoRoot, "packages", "qfai", "src", "cli", "lib", "args.ts");
-const DOCTOR_MODULE_DIR = path.join(repoRoot, "packages", "qfai", "src", "core", "doctor");
-
-/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
-const flat = (s: string): string => s.replace(/\s*\n\s*/gu, " ");
 
 /**
  * The flags `main.ts` threads into `runDoctor` on the `doctor` branch. Kept
@@ -52,6 +46,28 @@ const THREADED_FLAGS = [
   "--dry-run",
   "--yes",
 ] as const;
+
+/** Every business-rule statement of the doctor contract, keyed by rule ID. */
+async function readRules(): Promise<Map<string, string>> {
+  const text = await readFile(CONTRACT, "utf-8");
+  const scan = parseContractRules(CONTRACT, text);
+  expect(scan.errors).toEqual([]);
+  return new Map(scan.rules.map((rule) => [rule.id, rule.statement]));
+}
+
+/** The one rule whose statement holds every needle. */
+function ruleWith(rules: Map<string, string>, ...needles: string[]): string {
+  const found = [...rules.values()].find((statement) =>
+    needles.every((needle) => statement.includes(needle)),
+  );
+  expect(found, `no doctor business rule states all of: ${needles.join(" | ")}`).toBeDefined();
+  return found ?? "";
+}
+
+/** The rule that declares the command's options. */
+function optionsRule(rules: Map<string, string>): string {
+  return ruleWith(rules, "`qfai doctor` accepts");
+}
 
 /** Flags whose parser branch is gated on `command === "doctor"`. */
 function doctorOnlyFlags(argsSource: string): string[] {
@@ -91,47 +107,30 @@ function failOnValues(argsSource: string): string[] {
   return [...found].sort();
 }
 
-/** The `### \`qfai doctor ...\`` command-shape heading. */
-function commandShapeHeading(contract: string): string {
-  const line = contract.split("\n").find((candidate) => candidate.startsWith("### `qfai doctor"));
-  return line ?? "";
-}
-
 describe("`qfai doctor` CLI contract surface", () => {
-  it("does not promise elsewhere that nothing is ever deleted", async () => {
-    // The `--clean` section deletes a TTL-expired run log and tabulates the
-    // preconditions; the non-goals said no path is removed on any flag. A
-    // reader deciding whether the command is reversible got the opposite
-    // answer depending on which section they reached first.
-    const contract = await readFile(CONTRACT, "utf-8");
+  it("says what doctor deletes, and that review packs are only renamed", async () => {
+    // A reader deciding whether the command is reversible must get one
+    // answer: a TTL-expired run log is removed, a review pack never is.
+    const rules = await readRules();
 
-    expect(contract, "the clean section must still declare the removal").toMatch(
-      /\| `<outDir>\/run-<ts>\/` +\| removed/,
-    );
-    expect(contract, "and the non-goals must not deny it").not.toMatch(
-      /does NOT delete anything|no path is removed on any flag/,
-    );
-    expect(contract, "the guarantee that does hold is the one about review packs").toMatch(
-      /RENAMED into `_archive\/` and never removed/,
-    );
+    ruleWith(rules, "`--clean` removes each `<outDir>/run-<ts>/`");
+    ruleWith(rules, "A run log is the one thing doctor deletes", "never removed");
+    for (const statement of rules.values()) {
+      expect(statement).not.toMatch(/does NOT delete anything|no path is removed on any flag/);
+    }
   });
 
   it("declares every flag the doctor branch threads into runDoctor", async () => {
-    const contract = await readFile(CONTRACT, "utf-8");
-    const heading = commandShapeHeading(contract);
+    const statement = optionsRule(await readRules());
 
-    expect(heading).not.toBe("");
     for (const flag of THREADED_FLAGS) {
-      expect(heading).toContain(flag);
+      expect(statement).toContain(flag);
     }
   });
 
   it("declares every doctor-only flag the parser accepts", async () => {
-    const [contract, argsSource] = await Promise.all([
-      readFile(CONTRACT, "utf-8"),
-      readFile(ARGS, "utf-8"),
-    ]);
-    const heading = commandShapeHeading(contract);
+    const [rules, argsSource] = await Promise.all([readRules(), readFile(ARGS, "utf-8")]);
+    const statement = optionsRule(rules);
     const parserFlags = doctorOnlyFlags(argsSource);
 
     // Guard the guard: if the parser shape changes so nothing matches, the
@@ -139,142 +138,103 @@ describe("`qfai doctor` CLI contract surface", () => {
     expect(parserFlags).toContain("--clean");
     expect(parserFlags).toContain("--autoremediate");
     for (const flag of parserFlags) {
-      expect(heading).toContain(flag);
+      expect(statement).toContain(flag);
     }
   });
 
   it("enumerates every `--fail-on` value the parser accepts", async () => {
-    const [contract, argsSource] = await Promise.all([
-      readFile(CONTRACT, "utf-8"),
-      readFile(ARGS, "utf-8"),
-    ]);
-    const heading = commandShapeHeading(contract);
+    const [rules, argsSource] = await Promise.all([readRules(), readFile(ARGS, "utf-8")]);
+    const statement = optionsRule(rules);
     const values = failOnValues(argsSource);
 
     // Guard the guard: an unmatched branch would make the loop vacuous.
     expect(values).toContain("never");
     expect(values).toContain("error");
     for (const value of values) {
-      expect(heading).toContain(value);
+      expect(statement).toContain(`\`${value}\``);
     }
   });
 
   it("declares the `--out` write, which needs neither mutating flag", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
+    // `runDoctor` creates the parent directories and writes the file on any
+    // invocation carrying `--out`, so "doctor writes nothing unless --clean or
+    // --autoremediate" would be false for the one write an operator names.
+    const rules = await readRules();
 
-    // `runDoctor` mkdir -p's the parent and writes the file on any invocation
-    // carrying `--out`, so "doctor writes nothing unless --clean or
-    // --autoremediate" was false for the one write an operator asks for by
-    // name.
-    expect(contract).not.toContain("Doctor writes nothing unless `--clean` or `--autoremediate`");
-    expect(contract).toContain("### `--out <path>`");
-    expect(contract).toContain("created recursively");
+    const out = ruleWith(rules, "With `--out <path>`");
+    expect(out).toContain("missing parent directories are created");
+    expect(out).toContain("with or without `--clean` or `--autoremediate`");
+    ruleWith(rules, "read-only by default", "the `--out` file is its only write");
   });
 
-  it("puts npm lifecycle scripts outside the enumerated side-effect boundary", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
+  it("puts npm lifecycle scripts outside the listed side effects", async () => {
+    // The install spawns `npm install <name>` with no `--ignore-scripts`, so
+    // the package's hooks run as the operator. Claiming the remediation is
+    // bounded by the listed paths without that carve-out overstates it.
+    const statement = ruleWith(await readRules(), "without `--ignore-scripts`");
 
-    // `defaultInstallRunner` spawns `npm install <name>` with no
-    // `--ignore-scripts`, so the package's preinstall / install / postinstall /
-    // prepare hooks run as the operator. Claiming the remediation is "bounded
-    // by the paths enumerated" without that carve-out overstates the guarantee.
-    expect(contract).not.toContain(
-      'are bounded by the paths enumerated under "Side effects (written)"',
-    );
-    expect(contract).toContain("Install scripts are an UNBOUNDED side effect");
-    expect(contract).toContain("without `--ignore-scripts`");
-    expect(contract).toContain("`postinstall`");
+    expect(statement).toContain("`postinstall`");
+    expect(statement).toContain("can write outside the paths doctor lists");
   });
 
   it("conditions the `.gitignore` rewrite on the block being missing or stale", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
+    // The rewrite returns early, writing nothing, when the marker, the
+    // governance negations, their ordering and the absence of legacy lines
+    // all hold, so a repeat run produces no diff.
+    const rules = await readRules();
 
-    // `ensureRootGitignoreEntries` returns early — writing nothing — when the
-    // marker, the governance negations, their ordering and the absence of
-    // legacy lines all hold, so an `always` row promised a diff a repeat run
-    // does not produce.
-    expect(contract).toContain("the managed block is missing or stale");
-    expect(contract).toContain("returns early");
-    expect(contract).toContain("byte-identical");
-  });
-
-  it("scopes the read-only claim instead of asserting it unconditionally", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
-
-    expect(contract).not.toContain("does NOT attempt repairs. It is read-only.");
-    expect(contract).toContain("read-only BY DEFAULT");
-    expect(contract).toContain("## Side effects (written)");
+    ruleWith(rules, "`<root>/.gitignore`", "when the block is missing or stale");
+    ruleWith(rules, "The `.gitignore` rewrite writes nothing when", "byte-identical");
   });
 
   it("names every path the mutating flags write", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
+    const rules = await readRules();
+    const writes = ruleWith(rules, "`--autoremediate` writes only these paths");
 
-    // `--autoremediate`
-    expect(contract).toContain("`qfai.config.yaml`");
-    expect(contract).toContain("`<root>/.gitignore`");
-    expect(contract).toContain("`npm install <name>`");
-    // The `npm install` has no `--no-save`, so it lands on tracked files too.
-    expect(contract).toContain("`package.json`");
-    expect(contract).toContain("`package-lock.json`");
-    // Both halves of the legacy-pack migration, not the manifest alone.
-    expect(contract).toContain("`.qfai/review/.legacy-packs`");
-    expect(contract).toContain("`.qfai/review/review-<ts>/summary.json`");
-    // `--clean`
-    expect(contract).toContain("`.qfai/review/_archive/`");
+    for (const written of [
+      "`qfai.config.yaml`",
+      "`<root>/.gitignore`",
+      "`npm install <name>`",
+      // The `npm install` has no `--no-save`, so it lands on tracked files too.
+      "`package.json`",
+      "`package-lock.json`",
+      // Both halves of the legacy-pack migration, not the manifest alone.
+      "`.qfai/review/.legacy-packs`",
+      "`.qfai/review/review-<ts>/summary.json`",
+      "`.qfai/review/_archive/`",
+    ]) {
+      expect(writes).toContain(written);
+    }
     // The CI suppression an operator relies on before running this in a lane.
-    expect(contract).toContain("disables `--autoremediate`");
-    expect(contract).toContain("`GITHUB_ACTIONS=true`");
-    // `--dry-run` / `--yes` semantics, absent entirely before this.
-    expect(contract).toContain("### `--dry-run` / `--yes` interaction");
+    ruleWith(rules, "`--autoremediate` is off", "`GITHUB_ACTIONS=true`");
   });
 
   it("declares the dry-run plan as decided, not assumed", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
-
     // The config-fill preview used to be a fixed line printed without reading
     // the config, so it promised an append for a config that already declared
-    // the key and for one that does not parse. The contract must say a `would`
-    // line is a commitment, and name the two answers a live run gives instead.
-    expect(contract).toContain("The plan is DECIDED, not assumed");
-    expect(contract).toContain("would fill default-keyed config fields: review");
-    expect(contract).toContain("config-fill not needed, default-keyed fields present");
+    // the key and for one that does not parse.
+    const statement = ruleWith(await readRules(), "`--dry-run` applies to `--clean` and");
+
+    expect(statement).toContain("only the changes that pass would make");
+    expect(statement).toContain("would fill default-keyed config fields: review");
+    expect(statement).toContain("config-fill not needed, default-keyed fields present");
   });
 
-  it("keeps the `--yes` confirmation gate as a requirement, not a retracted one", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
+  it("keeps the `--yes` confirmation gate as a requirement", async () => {
+    // Wording that froze a non-interactive binary into the contract would make
+    // an unattended install-and-write the specified behaviour, not a defect.
+    const statement = ruleWith(await readRules(), "`--yes` skips it");
 
-    // The gate the owning spec mandates must still read as mandatory. The
-    // pre-fix wording ("non-interactive today, so `--yes` ... changes no
-    // behavior") froze the unimplemented state into the contract, which
-    // would have made an unattended install-and-write the specified
-    // behaviour rather than a defect.
-    expect(contract).not.toContain("changes no behavior on its own");
-    expect(contract).toContain("REQUIRES by default");
-    expect(contract).toContain("Known implementation deviation:");
+    expect(statement).toContain("Interactive confirmation is required by default");
+    expect(statement).not.toContain("changes no behavior on its own");
   });
 
   it("describes `--out` as redirecting stdout rather than duplicating it", async () => {
-    const contract = flat(await readFile(CONTRACT, "utf-8"));
-
     // `runDoctor` writes the summary to the file and prints only
-    // `doctor: wrote <path>`, so the summary is never on both channels — and
-    // under `--format json` the stdout line is not JSON.
-    expect(contract).not.toContain("writes the rendered summary to `<path>` in addition to stdout");
-    expect(contract).toContain("INSTEAD of stdout");
-    expect(contract).toContain("doctor: wrote <absolute path>");
-  });
+    // `doctor: wrote <path>`, so under `--format json` the stdout line is not JSON.
+    const statement = ruleWith(await readRules(), "With `--out <path>`");
 
-  it("lists the core/doctor modules that exist on disk", async () => {
-    const [contract, entries] = await Promise.all([
-      readFile(CONTRACT, "utf-8"),
-      readdir(DOCTOR_MODULE_DIR),
-    ]);
-    const modules = entries.filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts"));
-
-    expect(modules.length).toBeGreaterThan(0);
-    expect(flat(contract)).not.toContain("there is no `core/doctor/` directory");
-    for (const moduleName of modules) {
-      expect(contract).toContain(`\`${moduleName}\``);
-    }
+    expect(statement).toContain("instead of stdout");
+    expect(statement).toContain("doctor: wrote <absolute path>");
   });
 });

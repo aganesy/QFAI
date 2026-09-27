@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-06
 /**
  * A skill a host cannot register.
  *

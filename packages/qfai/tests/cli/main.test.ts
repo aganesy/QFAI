@@ -100,7 +100,7 @@ describe("cli root discovery", () => {
   });
 
   // CLI-arg errors exit 2 on every command
-  // (`.qfai/spec/03_contract/cli/cli-0011-qfai-init.md` exit-code table).
+  // (BR-0011-0045 of `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`).
   it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 

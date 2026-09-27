@@ -1,11 +1,13 @@
+// QFAI:EX-0001-0039-02
+// QFAI:EX-0001-0039-03
 /**
- * The validate contract's `### Text output grammar` section declares the line
- * grammar of `qfai validate --format text` (the default format). Nothing else
- * binds that section to the emitter, so this test rebuilds the expected lines
- * from the grammar the contract states and compares them against real
- * `emitText` output. Either side drifting fails here.
+ * The validate contract's business rules declare the line grammar of
+ * `qfai validate --format text` (the default format). Nothing else binds those
+ * rules to the emitter, so this test rebuilds the expected lines from the
+ * grammar the rules state and compares them against real `emitText` output.
+ * Either side drifting fails here.
  *
- * The section is used as a *complete* output contract, so the fixtures below
+ * The rules are used as a *complete* output contract, so the fixtures below
  * mirror production faithfully: counts skip suppressed issues (as `countIssues`
  * does), an error issue carries a multi-line `suggested_action` (as
  * `QFAI-SKILLS-001` does), and the trailing `run-log:` line is exercised through
@@ -21,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import { captureStdout } from "../../helpers/stdout.js";
 import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
+import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
@@ -46,33 +49,21 @@ it("directs agent routing repairs to package defaults or project config override
   }
 });
 
-/** The contract's `### Text output grammar` section, LF-normalised. */
+/** The business rules that state the text output grammar, one statement per line. */
 async function readGuideline(): Promise<string> {
-  const content = (await readFile(CONTRACT_PATH, "utf-8")).replace(/\r\n/g, "\n");
-  const section = /\n### Text output grammar\n([\s\S]*?)(?=\n## |\n### |$)/.exec(content)?.[1];
-  if (section === undefined) {
-    throw new Error("cli-0016-qfai-validate.md no longer has a Text output grammar section");
+  const content = await readFile(CONTRACT_PATH, "utf-8");
+  const statements = parseContractRules(CONTRACT_PATH, content)
+    .rules.map((rule) => rule.statement)
+    .filter((statement) => /text output|--format text|detail block/.test(statement));
+  if (statements.length === 0) {
+    throw new Error("cli-0016-qfai-validate.md no longer states the text output grammar");
   }
-  return section;
+  return statements.join("\n");
 }
 
-/** Every ```text fence in the guideline, in document order. */
-function fences(guideline: string): string[] {
-  return [...guideline.matchAll(/```text\n([\s\S]*?)```/g)].map((match) => match[1] ?? "");
-}
-
-function fenceWith(guideline: string, needle: string): string {
-  const found = fences(guideline).find((fence) => fence.includes(needle));
-  if (found === undefined) {
-    throw new Error(`the text output grammar no longer documents a block containing ${needle}`);
-  }
-  return found;
-}
-
-/** Extracts the single-line grammar fenced right under `#### One issue`. */
+/** Extracts the one-issue line grammar the rules state as a code span. */
 function extractGrammar(guideline: string): string {
-  const match = /#### One issue\n[\s\S]*?```text\n([^\n]+)\n```/.exec(guideline);
-  const grammar = match?.[1];
+  const grammar = /`(\[<severity>\] <CODE> <message>[^`]*)`/.exec(guideline)?.[1];
   if (grammar === undefined) {
     throw new Error("the text output grammar no longer documents a one-issue line");
   }
@@ -84,31 +75,24 @@ function extractGrammar(guideline: string): string {
   return grammar;
 }
 
-/** Labels of the indented detail block documented for `error` issues, in order. */
+/** Labels of the indented detail block the rules document, in order. */
 function extractDetailLabels(guideline: string): string[] {
-  return fenceWith(guideline, "error_code:")
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => line.trim().split(":")[0] ?? "");
+  const block = /detail block of the lines (.*?), and a block/.exec(guideline)?.[1];
+  if (block === undefined) {
+    throw new Error("the text output grammar no longer documents the detail block's lines");
+  }
+  return [...block.matchAll(/`([a-z_]+): [^`]*`/g)].map((match) => match[1] ?? "");
 }
 
 /**
- * Leading-space count of the continuation line in the guideline's worked
- * multi-line example. Binding the example to the rule is what keeps the
- * documented indent honest.
+ * The continuation indent for `label`, from the arithmetic the rules state in
+ * words: two spaces, plus the label's length, plus two.
  */
-function documentedContinuationIndent(guideline: string): number {
-  const example = fences(guideline).find(
-    (fence) => fence.startsWith("  fix: ") && !fence.includes("error_code:"),
-  );
-  if (example === undefined) {
-    throw new Error("the text output grammar no longer shows a multi-line detail-field example");
+function documentedContinuationIndent(guideline: string, label: string): number {
+  if (!guideline.includes("two spaces, plus the label's length, plus two")) {
+    throw new Error("the text output grammar no longer states the continuation indent");
   }
-  const continuation = example.split("\n")[1];
-  if (continuation === undefined || continuation.trim().length === 0) {
-    throw new Error("the multi-line detail-field example lost its continuation line");
-  }
-  return continuation.length - continuation.trimStart().length;
+  return 2 + label.length + 2;
 }
 
 /** Renders one issue by substituting it into the documented grammar. */
@@ -154,7 +138,7 @@ type LineKind =
   | "message-continuation";
 
 /**
- * The precedence documented under `#### Classifying a line`, implemented literally:
+ * The precedence the line-classification rule states, implemented literally:
  * structural lines are recognised before the "anything else continues the
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
@@ -211,30 +195,18 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
 }
 
 /**
- * The ordered rules listed under `#### Classifying a line`, in document order.
- * A rule wrapped over several physical lines is returned whole, so an anchor on
- * its second line is found in that rule rather than missed.
+ * The numbered tests of the line-classification rule, in the order it states
+ * them: `(1) …; (2) …; … (7) ….` Each test ends at the next number, and the
+ * last at the end of its sentence.
  */
 function extractPrecedenceRules(guideline: string): string[] {
-  const section = /#### Classifying a line\n([\s\S]*?)\n\nA message continuation/.exec(
-    guideline,
-  )?.[1];
-  if (section === undefined) {
+  const statement = guideline.split("\n").find((line) => line.includes("classifies each line"));
+  if (statement === undefined) {
     throw new Error("the text output grammar no longer documents a line-classification precedence");
   }
-  const rules: string[] = [];
-  for (const line of section.split("\n")) {
-    const item = /^\d+\. (.*)$/.exec(line);
-    if (item?.[1] !== undefined) {
-      rules.push(item[1]);
-      continue;
-    }
-    const last = rules.length - 1;
-    if (last >= 0 && /^ +\S/.test(line)) {
-      rules[last] = `${rules[last]} ${line.trim()}`;
-    }
-  }
-  return rules;
+  return [...statement.matchAll(/\((\d)\) (.*?)(?=; \(\d\) |\. [A-Z]|\.?$)/g)].map(
+    (match) => match[2] ?? "",
+  );
 }
 
 const MULTILINE_FIX = [
@@ -348,7 +320,7 @@ describe("validate --format text matches the validate contract's text output gra
     const labels = extractDetailLabels(guideline);
     expect(labels).toEqual([...DETAIL_LABELS]);
 
-    const indent = documentedContinuationIndent(guideline);
+    const indent = documentedContinuationIndent(guideline, "fix");
     // The documented rule: `2 + <label> + 2`, i.e. the continuation aligns
     // under the first character of the value.
     expect(indent).toBe(2 + "fix".length + 2);
@@ -476,7 +448,7 @@ describe("validate --format text matches the validate contract's text output gra
 
   it("ends the real `--format text` run with the documented run-log line", async () => {
     const guideline = await readGuideline();
-    expect(guideline).toContain("`run-log: <path>` — always, the last line.");
+    expect(guideline).toContain("`run-log: <path>`, always, as the last line");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
@@ -561,7 +533,7 @@ describe("validate --format text matches the validate contract's text output gra
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
     expect(rules[6], "the last precedence rule must be the message-continuation fallback").toBe(
-      "Anything else continues the previous issue's message.",
+      "anything else continues the previous issue's message",
     );
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));

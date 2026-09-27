@@ -303,6 +303,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exit codes, payload fields, state transitions and operator screens are rules
   in that table. No command behaves differently.
 
+- **The `qfai doctor`, `qfai init` and `qfai validate` contracts are one
+  business-rule table each.** Every obligation their synopsis, option,
+  side-effect, exit-code, finding and output-grammar sections stated is now a
+  rule that cites the examples showing it, numbered `BR-0008-NNNN`,
+  `BR-0011-NNNN` and `BR-0016-NNNN`. Obligations no example showed gained one,
+  such as `--clean` pruning expired run logs, the rule citations `qfai init`
+  adds to an existing `AGENTS.md`, and the `--format text` line grammar.
+
 - **The shipped guidance states what each story-tree document may hold.** The
   `qfai-sdd` skill, its steps and the shared rules now say that a document
   under `.qfai/spec/` holds its template's headings and nothing else, with one
