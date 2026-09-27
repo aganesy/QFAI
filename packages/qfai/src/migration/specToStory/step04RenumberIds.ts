@@ -707,11 +707,20 @@ function withoutArchivedFields(body: string): string {
   let removed = false;
   let fence: string | null = null;
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
-    const marker = /^\s*(```|~~~)/.exec(line)?.[1] ?? null;
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
     if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
     else if (fence !== null || !/^\s+\S/.test(line)) skipping = false;
-    if (marker !== null) fence = fence === null ? marker : fence === marker ? null : fence;
+    const run = marker?.[1] ?? "";
+    if (marker && fence === null) fence = run;
+    else if (
+      marker &&
+      fence !== null &&
+      run[0] === fence[0] &&
+      run.length >= fence.length &&
+      (marker[2] ?? "").trim() === ""
+    )
+      fence = null;
     if (skipping) {
       removed = true;
       continue;

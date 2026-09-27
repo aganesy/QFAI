@@ -511,7 +511,7 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/spec/spec-0001/02_User-stories.md",
-        "# Stories\n\n## US-0001-0001: Order\n\n- Source: discussion-20260101000000000#DUS-001\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n```text\n- Source: example\n```\n",
+        "# Stories\n\n## US-0001-0001: Order\n\n- Source: discussion-20260101000000000#DUS-001\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
       );
       const result = await run(step04, await context(root));
       expect(result.code).toBe(3);
@@ -519,7 +519,7 @@ describe("migration steps 1 to 4", () => {
         ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md";
       expect(result.output).toContain(`${file}: US-0001-0001 is not one`);
       expect(await readFile(path.join(root, file), "utf8")).toBe(
-        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n```text\n- Source: example\n```\n",
+        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
       );
     });
   });
