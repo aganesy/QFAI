@@ -168,6 +168,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     ID, Constraint, Rationale and Impact table, which may be empty.
   - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
     strict schema, so a misspelt rule or option fails instead of being ignored.
+  - Migration step 3 writes these five policy files in their template's shape.
+    An old section of the same kind moves into its section; every other one is
+    listed under `## For a person` with its archived copy, and the step exits 3.
 
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`

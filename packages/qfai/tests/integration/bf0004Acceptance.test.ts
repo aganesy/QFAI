@@ -1182,7 +1182,8 @@ describe("BF-0004 acceptance criteria", () => {
       tech,
       `${await readFile(tech, "utf8")}\n## Standard commands\n\nStandard commands marker.\n`,
     );
-    const sectionMarkers: Array<{ target: string; text: string }> = [];
+    const sectionMarkers: Array<{ target: string; text: string; source: string; name: string }> =
+      [];
     for (const [source, target, marker] of markers) {
       const file = path.join(root, source);
       let count = 0;
@@ -1195,16 +1196,24 @@ describe("BF-0004 acceptance criteria", () => {
               ? ".qfai/spec/01_policy/initiative.md"
               : target;
           const text = `${marker} section ${count}: ${name}.`;
-          sectionMarkers.push({ target: routedTarget, text });
+          sectionMarkers.push({ target: routedTarget, text, source, name });
           return `${heading}\n\n${text}`;
         },
       );
       expect(count, source).toBeGreaterThan(0);
       await writeFile(file, content);
     }
-    expect(step(root, 3).status).toBe(0);
-    for (const { target, text } of sectionMarkers) {
-      expect(await readFile(path.join(root, target), "utf8"), target).toContain(text);
+    // A policy section holding a paragraph is not of its template section's kind, so it
+    // goes to a person; every other destination takes the section whole.
+    const moved = step(root, 3);
+    expect(moved.status).toBe(3);
+    for (const { target, text, source, name } of sectionMarkers) {
+      if (target.includes("/01_policy/")) {
+        expect(moved.stdout, text).toContain(`rewrite "## ${name}" of ${source} by hand`);
+        expect(await readFile(path.join(root, target), "utf8"), target).not.toContain(text);
+      } else {
+        expect(await readFile(path.join(root, target), "utf8"), target).toContain(text);
+      }
     }
     expect(await readFile(path.join(root, ".qfai/spec/03_contract/tech.md"), "utf8")).toContain(
       "Standard commands marker.",

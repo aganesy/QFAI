@@ -13,6 +13,13 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
+import {
+  isPolicyDocument,
+  movePolicySection,
+  newPolicyDraft,
+  renderPolicyDocument,
+  type PolicyDraft,
+} from "./policyDocuments.js";
 
 const POLICY_SOURCES = [
   ["01_Objective.md", "objective.md"],
@@ -294,19 +301,42 @@ export const step03: MigrationStep = {
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
     sources.push(...CATALOG_FILES.map((name) => `.qfai/assistant/catalog/${name}`));
 
+    const drafts = new Map<string, PolicyDraft>();
+    const draftFor = (target: string): PolicyDraft => {
+      const draft = drafts.get(target) ?? newPolicyDraft(target);
+      drafts.set(target, draft);
+      return draft;
+    };
     for (const source of sources) {
       const absolute = path.join(context.root, source);
       if (!(await exists(absolute))) continue;
       const content = await readInput(absolute);
       const { preamble, sections } = sectionParts(content);
+      const archive = await uniqueRetired(
+        context.root,
+        `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
+        reserved,
+      );
       const fallback = route(source, "", context);
-      if (!documents.has(fallback)) {
-        documents.set(fallback, await readDestination(context, fallback));
+      if (isPolicyDocument(fallback)) {
+        draftFor(fallback);
+        if (preamble)
+          forAPerson.push(
+            `${fallback}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,
+          );
+      } else {
+        if (!documents.has(fallback)) {
+          documents.set(fallback, await readDestination(context, fallback));
+        }
+        if (preamble)
+          documents.set(fallback, addDistinctParagraphs(documents.get(fallback) ?? "", preamble));
       }
-      if (preamble)
-        documents.set(fallback, addDistinctParagraphs(documents.get(fallback) ?? "", preamble));
       for (const section of sections) {
         const target = route(source, section.heading, context);
+        if (isPolicyDocument(target)) {
+          forAPerson.push(...movePolicySection(draftFor(target), { ...section, source, archive }));
+          continue;
+        }
         if (!documents.has(target)) {
           documents.set(target, await readDestination(context, target));
         }
@@ -315,12 +345,16 @@ export const step03: MigrationStep = {
           appendSection(documents.get(target) ?? "", section.heading, section.body),
         );
       }
-      const archive = await uniqueRetired(
-        context.root,
-        `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
-        reserved,
-      );
       operations.push({ kind: "move", source, target: archive });
+    }
+    for (const [target, draft] of drafts) {
+      const content = await renderPolicyDocument(draft);
+      const absolute = path.join(context.root, target);
+      if (!(await exists(absolute))) documents.set(target, content);
+      else if ((await readInput(absolute)) !== content)
+        forAPerson.push(
+          `${target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
+        );
     }
 
     const sliceSource = `${policies}/11_Slice-Policy.md`;
