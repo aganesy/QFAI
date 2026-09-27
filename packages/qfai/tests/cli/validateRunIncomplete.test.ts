@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-04
 /**
  * `validate` produces a verdict even when a validator throws.
  *
@@ -105,7 +106,7 @@ describe("describeIncompleteRun", () => {
     expect(described?.message).toContain("EPERM");
     expect(described?.message).toContain("stat");
     expect(described?.message).toContain(".claude\\skills\\qfai-sdd");
-    // The verdict clause, in the language `cli-ux-guidelines.md` pins for
+    // The verdict clause, in the language `repository-language.md` pins for
     // operator-facing strings: "this run is NOT a clean result".
     expect(described?.message).toContain("NOT a clean result");
   });

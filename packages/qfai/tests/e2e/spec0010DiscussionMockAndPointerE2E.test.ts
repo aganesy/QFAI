@@ -9,7 +9,7 @@
  * Requires a built dist (pnpm --filter qfai build) so dist/cli/index.cjs
  * reflects the wired `discussion` command.
  */
-// QFAI:SPEC-0010:US-0010-0012
+// QFAI:BF-0001
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp } from "node:fs/promises";
@@ -56,7 +56,7 @@ async function makePack(id: string): Promise<void> {
 }
 
 describe("spec-0010 discussion active pointer CHG-006 (built CLI)", () => {
-  it("QFAI:SPEC-0010:US-0010-0012 — `discussion use` then `discussion list --active` round-trips the currentId (normal/state)", async () => {
+  it("QFAI:BF-0001 — `discussion use` then `discussion list --active` round-trips the currentId (normal/state)", async () => {
     await makePack("discussion-20260527075558258");
     const used = await runCli(
       ["discussion", "use", "discussion-20260527075558258", "--root", root],
@@ -73,7 +73,7 @@ describe("spec-0010 discussion active pointer CHG-006 (built CLI)", () => {
     expect(body.currentId).toBe("discussion-20260527075558258");
   });
 
-  it("QFAI:SPEC-0010:US-0010-0012 — absent currentId with multiple candidates → recovery error names candidates + `qfai discussion use` (error/boundary)", async () => {
+  it("QFAI:BF-0001 — absent currentId with multiple candidates → recovery error names candidates + `qfai discussion use` (error/boundary)", async () => {
     await makePack("discussion-20260101000000000");
     await makePack("discussion-20260202000000000");
     const res = await runCli(

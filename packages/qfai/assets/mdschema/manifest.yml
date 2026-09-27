@@ -1,123 +1,82 @@
 # Which schema governs which document.
 #
-# `scripts/check-mdschema.mjs` reads this file, expands each pattern against the
-# repository, and runs `mdschema check` once per entry with the named schema.
-# Splitting the run per document type is not an optimisation — mdschema takes
-# ONE schema per invocation, and "how a test-case table is shaped" is a
-# different contract from "how a user story is shaped".
+# `assets/scripts/check-mdschema.mjs` reads this file, expands each pattern
+# against the checked tree, and runs `mdschema check` once per entry with the
+# named schema. mdschema takes ONE schema per invocation, and how an example
+# table is shaped is a different contract from how a user story is shaped.
 #
-# `{specsDir}` expands to `paths.specsDir` from `qfai.config.yaml`, so an
-# adopter who keeps specs somewhere other than `.qfai/specs` is covered without
-# editing this file.
+# `{specsDir}` and `{contractsDir}` expand from `qfai.config.yaml`, so an
+# adopter who moves either tree is covered without editing this file.
 #
-# Patterns are repository-root-relative and support `*` (one path segment) and
-# `**` (any depth). A pattern that matches nothing is not an error: a pack that
-# has not been created yet, and an optional document like the traceability
-# ledger, are both ordinary states.
+# Patterns are root-relative and support `*` (one path segment) and `**` (any
+# depth). A pattern that matches nothing is not an error: a flow or a story that
+# has not been written yet is an ordinary state.
 #
-# An entry may also carry `when:`, a regular expression read against the
-# document's own text. It exists because a path can carry two document shapes:
-# a `01_Spec.md` specifies something while its spec is live, and records why the
-# spec went away once it is not. A file the predicate matches is checked against
-# that entry and dropped from the entry on the same path that has no predicate,
-# so the two partition the documents rather than running one document against
-# two contracts. Write the predicate without `#`, which starts a comment here.
+# Every entry claims its own path. A document matched by no entry is not
+# checked, and one matched by two would be held to two contracts.
 
 documents:
-  # ── Spec packs ────────────────────────────────────────────────────
-  - id: spec-overview
-    schema: spec/01_Spec.mdschema.yml
-    pattern: "{specsDir}/spec-*/01_Spec.md"
+  # ── Story tree ────────────────────────────────────────────────────
+  - id: story-decisions
+    schema: story/decisions.mdschema.yml
+    pattern: "{specsDir}/decisions.md"
 
-  # The same document once its spec has retired. A pack outlives the thing it
-  # specifies, and the record it becomes cannot carry a consumer view or an
-  # applicable NFR for something that no longer exists.
-  - id: spec-overview-retired
-    schema: spec/01_Spec-retired.mdschema.yml
-    pattern: "{specsDir}/spec-*/01_Spec.md"
-    when: "^- Status:[ \t]*(superseded|deprecated|removed)[ \t]*$"
+  - id: story-open-questions
+    schema: story/open-questions.mdschema.yml
+    pattern: "{specsDir}/open-questions.md"
 
-  - id: spec-user-stories
-    schema: spec/02_User-stories.mdschema.yml
-    pattern: "{specsDir}/spec-*/02_User-stories.md"
+  - id: story-objective
+    schema: story/01_policy/objective.mdschema.yml
+    pattern: "{specsDir}/01_policy/objective.md"
 
-  - id: spec-acceptance-criteria
-    schema: spec/03_Acceptance-Criteria.mdschema.yml
-    pattern: "{specsDir}/spec-*/03_Acceptance-Criteria.md"
+  - id: story-initiative
+    schema: story/01_policy/initiative.mdschema.yml
+    pattern: "{specsDir}/01_policy/initiative.md"
 
-  - id: spec-business-rules
-    schema: spec/04_Business-Rules.mdschema.yml
-    pattern: "{specsDir}/spec-*/04_Business-Rules.md"
+  - id: story-principle
+    schema: story/01_policy/principle.mdschema.yml
+    pattern: "{specsDir}/01_policy/principle.md"
 
-  - id: spec-examples
-    schema: spec/05_Examples.mdschema.yml
-    pattern: "{specsDir}/spec-*/05_Examples.md"
+  - id: story-glossary
+    schema: story/01_policy/glossary.mdschema.yml
+    pattern: "{specsDir}/01_policy/glossary.md"
 
-  - id: spec-test-cases
-    schema: spec/06_Test-Cases.mdschema.yml
-    pattern: "{specsDir}/spec-*/06_Test-Cases.md"
+  - id: story-constraint
+    schema: story/01_policy/constraint.mdschema.yml
+    pattern: "{specsDir}/01_policy/constraint.md"
 
-  - id: spec-decisions
-    schema: spec/07_Decisions.mdschema.yml
-    pattern: "{specsDir}/spec-*/07_Decisions.md"
+  - id: story-business-flows
+    schema: story/02_business-flow/business-flows.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flows.md"
 
-  - id: spec-open-questions
-    schema: spec/08_Open-questions.mdschema.yml
-    pattern: "{specsDir}/spec-*/08_Open-questions.md"
+  - id: story-business-flow
+    schema: story/02_business-flow/business-flow-NNNN/business-flow.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/business-flow.md"
 
-  - id: spec-delta
-    schema: spec/09_delta.mdschema.yml
-    pattern: "{specsDir}/spec-*/09_delta.md"
+  - id: story-user-stories
+    schema: story/02_business-flow/business-flow-NNNN/user-stories.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-stories.md"
 
-  - id: spec-plan
-    schema: spec/10_Plan.mdschema.yml
-    pattern: "{specsDir}/spec-*/10_Plan.md"
+  - id: story-user-story
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/01_User-story.md"
 
-  - id: spec-traceability-ledger
-    schema: spec/16_Traceability-ledger.mdschema.yml
-    pattern: "{specsDir}/spec-*/16_Traceability-ledger.md"
+  - id: story-acceptance-criteria
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/02_Acceptance-Criteria.md"
 
-  # ── Policy layer ──────────────────────────────────────────────────
-  - id: policies-objective
-    schema: policies/01_Objective.mdschema.yml
-    pattern: "{specsDir}/_policies/01_Objective.md"
+  - id: story-example
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/03_Example.md"
 
-  - id: policies-initiative
-    schema: policies/02_Initiative.mdschema.yml
-    pattern: "{specsDir}/_policies/02_Initiative.md"
+  - id: story-contracts
+    schema: story/03_contract/contracts.mdschema.yml
+    pattern: "{contractsDir}/contracts.md"
 
-  - id: policies-capabilities
-    schema: policies/03_Capabilities.mdschema.yml
-    pattern: "{specsDir}/_policies/03_Capabilities.md"
+  - id: story-tech
+    schema: story/03_contract/tech.mdschema.yml
+    pattern: "{contractsDir}/tech.md"
 
-  - id: policies-business-flow
-    schema: policies/04_Business-Flow.mdschema.yml
-    pattern: "{specsDir}/_policies/04_Business-Flow.md"
-
-  - id: policies-contracts
-    schema: policies/05_Contracts.mdschema.yml
-    pattern: "{specsDir}/_policies/05_Contracts.md"
-
-  - id: policies-glossary
-    schema: policies/06_Glossary.mdschema.yml
-    pattern: "{specsDir}/_policies/06_Glossary.md"
-
-  - id: policies-constraints
-    schema: policies/07_Constraints.mdschema.yml
-    pattern: "{specsDir}/_policies/07_Constraints.md"
-
-  - id: policies-decisions
-    schema: policies/08_Decisions.mdschema.yml
-    pattern: "{specsDir}/_policies/08_Decisions.md"
-
-  - id: policies-open-questions
-    schema: policies/09_Open-questions.mdschema.yml
-    pattern: "{specsDir}/_policies/09_Open-questions.md"
-
-  - id: policies-delta
-    schema: policies/10_delta.mdschema.yml
-    pattern: "{specsDir}/_policies/10_delta.md"
-
-  - id: policies-slice-policy
-    schema: policies/11_Slice-Policy.mdschema.yml
-    pattern: "{specsDir}/_policies/11_Slice-Policy.md"
+  - id: story-cli-contract
+    schema: story/03_contract/cli/cli-NNNN-title.mdschema.yml
+    pattern: "{contractsDir}/cli/*.md"

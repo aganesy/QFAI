@@ -1,5 +1,5 @@
 /**
- * The predicate `BR-0017-0030` and `BR-0017-0031` describe: a cost, wall-clock or parallelism claim is
+ * The predicate `BR-0018-0030` and `BR-0018-0031` describe: a cost, wall-clock or parallelism claim is
  * backed by captured before-and-after numbers, or it does not land.
  *
  * ## Why the claim is an input and not something this module infers
@@ -14,13 +14,13 @@
  *   shows a wall-clock regression and keeping the rebuilds". Not a claim — it is describing what the
  *   rule accepts, and it says in the same breath that the baseline "does not exist yet".
  *
- * Both sit inside a `- Decision` bullet. Both cite `BR-0017-0030`. Both contain the word `regression`.
+ * Both sit inside a `- Decision` bullet. Both cite the measurement rule. Both contain the word `regression`.
  * Every lexical discriminator that admits the first admits the second, so a scanner would either
  * redden a record that claims nothing, or be narrowed until it catches nothing at all.
  *
  * So the direction is declared by the caller, who is the only party that knows what is being asserted,
  * and this module checks the thing that IS decidable: whether the numbers are there. That is also what
- * the rule is actually about — `BR-0017-0030` forbids a claim "landing on argument", and the argument
+ * the rule is actually about — `BR-0018-0030` forbids a claim "landing on argument", and the argument
  * is exactly the part a machine cannot grade.
  *
  * A first attempt here scanned for `rose` and matched `prose`. Word boundaries, always.
@@ -78,7 +78,7 @@ export function capturedPairs(record: string): MeasurementPair[] {
 }
 
 /**
- * `BR-0017-0030`. A declared claim must quote at least one before-and-after pair in the record itself,
+ * `BR-0018-0030`. A declared claim must quote at least one before-and-after pair in the record itself,
  * because the evidence tree is ignored by git and a number that lives only there is unreviewable.
  */
 export function evaluateMeasurementClaim(input: {
@@ -106,7 +106,7 @@ export function evaluateMeasurementClaim(input: {
 }
 
 /**
- * `AC-0017-0015` via `BR-0017-0031`. A measured wall-clock regression is an ACCEPTING outcome — the
+ * `BR-0018-0031`. A measured wall-clock regression is an ACCEPTING outcome — the
  * rebuilds are kept and the measurement is recorded as the reason. Re-running the comparison until it
  * agrees is forbidden, which is why a negative result has to be able to close the requirement at all.
  */

@@ -5,7 +5,7 @@
  * - malformed / unreadable legacy file → clear error
  * - the canonical destination is NOT overwritten or partially emitted
  */
-// QFAI:SPEC-0015:TC-0015-0031
+// QFAI:EX-0001-0180-01
 
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -25,6 +25,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0180-04
 describe("TC-0015-0031: handoff upgrade rejects malformed input without partial overwrite", () => {
   it("errors when the legacy file is absent and writes nothing", async () => {
     const errs: string[] = [];

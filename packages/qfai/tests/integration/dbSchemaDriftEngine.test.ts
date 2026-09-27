@@ -45,8 +45,8 @@ describe("reading two schemas and comparing them", () => {
     const root = await newRoot();
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
     );
     const migration = await write(
       root,
@@ -74,8 +74,8 @@ describe("reading two schemas and comparing them", () => {
     const root = await newRoot();
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY, note TEXT);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY, note TEXT);\n",
     );
     const migration = await write(
       root,
@@ -99,8 +99,8 @@ describe("reading two schemas and comparing them", () => {
     const root = await newRoot();
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY, total NUMERIC);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY, total NUMERIC);\n",
     );
     const migration = await write(
       root,
@@ -124,8 +124,8 @@ describe("reading two schemas and comparing them", () => {
     const ddl = "CREATE TABLE orders (id TEXT PRIMARY KEY, total NUMERIC NOT NULL DEFAULT 0);\n";
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      `-- QFAI-CONTRACT-ID: CON-DB-0001\n${ddl}`,
+      ".qfai/contracts/db/DB-0001.sql",
+      `-- QFAI-CONTRACT-ID: DB-0001\n${ddl}`,
     );
     const migration = await write(root, "migrations/0001_orders.sql", ddl);
 
@@ -143,8 +143,8 @@ describe("reading two schemas and comparing them", () => {
     const root = await newRoot();
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
     );
     const migration = await write(root, "migrations/0001_orders.sql", "CREATE TABL orders (;\n");
 
@@ -167,8 +167,8 @@ describe("reading two schemas and comparing them", () => {
     // which it could not do if both sides shared one database.
     const contract = await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE customers (id TEXT PRIMARY KEY);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE customers (id TEXT PRIMARY KEY);\n",
     );
     const migration = await write(
       root,

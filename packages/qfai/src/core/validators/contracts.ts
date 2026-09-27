@@ -13,6 +13,7 @@ import {
 import {
   collectApiContractFiles,
   collectDbContractFiles,
+  collectMarkdownContractIds,
   collectUiContractFiles,
 } from "../discovery.js";
 import {
@@ -24,7 +25,6 @@ import {
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -55,7 +55,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     collectDbContractFiles(dbRoot),
   ]);
 
-  if (uiFiles.length === 0) {
+  if (uiFiles.length === 0 && !(await holdsMarkdownContract(uiRoot, "UI"))) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -66,7 +66,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (apiFiles.length === 0) {
+  if (apiFiles.length === 0 && !(await holdsMarkdownContract(apiRoot, "API"))) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -77,7 +77,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (dbFiles.length === 0) {
+  if (dbFiles.length === 0 && !(await holdsMarkdownContract(dbRoot, "DB"))) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -106,7 +106,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...validateDependencyRefs(contractIndex));
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
-  issues.push(...(await validateDbContractExecutability(root, dbFiles)));
   issues.push(...(await validateDbContractApplyOrder(root, dbFiles)));
   // The reverse of the marker traceability: declared and rendered by nothing.
   // The forward direction cannot see it — an element nobody built is an element
@@ -121,6 +120,12 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...(await validateUiScreenEntries(root, config)));
 
   return issues;
+}
+
+/** Whether a Markdown contract under `root` declares an ID of `kind` in its H1. */
+async function holdsMarkdownContract(root: string, kind: ContractKind): Promise<boolean> {
+  const ids = await collectMarkdownContractIds(root, new RegExp(String.raw`^${kind}-\d{4}$`));
+  return ids.length > 0;
 }
 
 async function validateContractFile(file: string, kind: ContractKind): Promise<Issue[]> {
@@ -302,7 +307,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
   }
 
   const id = ids[0] ?? "";
-  const expectedPrefix = `CON-${kind}-`;
+  const expectedPrefix = `${kind}-`;
   if (!id.startsWith(expectedPrefix)) {
     return [
       issue(
@@ -355,7 +360,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       "contracts.dependencyDeclaration",
       [id],
       "change",
-      "Add `-- Depends on: CON-DB-0002` to a `.sql` file, or `x-qfai-depends-on: [CON-API-0002]` " +
+      "Add `-- Depends on: DB-0002` to a `.sql` file, or `x-qfai-depends-on: [API-0002]` " +
         "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
     ),
   ];

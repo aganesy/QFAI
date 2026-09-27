@@ -1,19 +1,13 @@
 /**
- * Shared constants and helpers for TDD list processing.
- *
- * The layer constants, the ledger-table reader and the TC-Refs / parent-ID
- * helpers are shared by the `tddList` validator and the report generator, which
- * is what keeps their classification identical. The status sets below are the
- * report generator's alone — the validator owns its own `VALID_STATUSES` and
- * does not read them.
+ * Test-case `Level` vocabulary, TDD ledger table readers and `TC-Refs` helpers.
  */
 import type { MarkdownTable } from "./specPackParsers.js";
 import { maskNonSpecRegions, parseAllMarkdownTables } from "./specPackParsers.js";
 
 /**
  * Level values that ARE TDD coverage targets, in every spelling the shipped
- * artifacts use. `06_Test-Cases.md` writes `L1`…`L5`; the ledger schema and
- * the layer catalog write words. Both must classify identically.
+ * artifacts use. `06_Test-Cases.md` writes `L1`…`L5`; the layer catalog
+ * writes words. Both must classify identically.
  *
  * **Membership is lower-case only.** The artifacts write `L1` and `Unit`, but
  * the entries here are the normalized forms, so a caller MUST apply
@@ -22,12 +16,10 @@ import { maskNonSpecRegions, parseAllMarkdownTables } from "./specPackParsers.js
  * which normalize for you; reach for the raw set only to enumerate the
  * vocabulary.
  *
- * **Editing this set moves two gates, not one.** `atddTraceability.ts` uses it
- * as `NO_ATDD_OBLIGATION_LEVELS`: the levels named here are exactly the levels
- * `QFAI-ATDD-112` stops demanding an annotation for, because this ledger is
- * what picks them up instead. Adding a spelling here silences the ATDD gate for
- * it; removing one leaves it owed by ATDD and not by the ledger. The two are
- * one set on purpose — a spelling in neither is a `Level` no gate owns.
+ * **Editing this set moves `QFAI-ATDD-112`.** `atddTraceability.ts` uses it as
+ * `NO_ATDD_OBLIGATION_LEVELS`: `QFAI-ATDD-112` demands no annotation for the
+ * levels named here, and no other rule demands a test for them. Adding a
+ * spelling here takes the only test obligation away from every TC declaring it.
  */
 export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
 
@@ -275,7 +267,7 @@ export function collectLedgerTables(content: string): LedgerTable[] {
  *
  * `catalog/test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
  * `tests/api/**`, so those rows record their obligation in `US-Refs` /
- * `CON-API-Refs`.
+ * `API-Refs`.
  *
  * **One set, two rules.** `tddList.ts` reads it to raise
  * `TDDLIST_OBLIGATION_LAYER_MISMATCH` on a `TC-*` placed there, and

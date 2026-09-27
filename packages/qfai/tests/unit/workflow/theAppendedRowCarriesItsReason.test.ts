@@ -1,0 +1,49 @@
+// QFAI:EX-0001-0193-02
+
+import { expect, it } from "vitest";
+
+import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
+
+const plan = {
+  route: "bugfix",
+  stages: [
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
+    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
+  writeScope: ["src/forms/**"],
+};
+const reproductionRef = "evidence/empty-value-reproduction.json";
+const reproductionDigest = "a".repeat(64);
+
+it("Issue the sdd_append work order after a missing-test diagnosis", () => {
+  const decision = decide(
+    {
+      run: { id: "run-append", state: "ready", sequence: 7 },
+      plan,
+      flowBinding: { flowId: "BF-0007" },
+      diagnosis: { verdict: "missing-test", reproductionRef, matchedIds: [] },
+      acceptedStages: [
+        { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
+      ],
+    },
+    { operation: "next" },
+    { fileDigests: { [reproductionRef]: reproductionDigest } },
+  );
+  const workOrder = decision.verdict.workOrder;
+  const writable = [...(workOrder?.scope?.writeAreas ?? []), ...(workOrder?.recordAreas ?? [])];
+
+  expect({
+    stageKind: workOrder?.stageKind,
+    inputs: workOrder?.inputs,
+    statementWritable: writable.some((area) =>
+      /(?:01_User-story|02_Acceptance-Criteria).md$/.test(area),
+    ),
+  }).toEqual({
+    stageKind: "sdd_append",
+    inputs: [{ path: reproductionRef, digest: reproductionDigest }],
+    statementWritable: false,
+  });
+});

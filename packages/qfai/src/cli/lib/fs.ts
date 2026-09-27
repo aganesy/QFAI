@@ -162,7 +162,7 @@ function formatConflictMessage(conflicts: string[]): string {
   ].join("\n");
 }
 
-async function collectTemplateFiles(root: string): Promise<string[]> {
+export async function collectTemplateFiles(root: string): Promise<string[]> {
   const entries: string[] = [];
   if (!(await exists(root))) {
     return entries;

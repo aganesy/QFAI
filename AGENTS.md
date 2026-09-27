@@ -8,7 +8,7 @@ wins when it disagrees with one.
 ## 言語
 
 Output language is decided by the Absolute Rule in
-`.qfai/assistant/constitution/constitution.md`: write every output in the
+`.qfai/assistant/rule/constitution.md`: write every output in the
 language the user is working in for this session. This file pins no language,
 and neither may any other.
 
@@ -23,10 +23,10 @@ package carries.** It does not install its own package: there is no `qfai`
 dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
 would create one.
 
-| ディレクトリ     | 役割                                                                                                                                                                            | 修正してよいか                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                     | ✅ 開発対象                                                       |
-| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, evidence), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
+| ディレクトリ     | 役割                                                                                                                                                                                                              | 修正してよいか                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                                                       | ✅ 開発対象                                                       |
+| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, and local evidence that is never committed), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
 
 - skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
 - An edit made directly to the generated assistant tree is reverted by the next
@@ -36,24 +36,25 @@ would create one.
   repository alone is a real file in that directory.
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
-### `.qfai/contracts/cli/`
+### `.qfai/spec/03_contract/cli/`
 
 `api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
 shipped `qfai-sdd` skill governs them
-(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
+(`assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`).
 `cli/` is this repository's alone: the contracts for QFAI's own command surface,
 and for the files QFAI writes into a consuming project.
 
 - Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
   contract validators do not scan them.
-- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
-  short ids.
-- Named `qfai-<command>.md` for one command's surface. A subject name instead —
-  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
-  schema or an ownership boundary that more than one command shares.
+- Each declares its ID in the H1: `# CLI-NNNN: <title>`. The number is unique
+  across every contract kind and is never reused.
+- Named `cli-NNNN-<slug>.md` after that ID. The slug is the command
+  (`cli-0016-qfai-validate.md`), the skill whose scripts it covers
+  (`cli-0012-qfai-migration-v1-to-v2.md`), or the subject several commands share
+  (`cli-0020-shipped-workflows.md`).
+- Indexed by ID in `.qfai/spec/03_contract/contracts.md`, one row per contract.
 
-No check enforces the naming or the index entry. A new file that skips either is
-caught in review or not at all.
+`qfai validate` reports a contract whose ID, file name and index row disagree.
 
 ## バージョン規律 (全 AI 必読)
 
@@ -86,8 +87,11 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
 - `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
-- `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
-  `packages/qfai/assets/mdschema/**` が SSOT)
+- `document-schema.md` (every spec-tree document conforms to its closed schema
+  in `packages/qfai/assets/mdschema/**`; `qfai validate` and the docs lane
+  check it, and no document opts out)
+- `document-schema.local.md` (the lanes, where the checkers live, and how a
+  schema is changed)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
 - `repository-language.md` (this repository is written in English)
 - `minimal-implementation.md` (the order to try solutions in, once a

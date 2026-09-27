@@ -13,7 +13,7 @@
  * `shouldStop`) without requiring the CLI harness, so the assertion
  * surface stays integration-level but execution stays in-process.
  */
-// QFAI:SPEC-0012:TC-0012-0434
+// QFAI:EX-0001-0128-01
 
 import { describe, expect, it } from "vitest";
 
@@ -92,14 +92,20 @@ const convergedIteration = (index: number): Iteration => ({
   index,
   commitSha: `${index.toString().padStart(40, "0")}`,
   blockingFindings: [],
+  scores: {
+    informationArchitecture: "exceptional",
+    navigationFlow: "exceptional",
+    usability: "exceptional",
+    functionality: "exceptional",
+  },
   proseCritique: "ok",
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
   pivotDirective: "continue",
-  evidenceRefs: {
-    screenshot: `iter-0${index}/screenshot.png`,
-    html: `iter-0${index}/index.html`,
-  },
+  evidenceRefs: [
+    { kind: "screenshot", path: `iter-0${index}/screenshot.png` },
+    { kind: "html", path: `iter-0${index}/index.html` },
+  ],
 });
 
 describe("TC-0012-0434: Tailwind contract convergence within 3 cycles", () => {
