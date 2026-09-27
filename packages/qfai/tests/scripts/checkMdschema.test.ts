@@ -387,7 +387,13 @@ describe("a document that carries the opt-out marker", () => {
 
   it("is not read from a mention below the content", async () => {
     const root = await newTempDir();
-    await writeFlow(root, "business-flow-0001", `${CONFORMING_FLOW}\n${IGNORE_MARKER}\n`);
+    // The mention sits after the first section's prose, where the schema allows a
+    // paragraph, so the document conforms and only the marker's position is tested.
+    await writeFlow(
+      root,
+      "business-flow-0001",
+      CONFORMING_FLOW.replace(/^## Flow$/m, `${IGNORE_MARKER}\n\n## Flow`),
+    );
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
