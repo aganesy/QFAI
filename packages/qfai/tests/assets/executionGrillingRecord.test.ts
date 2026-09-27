@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const RECORD = "assistant/step/common-grilling-record/STEP.md";
 const stages = [
   { skill: "qfai-atdd", evidence: "atdd-BF-NNNN.md" },
   { skill: "qfai-implement", evidence: "implement-BF-NNNN.md" },
@@ -19,54 +20,37 @@ describe.each(trees)("%s — execution stage grilling records", (tree) => {
   it.each(stages)(
     "$skill records sessions in the evidence its reviewer reads",
     async ({ skill, evidence }) => {
-      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
-      expect(body).toContain("## Grilling (MANDATORY)");
-      expect(body).toContain(`.qfai/evidence/${evidence}`);
-      expect(body).toContain("## Grilling Session");
-      expect(body).toContain("Preflight:");
-      expect(body).toContain("Work Orders Summary");
+      const record = await read(tree, RECORD);
+      const row = record.split("\n").find((line) => line.includes(`\`${skill}\``)) ?? "";
+      expect(row).toContain(`.qfai/evidence/${evidence}`);
+      expect(row).toContain("## Grilling Session");
+      expect(row).toContain("Run blocks");
     },
   );
 
-  it.each(stages)(
-    "$skill binds each session to its invocation and source revision",
-    async ({ skill }) => {
-      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
-      expect(body).toMatch(/run.start|invocation.s UTC start time/i);
-      expect(body).toMatch(/millisecond/);
-      expect(body).toMatch(/Revision|source revision/);
-      expect(body).toMatch(/Ended at|end time/);
-      expect(body).toMatch(/Work resumed|time work resumed/);
-    },
-  );
+  it("binds each session to its invocation and source revision", async () => {
+    const body = flatten(await read(tree, RECORD));
+    expect(body).toContain("Preflight: session opened");
+    expect(body).toContain("Work Orders Summary");
+    expect(body).toMatch(/run start/i);
+    expect(body).toMatch(/millisecond/);
+    expect(body).toContain("working-tree+<hash>");
+    expect(body).toContain("Ended at");
+    expect(body).toContain("Work resumed");
+  });
 
-  it.each(stages)(
-    "$skill reconciles open nodes and decisions at its reviewer gate",
-    async ({ skill }) => {
-      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
-      expect(body).toMatch(/Open|open nodes/);
-      expect(body).toMatch(/Decisions|decisions/);
-      expect(body).toMatch(/Session|session ID/);
-      expect(body).toMatch(/critical decision/);
-      expect(body).toMatch(/REVISE/);
-    },
-  );
-
-  it.each(["qfai-atdd", "qfai-implement"])(
-    "%s rejects stale, duplicate and unreconciled records",
-    async (skill) => {
-      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
-      expect(body).toContain("one block per invocation");
-      expect(body).toContain("unique session ID");
-      expect(body).toContain("older block cannot pass");
-      expect(body).toContain("working-tree+<hash>");
-      expect(body).toContain("cannot precede the run start");
-      expect(body).toContain("must follow `Ended at`");
-      expect(body).toContain("count must equal");
-      expect(body).toContain("an unanswered escalation is an open node");
-      expect(body).toContain("duplicate session key");
-    },
-  );
+  it("rejects stale, duplicate and unreconciled records at its reviewer gate", async () => {
+    const body = flatten(await read(tree, RECORD));
+    expect(body).toContain("One block per invocation and per stage");
+    expect(body).toContain("an older block cannot pass as the current run");
+    expect(body).toContain("a duplicate session key");
+    expect(body).toContain("at or after the run start");
+    expect(body).toContain("later than `Ended at`");
+    expect(body).toMatch(/`Open`, `Escalated` or `Decisions` not equal to the lines/);
+    expect(body).toContain("An unanswered escalation is an open node");
+    expect(body).toMatch(/critical decision/);
+    expect(body).toMatch(/REVISE/);
+  });
 
   it("keeps the five endings in the rule master", async () => {
     const master = await readFile(path.join(repoRoot, ".agents/rules/grilling.md"), "utf-8");
@@ -78,10 +62,8 @@ describe.each(trees)("%s — execution stage grilling records", (tree) => {
   });
 
   it("records a stopped session without resuming work or writing the stopped artifact", async () => {
-    for (const { skill } of stages) {
-      const body = flatten(await read(tree, `assistant/skill/${skill}/SKILL.md`));
-      expect(body).toMatch(/stopped.*(reported|report)/i);
-      expect(body).toMatch(/stopped.*(work|resume)/i);
-    }
+    const body = flatten(await read(tree, RECORD));
+    expect(body).toContain("A stopped session is reported, not written");
+    expect(body).toMatch(/resumes no work/);
   });
 });

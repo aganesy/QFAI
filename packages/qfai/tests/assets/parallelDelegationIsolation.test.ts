@@ -16,12 +16,13 @@ describe("qfai-sdd parallel work isolation", () => {
         tree,
         "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",
       );
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-gate/STEP.md");
       expect(playbook).toContain("## Parallel work");
       expect(skill).toContain(
         "A worker's flow gate does not include a sibling flow still being edited",
       );
-      expect(skill).toContain("shared dependencies");
+      const parent = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      expect(parent).toContain("shared dependencies");
     });
   }
 });

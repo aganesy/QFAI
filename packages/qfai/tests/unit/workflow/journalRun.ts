@@ -6,6 +6,7 @@
 import { decide } from "../../../src/core/workflow/decide.js";
 import { journalExtrasOf, recordsOf, snapshotOf } from "../../../src/core/workflow/fold.js";
 import type { JournalRecord } from "../../../src/core/workflow/persistence.js";
+import { KIND_STEPS } from "./kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Input = Parameters<typeof decide>[1];
@@ -109,13 +110,13 @@ export function readyWith(
   ];
 }
 
-// One plan stage, in the order the plan files list its fields.
+// One plan stage, in the order the plan files list its fields, carrying its kind's steps.
 export function stage(
   stageInstanceId: string,
   stageKind: string,
-  skill: string,
-  operation: string,
   when = "always",
 ): PlanStages[number] {
-  return { stageInstanceId, stageKind, skill, operation, when };
+  const steps = KIND_STEPS[stageKind];
+  if (!steps) throw new Error(`no steps for stage kind ${stageKind}`);
+  return { stageInstanceId, stageKind, steps, when };
 }

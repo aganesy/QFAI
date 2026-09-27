@@ -7,7 +7,7 @@ export const PROTOTYPING_DELEGATION_SCOPE = {
 
 /**
  * The Delegation Scope Table rendered by the shipped
- * `qfai-prototyping/SKILL.md`, transcribed row for row: each English label
+ * `prototyping-loop/STEP.md`, transcribed row for row: each English label
  * maps to the roles ITS OWN row documents.
  *
  * A `delegationMap` written against the distributed skill uses these labels,

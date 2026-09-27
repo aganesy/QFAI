@@ -4,12 +4,12 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { normalizeNewlines } from "../../shared/text.js";
 import type { QfaiConfig } from "../config.js";
-import { joinAssistantLayer } from "../paths/assistantPaths.js";
 import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import type { SkillRouting } from "../validators/skillRoles.js";
 import { isRecord } from "./parse.js";
+import { SEAM_STEP, stepPath } from "./steps.js";
+import type { PlanStep } from "./types.js";
 
 export const WORKFLOW_ROUTES = [
   "direct",
@@ -24,9 +24,7 @@ export type WorkflowRoute = (typeof WORKFLOW_ROUTES)[number];
 export interface PlanStage {
   id: string;
   kind: string;
-  // One skill, or both of a `test_fix` stage's.
-  skills: string[];
-  operation: string;
+  steps: PlanStep[];
   when: string;
   after: string[];
   effects: string[];
@@ -50,14 +48,10 @@ export type PlanRefusalReason =
   | "cycle"
   | "unreachable"
   | "no-verify-path"
-  | "skill-missing"
-  | "operations-table-missing"
-  | "operations-first-column"
-  | "operations-cell-not-id"
-  | "operations-pair-omitted"
+  | "step-missing"
   | "reviewer-missing";
 
-// Why a plan was refused, and the key, stage or route the refusal is about.
+// Why a plan was refused, and the key, stage, step or route the refusal is about.
 export interface PlanRefusal {
   route: WorkflowRoute;
   reason: PlanRefusalReason;
@@ -67,7 +61,7 @@ export interface PlanRefusal {
 export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
-// The verdict over the package's plans, the skills they name and the reviewers the effective
+// The verdict over the package's plans, the steps they name and the reviewers the effective
 // routing keeps: a refusal is the cause `contract-undeclared` or `reviewer-missing`.
 export interface PlanCheck {
   cause?: "contract-undeclared" | "reviewer-missing";
@@ -85,27 +79,40 @@ export function planDigestKey(route: WorkflowRoute): string {
 }
 
 const PLAN_KEYS = ["route", "stages"];
-const STAGE_KEYS = ["id", "kind", "skill", "operation", "when", "after", "effects"];
+const STAGE_KEYS = ["id", "kind", "steps", "when", "after", "effects"];
+const STEP_KEYS = ["step", "when"];
 
-// Each stage kind, with its skills and its operation.
-const KINDS: Record<string, { skills: string[]; operation: string }> = {
-  maintenance: { skills: ["qfai-maintain"], operation: "non-normative-edit" },
-  diagnose: { skills: ["qfai-implement"], operation: "diagnose-only" },
-  sdd_append: { skills: ["qfai-sdd"], operation: "defect-example-seeding" },
-  test_fix: { skills: ["qfai-atdd", "qfai-implement"], operation: "test-fix" },
-  regression_fix: { skills: ["qfai-implement"], operation: "regression-fix" },
-  sdd: { skills: ["qfai-sdd"], operation: "new-story" },
-  sdd_delta: { skills: ["qfai-sdd"], operation: "update-or-applicability-check" },
-  prototype: { skills: ["qfai-prototyping"], operation: "existing-runtime-contract" },
-  acceptance: { skills: ["qfai-atdd"], operation: "author-acceptance-tests" },
-  implement: { skills: ["qfai-implement"], operation: "implement" },
-  verify: { skills: ["qfai-verify"], operation: "verify-full" },
-  discussion: { skills: ["qfai-discussion"], operation: "resolve-unsettled-product-scope" },
+const SDD_STEPS = ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "common-design-md"];
+
+// Each stage kind, with the steps a stage of that kind may run.
+const KINDS: Record<string, string[]> = {
+  maintenance: ["maintain-edit"],
+  diagnose: ["implement-diagnose"],
+  sdd_append: ["sdd-story", "sdd-gate"],
+  test_fix: ["atdd-test-fix", "implement-test-fix"],
+  regression_fix: ["implement-regression-fix"],
+  sdd: [...SDD_STEPS, "sdd-cycle", "sdd-gate"],
+  sdd_delta: [...SDD_STEPS, "sdd-gate"],
+  prototype: [
+    "prototyping-grill",
+    "prototyping-preflight",
+    "prototyping-loop",
+    "prototyping-handoff",
+  ],
+  acceptance: ["atdd-scaffold", "atdd-credentials", "atdd-author"],
+  implement: ["implement-tdd", "implement-checkpoint"],
+  verify: ["verify-context", "verify-qfai-gate", "verify-repo-gate"],
+  discussion: [
+    "discussion-research",
+    "discussion-interview",
+    "discussion-pack",
+    "discussion-oq",
+    "discussion-uiux",
+  ],
 };
 
-const SKILLS = new Set(Object.values(KINDS).flatMap((kind) => kind.skills));
-// `seam-only` is an operation of the vocabulary that no plan stage may carry.
-const OPERATIONS = new Set([...Object.values(KINDS).map((kind) => kind.operation), "seam-only"]);
+// `implement-seam` is a step of the vocabulary that no plan stage may run.
+const STEPS = new Set([...Object.values(KINDS).flat(), SEAM_STEP]);
 
 const PREDICATES = [
   "always",
@@ -117,6 +124,8 @@ const PREDICATES = [
   "prototype_decision_needed",
   "full_discussion_needed",
 ];
+
+const STEP_PREDICATES = ["proposed", "test_defect_acceptance_layer", "test_defect_example_layer"];
 
 const EFFECTS = [
   "push",
@@ -144,43 +153,56 @@ function stringList(value: unknown): string[] | undefined {
   return undefined;
 }
 
-function sameSet(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((item) => right.includes(item));
-}
-
 function vocabularyRefusals(stage: PlanStage, refuse: Refuse) {
   const kind = KINDS[stage.kind];
   const outside = [
     ...(kind ? [] : [stage.kind]),
-    ...stage.skills.filter((skill) => !SKILLS.has(skill)),
-    ...(OPERATIONS.has(stage.operation) ? [] : [stage.operation]),
     ...(PREDICATES.includes(stage.when) ? [] : [stage.when]),
+    ...stage.steps.flatMap((step) => [
+      ...(STEPS.has(step.name) ? [] : [step.name]),
+      ...(step.when === undefined || STEP_PREDICATES.includes(step.when) ? [] : [step.when]),
+    ]),
   ];
   for (const name of outside) refuse("out-of-vocabulary", name);
   if (outside.length > 0 || !kind) return;
-  if (!sameSet(stage.skills, kind.skills) || stage.operation !== kind.operation) {
-    refuse("kind-mismatch", stage.id);
-  }
+  if (stage.steps.some((step) => !kind.includes(step.name))) refuse("kind-mismatch", stage.id);
+}
+
+// One step entry: a step name, or `{ step, when }` for a step with its own predicate.
+function stepOf(value: unknown, refuse: Refuse): PlanStep | null {
+  if (typeof value === "string") return { name: value };
+  if (!isRecord(value)) return null;
+  unknownKeys(value, STEP_KEYS, refuse);
+  const { step, when } = value;
+  if (typeof step !== "string" || (when !== undefined && typeof when !== "string")) return null;
+  return when === undefined ? { name: step } : { name: step, when };
+}
+
+// A stage's steps, or undefined when the list is empty, holds a malformed entry or repeats one.
+function stepsOf(value: unknown, refuse: Refuse): PlanStep[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const steps = value.map((entry) => stepOf(entry, refuse));
+  if (!steps.every((step) => step !== null)) return undefined;
+  const names = steps.map((step) => step.name);
+  return new Set(names).size === names.length ? steps : undefined;
 }
 
 // One stage entry, or null when its shape is refused.
 function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!isRecord(value)) return refused(refuse, "shape", "stages");
   unknownKeys(value, STAGE_KEYS, refuse);
-  const { id, kind, skill, operation, when } = value;
-  const skills = typeof skill === "string" ? [skill] : stringList(skill);
+  const { id, kind, when } = value;
+  const steps = stepsOf(value.steps, refuse);
   const after = value.after === undefined ? [] : stringList(value.after);
   const effects = value.effects === undefined ? [] : stringList(value.effects);
   if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
     refuse("effects", typeof id === "string" ? id : "stages");
   }
-  if (typeof id !== "string" || typeof kind !== "string" || !skills?.length || !after) {
+  if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
-  if (typeof operation !== "string" || typeof when !== "string" || !effects) {
-    return refused(refuse, "shape", id);
-  }
-  const stage = { id, kind, skills, operation, when, after, effects };
+  if (typeof when !== "string" || !effects) return refused(refuse, "shape", id);
+  const stage = { id, kind, steps, when, after, effects };
   vocabularyRefusals(stage, refuse);
   return stage;
 }
@@ -202,7 +224,7 @@ function reachedFrom(stages: PlanStage[], from: PlanStage[]): Set<string> {
 }
 
 function isVerifyFull(stage: PlanStage): boolean {
-  return stage.kind === "verify" && stage.operation === "verify-full";
+  return stage.kind === "verify";
 }
 
 function verifyPathRefusals(stages: PlanStage[], refuse: Refuse) {
@@ -303,106 +325,49 @@ export async function loadBuiltInPlans(): Promise<Record<WorkflowRoute, Workflow
   return { direct, bugfix, "bounded-change": boundedChange, feature, discovery };
 }
 
-type PlanUse = { route: WorkflowRoute; operations: Set<string> };
-
-// Every (skill, operation) pair the loaded plans use, with the first route using the skill.
-function planPairs(plans: readonly WorkflowPlanFile[]): Map<string, PlanUse> {
-  const pairs = new Map<string, PlanUse>();
+// Every step the loaded plans run, with the first route running it.
+function planSteps(plans: readonly WorkflowPlanFile[]): Map<string, WorkflowRoute> {
+  const steps = new Map<string, WorkflowRoute>();
   for (const plan of plans) {
-    for (const stage of plan.stages) {
-      for (const skill of stage.skills) {
-        const entry = pairs.get(skill) ?? { route: plan.route, operations: new Set<string>() };
-        pairs.set(skill, entry);
-        entry.operations.add(stage.operation);
-      }
+    for (const step of plan.stages.flatMap((stage) => stage.steps)) {
+      if (!steps.has(step.name)) steps.set(step.name, plan.route);
     }
   }
-  return pairs;
+  return steps;
 }
 
-type TableRead = { ok: true; operations: string[] } | { ok: false; reason: PlanRefusalReason };
-
-// The lines of the first table under `## Operations`, up to the next heading, outside fences.
-function operationsTableLines(text: string): string[] {
-  const table: string[] = [];
-  let inside = false;
-  let fenced = false;
-  for (const line of normalizeNewlines(text).split("\n")) {
-    if (line.trimStart().startsWith("```")) fenced = !fenced;
-    if (fenced) continue;
-    if (/^#{1,6}\s/.test(line)) {
-      if (inside) break;
-      inside = line.trimEnd() === "## Operations";
-      continue;
-    }
-    if (!inside) continue;
-    if (line.trimStart().startsWith("|")) table.push(line.trim());
-    else if (table.length > 0) break;
-  }
-  return table;
+// Each step a plan runs that is not installed: `<assistant>/step/<name>/STEP.md` is no file.
+async function contractRefusals(
+  root: string,
+  steps: Map<string, WorkflowRoute>,
+): Promise<PlanRefusal[]> {
+  const found = await Promise.all(
+    [...steps].map(async ([step, route]): Promise<PlanRefusal[]> => {
+      const entry = await stat(path.join(root, stepPath(step))).catch(() => undefined);
+      return entry?.isFile() ? [] : [{ route, reason: "step-missing", subject: step }];
+    }),
+  );
+  return found.flat();
 }
 
-function cellsOf(row: string): string[] {
-  return row
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
-}
-
-// The operations a skill's Operations table declares: a first column headed `Operation`, each
-// cell exactly one backticked operation ID of the vocabulary.
-export function readOperationsTable(text: string): TableRead {
-  const [header, , ...rows] = operationsTableLines(text);
-  if (header === undefined) return { ok: false, reason: "operations-table-missing" };
-  if (cellsOf(header)[0] !== "Operation") return { ok: false, reason: "operations-first-column" };
-  const operations: string[] = [];
-  for (const row of rows) {
-    const id = /^`([a-z-]+)`$/.exec(cellsOf(row)[0] ?? "")?.[1];
-    if (id === undefined || !OPERATIONS.has(id)) {
-      return { ok: false, reason: "operations-cell-not-id" };
-    }
-    operations.push(id);
-  }
-  return { ok: true, operations };
-}
-
-// A skill a plan names must be installed, and its Operations table must declare every
-// operation the plans use it for.
-async function skillRefusals(root: string, skill: string, use: PlanUse): Promise<PlanRefusal[]> {
-  const refusal = (reason: PlanRefusalReason, subject = skill) => [
-    { route: use.route, reason, subject },
-  ];
-  const skillDir = joinAssistantLayer(root, "skill", skill);
-  if (!(await stat(skillDir).catch(() => undefined))?.isDirectory()) {
-    return refusal("skill-missing");
-  }
-  const text = await readIfPresent(path.join(skillDir, "references", "orchestrated-mode.md"));
-  const table = readOperationsTable(text ?? "");
-  if (!table.ok) return refusal(table.reason);
-  return [...use.operations]
-    .filter((operation) => !table.operations.includes(operation))
-    .flatMap((operation) => refusal("operations-pair-omitted", `${skill}:${operation}`));
-}
-
-function requiredAgents(routing: Map<string, SkillRouting> | undefined, skill: string): string[] {
-  const agents = routing?.get(skill)?.agents ?? new Map<string, string>();
+function requiredAgents(routing: Map<string, SkillRouting> | undefined, step: string): string[] {
+  const agents = routing?.get(step)?.agents ?? new Map<string, string>();
   return [...agents].filter(([, binding]) => binding === "required").map(([agent]) => agent);
 }
 
-// Every agent the package's default routing requires for a skill a plan dispatches must still be
+// Every agent the package's default routing requires for a step a plan runs must still be
 // required by the effective routing. An agent the project adds is the project's.
 async function reviewerRefusals(
   config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
-  pairs: Map<string, PlanUse>,
+  steps: Map<string, WorkflowRoute>,
 ): Promise<PlanRefusal[]> {
   const { routing, defaultRouting } = await readEffectiveRouting(config);
   const refusals: PlanRefusal[] = [];
-  for (const [skill, { route }] of pairs) {
-    const kept = requiredAgents(routing, skill);
-    for (const agent of requiredAgents(defaultRouting, skill)) {
+  for (const [step, route] of steps) {
+    const kept = requiredAgents(routing, step);
+    for (const agent of requiredAgents(defaultRouting, step)) {
       if (!kept.includes(agent)) {
-        refusals.push({ route, reason: "reviewer-missing", subject: `${skill}:${agent}` });
+        refusals.push({ route, reason: "reviewer-missing", subject: `${step}:${agent}` });
       }
     }
   }
@@ -416,18 +381,15 @@ export async function allPlanRefusals(
   config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
 ): Promise<PlanRefusal[]> {
   const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
-  const pairs = planPairs(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
-  const contract = await Promise.all(
-    [...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)),
-  );
+  const steps = planSteps(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
   return [
     ...loaded.flatMap((load) => (load.ok ? [] : load.refusals)),
-    ...contract.flat(),
-    ...(await reviewerRefusals(config, pairs)),
+    ...(await contractRefusals(projectRoot, steps)),
+    ...(await reviewerRefusals(config, steps)),
   ];
 }
 
-// Trigger (b) over the package's plans and the skills they name, then trigger (c) over the
+// Trigger (b) over the package's plans and the steps they name, then trigger (c) over the
 // reviewers the effective routing keeps. The first that holds is the cause.
 export async function checkPlans(
   projectRoot: string,
@@ -436,12 +398,10 @@ export async function checkPlans(
   const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
   const loadRefusals = loaded.flatMap((load) => (load.ok ? [] : load.refusals));
   if (loadRefusals.length > 0) return { cause: "contract-undeclared", refusals: loadRefusals };
-  const pairs = planPairs(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
-  const contract = (
-    await Promise.all([...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)))
-  ).flat();
+  const steps = planSteps(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
+  const contract = await contractRefusals(projectRoot, steps);
   if (contract.length > 0) return { cause: "contract-undeclared", refusals: contract };
-  const reviewers = await reviewerRefusals(config, pairs);
+  const reviewers = await reviewerRefusals(config, steps);
   return reviewers.length > 0
     ? { cause: "reviewer-missing", refusals: reviewers }
     : { refusals: [] };

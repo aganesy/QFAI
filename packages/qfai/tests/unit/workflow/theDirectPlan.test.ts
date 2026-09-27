@@ -5,20 +5,15 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import type { WorkflowDecision } from "../../../src/core/workflow/decide.js";
 import { CONFIG_DIGEST, TOOL_DIGEST, completion } from "./finishFixture.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
 
 const directStages = [
-  ["direct-edit", "maintenance", "qfai-maintain", "non-normative-edit"],
-  ["direct-verify", "verify", "qfai-verify", "verify-full"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when: "always",
-}));
+  planStage("direct-edit", "maintenance", "always"),
+  planStage("direct-verify", "verify", "always"),
+];
 
 const startFacts: Facts = {
   start: {

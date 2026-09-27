@@ -1,7 +1,7 @@
 /**
- * Integration: `qfai init` installs the workflow entry — the two entry skills and each plan-named
- * stage skill's orchestrated-mode reference — through the existing asset copy. The built-in plans
- * stay in the package and are never written into the project.
+ * Integration: `qfai init` installs the workflow entry — the two entry skills and every step the
+ * built-in plans name — through the existing asset copy. The built-in plans stay in the package
+ * and are never written into the project.
  */
 // QFAI:AC-0001-0203-01
 // QFAI:EX-0001-0203-01
@@ -12,6 +12,7 @@ import { existsSync } from "node:fs";
 import { readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { packagePlansDir } from "../../../src/core/workflow/plans.js";
@@ -26,12 +27,22 @@ import {
 
 const PLANS = ["bounded-change.yml", "bugfix.yml", "direct.yml", "discovery.yml", "feature.yml"];
 
-/** The skills the packaged plans name, read from the plans themselves. */
-async function planSkills(): Promise<string[]> {
+/** The steps the packaged plans name, read from the plans themselves. */
+async function planSteps(): Promise<string[]> {
   const names = new Set<string>();
   for (const plan of PLANS) {
-    const text = await readFile(path.join(packagePlansDir(), plan), "utf-8");
-    for (const match of text.matchAll(/qfai-[a-z-]+/g)) names.add(match[0]);
+    const parsed: unknown = parseYaml(await readFile(path.join(packagePlansDir(), plan), "utf-8"));
+    const stages: unknown =
+      typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "stages") : [];
+    for (const stage of Array.isArray(stages) ? stages : []) {
+      const steps: unknown =
+        typeof stage === "object" && stage !== null ? Reflect.get(stage, "steps") : [];
+      for (const entry of Array.isArray(steps) ? steps : []) {
+        const name: unknown =
+          typeof entry === "object" && entry !== null ? Reflect.get(entry, "step") : entry;
+        if (typeof name === "string") names.add(name);
+      }
+    }
   }
   return [...names].sort();
 }
@@ -62,9 +73,11 @@ async function expectInstallSet(root: string): Promise<void> {
   for (const skill of ENTRY_SKILLS) {
     expect(existsSync(path.join(root, SKILLS, skill, "SKILL.md")), skill).toBe(true);
   }
-  for (const skill of await planSkills()) {
-    const reference = path.join(root, SKILLS, skill, "references", "orchestrated-mode.md");
-    expect(existsSync(reference), `${skill} carries its orchestrated-mode reference`).toBe(true);
+  const steps = await planSteps();
+  expect(steps.length, "the plans name steps").toBeGreaterThan(0);
+  for (const step of steps) {
+    const doc = path.join(root, ".qfai", "assistant", "step", step, "STEP.md");
+    expect(existsSync(doc), `${step} is installed`).toBe(true);
   }
   const written = (await filesUnder(root)).map((file) => path.basename(file));
   expect(
@@ -85,7 +98,7 @@ async function expectWrappersResolve(root: string): Promise<void> {
 }
 
 describe("the workflow entry install set", () => {
-  it("Fresh init installs the entry skills and the orchestrated-mode references", async () => {
+  it("Fresh init installs the entry skills and every step the plans name", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       await expectInstallSet(root);

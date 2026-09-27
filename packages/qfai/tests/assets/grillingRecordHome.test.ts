@@ -12,10 +12,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("SDD decision and question homes", () => {
   for (const tree of trees) {
     it(`${tree}: records adopted, rejected, and unresolved grilling outcomes in story-tree rows`, async () => {
-      const loop = await read(
-        tree,
-        "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
-      );
+      const loop = await read(tree, "assistant/step/common-grilling-record/STEP.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(loop).toContain("appropriate `decisions.md` row");
       expect(loop).toContain("Record an unresolved choice in `open-questions.md`");

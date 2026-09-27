@@ -2,30 +2,35 @@ route: feature
 stages:
   - id: sdd
     kind: sdd
-    skill: qfai-sdd
-    operation: new-story
+    steps:
+      - sdd-triage
+      - sdd-flow
+      - sdd-story
+      - sdd-contract
+      - { step: common-design-md, when: proposed }
+      - sdd-cycle
+      - sdd-gate
     when: always
   - id: prototype
     kind: prototype
-    skill: qfai-prototyping
-    operation: existing-runtime-contract
+    steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
     when: prototype_decision_needed
     after: [sdd]
   - id: acceptance
     kind: acceptance
-    skill: qfai-atdd
-    operation: author-acceptance-tests
+    steps:
+      - atdd-scaffold
+      - { step: atdd-credentials, when: proposed }
+      - atdd-author
     when: acceptance_obligations_unmet
     after: [prototype]
   - id: implement
     kind: implement
-    skill: qfai-implement
-    operation: implement
+    steps: [implement-tdd, implement-checkpoint]
     when: always
     after: [acceptance]
   - id: verify
     kind: verify
-    skill: qfai-verify
-    operation: verify-full
+    steps: [verify-context, verify-qfai-gate, verify-repo-gate]
     when: always
     after: [implement]

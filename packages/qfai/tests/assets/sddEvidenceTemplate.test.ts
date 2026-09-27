@@ -15,7 +15,7 @@ describe("per-flow SDD evidence", () => {
   for (const root of roots) {
     it(`${root}: the skill, evidence, and DB rule agree on the BF scope`, async () => {
       const [skill, evidence, contractRules] = await Promise.all([
-        read(root, "SKILL.md"),
+        readFile(path.join(repoRoot, root, "step/sdd-gate/STEP.md"), "utf8"),
         read(root, "templates/evidence/sdd-flow.md"),
         read(root, "references/contract-artifact-rules.md"),
       ]);

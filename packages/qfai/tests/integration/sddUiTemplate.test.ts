@@ -118,7 +118,12 @@ describe("shipped qfai-sdd design contracts", () => {
       "utf-8",
     );
     expect(normalization).toContain("MUST NOT be generated");
-    expect(normalization).toContain("Add the lock YAML to `<paths.contractsDir>/contracts.md`");
+    const designMd = await readFile(
+      path.join(SDD_SKILL_DIR, "..", "..", "step", "common-design-md", "STEP.md"),
+      "utf-8",
+    );
+    expect(normalization).toContain("common-design-md/STEP.md#author-and-freeze");
+    expect(designMd).toContain("Add the lock YAML to `<paths.contractsDir>/contracts.md`");
     expect(normalization).toContain("design-system.yaml");
     expect(normalization).toContain("prototype-handoff.yaml");
   });

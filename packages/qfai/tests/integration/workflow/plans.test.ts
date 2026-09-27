@@ -2,14 +2,16 @@
 // QFAI:AC-0001-0195-05
 // QFAI:AC-0001-0198-01
 // QFAI:AC-0001-0199-03
+// QFAI:AC-0001-0217-05
 // QFAI:EX-0001-0192-13
 // QFAI:EX-0001-0192-14
 // QFAI:EX-0001-0195-08
 // QFAI:EX-0001-0198-01
 // QFAI:EX-0001-0199-08
 // QFAI:EX-0001-0199-09
+// QFAI:EX-0001-0217-08
 
-import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,7 +27,6 @@ import {
   type WorkflowPlanFile,
   type WorkflowRoute,
 } from "../../../src/core/workflow/plans.js";
-import { getInitAssetsDir } from "../../../src/shared/assets.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 type Facts = Parameters<typeof decide>[2];
@@ -59,17 +60,17 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-// A minimal project: each shipped skill's Operations table, as `qfai init` leaves it, and an
-// optional `qfai.config.yaml`. The plans and the routing stay in the package.
+// A minimal project: one `STEP.md` per step the package's plans run, and an optional
+// `qfai.config.yaml`. The plans and the routing stay in the package.
 async function project(config?: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plans-"));
   roots.push(root);
-  const skills = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill");
-  for (const skill of await readdir(skills)) {
-    const table = path.join(skill, "references", "orchestrated-mode.md");
-    const target = path.join(root, ".qfai", "assistant", "skill", table);
-    await mkdir(path.dirname(target), { recursive: true });
-    await cp(path.join(skills, table), target).catch(() => undefined);
+  const plans = Object.values(await loadBuiltInPlans());
+  const names = plans.flatMap((plan) => plan.stages.flatMap((stage) => stage.steps));
+  for (const name of new Set(names.map((step) => step.name))) {
+    const dir = path.join(root, ".qfai", "assistant", "step", name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "STEP.md"), `# ${name}\n`);
   }
   if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   return root;
@@ -96,6 +97,7 @@ async function startOn(root: string) {
     cause: error && "cause" in error ? error.cause : undefined,
     events: decision.events.length,
     reasons: check.refusals.map((refusal) => refusal.reason),
+    subjects: check.refusals.map((refusal) => refusal.subject),
   };
 }
 
@@ -105,24 +107,28 @@ const started = {
   cause: undefined,
   events: 2,
   reasons: [],
+  subjects: [],
 };
 
+// Each stage as its kind, its steps, each marked with its own predicate when it has one, and
+// the stage's predicate.
 function shape(plan: WorkflowPlanFile | undefined) {
   return (plan?.stages ?? []).map((stage) => [
     stage.kind,
-    stage.skills,
-    stage.operation,
+    stage.steps.map((step) => (step.when ? `${step.name}?${step.when}` : step.name)),
     stage.when,
   ]);
 }
 
-// Whether every stage has a path to a `verify-full` stage, and the stages nothing follows.
+const VERIFY = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
+
+// Whether every stage has a path to a verify stage, and the stages nothing follows.
 function verifyReach(plan: WorkflowPlanFile | undefined) {
   const stages = plan?.stages ?? [];
   const followers = (id: string) => stages.filter((stage) => stage.after.includes(id));
   const reaches = (id: string): boolean => {
     const stage = stages.find((candidate) => candidate.id === id);
-    if (stage?.kind === "verify" && stage.operation === "verify-full") return true;
+    if (stage?.kind === "verify") return true;
     return followers(id).some((next) => reaches(next.id));
   };
   return {
@@ -135,11 +141,31 @@ it("Load the shipped feature", async () => {
   const plans = await loadBuiltInPlans();
 
   expect(shape(plans.feature)).toEqual([
-    ["sdd", ["qfai-sdd"], "new-story", "always"],
-    ["prototype", ["qfai-prototyping"], "existing-runtime-contract", "prototype_decision_needed"],
-    ["acceptance", ["qfai-atdd"], "author-acceptance-tests", "acceptance_obligations_unmet"],
-    ["implement", ["qfai-implement"], "implement", "always"],
-    ["verify", ["qfai-verify"], "verify-full", "always"],
+    [
+      "sdd",
+      [
+        "sdd-triage",
+        "sdd-flow",
+        "sdd-story",
+        "sdd-contract",
+        "common-design-md?proposed",
+        "sdd-cycle",
+        "sdd-gate",
+      ],
+      "always",
+    ],
+    [
+      "prototype",
+      ["prototyping-grill", "prototyping-preflight", "prototyping-loop", "prototyping-handoff"],
+      "prototype_decision_needed",
+    ],
+    [
+      "acceptance",
+      ["atdd-scaffold", "atdd-credentials?proposed", "atdd-author"],
+      "acceptance_obligations_unmet",
+    ],
+    ["implement", ["implement-tdd", "implement-checkpoint"], "always"],
+    ["verify", VERIFY, "always"],
   ]);
 });
 
@@ -147,9 +173,13 @@ const changeRoutes: WorkflowRoute[] = ["direct", "bugfix", "bounded-change", "fe
 
 for (const route of changeRoutes) {
   it(route, async () => {
-    const plans = await loadBuiltInPlans();
+    const plan = (await loadBuiltInPlans())[route];
+    const verify = plan.stages.filter((stage) => stage.kind === "verify");
 
-    expect(verifyReach(plans[route])).toEqual({ everyStageReachesVerify: true, ends: ["verify"] });
+    expect({
+      ...verifyReach(plan),
+      verifySteps: verify.map((stage) => stage.steps.map((step) => step.name)),
+    }).toEqual({ everyStageReachesVerify: true, ends: ["verify"], verifySteps: [VERIFY] });
   });
 }
 
@@ -161,7 +191,7 @@ it("Load the five shipped plans", async () => {
 
   expect({
     routes: Object.keys(plans).sort(),
-    grill: stages.filter((stage) => stage.skills.some((skill) => skill.startsWith("qfai-grill"))),
+    grill: stages.filter((stage) => stage.steps.some((step) => step.name.startsWith("grill"))),
     discussion: stages
       .filter((stage) => stage.kind === "discussion")
       .map((stage) => [stage.route, stage.when]),
@@ -176,15 +206,15 @@ it("Load the shipped direct", async () => {
   const plans = await loadBuiltInPlans();
 
   expect(shape(plans.direct)).toEqual([
-    ["maintenance", ["qfai-maintain"], "non-normative-edit", "always"],
-    ["verify", ["qfai-verify"], "verify-full", "always"],
+    ["maintenance", ["maintain-edit"], "always"],
+    ["verify", VERIFY, "always"],
   ]);
 });
 
 it("A routing override that keeps every required agent", async () => {
   const override = [
     "routing:",
-    "  - skill: qfai-maintain",
+    "  - step: maintain-edit",
     "    phases:",
     "      - id: edit",
     "        mandatory_agents: [doc-steward]",
@@ -205,7 +235,8 @@ it("A routing override that keeps every required agent", async () => {
   expect(await startOn(await project(override))).toEqual(started);
 });
 
-const DIRECT_STAGE = "  - id: edit\n    kind: maintenance\n    skill: qfai-maintain\n";
+const DIRECT_STAGE = "  - id: edit\n    kind: maintenance\n    steps: [maintain-edit]\n";
+const EDIT_STEPS = "steps: [maintain-edit]";
 
 async function packagedDirect(): Promise<string> {
   return readFile(path.join(packagePlansDir(), "direct.yml"), "utf8");
@@ -216,15 +247,15 @@ const loadRefusals: [string, (text: string) => string][] = [
   ["unknown-key", (text) => `${text}owner: platform-team\n`],
   ["route-name", (text) => text.replace("route: direct", "route: bugfix")],
   ["out-of-vocabulary", (text) => text.replace("when: always", "when: sometimes")],
-  ["kind-mismatch", (text) => text.replace("skill: qfai-maintain", "skill: qfai-sdd")],
+  ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
   ["cycle", (text) => text.replace(DIRECT_STAGE, `${DIRECT_STAGE}    after: [verify]\n`)],
   ["unreachable", (text) => text.replace(DIRECT_STAGE, `${DIRECT_STAGE}    after: [edit]\n`)],
   [
     "no-verify-path",
     (text) =>
-      `${text}  - id: tidy\n    kind: maintenance\n    skill: qfai-maintain\n` +
-      "    operation: non-normative-edit\n    when: always\n    after: [edit]\n",
+      `${text}  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n` +
+      "    when: always\n    after: [edit]\n",
   ],
 ];
 
@@ -232,6 +263,29 @@ for (const [reason, change] of loadRefusals) {
   // QFAI:EX-0001-0199-10
   it(reason, async () => {
     const loaded = parsePlan(change(await packagedDirect()), "direct");
+
+    expect(loaded.ok ? [] : loaded.refusals.map((refusal) => refusal.reason)).toContain(reason);
+  });
+}
+
+const stepRefusals: [string, string, string][] = [
+  ["a step outside the vocabulary", "steps: [maintain-rewrite]", "out-of-vocabulary"],
+  [
+    "a step predicate outside the vocabulary",
+    "steps: [{ step: maintain-edit, when: sometimes }]",
+    "out-of-vocabulary",
+  ],
+  ["a step another kind runs", "steps: [maintain-edit, sdd-gate]", "kind-mismatch"],
+  ["the seam step in a plan", "steps: [implement-seam]", "kind-mismatch"],
+  ["a step listed twice", "steps: [maintain-edit, maintain-edit]", "shape"],
+  ["no step", "steps: []", "shape"],
+  ["an operation beside the steps", `${EDIT_STEPS}\n    operation: edit`, "unknown-key"],
+];
+
+for (const [title, steps, reason] of stepRefusals) {
+  // QFAI:EX-0001-0199-10
+  it(title, async () => {
+    const loaded = parsePlan((await packagedDirect()).replace(EDIT_STEPS, steps), "direct");
 
     expect(loaded.ok ? [] : loaded.refusals.map((refusal) => refusal.reason)).toContain(reason);
   });
@@ -285,11 +339,30 @@ it("discovery-ends-routing", async () => {
     discovery: [
       [
         "discussion",
-        ["qfai-discussion"],
-        "resolve-unsettled-product-scope",
+        [
+          "discussion-research",
+          "discussion-interview",
+          "discussion-pack",
+          "discussion-oq",
+          "discussion-uiux?proposed",
+        ],
         "full_discussion_needed",
       ],
     ],
     refusals: [],
+  });
+});
+
+it("A project whose sdd-gate step is not installed", async () => {
+  const root = await project();
+  await rm(path.join(root, ".qfai", "assistant", "step", "sdd-gate"), { recursive: true });
+
+  expect(await startOn(root)).toEqual({
+    run: null,
+    code: "fail-closed",
+    cause: "contract-undeclared",
+    events: 0,
+    reasons: ["step-missing"],
+    subjects: ["sdd-gate"],
   });
 });

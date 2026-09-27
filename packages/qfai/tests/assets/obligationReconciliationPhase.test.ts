@@ -12,13 +12,13 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 describe("contract obligations are reconciled after concrete examples", () => {
   for (const tree of trees) {
     it(tree + ": checks realizability and cross-contract outcomes", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-contract/STEP.md");
       const rules = await read(
         tree,
         "assistant/skill/qfai-sdd/references/contract-artifact-rules.md",
       );
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
-      expect(skill).toContain("Write a BR only after the EX it cites exists");
+      expect(flat(skill)).toContain("Write a BR only after the EX it cites exists");
       expect(rules).toContain(
         "For each affected AC, EX, and BR, name the contract that realizes it",
       );
@@ -34,7 +34,7 @@ describe("contract obligations are reconciled after concrete examples", () => {
     it(
       tree + ": contract reruns close over changed dependencies without widening writes",
       async () => {
-        const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+        const skill = await read(tree, "assistant/step/sdd-contract/STEP.md");
         const rules = await read(
           tree,
           "assistant/skill/qfai-sdd/references/contract-artifact-rules.md",

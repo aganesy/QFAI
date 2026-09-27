@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import type { WorkflowDecision } from "../../../src/core/workflow/decide.js";
 import { finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -316,16 +317,10 @@ it("scope-or-obligation-revision", () => {
   const bugfixPlan = {
     route: "bugfix",
     stages: [
-      ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only"],
-      ["bugfix-implement", "implement", "qfai-implement", "implement"],
-      ["bugfix-verify", "verify", "qfai-verify", "verify-full"],
-    ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-      stageInstanceId,
-      stageKind,
-      skill,
-      operation,
-      when: "always",
-    })),
+      planStage("bugfix-diagnose", "diagnose", "always"),
+      planStage("bugfix-implement", "implement", "always"),
+      planStage("bugfix-verify", "verify", "always"),
+    ],
   };
   const ready = {
     run: { id: "run-bugfix", state: "ready", sequence: 4 },

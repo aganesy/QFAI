@@ -185,7 +185,7 @@ reported by name:
 
 | Check                 | Fails when                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------ |
-| `contract-undeclared` | A skill a built-in plan names is missing, or its Operations table lacks an operation a plan uses |
+| `contract-undeclared` | A step a built-in plan runs is not installed under `.qfai/assistant/step/`                       |
 | `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
 | `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
 | `entry-directive`     | `AGENTS.md` or `CLAUDE.md` lacks the entry directive                                             |

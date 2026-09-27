@@ -2,22 +2,18 @@
  * Integration: what `/qfai-discussion` and `/qfai-prototyping` do when a workflow run hands them a
  * work order.
  *
- * Reads each skill's shipped `references/orchestrated-mode.md`. The workflow core's checks at
- * `accept` are not this module's.
+ * Reads the shipped parent skills, their steps and the operating baseline they cite. The workflow
+ * core's checks at `accept` are not this module's.
  */
 import { describe, expect, it } from "vitest";
 
-import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js";
+import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssistant.js";
 
-const DISCUSSION = "skill/qfai-discussion/references/orchestrated-mode.md";
-const PROTOTYPING = "skill/qfai-prototyping/references/orchestrated-mode.md";
+const DISCUSSION_INTERVIEW_STEP = "step/discussion-interview/STEP.md";
+const PROTOTYPING_SCOPE_STEP = "step/prototyping-grill/STEP.md";
+const OPERATING = "rule/shared-skill-operating-baseline.md";
 const ENTRY_CHECK =
   "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`";
-
-async function citingLines(skill: string): Promise<string[]> {
-  const body = await readShipped(`skill/${skill}/SKILL.md`);
-  return body.split("\n").filter((line) => line.includes("references/orchestrated-mode.md"));
-}
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -29,37 +25,41 @@ describe("qfai-discussion in a workflow run", () => {
   // QFAI:AC-0001-0206-01
   // QFAI:EX-0001-0206-01
   it("takes what the work order settled as settled and covers only the rest", async () => {
-    const text = await section(DISCUSSION, "## What is already settled");
-    expect(text).toMatch(
-      /the checked proposal's routing result and every answered question with its chosen answer, is taken as settled and not asked again/i,
-    );
-    expect(text).toMatch(/the discussion covers only the scope `settled` leaves unresolved/i);
+    const text = await section(DISCUSSION_INTERVIEW_STEP, "## Procedure");
+    expect(text).toMatch(/what the work order's `settled` field records is not asked again/i);
+    expect(text).toMatch(/the interview covers only the product scope it leaves unresolved/i);
   });
 
   // QFAI:AC-0001-0206-02
   // QFAI:EX-0001-0206-02
-  it("follows the entry check and cites its reference on one SKILL.md line", async () => {
-    expect(await citingLines("qfai-discussion")).toHaveLength(1);
-    const reference = flat(await readShipped(DISCUSSION));
-    expect(reference).toContain(`Run the entry check in ${ENTRY_CHECK} first.`);
-    expect(reference).toMatch(/applies only to the `worker` state/i);
+  it("runs the entry check before its steps, and a work order only the steps it names", async () => {
+    const skill = flat(await readShipped("skill/qfai-discussion/SKILL.md"));
+    expect(skill).toContain("shared-skill-operating-baseline.md#a-parent-skill-invoked-by-name");
+    expect(skill).toContain("shared-skill-operating-baseline.md#a-work-orders-steps");
+    const byName = await section(OPERATING, "### A parent skill invoked by name");
+    expect(byName).toContain("Run the [entry check](#workflow-run-entry-check-mandatory)");
+    const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
+    expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
+    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
   });
 });
 
 describe("qfai-prototyping in a workflow run", () => {
   // QFAI:AC-0001-0211-01
   // QFAI:EX-0001-0211-01
-  it("follows the entry check and cites its reference on one SKILL.md line", async () => {
-    expect(await citingLines("qfai-prototyping")).toHaveLength(1);
-    const reference = flat(await readShipped(PROTOTYPING));
-    expect(reference).toContain(`Run the entry check in ${ENTRY_CHECK} first.`);
-    expect(reference).toMatch(/applies only to the `worker` state/i);
+  it("follows the entry check and cites it on one SKILL.md line", async () => {
+    const body = await readShipped("skill/qfai-prototyping/SKILL.md");
+    const citing = body
+      .split("\n")
+      .filter((line) => line.includes("workflow-run-entry-check-mandatory"));
+    expect(citing).toHaveLength(1);
+    expect(flat(body)).toContain(`The entry check is ${ENTRY_CHECK}.`);
   });
 
   // QFAI:AC-0001-0211-03
   // QFAI:EX-0001-0211-03
   it("works only on the UI contracts that serve the bound flow and creates none", async () => {
-    const text = await section(PROTOTYPING, "## Work order scope");
+    const text = await section(PROTOTYPING_SCOPE_STEP, "## Scope");
     expect(text).toMatch(
       /works only on the UI-bearing UI contracts that serve the business flow the work order's `target` binds/i,
     );
@@ -75,7 +75,7 @@ describe("qfai-prototyping in a workflow run", () => {
   // QFAI:AC-0001-0211-04
   // QFAI:EX-0001-0211-04
   it("writes nothing and returns blocked when no UI contract serves the bound flow", async () => {
-    const text = await section(PROTOTYPING, "## Work order scope");
+    const text = await section(PROTOTYPING_SCOPE_STEP, "## Scope");
     expect(text).toMatch(/writes no `DESIGN\.md`, no UI contract and no surface declaration/i);
     expect(text).toMatch(
       /returns outcome `blocked` with one `debts` entry naming the missing UI surface/i,

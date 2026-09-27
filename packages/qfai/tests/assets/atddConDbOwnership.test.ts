@@ -19,20 +19,20 @@ describe.each(trees)("%s ATDD contract ownership", (tree) => {
 
   it("uses contracts to shape assertions without treating contract IDs as coverage annotations", async () => {
     const card = await read(tree, "assistant/agent/acceptance-test-engineer.md");
-    const skill = await read(tree, "assistant/skill/qfai-atdd/SKILL.md");
+    const step = await read(tree, "assistant/step/atdd-author/STEP.md");
     expect(card).toContain("Use active CON-API and CON-DB contracts to shape assertions");
     expect(card).toContain("one E2E test per BF and integration or API tests for each active AC");
-    expect(skill).toContain("Contract references and business rules define assertions");
-    expect(skill).toContain("contract IDs are not coverage annotations");
+    expect(step).toContain("Contract references and business rules define assertions");
+    expect(step).toContain("contract IDs are not coverage annotations");
   });
 
   it("preserves BF, AC and EX test ownership across skills", async () => {
-    const skill = await read(tree, "assistant/skill/qfai-atdd/SKILL.md");
-    expect(skill).toContain("Business flow");
-    expect(skill).toContain("Acceptance criterion");
-    expect(skill).toContain("`QFAI:BF-NNNN`");
-    expect(skill).toContain("`QFAI:AC-NNNN-NNNN-NN`");
-    expect(skill).toContain("Unit and component tests belong");
-    expect(skill).toContain("`/qfai-implement`");
+    const step = await read(tree, "assistant/step/atdd-author/STEP.md");
+    expect(step).toContain("Business flow");
+    expect(step).toContain("Acceptance criterion");
+    expect(step).toContain("`QFAI:BF-NNNN`");
+    expect(step).toContain("`QFAI:AC-NNNN-NNNN-NN`");
+    expect(step).toContain("Unit and component tests belong");
+    expect(step).toContain("`/qfai-implement`");
   });
 });

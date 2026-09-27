@@ -12,7 +12,7 @@ Scenario: Init and upgrade install the entry skills and their host links
   When `qfai init` runs
   Then `qfai-run` and `qfai-maintain` are under `.qfai/assistant/skill/`
   And each host skills directory links them to that one source
-  And every stage skill a built-in plan names has its `references/orchestrated-mode.md`
+  And every step a built-in plan names is under `.qfai/assistant/step/`
   And no plan file and no workflow schema file is written into the project
   And on an upgrade every other skill directory is left as it was
 
@@ -71,4 +71,13 @@ Scenario: A plain upgrade counts the skills it skipped
   And the summary counts them and names `qfai init --force` as the command that updates them
   And it says that command replaces them with the shipped versions, overwriting local edits
   And under `--force` no count is printed, because that run replaces them
+
+# AC-0001-0203-08
+# Parent: US-0001-0203
+Scenario: Steps are installed with the assistant tree and linked into no host
+  Given a fresh project, and a project whose shipped steps an earlier install wrote
+  When `qfai init` runs, and again with `--force`
+  Then every shipped step is at `.qfai/assistant/step/<name>/STEP.md`, one directory level under `step/`
+  And no step directory holds a `SKILL.md`, and no host skills directory holds an entry for a step
+  And a plain upgrade leaves a step whose copy differs from the shipped one as it is, and `--force` replaces it, as for a shipped skill
 ```

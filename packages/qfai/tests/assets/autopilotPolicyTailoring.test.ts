@@ -18,7 +18,8 @@ describe("autopilot choices cannot supply missing approval", () => {
       for (const bucket of ["auto-decide:", "ask-user:", "hard-required:"]) {
         expect(skill).toContain(bucket);
       }
-      expect(skill).toContain("sdd-triage.md");
+      const step = await read(tree, "assistant/step/sdd-triage/STEP.md");
+      expect(step).toContain("sdd-triage.md");
       expect(triage).toContain("CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE");
       expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("In --auto, ask no question, leave approval-required rows at TODO");

@@ -29,14 +29,14 @@ Scenario: /qfai-sdd checks how it was invoked before it edits anything
   When it holds no work order and was not invoked by name, or holds one that matches no issued work order
   Then it edits nothing
   And a worker holding a valid work order does only that work
-  And the rule is stated in references/orchestrated-mode.md, cited by one SKILL.md line
 
 # AC-0001-0214-04
 # Parent: US-0001-0214
-Scenario: /qfai-sdd declares the operations it serves
-  Given references/orchestrated-mode.md of /qfai-sdd
-  When the Operations table is read
-  Then it lists exactly the operations the plan vocabulary assigns to qfai-sdd, and no other
+Scenario: /qfai-sdd lists the steps the plans run for story authoring
+  Given the /qfai-sdd SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-sdd
+  And every step a plan gives an sdd, sdd_delta or sdd_append stage is one of them
 
 # AC-0001-0214-05
 # Parent: US-0001-0214

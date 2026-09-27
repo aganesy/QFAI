@@ -33,6 +33,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
+import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import {
@@ -90,6 +91,7 @@ import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
 import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
+import { isEnoent } from "./fs/errno.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
 const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
@@ -242,7 +244,7 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
       // the configured skills directory. Listing only the agents tree for them
       // left a FIFO at a routed `SKILL.md` blocking the run forever with the
       // `QFAI-LINK-001` that names it already in hand.
-      return [skillsRelative, AGENTS_RELATIVE];
+      return [skillsRelative, STEP_DIR_REL, AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
     default:
@@ -552,6 +554,7 @@ async function runStoryProfileValidators(
         dedupeStoryFindings([
           ...(await validateRepositoryHygiene(root, config)),
           ...(await validateSkillsIntegrity(root, config)),
+          ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config, "all")),
           ...(await sdd(false)),
@@ -862,9 +865,31 @@ async function validatePrototypingSkill(
   const skillsDir = resolvePath(root, config, "skillsDir");
   const prototypingSkillPath = path.join(skillsDir, "qfai-prototyping", "SKILL.md");
   const prototypingSkillContent = await readSafe(prototypingSkillPath);
-  return prototypingSkillContent.length > 0
-    ? validatePrototypingSkillContent(prototypingSkillContent).issues
-    : [];
+  if (prototypingSkillContent.length === 0) {
+    return [];
+  }
+  const stepBodies = await readPrototypingStepBodies(root);
+  return validatePrototypingSkillContent([prototypingSkillContent, ...stepBodies].join("\n"))
+    .issues;
+}
+
+/**
+ * The bodies of the `prototyping-*` steps, in name order. The skill's procedure
+ * lives in its steps, so the content checks read the parent and its steps as
+ * one document. A missing step directory yields no bodies, and the checks then
+ * report what the parent alone lacks.
+ */
+async function readPrototypingStepBodies(root: string): Promise<string[]> {
+  const stepDir = path.join(root, ".qfai", "assistant", "step");
+  let names: string[];
+  try {
+    names = await readdir(stepDir);
+  } catch (error) {
+    if (isEnoent(error)) return [];
+    throw error;
+  }
+  const stepNames = names.filter((name) => name.startsWith("prototyping-")).sort();
+  return Promise.all(stepNames.map((name) => readSafe(path.join(stepDir, name, "STEP.md"))));
 }
 
 /**

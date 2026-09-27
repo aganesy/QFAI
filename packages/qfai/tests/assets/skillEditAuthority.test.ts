@@ -67,7 +67,15 @@ const loadSkills = async (tree: string): Promise<readonly SkillFrontmatter[]> =>
   if (skills.length === 0) {
     throw new Error(`${tree}: no shipped SKILL.md found`);
   }
-  return skills;
+  // A step runs under its parent's frontmatter, so what a step mandates is
+  // read as part of the parent's body.
+  const stepsDir = path.join(repoRoot, tree, "assistant", "step");
+  const steps = await fg(["*/STEP.md"], { cwd: stepsDir, absolute: true });
+  const stepBodies = await Promise.all(steps.map((file) => readFile(file, "utf-8")));
+  return skills.map((skill) => {
+    const owned = stepBodies.filter((step) => step.includes(`\nowner: ${skill.id}\n`));
+    return { ...skill, body: [skill.body, ...owned].join("\n") };
+  });
 };
 
 describe.each(TREES)("%s", (tree) => {

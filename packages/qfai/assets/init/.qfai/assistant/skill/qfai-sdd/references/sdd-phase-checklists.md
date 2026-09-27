@@ -27,29 +27,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 - Examples cover meaningful success, boundary, and kept-failure outcomes without inventing product rules.
 - The story and example IDs follow their BF and US scopes and are never reused.
 
-### Defect example seeding (`defect-example-seeding`)
-
-Under a workflow work order of operation `defect-example-seeding`, the stage
-adds the one example a diagnosed missing test needs, for behaviour an existing
-AC already states:
-
-- Append exactly one EX to the `03_Example.md` of the story that owns the AC the
-  diagnosis matched. Its ID is the next free EX ID of that story, and its
-  `AC-Ref` is that AC.
-- Add the new EX ID to the Examples cell of the contract rule that already cites
-  an example of that AC. The rule's Statement is unchanged.
-- When the work order's `recordAreas` name no contract, because rules in several
-  contracts cite that AC's examples, change no file. Return `blocked` with one
-  `debts` entry owned by `operator` that names those contracts: which of them
-  takes the new example is the operator's to settle.
-- Add or change no US or AC, and no existing EX. Write or annotate no test: the
-  new EX stays an example no test annotates.
-- Record the appended EX as one `decisions.md` triage row naming UPDATE:APPEND,
-  the story and the diagnosis as its source. The operation needs no approval, so
-  the row cites no `human_decision`.
-- `.qfai/evidence/sdd-BF-NNNN.md` records the diagnosed defect and the run ID,
-  and names no path under `.qfai/run/`.
-- No concrete-abstract cycle runs, and the evidence gets no cycle row.
+The one example a diagnosed missing test needs is appended as `.qfai/assistant/step/sdd-story/STEP.md#a-diagnosed-missing-test` states.
 
 ## Contracts and business rules
 
@@ -64,7 +42,7 @@ AC already states:
 
 Follow concrete-abstract-cycle.md.
 
-- A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or under `defect-example-seeding`.
+- A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or in an `sdd_append` stage.
 - The finder is a test-design-analyst that wrote none of the BRs it read. Each cycle had one griller, neither the finder nor an author of a targeted item.
 - A finding resting on product intent nothing written states went to the user. A proposed EX that no existing BR, existing AC or the request implies was rejected.
 - Each adopted change took the route its target's age allows, and the affected BRs were rewritten from their updated EXs.

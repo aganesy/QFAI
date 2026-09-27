@@ -21,6 +21,7 @@ import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
   flat,
+  frontMatterOf,
   readDefault,
   readShipped,
   rowOf,
@@ -31,7 +32,7 @@ const RUN = "skill/qfai-run/SKILL.md";
 const PAYLOADS = "skill/qfai-run/references/payloads.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
-const MAINTAIN_RUN = "skill/qfai-maintain/references/orchestrated-mode.md";
+const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
 const SIX_PROFILES = [
   "architecture-heavy",
@@ -61,10 +62,13 @@ function phaseAgents(phase: Phase): string[] {
   return [...AGENT_FIELDS.flatMap((field) => strings(phase[field])), ...grouped];
 }
 
-async function routingEntry(skill: string): Promise<Record<string, unknown> | undefined> {
+async function routingEntry(
+  name: string,
+  key: "skill" | "step" = "skill",
+): Promise<Record<string, unknown> | undefined> {
   const manifest: unknown = parse(await readDefault("agent-routing.yml"));
   const routing = isRecord(manifest) && Array.isArray(manifest.routing) ? manifest.routing : [];
-  return routing.filter(isRecord).find((entry) => entry.skill === skill);
+  return routing.filter(isRecord).find((entry) => entry[key] === name);
 }
 
 async function profiles(): Promise<Record<string, unknown>> {
@@ -175,7 +179,8 @@ describe("qfai-maintain", () => {
   // QFAI:AC-0001-0198-01
   // QFAI:EX-0001-0198-02
   it("edits only non-normative text in the write scope and returns the four receipts", async () => {
-    const skill = await readShipped(MAINTAIN);
+    const skill = await readShipped(MAINTAIN_EDIT);
+    expect(frontMatterOf(await readShipped(MAINTAIN)).steps).toEqual(["maintain-edit"]);
     expect(flat(sectionOf(skill, "## What this is for"))).toMatch(
       /alters what a reader reads and nothing a program or an agent does/i,
     );
@@ -194,23 +199,22 @@ describe("qfai-maintain", () => {
   // QFAI:AC-0001-0198-02
   // QFAI:EX-0001-0198-04
   it("stops before an edit with a semantic effect and returns the run for reclassification", async () => {
-    const skill = await readShipped(MAINTAIN);
+    const skill = await readShipped(MAINTAIN_EDIT);
     const edit = flat(sectionOf(skill, "## The edit"));
     expect(edit).toMatch(/judge whether each planned edit has a semantic effect/i);
     expect(edit).toMatch(/stop before editing as \[A semantic effect\]/i);
     expect(edit).toMatch(/do not make the edit/i);
-    // Invoked by name, the skill stops and says so; in a run, the reference says what it returns.
+    // Invoked by name, the step stops and says so; in a run, it also says what the stage returns.
     const effect = flat(sectionOf(skill, "## A semantic effect"));
     expect(effect).toMatch(/is not a maintenance edit\. nothing is edited/i);
     expect(effect).toMatch(/stop, and report that the change is not a maintenance edit/i);
-    const inRun = flat(sectionOf(await readShipped(MAINTAIN_RUN), "## A semantic effect"));
-    expect(inRun).toMatch(/the run is reclassified from there/i);
-    expect(inRun).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
-    expect(inRun).toMatch(/`debts` holds one entry for the finding/i);
-    expect(inRun).toMatch(/`findingCode` is `maintain-semantic-effect`/);
-    expect(inRun).toMatch(/`owningFlow` is `null`, because a `direct` run binds no flow/i);
-    expect(inRun).toMatch(/`detectingCommand` names the review or the command that found it/i);
-    expect(inRun).toMatch(
+    expect(effect).toMatch(/the run is reclassified from there/i);
+    expect(effect).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
+    expect(effect).toMatch(/`debts` holds one entry for the finding/i);
+    expect(effect).toMatch(/`findingCode` is `maintain-semantic-effect`/);
+    expect(effect).toMatch(/`owningFlow` is `null`, because a `direct` run binds no flow/i);
+    expect(effect).toMatch(/`detectingCommand` names the review or the command that found it/i);
+    expect(effect).toMatch(
       /`resolvingOwner` is the skill that owns that kind of change, never one the `direct` plan names/i,
     );
   });
@@ -229,7 +233,7 @@ describe("the entry skills' routing entries", () => {
     expect([...new Set(runPhases.flatMap(phaseAgents))]).toEqual(["orchestrator"]);
     expect(run?.review_profile, "qfai-run names no review profile").toBeUndefined();
 
-    const maintain = await routingEntry("qfai-maintain");
+    const maintain = await routingEntry("maintain-edit", "step");
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
     const authors = maintainPhases
@@ -254,6 +258,7 @@ describe("shipped text the workflow adds", () => {
     const files = [
       ...(await filesUnder(path.join(SHIPPED_ASSISTANT, "skill", "qfai-run"))),
       ...(await filesUnder(path.join(SHIPPED_ASSISTANT, "skill", "qfai-maintain"))),
+      ...(await filesUnder(path.join(SHIPPED_ASSISTANT, "step", "maintain-edit"))),
       ...(await filesUnder(path.join(PACKAGE_DEFAULTS, "workflows"))),
     ];
     expect(files.length).toBeGreaterThanOrEqual(9);

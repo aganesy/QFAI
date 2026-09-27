@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { completion, finishPlan } from "./finishFixture.js";
+import { issuedSteps, kindSteps, planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -12,16 +13,10 @@ const flowBinding = { flowId: "BF-0007" };
 const bugfixPlan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only"],
-    ["bugfix-implement", "implement", "qfai-implement", "implement"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-implement", "implement", "always"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 
 // A run whose diagnose work order is outstanding, after `replans` earlier replans.
@@ -110,8 +105,7 @@ function fourthRepair(path: string) {
     attempt: 4,
     stageKind: "verify",
     target: { kind: "flow" as const, flowId: "BF-0007" },
-    executor: { skill: "qfai-verify" },
-    operation: "verify-full",
+    steps: kindSteps("verify"),
   };
   const snapshot = {
     run,
@@ -154,7 +148,7 @@ function fourthRepair(path: string) {
   return {
     state: ready?.state,
     halt: accepted.verdict.halt,
-    issued: next?.verdict.workOrder?.executor?.skill,
+    issued: next?.verdict.workOrder?.steps,
   };
 }
 
@@ -174,6 +168,6 @@ it("other-path", () => {
   expect(fourthRepair(".qfai/specs/BF-0007/05_Examples.md")).toEqual({
     state: "ready",
     halt: undefined,
-    issued: "qfai-sdd",
+    issued: issuedSteps("sdd-triage", "sdd-story", "sdd-gate"),
   });
 });

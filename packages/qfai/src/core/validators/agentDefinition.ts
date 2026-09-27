@@ -4,7 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
-import type { QfaiConfig } from "../config.js";
+import { routingEntryName, type QfaiConfig } from "../config.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import {
@@ -183,6 +183,43 @@ export async function readEffectiveRouting(
   return { routing, defaultRouting, profiles };
 }
 
+export type EffectiveRouting = Awaited<ReturnType<typeof readEffectiveRouting>>;
+
+/** The review gate the effective routing gives one step, or one skill that is not split. */
+export type StepReview = {
+  /** The review profile the entry names; undefined for a step with no review of its own. */
+  profile: string | undefined;
+  /** That profile's `always_required` reviewers. */
+  alwaysRequired: string[];
+  /** Every agent the entry binds as mandatory or blocking, and the profile's always-required reviewers. */
+  requiredAgents: string[];
+};
+
+/**
+ * Read one entry's review gate out of routing already resolved by
+ * {@link readEffectiveRouting}. A name with no entry has no gate. A stage takes
+ * the union over the steps it runs.
+ */
+export function stepReview(
+  effective: Pick<EffectiveRouting, "routing" | "profiles">,
+  name: string,
+): StepReview {
+  const entry = effective.routing?.get(name);
+  const profile = entry?.reviewProfile;
+  const reviewers = profile === undefined ? undefined : effective.profiles?.get(profile);
+  const alwaysRequired = [...(reviewers?.reviewers ?? [])]
+    .filter(([, binding]) => binding === "required")
+    .map(([reviewer]) => reviewer);
+  const bound = [...(entry?.agents ?? [])]
+    .filter(([, binding]) => binding === "required")
+    .map(([agent]) => agent);
+  return {
+    profile,
+    alwaysRequired,
+    requiredAgents: [...new Set([...bound, ...alwaysRequired])],
+  };
+}
+
 async function validateRouting(
   routingPath: string,
   overrides: NonNullable<QfaiConfig["routing"]>,
@@ -225,17 +262,24 @@ async function validateRouting(
     const effective = new Map<string, unknown>();
     for (const route of routingRoot.routing) {
       if (route && typeof route === "object" && !Array.isArray(route)) {
-        const skill: unknown = Reflect.get(route, "skill");
-        if (typeof skill === "string") effective.set(skill, route);
+        const name = routingEntryName({
+          step: Reflect.get(route, "step"),
+          skill: Reflect.get(route, "skill"),
+        });
+        if (name !== undefined) effective.set(name, route);
       }
     }
-    for (const route of overrides) effective.set(route.skill, route);
+    for (const route of overrides) {
+      const name = routingEntryName(route);
+      if (name !== undefined) effective.set(name, route);
+    }
     for (const [routeIndex, route] of [...effective.values()].entries()) {
       if (!route || typeof route !== "object" || Array.isArray(route)) {
         continue;
       }
       const routeObj = route as Record<string, unknown>;
-      const source = overrides.some((entry) => entry.skill === routeObj.skill)
+      const routeName = routingEntryName(routeObj);
+      const source = overrides.some((entry) => routingEntryName(entry) === routeName)
         ? "qfai.config.yaml"
         : rel;
       const routedEntry = collectRouteHeader(
@@ -243,7 +287,7 @@ async function validateRouting(
         routed,
         issues,
         source,
-        formatSkillLabel(routeObj.skill, routeIndex),
+        formatSkillLabel(routeName, routeIndex),
       );
       if (!Array.isArray(routeObj.phases)) {
         continue;
@@ -259,7 +303,7 @@ async function validateRouting(
             issues.push(
               issue(
                 "QFAI-AGENT-013",
-                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares iteration ${JSON.stringify(declared)}; allowed: ${[...ROUTING_ITERATIONS].sort().join(", ")}`,
+                `${formatSkillLabel(routeName, routeIndex)} phase[${phaseIndex}] declares iteration ${JSON.stringify(declared)}; allowed: ${[...ROUTING_ITERATIONS].sort().join(", ")}`,
                 "error",
                 source,
                 "agentDefinition.routingIteration",
@@ -273,7 +317,7 @@ async function validateRouting(
             issues.push(
               issue(
                 "QFAI-AGENT-013",
-                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares rerun_policy ${JSON.stringify(declared)}; allowed: ${[...RERUN_POLICIES].sort().join(", ")}`,
+                `${formatSkillLabel(routeName, routeIndex)} phase[${phaseIndex}] declares rerun_policy ${JSON.stringify(declared)}; allowed: ${[...RERUN_POLICIES].sort().join(", ")}`,
                 "error",
                 source,
                 "agentDefinition.rerunPolicy",
@@ -286,7 +330,7 @@ async function validateRouting(
           phaseObj.mandatory_agents,
           agentIds,
           issues,
-          formatSkillLabel(routeObj.skill, routeIndex),
+          formatSkillLabel(routeName, routeIndex),
           routeIndex,
           phaseIndex,
           "mandatory_agents",
@@ -296,7 +340,7 @@ async function validateRouting(
           phaseObj.conditional_agents,
           agentIds,
           issues,
-          formatSkillLabel(routeObj.skill, routeIndex),
+          formatSkillLabel(routeName, routeIndex),
           routeIndex,
           phaseIndex,
           "conditional_agents",
@@ -306,7 +350,7 @@ async function validateRouting(
           phaseObj.blocking_agents,
           agentIds,
           issues,
-          formatSkillLabel(routeObj.skill, routeIndex),
+          formatSkillLabel(routeName, routeIndex),
           routeIndex,
           phaseIndex,
           "blocking_agents",
@@ -318,7 +362,7 @@ async function validateRouting(
               group,
               agentIds,
               issues,
-              formatSkillLabel(routeObj.skill, routeIndex),
+              formatSkillLabel(routeName, routeIndex),
               routeIndex,
               phaseIndex,
               "parallel_groups",
@@ -332,7 +376,7 @@ async function validateRouting(
           source,
           phaseObj,
           issues,
-          formatSkillLabel(routeObj.skill, routeIndex),
+          formatSkillLabel(routeName, routeIndex),
           phaseIndex,
         );
         if (routedEntry) {
@@ -363,7 +407,7 @@ const PHASE_AGENT_FIELDS = [
 ] as const;
 
 /**
- * Register a routing entry under its skill name and remember the review
+ * Register a routing entry under its step or skill name and remember the review
  * profile it declares. Unnamed routes are skipped: there is no skill whose
  * `roles:` they could be held against.
  *
@@ -387,10 +431,12 @@ function collectRouteHeader(
   routingPathRel: string,
   skillLabel: string,
 ): SkillRouting | undefined {
-  if (typeof routeObj.skill !== "string" || routeObj.skill.length === 0) {
+  const name = routingEntryName(routeObj);
+  if (name === undefined) {
     return undefined;
   }
-  const entry = routed.get(routeObj.skill) ?? emptySkillRouting();
+  const kind = name === routeObj.step ? "step" : "skill";
+  const entry = routed.get(name) ?? emptySkillRouting(kind);
   const declared = routeObj.review_profile;
   if (typeof declared === "string" && declared.trim().length > 0) {
     const profile = declared.trim();
@@ -411,7 +457,7 @@ function collectRouteHeader(
       ),
     );
   }
-  routed.set(routeObj.skill, entry);
+  routed.set(name, entry);
   return entry;
 }
 

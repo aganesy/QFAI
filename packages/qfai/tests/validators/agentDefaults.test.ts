@@ -7,7 +7,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { parseAgentCardKind, renderCodexAgentToml } from "../../src/core/codexAgentToml.js";
-import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
+import {
+  readEffectiveRouting,
+  stepReview,
+  validateAgentDefinition,
+} from "../../src/core/validators/agentDefinition.js";
 
 const CARD = `---
 name: completion-reviewer
@@ -109,7 +113,7 @@ describe("agent cards and package defaults", () => {
       ...defaultConfig,
       routing: [
         {
-          skill: "qfai-sdd",
+          step: "sdd-triage",
           phases: [{ id: "review", mandatory_agents: ["completion-reviewer"] }],
           review_profile: "default",
         },
@@ -118,7 +122,7 @@ describe("agent cards and package defaults", () => {
     expect(issues.some((entry) => /^QFAI-AGENT-00[1-3]$/.test(entry.code))).toBe(false);
     expect(
       issues.filter(
-        (entry) => entry.code === "QFAI-AGENT-008" && entry.message.includes("qfai-sdd"),
+        (entry) => entry.code === "QFAI-AGENT-008" && entry.message.includes("sdd-triage"),
       ),
     ).toEqual([]);
   });
@@ -129,7 +133,7 @@ describe("agent cards and package defaults", () => {
       ...defaultConfig,
       routing: [
         {
-          skill: "qfai-sdd",
+          step: "sdd-triage",
           phases: [{ id: "review", mandatory_agents: ["missing-reviewer"] }],
           review_profile: "default",
         },
@@ -140,5 +144,45 @@ describe("agent cards and package defaults", () => {
         (entry) => entry.code === "QFAI-AGENT-008" && entry.message.includes("missing-reviewer"),
       ),
     ).toEqual([expect.objectContaining({ file: "qfai.config.yaml" })]);
+  });
+});
+
+describe("stepReview", () => {
+  it("reads a step's profile and required reviewers from the package routing", async () => {
+    const effective = await readEffectiveRouting(defaultConfig);
+    expect(stepReview(effective, "sdd-contract")).toEqual({
+      profile: "architecture-heavy",
+      alwaysRequired: ["completion-reviewer", "architecture-reviewer"],
+      requiredAgents: ["solution-architect", "completion-reviewer", "architecture-reviewer"],
+    });
+  });
+
+  it("gives a step with no review of its own no profile and no reviewers", async () => {
+    const review = stepReview(await readEffectiveRouting(defaultConfig), "verify-context");
+    expect(review.profile).toBeUndefined();
+    expect(review.alwaysRequired).toEqual([]);
+    expect(review.requiredAgents).toEqual(["delivery-planner", "qa-strategist"]);
+  });
+
+  it("follows a project override keyed by the step name", async () => {
+    const effective = await readEffectiveRouting({
+      routing: [
+        {
+          step: "sdd-contract",
+          phases: [{ id: "review", mandatory_agents: ["completion-reviewer"] }],
+          review_profile: "default",
+        },
+      ],
+    });
+    expect(stepReview(effective, "sdd-contract")).toEqual({
+      profile: "default",
+      alwaysRequired: ["completion-reviewer"],
+      requiredAgents: ["completion-reviewer"],
+    });
+    expect(stepReview(effective, "no-such-step")).toEqual({
+      profile: undefined,
+      alwaysRequired: [],
+      requiredAgents: [],
+    });
   });
 });

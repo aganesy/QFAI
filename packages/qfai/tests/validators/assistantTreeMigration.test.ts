@@ -20,7 +20,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seed4LayerTree(root: string): Promise<void> {
-  for (const layer of ["rule", "skill", "agent", "prompt"]) {
+  for (const layer of ["rule", "skill", "step", "agent", "prompt"]) {
     const dir = path.join(root, ".qfai", "assistant", layer);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, ".gitkeep"), `# ${layer}\n`, "utf-8");
@@ -144,7 +144,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // QFAI:EX-0001-0043-01
-  it("allows skill.local and reports a legacy catalog directory", async () => {
+  it("allows step and skill.local and reports a legacy catalog directory", async () => {
     const root = await newRoot("treemig-catalog");
     try {
       await seed4LayerTree(root);
@@ -160,7 +160,7 @@ describe("assistantTreeMigration validator", () => {
       ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
       const catalogIssue = changed.find((found) => found.file === ".qfai/assistant/catalog/");
       expect(catalogIssue?.severity).toBe("warning");
-      expect(catalogIssue?.message).toContain("rule, skill, agent, prompt");
+      expect(catalogIssue?.message).toContain("rule, skill, step, agent, prompt");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -11,8 +11,6 @@
     "stageInstanceId",
     "attempt",
     "stageKind",
-    "operation",
-    "executor",
     "scope",
     "recordAreas",
     "inputs",
@@ -23,28 +21,79 @@
     "priorStageReceiptRefs",
     "expectedSequence"
   ],
-  "if": {
-    "required": ["stageKind"],
-    "properties": {
-      "stageKind": {
-        "enum": ["route", "discussion", "maintenance", "verify"]
+  "allOf": [
+    {
+      "if": {
+        "required": ["stageKind"],
+        "properties": {
+          "stageKind": {
+            "enum": ["route", "discussion", "maintenance", "verify"]
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": ["target"],
+          "properties": {
+            "target": true
+          }
+        }
+      },
+      "else": {
+        "required": ["target"],
+        "properties": {
+          "target": true
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["stageKind"],
+        "properties": {
+          "stageKind": {
+            "const": "route"
+          }
+        }
+      },
+      "then": {
+        "required": ["executor", "operation"],
+        "properties": {
+          "executor": true,
+          "operation": true
+        },
+        "not": {
+          "required": ["steps"],
+          "properties": {
+            "steps": true
+          }
+        }
+      },
+      "else": {
+        "required": ["steps"],
+        "properties": {
+          "steps": true
+        },
+        "allOf": [
+          {
+            "not": {
+              "required": ["executor"],
+              "properties": {
+                "executor": true
+              }
+            }
+          },
+          {
+            "not": {
+              "required": ["operation"],
+              "properties": {
+                "operation": true
+              }
+            }
+          }
+        ]
       }
     }
-  },
-  "then": {
-    "not": {
-      "required": ["target"],
-      "properties": {
-        "target": true
-      }
-    }
-  },
-  "else": {
-    "required": ["target"],
-    "properties": {
-      "target": true
-    }
-  },
+  ],
   "properties": {
     "runId": {
       "type": "string",
@@ -67,10 +116,12 @@
       "minLength": 1
     },
     "operation": {
+      "description": "The routing work order's operation, `route`.",
       "type": "string",
       "minLength": 1
     },
     "executor": {
+      "description": "The routing work order's executor, `qfai-run`.",
       "type": "object",
       "additionalProperties": false,
       "required": ["skill"],
@@ -78,6 +129,26 @@
         "skill": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "steps": {
+      "description": "A plan stage's active steps, in the order they run, each with its entry file's project-relative path.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "path"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^\\.qfai/assistant/step/[a-z][a-z0-9-]*/STEP\\.md$"
+          }
         }
       }
     },

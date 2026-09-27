@@ -37,14 +37,24 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
-// `qfai-run` and every skill a built-in plan dispatches to.
+// The skill a plan step belongs to, by its name: `<owner>-<name>`, owner without `qfai-`.
+function ownerOf(step: unknown): string | undefined {
+  const name = typeof step === "string" ? step : record(step).step;
+  const prefix = typeof name === "string" ? name.split("-")[0] : undefined;
+  return prefix && prefix !== "common" ? `qfai-${prefix}` : undefined;
+}
+
+// `qfai-run` and every skill owning a step a built-in plan runs.
 async function entrySkills(): Promise<string[]> {
   const skills = new Set<string>(["qfai-run"]);
   for (const name of await readdir(PLANS)) {
     const plan = record(parseYaml(await readFile(path.join(PLANS, name), "utf8")));
     for (const stage of Array.isArray(plan.stages) ? plan.stages : []) {
-      const skill = record(stage).skill;
-      for (const each of Array.isArray(skill) ? skill : [skill]) skills.add(String(each));
+      const steps: unknown = record(stage).steps;
+      for (const step of Array.isArray(steps) ? steps : []) {
+        const owner = ownerOf(step);
+        if (owner) skills.add(owner);
+      }
     }
   }
   return [...skills].sort();

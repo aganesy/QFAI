@@ -3,6 +3,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
@@ -13,27 +14,9 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
   const boundedPlan = {
     route: "bounded-change",
     stages: [
-      {
-        stageInstanceId: "sdd-delta",
-        stageKind: "sdd_delta",
-        skill: "qfai-sdd",
-        operation: "update-or-applicability-check",
-        when: "always",
-      },
-      {
-        stageInstanceId: "implement",
-        stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
-        when: "always",
-      },
-      {
-        stageInstanceId: "verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("sdd-delta", "sdd_delta", "always"),
+      planStage("implement", "implement", "always"),
+      planStage("verify", "verify", "always"),
     ],
   };
   const snapshot = {

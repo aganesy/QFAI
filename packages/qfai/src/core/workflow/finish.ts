@@ -1,12 +1,12 @@
 import {
   areaCovers,
   everyStageResult,
-  executorSkill,
   isAuthorOrRecommender,
   isRunChange,
   refusedInput,
 } from "./common.js";
 import { activeStages } from "./stages.js";
+import { activeSteps, ownerOfSteps, stepNamesOf } from "./steps.js";
 import type {
   FindingIdentity,
   Severity,
@@ -52,7 +52,8 @@ function validateGate(snapshot: WorkflowSnapshot, failing: FindingIdentity[]): W
 function runStateUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   const { run, outstandingWorkOrder } = snapshot;
   if (run.state === "running") {
-    const owner = outstandingWorkOrder?.executor?.skill ?? "operator";
+    const owner =
+      outstandingWorkOrder?.executor?.skill ?? ownerOfSteps(stepNamesOf(outstandingWorkOrder));
     const subject = outstandingWorkOrder?.workOrderId ?? "work-order";
     return unmetOf("work-order-outstanding", [subject], owner);
   }
@@ -78,7 +79,7 @@ function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowU
       unmetOf(
         "stage-unaccepted",
         [stage.stageInstanceId],
-        executorSkill(stage, snapshot.diagnosis) ?? "operator",
+        ownerOfSteps(activeSteps(stage, plan, snapshot.diagnosis)),
       ),
     );
 }

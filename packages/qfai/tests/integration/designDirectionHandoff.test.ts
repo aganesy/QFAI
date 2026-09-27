@@ -68,7 +68,7 @@ it("/qfai-sdd authors root DESIGN.md from the recorded direction, and asks when 
     reads: authoring.includes("`01_Context.md#Design Direction` is the decision the user made"),
     asks: authoring.includes("stop and ask rather than pick one"),
     writtenBySdd: intake.includes(
-      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `03_contract` step, which reads those records",
+      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads those records",
     ),
   }).toEqual({ reads: true, asks: true, writtenBySdd: true });
 });

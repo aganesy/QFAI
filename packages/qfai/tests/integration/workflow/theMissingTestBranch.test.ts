@@ -11,7 +11,7 @@ it("Load the shipped bugfix", async () => {
 
   expect({
     stages: bugfix.stages.map((stage) => [stage.kind, stage.when]),
-    last: bugfix.stages.at(-1)?.operation,
+    last: bugfix.stages.at(-1)?.steps.map((step) => step.name),
   }).toEqual({
     stages: [
       ["diagnose", "always"],
@@ -22,6 +22,6 @@ it("Load the shipped bugfix", async () => {
       ["test_fix", "test_defect_found"],
       ["verify", "always"],
     ],
-    last: "verify-full",
+    last: ["verify-context", "verify-qfai-gate", "verify-repo-gate"],
   });
 });

@@ -12,14 +12,14 @@ Scenario: The prototyping skill follows the stage-skill handover
   When qfai-prototyping starts with no name invocation and no work order
   Then it edits nothing and passes the request to qfai-run
   And with a valid work order it does only that work
-  And its SKILL.md cites references/orchestrated-mode.md with one line
 
 # AC-0001-0211-02
 # Parent: US-0001-0211
-Scenario: The prototyping skill declares its operation
-  Given references/orchestrated-mode.md of qfai-prototyping
-  When its Operations table is read
-  Then it lists exactly the operations the plan vocabulary assigns to qfai-prototyping
+Scenario: The prototyping skill lists the steps the plans run for prototyping
+  Given the qfai-prototyping SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-prototyping
+  And every step a plan gives a prototype stage is one of them
 
 # AC-0001-0211-03
 # Parent: US-0001-0211

@@ -41,6 +41,8 @@ export type WriteSetArea =
   | "test-annotations"
   | "skills"
   | "skill-archive"
+  | "steps"
+  | "step-archive"
   | "skill-links"
   | "entry-points";
 export type ReportSection = "Cases to examples" | "Git index" | "For a person" | "Annotations kept";
@@ -501,6 +503,12 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
     }
     case "skill-archive":
       return inside(path.join(root, SKILL_ARCHIVE_DIR), target);
+    case "steps": {
+      const steps = path.join(root, ".qfai", "assistant", "step");
+      return target !== steps && inside(steps, target);
+    }
+    case "step-archive":
+      return inside(path.join(root, path.dirname(SKILL_ARCHIVE_DIR), "step"), target);
     case "skill-links":
       return SKILL_INTEGRATION_DIRS.some((link) => inside(path.join(root, link), target));
     case "entry-points":

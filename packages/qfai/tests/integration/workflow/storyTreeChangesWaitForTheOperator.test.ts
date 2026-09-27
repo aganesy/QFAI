@@ -13,6 +13,7 @@ import {
   list,
   removeProjects,
   resultFor,
+  stepNames,
   submit,
   workflow,
   write,
@@ -91,9 +92,9 @@ it("Drift inside the checked scope is a repair owned by story authoring, not a h
   );
   const next = workflow(root, ["next", "--run", runId]);
 
-  expect([field(repair.json, "run.state"), field(next.json, "workOrder.executor.skill")]).toEqual([
+  expect([field(repair.json, "run.state"), stepNames(next.json)]).toEqual([
     "ready",
-    "qfai-sdd",
+    ["sdd-triage", "sdd-story", "sdd-gate"],
   ]);
 }, 300_000);
 

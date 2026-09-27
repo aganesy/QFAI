@@ -2,6 +2,10 @@ route: discovery
 stages:
   - id: discussion
     kind: discussion
-    skill: qfai-discussion
-    operation: resolve-unsettled-product-scope
+    steps:
+      - discussion-research
+      - discussion-interview
+      - discussion-pack
+      - discussion-oq
+      - { step: discussion-uiux, when: proposed }
     when: full_discussion_needed

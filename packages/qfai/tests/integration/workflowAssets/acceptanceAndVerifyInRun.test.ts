@@ -1,15 +1,18 @@
 /**
  * Integration: what `/qfai-atdd` and `/qfai-verify` do when a workflow run hands them a work order.
  *
- * Reads each skill's shipped `references/orchestrated-mode.md`. The workflow core's checks at
- * `accept` are not this module's.
+ * Reads the shipped files that state each skill's behaviour inside a run. The workflow core's
+ * checks at `accept` are not this module's.
  */
 import { describe, expect, it } from "vitest";
 
 import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssistant.js";
 
-const ATDD = "skill/qfai-atdd/references/orchestrated-mode.md";
-const VERIFY = "skill/qfai-verify/references/orchestrated-mode.md";
+const SCAFFOLD = "step/atdd-scaffold/STEP.md";
+const AUTHOR = "step/atdd-author/STEP.md";
+const TEST_FIX = "step/atdd-test-fix/STEP.md";
+const VERIFY = "step/verify-repo-gate/STEP.md";
+const OPERATING = "rule/shared-skill-operating-baseline.md";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -21,22 +24,22 @@ describe("qfai-atdd in a workflow run", () => {
   // QFAI:AC-0001-0204-01
   // QFAI:EX-0001-0204-01
   it("works only the bound flow's BF and AC items, gated by that flow, and hands over otherwise", async () => {
-    const entry = await section(ATDD, "## Entry check");
-    expect(entry).toMatch(
-      /a request with no work order and no name is passed to `qfai-run` with nothing edited/i,
+    const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
+    expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
+    expect(rowOf(entry, "| `worker`")).toMatch(/Check the run, stage and work-order IDs/);
+    const reads = await section(SCAFFOLD, "## Reads");
+    expect(reads).toMatch(/the work order's `target` names it, and no question asks which flow/i);
+    const procedure = await section(SCAFFOLD, "## Procedure");
+    expect(procedure).toMatch(/npx qfai validate --profile atdd --flow BF-NNNN --fail-on error/);
+    expect(procedure).toMatch(
+      /the tests to write are the BF and AC items of the work order's `obligations` that no test annotates/i,
     );
-    expect(entry).toMatch(/checks the run, stage instance and work-order IDs/i);
-    const bound = await section(ATDD, "## The bound flow");
-    expect(bound).toMatch(
-      /runs with `--flow BF-NNNN` for that flow, and no question asks which flow/i,
-    );
-    expect(bound).toMatch(/only for the BF and AC items of the work order's `obligations`/i);
   });
 
   // QFAI:AC-0001-0204-03
   // QFAI:EX-0001-0204-03
   it("reports expected_red only for a failure at the assertion", async () => {
-    const text = sectionOf(await readShipped(ATDD), "## RED at the assertion");
+    const text = sectionOf(await readShipped(AUTHOR), "### RED at the assertion");
     expect(rowOf(text, "`assertion`")).toMatch(/`expected_red`/);
     for (const kind of ["collection", "import", "startup", "timeout"]) {
       expect(rowOf(text, `\`${kind}\``), kind).toMatch(/`unrun` or `blocked`/);
@@ -47,7 +50,7 @@ describe("qfai-atdd in a workflow run", () => {
   // QFAI:AC-0001-0204-04
   // QFAI:EX-0001-0204-04
   it("hands findings another flow owns on as debts, each with its flow and owner", async () => {
-    const text = await section(ATDD, "## Findings another flow owns");
+    const text = await section(AUTHOR, "## Findings another flow owns");
     expect(text).toMatch(
       /returns outcome `accepted_with_debt`, with one `debts` entry per finding/i,
     );
@@ -58,42 +61,52 @@ describe("qfai-atdd in a workflow run", () => {
   // QFAI:AC-0001-0204-05
   // QFAI:EX-0001-0204-05
   it("asks for a seam and takes RED in the same stage instance, inside the run", async () => {
-    const text = await section(ATDD, "## The seam round trip");
+    const text = await section(AUTHOR, "### The seam round trip");
     expect(text).toMatch(/returned `needs_repair` with a seam request \(`seamRequest`\)/i);
     expect(text).toMatch(/the same acceptance stage instance runs as a new attempt and takes RED/i);
     expect(text).toMatch(/only then is the full implementation handed on/i);
     expect(text).toMatch(/no second run starts/i);
-    expect(text).toMatch(/`references\/red-provenance\.md`/);
+    const procedure = await section(AUTHOR, "## Procedure");
+    expect(procedure).toMatch(
+      /`\.qfai\/assistant\/skill\/qfai-atdd\/references\/red-provenance\.md`/,
+    );
   });
 
   // QFAI:AC-0001-0204-06
   // QFAI:EX-0001-0204-06
   it("decides each layer from the current story tree, never from the snapshot", async () => {
-    const text = await section(ATDD, "## The layer decision");
-    expect(text).toMatch(/reused only for the inputs it covers/i);
-    expect(text).toMatch(/decided from the current story tree at every stage start/i);
-    expect(text).toMatch(/never taken from the snapshot/i);
-    const bound = await section(ATDD, "## The bound flow");
-    expect(bound).toMatch(/an EX is `\/qfai-implement`'s/i);
+    const text = await section(SCAFFOLD, "## Procedure");
+    expect(text).toMatch(
+      /decide the layer each obligation needs from the current story tree, at every stage start/i,
+    );
+    expect(text).toMatch(/reused only for the inputs it covers, never for this decision/i);
+    expect(text).toMatch(/an EX belongs to `\/qfai-implement`/i);
   });
 
   // QFAI:AC-0001-0205-01
   // QFAI:EX-0001-0205-01
   it("keeps a test fix on the same annotated IDs, with a review and a re-run", async () => {
-    const text = await section(ATDD, "## `test-fix`");
-    expect(text).toMatch(/names the IDs the test annotates before and after the fix/i);
-    expect(text).toMatch(/`citedBefore`, `citedAfter`/);
-    expect(text).toMatch(/an independent review \(`reviewRef`\) and a re-run \(`rerunRef`\)/i);
-    expect(text).toMatch(/the fixed test annotates the same IDs as before/i);
-    expect(text).toMatch(/no story, contract or `decisions\.md` file changes/i);
-    expect(text).toMatch(/recorded in `\.qfai\/evidence\/atdd-BF-NNNN\.md`/);
+    const result = await section(TEST_FIX, "## Result");
+    expect(result).toMatch(/names the IDs the test annotates before and after the fix/i);
+    expect(result).toMatch(/`citedBefore`, `citedAfter`/);
+    expect(result).toMatch(/the independent review \(`reviewRef`\) and the re-run \(`rerunRef`\)/i);
+    const procedure = await section(TEST_FIX, "## Procedure");
+    expect(procedure).toMatch(/it annotates the same IDs as before/i);
+    expect(procedure).toMatch(/no story, contract or `decisions\.md` file changes/i);
+    const writes = await section(TEST_FIX, "## Writes");
+    expect(writes).toMatch(
+      /the re-run, the proof and the grilling block in `\.qfai\/evidence\/atdd-BF-NNNN\.md`/i,
+    );
   });
 
   // QFAI:AC-0001-0205-02
   // QFAI:EX-0001-0205-02
   it("returns a test fix that changes what is checked as needs_repair for qfai-sdd", async () => {
-    const text = await section(ATDD, "## `test-fix`");
-    expect(text).toMatch(/would check a different ID returns `needs_repair`/i);
+    const text = await section(TEST_FIX, "## Procedure");
+    expect(text).toMatch(
+      /a fix after which the expectation would check a different ID is not a test fix/i,
+    );
+    expect(text).toMatch(/return `needs_repair`/i);
     expect(text).toMatch(/with `qfai-sdd` as its `resolvingOwner`/i);
     expect(text).toMatch(/no accepted test fix is returned for it/i);
   });
@@ -101,9 +114,9 @@ describe("qfai-atdd in a workflow run", () => {
   // QFAI:AC-0001-0205-03
   // QFAI:EX-0001-0205-03
   it("takes a test fix whose first matched ID is a BF or an AC, and leaves an EX", async () => {
-    const text = await section(ATDD, "## `test-fix`");
-    expect(text).toMatch(/the first ID of the diagnosis's `matchedIds` is a BF or an AC/i);
-    expect(text).toMatch(/an EX is `qfai-implement`'s/i);
+    const text = await section(TEST_FIX, "## When it runs");
+    expect(text).toMatch(/the first ID of its `matchedIds` is a BF or an AC/i);
+    expect(text).toMatch(/an EX-layer test is `\/qfai-implement`'s/i);
   });
 });
 
@@ -142,7 +155,7 @@ describe("qfai-verify in a workflow run", () => {
   it("leaves verify.json unchanged inside a run", async () => {
     const text = await section(VERIFY, "## The stage result");
     expect(text).toMatch(/`verify\.json` itself is unchanged inside a run/i);
-    expect(text).toMatch(/`references\/verify-output-contract\.md`/);
+    expect(text).toMatch(/qfai-verify\/references\/verify-output-contract\.md`/);
     expect(text).toMatch(/the run's values stay in the stage result/i);
   });
 
@@ -170,10 +183,12 @@ describe("qfai-verify in a workflow run", () => {
   // QFAI:AC-0001-0215-06
   // QFAI:EX-0001-0215-07
   it("runs only the work order's gates and hands over a request with no work order", async () => {
-    const text = await section(VERIFY, "## Entry check");
-    expect(text).toMatch(
-      /a request with no work order and no name is passed to `qfai-run` with nothing edited/i,
+    const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
+    expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
+    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
+    const steps = await section(OPERATING, "### A work order's steps");
+    expect(steps).toMatch(
+      /runs the steps the work order names, in its `steps:` list, and no other/i,
     );
-    expect(text).toMatch(/then does only that work order's work/i);
   });
 });

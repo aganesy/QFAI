@@ -8,6 +8,7 @@ import {
   CANONICAL_REQUIRED_SIDECAR_FILES,
   FORBIDDEN_LEGACY_PATTERNS,
 } from "../../src/core/validators/uix/threeLayer.js";
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -284,10 +285,11 @@ describe("discussion skill template integration", () => {
     );
     expect(uiBearingConditions).toMatch(/Visual-prototyping surfaces/i);
 
-    // SKILL.md states the same requirement independently; if it still demands
-    // brand answers from every UI-bearing pack the carve-out is unreachable.
-    const skill = await readFile(skillPath, "utf-8");
-    expect(skill).toMatch(/`03_contract` step skips the freeze/);
+    // The skill and its steps state the same requirement independently; if they
+    // still demand brand answers from every UI-bearing pack the carve-out is
+    // unreachable.
+    const skill = await readDiscussionSkill(assistantBase);
+    expect(skill).toMatch(/`common-design-md` step skips the freeze/);
     expect(skill).toMatch(/the brand questions do not apply to it/);
     expect(skill).toMatch(/skip for cli-only and non-ui targets/);
 
@@ -385,7 +387,7 @@ describe("discussion skill template integration", () => {
   // `cli` as an execution surface, so discussion must not hand a cli pack a
   // recommendation the next skill refuses to run.
   it("cli pack に prototyping.yaml を生成させない", async () => {
-    const skill = await readFile(skillPath, "utf-8");
+    const skill = await readDiscussionSkill(assistantBase);
     const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
     const prototypingYaml = await readFile(
       path.join(templateBase, "templates", "prototyping.yaml"),

@@ -2552,9 +2552,11 @@ describe("the shipped sealed-loop guidance matches the gates", () => {
   const repoRootDir = path.resolve(process.cwd(), "..", "..");
   const readShipped = (tree: string, relative: string): Promise<string> =>
     readFile(path.join(repoRootDir, tree, "assistant/skill/qfai-prototyping", relative), "utf-8");
+  const readRecoverStep = (tree: string): Promise<string> =>
+    readFile(path.join(repoRootDir, tree, "assistant/step/prototyping-recover/STEP.md"), "utf-8");
 
   it.each(trees)("%s: does not promise a same-cycle retry after max-iterations", async (tree) => {
-    const skill = await readShipped(tree, "SKILL.md");
+    const skill = await readRecoverStep(tree);
     expect(skill).toContain("`max-iterations` does not seal either");
     expect(skill).toContain("exit `65`");
     expect(skill).not.toContain(
@@ -2567,7 +2569,7 @@ describe("the shipped sealed-loop guidance matches the gates", () => {
   });
 
   it.each(trees)("%s: calls the accepted-cycle rerun a state read, not a rerun", async (tree) => {
-    const skill = await readShipped(tree, "SKILL.md");
+    const skill = await readRecoverStep(tree);
     expect(skill).toContain("it is a state read, not a rerun");
     expect(skill).not.toContain("Re-running the accepted cycle is permitted.");
 

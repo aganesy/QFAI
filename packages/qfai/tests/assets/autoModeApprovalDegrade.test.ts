@@ -12,7 +12,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("qfai-sdd approval in no-question mode", () => {
   for (const tree of trees) {
     it(`${tree}: leaves approval-required decisions pending before dependent writes`, async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(skill).toContain("--auto");
       expect(skill).toContain("sdd-triage.md");

@@ -27,7 +27,7 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 ## Sidecar Family SSOT
 
 For UI-bearing packs on a visual-prototyping surface the brand SSOT is root
-`DESIGN.md`, which `/qfai-sdd`'s `03_contract` step authors from this pack and freezes into
+`DESIGN.md`, which `/qfai-sdd`'s `common-design-md` step authors from this pack and freezes into
 `<paths.contractsDir>/design/DESIGN.md.lock.yaml`. Discussion records the direction
 behind it and writes the screen-level UX inputs:
 
@@ -55,7 +55,7 @@ inputs above — those have downstream readers. It must NOT be blocked on
 inventing brand colors, font stacks, a type scale, spacing tokens, radii or
 shadows:
 
-- Do not interview for brand direction on a cli-only pack. `/qfai-sdd`'s `03_contract` step
+- Do not interview for brand direction on a cli-only pack. `/qfai-sdd`'s `common-design-md` step
   skips the DESIGN.md freeze for it, and nothing on the `cli` path reads a
   token value.
 - Screen contracts stay mandatory, including their `route:` field, which on

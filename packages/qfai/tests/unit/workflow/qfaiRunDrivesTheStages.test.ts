@@ -3,25 +3,15 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
+
+type Steps = ReturnType<typeof kindSteps>;
 
 it("direct", () => {
   const flowBinding = { flowId: "BF-0018" };
   const plan = {
     route: "direct",
-    stages: [
-      {
-        stageInstanceId: "direct-edit",
-        stageKind: "maintenance",
-        skill: "qfai-maintain",
-        operation: "non-normative-edit",
-      },
-      {
-        stageInstanceId: "direct-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-      },
-    ],
+    stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
   };
   let run = { id: "run-direct", state: "ready", sequence: 4 };
   let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
@@ -29,8 +19,7 @@ it("direct", () => {
   const issued: {
     stageInstanceId: string;
     stageKind: string;
-    skill: unknown;
-    operation: unknown;
+    steps: unknown;
     target: unknown;
   }[] = [];
   const resultDocuments = new Map<string, { stageInstanceId: string; outcome: string }>();
@@ -45,14 +34,7 @@ it("direct", () => {
     issued.push({
       stageInstanceId: workOrder.stageInstanceId,
       stageKind: workOrder.stageKind,
-      skill:
-        "executor" in workOrder &&
-        workOrder.executor &&
-        typeof workOrder.executor === "object" &&
-        "skill" in workOrder.executor
-          ? workOrder.executor.skill
-          : undefined,
-      operation: "operation" in workOrder ? workOrder.operation : undefined,
+      steps: workOrder.steps,
       target: workOrder.target,
     });
 
@@ -128,15 +110,13 @@ it("direct", () => {
       {
         stageInstanceId: "direct-edit",
         stageKind: "maintenance",
-        skill: "qfai-maintain",
-        operation: "non-normative-edit",
+        steps: kindSteps("maintenance"),
         target: undefined,
       },
       {
         stageInstanceId: "direct-verify",
         stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
+        steps: kindSteps("verify"),
         target: undefined,
       },
     ],
@@ -158,34 +138,10 @@ it("bounded-change", () => {
   const plan = {
     route: "bounded-change",
     stages: [
-      {
-        stageInstanceId: "bounded-sdd-delta",
-        stageKind: "sdd_delta",
-        skill: "qfai-sdd",
-        operation: "update-or-applicability-check",
-        when: "always",
-      },
-      {
-        stageInstanceId: "bounded-acceptance",
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        when: "acceptance_obligations_unmet",
-      },
-      {
-        stageInstanceId: "bounded-implement",
-        stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
-        when: "always",
-      },
-      {
-        stageInstanceId: "bounded-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("bounded-sdd-delta", "sdd_delta", "always"),
+      planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
+      planStage("bounded-implement", "implement", "always"),
+      planStage("bounded-verify", "verify", "always"),
     ],
   };
   const facts = { acceptanceObligationsUnmet: true };
@@ -195,8 +151,7 @@ it("bounded-change", () => {
   const issued: {
     stageInstanceId: string;
     stageKind: string;
-    skill: string | undefined;
-    operation: string | undefined;
+    steps: Steps | undefined;
     target: unknown;
   }[] = [];
   const resultDocuments = new Map<string, { stageInstanceId: string; outcome: string }>();
@@ -210,8 +165,7 @@ it("bounded-change", () => {
     issued.push({
       stageInstanceId: workOrder.stageInstanceId,
       stageKind: workOrder.stageKind,
-      skill: workOrder.executor?.skill,
-      operation: workOrder.operation,
+      steps: workOrder.steps,
       target: workOrder.target,
     });
 
@@ -285,29 +239,25 @@ it("bounded-change", () => {
       {
         stageInstanceId: "bounded-sdd-delta",
         stageKind: "sdd_delta",
-        skill: "qfai-sdd",
-        operation: "update-or-applicability-check",
+        steps: kindSteps("sdd_delta"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-acceptance",
         stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
+        steps: kindSteps("acceptance"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-implement",
         stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
+        steps: kindSteps("implement"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-verify",
         stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
+        steps: kindSteps("verify"),
         target: undefined,
       },
     ],
@@ -331,55 +281,13 @@ it("bugfix", () => {
   const plan = {
     route: "bugfix",
     stages: [
-      {
-        stageInstanceId: "bugfix-diagnose",
-        stageKind: "diagnose",
-        skill: "qfai-implement",
-        operation: "diagnose-only",
-        when: "always",
-      },
-      {
-        stageInstanceId: "bugfix-sdd-append",
-        stageKind: "sdd_append",
-        skill: "qfai-sdd",
-        operation: "defect-example-seeding",
-        when: "missing_example_needed",
-      },
-      {
-        stageInstanceId: "bugfix-acceptance",
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        when: "acceptance_obligations_unmet",
-      },
-      {
-        stageInstanceId: "bugfix-implement",
-        stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
-        when: "missing_example_needed",
-      },
-      {
-        stageInstanceId: "bugfix-regression-fix",
-        stageKind: "regression_fix",
-        skill: "qfai-implement",
-        operation: "regression-fix",
-        when: "regression_found",
-      },
-      {
-        stageInstanceId: "bugfix-test-fix",
-        stageKind: "test_fix",
-        skill: "qfai-atdd",
-        operation: "test-fix",
-        when: "test_defect_found",
-      },
-      {
-        stageInstanceId: "bugfix-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("bugfix-diagnose", "diagnose", "always"),
+      planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
+      planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
+      planStage("bugfix-implement", "implement", "missing_example_needed"),
+      planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
+      planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
+      planStage("bugfix-verify", "verify", "always"),
     ],
   };
   const missingTestDiagnosis = {
@@ -396,8 +304,7 @@ it("bugfix", () => {
   const issued: {
     stageInstanceId: string;
     stageKind: string;
-    skill: string | undefined;
-    operation: string | undefined;
+    steps: Steps | undefined;
     target: unknown;
   }[] = [];
   const events: ReturnType<typeof decide>["events"] = [];
@@ -417,8 +324,7 @@ it("bugfix", () => {
     issued.push({
       stageInstanceId: workOrder.stageInstanceId,
       stageKind: workOrder.stageKind,
-      skill: workOrder.executor?.skill,
-      operation: workOrder.operation,
+      steps: workOrder.steps,
       target: workOrder.target,
     });
 
@@ -499,36 +405,31 @@ it("bugfix", () => {
       {
         stageInstanceId: "bugfix-diagnose",
         stageKind: "diagnose",
-        skill: "qfai-implement",
-        operation: "diagnose-only",
+        steps: kindSteps("diagnose"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-sdd-append",
         stageKind: "sdd_append",
-        skill: "qfai-sdd",
-        operation: "defect-example-seeding",
+        steps: kindSteps("sdd_append"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-acceptance",
         stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
+        steps: kindSteps("acceptance"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-implement",
         stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
+        steps: kindSteps("implement"),
         target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-verify",
         stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
+        steps: kindSteps("verify"),
         target: undefined,
       },
     ],
@@ -558,8 +459,7 @@ function driveWithCannedResults(
 ) {
   let run = start;
   let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
-  const issued: { stageKind: string; skill: string | undefined; operation: string | undefined }[] =
-    [];
+  const issued: { stageKind: string; steps: Steps | undefined }[] = [];
   const acceptEvents: string[] = [];
   // The flow a story-authoring stage binds, which every later stage targets.
   let bound = {};
@@ -573,8 +473,7 @@ function driveWithCannedResults(
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
     issued.push({
       stageKind: workOrder.stageKind,
-      skill: workOrder.executor?.skill,
-      operation: workOrder.operation,
+      steps: workOrder.steps,
     });
     const accepted = decide(
       {
@@ -638,34 +537,10 @@ it("feature", () => {
   const plan = {
     route: "feature",
     stages: [
-      {
-        stageInstanceId: "feature-sdd",
-        stageKind: "sdd",
-        skill: "qfai-sdd",
-        operation: "new-story",
-        when: "always",
-      },
-      {
-        stageInstanceId: "feature-acceptance",
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        when: "acceptance_obligations_unmet",
-      },
-      {
-        stageInstanceId: "feature-implement",
-        stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
-        when: "always",
-      },
-      {
-        stageInstanceId: "feature-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("feature-sdd", "sdd", "always"),
+      planStage("feature-acceptance", "acceptance", "acceptance_obligations_unmet"),
+      planStage("feature-implement", "implement", "always"),
+      planStage("feature-verify", "verify", "always"),
     ],
   };
   const approval = {
@@ -682,7 +557,7 @@ it("feature", () => {
     { acceptanceObligationsUnmet: true },
   );
   const expected = {
-    issued: plan.stages.map(({ stageKind, skill, operation }) => ({ stageKind, skill, operation })),
+    issued: plan.stages.map(({ stageKind }) => ({ stageKind, steps: kindSteps(stageKind) })),
     acceptEvents: plan.stages.flatMap(({ stageKind }) =>
       stageKind === "sdd"
         ? ["accept-nonfinal-result", "binding-recorded"]
@@ -697,15 +572,7 @@ it("feature", () => {
 it("discovery", () => {
   const plan = {
     route: "discovery",
-    stages: [
-      {
-        stageInstanceId: "discovery-discussion",
-        stageKind: "discussion",
-        skill: "qfai-discussion",
-        operation: "resolve-unsettled-product-scope",
-        when: "full_discussion_needed",
-      },
-    ],
+    stages: [planStage("discovery-discussion", "discussion", "full_discussion_needed")],
   };
 
   const actual = driveWithCannedResults(
@@ -717,8 +584,7 @@ it("discovery", () => {
     issued: [
       {
         stageKind: "discussion",
-        skill: "qfai-discussion",
-        operation: "resolve-unsettled-product-scope",
+        steps: kindSteps("discussion"),
       },
     ],
     acceptEvents: ["scope-or-obligation-revision"],

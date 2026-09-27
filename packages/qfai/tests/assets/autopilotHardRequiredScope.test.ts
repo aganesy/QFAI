@@ -12,7 +12,8 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
   for (const tree of trees) {
     it(tree + ": SDD requires a usable source and an affected flow", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
-      expect(skill).toContain("With no argument, triage all incoming requirements");
+      const triage = await read(tree, "assistant/step/sdd-triage/STEP.md");
+      expect(triage).toContain("With no argument, triage all incoming requirements");
       expect(skill).toContain("hard-required: a usable requirement source");
       expect(skill).toContain(
         "an identifiable affected flow or an explicit decision to create one",

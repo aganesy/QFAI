@@ -13,7 +13,8 @@ mode: execution-focused
 [DRIFT-PROTOCOL:MANDATORY]
 
 The operator states a change once. This skill proposes the route and hands each
-stage to its owning skill; `npx qfai workflow` decides what happens next.
+work order to a sub-agent that runs its steps; `npx qfai workflow` decides what
+happens next.
 
 - Every call and payload shape: `references/payloads.md`.
 - What the operator sees, and how questions are put: `references/operator-screens.md`.
@@ -56,15 +57,19 @@ Classify the request before any write call. Only `change` calls `start`.
    one business flow in `affectedFlowIds`; a story no existing story represents
    in `newStories`. A search that finds nothing is not evidence that no story
    represents the goal. `proposedWriteScope` names every file a stage will
-   write that git does not ignore. Submit the result with `accept`.
+   write that git does not ignore. `optionalSteps` names each step the plan
+   runs only when proposed that the request needs: a contract change needs
+   `sdd-contract`. Submit the result with `accept`.
 3. **Revise a refused proposal.** Fix every reason `proposal-refused` lists and
    submit again. The operator sees nothing unless a question or a halt follows.
 4. **Announce.** Once the plan is checked, give the goal, the stages in order
    and the write scope. Ask nothing.
 5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2.
-   - Any other work order: hand it whole to its executor skill in a sub-agent, write
-     the stage result under `.qfai/run/<runId>/inbox/`, and call `accept`. A
-     `retry` names the delay before the same work order is handed over again.
+   - Any other work order: hand it whole to one sub-agent. It reads the `path`
+     of each entry in `steps`, in order and only the current one, and runs that
+     step. After the last step it runs one review, by `requiredReviewerRoles`.
+     Write its stage result under `.qfai/run/<runId>/inbox/` and call `accept`.
+     A `retry` names the delay before the same work order is handed over again.
    - `awaiting_input`: put each open question as `references/operator-screens.md`
      says, and relay each answer with `decision`.
    - `blocked`: give the halt notice and stop.
@@ -90,7 +95,7 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 ### Orchestrator Protocol (MUST)
 
 - This skill creates no work order of its own: it hands on the ones `next` returns, integrates the results and presents them.
-- Each stage runs in a sub-agent holding the executor skill and its work order.
+- Each stage runs in a sub-agent holding its work order and the steps it names.
 
 ### Capability Probe (MUST)
 
@@ -100,7 +105,7 @@ The first stage's delegation is the capability check. A result reporting it `una
 
 - `unavailable`: submit the result with `delegation` set, and stop on the halt the run returns.
 - `saturated`: wait out the `retry` the run returns.
-- Do not simulate roles. A stage is never done here in place of its skill.
+- Do not simulate roles. A stage is never done here in place of its steps.
 
 ## Work Orders Summary
 
@@ -108,12 +113,12 @@ Report one row per work order handed on.
 
 | Step | Role (sub-agent) | Agent instance  | Task title         | Input (refs)   | Output (refs)    | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | --------------- | ------------------ | -------------- | ---------------- | ---------------------------- |
-| 1    | `<executor>`     | `<instance id>` | `<stage in words>` | The work order | The stage result | PASS/REVISE                  |
+| 1    | `<stage worker>` | `<instance id>` | `<stage in words>` | The work order | The stage result | PASS/REVISE                  |
 
 ### Reviewer Gate (MUST)
 
-This skill writes no artifact, so it runs no Reviewer of its own. Each stage's reviewers return PASS or REVISE
-on that stage's work, and `accept` refuses a result whose reviewer is not independent.
+This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers return PASS or
+REVISE on that stage's work, and `accept` refuses a result whose reviewer is not independent.
 
 - The Drift Protocol applies to the run: a stage that would change a story, a
   contract or a decision outside its work order stops and says so.
@@ -130,14 +135,6 @@ on that stage's work, and `accept` refuses a result whose reviewer is not indepe
   - scope expansions outside the active envelope
 - hard-required:
   - change request (the operator's own words; an empty request is asked for, never guessed)
-
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations` — with the
-operations its own run cannot authorize for itself. `hard-required` also takes the
-undefaultable inputs this skill itself consumes, declared per skill and checked against
-that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
-entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 ## Completion Contract (Shared)
 

@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const uiuxTemplateDir = path.join(
@@ -22,18 +24,19 @@ const implementSkillPath = path.join(
   "qfai-implement",
   "SKILL.md",
 );
+const implementAssistantDir = path.join(templateRoot, ".qfai", "assistant");
 
 let content: string | undefined;
 
 async function loadContent(): Promise<string> {
-  content ??= await readFile(implementSkillPath, "utf-8");
+  content ??= await readImplementFlowSteps(implementAssistantDir);
   return content;
 }
 
 describe("BF completion gate", () => {
   it("requires a fresh BF-scoped validator result with no owed EX tests", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/### Select the next example/);
+    expect(c).toMatch(/## Select the next example/);
     expect(c).toMatch(/qfai validate --profile tdd --flow BF-NNNN/);
     expect(c).toMatch(/generatedAt.*no earlier than this run start/);
     expect(c).toMatch(/lowest EX ID.*test-obligation EX findings/);

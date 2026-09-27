@@ -7,10 +7,10 @@ Feature: Assistant tree
 
 # AC-0001-0012-01
 # Parent: US-0001-0012
-Scenario: The assistant tree has four top-level directories
+Scenario: The assistant tree has five top-level directories
   Given an assistant tree in the `rule/ skill/ agent/ prompt/` layout
   When the entries directly under `.qfai/assistant/` are listed
-  Then they are `rule/`, `skill/`, `agent/` and `prompt/`, plus `skill.local/` where the project created one
+  Then they are `rule/`, `skill/`, `step/`, `agent/` and `prompt/`, plus `skill.local/` where the project created one
   And `constitution/`, `manifest/`, `catalog/` and `process/` are absent
 
 # AC-0001-0012-02

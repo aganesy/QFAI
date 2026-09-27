@@ -3,24 +3,19 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { issuedSteps, planStage } from "./kindSteps.js";
 
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 
-// The kind of the diagnosis's first matched ID decides who fixes the test.
-function testFixSkillFor(firstMatched: string) {
+// The kind of the diagnosis's first matched ID decides which step fixes the test.
+function testFixStepsFor(firstMatched: string) {
   const decision = decide(
     {
       run: { id: "run-test-fix", state: "ready", sequence: 6 },
@@ -39,17 +34,17 @@ function testFixSkillFor(firstMatched: string) {
     {},
   );
   const workOrder = decision.verdict.workOrder;
-  return [workOrder?.stageKind, workOrder?.executor?.skill, workOrder?.operation];
+  return [workOrder?.stageKind, workOrder?.steps];
 }
 
 const matrix: [string, string, string][] = [
-  ["business-flow", "BF-0007", "qfai-atdd"],
-  ["acceptance-criterion", "AC-0007-0002-01", "qfai-atdd"],
-  ["example", "EX-0007-0002-01", "qfai-implement"],
+  ["business-flow", "BF-0007", "atdd-test-fix"],
+  ["acceptance-criterion", "AC-0007-0002-01", "atdd-test-fix"],
+  ["example", "EX-0007-0002-01", "implement-test-fix"],
 ];
 
-for (const [title, firstMatched, skill] of matrix) {
+for (const [title, firstMatched, step] of matrix) {
   it(title, () => {
-    expect(testFixSkillFor(firstMatched)).toEqual(["test_fix", skill, "test-fix"]);
+    expect(testFixStepsFor(firstMatched)).toEqual(["test_fix", issuedSteps(step)]);
   });
 }

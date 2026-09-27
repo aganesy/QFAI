@@ -4,22 +4,17 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const plan = {
   route: "bounded-change",
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-    ["bounded-acceptance", "acceptance", "qfai-atdd", "author-acceptance-tests"],
-    ["bounded-implement", "implement", "qfai-implement", "implement"],
-    ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bounded-sdd-delta", "sdd_delta", "always"),
+    planStage("bounded-acceptance", "acceptance", "always"),
+    planStage("bounded-implement", "implement", "always"),
+    planStage("bounded-verify", "verify", "always"),
+  ],
 };
 const flowBinding = { flowId: "BF-0007" };
 const actorHistory = [
@@ -100,8 +95,7 @@ it("A review result whose reviewer instance the actor history shows as the autho
     attempt: 1,
     stageKind: "implement",
     target: { kind: "flow" as const, flowId: "BF-0007" },
-    executor: { skill: "qfai-implement" },
-    operation: "implement",
+    steps: kindSteps("implement"),
   };
   const decision = decide(
     {
@@ -166,9 +160,9 @@ function actorsRun(recommender?: string) {
     },
   };
   const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-    stage("bounded-implement", "implement", "qfai-implement", "implement"),
-    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+    stage("bounded-sdd-delta", "sdd_delta"),
+    stage("bounded-implement", "implement"),
+    stage("bounded-verify", "verify"),
   ]);
   const actor = recommender
     ? {

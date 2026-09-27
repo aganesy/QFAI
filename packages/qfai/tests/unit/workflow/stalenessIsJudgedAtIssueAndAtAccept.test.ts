@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -25,20 +26,7 @@ function freshSnapshot(): Snapshot {
     run: { id: "run-feature", state: "ready", sequence: 5 },
     plan: {
       route: "feature",
-      stages: [
-        {
-          stageInstanceId: "feature-sdd",
-          stageKind: "sdd",
-          skill: "qfai-sdd",
-          operation: "new-story",
-        },
-        {
-          stageInstanceId: "feature-verify",
-          stageKind: "verify",
-          skill: "qfai-verify",
-          operation: "verify-full",
-        },
-      ],
+      stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
     },
     scopeDigest: scopeDigestOf(approvedWriteAreas),
     stories: [{ ...story, slotId: "slot-3-1" }],
@@ -145,12 +133,7 @@ it("widening-replan-at-accept", () => {
 it("Bind the created flow, then issue the next flow-bound work order", () => {
   const fresh = freshSnapshot();
   const [sdd, verify] = fresh?.plan?.stages ?? [];
-  const implement = {
-    stageInstanceId: "feature-implement",
-    stageKind: "implement",
-    skill: "qfai-implement",
-    operation: "implement",
-  };
+  const implement = planStage("feature-implement", "implement");
   const bound: Snapshot = {
     ...fresh,
     run: { id: "run-feature", state: "ready", sequence: 9 },

@@ -41,7 +41,7 @@ const routingDoc = loadYaml(ROUTING_PATH);
 const profilesDoc = loadYaml(PROFILES_PATH);
 const profiles = profilesDoc?.profiles ?? {};
 
-// agent-routing.yml has top-level `routing:` (array of skill entries).
+// agent-routing.yml has top-level `routing:`, an array of `step:` and `skill:` entries.
 const routing = Array.isArray(routingDoc?.routing) ? routingDoc.routing : [];
 
 /**
@@ -53,7 +53,7 @@ const REVIEWER_NAME = /(?:-reviewer|-gatekeeper)$/;
 
 const drifts = [];
 for (const entry of routing) {
-  const skill = entry.skill ?? "<unknown-skill>";
+  const skill = entry.step ?? entry.skill ?? "<unknown-entry>";
   const profileName = entry.review_profile;
   if (!profileName) continue;
   const profile = profiles[profileName];

@@ -3,6 +3,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
@@ -10,31 +11,13 @@ const flowBinding = { flowId: "BF-0007" };
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-example-seeding",
-      "missing_example_needed",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
-    [
-      "bugfix-regression-fix",
-      "regression_fix",
-      "qfai-implement",
-      "regression-fix",
-      "regression_found",
-    ],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
+    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
+    planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
+    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 const diagnosis = {
   verdict: "regression",
@@ -105,18 +88,14 @@ it("A diagnose result regression for an annotated example", () => {
   const diagnose = issued.find((workOrder) => workOrder.stageKind === "diagnose");
 
   expect({
-    issued: issued.map(({ stageKind, executor, operation }) => [
-      stageKind,
-      executor?.skill,
-      operation,
-    ]),
+    issued: issued.map(({ stageKind, steps }) => [stageKind, steps]),
     digestRecorded: typeof regressionFix?.obligations?.digest === "string",
     digestUnchanged: regressionFix?.obligations?.digest === diagnose?.obligations?.digest,
   }).toEqual({
     issued: [
-      ["diagnose", "qfai-implement", "diagnose-only"],
-      ["regression_fix", "qfai-implement", "regression-fix"],
-      ["verify", "qfai-verify", "verify-full"],
+      ["diagnose", kindSteps("diagnose")],
+      ["regression_fix", kindSteps("regression_fix")],
+      ["verify", kindSteps("verify")],
     ],
     digestRecorded: true,
     digestUnchanged: true,

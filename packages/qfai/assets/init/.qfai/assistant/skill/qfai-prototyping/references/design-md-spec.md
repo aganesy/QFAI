@@ -1,7 +1,7 @@
 # DESIGN.md Specification
 
 `DESIGN.md` lives at the **consuming-project root** and is the single
-source of truth for brand identity. `/qfai-sdd`'s `03_contract` step authors it when
+source of truth for brand identity. `/qfai-sdd`'s `common-design-md` step authors it when
 the project has none, then freezes it into
 `<contractsDir>/design/DESIGN.md.lock.yaml` (sha256 record).
 
@@ -87,7 +87,7 @@ reader can install: the design system and the theme within it.
 
 It is optional because a project that authored its own `DESIGN.md`
 before this field existed is not wrong — it just does not say. A file
-`/qfai-sdd`'s `03_contract` step writes names its theme and takes the token
+`/qfai-sdd`'s `common-design-md` step writes names its theme and takes the token
 values from that theme rather than composing them.
 
 Everything downstream treats these numbers as exact. The lock hashes

@@ -8,7 +8,7 @@ Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
 
 Brand-level intent (product intent, brand signals, anti-goals,
 reference pool framed as deviate-from inputs) is recorded in
-`04_Sources.md`, not in this sidecar family. `/qfai-sdd`'s `03_contract` step turns
+`04_Sources.md`, not in this sidecar family. `/qfai-sdd`'s `common-design-md` step turns
 that record into root `DESIGN.md` — on a visual-prototyping surface
 (`web`, `mobile`, `desktop`, `mixed`) only. A cli-only pack has no
 brand-level intent layer at all.
@@ -24,10 +24,10 @@ brand-level intent layer at all.
 All three required files above MUST be present for every UI-bearing pack.
 Partial generation is not permitted.
 
-Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `03_contract` step authors it, and only
+Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `common-design-md` step authors it, and only
 on a visual-prototyping surface (`web`, `mobile`, `desktop`, `mixed`). A
 cli-only pack — `primary_surface: cli` with no visual surface in
-`secondary_surfaces` — never gets one: the `03_contract` step skips the freeze, and
+`secondary_surfaces` — never gets one: the `common-design-md` step skips the freeze, and
 `/qfai-prototyping` does not run on `cli`. Do not report any pack as
 incomplete for a missing `DESIGN.md`.
 

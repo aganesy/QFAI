@@ -216,8 +216,18 @@ export type QfaiAtddConfig = {
   scaffoldEscalateCycles?: number;
 };
 
-/** Project routing overrides replace a complete entry, keyed by skill. */
-export type QfaiRoutingEntry = Record<string, unknown> & { skill: string };
+/**
+ * Project routing overrides replace a complete entry, keyed by the step or the
+ * skill it routes. An entry carries exactly one of `step:` and `skill:`.
+ */
+export type QfaiRoutingEntry = Record<string, unknown> & { step?: string; skill?: string };
+
+/** The name a routing entry is keyed by: its `step:`, else its `skill:`. */
+export function routingEntryName(entry: { step?: unknown; skill?: unknown }): string | undefined {
+  if (typeof entry.step === "string" && entry.step.length > 0) return entry.step;
+  if (typeof entry.skill === "string" && entry.skill.length > 0) return entry.skill;
+  return undefined;
+}
 
 /** Project review-profile overrides replace a complete profile, keyed by name. */
 export type QfaiReviewProfile = Record<string, unknown>;
@@ -454,22 +464,32 @@ function normalizeRouting(
 ): QfaiRoutingEntry[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) {
-    issues.push(configIssue(configPath, "routing must be a list of entries keyed by skill."));
+    issues.push(
+      configIssue(configPath, "routing must be a list of entries keyed by step or skill."),
+    );
     return undefined;
   }
   const entries: QfaiRoutingEntry[] = [];
   const seen = new Set<string>();
   for (const [index, value] of raw.entries()) {
-    if (!isRecord(value) || !isNonEmptyString(value.skill)) {
-      issues.push(configIssue(configPath, `routing[${index}] must have a non-empty skill.`));
+    const name = isRecord(value) ? routingEntryName(value) : undefined;
+    const keys = isRecord(value)
+      ? [value.step, value.skill].filter((key) => key !== undefined)
+      : [];
+    if (!isRecord(value) || name === undefined || keys.length !== 1) {
+      issues.push(
+        configIssue(configPath, `routing[${index}] must have exactly one non-empty step or skill.`),
+      );
       continue;
     }
-    if (seen.has(value.skill)) {
-      issues.push(configIssue(configPath, `routing has duplicate skill ${value.skill}.`));
+    if (seen.has(name)) {
+      issues.push(configIssue(configPath, `routing has duplicate entry ${name}.`));
       continue;
     }
-    seen.add(value.skill);
-    entries.push({ ...value, skill: value.skill });
+    seen.add(name);
+    entries.push(
+      isNonEmptyString(value.step) ? { ...value, step: name } : { ...value, skill: name },
+    );
   }
   return entries;
 }

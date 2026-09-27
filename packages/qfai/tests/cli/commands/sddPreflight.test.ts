@@ -186,12 +186,12 @@ describe("qfai sdd preflight", () => {
       "..",
     );
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
-      const skill = await read(
-        pathMod.default.join(tree, "assistant/skill/qfai-sdd/SKILL.md"),
-        "utf-8",
-      ).catch(() =>
-        read(pathMod.default.join(repoRoot, tree, "assistant/skill/qfai-sdd/SKILL.md"), "utf-8"),
-      );
+      const step = "assistant/step/sdd-triage/STEP.md";
+      const skill = (
+        await read(pathMod.default.join(tree, step), "utf-8").catch(() =>
+          read(pathMod.default.join(repoRoot, tree, step), "utf-8"),
+        )
+      ).replace(/\s+/g, " ");
       expect(skill, tree).toContain("use its `selectedInputPath`");
       expect(skill, tree).toContain("a selected discussion pack may be older than the newest pack");
       // The instruction that caused it must be gone.

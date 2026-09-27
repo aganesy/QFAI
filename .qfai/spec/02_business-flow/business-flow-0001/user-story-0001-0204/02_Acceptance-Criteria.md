@@ -12,14 +12,14 @@ Scenario: The acceptance stage follows the stage-skill handover
   When /qfai-atdd is selected with no work order and not by name
   Then it edits nothing and passes the request to qfai-run
   And a worker handed a work order checks the run, stage and work-order IDs and does only that work, scoped to the flow the work order binds
-  And SKILL.md cites references/orchestrated-mode.md with one line
 
 # AC-0001-0204-02
 # Parent: US-0001-0204
-Scenario: The Operations table lists what the plan vocabulary assigns to qfai-atdd
-  Given the qfai-atdd reference references/orchestrated-mode.md
-  When its Operations table is read
-  Then it lists exactly the operations the plan vocabulary assigns to qfai-atdd
+Scenario: qfai-atdd lists the steps the plans run for acceptance
+  Given the qfai-atdd SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-atdd
+  And every step a plan gives an acceptance stage, and the acceptance-layer step of a test_fix stage, is one of them
 
 # AC-0001-0204-03
 # Parent: US-0001-0204

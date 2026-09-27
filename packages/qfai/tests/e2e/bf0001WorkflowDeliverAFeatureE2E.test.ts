@@ -50,6 +50,8 @@ import { discussedProject } from "./workflowProjectInputs.js";
 afterEach(removeProjects);
 
 const BOUND = { kind: "flow", flowId: FLOW_ID };
+const BASELINE = "shared-skill-operating-baseline.md";
+const ACCEPTANCE = ["atdd-scaffold", "atdd-author"];
 
 it("one create question, one change approval, every stage from its work order, and finish qfai_done", async () => {
   const root = await discussedProject();
@@ -106,8 +108,7 @@ it("one create question, one change approval, every stage from its work order, a
     approved: "ready",
     sdd: {
       stageKind: "sdd",
-      skill: "qfai-sdd",
-      operation: "new-story",
+      steps: ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"],
       target: { kind: "new_story", slotId: expect.any(String) },
     },
     slotBound: true,
@@ -118,21 +119,15 @@ it("one create question, one change approval, every stage from its work order, a
       ["human_decision", "CHANGE_REQUEST", "agent_captured"],
     ],
     later: [
+      { stageKind: "acceptance", steps: ACCEPTANCE, target: BOUND },
+      { stageKind: "implement", steps: ["implement-seam"], target: BOUND },
+      { stageKind: "acceptance", steps: ACCEPTANCE, target: BOUND },
       {
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
+        stageKind: "implement",
+        steps: ["implement-tdd", "implement-checkpoint"],
         target: BOUND,
       },
-      { stageKind: "implement", skill: "qfai-implement", operation: "seam-only", target: BOUND },
-      {
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        target: BOUND,
-      },
-      { stageKind: "implement", skill: "qfai-implement", operation: "implement", target: BOUND },
-      { stageKind: "verify", skill: "qfai-verify", operation: "verify-full" },
+      { stageKind: "verify", steps: ["verify-context", "verify-qfai-gate", "verify-repo-gate"] },
     ],
     seamParent: true,
     attempts: [1, 2],
@@ -208,11 +203,10 @@ it("a result for a work order never issued is refused and changes nothing, and t
   const skills = path.join(root, ".qfai", "assistant", "skill");
   const handover = await Promise.all(
     ["qfai-sdd", "qfai-atdd", "qfai-implement", "qfai-verify"].map(async (skill) =>
-      (
-        await readFile(path.join(skills, skill, "references", "orchestrated-mode.md"), "utf8")
-      ).includes("qfai-run"),
+      (await readFile(path.join(skills, skill, "SKILL.md"), "utf8")).includes(BASELINE),
     ),
   );
+  const baseline = await readFile(path.join(root, ".qfai", "assistant", "rule", BASELINE), "utf8");
   const shipped = (await filesUnder(root)).filter(
     (rel) =>
       /(^|\/)(direct|bugfix|bounded-change|feature|discovery)\.yml$/.test(rel) ||
@@ -224,6 +218,7 @@ it("a result for a work order never issued is refused and changes nothing, and t
     reasons: list(refused.json, "error.reasons").map((reason) => field(reason, "reason")),
     journal: (await treeDigest(root, outsideJournal)) === before,
     handover,
+    passesOn: baseline.includes("Pass the request to `qfai-run`"),
     entry: existsSync(path.join(skills, "qfai-run", "SKILL.md")),
     shipped,
   }).toEqual({
@@ -231,6 +226,7 @@ it("a result for a work order never issued is refused and changes nothing, and t
     reasons: ["work-order"],
     journal: true,
     handover: [true, true, true, true],
+    passesOn: true,
     entry: true,
     shipped: [],
   });

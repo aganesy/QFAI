@@ -142,8 +142,8 @@ Run the gates in this order, every time:
    option-B phase-isolation contract, and a `full` run at this point
    necessarily fails the stage-5 ATDD traceability rules
    (`QFAI-ATDD-111/112/113`). The field list and the `scope` enum are
-   specified under "Verify Output Contract" in
-   `.qfai/assistant/skill/qfai-verify/SKILL.md`.
+   specified in
+   `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate includes `designMdPath` + `designMdSha256` for the

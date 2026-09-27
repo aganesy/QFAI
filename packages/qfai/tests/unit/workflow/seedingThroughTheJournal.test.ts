@@ -73,15 +73,9 @@ function answered(answeredBy: string) {
   const plan = planOf(
     "bugfix",
     [
-      stage("diagnose", "diagnose", "qfai-implement", "diagnose-only"),
-      stage(
-        "sdd-append",
-        "sdd_append",
-        "qfai-sdd",
-        "defect-example-seeding",
-        "missing_example_needed",
-      ),
-      stage("verify", "verify", "qfai-verify", "verify-full"),
+      stage("diagnose", "diagnose"),
+      stage("sdd-append", "sdd_append", "missing_example_needed"),
+      stage("verify", "verify"),
     ],
     [STORY],
   );
@@ -170,9 +164,9 @@ it("Seeding that cites, instead of the new example, an example the story already
 
 it("An implement result accepted while the bound flow's obligations cannot be read", () => {
   const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-    stage("bounded-implement", "implement", "qfai-implement", "implement"),
-    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+    stage("bounded-sdd-delta", "sdd_delta"),
+    stage("bounded-implement", "implement"),
+    stage("bounded-verify", "verify"),
   ]);
   const read = { flows: [FLOW], obligations: obligations(AT_ISSUE) };
   const run = new JournalRun(readyWith(plan, FLOW, RUN));

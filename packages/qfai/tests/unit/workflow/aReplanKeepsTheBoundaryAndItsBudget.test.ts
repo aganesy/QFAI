@@ -13,9 +13,9 @@ import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const FLOW = "BF-0007";
 const bounded = [
-  stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-  stage("bounded-implement", "implement", "qfai-implement", "implement"),
-  stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+  stage("bounded-sdd-delta", "sdd_delta"),
+  stage("bounded-implement", "implement"),
+  stage("bounded-verify", "verify"),
 ];
 const obligations = {
   flowId: FLOW,

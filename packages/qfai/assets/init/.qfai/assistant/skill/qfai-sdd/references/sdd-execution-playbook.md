@@ -36,7 +36,7 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. The only quality-gate command definitions are in the Standard commands section of tech.md.
 2. Put each BR inside the contract that enforces it. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition; dependent contracts use file-level rule refs.
 3. Add each contract file to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
-4. For a visual UI surface, complete the DESIGN.md lock protocol before finalizing design contracts. A CLI-only surface does not require a visual lock.
+4. For a visual UI surface, the root DESIGN.md and its lock are written by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require a visual lock.
 
 ## Concrete-abstract cycle
 
@@ -46,7 +46,7 @@ When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in 
 
 Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning
 source and rerun. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
-from ../templates/evidence/sdd-flow.md. Route independent reviewers under review-cycle-playbook.md; all blocking
+from ../templates/evidence/sdd-flow.md. Route independent reviewers under .qfai/assistant/step/common-review-cycle/STEP.md; all blocking
 verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 
 For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, say so in the report, record the pending ownership as an `open-questions.md` row, and do not claim a flow gate passed.

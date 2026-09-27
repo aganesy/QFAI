@@ -4,26 +4,14 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 import { RUN_ID, finish, finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
   route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
 
