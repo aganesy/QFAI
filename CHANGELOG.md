@@ -204,6 +204,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
     exits 3.
 
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
+
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
   stories, acceptance criteria and examples in `02_business-flow/`, contracts
