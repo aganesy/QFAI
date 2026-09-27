@@ -10,7 +10,7 @@ import {
 } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
-import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
+import { CONTRACT_KIND_BY_DIR, contractNumber, isContractId } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 
@@ -36,11 +36,16 @@ export async function validateStoryTreeContractReferences(
   const { contractsDir } = resolveStoryTreeRoots(root, config);
   const indexFile = path.join(contractsDir, "contracts.md");
   const tables = parseIndexTables(await readSafe(indexFile));
-  const current = tables.find(
+  const currentTables = tables.filter(
     (table) => table.headers.map(normalizeHeaderKey).join("|") === INDEX_COLUMNS,
   );
-  if (current) {
-    return validateContractIndex({ root, contractsDir, indexFile }, current.rows, model);
+  const underIndex = currentTables.filter(
+    (table) => table.heading.toLowerCase() === "contract index",
+  );
+  const current = underIndex.length > 0 ? underIndex : currentTables.slice(0, 1);
+  if (current.length > 0) {
+    const rows = current.flatMap((table) => table.rows);
+    return validateContractIndex({ root, contractsDir, indexFile }, rows, model);
   }
   // SIMPLIFIED: an index without the `ID | Title | File | Depends On | Reconciled With |
   // Purpose` columns is still read by its `Declared ID` and `File` columns.
@@ -92,6 +97,21 @@ export async function validateStoryTreeContractReferences(
       }
       continue;
     }
+    const scheme = model.contracts.find((entry) => path.resolve(entry.file) === path.resolve(file));
+    if (scheme) {
+      if (indexedIds.has(scheme.id) && listedPath(file)) continue;
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-034",
+          `Contract ${scheme.id} is not listed with its file in ${indexFile}: ${file}`,
+          "error",
+          file,
+          "contracts.storyTreeIndex",
+          [scheme.id],
+        ),
+      );
+      continue;
+    }
     if (model.additionalContractFiles.includes(file) && !listedPath(file)) {
       issues.push(
         issue(
@@ -105,6 +125,7 @@ export async function validateStoryTreeContractReferences(
       );
     }
   }
+  issues.push(...duplicateContractNumbers(model));
   return issues;
 }
 
@@ -236,7 +257,8 @@ function bareCell(cell: string): string {
  */
 function canonicalCellContractId(cell: string): string | undefined {
   const bare = cell.trim().replace(CELL_DECORATION_RE, "").trim();
-  return CANONICAL_CELL_ID_RE.test(bare) ? bare.toUpperCase() : undefined;
+  const upper = bare.toUpperCase();
+  return isContractId(upper) || CANONICAL_CELL_ID_RE.test(bare) ? upper : undefined;
 }
 
 /**
@@ -267,9 +289,10 @@ function parseIndexTables(text: string): IndexTable[] {
     if (headerLine === undefined || separatorLine === undefined) {
       continue;
     }
-    const headingMatch = /^#{1,6}[ \t]+(.*)$/.exec(headerLine);
+    // The enclosing section: a deeper heading stays inside the H2 above it.
+    const headingMatch = /^ {0,3}(#{1,6})[ \t]+(.*)$/.exec(headerLine);
     if (headingMatch) {
-      heading = (headingMatch[1] ?? "").trim();
+      if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
       continue;
     }
     if (!looksLikeTableRow(headerLine) || !isTableSeparator(separatorLine)) {
