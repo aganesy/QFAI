@@ -8,7 +8,7 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "./config.js";
 import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
-import { extractDeclaredContractIds } from "./contractsDecl.js";
+import { declaredContractId, extractDeclaredContractIds } from "./contractsDecl.js";
 import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
 import {
   collectFilesByGlobs,
@@ -454,7 +454,9 @@ function restoreTestNames(masked: string, original: string, patterns: readonly R
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
-const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
+// SIMPLIFIED: `CON-API-*` and `CON-DB-*` are still read beside `API-NNNN` and `DB-NNNN`.
+// Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+\b|API-\d{4}(?![\w-]))/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
  *
@@ -463,7 +465,7 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
  * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
  * A `QFAI:CON-DB-0002` written into a test was silently invisible.
  */
-const DB_TEST_ANNOTATION_RE = /\bQFAI:CON-DB-(\d+)\b/g;
+const DB_TEST_ANNOTATION_RE = /\bQFAI:(CON-DB-\d+\b|DB-\d{4}(?![\w-]))/g;
 
 /** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
 const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
@@ -471,8 +473,8 @@ const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
-const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
+const API_CONTRACT_ID_RE = /^(?:CON-API-\d+|API-\d{4})$/;
+const DB_CONTRACT_ID_RE = /^(?:CON-DB-\d+|DB-\d{4})$/;
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -610,7 +612,7 @@ export type AtddCodeTraceabilityResult = {
   deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
-   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * Every declared `API-NNNN` or `CON-API-*`, active and deferred alike. This is the public
    * meaning the field has always had — adding `x-qfai-status: planned` defers
    * the test obligation, it does not un-declare the contract, so an external
    * consumer using this set for "is this ID declared?" must keep seeing it.
@@ -619,24 +621,24 @@ export type AtddCodeTraceabilityResult = {
   /** The subset that carries the `QFAI-ATDD-113` obligation. */
   activeApiContractIds: Set<string>;
   /**
-   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * `API-NNNN` and `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
    * contract declares `x-qfai-status: planned`. Reported as `info` so the
    * deferral stays visible instead of silently shrinking the gate.
    */
   deferredApiContractIds: Set<string>;
   contractsDbRoot: string;
-  /** Every declared `CON-DB-*`, active and deferred alike. */
+  /** Every declared `DB-NNNN` or `CON-DB-*`, active and deferred alike. */
   dbContractIds: Set<string>;
   /** The subset that carries the `QFAI-ATDD-115` obligation. */
   activeDbContractIds: Set<string>;
-  /** `CON-DB-*` deferred by `-- x-qfai-status: planned`; reported at `info`. */
+  /** `DB-NNNN` and `CON-DB-*` IDs deferred by `-- x-qfai-status: planned`; reported at `info`. */
   deferredDbContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
     api: Map<string, Set<string>>;
     /**
-     * `CON-DB-*` references found in integration tests. L3 Integration is the
+     * `DB-NNNN` and `CON-DB-*` references found in integration tests. L3 Integration is the
      * layer whose declared scope is real-infrastructure integration including
      * the database, so it is the one that can actually exercise a DB contract.
      */
@@ -1295,10 +1297,12 @@ function unreadableDirectoryOf(root: string, error: unknown): string | null {
 const UNCOUNTED_TEST_DIRS = ["atdd"];
 
 /** Any QFAI test annotation, in any of its forms. */
-const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
+const ANY_QFAI_ANNOTATION =
+  /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
-const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/;
+const LEVEL_INDEPENDENT_ANNOTATION =
+  /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /**
  * Whether a legacy file's annotations are all ones ATDD no longer owes.
@@ -2039,6 +2043,17 @@ type CollectedContractIds = {
   deferred: Set<string>;
 };
 
+/** The IDs Markdown contracts under a kind directory declare in their H1, as the story-tree model reads them. */
+async function markdownContractIds(root: string, pattern: RegExp): Promise<string[]> {
+  const files = await fg("**/*.md", { cwd: root, absolute: true, onlyFiles: true });
+  const ids: string[] = [];
+  for (const file of files.sort()) {
+    const id = declaredContractId(file, await readSafe(file));
+    if (id !== null && pattern.test(id)) ids.push(id);
+  }
+  return ids;
+}
+
 async function collectApiContractIds(apiRoot: string): Promise<CollectedContractIds> {
   const files = await collectApiContractFiles(apiRoot);
   const active = new Set<string>();
@@ -2055,6 +2070,7 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
       }
     }
   }
+  for (const id of await markdownContractIds(apiRoot, API_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
@@ -2456,6 +2472,7 @@ async function collectDbContractIds(dbRoot: string): Promise<CollectedContractId
       }
     }
   }
+  for (const id of await markdownContractIds(dbRoot, DB_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
@@ -3625,11 +3642,11 @@ function extractSpecScopedAnnotations(text: string, pattern: RegExp): SpecScoped
 function extractApiContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(API_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-API-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
@@ -3637,11 +3654,11 @@ function extractApiContractAnnotations(text: string): string[] {
 function extractDbContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(DB_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-DB-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }

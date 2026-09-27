@@ -438,20 +438,17 @@ describe("lint-shipping fixture — detection rules", () => {
     );
   });
 
-  it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {
-    // Composite trace IDs (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
-    // forbidden set declared by `.agents/rules/distributed-surface.md`
-    // (only spec-0010+, CAP-0010+, DEC-NNNN-NNNN, DR-NNNN, and the
-    // QFAI-PROT2-NNN trace prefix are forbidden). Composite IDs in
-    // JSDoc remain permitted so existing trace pointers like
-    // "BR-0029-0001" / "AC-0025-0005" do not need to be scrubbed.
+  it("does NOT flag two-segment AC or TC trace IDs in JSDoc", async () => {
+    // `AC-NNNN-NNNN` and `TC-NNNN-NNNN` are not in the forbidden set of
+    // `.agents/rules/distributed-surface.local.md`. `BR-NNNN-NNNN` is: it is the
+    // contract-scoped business-rule ID.
     const root = await newTempDir();
     await mkdir(path.join(root, "src/foo"), { recursive: true });
     await writeFile(
       path.join(root, "src/foo/bar.ts"),
       [
         "/**",
-        " * Implements BR-0029-0001 and references AC-0025-0005.",
+        " * Implements TC-0029-0001 and references AC-0025-0005.",
         " */",
         "export function foo(): void {}",
         "",
