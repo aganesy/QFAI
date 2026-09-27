@@ -22,7 +22,7 @@
 
 import path from "node:path";
 
-import { extractDeclaredContractIds, extractDeclaredDependencies } from "../contractsDecl.js";
+import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -98,10 +98,11 @@ async function readContractFiles(
     if (!text) {
       continue;
     }
-    const contractId = extractDeclaredContractIds(text)[0];
-    if (contractId === undefined) {
-      // A `db/` file that declares no contract ID is already reported by
-      // `QFAI-CONTRACT-010`; do not pile a second finding onto it.
+    const contractId = declaredContractId(file, text);
+    if (contractId === null || !contractId.startsWith("DB-")) {
+      // A `db/` file that declares no ID, several IDs or an ID of another kind is
+      // already reported by the declaration checks. It neither owns a table nor
+      // receives a finding here, so a correct file is not blamed for it.
       continue;
     }
     const { creates, references } = readTableEdges(text);

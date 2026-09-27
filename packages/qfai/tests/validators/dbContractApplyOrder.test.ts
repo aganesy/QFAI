@@ -219,6 +219,66 @@ describe("validateDbContractApplyOrder", () => {
     expect(await validateDbContractApplyOrder(root, [abs, parent])).toEqual([]);
   });
 
+  it("takes only a file declaring one DB- ID as a table owner", async () => {
+    // QFAI:EX-0001-0054-06
+    // A `db/` file declaring an `API-` ID, or two IDs, is a declaration error
+    // another check reports. Taken as the owner of what it creates, it would
+    // send a correct file to declare a contract that is not a DB contract.
+    const root = await newRoot();
+    const dbDir = path.join(root, ".qfai/contracts/db");
+    await mkdir(dbDir, { recursive: true });
+    const write = async (name: string, text: string): Promise<string> => {
+      const abs = path.join(dbDir, name);
+      await writeFile(abs, text, "utf-8");
+      return abs;
+    };
+    const orders = await write(
+      "db-0001-orders.sql",
+      "-- QFAI-CONTRACT-ID: API-0001\nCREATE TABLE orders (id TEXT);\n",
+    );
+    const archive = await write(
+      "db-0002-archive.sql",
+      "-- QFAI-CONTRACT-ID: API-0003\n-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE archive (id TEXT);\n",
+    );
+    const lines = await write(
+      "db-0004-lines.sql",
+      [
+        "-- QFAI-CONTRACT-ID: DB-0004",
+        "-- Depends on: -",
+        "CREATE TABLE lines (",
+        "  o TEXT REFERENCES orders (id),",
+        "  a TEXT REFERENCES archive (id)",
+        ");",
+      ].join("\n"),
+    );
+
+    expect(await validateDbContractApplyOrder(root, [orders, archive, lines])).toEqual([]);
+
+    await write(
+      "db-0001-orders.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT);\n",
+    );
+    const issues = await validateDbContractApplyOrder(root, [orders, archive, lines]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.file).toBe(".qfai/contracts/db/db-0004-lines.sql");
+    expect(issues[0]?.message).toContain("DB-0001 (orders)");
+    expect(issues[0]?.message).not.toContain("archive");
+  });
+
+  it("gives no finding to a file that does not declare one DB- ID", async () => {
+    // QFAI:EX-0001-0054-06
+    const root = await newRoot();
+    const parent = await contract(root, "DB-0070", "CREATE TABLE orders (id TEXT);\n");
+    const wrongKind = await contract(
+      root,
+      "API-0071",
+      "-- Depends on: -\nCREATE TABLE t (o TEXT REFERENCES orders (id));\n",
+    );
+
+    expect(await validateDbContractApplyOrder(root, [parent, wrongKind])).toEqual([]);
+  });
+
   it("says nothing when the project has no db contracts", async () => {
     expect(await validateDbContractApplyOrder(await newRoot(), [])).toEqual([]);
   });

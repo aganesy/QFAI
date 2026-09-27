@@ -806,6 +806,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   primary and started cycle 0. Without `--primary-ui-contract`, `iterate` and
   `show-ui-contract` now exit 2 and name the key and the value received.
 
+- **The prototyping skill check no longer reads `CON-UI-NNNN` as the UI
+  contract scope** (#2580). It looked for the text `ui-nnnn` anywhere, which
+  the retired form also contains, so a skill still written with that form
+  passed. It now needs `UI-NNNN` standing on its own, and otherwise raises
+  `UIX-VAL-SKILL-UI-BEARING-FALSE`.
+
+- **A misdeclared `db/` contract no longer gets a correct one blamed**
+  (#2580). `QFAI-CONTRACT-036` took the first ID a `db/` file declared, of any
+  kind, as the owner of the tables the file creates. A file declaring an
+  `API-` ID, or an `API-` ID before its `DB-` ID, then sent a correct file to
+  declare a dependency on it. Only a file declaring exactly one `DB-` ID now
+  owns tables or receives the finding; the declaration checks already report
+  the others.
+
 - **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
   only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a
   plan's `from` selects. Each new `business-flow.md` now also carries that

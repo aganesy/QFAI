@@ -24,4 +24,11 @@ Feature: Contract index and contract-layer validation
     When `qfai validate --profile sdd` runs
     Then `QFAI-CONTRACT-034` is raised at error for each contract file under a kind directory that declares no contract ID of its directory's kind, is not named `<kind>-NNNN-<slug>.<ext>` after that ID, or has no row whose ID and File agree with it
     And it is also raised for a row that names no contract file, and for a contract number that more than one contract declares
+
+  # AC-0001-0054-04
+  Scenario: Only a db contract that declares one DB ID takes part in the apply-order check
+    Given the story tree, and `db/` contracts whose DDL points a foreign key at a table another contract creates
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-CONTRACT-036` takes a `db/` file as the owner of the tables it creates only when the file declares exactly one contract ID and that ID is a `DB-NNNN` ID
+    And a `db/` file that declares an ID of another kind, or more than one ID, neither owns a table nor receives that finding
 ```
