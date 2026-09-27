@@ -3,16 +3,18 @@
 ## Objective
 
 - Outcome: `<the change this project seeks>`
-- Evidence: `<source that supports the need>`
+- Evidence: `<source that shows the need>`
 
 ## Users
 
-- Primary user: `<role and task>`
+- `<role>`: `<what this role does with the product>`
 
 ## Success criteria
 
-- Measure: `<observable result and threshold>`
+| Observable result         | Measurement                               |
+| ------------------------- | ----------------------------------------- |
+| `<result a user can see>` | `<command or threshold that measures it>` |
 
 ## Non-goals
 
-- Outside this initiative: `<explicit boundary>`
+- `<what this project does not do>`
