@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a QA Engineer, I want API tests generated for all required CON-API with `QFAI:CON-API-XXXX` annotations, so that contract obligations are verifiable without TC annotations.
+As a QA Engineer, I want an API test for every acceptance criterion exercised through the API, annotated with `QFAI:AC-NNNN-NNNN-NN`, so that the criteria an API contract enforces are verified at the API layer.

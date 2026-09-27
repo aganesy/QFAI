@@ -15,6 +15,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "./config.js";
+import { declaredContractId } from "./contractsDecl.js";
 import { collectFiles } from "./fs.js";
 
 /** What `uiux.surfacePaths` in `qfai.config.yaml` declares. */
@@ -28,7 +29,7 @@ export interface UiAffectingRow {
   /** The `Owning module` cell; `-` or empty when the ledger declares none. */
   readonly owningModule: string;
   readonly testFile: string;
-  /** Every id in `TC-Refs`, `US-Refs` and `CON-API-Refs`. */
+  /** Every id in `TC-Refs`, `US-Refs` and `API-Refs`. */
   readonly obligations: readonly string[];
 }
 
@@ -141,7 +142,10 @@ async function readUiContracts(root: string, contractsDir: string): Promise<UiCo
   return contracts;
 }
 
-/** Every `*.yaml`, `*.yml` and `*.json` under `<contractsDir>/api/**` naming `id`. */
+/** An `API-Refs` obligation: the ID of an API contract. */
+const API_CONTRACT_ID = /^API-\d{4}$/;
+
+/** The `*.yaml`, `*.yml` and `*.json` file under `<contractsDir>/api/**` that declares `id`. */
 async function apiContractEntries(
   root: string,
   contractsDir: string,
@@ -153,7 +157,9 @@ async function apiContractEntries(
   for (const file of files.sort()) {
     try {
       const text = await readFile(file, "utf-8");
-      if (standsAlone(text, id)) entries.push({ file: toPosix(path.relative(root, file)), text });
+      if (declaredContractId(file, text) === id) {
+        entries.push({ file: toPosix(path.relative(root, file)), text });
+      }
     } catch {
       continue;
     }
@@ -273,7 +279,7 @@ export class UiAffectingClauses {
 
   /** The entries that declare an obligation, by its kind. */
   private async sourceEntries(id: string): Promise<Array<{ file: string; text: string }>> {
-    if (id.startsWith("CON-API-")) return apiContractEntries(this.root, this.contractsDir, id);
+    if (API_CONTRACT_ID.test(id)) return apiContractEntries(this.root, this.contractsDir, id);
     const document = id.startsWith("TC-")
       ? this.sources.testCases
       : id.startsWith("US-")
