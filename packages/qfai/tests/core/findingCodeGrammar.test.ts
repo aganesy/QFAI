@@ -5,7 +5,6 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { GATE_GROUP_FAMILIES } from "../../src/cli/commands/validate.js";
-import { EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID } from "../../src/core/ruleIds.js";
 import { SAAS_PACKAGE_SKIPPED_GATE_FAMILIES } from "../../src/core/saasPackage/skippedGates.js";
 import { familyMatches } from "../helpers/gateFamilies.js";
 
@@ -90,10 +89,6 @@ const LEGACY_FINDING_CODES: readonly string[] = [
   "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST-001",
-  "TDDLIST-002",
-  "TDDLIST_EXCEPTION_PARKED",
-  "TDDLIST_UNKNOWN_LEVEL",
   "UIX-VAL-3LAYER-FORBIDDEN-FILE",
   "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
   "UIX-VAL-3LAYER-LEGACY-FORMAT",
@@ -452,21 +447,6 @@ describe("finding code grammar", () => {
     expect(doc).toContain("Renaming a legacy code whose shape is **not** `<AREA>-<NNN>`");
   });
 
-  it("does not claim a screaming-snake code has no numbered id", async () => {
-    // It has one — `TDDLIST_EXCEPTION_PARKED` is published under `rule`
-    // `TDDLIST-001`. What the strip cannot do is derive that id from the code,
-    // which is a different statement and the one the step has to make.
-    const doc = flat(await readFile(DOC_PATH, "utf-8"));
-
-    expect(doc).not.toContain("has no numbered id to alias at all");
-    expect(doc).toContain("does not match at all, so no alias is derived from it");
-    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED` is published under `rule` `TDDLIST-001`");
-    // And the source that pairing is read from, so the example cannot go stale
-    // silently.
-    expect(EXCEPTION_PARKED_CODE).toBe("TDDLIST_EXCEPTION_PARKED");
-    expect(EXCEPTION_PARKED_RULE_ID).toBe("TDDLIST-001");
-  });
-
   it("keeps the documented strip in step with the one waivers.ts applies", async () => {
     // Two statements of one rule is how the document would come to promise an
     // alias the resolver does not give. The document states the shape in prose,
@@ -506,11 +486,13 @@ describe("finding code grammar", () => {
     expect(re.exec("QFAI-TDDLIST-007")?.[1]).toBe("TDDLIST-007");
     // And the two shapes it says get none.
     expect(re.test("QFAI-CFG-LINK-001")).toBe(false);
-    expect(re.test("TDDLIST_EXCEPTION_PARKED")).toBe(false);
+    expect(re.test("QFAI_CONFIG_INVALID")).toBe(false);
 
     const doc = flat(await readFile(DOC_PATH, "utf-8"));
     expect(doc).toContain("`QFAI-CFG-LINK-001` strips to nothing");
-    expect(doc).toContain("`TDDLIST_EXCEPTION_PARKED`");
+    expect(doc).toContain(
+      "an underscore-separated code (`QFAI_CONFIG_INVALID`) does not match at all",
+    );
   });
 
   it("documents every frozen family in docs/finding-codes.md", async () => {

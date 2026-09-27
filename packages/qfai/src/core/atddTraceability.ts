@@ -26,7 +26,6 @@ import {
   parseAllMarkdownTables,
   resolveTestCaseTables,
 } from "./specPackParsers.js";
-import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
@@ -1517,19 +1516,6 @@ function collectTableTcLevels(tcText: string): Array<[string, string]> {
 }
 
 /**
- * Heading-form TC levels only (`## TC-0001` + `- Level:`), with non-spec
- * regions masked.
- *
- * Exported for `validateTddList`: its table reader is deliberately
- * section-scoped, so the heading shape needs collecting separately. Using the
- * combined `collectTcLevels` there would re-admit every table in the document,
- * including an Appendix one the section scoping exists to keep out.
- */
-export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, string]> {
-  return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
-}
-
-/**
  * The TC ids a spec pack declares, from the shapes that carry authority.
  *
  * The union of the heading form and the `TC-ID` column of the tables
@@ -1576,9 +1562,9 @@ export function collectDeclaredTcIds(rawTcText: string): Set<string> {
 /**
  * Every heading-form TC id, whether or not the block declares a `Level`.
  *
- * `collectHeadingTcLevelsFrom` yields a pair only when a `- Level:` line
- * follows the heading, so it cannot answer "does this spec declare this TC?" —
- * a level-less TC is still declared. {@link collectDeclaredTcIds} reads this
+ * The level collector yields a pair only when a `- Level:` line follows the
+ * heading, so it cannot answer "does this spec declare this TC?" — a
+ * level-less TC is still declared. {@link collectDeclaredTcIds} reads this
  * for that reason.
  */
 export function collectHeadingTcIdsFrom(rawTcText: string): string[] {
@@ -1680,9 +1666,10 @@ function normalizeLevel(level: string): string {
  * each excluded TC at `info`, so the exclusion is visible rather than silent.
  *
  * The members are lower-case, so a `Level` goes through {@link normalizeLevel}
- * before it is looked up.
+ * before it is looked up. Adding a spelling here takes the only test obligation
+ * away from every TC declaring it.
  */
-const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
+const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
