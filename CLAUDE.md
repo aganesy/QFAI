@@ -100,9 +100,9 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 ### `.qfai/spec/03_contract/cli/`
 
 The contracts for QFAI's own command surface, and for the files QFAI writes into
-a consuming project. This directory is the repository's own; the `api/`, `db/`,
-`ui/` and `design/` directories beside it hold a project's contracts and belong
-to the shipped `qfai-sdd` skill.
+a consuming project. This directory is the repository's own; the `api/`, `db/`
+and `ui/` directories beside it hold a project's contracts and belong to the
+shipped `qfai-sdd` skill.
 
 Naming and indexing rules: `AGENTS.md`.
 

@@ -143,7 +143,6 @@
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
     "tests/core/sddPreflightReqCount.test.ts",
-    "tests/core/bpApDb.test.ts",
     "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
     "tests/core/findingCodeGrammar.test.ts",

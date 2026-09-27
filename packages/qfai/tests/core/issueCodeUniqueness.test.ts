@@ -559,11 +559,11 @@ describe("issue report metadata", () => {
       code: "QFAI-NOT-A-CATALOGUED-CODE",
       severity: "error",
       category: "canonical",
-      message: "Duplicate BP ID: BP-0001",
-      rule: "bpApDb.duplicateId",
+      message: "External URL reference in HTML Mock: https://cdn.example.com/style.css",
+      rule: "htmlMock.externalUrl",
     });
     expect(expected).toBe(UNCATALOGUED_EXPECTED);
-    expect(expected).not.toContain("bpApDb");
+    expect(expected).not.toContain("htmlMock");
   });
 
   it("states the skills-integrity expected state without naming a configured path", () => {
@@ -581,35 +581,18 @@ describe("issue report metadata", () => {
     expect(expected).not.toContain(".qfai/");
   });
 
-  it("remediates a BP/AP required field that is present but invalid, not only one that is absent", () => {
-    // `toSafeString(value).trim() === ""` fires on `description: []` as well as
-    // on an absent key, and "add the missing field" cannot repair that entry:
-    // a second key of the same name is a YAML duplicate.
-    const base = { severity: "error", category: "canonical" } as const;
-    for (const code of ["QFAI-BPAP-006", "QFAI-BPAP-009"]) {
-      const fix = resolveIssueFix({
-        ...base,
-        code,
-        message: `Missing required field "description" in entry`,
-      });
-      expect(fix).not.toBe(UNCATALOGUED_FIX);
-      expect(fix).toMatch(/add the key/i);
-      expect(fix).toMatch(/overwrite the value/i);
-    }
-  });
-
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
-    const base = { severity: "error", category: "canonical", message: "Duplicate BP ID" } as const;
+    const base = { severity: "error", category: "canonical", message: "Unknown key" } as const;
     expect(
       resolveIssueFix({
         ...base,
-        code: "QFAI-BPAP-005",
+        code: "QFAI-CFG-001",
         suggested_action: "Do the specific thing.",
       }),
     ).toBe("Do the specific thing.");
-    const catalogued = resolveIssueFix({ ...base, code: "QFAI-BPAP-005" });
+    const catalogued = resolveIssueFix({ ...base, code: "QFAI-CFG-001" });
     expect(catalogued).not.toBe(UNCATALOGUED_FIX);
-    expect(catalogued).toContain("BP ID");
+    expect(catalogued).toContain("Delete the named key");
     expect(resolveIssueFix({ ...base, code: "QFAI-NOT-A-CATALOGUED-CODE" })).toBe(UNCATALOGUED_FIX);
   });
 });

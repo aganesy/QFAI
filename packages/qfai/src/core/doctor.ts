@@ -1625,7 +1625,7 @@ async function buildPrototypingDesignContractsCheck(
       title: "Pre-prototyping design contracts",
       message: "pre-prototyping design contracts satisfy readiness checks",
       details: {
-        designDir: `${config.paths.contractsDir}/design`,
+        designMd: "DESIGN.md",
       },
     };
   }
@@ -1641,7 +1641,7 @@ async function buildPrototypingDesignContractsCheck(
     title: "Pre-prototyping design contracts",
     message: `pre-prototyping design contracts have blocking issue(s) (count=${issues.length})`,
     details: {
-      designDir: `${config.paths.contractsDir}/design`,
+      designMd: "DESIGN.md",
       issues: issues.map((item) => ({
         code: item.code,
         severity: item.severity,

@@ -12,8 +12,8 @@
 # depth). A pattern that matches nothing is not an error: a flow or a story that
 # has not been written yet is an ordinary state.
 #
-# Every entry claims its own path. A document matched by no entry is not
-# checked, and one matched by two would be held to two contracts.
+# Every entry claims its own path. A Markdown file under either tree that no
+# entry matches, or that two entries match, fails the run.
 
 documents:
   # ── Story tree ────────────────────────────────────────────────────

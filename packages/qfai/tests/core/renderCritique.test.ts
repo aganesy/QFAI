@@ -37,9 +37,7 @@ describe("Render Critique Loop validation", () => {
   }
 
   async function seedContracts(): Promise<void> {
-    const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
     const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
-    await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001-dashboard.yaml"),

@@ -492,7 +492,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-FLOW-001",
     "QFAI-FLOW-002",
     "QFAI-FLOW-004",
-    "QFAI-BPAP-*",
     "QFAI-CONSISTENCY-*",
     "QFAI-AGENT-*",
     "QFAI-AUD-*",
@@ -1170,7 +1169,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-011":
     "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
   "QFAI-DOCSCHEMA-001":
-    "Every story-tree document has the sections, order and content its shipped schema declares, and none carries the opt-out marker.",
+    "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
@@ -1303,26 +1302,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  // `paths.contractsDir` is configurable, so the expected state names the file
-  // by role rather than pinning the default location: a project that moved its
-  // contracts must not be told to repair a directory it does not use. The
-  // offending path is already on the finding's `target:` line.
-  "QFAI-BPAP-001": "Every BP/AP rule file in the contracts `design/` directory is readable.",
-  "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
-  "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
-  "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
-  "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
-  // The check is `toSafeString(value).trim() === ""`, so a required key that is
-  // present but holds `[]`, `{}`, or `null` fails it exactly like an absent
-  // one. The expected state says "non-empty scalar", not "present", so the
-  // report does not read as if the key were missing when it is not.
-  "QFAI-BPAP-006": "Every BP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
-  "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
-  "QFAI-BPAP-009": "Every AP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
-  "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
-  "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
@@ -1422,7 +1401,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
   "QFAI-DOCSCHEMA-001":
-    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it.",
+    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
@@ -1430,33 +1409,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
   "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
-  "QFAI-BPAP-001":
-    "Restore read access to the file, or delete it if it is no longer part of the rule set.",
-  "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
-  // QFAI-BPAP-001/002/003 fire on both `best-practices*.yaml` and
-  // `anti-patterns*.yaml`, so the example ID has to stay neutral: spelling
-  // `BP-0001` here would walk an anti-pattern author straight into
-  // QFAI-BPAP-007, which demands the `AP-XXXX` form.
-  "QFAI-BPAP-003":
-    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` in a best-practices file, `- id: AP-0001` in an anti-patterns file); a mapping at the root is not a rule set.",
-  "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
-  "QFAI-BPAP-005":
-    "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
-  // Both codes fire on a present-but-empty value as well as on an absent key:
-  // the check reads `toSafeString(value).trim()`, and a `description: []` or a
-  // `detection_method: {}` reduces to the empty string. "Add the missing field"
-  // is unusable on that path — the key is already there, and adding a second
-  // one of the same name is a YAML duplicate rather than a repair.
-  "QFAI-BPAP-006":
-    "Give the BP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the practice is no longer needed.",
-  "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
-  "QFAI-BPAP-008":
-    "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
-  "QFAI-BPAP-009":
-    "Give the AP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the anti-pattern is no longer needed.",
-  "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
-  "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
-  "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
   // All four declared-mapping paths (blank cell, several directories, a CAP on
   // two rows, two CAPs on one directory) pass no `suggested_action`, and one
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
@@ -1529,7 +1481,7 @@ function resolveIssueTarget(issue: Issue): string {
  * emitting validator uses, instead of drifting from it silently.
  *
  * `issue.rule` is deliberately not a fallback: it holds an internal rule token
- * (`bpApDb.duplicateId`), and printing it in the `expected` field made a missing
+ * (`htmlMock.externalUrl`), and printing it in the `expected` field made a missing
  * catalog entry look like a value rather than an omission.
  */
 export function resolveIssueExpected(issue: Issue): string {

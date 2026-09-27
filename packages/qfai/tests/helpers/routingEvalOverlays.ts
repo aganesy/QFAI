@@ -189,8 +189,8 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   materialPermissionRequired: stated,
   providedApprover: stated,
   designLocked: appendTo(
-    `${SPEC}/03_contract/design/customer-list.md`,
-    "# Customer list\n\nA two-column grid. This layout is locked.",
+    `${SPEC}/03_contract/ui/ui-0001-customer-list.yaml`,
+    "# QFAI-CONTRACT-ID: UI-0001\n# A two-column grid. This layout is locked.\nscreens:\n  - id: customer_list\n    title: Customer list\n    route: /customers",
   ),
   expectedLayoutKnown: stated,
   newBrandDecision: stated,

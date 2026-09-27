@@ -50,7 +50,6 @@ import {
 import {
   detectPlatform,
   validateAgentDefinition,
-  validateBpApDb,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -840,7 +839,6 @@ async function runUiuxValidators(
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config, htmlMockTiming),
     () => validateMermaidScreenFlow(root, config),
-    () => validateBpApDb(root, config),
     () => validateUiDefinitionConsistency(root, config),
     () => validateResearchSummary(root, config),
     () => validateAgentDefinition(root, config),

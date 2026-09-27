@@ -35,7 +35,6 @@ export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
-export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";

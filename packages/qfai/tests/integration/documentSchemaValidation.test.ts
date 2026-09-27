@@ -73,6 +73,25 @@ describe("qfai validate runs the document-schema check", () => {
     expect(findings.map((finding) => finding.message).join("\n")).toContain("Flow");
   });
 
+  it("reports a Markdown file no schema covers as one error naming it", async () => {
+    // QFAI:AC-0001-0011-05
+    // QFAI:EX-0001-0011-13
+    const notes = ".qfai/spec/03_contract/design/notes.md";
+    const root = await treeWithFlow(await template());
+    await mkdir(path.dirname(path.join(root, notes)), { recursive: true });
+    await writeFile(path.join(root, notes), "# Notes\n", "utf-8");
+
+    const findings = await schemaFindings(root);
+
+    expect(findings).toEqual([
+      expect.objectContaining({
+        code: "QFAI-DOCSCHEMA-001",
+        file: notes,
+        message: expect.stringContaining(`${notes}:1:1 [coverage] no schema covers this document`),
+      }),
+    ]);
+  });
+
   it("reports nothing for a document that conforms", async () => {
     // QFAI:AC-0001-0011-03
     const root = await treeWithFlow(await template());

@@ -39,9 +39,8 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   written. A row has the columns `ID`, `Title`, `File`, `Depends On`,
   `Reconciled With` and `Purpose`.
 
-A new contract takes its kind from its directory (`cli/`, `api/`, `db/`, `ui/`
-or `design/`) and the next contract number, one more than the highest of any
-kind. A number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it
+A new contract takes its kind from its directory (`cli/`, `api/`, `db/` or
+`ui/`) and the next contract number, one more than the highest of any kind. A number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it
 declares its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`),
 or on a `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 

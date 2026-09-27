@@ -880,11 +880,9 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
 
   const specDir = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
   const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
-  const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
   const binDir = path.join(root, "node_modules", ".bin");
   await mkdir(specDir, { recursive: true });
   await mkdir(uiDir, { recursive: true });
-  await mkdir(designDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
 
   await writeFile(path.join(specDir, "business-flow.md"), "# BF-0001: Doctor fixture\n", "utf-8");

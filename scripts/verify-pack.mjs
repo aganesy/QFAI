@@ -293,7 +293,7 @@ for (const relative of [
     throw new Error(`init did not seed .qfai/spec/${relative} from its packed template.`);
   }
 }
-for (const kind of ["api", "db", "ui", "cli", "design"]) {
+for (const kind of ["api", "db", "ui", "cli"]) {
   const contractDir = path.join(specDir, "03_contract", kind);
   if (!existsSync(contractDir) || !lstatSync(contractDir).isDirectory()) {
     throw new Error(`init did not generate .qfai/spec/03_contract/${kind} directory.`);

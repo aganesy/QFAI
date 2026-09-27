@@ -2,7 +2,7 @@ import { parseHeadings } from "./parse/markdown.js";
 import { maskNonSpecRegions } from "./specPackParsers.js";
 import { isContractId } from "./storyTree/ids.js";
 
-const DECLARED_ID = String.raw`(?:CLI|API|DB|UI|DESIGN)-\d{4}`;
+const DECLARED_ID = String.raw`(?:CLI|API|DB|UI)-\d{4}`;
 /** A 1.x `CON-*` ID, which only the 1.x to 2.x migration reads, beside a current one. */
 const LEGACY_DECLARED_ID = String.raw`CON-(?:API|UI|DB)-\d+|${DECLARED_ID}`;
 const declarationPattern = (id: string): RegExp =>
@@ -16,7 +16,7 @@ const CONTRACT_DECLARATION_LINE_RE = new RegExp(
   String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:${DECLARED_ID})\s*(?:\*\/)?\s*$`,
 );
 /** `# CLI-0001: <title>`, the H1 a Markdown contract declares its ID in. */
-const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI|DESIGN)-\d{4}):\s+\S/;
+const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI)-\d{4}):\s+\S/;
 
 /**
  * The `<KIND>-NNNN` ID a contract file declares, or `null` when it declares

@@ -64,7 +64,7 @@ describe("story-tree core", () => {
       "constraint.md",
     ]);
     expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md"]);
-    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli", "design"]);
+    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli"]);
     expect(STORY_TREE_ROOT_ENTRIES).not.toContain(".qfai/decisions");
     expect(STORY_FILES).not.toContain("01_Spec-retired.md");
     expect(STORY_FILES).toEqual(["01_User-story.md", "02_Acceptance-Criteria.md", "03_Example.md"]);

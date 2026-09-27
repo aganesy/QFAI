@@ -41,7 +41,7 @@ const IMPLEMENTATION_PATH =
 /** Every file under this repository's contract kind directories. */
 async function contractFiles(): Promise<string[]> {
   const base = path.join(REPO_ROOT, ".qfai/spec/03_contract");
-  const kinds = ["cli", "api", "db", "ui", "design"];
+  const kinds = ["cli", "api", "db", "ui"];
   const listed = await Promise.all(
     kinds.map(async (kind) => {
       const entries = await readdir(path.join(base, kind), {
@@ -360,13 +360,13 @@ describe("contract IDs and contract-scoped business rules", () => {
         indexRow("API-0002", "api/api-0002-orders.yaml"),
         indexRow("-", "ui/ui-0005-home.yaml"),
         indexRow("CLI-0002", "cli/cli-0002-moved.md"),
-        indexRow("DESIGN-0001", "design/design-0001-tokens.yaml"),
+        indexRow("DB-0001", "db/db-0001-orders.sql"),
       ],
       {
         "cli/check.md": CLI_CONTRACT,
         "api/api-0002-orders.yaml": "# QFAI-CONTRACT-ID: DB-0002\nopenapi: 3.1.0\n",
         "ui/ui-0005-home.yaml": "screens: []\n",
-        "design/design-0001-tokens.yaml": "# QFAI-CONTRACT-ID: DESIGN-0001\ntokens: {}\n",
+        "db/db-0001-orders.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id int);\n",
       },
     );
     const findings = await indexFindings(root);

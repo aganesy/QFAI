@@ -1180,6 +1180,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     it("states every clause in the shipped master", async () => {
       const text = await readFile(path.join(ROOT, MASTER), "utf-8");
       for (const clause of [
+        /Every document has one schema/,
+        /no entry names fails/,
         /The schemas are closed/,
         /A section the schema does not name fails/,
         /An empty section is still there/,

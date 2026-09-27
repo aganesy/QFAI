@@ -8,7 +8,7 @@ Feature: Contract index and contract-layer validation
   Scenario: A contract file missing from contracts.md raises QFAI-CONTRACT-034
     Given the story tree, and a contract file under `paths.contractsDir` that has no row in `contracts.md`
     When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised at error naming the file, keyed by the contract ID the file declares, or by the file's path for a file under `cli/` or `design/` that declares none
+    Then `QFAI-CONTRACT-034` is raised at error naming the file, keyed by the contract ID the file declares, or by the file's path for a file under `cli/` that declares none
     And a contract file that `contracts.md` lists raises no such finding
 
   # AC-0001-0054-02
@@ -38,4 +38,11 @@ Feature: Contract index and contract-layer validation
     When `qfai validate --profile sdd` runs
     Then `QFAI-CONTRACT-036` takes a `db/` file as the owner of the tables it creates only when the file declares exactly one contract ID and that ID is a `DB-NNNN` ID
     And a `db/` file that declares an ID of another kind, or more than one ID, neither owns a table nor receives that finding
+
+  # AC-0001-0054-06
+  Scenario: A file outside the contract kind directories is not a contract
+    Given the story tree, and a file in a directory under `paths.contractsDir` other than `api/`, `cli/`, `db/` and `ui/`, such as `design/`
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-CONTRACT-034` is raised once at error naming the file, its directory and the contract kind directories
+    And the story tree reads no contract ID and no rule from the file
 ```
