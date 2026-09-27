@@ -626,7 +626,11 @@ const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
 type StoryParts = { sentence: string; nonGoals: string[] };
 type BlockEntry =
   | { kind: "field"; key: string; value: string; items: string[] }
-  | { kind: "paragraph"; text: string };
+  | { kind: "paragraph"; text: string }
+  | { kind: "other" };
+
+/** A line that opens a list item, a quote, a table or a fence at the top of a block. */
+const OTHER_BLOCK = /^(?:[-*+]|\d+[.)])\s|^\s*(?:>|\||```|~~~)/;
 
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
@@ -650,6 +654,11 @@ function storyBlockEntries(body: string): BlockEntry[] {
       const last = current.items.length - 1;
       if (last >= 0) current.items[last] = `${current.items[last]} ${line.trim()}`;
       else current.value = `${current.value.trimEnd()} ${line.trim()}`;
+    } else if (OTHER_BLOCK.test(line)) {
+      current = { kind: "other" };
+      entries.push(current);
+    } else if (current?.kind === "other") {
+      continue;
     } else if (current?.kind === "paragraph") {
       current.text = `${current.text.trimEnd()} ${line.trim()}`;
     } else {
@@ -669,7 +678,9 @@ function storyParts(body: string): StoryParts | null {
   const sentences: string[] = [];
   const nonGoals: string[] = [];
   for (const entry of storyBlockEntries(body)) {
-    if (entry.kind === "paragraph") {
+    if (entry.kind === "other") {
+      return null;
+    } else if (entry.kind === "paragraph") {
       sentences.push(entry.text);
     } else if (entry.key === "non-goals") {
       nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
@@ -686,19 +697,30 @@ function storyParts(body: string): StoryParts | null {
 }
 
 /**
- * A story block without the fields only the archive keeps, and their continuation
- * lines. What remains is left for a person to rewrite.
+ * A story block without the top-level fields only the archive keeps, and their
+ * continuation lines. A line inside a fence is content, never a field. Every other
+ * line stays as written, except a blank line a removed field leaves beside another.
  */
 function withoutArchivedFields(body: string): string {
   const kept: string[] = [];
   let skipping = false;
+  let removed = false;
+  let fence: string | null = null;
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
-    const field = /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line);
+    const marker = /^\s*(```|~~~)/.exec(line)?.[1] ?? null;
+    const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
     if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
-    else if (!/^\s+\S/.test(line)) skipping = false;
-    if (!skipping) kept.push(line);
+    else if (fence !== null || !/^\s+\S/.test(line)) skipping = false;
+    if (marker !== null) fence = fence === null ? marker : fence === marker ? null : fence;
+    if (skipping) {
+      removed = true;
+      continue;
+    }
+    if (removed && line.trim() === "" && (kept.at(-1) ?? "").trim() === "") continue;
+    removed = false;
+    kept.push(line);
   }
-  return kept.join("\n").replace(/\n{3,}/g, "\n\n");
+  return kept.join("\n");
 }
 
 function outputStory(
@@ -716,8 +738,8 @@ function outputStory(
 }
 
 /**
- * A scenario re-indented to the template: two spaces for `Scenario:`, four for each step.
- * Every other line keeps its place relative to the step above it: that step's
+ * A scenario re-indented to the template: two spaces for `Scenario:`, four for each step
+ * and each `Examples:` line. Every other line keeps its place relative to the step above it: that step's
  * indentation is replaced and every character after it is kept, so a DocString keeps
  * its relative whitespace, tabs included. A whitespace-only line inside a DocString is
  * payload, so it is shifted like the rest rather than emptied.
@@ -725,10 +747,14 @@ function outputStory(
 function indentedScenario(scenario: string): string {
   const lines = scenario.replace(/\r\n/g, "\n").split("\n");
   const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
-  const isStep = (line: string): boolean => /^\s*(?:Given|When|Then|And|But)\s/.test(line);
+  const isStep = (line: string): boolean =>
+    /^\s*(?:(?:Given|When|Then|And|But)\s|(?:Examples|Scenarios):)/.test(line);
   let stepIndent = indent(lines.find(isStep) ?? "");
-  const shifted = (line: string): string =>
-    `    ${indent(line) >= stepIndent ? line.slice(stepIndent) : line.trimStart()}`;
+  const shifted = (line: string): string => {
+    if (indent(line) >= stepIndent) return `    ${line.slice(stepIndent)}`;
+    const delta = 4 - stepIndent;
+    return delta >= 0 ? `${" ".repeat(delta)}${line}` : line.slice(Math.min(-delta, indent(line)));
+  };
   let docString: string | null = null;
   return lines
     .map((line, index) => {
