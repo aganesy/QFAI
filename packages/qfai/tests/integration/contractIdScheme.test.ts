@@ -291,6 +291,19 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       "```md\nRule refs: BR-0001\n```\n",
     );
     expect(parseContractRules(check, commentedRefs).errors).toEqual([]);
+    const twoSections = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n${rulesTable("Business rules", ["| BR-0003-0002 | Second | EX-0001-0001-01 |"])}`;
+    expect(parseContractRules(check, twoSections).errors).toContain(
+      `More than one ## Business rules section in ${check}`,
+    );
+  });
+
+  it("reads a Markdown contract's ID from its first rendered H1", () => {
+    expect(
+      declaredContractId(
+        "api/api-0002-orders.md",
+        "<!--\n# API-0003: Old title\n-->\n\n# API-0002: Orders\n",
+      ),
+    ).toBe("API-0002");
   });
 
   it("declares nothing when a file mixes a new and an old declaration", () => {
@@ -322,9 +335,16 @@ describe("the new contract IDs in the checks that read the old ones", () => {
         ...INDEX_HEADER.slice(2),
         indexRow("API-0002", "api/api-0002-orders.yaml"),
         "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0008", "api/api-0008-missing.yaml"),
+        "",
       ].join("\n"),
     );
-    expect(await indexFindings(root)).toEqual([]);
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /lists API-0008 with api\/api-0008-missing\.yaml, which is not a contract file$/,
+      ),
+    ]);
   });
 
   it("reads a new ID in an index with the old columns", async () => {

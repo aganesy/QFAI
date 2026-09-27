@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { extractH2Sections } from "../parse/markdown.js";
+import { extractH2Sections, parseHeadings } from "../parse/markdown.js";
 import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
 export type ContractRule = {
@@ -98,6 +98,12 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
     }
   } else if (extension === ".md") {
     const sections = extractH2Sections(text);
+    const businessRulesSections = parseHeadings(maskNonSpecRegions(text)).filter(
+      (heading) => heading.level === 2 && heading.title === BUSINESS_RULES,
+    ).length;
+    if (businessRulesSections > 1) {
+      errors.push(`More than one ## ${BUSINESS_RULES} section in ${file}`);
+    }
     // SIMPLIFIED: `## Rules`, and the `Rule refs:` line it may carry, are still read
     // beside `## Business rules`.
     // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.

@@ -39,11 +39,13 @@ export async function validateStoryTreeContractReferences(
   const currentTables = tables.filter(
     (table) => table.headers.map(normalizeHeaderKey).join("|") === INDEX_COLUMNS,
   );
-  const current =
-    currentTables.find((table) => table.heading.toLowerCase() === "contract index") ??
-    currentTables[0];
-  if (current) {
-    return validateContractIndex({ root, contractsDir, indexFile }, current.rows, model);
+  const underIndex = currentTables.filter(
+    (table) => table.heading.toLowerCase() === "contract index",
+  );
+  const current = underIndex.length > 0 ? underIndex : currentTables.slice(0, 1);
+  if (current.length > 0) {
+    const rows = current.flatMap((table) => table.rows);
+    return validateContractIndex({ root, contractsDir, indexFile }, rows, model);
   }
   // SIMPLIFIED: an index without the `ID | Title | File | Depends On | Reconciled With |
   // Purpose` columns is still read by its `Declared ID` and `File` columns.
