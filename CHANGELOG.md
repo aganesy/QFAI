@@ -411,7 +411,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     or YAML.
   - No file under `design/` is numbered. The directory moves whole, and each
     file is listed with where its content now belongs: the brand in the root
-    `DESIGN.md`, a screen in a `ui/` contract.
+    `DESIGN.md`, a screen in a `ui/` contract. A dot-prefixed file such as
+    `.tokens.json` is listed too, and so is an empty `.gitkeep`.
   - Each original is kept under
     `.qfai/evidence/migration-spec-to-story/retired/contract/`, and step 3
     exits 3. A plan that places a rule in one of these files stops step 4.

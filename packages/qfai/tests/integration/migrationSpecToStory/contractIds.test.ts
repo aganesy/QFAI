@@ -582,4 +582,30 @@ describe("migration files that are no contract", () => {
     }
     expect(await text(root, `${EVIDENCE}/contract-map.json`)).not.toContain("design/");
   });
+
+  it("names every dot-prefixed file of design/, an empty .gitkeep included", async () => {
+    // QFAI:EX-0004-0006-26
+    const root = await project();
+    const design = [
+      ["design/.gitkeep", ""],
+      ["design/.tokens.json", '{ "primary": "#003366" }\n'],
+      ["design/.drafts/home.yaml", "screens: []\n"],
+    ] as const;
+    for (const [relative, content] of design) await put(root, `${CONTRACTS}/${relative}`, content);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await files(path.join(root, CONTRACTS))).toEqual(NUMBERED);
+    await expect(readdir(path.join(root, CONTRACTS, "design"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    const reason =
+      "design/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract";
+    for (const [relative, content] of design) {
+      expect(await text(root, `${RETIRED}/${relative}`)).toBe(content);
+      expect(forAPerson(result.output)).toContain(
+        `${CONTRACTS}/${relative}: ${reason}; rewrite what it states by hand (kept at ${RETIRED}/${relative})`,
+      );
+    }
+    expect(await text(root, `${EVIDENCE}/contract-map.json`)).not.toContain("design/");
+  });
 });
