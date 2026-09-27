@@ -180,6 +180,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
     `UI-0003`.
 
+- **The policy-layer documents and the two registers have closed schemas.**
+  `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
+  `constraint.md`, `decisions.md` and `open-questions.md` now accept only
+  the sections their templates declare, in order, each holding the one kind of
+  content it is for. A section the schema does not name, or a list where a table
+  belongs, fails `pnpm lint:mdschema`.
+
+  - `principle.md` gains a Decision priorities table; `initiative.md` no
+    longer carries an overview or its own priorities.
+  - `glossary.md` is one Term and Definition table.
+  - `constraint.md` has Technical, Operational and Business sections, each one
+    ID, Constraint, Rationale and Impact table, which may be empty.
+  - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
+    strict schema, so a misspelt rule or option fails instead of being ignored.
+  - Migration step 3 writes these five policy files in their template's shape.
+    An old section of the same kind moves into its section; every other one is
+    listed under `## For a person` with its archived copy, and the step exits 3.
+
 - **`qfai-sdd` writes contracts in the contract ID scheme, and references
   point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
   constitution, the drift protocol and the agent cards now say:

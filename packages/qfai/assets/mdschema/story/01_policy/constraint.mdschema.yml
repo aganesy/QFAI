@@ -1,37 +1,56 @@
-# Document schema: 01_policy/constraint.md
+# Document schema: <specsDir>/01_policy/constraint.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# Constraints$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: Limits the design must accept, each with its reason and effect.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## Technical Constraints$"
           regex: true
-        description: Technical limits.
-        allow_additional: true
-        optional: true
+        description: Runtime and technology limits. One row per constraint, ID TC-NN; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Constraint, Rationale, Impact]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
       - heading:
           pattern: "^## Operational Constraints$"
           regex: true
-        description: Operational limits.
-        allow_additional: true
-        optional: true
+        description: Operational limits. One row per constraint, ID OC-NN; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Constraint, Rationale, Impact]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
       - heading:
           pattern: "^## Business Constraints$"
           regex: true
-        description: Business limits.
-        allow_additional: true
-        optional: true
-      - heading:
-          pattern: "^## Constraints$"
-          regex: true
-        description: Constraints section.
-        allow_additional: true
-        optional: true
+        description: Business and contractual limits. One row per constraint, ID BC-NN; the table may have no rows.
+        allow_additional: false
         tables:
           - min: 1
-            required_headers:
-              - Constraint
-              - Reason
+            max: 1
+            required_headers: [ID, Constraint, Rationale, Impact]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true

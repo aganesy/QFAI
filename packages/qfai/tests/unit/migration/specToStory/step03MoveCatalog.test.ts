@@ -1,4 +1,7 @@
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -35,6 +38,42 @@ async function put(root: string, relative: string, content: string): Promise<voi
   await writeFile(target, content, "utf8");
 }
 
+/** The document schema checker's entry point, read from the package's `bin` field. */
+function mdschemaCli(): string {
+  const manifestPath = createRequire(import.meta.url).resolve("@jackchuka/mdschema/package.json");
+  const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const bin =
+    typeof manifest === "object" && manifest !== null && "bin" in manifest
+      ? manifest.bin
+      : undefined;
+  const entry =
+    typeof bin === "string"
+      ? bin
+      : typeof bin === "object" && bin !== null && "mdschema" in bin
+        ? bin.mdschema
+        : undefined;
+  if (typeof entry !== "string") throw new Error("@jackchuka/mdschema declares no bin entry");
+  return path.resolve(path.dirname(manifestPath), entry);
+}
+
+/** What the shipped schema says about one written policy document. */
+function conformance(specsDir: string, name: string): string {
+  const schema = path.resolve(
+    getInitAssetsDir(),
+    "..",
+    "mdschema",
+    "story",
+    "01_policy",
+    `${name}.mdschema.yml`,
+  );
+  const result = spawnSync(
+    process.execPath,
+    [mdschemaCli(), "check", "--schema", schema, path.join(specsDir, "01_policy", `${name}.md`)],
+    { encoding: "utf8" },
+  );
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
+}
+
 async function run(context: MigrationContext): Promise<{ code: number; output: string }> {
   let output = "";
   const code = await executePlannedStep(step03, context, false, {
@@ -53,19 +92,19 @@ async function run(context: MigrationContext): Promise<{ code: number; output: s
 }
 
 describe("migration catalog move", () => {
-  it("routes whole sections and keeps the standard commands section", async () => {
+  it("reports a policy section with no place in the template and keeps the standard commands section", async () => {
     // QFAI:EX-0004-0006-02
     // QFAI:EX-0004-0006-04
     const context = await fixture();
     await put(
       context.root,
       ".qfai/spec/_policies/01_Objective.md",
-      "# Old\n\n## Objective\n\nShared paragraph.\n",
+      "# Old\n\n## Out of scope\n\n- Shared item.\n",
     );
     await put(
       context.root,
       ".qfai/assistant/catalog/product.md",
-      "# Product\n\n## Who is the user?\n\nUser marker.\n\n## Milestones\n\nMilestone marker.\n\n## Pricing notes\n\nPrice marker.\n\n## What is success?\n\nShared paragraph.\n",
+      "# Product\n\n## Non-goals\n\n- Shared item.\n- Product item.\n\n## Pricing notes\n\nPrice marker.\n",
     );
     await put(
       context.root,
@@ -77,22 +116,253 @@ describe("migration catalog move", () => {
       ".qfai/spec/03_contract/tech.md",
       "# Technology\n\n## Standard commands (copy-paste)\n\n- Test: run test\n",
     );
-    await run(context);
+    const result = await run(context);
+    expect(result.code).toBe(3);
     const objective = await readFile(
       path.join(context.specsDir, "01_policy", "objective.md"),
       "utf8",
     );
-    const initiative = await readFile(
-      path.join(context.specsDir, "01_policy", "initiative.md"),
-      "utf8",
+    expect(objective).toContain("## Non-goals\n\n- Shared item.\n- Product item.\n");
+    expect(objective.match(/Shared item\./g)).toHaveLength(1);
+    expect(objective).not.toContain("Price marker");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/objective.md: rewrite "## Pricing notes" of .qfai/assistant/catalog/product.md by hand (kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/product.md)',
     );
     const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
-    expect(objective).toContain("## Who is the user?\n\nUser marker.");
-    expect(objective).toContain("## Pricing notes\n\nPrice marker.");
-    expect(objective.match(/Shared paragraph\./g)).toHaveLength(1);
-    expect(initiative).toContain("## Milestones\n\nMilestone marker.");
     expect(tech).toContain("## Standard commands (copy-paste)\n\n- Test: run test");
     expect(tech.match(/- Test: run test/g)).toHaveLength(1);
+  });
+
+  it("writes every policy document in its template's shape from sections of the same kind", async () => {
+    // QFAI:EX-0004-0006-09
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Success criteria\n\n| Criterion | How it is measured |\n| --- | --- |\n| Orders are kept | A restart loses none |\n\n## Out of scope\n\n- Refunds.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Assumptions\n\n- One region.\n\n## Dependencies\n\n- The payment API.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/product.md",
+      "# Product\n\n## Milestones\n\n| Milestone | Description |\n| --- | --- |\n| First order | A buyer places one order. |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/manifest.md",
+      "# Manifest\n\n## Product / Mission\n\n- Summary: An order service.\n- Value: Buyers get receipts.\n\n## Axioms (Non-negotiable)\n\n- An order is never lost.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | An accepted request with a receipt. |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Node 22 | Runtime | Build |\n| BC-02 | EU data | Contract | Storage |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const policy = (name: string): Promise<string> =>
+      readFile(path.join(context.specsDir, "01_policy", name), "utf8");
+    expect(await policy("objective.md")).toContain(
+      "## Success criteria\n\n| Observable result | Measurement |\n| --- | --- |\n| Orders are kept | A restart loses none |\n\n## Non-goals\n\n- Refunds.\n",
+    );
+    expect(await policy("objective.md")).toContain("- Outcome: `<the change this project seeks>`");
+    expect(await policy("initiative.md")).toContain(
+      "## Assumptions\n\n- One region.\n\n## Dependencies\n\n- The payment API.\n\n## Milestones\n\n| Milestone | Description |\n| --- | --- |\n| First order | A buyer places one order. |\n",
+    );
+    expect(await policy("principle.md")).toContain(
+      "## Product / Mission\n\n- Summary: An order service.\n- Value: Buyers get receipts.\n\n## Axioms (Non-negotiable)\n\n- An order is never lost.\n",
+    );
+    expect(await policy("glossary.md")).toBe(
+      "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | An accepted request with a receipt. |\n",
+    );
+    expect(await policy("constraint.md")).toBe(
+      "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Node 22 | Runtime | Build |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale | Impact |\n| --- | ---------- | --------- | ------ |\n\n## Business Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| BC-02 | EU data | Contract | Storage |\n",
+    );
+    for (const name of ["objective", "initiative", "principle", "glossary", "constraint"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("keeps the template's text where a section's content is of another kind", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\nThe product-level why.\n\n## Objective\n\n- Buyers can order.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Kind | Source |\n| --- | --- | --- | --- |\n| CST-01 | No card data | regulatory | PCI |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const retired = ".qfai/evidence/migration-spec-to-story/retired/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Objective" of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md: rewrite the text before the first section of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand (kept at ${retired}/07_Constraints.md)`,
+    );
+    const objective = await readFile(
+      path.join(context.specsDir, "01_policy", "objective.md"),
+      "utf8",
+    );
+    expect(objective).toContain("## Objective\n\n- Outcome: `<the change this project seeks>`");
+    expect(objective).not.toContain("Buyers can order");
+    expect(await readFile(path.join(context.root, retired, "01_Objective.md"), "utf8")).toContain(
+      "- Buyers can order.",
+    );
+    for (const name of ["objective", "constraint"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("moves an indented list and sends ragged, split and prefixed content to a person", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "---\nowner: product\n---\n# 01 Objective\n\n## Out of scope\n\n  - Refunds.\n    Handled by support.\n  - Returns.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n\n| Term | Definition |\n| --- | --- |\n| Receipt | Proof |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Node 22 | Runtime | Build | extra |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const retired = ".qfai/evidence/migration-spec-to-story/retired/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md: rewrite the text before the title of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of .qfai/spec/_policies/06_Glossary.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand`,
+    );
+    expect(
+      await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8"),
+    ).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n- Returns.\n");
+    for (const name of ["objective", "glossary", "constraint"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("keeps a short continuation and reports an unused column or a short row", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n   - Refunds.\n  Handled by support.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition | Owner |\n| --- | --- | --- |\n| Order | A request | |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n|| Node 22 | Runtime | Build |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/product.md",
+      "# Product\n\n## Non-goals\n\n   - Resale.\n- Rentals.\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const objective = await readFile(
+      path.join(context.specsDir, "01_policy", "objective.md"),
+      "utf8",
+    );
+    expect(objective).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n");
+    expect(objective).not.toContain("Rentals");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Non-goals" of .qfai/assistant/catalog/product.md by hand',
+    );
+    expect(conformance(context.specsDir, "objective")).toContain("No violations");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/glossary.md ## Terms: carry the "Owner" column of "## Terms" in .qfai/spec/_policies/06_Glossary.md by hand',
+    );
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand',
+    );
+  });
+
+  it("sends thematic breaks and HTML blocks to a person and names a section for old headings", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Outcome\n\nOrders can be placed.\n\n## Out of scope\n\n- Refunds.\n\n- - -\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Initiative\n\nShip the order flow.\n\n<!-- hidden -->\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Outcome" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/initiative.md ## Initiative: rewrite "## Initiative" of ${policies}/02_Initiative.md by hand`,
+    );
+    for (const name of ["objective", "initiative"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("sends tab-indented lists and tables with a short delimiter row to a person", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n- Parent\n\t- Child\n\t\t- Grandchild\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- |\n| Order | A request |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of ${policies}/06_Glossary.md by hand`,
+    );
   });
 
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
