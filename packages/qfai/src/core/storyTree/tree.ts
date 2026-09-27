@@ -198,12 +198,7 @@ export function buildStoryTreeModel(
       relative = /(?:^|\/)03_contract\/(.+)$/.exec(file)?.[1] ?? null;
     }
     if (!relative) continue;
-    if (
-      !/^(?:api|db|ui|cli|design)\//.test(relative) &&
-      relative !== "tech.md" &&
-      relative !== "structure.md"
-    )
-      continue;
+    if (!/^(?:api|db|ui|cli|design)\//.test(relative) && relative !== "tech.md") continue;
     model.contractFiles.push(file);
     if (/^(?:cli|design)\//.test(relative)) model.additionalContractFiles.push(file);
     const contractId = relative.includes("/") ? declaredContractId(file, text) : null;

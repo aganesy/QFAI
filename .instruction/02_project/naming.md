@@ -39,7 +39,6 @@ version: 1.0.0
   03_contract/
     contracts.md
     tech.md
-    structure.md
     api/ db/ ui/ cli/ design/
 ```
 

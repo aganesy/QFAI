@@ -34,4 +34,12 @@ Scenario: Existing specs directory remains configured
   Given the same project has `paths.specsDir` already set
   When `/qfai-configure` updates the config
   Then the existing value is left unchanged
+
+# AC-0001-0078-04
+# Parent: US-0001-0078
+Scenario: UI Surface Paths In The Configuration
+  Given a project on the story tree
+  When `/qfai-configure` updates its configuration
+  Then it writes `uiux.surfacePaths` with the globs of the paths observed to render a user-visible surface, or an empty list when the repository renders none
+  And the UI-affecting check reads the declared paths from that key alone, matching a path by the key's glob rules
 ```

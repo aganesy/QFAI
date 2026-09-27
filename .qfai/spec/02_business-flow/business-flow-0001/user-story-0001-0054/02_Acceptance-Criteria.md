@@ -16,10 +16,10 @@ Scenario: AC-0001-0054-01
 # AC-0001-0054-02
 # Parent: US-0001-0054
 Scenario: AC-0001-0054-02
-  Given the story tree, and `tech.md` or `structure.md` under `paths.contractsDir` with a section still holding a shipped placeholder, the Standard commands section of `tech.md` included
+  Given the story tree, and `tech.md` under `paths.contractsDir` with a section still holding a shipped placeholder, its Standard commands section included
   When `qfai validate` runs with a profile that runs `QFAI-ASSETS-*`
   Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder
-  And The catalog copies of `tech.md` and `structure.md` are not read for this finding on the story tree
+  And The catalog copy of `tech.md` is not read for this finding on the story tree
 
 # AC-0001-0054-03
 # Parent: US-0001-0054

@@ -2549,7 +2549,6 @@ describe("assets guardrails", () => {
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
       "03_contract/cli/command.md",
       "03_contract/contracts.md",
-      "03_contract/structure.md",
       "03_contract/tech.md",
       "decisions.md",
       "open-questions.md",

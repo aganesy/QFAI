@@ -2,11 +2,10 @@
 
 ## Entry points
 
-Read the Key packages / entrypoints section of <paths.contractsDir>/structure.md. Resolve paths.contractsDir from qfai.config.yaml. If that optional section is absent, use its Entry points section. Treat each entrypoint as a separate proof target.
+Read the Skeleton lines in the Standard commands section of <paths.contractsDir>/tech.md. Resolve paths.contractsDir from qfai.config.yaml. A line of the form `- Skeleton: <entry> -> <command>` names one entrypoint; a single Skeleton line with only a command serves a project with one entrypoint. Treat each entrypoint as a separate proof target.
 
-For each entrypoint, identify an existing smoke test that reaches it. Use its Skeleton command in the Standard commands
-section of <paths.contractsDir>/tech.md: `- Skeleton: <entry> -> <command>`, one item per entrypoint, or
-`- Skeleton: <command>` where the project has one. If it is absent or still a placeholder, use that section's Test command with a
+For each entrypoint, identify an existing smoke test that reaches it. Use the Skeleton command in the Standard commands
+section of <paths.contractsDir>/tech.md. If it is absent or still a placeholder, use that section's Test command with a
 smoke selector declared there or supported by the checked-in test runner configuration. If no smoke test exists, add the
 smallest test that exercises the entrypoint and one observable response. When neither command can run that test, resolve
 the missing command in tech.md before claiming proof. Do not infer a command from package scripts.

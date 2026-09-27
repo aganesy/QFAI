@@ -103,6 +103,11 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
   return person;
 }
 
+/** Adds standard-command items already in the template's form, such as Skeleton items. */
+export function addTechCommands(draft: PolicyDraft, items: string[]): void {
+  addUnique(draft.lists, COMMANDS, items, sameText);
+}
+
 /**
  * Moves one section of an old technology file into the `tech.md` draft when it fits a
  * template section. Returns what a person has to do otherwise.

@@ -15,7 +15,6 @@ const SEED_FILES = [
   "02_business-flow/business-flows.md",
   "03_contract/contracts.md",
   "03_contract/tech.md",
-  "03_contract/structure.md",
 ] as const;
 
 const SEED_DIRS = [

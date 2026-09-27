@@ -188,13 +188,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
 
+- **The story tree has no `structure.md`.** `qfai init` no longer writes
+  `03_contract/structure.md`, and nothing reads it. Its facts have other
+  homes:
+  - Each entrypoint is a Skeleton line in the Standard commands section of
+    `03_contract/tech.md`: `` - Skeleton: `<entry>` -> `<command>` ``.
+  - An architecture boundary is a Technical Constraints row of
+    `01_policy/constraint.md`.
+  - The paths that render a user-visible surface are `uiux.surfacePaths` in
+    `qfai.config.yaml`: a list of globs, or `[]` for a project that renders
+    none. `/qfai-configure` writes it, and the UI-affecting check reads it.
+  - `QFAI-ASSETS-003` checks `tech.md` alone for unfilled placeholders.
+  - Migration step 3 moves the old structure catalog into those three places
+    and lists the rest under `## For a person`.
+
 - **`tech.md` has a closed schema of three sections.** `## Stack` is one
   Component and Choice table with Runtime and Platform rows. `## Dependencies`
   names each runtime package in backticks with its reason on a nested item, or
   says `- None.`. `## Standard commands (copy-paste)` holds one labelled item
   per quality-gate command: Install, Format, Test, Lint, Typecheck, Build,
-  Skeleton and Validate, and optionally Pack / distribution. A project with
-  several entrypoints writes one `- Skeleton: <entry> -> <command>` item each.
+  Skeleton and Validate, and optionally Pack / distribution.
 
   - `tech.md` holds no rules and no constraints. A rule belongs to the contract
     that enforces it, and a constraint to `01_policy/constraint.md`.

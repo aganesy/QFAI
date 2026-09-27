@@ -78,7 +78,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
 - P2: `.qfai/assistant/skill/qfai-grilling/SKILL.md` — the method
-- P3: when the subject belongs to a QFAI project, its policy files under `<paths.specsDir>/01_policy/` and its technology and structure contracts under `<paths.contractsDir>/`
+- P3: when the subject belongs to a QFAI project, its policy files under `<paths.specsDir>/01_policy/` and its technology contract `<paths.contractsDir>/tech.md`
 - P4: whatever the subject names, as facts to read rather than decisions to
   re-open
 
