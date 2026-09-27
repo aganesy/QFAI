@@ -319,19 +319,9 @@ beforeAll(async () => {
   };
 
   const unresolvedRoot = await project();
-  prepareThrough(unresolvedRoot, 3);
-  const unresolvedPlan = path.join(
-    unresolvedRoot,
-    ".qfai/evidence/migration-spec-to-story/plan.yaml",
-  );
-  const originalRulePlan = await readFile(unresolvedPlan, "utf8");
-  const missingContractPlan = originalRulePlan.replace(
-    "contract: api/order.yaml",
-    "contract: api/missing-order.yaml",
-  );
-  if (missingContractPlan === originalRulePlan) throw new Error("Fixture has no API rule owner");
-  await writeFile(unresolvedPlan, missingContractPlan);
   prepareThrough(unresolvedRoot, 6);
+  // The contract the plan names is gone by the time step 7 runs.
+  await rm(path.join(unresolvedRoot, ".qfai/spec/03_contract/api/api-0001-order.yaml"));
   const ruleSource = path.join(unresolvedRoot, ".qfai/spec/spec-0001/04_Business-Rules.md");
   const ruleText = await readFile(ruleSource, "utf8");
   const unresolvedBefore = await hashTree(unresolvedRoot);
@@ -412,7 +402,8 @@ describe("BF-0004 migration cutover", () => {
     // its flow rather than keeping it.
     expect(e2e).not.toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(journey.real[7]?.stdout).not.toContain("QFAI:SPEC-0001:US-0001-0001");
-    expect(journey.real[7]?.stdout).toContain("QFAI:CON-API-0001");
+    expect(integration).toContain(["QFAI", "API-0001"].join(":"));
+    expect(integration).not.toContain(["QFAI", "CON-API-0001"].join(":"));
   });
 
   it("retires the old reader and leaves no story or contract migration errors", async () => {

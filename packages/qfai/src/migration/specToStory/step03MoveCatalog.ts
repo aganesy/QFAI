@@ -7,12 +7,15 @@ import { parseDocument, parse as parseYaml } from "yaml";
 import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { planContracts, type ContractPlan } from "./contractIds.js";
+import { renderContractIndex } from "./contractIndex.js";
 import {
   MigrationInputError,
   type MigrationContext,
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
+import { oldContractIds } from "./idMap.js";
 import {
   isPolicyDocument,
   movePolicySection,
@@ -72,8 +75,6 @@ function titleFor(target: string): string {
       return "Glossary";
     case "constraint.md":
       return "Constraints";
-    case "contracts.md":
-      return "Contracts";
     case "tech.md":
       return "Technology";
     case "structure.md":
@@ -286,6 +287,34 @@ async function contestedOverlays(root: string): Promise<string[]> {
   return contested;
 }
 
+/**
+ * Puts the new `contracts.md` among the documents step 3 writes, and returns what
+ * a person carries by hand. An existing file that differs is left as it is.
+ */
+async function writeContractIndex(
+  context: MigrationContext,
+  old: { source: string; content: string; archive: string; target: string },
+  contracts: ContractPlan,
+  documents: Map<string, string>,
+): Promise<string[]> {
+  const index = renderContractIndex({
+    source: old.content,
+    sourcePath: old.source,
+    archive: old.archive,
+    target: old.target,
+    contractsDir: relative(context.root, context.contractsDir),
+    contracts: contracts.contracts,
+    oldIds: oldContractIds(contracts.map),
+  });
+  const absolute = path.join(context.root, old.target);
+  if (!(await exists(absolute))) documents.set(old.target, index.content);
+  else if ((await readInput(absolute)) !== index.content)
+    index.forAPerson.push(
+      `${old.target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
+    );
+  return index.forAPerson;
+}
+
 export const step03: MigrationStep = {
   number: 3,
   writeSet: ["qfai", "specs", "contracts", "config"],
@@ -294,7 +323,8 @@ export const step03: MigrationStep = {
     const contested = await contestedOverlays(context.root);
     if (contested.length > 0) return { operations: [], forAPerson: contested };
     const operations: MigrationOperation[] = [];
-    const forAPerson: string[] = [];
+    const contracts = await planContracts(context);
+    const forAPerson: string[] = [...contracts.forAPerson];
     const reserved = new Set<string>();
     const documents = new Map<string, string>();
     const policies = relative(context.root, path.join(context.specsDir, "_policies"));
@@ -318,6 +348,18 @@ export const step03: MigrationStep = {
         reserved,
       );
       const fallback = route(source, "", context);
+      if (path.posix.basename(fallback) === "contracts.md") {
+        forAPerson.push(
+          ...(await writeContractIndex(
+            context,
+            { source, content, archive, target: fallback },
+            contracts,
+            documents,
+          )),
+        );
+        operations.push({ kind: "move", source, target: archive });
+        continue;
+      }
       if (isPolicyDocument(fallback)) {
         draftFor(fallback);
         const h1 = parseHeadings(content).find((item) => item.level === 1);
@@ -434,6 +476,7 @@ export const step03: MigrationStep = {
     }
     for (const [target, content] of documents)
       operations.unshift({ kind: "write", target, content });
+    operations.unshift(...contracts.operations);
     return { operations, forAPerson };
   },
 };

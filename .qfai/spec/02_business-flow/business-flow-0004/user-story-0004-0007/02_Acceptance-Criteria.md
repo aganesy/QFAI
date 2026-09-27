@@ -21,4 +21,12 @@ Scenario: Step 4 does not guess
   When step 4 runs
   Then a story or criterion stays in its source, a flow with no `from` receives the template `business-flow.md` with the plan title, and each is listed under For a person with its file and the reason
   And step 4 exits 3
+
+# AC-0004-0007-03
+# Parent: US-0004-0007
+Scenario: A rule destination that is not a contract stops step 4
+  Given a plan placing a rule in a path outside the contract kind directories, or in a path that names no contract
+  When step 4 runs
+  Then it exits 2 naming the rule and the path
+  And it writes nothing
 ```

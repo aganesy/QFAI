@@ -1,0 +1,5 @@
+screens:
+  - id: receipt
+    markers:
+      - selector: "[data-qfai='CON-API-0001:submit']"
+      - selector: "[data-qfai='CON-UI-0009:total']"
