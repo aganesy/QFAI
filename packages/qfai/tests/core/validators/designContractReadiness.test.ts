@@ -124,7 +124,7 @@ async function prototypingIssues(root: string, code: string): Promise<string[]> 
 }
 
 describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
-  // QFAI:EX-0001-0042-03
+  // QFAI:EX-0001-0042-17
   it("TC-3.8.1: an authored root DESIGN.md passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

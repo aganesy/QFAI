@@ -2,4 +2,8 @@
 
 ## User Story
 
-- Describe the user story.
+As a `<actor>`, I want `<goal>`, so that `<benefit>`.
+
+## Non-goals
+
+- `<what this story does not cover>`

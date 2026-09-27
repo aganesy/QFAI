@@ -2,7 +2,7 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                  | Expected                                                                       |
-| --------------- | --------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
-| EX-0001-0021-01 | AC-0001-0021-01 | 既存 `.qfai/` がある状態で `qfai init` | 既存ファイルは skip、欠落ファイルのみ追加。レポートに skipped パスが表示される |
-| EX-0001-0021-02 | AC-0001-0021-01 | 複数回 `qfai init` 実行                | 正しい symlink は skip、壊れた symlink は再作成                                |
+| EX-ID           | AC-Ref          | Input                                 | Expected                                                                                        |
+| --------------- | --------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| EX-0001-0021-01 | AC-0001-0021-01 | `qfai init` with an existing `.qfai/` | Existing files are skipped and only missing files are added; the report shows the skipped paths |
+| EX-0001-0021-02 | AC-0001-0021-01 | `qfai init` run several times         | A correct symlink is skipped and a broken symlink is recreated                                  |

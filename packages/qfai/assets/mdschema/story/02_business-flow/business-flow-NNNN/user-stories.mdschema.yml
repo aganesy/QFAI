@@ -1,19 +1,26 @@
-# Document schema: 02_business-flow/business-flow-NNNN/user-stories.md
+# Document schema: <specsDir>/02_business-flow/business-flow-NNNN/user-stories.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# User Stories$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: The index of the user stories in this flow.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## Stories$"
           regex: true
-        description: Stories section.
-        allow_additional: true
+        description: One row per story, in ID order; the table may have no rows.
+        allow_additional: false
         tables:
           - min: 1
-            required_headers:
-              - US-ID
-              - Story
-              - Path
+            max: 1
+            required_headers: [US-ID, Story, Path]
+        forbidden_text:
+          - pattern: '(?m)^[^|\s#]'
+            regex: true

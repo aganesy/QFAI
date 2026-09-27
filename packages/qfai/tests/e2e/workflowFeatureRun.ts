@@ -121,7 +121,7 @@ const STORY_TREE: Record<string, string> = {
     "",
     "## Purpose",
     "",
-    "- A customer chooses where notifications go.",
+    "A customer chooses where notifications go.",
     "",
     "## Flow",
     "",
@@ -129,6 +129,10 @@ const STORY_TREE: Record<string, string> = {
     "flowchart LR",
     "  Register --> Notify",
     "```",
+    "",
+    "## Alternate and exception paths",
+    "",
+    "- A sixth address is refused, and the customer keeps the five already registered.",
     "",
   ].join("\n"),
   [`${FLOW_DIR}/user-stories.md`]: [
@@ -146,7 +150,7 @@ const STORY_TREE: Record<string, string> = {
     "",
     "## User Story",
     "",
-    "- Goal: As a customer, I register up to five notification addresses.",
+    "As a customer, I want to register up to five notification addresses, so that notifications reach me where I choose.",
     "",
   ].join("\n"),
   [`${STORY_DIR}/02_Acceptance-Criteria.md`]: [

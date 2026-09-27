@@ -3,29 +3,25 @@
 ## Criteria
 
 ```gherkin
-Feature: 設定ファイル診断
+Feature: Configuration file diagnosis
+  # AC-0003-0001-01
+  Scenario: The configuration file is found
+    Given `qfai.config.yaml` exists
+    When `qfai doctor` runs
+    Then it reports `config.found = true`
+    And it shows the configuration file path
 
-# AC-0003-0001-01
-# Parent: US-0003-0001
-Scenario: 設定ファイル存在チェック
-  Given qfai.config.yaml が存在する
-  When `qfai doctor` を実行する
-  Then config.found = true として報告される
-  And 設定ファイルパスが表示される
+  # AC-0003-0001-02
+  Scenario: A missing configuration file is reported
+    Given `qfai.config.yaml` does not exist
+    When `qfai doctor` runs
+    Then it reports `config.found = false`
+    And it shows a warning message
 
-# AC-0003-0001-02
-# Parent: US-0003-0001
-Scenario: 設定ファイル不在チェック
-  Given qfai.config.yaml が存在しない
-  When `qfai doctor` を実行する
-  Then config.found = false として報告される
-  And 警告メッセージが表示される
-
-# AC-0003-0001-03
-# Parent: US-0003-0001
-Scenario: Invalid configuration
-  Given `qfai.config.yaml` is present but its loader reports issues
-  When `qfai doctor` runs
-  Then the `config.load` check is `error`
-  And `details.issues` lists the issues
+  # AC-0003-0001-03
+  Scenario: Invalid configuration
+    Given `qfai.config.yaml` is present but its loader reports issues
+    When `qfai doctor` runs
+    Then the `config.load` check is `error`
+    And `details.issues` lists the issues
 ```
