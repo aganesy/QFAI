@@ -7,7 +7,11 @@ import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
-import { resolveStoryTreeRoots } from "../storyTree/layout.js";
+import {
+  markdownOutsideContractForm,
+  NON_MARKDOWN_CONTRACT_FORMS,
+  resolveStoryTreeRoots,
+} from "../storyTree/layout.js";
 
 const CELL_DECORATION_RE = /^[`*_]+|[`*_]+$/g;
 
@@ -55,7 +59,8 @@ function contractKind(relative: string): string | null {
  * Checks the index in its current columns. Each contract file under a kind
  * directory declares an ID of that kind, is named `<kind>-NNNN-<slug>.<ext>`
  * after it, and has a row whose ID and File agree with it. A number belongs to
- * one contract, and every row names a contract file.
+ * one contract, and every row names a contract file. A Markdown file under
+ * `api/`, `db/` or `ui/` is not a contract, and is reported as that alone.
  */
 function validateContractIndex(
   location: IndexLocation,
@@ -80,6 +85,17 @@ function validateContractIndex(
     ];
     const row = listed.find((entry) => spellings.includes(entry.file));
     if (row) matched.add(row);
+    const directory = markdownOutsideContractForm(relative);
+    if (directory) {
+      issues.push(
+        indexIssue(
+          `${file} is Markdown, which is not a contract: ${directory}/ holds ${NON_MARKDOWN_CONTRACT_FORMS[directory]} contracts`,
+          file,
+          [file],
+        ),
+      );
+      continue;
+    }
     const id = declared.get(file) ?? null;
     const problems = contractFileProblems(relative, kind, id, row, location.indexFile);
     if (problems.length > 0) {
