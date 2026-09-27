@@ -667,6 +667,37 @@ describe("qfai prototyping show-ui-contract", () => {
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 
+  // QFAI:EX-0001-0142-02
+  it("refuses a configured primary UI contract the config loader rejected", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedShowRecord(root, {
+      runId: "test-run-id",
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
+    });
+    const configPath = path.join(root, "qfai.config.yaml");
+    const config = await readFile(configPath, "utf-8");
+    await writeFile(
+      configPath,
+      `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
+      "utf-8",
+    );
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowUiContract({ root })).toBe(2);
+      const text = errorSpy.mock.calls.flat().join(" ");
+      expect(text).toContain("prototyping.primaryUiContract");
+      expect(text).toContain('"CON-UI-0002"');
+      expect(infoSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
+  });
+
   it("rejects a missing frozen surface union", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
