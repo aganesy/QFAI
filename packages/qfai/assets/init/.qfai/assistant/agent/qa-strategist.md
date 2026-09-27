@@ -49,7 +49,8 @@ specialization_tags:
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md
 - <paths.specsDir>/02_business-flow/** (affected flow and stories)
-- <paths.contractsDir>/db/\*\* (default `.qfai/spec/03_contract/db/**`) — **conditional**: only where a `DB-*` contract holds a business rule that cites an affected example; otherwise its absence is not a gap
+- <paths.contractsDir>/db/\*\* (default `.qfai/spec/03_contract/db/**`) — **conditional**: only where a
+  `DB-*` contract holds a business rule that cites an affected example; otherwise its absence is not a gap
 - QA evidence, coverage tooling outputs, and test plans
 
 ## Deliverables
