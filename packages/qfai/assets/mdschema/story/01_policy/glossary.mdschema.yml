@@ -24,3 +24,5 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true

@@ -630,7 +630,7 @@ describe("migration harness", () => {
     await put(
       ctx.root,
       ".qfai/spec/spec-0001/02_User-stories.md",
-      "# Stories\n\n## US-0001-0001: Order\n\nOrder.\n",
+      "# Stories\n\n## US-0001-0001: Order\n\nAs a buyer, I want to order, so that the cart is bought.\n",
     );
     await put(
       ctx.root,
@@ -672,7 +672,7 @@ describe("migration harness", () => {
     await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
     await writeFile(stage.payload, '{"version":1,"ids":');
     const captured = capture();
-    expect(await runStep(4, [], { cwd: ctx.root, ...captured.io })).toBe(0);
+    expect(await runStep(4, [], { cwd: ctx.root, ...captured.io })).toBe(3);
     expect(JSON.parse(await readFile(path.join(ctx.root, ID_MAP_PATH), "utf8"))).toMatchObject({
       version: 1,
       ids: { "spec-0001": { "US-0001-0001": "US-0001-0001" } },

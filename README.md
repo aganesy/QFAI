@@ -22,14 +22,14 @@ Invoking a stage skill such as `/qfai-sdd` yourself remains available as the exp
 - Prototyping is UI-only and runs through `qfai prototyping iterate --cycle <n>`.
   It evaluates every UI-bearing contract and each screen that contract declares.
   `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary
-  contract; `--primary-ui-contract CON-UI-0001` overrides it. Cycle 0 records
+  contract; `--primary-ui-contract UI-0001` overrides it. Cycle 0 records
   the full UI contract set as `uiContractsCovered` and `frozenSurfaceUnion` in
   `prototyping.json`. The loop runs through cycles 0..9 with deterministic stop
   codes: 0 (continue), 64 (converged), 65 (cycle limit), 66 (license check),
   and 2 (input or lock drift).
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iteration evidence is a single
-  `iter-NN/CON-UI-NNNN/<screen>.review.json` per UI contract and screen pair
+  `iter-NN/UI-NNNN/<screen>.review.json` per UI contract and screen pair
   (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
   `designMdViolations[]`, and `pivotDirective`). It is the only
@@ -146,7 +146,7 @@ Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
     evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Evidence refs must resolve to concrete repository-relative artifacts;
     absolute paths are invalid. UI coverage and per-screen reviews use full
-    `CON-UI-NNNN` IDs.
+    `UI-NNNN` IDs.
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.

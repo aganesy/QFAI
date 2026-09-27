@@ -69,8 +69,8 @@ New scope adds product behavior or a quality bar the approved story tree and con
 ### Provenance and routing
 
 Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,
-a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten CON-API, CON-DB,
-or CON-UI references. A finding against a record names the record and stays advisory when the product and its evidence
+a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten API, DB,
+or UI references. A finding against a record names the record and stays advisory when the product and its evidence
 remain sound. A false claim that work ran, or that a reviewer independently checked it, is an evidence defect and
 remains blocking.
 

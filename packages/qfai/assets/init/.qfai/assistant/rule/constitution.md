@@ -193,7 +193,7 @@ Default policy:
   `hard-required` has no default and MUST NOT be guessed once the budget is
   exhausted. The exemption is **scoped to the inputs the requested work actually
   consumes**: brand intent when the run produces brand-facing
-  output, a full `CON-UI-NNNN` when a prototyping-scoped run cannot identify
+  output, a full `UI-NNNN` when a prototyping-scoped run cannot identify
   its primary UI contract, or a usable story source and `BF-NNNN` when a
   flow-scoped run cannot identify its target. An input the requested
   path never reads MUST NOT be asked for and MUST NOT block the run — a

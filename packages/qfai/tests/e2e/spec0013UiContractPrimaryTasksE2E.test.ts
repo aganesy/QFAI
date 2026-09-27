@@ -81,7 +81,7 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
 
 function emptyPrimaryTasksContract(): string {
   return [
-    "# QFAI-CONTRACT-ID: CON-UI-0001",
+    "# QFAI-CONTRACT-ID: UI-0001",
     "screens:",
     "  - id: order_create",
     "    title: Create Order",
@@ -93,7 +93,7 @@ function emptyPrimaryTasksContract(): string {
 
 function populatedPrimaryTasksContract(): string {
   return [
-    "# QFAI-CONTRACT-ID: CON-UI-0001",
+    "# QFAI-CONTRACT-ID: UI-0001",
     "screens:",
     "  - id: order_create",
     "    title: Create Order",

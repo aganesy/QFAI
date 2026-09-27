@@ -110,7 +110,7 @@ async function seedProject(
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "ui-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
     "utf-8",
   );
 }
@@ -128,7 +128,7 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
     await writeFile(
       path.join(uiDir, "screens.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "# QFAI-CONTRACT-ID: UI-0002",
         "screens:",
         "  - id: home",
         "    route: /",
@@ -166,7 +166,7 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
     await writeFile(
       path.join(uiDir, "screens.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "# QFAI-CONTRACT-ID: UI-0002",
         "screens:",
         "  - id: home",
         "    route: /",
@@ -389,7 +389,7 @@ describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
     const root = await newTempDir();
     await seedProject(root);
     // Plant prior iter-00 content.
-    const reviewRel = ".qfai/evidence/prototyping/iter-00/CON-UI-0001/home.review.json";
+    const reviewRel = ".qfai/evidence/prototyping/iter-00/UI-0001/home.review.json";
     const reviewAbs = path.join(root, reviewRel);
     await mkdir(path.dirname(reviewAbs), { recursive: true });
     await writeFile(reviewAbs, `{}` + " ".repeat(2046), "utf-8");

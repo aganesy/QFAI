@@ -123,7 +123,7 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    lower.includes("con-ui-nnnn") &&
+    lower.includes("ui-nnnn") &&
     lower.includes("screens[]") &&
     (lower.includes("only") || lower.includes("excluded"))
   );
@@ -310,9 +310,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-UI-BEARING-FALSE",
-        "Prototyping skill must limit execution to UI contracts with a full CON-UI-NNNN ID and non-empty screens[].",
+        "Prototyping skill must limit execution to UI contracts with a full UI-NNNN ID and non-empty screens[].",
         "error",
-        "State that only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] are eligible.",
+        "State that only UI contracts with a full UI-NNNN ID and non-empty screens[] are eligible.",
       ),
     );
   }

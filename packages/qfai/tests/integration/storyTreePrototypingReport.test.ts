@@ -92,14 +92,14 @@ describe("story-tree prototyping report", () => {
     await put(
       root,
       ".qfai/spec/03_contract/ui/checkout.yaml",
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: checkout\n  - id: settings\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: checkout\n  - id: settings\n",
     );
     await put(root, `${evidence}/iter-01/checkout.png`, "image");
     await put(
       root,
       `${evidence}/prototyping.json`,
       JSON.stringify({
-        uiContractsCovered: ["CON-UI-0001"],
+        uiContractsCovered: ["UI-0001"],
         acceptedIterationIndex: 1,
         stopReason: "converged",
         iterations: [

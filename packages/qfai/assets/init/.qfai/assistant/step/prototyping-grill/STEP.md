@@ -26,7 +26,7 @@ settles, by talking, the questions that do not need a prototype to answer.
 ## Scope
 
 The loop covers every UI-bearing UI contract: a YAML file under
-`<contractsDir>/ui/` declaring a full `CON-UI-NNNN` ID and a non-empty
+`<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty
 `screens[]`. Only those contracts enter the prototyping scope.
 
 Inside an `npx qfai workflow` run the work order narrows that set:

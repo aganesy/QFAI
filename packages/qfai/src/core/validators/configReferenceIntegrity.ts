@@ -80,7 +80,7 @@ export async function validateConfigReferenceIntegrity(
           "config.prototyping.primaryUiContract.reality",
           undefined,
           "canonical",
-          "Set prototyping.primaryUiContract to a declared CON-UI-NNNN ID in the configured UI contracts directory.",
+          "Set prototyping.primaryUiContract to a declared UI-NNNN ID in the configured UI contracts directory.",
         ),
       );
     }

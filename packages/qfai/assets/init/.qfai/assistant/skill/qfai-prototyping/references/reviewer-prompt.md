@@ -48,7 +48,7 @@ write them exactly there, or the CLI will not find them.
 
 1. **Per-contract / per-screen payload** —
    `.qfai/evidence/prototyping/iter-NN/<ui-contract-id>/<screen>.review.json`,
-   one per screen. `<ui-contract-id>` is the full `CON-UI-NNNN` ID. The
+   one per screen. `<ui-contract-id>` is the full `UI-NNNN` ID. The
    per-UI-contract subdirectory is mandatory for every run that declares UI
    screens, including a run with one contract. This is the file the
    prototyping CLI parses and certify requires. Its schema is closed

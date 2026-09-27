@@ -1,4 +1,4 @@
-# QFAI-CONTRACT-ID: CON-API-0001
+# QFAI-CONTRACT-ID: API-0001
 # Replace the sample BR and EX IDs with allocated IDs from the story tree.
 x-qfai-depends-on: []
 x-qfai-rules:
