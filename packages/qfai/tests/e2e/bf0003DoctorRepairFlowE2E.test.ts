@@ -69,8 +69,6 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
   // QFAI:US-0003-0002
   // QFAI:US-0003-0005
   // QFAI:US-0003-0012
-  // QFAI:US-0003-0013
-  // QFAI:US-0003-0015
   it("QFAI:BF-0003 records the finding, owner, targeted repair and confirming checks", async () => {
     const root = await fixture();
     const beforePath = path.join(root, ".qfai/report/doctor.before.json");
@@ -113,14 +111,12 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(missingFlow.stdout + missingFlow.stderr).toContain("QFAI-FLOW-005");
     expect(await exists(scopedPath)).toBe(false);
 
-    // The path and absent flow belong to the story tree; the DG rule belongs
-    // to a policy artifact. Repair those sources, then rerun each diagnostic.
+    // The path and the absent flow belong to the story tree. Repair those
+    // sources, then rerun each diagnostic.
     const flowDir = path.join(root, "docs/stories/02_business-flow/business-flow-0003");
     const storyDir = path.join(flowDir, "user-story-0003-0001");
-    const policy = path.join(root, "docs/stories/01_policy/policy.md");
     const contractDir = path.join(root, "docs/contracts/cli");
     await mkdir(storyDir, { recursive: true });
-    await mkdir(path.dirname(policy), { recursive: true });
     await mkdir(contractDir, { recursive: true });
     await writeFile(
       path.join(flowDir, "business-flow.md"),
@@ -155,22 +151,6 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     await writeFile(
       path.join(root, "docs/contracts/contracts.md"),
       "# Contracts\n\n## Contract Index\n\n| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| CLI-003 | Repair | - | cli/repair.md | - | - | Confirm a targeted repair. |\n",
-      "utf8",
-    );
-    await writeFile(
-      policy,
-      "## Decision Guardrails\n### DG-0001: Boundary\n- Guardrail: Keep the repair scoped.\n",
-      "utf8",
-    );
-    const incompleteRule = cli(root, "guardrails", "check", "--root", root, "--format", "json");
-    expect(incompleteRule.status).toBe(1);
-    expect(
-      (JSON.parse(incompleteRule.stdout) as { summary: { errors: number } }).summary.errors,
-    ).toBeGreaterThan(0);
-
-    await writeFile(
-      policy,
-      "## Decision Guardrails\n### DG-0001: Boundary\n- Type: non-goal\n- Guardrail: Keep the repair scoped.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n",
       "utf8",
     );
     const after = cli(
@@ -209,18 +189,12 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     expect(validated.status).toBe(0);
     const validation = JSON.parse(await readFile(scopedPath, "utf8")) as ValidateResult;
     expect(validation.issues.some((issue) => issue.code === "QFAI-FLOW-005")).toBe(false);
-    const guardrails = cli(root, "guardrails", "check", "--root", root, "--format", "json");
-    expect(guardrails.status).toBe(0);
-    expect(JSON.parse(guardrails.stdout)).toMatchObject({ summary: { errors: 0 } });
-    const listed = cli(root, "guardrails", "list", "--root", root, "--format", "json");
-    expect(listed.status).toBe(0);
-    expect(listed.stdout).toContain("DG-0001");
     expect(await exists(beforePath)).toBe(true);
     expect(await exists(afterPath)).toBe(true);
   });
 
-  // QFAI:US-0003-0016
-  it("reports malformed configuration and explicit guardrail input failures", async () => {
+  // QFAI:US-0003-0001
+  it("reports malformed configuration", async () => {
     const root = await fixture();
     await writeFile(
       path.join(root, "qfai.config.yaml"),
@@ -232,25 +206,6 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     const diagnosis = JSON.parse(invalidConfig.stdout) as DoctorResult;
     expect(diagnosis.checks.find((check) => check.id === "config.load")).toMatchObject({
       severity: "error",
-    });
-
-    const noAction = cli(root, "guardrails", "--root", root, "--format", "json");
-    expect(noAction.status).toBe(2);
-    expect(JSON.parse(noAction.stdout)).toMatchObject({ error: { code: "invalid-arguments" } });
-    const missingPath = cli(
-      root,
-      "guardrails",
-      "check",
-      "--root",
-      root,
-      "--path",
-      "missing.md",
-      "--format",
-      "json",
-    );
-    expect(missingPath.status).toBe(2);
-    expect(JSON.parse(missingPath.stdout)).toMatchObject({
-      error: { code: "load-failed", details: [{ path: "missing.md" }] },
     });
   });
 });

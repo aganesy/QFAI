@@ -184,11 +184,7 @@ describe("issue code uniqueness", () => {
 // those was invisible to an earlier cut of the helper, so the lists were
 // re-baselined each time to name the codes that hole had been hiding.
 //
-// Two kinds of entry leave the lists without an entry being written. The
-// `QFAI-GR-*` codes left because they never belonged: `guardrails check` builds
-// them, `qfai validate` does not return them, and only a census that read
-// `severity` without `category` mistook `GuardrailIssue` for `Issue`.
-// `R-PACK-LOCATION-DRIFT` left the same way — it is a
+// `R-PACK-LOCATION-DRIFT` stays off the lists because it never belonged: it is a
 // `JustificationCatalogEntry` descriptor, not an emission. It does reach
 // `validate`, but only through `validateReviewerJustification` re-emitting a
 // code it read out of a reviewer report, a data-driven path no static census
@@ -472,16 +468,17 @@ describe("issue report metadata", () => {
   });
 
   it("counts only object literals that build an Issue, not look-alike records", async () => {
-    const usage = await collectErrorCapableUsage();
-    // `core/decisionGuardrails.ts` builds `GuardrailIssue` records with a
-    // `severity` but no `category`. They are consumed by `guardrails check`
-    // alone, so letting them into the census made the ratchet answer to a CLI
-    // that never prints an `expected:` line.
-    for (const code of ["QFAI-GR-001", "QFAI-GR-003", "QFAI-GR-004", "QFAI-GR-005"]) {
-      expect(usage.has(code)).toBe(false);
-    }
+    // A record with a `severity` but no `category` is not an `Issue`, and
+    // `qfai validate` never returns one.
+    const usage = await censusOf(`
+      export const records = [
+        { code: "C-LOOK-ALIKE", severity: "error", message: "m" },
+        { code: "C-REAL-ISSUE", severity: "error", category: "compatibility", message: "m" },
+      ];
+    `);
+    expect(usage.has("C-LOOK-ALIKE")).toBe(false);
     // The pin: a real `Issue` object literal is still counted.
-    expect(usage.has("QFAI-SKILLS-001")).toBe(true);
+    expect(usage.has("C-REAL-ISSUE")).toBe(true);
   });
 
   it("reads a severity that branches on what the rule found", async () => {

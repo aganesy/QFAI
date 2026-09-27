@@ -51,8 +51,7 @@ qfai report → .qfai/report/report.md
 - Each story has `01_User-story.md`, `02_Acceptance-Criteria.md` and
   `03_Example.md`. Each EX cites one AC. See `02_project/naming.md`.
 - Record decisions and unresolved questions in `decisions.md` and
-  `open-questions.md`. Explicit `DG-NNNN` entries in policy or contract Markdown
-  supply decision guardrails.
+  `open-questions.md`.
 
 ### Phase 2: Contracts の作成
 

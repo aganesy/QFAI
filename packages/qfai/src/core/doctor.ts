@@ -40,7 +40,6 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
-import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
   probeSkillManifest,
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
@@ -699,38 +698,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   if (options.skillProfile) {
     checks.push(...(await buildSkillManifestProbeChecks(root, options.skillProfile)));
   }
-
-  const guardrailsLoad = await loadDecisionGuardrails(root, {
-    specsRoot: path.join(resolvePath(root, config, "specsDir"), "01_policy"),
-    contractsRoot: resolvePath(root, config, "contractsDir"),
-  });
-  const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
-  let guardrailsSeverity: DoctorSeverity;
-  let guardrailsMessage: string;
-  if (guardrailsLoad.errors.length > 0) {
-    guardrailsSeverity = "warning";
-    guardrailsMessage = `Decision Guardrails scan failed (errors=${guardrailsLoad.errors.length})`;
-  } else if (guardrailsItems.length === 0) {
-    guardrailsSeverity = "info";
-    guardrailsMessage = "Decision Guardrails not found (optional)";
-  } else {
-    guardrailsSeverity = "ok";
-    guardrailsMessage = `Decision Guardrails detected (count=${guardrailsItems.length})`;
-  }
-
-  addCheck(checks, {
-    id: "guardrails.present",
-    severity: guardrailsSeverity,
-    title: "Decision Guardrails",
-    message: guardrailsMessage,
-    details: {
-      count: guardrailsItems.length,
-      errors: guardrailsLoad.errors.map((item) => ({
-        path: toRelativePath(root, item.path),
-        message: item.message,
-      })),
-    },
-  });
 
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath

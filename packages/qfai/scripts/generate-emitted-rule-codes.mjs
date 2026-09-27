@@ -30,8 +30,7 @@
  *     code these validators emit.
  *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
  *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
- *     other shapes out: `GuardrailIssue` (`QFAI-GR-00N`, a `guardrails`-command
- *     type that `applyWaivers` never sees), `HandoffValidationIssue`, the
+ *     other shapes out: `HandoffValidationIssue`, the
  *     render-evidence error record and the justification catalog all carry a
  *     `code` but none of them is a validate `Issue`, and a waiver naming one
  *     could never match a finding.
@@ -410,7 +409,7 @@ function resolveValue(raw, literals, constants) {
  * passes them on, so the same file always holds the answer.
  *
  * Same-file is also what keeps the resolution honest: widening it to the whole
- * tree would let any `code:` field anywhere — `GuardrailIssue`'s included —
+ * tree would let any `code:` field anywhere — `HandoffValidationIssue`'s included —
  * answer for every `x.code` argument in `src/`.
  *
  * @param {string} raw sanitized source slice.

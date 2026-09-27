@@ -345,6 +345,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
+  `list`, `extract` and `check` actions are gone, along with their `--path`,
+  `--max` and `--keyword` options. `qfai doctor` no longer runs the
+  `guardrails.present` check. `qfai report` no longer writes a Decision
+  Guardrails section, and its JSON output has no `guardrails` field. The
+  package entry point no longer exports the decision-guardrail functions and
+  types.
+
+  Nothing told a project to write `DG-NNNN` entries, and each kind already has
+  a home. Record a non-goal under Non-goals in `01_policy/objective.md` and a
+  trade-off in the decision-priority table of `01_policy/principle.md`. Record
+  a deferral as a `decisions.md` row or a DEFERRED row in `open-questions.md`.
+
 - **Breaking: the spec-pack layout and every check that read it.** `qfai`
   no longer reads `.qfai/specs/spec-*` packs, the shared `_policies/` pack,
   the `tdd/test-list.md` ledger, triage tables, delta files or test-case

@@ -56,8 +56,8 @@
  * ## What the `summary.info` claim does NOT discriminate, measured
  *
  * `TC-0006-0032` asks for `summary.info >= 1`. On this fixture the bare install
- * already contributes four `info` checks (`paths.specsDir`, `paths.contractsDir`,
- * `paths.discussionDir`, `guardrails.present`), so the claim holds at 4 even with
+ * already contributes three `info` checks (`paths.specsDir`, `paths.contractsDir`,
+ * `paths.discussionDir`), so the claim holds at 3 even with
  * the drift advisory absent or re-severitied. It is asserted because the TC asks
  * for it, and it is recorded here as NON-DISCRIMINATING so no reader mistakes it
  * for the claim that pins the severity choice. That claim is `summary.warning`.

@@ -2,8 +2,6 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ConfigLoadResult } from "./config.js";
-import { resolvePath } from "./config.js";
-import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { resolveFlowScope } from "./flowScope.js";
 import {
   buildEvidenceRefs,
@@ -74,16 +72,6 @@ export type ReportData = {
     rules: string[];
   }>;
   prototyping: PrototypingSummary;
-  guardrails: {
-    total: number;
-    items: Array<{
-      id: string;
-      type: string;
-      guardrail: string;
-      source: { file: string; line: number };
-    }>;
-    scanErrors: Array<{ file: string; message: string }>;
-  };
   waivers?: ValidationResult["waivers"];
   issues: Issue[];
 };
@@ -293,11 +281,6 @@ export async function createReportData(
     model.rules.filter((rule) => rules.has(rule.id)).map((rule) => rule.file),
   );
   const prototyping = await readPrototypingSummary(root, config, validation.issues);
-  const guardrailsLoad = await loadDecisionGuardrails(root, {
-    specsRoot: path.join(resolvePath(root, config, "specsDir"), "01_policy"),
-    contractsRoot: resolvePath(root, config, "contractsDir"),
-  });
-  const guardrailItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
   return {
     tool: "qfai",
     version: validation.toolVersion,
@@ -314,22 +297,6 @@ export async function createReportData(
     },
     flows,
     prototyping,
-    guardrails: {
-      total: guardrailItems.length,
-      items: guardrailItems.map((item) => ({
-        id: item.id,
-        type: item.type,
-        guardrail: item.guardrail,
-        source: {
-          file: path.relative(root, item.source.file).replace(/\\/g, "/"),
-          line: item.source.line,
-        },
-      })),
-      scanErrors: guardrailsLoad.errors.map((item) => ({
-        file: path.relative(root, item.path).replace(/\\/g, "/"),
-        message: item.message,
-      })),
-    },
     ...(validation.waivers ? { waivers: validation.waivers } : {}),
     issues: validation.issues,
   };
@@ -408,14 +375,6 @@ export function formatReportMarkdown(data: ReportData, options: { baseUrl?: stri
   } else if (prototyping.status !== "complete") {
     lines.push("- Rerun /qfai-prototyping after addressing the missing evidence or findings.", "");
   }
-  lines.push("## Decision Guardrails", "", `- Total: ${data.guardrails.total}`);
-  for (const item of data.guardrails.items) {
-    lines.push(`- ${item.id} (${item.type}): ${item.guardrail}`);
-  }
-  for (const failure of data.guardrails.scanErrors) {
-    lines.push(`- Scan error: ${failure.file}: ${failure.message}`);
-  }
-  lines.push("");
   if (data.waivers) {
     lines.push("## Waivers", "", `- Active: ${data.waivers.active.length}`);
     lines.push(`- Suppressed findings: ${data.waivers.suppressed.total}`, "");
