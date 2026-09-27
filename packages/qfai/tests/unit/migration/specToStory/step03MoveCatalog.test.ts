@@ -139,7 +139,7 @@ describe("migration catalog move", () => {
     await put(
       context.root,
       ".qfai/spec/_policies/01_Objective.md",
-      "# 01 Objective\n\n## Success criteria\n\n| ID | Criterion | How it is measured |\n| --- | --- | --- |\n|  | Orders are kept | A restart loses none |\n\n## Out of scope\n\n- Refunds.\n",
+      "# 01 Objective\n\n## Success criteria\n\n| Criterion | How it is measured |\n| --- | --- |\n| Orders are kept | A restart loses none |\n\n## Out of scope\n\n- Refunds.\n",
     );
     await put(
       context.root,
@@ -266,6 +266,38 @@ describe("migration catalog move", () => {
     for (const name of ["objective", "glossary", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
+  });
+
+  it("keeps a short continuation and reports an unused column or a short row", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n   - Refunds.\n  Handled by support.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition | Owner |\n| --- | --- | --- |\n| Order | A request | |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n|| Node 22 | Runtime | Build |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    expect(
+      await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8"),
+    ).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n");
+    expect(conformance(context.specsDir, "objective")).toContain("No violations");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/glossary.md ## Terms: carry the "Owner" column of "## Terms" in .qfai/spec/_policies/06_Glossary.md by hand',
+    );
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand',
+    );
   });
 
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {

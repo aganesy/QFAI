@@ -164,7 +164,13 @@ function listItems(body: string, keys: readonly string[] = []): string[] | null 
     base ??= marker?.[1]?.length ?? null;
     if (marker && marker[1]?.length === base) items.push(line.trimStart());
     else if (blank || items.length === 0 || /^[ \t]?[^-\s]/.test(line)) return null;
-    else items[items.length - 1] = `${items.at(-1) ?? ""}\n${line.slice(base ?? 0)}`;
+    else {
+      // The item is written from column 0, so its content starts at column 2; a line
+      // under it keeps its depth relative to the item and never less than that.
+      const lead = /^[ \t]*/.exec(line)?.[0].length ?? 0;
+      const depth = Math.max(2, lead - (base ?? 0));
+      items[items.length - 1] = `${items.at(-1) ?? ""}\n${" ".repeat(depth)}${line.trimStart()}`;
+    }
     blank = false;
   }
   const hasKey = (key: string): boolean => items.some((item) => item.startsWith(`- ${key}: `));
@@ -203,7 +209,7 @@ function tableRows(
   if (tables.length !== 1 || table === undefined || table.rows.length !== lines.length - 2) {
     return null;
   }
-  if (table.rows.some((row) => row.length > table.headers.length)) return null;
+  if (table.rows.some((row) => row.length !== table.headers.length)) return null;
   const headers = table.headers.map((header) => header.trim().toLowerCase());
   const indexes = columns.map((column) =>
     [column, ...(aliases[column] ?? [])]
@@ -212,10 +218,7 @@ function tableRows(
   );
   if (indexes.some((index) => index === undefined)) return null;
   const used = new Set(indexes);
-  const dropped = table.headers.filter(
-    (_header, index) =>
-      !used.has(index) && table.rows.some((row) => (row[index] ?? "").trim() !== ""),
-  );
+  const dropped = table.headers.filter((_header, index) => !used.has(index));
   const rows = table.rows.map((row) => indexes.map((index) => (row[index ?? -1] ?? "").trim()));
   return { rows, dropped };
 }
