@@ -97,7 +97,7 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   } else if (extension === ".md") {
-    const sections = extractH2Sections(text);
+    const sections = extractH2Sections(maskNonSpecRegions(text));
     const businessRulesSections = parseHeadings(maskNonSpecRegions(text)).filter(
       (heading) => heading.level === 2 && heading.title === BUSINESS_RULES,
     ).length;

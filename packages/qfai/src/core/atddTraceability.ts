@@ -2043,6 +2043,17 @@ type CollectedContractIds = {
   deferred: Set<string>;
 };
 
+/** The IDs Markdown contracts under a kind directory declare in their H1, as the story-tree model reads them. */
+async function markdownContractIds(root: string, pattern: RegExp): Promise<string[]> {
+  const files = await fg("**/*.md", { cwd: root, absolute: true, onlyFiles: true });
+  const ids: string[] = [];
+  for (const file of files.sort()) {
+    const id = declaredContractId(file, await readSafe(file));
+    if (id !== null && pattern.test(id)) ids.push(id);
+  }
+  return ids;
+}
+
 async function collectApiContractIds(apiRoot: string): Promise<CollectedContractIds> {
   const files = await collectApiContractFiles(apiRoot);
   const active = new Set<string>();
@@ -2059,12 +2070,7 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
       }
     }
   }
-  // A Markdown contract declares its ID in its H1, as the story-tree model reads it.
-  const markdown = await fg("**/*.md", { cwd: apiRoot, absolute: true, onlyFiles: true });
-  for (const file of markdown.sort()) {
-    const id = declaredContractId(file, await readSafe(file));
-    if (id !== null && API_CONTRACT_ID_RE.test(id)) active.add(id);
-  }
+  for (const id of await markdownContractIds(apiRoot, API_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
@@ -2466,6 +2472,7 @@ async function collectDbContractIds(dbRoot: string): Promise<CollectedContractId
       }
     }
   }
+  for (const id of await markdownContractIds(dbRoot, DB_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }

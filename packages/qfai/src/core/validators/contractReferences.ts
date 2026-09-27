@@ -293,7 +293,7 @@ function parseIndexTables(text: string): IndexTable[] {
       continue;
     }
     // The enclosing section: a deeper heading stays inside the H2 above it.
-    const headingMatch = /^(#{1,6})[ \t]+(.*)$/.exec(headerLine);
+    const headingMatch = /^ {0,3}(#{1,6})[ \t]+(.*)$/.exec(headerLine);
     if (headingMatch) {
       if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
       continue;
