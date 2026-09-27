@@ -122,8 +122,8 @@ function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
 
 /**
  * The inputs BF-0001 has before SDD authors the story tree: the discussion that
- * led to it, and the technology and structure contracts the full profile reads
- * for unfilled placeholders.
+ * led to it, and the technology contract the full profile reads for unfilled
+ * placeholders.
  */
 async function seedProjectInputs(root: string): Promise<void> {
   for (const name of DISCUSSION_FILES) {
@@ -133,11 +133,6 @@ async function seedProjectInputs(root: string): Promise<void> {
     root,
     ".qfai/spec/03_contract/tech.md",
     "# Technology\n\n## Runtime / platform\n\n- Runtime: `Node.js 20`\n- Platform: `Linux, macOS and Windows`\n\n## Stack\n\n| Component | Choice |\n| --------- | ------ |\n| Test runner | node:test |\n\n## Dependencies\n\n- Runtime dependency: `none; the checkout module uses the standard library`\n\n## Standard commands (copy-paste)\n\n- Install: `npm install`\n- Format: `npm run format:check`\n- Test: `node --test tests`\n- Lint: `npm run lint`\n- Typecheck: `npm run typecheck`\n- Build: `npm run build`\n- Skeleton: `node src/checkout.mjs`\n- Validate: `npx qfai validate`\n",
-  );
-  await put(
-    root,
-    ".qfai/spec/03_contract/structure.md",
-    "# Structure\n\n## Structure\n\n- Repository layout: `src/ holds the checkout module; tests/ holds its tests by layer`\n- Production roots: `src/`\n\n## Entry points\n\n- Entry point: `src/checkout.mjs totals the selected cart items`\n\n## Key packages / entrypoints\n\n- Package or entrypoint: `src/checkout.mjs computes the cart total`\n\n## Architecture constraints\n\n- Boundary: `tests import src; src imports nothing from tests`\n\n## UI surface paths (SSOT)\n\n- UI surface: `none`\n",
   );
 }
 

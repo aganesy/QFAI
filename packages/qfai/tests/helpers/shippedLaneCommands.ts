@@ -1510,7 +1510,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "a6b03c7ab81d09c94c111814d0c7f112901e83493ae04a25ebae28212f1a25b5"],
+  //
+  // Re-pinned for the commented `uiux.surfacePaths` entry, which names the
+  // paths that render a user-visible surface. The whole delta is that comment:
+  // every key the file sets is unchanged, and deleting it reproduces
+  // `a6b03c7a…` byte for byte.
+  ["qfai.config.yaml", "41b0a60ea4b942ad240a2af0c2acbd3c2302f46632a4fc8c8b84947d81cbabff"],
 ]);
 
 /**

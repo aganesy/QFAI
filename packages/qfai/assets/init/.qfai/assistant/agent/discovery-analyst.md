@@ -45,7 +45,7 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - <paths.specsDir>/decisions.md and open-questions.md
 - Existing discussion records under `.qfai/discussion/`

@@ -53,7 +53,7 @@ describe("story-tree acceptance and implementation assets", () => {
 
   it("proves each runnable entrypoint through an observed smoke response", async () => {
     const skeleton = await read("skill/qfai-implement/references/walking-skeleton.md");
-    expect(skeleton).toContain("Key packages / entrypoints");
+    expect(skeleton).toContain("Skeleton lines in the Standard commands section");
     expect(skeleton).toContain("Skeleton command");
     expect(skeleton).toContain("one observable response");
     expect(skeleton).toContain("A process that merely starts is not a passing skeleton");
@@ -63,7 +63,7 @@ describe("story-tree acceptance and implementation assets", () => {
   it("routes UI effects from contracts and changed paths to captured product review", async () => {
     const ui = await read("skill/qfai-implement/references/ui-affecting.md");
     const gatekeeper = await read("agent/qa-gatekeeper.md");
-    expect(ui).toContain("UI surface paths");
+    expect(ui).toContain("uiux.surfacePaths");
     expect(ui).toContain("UI contracts");
     expect(ui).toContain("rendered surface");
     expect(ui).toContain("product-surface-reviewer");

@@ -175,7 +175,7 @@ does the confirmation that closes the session.
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
-- P2: `.qfai/assistant/rule/agent-selection.md`, then the project's policy files under `<paths.specsDir>/01_policy/` and its technology and structure contracts under `<paths.contractsDir>/`
+- P2: `.qfai/assistant/rule/agent-selection.md`, then the project's policy files under `<paths.specsDir>/01_policy/` and its technology contract `<paths.contractsDir>/tech.md`
 - P3: the subject the invoking stage named, and the artifacts it points at
 - P4: the story tree under `<paths.specsDir>/**` and contracts under `<paths.contractsDir>/**`, as facts to read rather than
   decisions to re-open

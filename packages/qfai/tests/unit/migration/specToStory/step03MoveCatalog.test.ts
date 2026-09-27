@@ -191,6 +191,96 @@ describe("migration catalog move", () => {
     }
   });
 
+  it("routes the structure catalog to Skeleton lines, technical constraints and the UI paths key", async () => {
+    // QFAI:EX-0004-0006-11
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/tech.md",
+      "# Tech\n\n## Standard commands (copy-paste)\n\n- Test: `npm test`\n- Smoke: `api` -> `node scripts/smoke-api.mjs`\n",
+    );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/structure.md",
+      [
+        "# Structure",
+        "",
+        "## Key packages / entrypoints",
+        "",
+        "- CLI / service entry: `api` -> `US-0001-0001`",
+        "- CLI / service entry: `worker` -> `US-0001-0002`",
+        "- Core modules: `src/core`",
+        "",
+        "## Architecture constraints",
+        "",
+        "| ID | Constraint | Rationale | Impact |",
+        "| --- | --- | --- | --- |",
+        "| TC-04 | src/core imports nothing from src/cli | One-way dependency | Review |",
+        "|  | Names are kebab-case | Readability | Review |",
+        "",
+        "## UI surface paths (SSOT)",
+        "",
+        "ui_paths:",
+        "",
+        "- `src/ui/**`",
+        "- `tests/e2e/**`",
+        "",
+        "## How to run locally",
+        "",
+        "Run the install command.",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
+    expect(tech).toContain("- Skeleton: `api` -> `node scripts/smoke-api.mjs`");
+    expect(tech).not.toContain("worker");
+    const constraint = await readFile(
+      path.join(context.specsDir, "01_policy", "constraint.md"),
+      "utf8",
+    );
+    expect(constraint).toContain(
+      "## Technical Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-04 | src/core imports nothing from src/cli | One-way dependency | Review |\n\n## Operational Constraints",
+    );
+    expect(constraint).not.toContain("kebab-case");
+    const config: unknown = parseYaml(
+      await readFile(path.join(context.root, "qfai.config.yaml"), "utf8"),
+    );
+    expect(config).toMatchObject({ uiux: { surfacePaths: ["src/ui/**", "tests/e2e/**"] } });
+    const source = ".qfai/assistant/catalog/structure.md";
+    const kept =
+      "kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/structure.md";
+    expect(result.output).toContain(
+      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for the entrypoint worker of "## Key packages / entrypoints" in ${source}, or drop it (${kept})`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/03_contract/tech.md: write a "- Skeleton: \`<entry>\` -> \`<command>\`" line for "Core modules: \`src/core\`" of "## Key packages / entrypoints" in ${source}, or drop it (${kept})`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/constraint.md ## Technical Constraints: give a row with no ID of "## Architecture constraints" in ${source} a TC- ID by hand (${kept})`,
+    );
+    expect(result.output).toContain(
+      `${source}: "## How to run locally" has no place in the story tree; carry what it states by hand, or drop it (${kept})`,
+    );
+  });
+
+  it("declares no UI surface when the structure catalog names none", async () => {
+    // QFAI:EX-0004-0006-11
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/structure.md",
+      "# Structure\n\n## UI surface paths (SSOT)\n\nui_paths:\n\n- `none`\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const config: unknown = parseYaml(
+      await readFile(path.join(context.root, "qfai.config.yaml"), "utf8"),
+    );
+    expect(config).toMatchObject({ uiux: { surfacePaths: [] } });
+  });
+
   it("keeps the template's text where a section's content is of another kind", async () => {
     // QFAI:EX-0004-0006-10
     const context = await fixture();
