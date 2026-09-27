@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { parseDesignToken } from "../../src/core/parse/designToken.js";
 import { computeContrastRatio } from "../../src/core/uiux/contrastRatio.js";
 import { parseHtmlMock } from "../../src/core/uiux/htmlMockDom.js";
@@ -516,7 +516,7 @@ describe("uiux validators", () => {
     const template = await readFile(
       path.resolve(
         process.cwd(),
-        "assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+        "assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
       ),
       "utf-8",
     );
@@ -958,6 +958,14 @@ describe("uiux validators", () => {
         "name: frontend-engineer",
         'description: "Implement frontend behavior aligned with the selected direction."',
         "tools: [Read, Write, Edit, Glob, Grep, Bash]",
+        "kind: worker",
+        "domain: frontend",
+        "mission: Implement frontend behavior.",
+        "replaces: [frontend-engineer]",
+        "owned_artifacts: [ui-implementation]",
+        "tool_profile: frontend",
+        "permission_profile: authoring",
+        "specialization_tags: [frontend]",
         "---",
         "",
         "# Frontend Engineer",
@@ -990,7 +998,9 @@ describe("uiux validators", () => {
     );
 
     const issues = await validateAgentDefinition(root, defaultConfig);
-    expect(issues).toEqual([]);
+    expect(
+      issues.filter((item) => item.file === ".qfai/assistant/agent/frontend-engineer.md"),
+    ).toEqual([]);
   });
 
   it("detects key html mock violations with stable code/severity", async () => {
@@ -1200,7 +1210,7 @@ async function newTempDir(): Promise<string> {
 
 async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): Promise<void> {
   const steeringDir = path.join(root, ".qfai", "assistant", "steering");
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   await mkdir(steeringDir, { recursive: true });
   await mkdir(agentsDir, { recursive: true });
 

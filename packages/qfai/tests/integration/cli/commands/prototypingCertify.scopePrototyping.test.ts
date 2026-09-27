@@ -16,7 +16,7 @@
  * downstream validate pass runs.
  */
 
-// QFAI:SPEC-0012:TC-0012-0445
+// QFAI:EX-0001-0137-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -26,6 +26,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../../../src/core/design/designMd.js";
+import { CERTIFY_UI_CONTRACT, seedCertifyUiEvidence } from "./certifyUiFixture.js";
 
 const CERT_DESIGN_MD = [
   "---",
@@ -92,43 +93,38 @@ async function seedHappyPath(root: string, verifyJson: object): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
     ].join("\n"),
     "utf-8",
   );
-  await mkdir(path.join(root, ".qfai/specs/spec-0012"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0012/01_Spec.md"),
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0012\n",
-    "utf-8",
-  );
   await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
   const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
   await mkdir(iter00, { recursive: true });
   await writeFile(path.join(iter00, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+  await seedCertifyUiEvidence(root, iter00);
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
   await mkdir(path.join(root, ".qfai/report"), { recursive: true });
   const validateBody = JSON.stringify({
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/verify.json"), JSON.stringify(verifyJson), "utf-8");
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validateBody, "utf-8");
+  await writeFile(path.join(root, ".qfai/report/verify.json"), JSON.stringify(verifyJson), "utf-8");
   const protoBody = {
     mode: { effective: "standard", source: "explicit-request", rationale: "test" },
     surface: "web",
     runId: "run-scope-prototyping",
     designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-    specsCovered: ["0012"],
+    uiContractsCovered: [CERTIFY_UI_CONTRACT],
+    frozenSurfaceUnion: [CERTIFY_UI_CONTRACT],
     reviewerGate: {
       result: "PASS",
       signoff: { reviewerId: "test-reviewer", timestamp: "2026-05-26T00:00:00Z" },

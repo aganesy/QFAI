@@ -3,7 +3,7 @@
  * gate.
  *
  * Covers the gate half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5): ONE declared
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0023): ONE declared
  * shape, whose values live in exactly one module (`shippedWorkflowShape.ts`
  * beside this file), diffed against a workflow tree and reporting
  * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with the drifted value and the expected
@@ -20,7 +20,7 @@
  * (`shippedWorkflowDetection`), portability of the setup/install column
  * (`shippedWorkflowPortability`) and the ownership / provenance flow
  * (`shippedWorkflowOwnership`). This file owns the DECLARED SHAPE and its
- * diff — that all nine contract dimensions are pinned in one place, and that
+ * diff — that all ten contract dimensions are pinned in one place, and that
  * each one is actually diffed rather than merely declared. It re-implements
  * no sibling oracle and contradicts none.
  *
@@ -60,15 +60,29 @@ const TESTS_DIR = path.join(packageRoot, "tests");
 /** The one module the shape's values are allowed to live in, tests-relative. */
 const SHAPE_MODULE_REL = "integration/shippedWorkflowShape.ts";
 
-/** The contract file whose §5 fixes the dimension set and forbids restating values. */
-const CONTRACT_PATH = path.join(repoRoot, ".qfai", "contracts", "cli", "shipped-workflows.md");
+/** The contract whose business rules fix the dimension set and forbid restating values. */
+const CONTRACT_PATH = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "03_contract",
+  "cli",
+  "cli-0020-shipped-workflows.md",
+);
 
-/** The owning spec pack, scanned for value restatements. */
-const SPEC_DIR = path.join(repoRoot, ".qfai", "specs", "spec-0003");
+/** The owning story, scanned for value restatements. */
+const SPEC_DIR = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "02_business-flow",
+  "business-flow-0002",
+  "user-story-0002-0008",
+);
 
 /**
- * The contract's dimension ordinals — a CLOSED set of nine. The ordinals are
- * the contract's own (§5 items 1-9), not shape values; the shape supplies what
+ * The contract's dimension ordinals — a CLOSED set of ten. The ordinals are
+ * the contract's own (BR-0020-0028 to BR-0020-0037), not shape values; the shape supplies what
  * each one pins.
  */
 const CONTRACT_DIMENSION_IDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -516,7 +530,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
   // in THIS file rather than in the shape module because the traceability scan
   // reads only `*.test.ts` / `*.spec.ts`, so an annotation in the shape module
   // would be invisible to it.
-  //   QFAI:SPEC-0003:TC-0003-0049
+  //   QFAI:EX-0002-0008-01
 
   it("planted profile and threshold divergence is reported as shape drift with the drifted and expected values, and the gate's verdict assertion fails (exit 1)", async () => {
     // Differential baseline: a rejection is only evidence when the unplanted
@@ -626,36 +640,23 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     }).toThrow();
   });
 
-  it("words each dimension the way the contract's numbered item does", async () => {
-    // The dimension set is closed and the contract is where it is closed. A
-    // title that drifts from its item leaves the gate reporting one obligation
-    // and the contract stating another, with nothing between them.
-    const contract = await readFile(
-      path.resolve(__dirname, "../../../..", ".qfai/contracts/cli/shipped-workflows.md"),
-      "utf8",
-    );
-    const section = contract.slice(
-      contract.indexOf("## 5. Declared structural shape"),
-      contract.indexOf("## 6. Hygiene rules"),
-    );
-    expect(section, "section 5 must be present to read the items from").not.toEqual("");
+  it("words each dimension the way the contract's business rule does", async () => {
+    // The dimension set is closed and the contract is where it is closed: one
+    // business rule per dimension, BR-0020-0028 to BR-0020-0037, each opening
+    // `Declared shape dimension N:`. A title that drifts from its rule leaves
+    // the gate reporting one obligation and the contract stating another, with
+    // nothing between them.
+    const contract = await readFile(CONTRACT_PATH, "utf8");
+    const rules = contract.slice(contract.indexOf("## Business rules"));
+    expect(rules, "the business rules must be present to read the dimensions from").not.toEqual("");
 
-    // Each item runs until the next number at the left margin. Continuation
-    // lines are indented, which is what separates an item from its successor.
+    // A row's cells are split on the pipes a statement does not escape.
     const items = new Map<number, string>();
-    let current = 0;
-    for (const line of section.split("\n")) {
-      const opener = /^(\d+)\.\s+(.*)$/.exec(line);
-      if (opener !== null) {
-        current = Number(opener[1]);
-        items.set(current, opener[2] ?? "");
-        continue;
-      }
-      if (current !== 0 && /^\s+\S/.test(line)) {
-        items.set(current, `${items.get(current) ?? ""} ${line.trim()}`);
-        continue;
-      }
-      current = 0;
+    for (const line of rules.split("\n")) {
+      if (!line.startsWith("| BR-")) continue;
+      const statement = (line.split(/(?<!\\)\|/)[2] ?? "").trim();
+      const opener = /^Declared shape dimension (\d+): (.*)$/.exec(statement);
+      if (opener !== null) items.set(Number(opener[1]), opener[2] ?? "");
     }
 
     // Backticks and bold markers are the contract's rendering, not its words.
@@ -666,20 +667,20 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     for (const dimension of SHIPPED_WORKFLOW_SHAPE.dimensions) {
       const item = items.get(dimension.id);
       if (item === undefined) {
-        wrong.push(`dimension ${String(dimension.id)} has no numbered item in section 5`);
+        wrong.push(`dimension ${String(dimension.id)} has no business rule in the contract`);
         continue;
       }
       // The item may carry an explanation after its opening clause; the title
       // is that clause, so the item must open with it.
       if (!words(item).startsWith(words(dimension.title))) {
         wrong.push(
-          `dimension ${String(dimension.id)}: the title "${dimension.title}" does not open item ${String(dimension.id)}`,
+          `dimension ${String(dimension.id)}: the title "${dimension.title}" does not open the rule for dimension ${String(dimension.id)}`,
         );
       }
     }
     expect(
       [...items.keys()].sort((a, b) => a - b),
-      "section 5 must number exactly the closed set",
+      "the business rules must number exactly the closed set",
     ).toEqual(CONTRACT_DIMENSION_IDS);
     expect(wrong, "a dimension title and its contract item have separated").toEqual([]);
   });
@@ -913,7 +914,7 @@ const RELEASE_TRANSITIVE_ENTRY = "pnpm -C packages/qfai test";
 const GATE_TEST_REL = "tests/integration/shippedWorkflowShapeGate.test.ts";
 
 /** The subsumed asset assertions' test-case reference, registered on the shape-gate side. */
-const SUBSUMED_ANNOTATION = "QFAI:SPEC-0003:TC-0003-0049";
+const SUBSUMED_ANNOTATION = "QFAI:EX-0002-0008-01";
 
 /** The `scripts` block of a package manifest, string entries only. */
 async function readScripts(packageJsonPath: string): Promise<Record<string, string>> {
@@ -959,7 +960,7 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
   // followed the existing form" is a checked fact. It also settles the shape
   // module's home: vitest is the invoker, so the module stays in the tests
   // tree beside this file and needs no build step.
-  //   QFAI:SPEC-0003:TC-0003-0050
+  //   QFAI:EX-0002-0008-02
 
   it("the gate's invocation path appears in pnpm ci:lint, in the form the existing vitest lane already uses", async () => {
     const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
@@ -1062,12 +1063,9 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
       `the subsumed reference ${SUBSUMED_ANNOTATION} is not registered in a comment on the shape-gate side`,
     ).toBeGreaterThanOrEqual(1);
 
-    // And registered where the repository's traceability registry reads it.
-    const registry = await readFile(
-      path.join(repoRoot, "tests", "integration", "qfai-traceability.md"),
-      "utf-8",
-    );
-    expect(registry).toContain(`- ${SUBSUMED_ANNOTATION}`);
+    // The active story carries the same example identifier as the gate annotation.
+    const example = await readFile(path.join(SPEC_DIR, "03_Example.md"), "utf-8");
+    expect(example).toContain(SUBSUMED_ANNOTATION.slice("QFAI:".length));
 
     // Neither carrier lost its own test-case annotation, and each still points
     // at the gate that subsumed its dimension-5 assertion — "not deleted"

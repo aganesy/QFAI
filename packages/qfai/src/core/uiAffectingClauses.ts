@@ -14,10 +14,11 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import { loadConfig } from "./config.js";
+import { declaredContractId } from "./contractsDecl.js";
 import { collectFiles } from "./fs.js";
-import { joinAssistantLayer } from "./paths/assistantPaths.js";
 
-/** What `structure.md#ui-surface-paths-ssot` declares. */
+/** What `uiux.surfacePaths` in `qfai.config.yaml` declares. */
 export type DeclaredUiPaths =
   | { readonly kind: "globs"; readonly globs: readonly string[] }
   | { readonly kind: "none" }
@@ -28,7 +29,7 @@ export interface UiAffectingRow {
   /** The `Owning module` cell; `-` or empty when the ledger declares none. */
   readonly owningModule: string;
   readonly testFile: string;
-  /** Every id in `TC-Refs`, `US-Refs` and `CON-API-Refs`. */
+  /** Every id in `TC-Refs`, `US-Refs` and `API-Refs`. */
   readonly obligations: readonly string[];
 }
 
@@ -45,38 +46,21 @@ export interface HoldingClause {
 }
 
 /**
- * The declared UI paths, read once per root.
+ * The UI paths `uiux.surfacePaths` in `qfai.config.yaml` declares.
  *
- * Bullets still at the template's `<...>` placeholder declare nothing, and a
- * section with no other bullet leaves clauses 1 and 2 unevaluable rather than
- * answered.
+ * An empty list declares a project with no UI surface. An absent key, or a
+ * configuration that does not load, declares nothing, which leaves clauses 1
+ * and 2 unevaluable rather than answered.
  */
 export async function readDeclaredUiPaths(root: string): Promise<DeclaredUiPaths> {
-  let text: string;
-  try {
-    text = await readFile(joinAssistantLayer(root, "catalog", "structure.md"), "utf-8");
-  } catch {
-    return { kind: "undeclared" };
-  }
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const heading = lines.findIndex((line) => /^##\s+UI surface paths\b/i.test(line));
-  if (heading < 0) return { kind: "undeclared" };
-  const end = lines.findIndex((line, index) => index > heading && /^##\s/.test(line));
-  const section = lines.slice(heading + 1, end < 0 ? lines.length : end);
-  const start = section.findIndex((line) => /^\s*ui_paths:\s*$/.test(line));
-  if (start < 0) return { kind: "undeclared" };
-  const bullets = section
-    .slice(start + 1)
-    .map((line) => /^\s*[-*]\s+(.+?)\s*$/.exec(line)?.[1])
-    .filter((value): value is string => value !== undefined)
-    .map((value) => value.replace(/^`([^`]*)`$/, "$1").trim());
-  if (bullets.some((value) => value.toLowerCase() === "none")) return { kind: "none" };
-  const globs = bullets.filter((value) => value.length > 0 && !/^<[^>]*>$/.test(value));
-  return globs.length === 0 ? { kind: "undeclared" } : { kind: "globs", globs };
+  const { config } = await loadConfig(root);
+  const globs = config.uiux?.surfacePaths;
+  if (globs === undefined) return { kind: "undeclared" };
+  return globs.length === 0 ? { kind: "none" } : { kind: "globs", globs };
 }
 
 /**
- * Whether `candidate` matches `glob` under the rules `structure.md` fixes:
+ * Whether `candidate` matches `glob` under the rules the configuration fixes:
  * `**` is zero or more segments, `*` and `?` stay within one, a leading dot is
  * ordinary, matching is case-sensitive, and every other character is literal.
  */
@@ -158,7 +142,10 @@ async function readUiContracts(root: string, contractsDir: string): Promise<UiCo
   return contracts;
 }
 
-/** Every `*.yaml`, `*.yml` and `*.json` under `<contractsDir>/api/**` naming `id`. */
+/** An `API-Refs` obligation: the ID of an API contract. */
+const API_CONTRACT_ID = /^API-\d{4}$/;
+
+/** The `*.yaml`, `*.yml` and `*.json` file under `<contractsDir>/api/**` that declares `id`. */
 async function apiContractEntries(
   root: string,
   contractsDir: string,
@@ -170,7 +157,9 @@ async function apiContractEntries(
   for (const file of files.sort()) {
     try {
       const text = await readFile(file, "utf-8");
-      if (standsAlone(text, id)) entries.push({ file: toPosix(path.relative(root, file)), text });
+      if (declaredContractId(file, text) === id) {
+        entries.push({ file: toPosix(path.relative(root, file)), text });
+      }
     } catch {
       continue;
     }
@@ -290,7 +279,7 @@ export class UiAffectingClauses {
 
   /** The entries that declare an obligation, by its kind. */
   private async sourceEntries(id: string): Promise<Array<{ file: string; text: string }>> {
-    if (id.startsWith("CON-API-")) return apiContractEntries(this.root, this.contractsDir, id);
+    if (API_CONTRACT_ID.test(id)) return apiContractEntries(this.root, this.contractsDir, id);
     const document = id.startsWith("TC-")
       ? this.sources.testCases
       : id.startsWith("US-")

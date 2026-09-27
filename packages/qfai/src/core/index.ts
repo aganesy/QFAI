@@ -1,6 +1,5 @@
 export * from "./config.js";
 export * from "./atddTraceability.js";
-export * from "./decisionGuardrails.js";
 export * from "./ids.js";
 export * from "./review/prototyping.js";
 export * from "./preflight/sddPreflight.js";
@@ -9,12 +8,6 @@ export * from "./types.js";
 export * from "./validate.js";
 export * from "./version.js";
 export * from "./validators/contracts.js";
-export * from "./validators/ids.js";
-export * from "./validators/atddCodeTraceability.js";
-export * from "./validators/layeredTraceability.js";
-export * from "./validators/orphanProhibition.js";
-export * from "./validators/specSplitByCapability.js";
-export * from "./validators/traceability.js";
 
 // WS-A: Canonical surface type detection (shared truth)
 export {

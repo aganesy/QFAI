@@ -12,7 +12,7 @@
  * - Verifies the auditProfile surface delegates to the shared
  *   designAudit lane.
  */
-// QFAI:SPEC-0004:TC-0004-0069
+// QFAI:EX-0001-0052-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

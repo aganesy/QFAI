@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                              | Expected                                                                      |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| EX-0001-0160-01 | AC-0001-0160-01 | `.qfai/state.json` carries `discussion.currentId: "discussion-20260527075558258"` and that dir exists, when a `/qfai-sdd` downstream skill resolves the active pack via the helper | It returns `discussion-20260527075558258` without scanning mtimes             |
+| EX-0001-0160-02 | AC-0001-0160-02 | `state.json#discussion.currentId` is absent and three candidate discussion directories exist, when the downstream helper resolves the active pack                                  | It raises an error naming the three candidates and `qfai discussion use <id>` |
+| EX-0001-0160-03 | AC-0001-0160-02 | `state.json#discussion.currentId` names `discussion-20260303000000000`, which does not exist, and two other packs exist                                                            | An error naming the two candidates and `qfai discussion use <id>`             |

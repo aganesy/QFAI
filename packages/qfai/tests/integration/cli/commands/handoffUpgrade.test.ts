@@ -6,7 +6,7 @@
  * - recognized fields are mapped to schema-defined slots
  * - ALL original fields preserved under a `legacy:` key (no data loss)
  */
-// QFAI:SPEC-0015:TC-0015-0030
+// QFAI:EX-0001-0180-01
 
 import { execFileSync } from "node:child_process";
 import {
@@ -53,6 +53,7 @@ function shellArg(value: string): string {
 const LEGACY_BODY = `# legacy session handoff
 companyName: Acme
 primarySpecId: spec-0012
+primaryUiContract: UI-0012
 startDate: 2026-05-27
 unrecognizedField: legacy-only-data
 customNotes: "remember to migrate"
@@ -74,7 +75,9 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^primaryUiContract: "UI-0012"$/m);
+    expect(body).toMatch(/^ {2}primarySpecId: spec-0012$/m);
+    expect(body).not.toMatch(/^primarySpecId:/m);
     expect(body).toMatch(/startDate: "2026-05-27"/);
     // legacy: key carries the full original payload (lossless).
     expect(body).toMatch(/legacy:/);
@@ -113,7 +116,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^ {2}primarySpecId: spec-0012$/m);
     // Nested signature.by / signature.on preserved under legacy:.
     expect(body).toMatch(/signature:/);
     expect(body).toMatch(/by: user-alpha/);
@@ -205,7 +208,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     expect(code).toBe(0);
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toMatch(/companyName: "JsonCo"/);
-    expect(body).toMatch(/primarySpecId: "spec-0099"/);
+    expect(body).toMatch(/^ {2}primarySpecId: spec-0099$/m);
     // Nested original payload preserved under legacy:
     expect(body).toMatch(/customExtra/);
   });
@@ -246,7 +249,7 @@ metadata:
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots from the recognized fields.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    expect(body).toMatch(/^ {2}primarySpecId: spec-0012$/m);
     // Nested mapping values must appear in the emitted legacy: block.
     // Pre-fix the column-0 regex scanner would drop these silently.
     expect(body).toMatch(/signature:/);
@@ -289,6 +292,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     return path.join(root, ".qfai", "handoff.yaml");
   }
 
+  // QFAI:EX-0001-0180-02
   it("refuses to overwrite an existing canonical handoff without --force", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -329,6 +333,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect(body).toMatch(/companyName: "FreshCo"/);
   });
 
+  // QFAI:EX-0001-0180-02
   it("with --force, backs the prior file up to <dest>.backup-<ISO> before overwriting", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -619,6 +624,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     }
   });
 
+  // QFAI:EX-0001-0180-03
   it("honours --dry-run: nothing is written and the preview names the refusal", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -643,6 +649,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
   });
 
+  // QFAI:EX-0001-0180-03
   it("honours --dry-run on a clean project without creating the destination", async () => {
     await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
     const out: string[] = [];

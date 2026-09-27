@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-10
 /**
  * The BP/AP rule database validator emits 12 codes, 11 of them at `error`, and
  * it runs on every `uiux` pass. Its only previous test pointed it at an empty

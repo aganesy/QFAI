@@ -5,8 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { loadLayerPolicy } from "../../src/core/layerPolicy.js";
 import { resolveAllowedLayerTagsFromPolicy } from "../../src/core/specPackParsers.js";
-import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
 const SHIPPED_HEADINGS = [
   "# Test Layers Policy",
@@ -46,16 +46,16 @@ describe("resolveAllowedLayerTagsFromPolicy", () => {
 });
 
 async function withProject(
-  seed: { catalog?: string; steering?: string },
-  assertion: (issues: Awaited<ReturnType<typeof validateSpecPacks>>) => void,
+  seed: { rule?: string; steering?: string },
+  assertion: (result: Awaited<ReturnType<typeof loadLayerPolicy>>) => void,
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layer-policy-"));
   try {
     const assistantRoot = path.join(root, ".qfai", "assistant");
-    await mkdir(path.join(assistantRoot, "skills"), { recursive: true });
-    if (seed.catalog !== undefined) {
-      await mkdir(path.join(assistantRoot, "catalog"), { recursive: true });
-      await writeFile(path.join(assistantRoot, "catalog", "test-layers.md"), seed.catalog, "utf-8");
+    await mkdir(path.join(assistantRoot, "skill"), { recursive: true });
+    if (seed.rule !== undefined) {
+      await mkdir(path.join(assistantRoot, "rule"), { recursive: true });
+      await writeFile(path.join(assistantRoot, "rule", "test-layers.md"), seed.rule, "utf-8");
     }
     if (seed.steering !== undefined) {
       await mkdir(path.join(assistantRoot, "steering"), { recursive: true });
@@ -65,46 +65,43 @@ async function withProject(
         "utf-8",
       );
     }
-    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(specDir, { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
-    await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 US\n", "utf-8");
-
-    assertion(await validateSpecPacks(root, defaultConfig));
+    assertion(await loadLayerPolicy(root, defaultConfig));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 }
 
 const spack090 = (
-  issues: Awaited<ReturnType<typeof validateSpecPacks>>,
-): Awaited<ReturnType<typeof validateSpecPacks>> =>
-  issues.filter((entry) => entry.code === "QFAI-SPACK-090");
+  result: Awaited<ReturnType<typeof loadLayerPolicy>>,
+): Awaited<ReturnType<typeof loadLayerPolicy>>["issues"] =>
+  result.issues.filter((entry) => entry.code === "QFAI-SPACK-090");
 
 describe("loadLayerPolicy resolves the path qfai init actually ships", () => {
-  it("reads catalog/test-layers.md without warning", async () => {
-    await withProject({ catalog: SHIPPED_HEADINGS }, (issues) => {
-      expect(spack090(issues)).toEqual([]);
+  it("reads rule/test-layers.md without a missing-policy finding", async () => {
+    await withProject({ rule: SHIPPED_HEADINGS }, (result) => {
+      expect(result.source).toBe("policy-file");
+      expect(spack090(result)).toEqual([]);
     });
   });
 
-  it("falls back to the legacy steering/ path", async () => {
-    await withProject({ steering: SHIPPED_HEADINGS }, (issues) => {
-      expect(spack090(issues)).toEqual([]);
+  it("does not treat a legacy steering file as the current policy", async () => {
+    await withProject({ steering: SHIPPED_HEADINGS }, (result) => {
+      expect(result.source).toBe("built-in-default");
+      expect(spack090(result)[0]?.severity).toBe("error");
     });
   });
 
   it("errors, not warns, when neither path resolves", async () => {
-    await withProject({}, (issues) => {
-      const finding = spack090(issues)[0];
+    await withProject({}, (result) => {
+      const finding = spack090(result)[0];
       expect(finding?.severity).toBe("error");
-      expect(finding?.file).toContain("catalog");
+      expect(finding?.file).toContain("rule");
     });
   });
 
   it("errors when the policy is present but yields no tags", async () => {
-    await withProject({ catalog: "# Test Layers Policy\n\nnothing parseable\n" }, (issues) => {
-      const finding = spack090(issues)[0];
+    await withProject({ rule: "# Test Layers Policy\n\nnothing parseable\n" }, (result) => {
+      const finding = spack090(result)[0];
       expect(finding?.severity).toBe("error");
       expect(finding?.message).toContain("layer タグを抽出できませんでした");
     });

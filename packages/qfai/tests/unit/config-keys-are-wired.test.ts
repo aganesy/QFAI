@@ -15,7 +15,7 @@
  * measured on the TypeScript AST rather than on source text, and only *read*
  * accesses count. The parser rules out comments, quoted strings and
  * template-literal prose for free; requiring the whole config path from
- * `validation` down (`…validation.traceability.scMustHaveTest`) rules out a
+ * `validation` down (`…validation.traceability.testFileGlobs`) rules out a
  * same-named local and any other object that happens to own a matching
  * property; and the read/write split rules out code that merely stores into the
  * key — `config.validation.traceability.newKey = false` writes a value nothing
@@ -40,28 +40,24 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * list MUST NOT grow without an issue reference: a new entry means a new knob
  * that lies to the operator.
  *
- * Keyed by the FULL config path, not the bare key name: `specSections` exists
- * under `validation.require` today, and a future `validation.traceability.
- * specSections` must not inherit this exemption just by sharing a name.
+ * Keyed by the FULL config path, not the bare key name: `requireLayerTags`
+ * exists under `validation.testStrategy` today, and a same-named key under
+ * another parent must not inherit this exemption just by sharing a name.
  *
  * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
  *   validator reads them.
- * - `validation.require.specSections` — parsed and shipped but no section
- *   requirement is enforced from it; the same class of shipped-but-inert
- *   config surface as the two keys above, not fixed here.
  */
 const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
   ["validation.testStrategy.requireLayerTags", "#408"],
   ["validation.testStrategy.requireSizeTags", "#408"],
-  ["validation.require.specSections", "#408 (same class: shipped-but-inert config surface)"],
 ]);
 
 type LeafKey = {
-  /** Bare key name, e.g. `scMustHaveTest`. */
+  /** Bare key name, e.g. `testFileGlobs`. */
   readonly key: string;
   /** Owning object key, e.g. `traceability`; `validation` for a direct child. */
   readonly parent: string;
-  /** Full dotted path from the root, e.g. `validation.traceability.scMustHaveTest`. */
+  /** Full dotted path from the root, e.g. `validation.traceability.testFileGlobs`. */
   readonly path: string;
 };
 
@@ -83,9 +79,9 @@ function collectLeafKeys(value: unknown, prefix: string, acc: LeafKey[] = []): L
 
 /**
  * The whole dotted access chain ending at `node`, walked back to its root:
- * `config.validation.traceability.scMustHaveTest`, not just the last two
+ * `config.validation.traceability.testFileGlobs`, not just the last two
  * segments. Truncating to `<parent>.<key>` would let an unrelated object that
- * happens to own a same-named property — `uiModel.traceability.scMustHaveTest`
+ * happens to own a same-named property — `uiModel.traceability.testFileGlobs`
  * — stand in for the config read.
  *
  * `undefined` when `node` is not a named access at all. A chain whose root is
@@ -204,8 +200,8 @@ function collectReadChains(source: string): Set<string> {
  * True when one of `chains` reaches `configPath` — the full path from
  * `validation` down. The root object holding the config differs by call site
  * (`config`, `configResult.config`, …) so the path is matched as a suffix, but
- * every segment of it must be present: `uiModel.traceability.scMustHaveTest`
- * does not reach `validation.traceability.scMustHaveTest`.
+ * every segment of it must be present: `uiModel.traceability.testFileGlobs`
+ * does not reach `validation.traceability.testFileGlobs`.
  */
 function readsConfigPath(chains: ReadonlySet<string>, configPath: string): boolean {
   for (const chain of chains) {
@@ -272,6 +268,8 @@ describe("validation config keys are wired", () => {
     expect(traceabilityKeys).not.toContain("brMustHaveSc");
     expect(traceabilityKeys).not.toContain("scNoTestSeverity");
     expect(traceabilityKeys).not.toContain("orphanContractsPolicy");
+    expect(traceabilityKeys).not.toContain("scMustHaveTest");
+    expect(traceabilityKeys).not.toContain("unknownContractIdSeverity");
   });
 
   it("does not accept a bare key name in prose, a string or a same-named local", () => {
@@ -291,13 +289,11 @@ describe("validation config keys are wired", () => {
 
   it("keeps code that lives next to comments and strings", () => {
     const prose = [
-      "// config.validation.traceability.scMustHaveTest はコメント",
-      'const label = "validation.traceability.scMustHaveTest";',
+      "// config.validation.traceability.testFileGlobs はコメント",
+      'const label = "validation.traceability.testFileGlobs";',
     ].join("\n");
-    const withCode = [prose, "const on = config.validation.traceability.scMustHaveTest;"].join(
-      "\n",
-    );
-    const key = "validation.traceability.scMustHaveTest";
+    const withCode = [prose, "const on = config.validation.traceability.testFileGlobs;"].join("\n");
+    const key = "validation.traceability.testFileGlobs";
 
     expect(readsPath(prose, key)).toBe(false);
     expect(readsPath(withCode, key)).toBe(true);
@@ -317,26 +313,25 @@ describe("validation config keys are wired", () => {
 
   it("does not let the unwired allowlist grow silently", () => {
     expect(Array.from(KNOWN_UNWIRED.keys()).sort()).toEqual([
-      "validation.require.specSections",
       "validation.testStrategy.requireLayerTags",
       "validation.testStrategy.requireSizeTags",
     ]);
   });
 
   it("exempts an allowlisted key only under the path it was allowlisted for", () => {
-    // `specSections` is exempt under `validation.require`. A same-named key
-    // added under another parent is a NEW inert knob and must still be checked.
+    // `requireLayerTags` is exempt under `validation.testStrategy`. A same-named
+    // key added under another parent is a NEW inert knob and must still be checked.
     const leaves = collectLeafKeys(
-      { require: { specSections: [] }, traceability: { specSections: [] } },
+      { testStrategy: { requireLayerTags: true }, traceability: { requireLayerTags: true } },
       "validation",
     );
 
     expect(leaves.map((leaf) => leaf.path)).toEqual([
-      "validation.require.specSections",
-      "validation.traceability.specSections",
+      "validation.testStrategy.requireLayerTags",
+      "validation.traceability.requireLayerTags",
     ]);
     expect(leaves.filter((leaf) => !KNOWN_UNWIRED.has(leaf.path)).map((leaf) => leaf.path)).toEqual(
-      ["validation.traceability.specSections"],
+      ["validation.traceability.requireLayerTags"],
     );
   });
 

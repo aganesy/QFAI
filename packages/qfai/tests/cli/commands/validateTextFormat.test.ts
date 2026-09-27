@@ -1,11 +1,13 @@
+// QFAI:EX-0001-0039-02
+// QFAI:EX-0001-0039-03
 /**
- * `assistant/catalog/cli-ux-guidelines.md` is shipped by `qfai init` and declares
- * the line grammar of `qfai validate --format text` (the default format). Nothing
- * else binds that document to the emitter, so this test rebuilds the expected
- * lines from the grammar the guideline actually ships and compares them against
- * real `emitText` output. Either side drifting fails here.
+ * The validate contract's business rules declare the line grammar of
+ * `qfai validate --format text` (the default format). Nothing else binds those
+ * rules to the emitter, so this test rebuilds the expected lines from the
+ * grammar the rules state and compares them against real `emitText` output.
+ * Either side drifting fails here.
  *
- * The guideline is used as a *complete* output contract, so the fixtures below
+ * The rules are used as a *complete* output contract, so the fixtures below
  * mirror production faithfully: counts skip suppressed issues (as `countIssues`
  * does), an error issue carries a multi-line `suggested_action` (as
  * `QFAI-SKILLS-001` does), and the trailing `run-log:` line is exercised through
@@ -19,15 +21,15 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { captureStdout } from "../../helpers/stdout.js";
-import { emitText, runValidate } from "../../../src/cli/commands/validate.js";
-import { warnIfTruncated } from "../../../src/cli/lib/warnings.js";
+import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
+import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
-const GUIDELINE_PATH = path.resolve(
+const CONTRACT_PATH = path.resolve(
   __dirname,
-  "../../../assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
+  "../../../../../.qfai/spec/03_contract/cli/cli-0016-qfai-validate.md",
 );
 
 const OPTIONAL_SLOTS = {
@@ -38,30 +40,32 @@ const OPTIONAL_SLOTS = {
 
 const DETAIL_LABELS = ["error_code", "target", "expected", "current", "fix"] as const;
 
-async function readGuideline(): Promise<string> {
-  const content = await readFile(GUIDELINE_PATH, "utf-8");
-  return content.replace(/\r\n/g, "\n");
-}
-
-/** Every ```text fence in the guideline, in document order. */
-function fences(guideline: string): string[] {
-  return [...guideline.matchAll(/```text\n([\s\S]*?)```/g)].map((match) => match[1] ?? "");
-}
-
-function fenceWith(guideline: string, needle: string): string {
-  const found = fences(guideline).find((fence) => fence.includes(needle));
-  if (found === undefined) {
-    throw new Error(`cli-ux-guidelines.md no longer documents a block containing ${needle}`);
+it("directs agent routing repairs to package defaults or project config overrides", () => {
+  for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
+    const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });
+    expect(fix).toContain("packages/qfai/assets/defaults/");
+    expect(fix).toContain("qfai.config.yaml");
+    expect(fix).not.toContain(".qfai/assistant/manifest/");
   }
-  return found;
+});
+
+/** The business rules that state the text output grammar, one statement per line. */
+async function readGuideline(): Promise<string> {
+  const content = await readFile(CONTRACT_PATH, "utf-8");
+  const statements = parseContractRules(CONTRACT_PATH, content)
+    .rules.map((rule) => rule.statement)
+    .filter((statement) => /text output|--format text|detail block/.test(statement));
+  if (statements.length === 0) {
+    throw new Error("cli-0016-qfai-validate.md no longer states the text output grammar");
+  }
+  return statements.join("\n");
 }
 
-/** Extracts the single-line grammar fenced right under `## Error Message Format`. */
+/** Extracts the one-issue line grammar the rules state as a code span. */
 function extractGrammar(guideline: string): string {
-  const match = /## Error Message Format\n[\s\S]*?```text\n([^\n]+)\n```/.exec(guideline);
-  const grammar = match?.[1];
+  const grammar = /`(\[<severity>\] <CODE> <message>[^`]*)`/.exec(guideline)?.[1];
   if (grammar === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer documents an Error Message Format grammar");
+    throw new Error("the text output grammar no longer documents a one-issue line");
   }
   for (const slot of Object.values(OPTIONAL_SLOTS)) {
     if (!grammar.includes(slot)) {
@@ -71,31 +75,24 @@ function extractGrammar(guideline: string): string {
   return grammar;
 }
 
-/** Labels of the indented detail block documented for `error` issues, in order. */
+/** Labels of the indented detail block the rules document, in order. */
 function extractDetailLabels(guideline: string): string[] {
-  return fenceWith(guideline, "error_code:")
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => line.trim().split(":")[0] ?? "");
+  const block = /detail block of the lines (.*?), and a block/.exec(guideline)?.[1];
+  if (block === undefined) {
+    throw new Error("the text output grammar no longer documents the detail block's lines");
+  }
+  return [...block.matchAll(/`([a-z_]+): [^`]*`/g)].map((match) => match[1] ?? "");
 }
 
 /**
- * Leading-space count of the continuation line in the guideline's worked
- * multi-line example. Binding the example to the rule is what keeps the
- * documented indent honest.
+ * The continuation indent for `label`, from the arithmetic the rules state in
+ * words: two spaces, plus the label's length, plus two.
  */
-function documentedContinuationIndent(guideline: string): number {
-  const example = fences(guideline).find(
-    (fence) => fence.startsWith("  fix: ") && !fence.includes("error_code:"),
-  );
-  if (example === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer shows a multi-line detail-field example");
+function documentedContinuationIndent(guideline: string, label: string): number {
+  if (!guideline.includes("two spaces, plus the label's length, plus two")) {
+    throw new Error("the text output grammar no longer states the continuation indent");
   }
-  const continuation = example.split("\n")[1];
-  if (continuation === undefined || continuation.trim().length === 0) {
-    throw new Error("the multi-line detail-field example lost its continuation line");
-  }
-  return continuation.length - continuation.trimStart().length;
+  return 2 + label.length + 2;
 }
 
 /** Renders one issue by substituting it into the documented grammar. */
@@ -127,21 +124,10 @@ function resultOf(issues: Issue[]): ValidationResult {
       warning: counted.filter((i) => i.severity === "warning").length,
       error: counted.filter((i) => i.severity === "error").length,
     },
-    traceability: {
-      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-      testFiles: {
-        globs: [],
-        excludeGlobs: [],
-        matchedFileCount: 0,
-        truncated: false,
-        limit: 0,
-      },
-    },
   };
 }
 
 type LineKind =
-  | "warn"
   | "header"
   | "counts"
   | "fail-on"
@@ -152,12 +138,12 @@ type LineKind =
   | "message-continuation";
 
 /**
- * The precedence documented under `### 行の判定順序`, implemented literally:
+ * The precedence the line-classification rule states, implemented literally:
  * structural lines are recognised before the "anything else continues the
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
- * Rule 5 keys on the run's `--fail-on` threshold, not on `error` alone: the
+ * Rule 6 keys on the run's `--fail-on` threshold, not on `error` alone: the
  * emitter prints a detail block for every severity that can fail the run, so a
  * `--fail-on warning` run puts one under its warnings too and a classifier
  * pinned to `error` would read that block as more message text.
@@ -168,9 +154,6 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
   let section: "none" | "message" | "detail" = "none";
   let severity: string | undefined;
   return lines.map((line) => {
-    if (line.startsWith("[warn] ")) {
-      return { kind: "warn" as const, line };
-    }
     const header = /^\[(info|warning|error)\] /.exec(line);
     if (header) {
       section = "message";
@@ -211,16 +194,19 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
   });
 }
 
-/** The ordered rules listed under `### 行の判定順序`, in document order. */
+/**
+ * The numbered tests of the line-classification rule, in the order it states
+ * them: `(1) …; (2) …; … (7) ….` Each test ends at the next number, and the
+ * last at the end of its sentence.
+ */
 function extractPrecedenceRules(guideline: string): string[] {
-  const section = /### 行の判定順序\n([\s\S]*?)\n\n>/.exec(guideline)?.[1];
-  if (section === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer documents a line-classification precedence");
+  const statement = guideline.split("\n").find((line) => line.includes("classifies each line"));
+  if (statement === undefined) {
+    throw new Error("the text output grammar no longer documents a line-classification precedence");
   }
-  return section
-    .split("\n")
-    .filter((line) => /^\d+\. /.test(line))
-    .map((line) => line.replace(/^\d+\. /, ""));
+  return [...statement.matchAll(/\((\d)\) (.*?)(?=; \(\d\) |\. [A-Z]|\.?$)/g)].map(
+    (match) => match[2] ?? "",
+  );
 }
 
 const MULTILINE_FIX = [
@@ -257,7 +243,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "warning",
     category: "canonical",
     message: "location and refs",
-    file: ".qfai/specs/spec-0001/01_Spec.md",
+    file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
     refs: ["semantic.color.primary", "semantic.color.accent"],
     rule: "test.refs",
   },
@@ -266,7 +252,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "warning",
     category: "canonical",
     message: "suppressed by a waiver",
-    file: ".qfai/specs/spec-0001/01_Spec.md",
+    file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
     suppressed: true,
     rule: "test.suppressed",
   },
@@ -275,14 +261,14 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "error",
     category: "change",
     message: "multi-line suggested action",
-    file: ".qfai/assistant/skills/qfai-verify/SKILL.md",
+    file: ".qfai/assistant/skill/qfai-verify/SKILL.md",
     suggested_action: MULTILINE_FIX.join("\n"),
     rule: "test.multiline",
   },
 ];
 
-describe("validate --format text matches the shipped CLI UX guideline", () => {
-  it("emits every issue in the grammar documented by cli-ux-guidelines.md", async () => {
+describe("validate --format text matches the validate contract's text output grammar", () => {
+  it("emits every issue in the documented grammar", async () => {
     const grammar = extractGrammar(await readGuideline());
     const output = await captureStdout(() => {
       emitText(resultOf(SYNTHETIC_ISSUES), DEFAULT_FAIL_ON);
@@ -310,7 +296,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         // the issue's refs, so the real line for this finding carries a
         // `refs=` slot. Dropping it here would let the example drift.
         message: "Circular reference detected: semantic.color.primary",
-        file: ".qfai/contracts/design/design-tokens.yaml",
+        file: ".qfai/spec/03_contract/design/design-tokens.yaml",
         refs: ["semantic.color.primary"],
       },
       {
@@ -318,7 +304,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         severity: "error",
         category: "canonical",
         message: "External URL reference in HTML Mock: https://cdn.example.com/style.css",
-        file: ".qfai/specs/spec-0001/01_Spec.md",
+        file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
       },
     ];
 
@@ -334,7 +320,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     const labels = extractDetailLabels(guideline);
     expect(labels).toEqual([...DETAIL_LABELS]);
 
-    const indent = documentedContinuationIndent(guideline);
+    const indent = documentedContinuationIndent(guideline, "fix");
     // The documented rule: `2 + <label> + 2`, i.e. the continuation aligns
     // under the first character of the value.
     expect(indent).toBe(2 + "fix".length + 2);
@@ -436,13 +422,37 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     expect(output).toContain("counts: info=1 warning=2 error=1\n");
   });
 
+  it("reports an incomplete story test scan as a counted error issue", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain("`QFAI-SCAN-002` as an `error` issue");
+    expect(guideline).not.toContain("[warn]");
+
+    const output = await captureStdout(() => {
+      emitText(
+        resultOf([
+          {
+            code: "QFAI-SCAN-002",
+            severity: "error",
+            category: "canonical",
+            message: "Story-tree test scan stopped at the 20000 file limit; coverage is incomplete",
+          },
+        ]),
+        DEFAULT_FAIL_ON,
+      );
+      return Promise.resolve();
+    });
+    expect(output).toContain("[error] QFAI-SCAN-002 Story-tree test scan stopped");
+    expect(output).toContain("counts: info=0 warning=0 error=1");
+    expect(output).not.toContain("[warn] ");
+  });
+
   it("ends the real `--format text` run with the documented run-log line", async () => {
     const guideline = await readGuideline();
-    expect(fenceWith(guideline, "run-log:").trim()).toBe("run-log: <path>");
+    expect(guideline).toContain("`run-log: <path>`, always, as the last line");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
-      await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
       const output = await captureStdout(async () => {
         await runValidate({ root, strict: false, format: "text" });
       });
@@ -466,11 +476,11 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("keeps a real multi-line issue message renderable from the documented grammar", async () => {
     const guideline = await readGuideline();
     const grammar = extractGrammar(guideline);
-    expect(guideline).toContain("`<message>` は改行を含むことがある");
+    expect(guideline).toContain("`<message>` may contain line breaks");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
       await writeFile(
         path.join(designDir, "anti-patterns.yaml"),
@@ -501,83 +511,47 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   });
 
   /**
-   * `runValidate` calls `warnIfTruncated` before `emitText`, and that warning
-   * goes to stdout. A guideline claiming to be the complete stdout contract has
-   * to declare it, or a conforming parser meets an undeclared line on any repo
-   * whose test-file scan hits the limit.
-   */
-  it("declares the scan-truncation warning line the CLI prints before the issues", async () => {
-    const guideline = await readGuideline();
-    expect(fenceWith(guideline, "test-file scan stopped").trim()).toBe(
-      "[warn] <command>: test-file scan stopped at the <n>-file cap; traceability/ATDD coverage in this run is computed over a partial file set",
-    );
-
-    const truncated = await captureStdout(() => {
-      warnIfTruncated(
-        { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
-        "validate",
-      );
-      return Promise.resolve();
-    });
-    expect(truncated).toBe(
-      "[warn] validate: test-file scan stopped at the 20000-file cap; traceability/ATDD coverage in this run is computed over a partial file set\n",
-    );
-
-    const complete = await captureStdout(() => {
-      warnIfTruncated(
-        { globs: [], excludeGlobs: [], matchedFileCount: 12, truncated: false, limit: 20000 },
-        "validate",
-      );
-      return Promise.resolve();
-    });
-    expect(complete).toBe("");
-  });
-
-  /**
    * "Anything that does not start with `[<severity>] ` continues the previous
    * message" is only safe once the structural lines are matched first. This
    * runs the documented precedence over one real run that carries all of them
-   * at once: a truncation warning, a multi-line `QFAI-BPAP-002` message, an
+   * at once: a multi-line `QFAI-BPAP-002` message, an
    * error detail block, `counts:` and `run-log:`.
    */
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(8);
+    expect(rules).toHaveLength(7);
     const anchors = [
-      "[warn] ",
-      "[info] ",
-      "counts: ",
-      "fail-on: ",
-      "timings: ",
-      "run-log: ",
+      "`[info]`",
+      "`counts:`",
+      "`fail-on:`",
+      "`timings:`",
+      "`run-log:`",
       "error_code:",
     ];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
+    expect(rules[6], "the last precedence rule must be the message-continuation fallback").toBe(
+      "anything else continues the previous issue's message",
+    );
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
-      await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
       await writeFile(
         path.join(designDir, "anti-patterns.yaml"),
         "- id: AP-0001\n  title: [unclosed\n",
         "utf-8",
       );
 
-      const output = await captureStdout(async () => {
-        warnIfTruncated(
-          { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
-          "validate",
-        );
-        await runValidate({ root, strict: false, format: "text" });
-      });
+      const output = await captureStdout(() =>
+        runValidate({ root, strict: false, format: "text" }).then(() => undefined),
+      );
       const classified = classifyByGuideline(output.trimEnd().split("\n"), DEFAULT_FAIL_ON);
 
-      expect(classified[0]?.kind).toBe("warn");
       expect(classified.at(-1)?.kind).toBe("run-log");
       expect(classified.at(-2)?.kind).toBe("fail-on");
       expect(classified.at(-3)?.kind).toBe("counts");
