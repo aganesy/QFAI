@@ -56,8 +56,9 @@ keep authors separate from reviewers.
    triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the four files assembled from multiple
    sources: `objective.md`, `initiative.md`, `principle.md` and `tech.md`.
    Remove facts duplicated in different words. Keep the
-   source files archived by the scripts. `tech.md` is written in its
-   template's shape: replace each `<...>` placeholder its old files did not
+   source files archived by the scripts. Each document the steps write is in
+   its `qfai-sdd` template's shape, and what does not fit is listed for a
+   person. In `tech.md`, replace each `<...>` placeholder its old files did not
    supply.
 4. Run steps 4 to 10 in order, each with `--dry-run` followed by the real run.
    Inspect and keep every report and exit code as in step 2.
@@ -89,7 +90,7 @@ keep authors separate from reviewers.
 | ---- | ---------------------------- | -------------------------------------------------------------- |
 | 1    | `01-rename-directories.mjs`  | Rename owned directories and update old default config paths.  |
 | 2    | `02-merge-tables.mjs`        | Merge decisions, questions and change records into two tables. |
-| 3    | `03-move-catalog.mjs`        | Move policy, catalog and assistant content to its new home.    |
+| 3    | `03-move-catalog.mjs`        | Move policy, catalog and assistant content; number contracts.  |
 | 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the fixed ID map.      |
 | 5    | `05-cases-to-examples.mjs`   | Convert test-case-only rows into examples.                     |
 | 6    | `06-derive-ac-refs.mjs`      | Derive each example's criterion reference.                     |

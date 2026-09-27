@@ -506,6 +506,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as errors for the first time: the `playwright-cli` browser wrapper, readers
   of `.qfai/output/validate.json`, and hand-written per-skill handoff files.
 
+- **The migration guides describe what the migration writes today.** The
+  skill's `references/migration-guide.md` and `docs/MIGRATION-2.0.0.md` now
+  say that:
+  - each story-tree document the steps write is in its template's shape, and
+    content that does not fit is listed under `## For a person`;
+  - a pack's scope and source provenance, a story's `Parent`, `Source` and
+    `Flow` fields and a criterion's `# Parent:` line stay in the archive;
+  - step 3 routes the old structure catalog by section and writes no structure
+    document;
+  - rules are numbered `BR-<contract number>-NNNN` and written in each
+    contract format's own form, a `## Business rules` table in Markdown;
+  - the design lock, the token mirror and `prototype-handoff.yaml` are not
+    carried over, and the handoff now lives in `prototyping.json`.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
