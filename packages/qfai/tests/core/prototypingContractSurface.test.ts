@@ -1,12 +1,14 @@
 /**
- * The prototyping CLI contract keeps capture artifacts conditional on the
- * opt-in flag, including the evidence each captured screen requires.
+ * The `qfai prototyping iterate` contract keeps capture artifacts conditional
+ * on the opt-in flag, including the evidence each captured screen requires.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 
 // tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -16,17 +18,30 @@ const CONTRACT = path.join(
   "spec",
   "03_contract",
   "cli",
-  "cli-0013-qfai-prototyping.md",
+  "cli-0014-qfai-prototyping-iterate.md",
 );
 
-describe("`qfai prototyping` CLI contract surface", () => {
-  it("specifies capture outputs and evidence only for the opt-in path", async () => {
-    const contract = await readFile(CONTRACT, "utf-8");
-    expect(contract).toContain("## Capture and serve flags");
-    expect(contract).toContain("Without either flag, the reviewer writes the");
-    expect(contract).toContain("iterate neither captures screenshots and");
-    expect(contract).toContain("Output paths (written when `--capture` is passed)");
-    expect(contract).toContain("When `--capture` is **not** passed for an iteration");
-    expect(contract).toContain("When `--capture` IS passed, `evidenceRefs[]` MUST contain");
+async function ruleStartingWith(opening: string): Promise<string> {
+  const { rules, errors } = parseContractRules(CONTRACT, await readFile(CONTRACT, "utf-8"));
+  expect(errors).toEqual([]);
+  const rule = rules.find(({ statement }) => statement.startsWith(opening));
+  expect(rule, `no business rule opens with ${opening}`).toBeDefined();
+  return rule?.statement ?? "";
+}
+
+describe("`qfai prototyping iterate` CLI contract surface", () => {
+  it("writes capture outputs only for the opt-in path", async () => {
+    const rule = await ruleStartingWith("`--capture` is opt-in");
+    expect(rule).toContain("without it iterate writes no PNG, no HTML and no interaction record");
+  });
+
+  it("requires capture evidence only for a captured iteration", async () => {
+    const rule = await ruleStartingWith("Each `evidenceRefs[]` entry");
+    expect(rule).toContain(
+      "When `--capture` is not passed for an iteration, its `evidenceRefs[]` may be empty",
+    );
+    expect(rule).toContain(
+      "When `--capture` is passed, it holds at least one `screenshot` entry per declared screen",
+    );
   });
 });

@@ -536,11 +536,10 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
   });
 });
 
-// QFAI:EX-0001-0101-03 — aligns with
-// the CLI contract §Review payload SSOT (`.qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md`
-// L161-200). The legacy flat `timeBudgetSoftWarning?: string` field is
-// replaced by the SSOT-compliant required `softWarnings.timeBudget: boolean`
-// nested form.
+// QFAI:EX-0001-0101-03 — aligns with the review payload rule BR-0014-0008 of
+// `.qfai/spec/03_contract/cli/cli-0014-qfai-prototyping-iterate.md`. The flat
+// `timeBudgetSoftWarning?: string` field is refused; the payload carries the
+// required nested `softWarnings.timeBudget: boolean`.
 describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
   // QFAI:EX-0001-0101-03
   it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {

@@ -296,6 +296,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   obligation its other sections stated is now a rule citing the examples
   that show it. The rules are numbered by contract, as `BR-0012-0001`.
 
+- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
+  contracts are written as business rules.** This repository's contracts for
+  those commands now hold an ownership boundary and one business-rules table,
+  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
+  exit codes, payload fields, state transitions and operator screens are rules
+  in that table. No command behaves differently.
+
 - **The shipped guidance states what each story-tree document may hold.** The
   `qfai-sdd` skill, its steps and the shared rules now say that a document
   under `.qfai/spec/` holds its template's headings and nothing else, with one

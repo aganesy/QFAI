@@ -159,6 +159,7 @@ describe("prototyping rescope refuses", () => {
     expect(await run(root, { remove: ["UI-0099"] })).toBe(2);
   });
 
+  // QFAI:EX-0001-0122-09
   it("a surface that STILL RESOLVES — the refusal that keeps this from being drift", async () => {
     // `0001` has a UI-bearing marker, so nothing has retired it. Removing it
     // here would be the silent narrowing the frozen union exists to detect;
@@ -208,6 +209,7 @@ describe("the two refusals say different things", () => {
 });
 
 describe("prototyping rescope applies", () => {
+  // QFAI:EX-0001-0122-09
   it("removes the retired surface and records why", async () => {
     const root = await reducedScope();
     expect(await run(root)).toBe(0);
@@ -222,6 +224,7 @@ describe("prototyping rescope applies", () => {
     expect(log[0]?.cycle).toBe(3);
   });
 
+  // QFAI:EX-0001-0122-09
   it("leaves the loop where it was", async () => {
     // This changes what the loop is ABOUT, not where it is. `--force` was the
     // only route before and it discarded the cycles; a reduction that reset
@@ -405,6 +408,7 @@ describe("prototyping rescope and the recorded review", () => {
     expect(plan.cycle).toBe(0);
   });
 
+  // QFAI:EX-0001-0122-09
   it("keeps a shared captured screen while another UI contract declares it", async () => {
     const root = await reducedScope();
     const dir = path.join(evidenceDir(root), "iter-00");
