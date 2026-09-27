@@ -8,8 +8,6 @@ paths:
   testsDir: tests
 validation:
   failOn: error
-  require:
-    specSections: []
   testStrategy:
     # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
     # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this

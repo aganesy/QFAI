@@ -515,12 +515,16 @@ example table without `AC-Ref`, or a malformed flow diagram needs more than
 Markdown formatting checks.
 
 - **Document shape** comes from the schemas the package ships in
-  `assets/mdschema/`: one per SDD document type, declaring which chapters it
-  needs and whether each is a list, a table with named columns, a Gherkin block
-  or a Mermaid diagram. They are the schemas the `qfai-sdd` templates were
-  written against, so a document authored from the template passes by
-  construction. The driver reads `paths.specsDir` from your `qfai.config.yaml`,
-  so a relocated story tree is covered without editing the driver.
+  `assets/mdschema/`, one per story-tree document. A schema is closed: it fixes
+  the headings, their order, and the one kind of content each section holds,
+  and a section it does not name fails. They are the schemas the `qfai-sdd`
+  templates are written to, so a document authored from its template passes by
+  construction. No document may opt out. The driver reads `paths.specsDir` and
+  `paths.contractsDir` from your `qfai.config.yaml`, so a relocated story tree
+  is covered without editing the driver.
+- **The lane is required.** `npx qfai validate` runs the same shape check and
+  reports each violation as `QFAI-DOCSCHEMA-001`, and `npx qfai doctor` warns
+  when `qfai-docs.yml` is missing.
 - **Mermaid syntax** is checked with Mermaid's own grammar under a headless DOM
   — the parse the renderer performs before it draws, with no browser and no
   rendering. A template block carrying `<placeholder>` tokens opts out with

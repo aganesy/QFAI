@@ -75,4 +75,12 @@ Scenario: drift finding の details が declined を透過的に列挙する
   And message body は declined file を stale として名指ししない
   And modified が 0 件で declined だけが存在する tree では finding 自体が emit されず、
     したがって `details` も出力に現れない
+
+# AC-0003-0011-07
+# Parent: US-0003-0011
+Scenario: A missing document-schema lane is reported
+  Given a project whose `.github/workflows/qfai-docs.yml` is absent, whether never installed or removed after install
+  When `qfai doctor` runs
+  Then the `workflows.docsLane` check is a warning naming the file and the packaged copy to restore it from
+  And with the file present the check is `ok`
 ```

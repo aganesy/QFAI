@@ -11,6 +11,7 @@ import {
 import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
+import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
@@ -505,6 +506,7 @@ async function runStoryProfileValidators(
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
+    ...(await validateDocumentSchema(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),

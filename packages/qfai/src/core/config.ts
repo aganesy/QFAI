@@ -52,9 +52,6 @@ export type QfaiPaths = {
 
 export type QfaiValidationConfig = {
   failOn: FailOn;
-  require: {
-    specSections: string[];
-  };
   testStrategy: {
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
@@ -309,9 +306,6 @@ export const defaultConfig: QfaiConfig = {
   },
   validation: {
     failOn: "error",
-    require: {
-      specSections: [],
-    },
     testStrategy: {
       forbidTestTodoStubs: true,
       requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
@@ -585,16 +579,6 @@ function normalizeValidation(
     return base;
   }
 
-  let requireRaw: Record<string, unknown> | undefined;
-  if (raw.require === undefined) {
-    requireRaw = undefined;
-  } else if (isRecord(raw.require)) {
-    requireRaw = raw.require;
-  } else {
-    issues.push(configIssue(configPath, "validation.require はオブジェクトである必要があります。"));
-    requireRaw = undefined;
-  }
-
   let traceabilityRaw: Record<string, unknown> | undefined;
   if (raw.traceability === undefined) {
     traceabilityRaw = undefined;
@@ -623,15 +607,6 @@ function normalizeValidation(
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
-    require: {
-      specSections: readStringArray(
-        requireRaw?.specSections,
-        base.require.specSections,
-        "validation.require.specSections",
-        configPath,
-        issues,
-      ),
-    },
     testStrategy: {
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,

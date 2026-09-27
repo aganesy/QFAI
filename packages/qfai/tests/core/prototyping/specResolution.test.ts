@@ -41,7 +41,6 @@ function config(primaryUiContract?: string): QfaiConfig {
     },
     validation: {
       failOn: "error",
-      require: { specSections: [] },
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,

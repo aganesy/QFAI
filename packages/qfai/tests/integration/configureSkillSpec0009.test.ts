@@ -63,7 +63,7 @@ describe("Config Update Is Minimal", () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/minimal.*diff/i);
     expect(content).toContain("traceability globs");
-    expect(content).toContain("Keep `validation.require.specSections` unchanged");
+    expect(content).toContain("Write no `validation.require` key");
   });
 });
 

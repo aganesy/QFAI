@@ -89,8 +89,6 @@ async function seedRepo(root: string): Promise<void> {
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "  testStrategy:",
       "    requireApiAtdd: false",
       "    requireE2eAtdd: false",

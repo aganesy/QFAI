@@ -46,6 +46,11 @@ version: 1.0.0
 The story-tree validator checks required files and rejects nested story
 directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 
+Every Markdown file in the tree conforms to its closed schema in
+`packages/qfai/assets/mdschema/`, which fixes its headings, their order and the
+one kind of content each section holds. `qfai validate` reports a violation as
+`QFAI-DOCSCHEMA-001`.
+
 ## ID 形式
 
 - business flow: `BF-0001`
@@ -63,7 +68,8 @@ directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 
 ## Examples and test annotations
 
-- `03_Example.md` uses `EX-ID | AC-Ref | Input | Expected` rows.
+- `03_Example.md` holds one table with the columns
+  `EX-ID | AC-Ref | Input | Expected`, as its schema fixes.
 - E2E tests annotate `QFAI:BF-0001`; integration and API tests annotate
   `QFAI:AC-0001-0001-01`; selected non-E2E tests annotate
   `QFAI:EX-0001-0001-01`.

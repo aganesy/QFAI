@@ -1237,7 +1237,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "a85981ec0e0abce435c2b436ac05f7890475fe1ed5d7741740bf13a270557525"],
+  ["qfai-docs.yml", "2ad1523e42db03cf08b832076ef88c158aff7cc4f6933bd8ba2bd1fc720f98ba"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -1360,8 +1360,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
     // that one item reproduces `be3d8ce2…` byte for byte.
+    //
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/document-schema.md`,
+    // the rule master the run now seeds. Derived by running `qfai init` into a temp root; dropping
+    // that one bullet reproduces `977424d0…` byte for byte.
     ".github/copilot-instructions.md",
-    "977424d04766292554407b765af218b2b47a3ed500f9c91e94c87b01e60a1a1e",
+    "0a58ab20105052b8eebde3fe46304b46abddbb423bdf239cb8cf2e2b85723de6",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1436,8 +1440,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
-  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
-  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/document-schema.md`,
+  // the rule master the run now seeds. Dropping that one bullet from both written files
+  // reproduces `51e3e03e…` and `07350d6a…` byte for byte.
+  ["AGENTS.md", "837a26630f7b9bf782ffcfa5c90800716be0bd0a76df364cfa582d17068d68d1"],
+  ["CLAUDE.md", "85cd31b5b97051166646738cd0758b13f03ffe437645d839c90c55c5e27e1cb0"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1510,7 +1518,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "a6b03c7ab81d09c94c111814d0c7f112901e83493ae04a25ebae28212f1a25b5"],
+  //
+  // Re-pinned for the removal of `validation.require.specSections`, which nothing read: the
+  // sections of a story-tree document come from the shipped schemas. Restoring the two lines
+  // `require:` and `specSections: []` reproduces `a6b03c7a…` byte for byte.
+  ["qfai.config.yaml", "bdb249c7bc9c4fea35f01a8d92bf38d3d35a552bec462f0a4a29dc8231ad4a64"],
 ]);
 
 /**
@@ -2268,7 +2280,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
   "qfai",
 ]);
 

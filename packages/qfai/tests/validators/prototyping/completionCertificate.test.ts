@@ -48,7 +48,6 @@ function makeConfig(): QfaiConfig {
     },
     validation: {
       failOn: "error",
-      require: { specSections: [] },
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,

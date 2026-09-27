@@ -432,6 +432,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
+  "document-schema": ["QFAI-DOCSCHEMA-*"],
   "story-test-obligations": [
     "QFAI-STORY-006",
     "QFAI-STORY-007",
@@ -554,6 +555,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   ],
   sdd: [
     "story-structure",
+    "document-schema",
     "story-contract-index",
     "design-contract-readiness",
     "sdd",
@@ -1174,6 +1176,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-010":
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
+  "QFAI-DOCSCHEMA-001":
+    "Every story-tree document has the sections, order and content its shipped schema declares, and none carries the opt-out marker.",
+  "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1435,6 +1440,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-010":
     "Restore the protected row or record an in-force change request for the named file change.",
   "QFAI-STORY-011": "Add a Mermaid flowchart or sequence diagram to the named business-flow file.",
+  "QFAI-DOCSCHEMA-001":
+    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it.",
+  "QFAI-DOCSCHEMA-002":
+    "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
