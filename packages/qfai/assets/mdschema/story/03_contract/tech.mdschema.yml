@@ -29,6 +29,10 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
       - heading:
           pattern: "^## Dependencies$"
           regex: true

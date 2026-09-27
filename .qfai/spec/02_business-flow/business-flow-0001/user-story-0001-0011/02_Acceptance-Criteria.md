@@ -27,7 +27,7 @@ Feature: Story-tree layout described by mdschema
 
   # AC-0001-0011-04
   Scenario: A table-only section holds its template's table and nothing else
-    Given a policy document, `decisions.md` or `open-questions.md` whose section holds only a table
+    Given a story-tree document whose section holds only a table
     When the document is checked against its schema
     Then a column the template's table does not have is a violation
     And a pipe line directly above the table's header row is a violation

@@ -324,15 +324,12 @@ describe("a closed policy section rejects content of another kind", () => {
 });
 
 describe("a table-only section holds its template's columns and nothing above the header", () => {
-  const DOCUMENTS = [
-    "01_policy/objective",
-    "01_policy/initiative",
-    "01_policy/principle",
-    "01_policy/glossary",
-    "01_policy/constraint",
-    "decisions",
-    "open-questions",
-  ];
+  /** Every template a schema governs, named by its path below the template root. */
+  const DOCUMENTS = schemas.flatMap((schema) =>
+    templateFor(schema) === undefined
+      ? []
+      : [schema.slice("story/".length).replace(/\.mdschema\.yml$/, "")],
+  );
   const DELIMITER = /^\|(?:\s*:?-+:?\s*\|)+$/;
 
   /** One variant per table of each template: a label, the document and its changed text. */
@@ -377,8 +374,8 @@ describe("a table-only section holds its template's columns and nothing above th
   );
   const noteAbove = variants((table) => ["| explanatory note", ...table]);
 
-  it("finds a table in every table-only document", () => {
-    expect(extraColumn.length).toBe(9);
+  it("finds every table of every template", () => {
+    expect(extraColumn.length).toBe(15);
   });
 
   it.each(extraColumn)("reports an added column in %s", (_label, name, text) => {
@@ -398,16 +395,20 @@ describe("a table-only section holds its template's columns and nothing above th
     },
   );
 
-  it("accepts a table whose delimiter row carries alignment colons", () => {
-    // QFAI:EX-0001-0011-10
-    const text = readFileSync(path.join(TEMPLATE_ROOT, "01_policy/glossary.md"), "utf-8").replace(
-      "| ---- | ---------- |",
-      "|:-----|-----------:|",
-    );
-    const result = check("01_policy/glossary", text);
-    expect(result.output).toContain("No violations");
-    expect(result.status).toBe(0);
-  });
+  const aligned = variants((table) =>
+    table.map((line, index) => (index === 1 ? line.replace(/ (-+) /g, ":$1:") : line)),
+  );
+
+  it.each(aligned)(
+    "accepts a delimiter row carrying alignment colons in %s",
+    (_label, name, text) => {
+      // QFAI:EX-0001-0011-10
+      expect(text).toContain("|:-");
+      const result = check(name, text);
+      expect(result.output).toContain("No violations");
+      expect(result.status).toBe(0);
+    },
+  );
 });
 
 describe("the technology document holds only its three sections, each in its shape", () => {
