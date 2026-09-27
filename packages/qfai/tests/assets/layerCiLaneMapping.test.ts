@@ -41,7 +41,7 @@ describe("the layer to CI lane map is part of the layer rule", () => {
     expect(section).not.toMatch(/layer-[a-z]+/);
     expect(section).not.toMatch(/`QFAI:TC-[^`]+`/);
 
-    const tokens = new Set([...rule.matchAll(/layer-[a-z0-9-]+/g)].map((match) => match[0]));
+    const tokens = new Set([...rule.matchAll(/layer-[a-z0-9-]+/gi)].map((match) => match[0]));
     expect([...tokens].sort()).toEqual([
       "layer-api",
       "layer-component",
@@ -49,7 +49,7 @@ describe("the layer to CI lane map is part of the layer rule", () => {
       "layer-integration",
       "layer-unit",
     ]);
-    const headings = [...rule.matchAll(/^#{1,6}\s*L\d+\b.*$/gm)].map((match) => match[0]);
+    const headings = [...rule.matchAll(/^ {0,3}#{1,6}\s*L\d+\b.*$/gm)].map((match) => match[0]);
     expect(headings).toEqual([
       "### L1 Unit",
       "### L2 Component",
