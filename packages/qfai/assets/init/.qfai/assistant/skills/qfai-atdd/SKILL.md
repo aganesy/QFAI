@@ -213,6 +213,7 @@ Use the shared schema.
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
+  - the change adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on (`.qfai/assistant/catalog/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4);
   - `scenario.feature` and coverage ledgers remain optional legacy inputs, not completion gates.
 - Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
 - Default ATDD review set:

@@ -191,6 +191,30 @@ describe("the minimal-implementation rule names the four shapes an addition take
   });
 });
 
+describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and readings", () => {
+  it("states both lines, the needed-fix exception and grilling first", async () => {
+    const text = await readFile(
+      path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      "utf-8",
+    );
+    const section = text.split("## 4. What a change leaves out")[1]?.split(/^## /m)[0];
+    expect(section).toBeDefined();
+    const flat = section?.replace(/\s+/g, " ");
+    expect(flat).toContain("**A fix nobody asked for**");
+    expect(flat).toContain("is reported as a follow-up");
+    expect(flat).toContain("A fix the requested behaviour cannot work without stays in.");
+    expect(flat).toContain(
+      "The change's report names it, and it needs no expansion declared under Article VII.",
+    );
+    expect(flat).toContain("**An ambiguous request**, where the work goes ahead on an assumption");
+    expect(flat).toContain(
+      "the reading the wording and the surrounding code most directly support",
+    );
+    expect(flat).toContain("State the assumption.");
+    expect(flat).toContain("Whether to ask instead is `grilling.md`'s to decide.");
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *

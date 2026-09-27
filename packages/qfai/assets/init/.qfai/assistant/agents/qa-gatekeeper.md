@@ -16,6 +16,7 @@ tools: [Read, Glob, Grep, Bash]
 - Review QA evidence for acceptance readiness.
 - Audit prototyping coverage evidence and unresolved spec coverage.
 - Treat density or volume smells as review signals, not standalone hard gates.
+- Check that the change adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on (`.qfai/assistant/catalog/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4).
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
 - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
 - File excess as `defect:code-quality` against constitution Article VII; tag it

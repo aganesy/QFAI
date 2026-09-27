@@ -540,6 +540,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 - Reviewer response must include `Reviewer role:`, `Reviewed artifact:` and `Result: PASS | REVISE` (matching .qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template). A bare `Result:` line is not a verdict — without the role and the artifact it is textually identical to a doer's self-assessment, so a response missing either line is re-requested, never read for its `Result:`.
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
+- Reviewer checks that the change adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on (`.qfai/assistant/catalog/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4).
 - Do not declare DONE until Reviewer returns `PASS` under those two lines, naming the artifact this gate covers; otherwise apply `REVISE`.
 
 #### Blocking vs advisory findings

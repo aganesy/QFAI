@@ -246,6 +246,27 @@ describe("the layers catalog sizes a new test suite without removing coverage", 
       expectPhrase(section, "**A scratch check is not a deliverable.**");
       expectPhrase(section, "Do not turn a scratch check into a permanent test file.");
       expectPhrase(section, "No validator reads them.");
+      const headings = catalog.match(/^## .+$/gm) ?? [];
+      expect(headings[headings.indexOf("## Test-suite sizing") - 1]).toBe(
+        "## Test-file granularity",
+      );
+    });
+
+    it(`${tree}: every reviewer check links the sizing section and § 4 of the rule`, async () => {
+      for (const rel of [
+        "assistant/agents/implementation-reviewer.md",
+        "assistant/agents/qa-gatekeeper.md",
+        "assistant/skills/qfai-implement/SKILL.md",
+        SKILL,
+      ]) {
+        const body = flat(await read(tree, rel));
+        expect(body, rel).toContain(
+          "adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on",
+        );
+        expect(body, rel).toContain(
+          "(`.qfai/assistant/catalog/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4)",
+        );
+      }
     });
   }
 });
