@@ -49,4 +49,12 @@ Scenario: AC-0001-0057-06
   Given the story tree, and a rule-refs entry naming a BR that no contract defines
   When `qfai validate --profile sdd` runs
   Then an error names the BR ID and the file that carries the reference
+
+# AC-0001-0057-07
+# Parent: US-0001-0057
+Scenario: AC-0001-0057-07
+  Given the story tree, and a Markdown contract whose rules sit under `## Business rules`
+  When `qfai validate --profile sdd` runs
+  Then its table is read with the columns BR-ID, Statement and Examples, as a `## Rules` table is
+  And a `Rule refs:` line in that section is an error naming the contract file
 ```
