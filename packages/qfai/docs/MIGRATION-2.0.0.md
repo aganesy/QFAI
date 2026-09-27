@@ -42,7 +42,14 @@ contract kinds. The old and new IDs and paths are recorded in
 `.qfai/evidence/migration-spec-to-story/contract-map.json` and then in the ID
 map. Later steps rewrite the old IDs in dependency declarations, rule
 statements and test annotations, and number each contract's rules from its own
-number, such as `BR-0002-0001`. `contracts.md` becomes one index table.
+number, such as `BR-0002-0001`. A Markdown contract takes its rules as rows of
+a `## Business rules` table. `contracts.md` becomes one index table.
+
+`design/DESIGN.md.lock.yaml`, `design/design-system.yaml` and
+`design/prototype-handoff.yaml` are not contracts. They get no ID, and QFAI
+2.0.0 reads none of them. The handoff is now the `handoff` object of
+`.qfai/evidence/prototyping/prototyping.json`, which `/qfai-prototyping`
+writes. The migration does not convert the old file into it.
 
 The result separates project policy, concrete behavior, and enforcing
 contracts:
@@ -53,6 +60,20 @@ contracts:
 | Business flows, stories, acceptance criteria and examples                                     | `02_business-flow/`                    |
 | Contract index, technology stack and commands, and API, database, UI, CLI or design contracts | `03_contract/`                         |
 | Decisions and open questions                                                                  | `decisions.md` and `open-questions.md` |
+
+Every story-tree document the scripts write is in the shape of its `qfai-sdd`
+template, which is the shape the document schema checks. Content that does not
+fit is listed under `## For a person` for a person to rewrite. These are not
+carried into the new tree. They stay in the old spec-pack files, which the
+scripts keep in the pack or in the migration archive:
+
+- a spec pack's scope and source provenance;
+- a story's `Parent`, `Source` and `Flow` fields;
+- a criterion's `# Parent:` line, since its directory names the story.
+
+A migrated Markdown CLI contract keeps its old body beside the new
+`## Business rules` table. Its schema admits only `## Ownership boundary` and
+that table, so rewrite the rest into them.
 
 The scripts archive old files that have no direct new home. Review the four
 assembled files after step 3: `objective.md`, `initiative.md`,
@@ -159,6 +180,3 @@ complete run, rerun the steps and confirm that they change no files.
 Once step 12 exits 0 and validation passes, send the project's first
 free-text change request to `qfai-run`. The entry directive step 11 added to
 `AGENTS.md` and `CLAUDE.md` points agents there.
-
-`qfai init --force` removes the host links of the skill's earlier name,
-`qfai-migration-spec-to-story`.
