@@ -323,6 +323,93 @@ describe("a closed policy section rejects content of another kind", () => {
   });
 });
 
+describe("a table-only section holds its template's columns and nothing above the header", () => {
+  const DOCUMENTS = [
+    "01_policy/objective",
+    "01_policy/initiative",
+    "01_policy/principle",
+    "01_policy/glossary",
+    "01_policy/constraint",
+    "decisions",
+    "open-questions",
+  ];
+  const DELIMITER = /^\|(?:\s*:?-+:?\s*\|)+$/;
+
+  /** One variant per table of each template: a label, the document and its changed text. */
+  function variants(change: (table: string[]) => string[]): [string, string, string][] {
+    return DOCUMENTS.flatMap((name) => {
+      const lines = readFileSync(path.join(TEMPLATE_ROOT, `${name}.md`), "utf-8").split(/\r?\n/);
+      const headers = lines.flatMap((line, index) =>
+        DELIMITER.test(lines[index + 1] ?? "") && line.startsWith("|") ? [index] : [],
+      );
+      return headers.map((start): [string, string, string] => {
+        let end = start;
+        while (lines[end]?.startsWith("|")) end++;
+        const text = [
+          ...lines.slice(0, start),
+          ...change(lines.slice(start, end)),
+          ...lines.slice(end),
+        ].join("\n");
+        return [`${name}.md line ${start + 1}`, name, text];
+      });
+    });
+  }
+
+  function check(name: string, text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-table-"));
+    try {
+      const file = path.join(dir, `${path.basename(name)}.md`);
+      writeFileSync(file, text, "utf-8");
+      const schema = path.join(SCHEMA_ROOT, `story/${name}.mdschema.yml`);
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const extraColumn = variants((table) =>
+    table.map((line, index) => `${line} ${index === 1 ? "---" : "Extra"} |`),
+  );
+  const noteAbove = variants((table) => ["| explanatory note", ...table]);
+
+  it("finds a table in every table-only document", () => {
+    expect(extraColumn.length).toBe(9);
+  });
+
+  it.each(extraColumn)("reports an added column in %s", (_label, name, text) => {
+    // QFAI:EX-0001-0011-10
+    const result = check(name, text);
+    expect(result.output).toContain("[forbidden-text]");
+    expect(result.status).not.toBe(0);
+  });
+
+  it.each(noteAbove)(
+    "reports a pipe line directly above the header in %s",
+    (_label, name, text) => {
+      // QFAI:EX-0001-0011-11
+      const result = check(name, text);
+      expect(result.output).toContain("[forbidden-text]");
+      expect(result.status).not.toBe(0);
+    },
+  );
+
+  it("accepts a table whose delimiter row carries alignment colons", () => {
+    // QFAI:EX-0001-0011-10
+    const text = readFileSync(path.join(TEMPLATE_ROOT, "01_policy/glossary.md"), "utf-8").replace(
+      "| ---- | ---------- |",
+      "|:-----|-----------:|",
+    );
+    const result = check("01_policy/glossary", text);
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
+});
+
 describe("the technology document holds only its three sections, each in its shape", () => {
   const TECH_TEMPLATE = path.join(TEMPLATE_ROOT, "03_contract/tech.md");
   const TECH_SCHEMA = path.join(SCHEMA_ROOT, "story/03_contract/tech.mdschema.yml");

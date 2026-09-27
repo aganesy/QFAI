@@ -191,11 +191,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `glossary.md` is one Term and Definition table.
   - `constraint.md` has Technical, Operational and Business sections, each one
     ID, Constraint, Rationale and Impact table, which may be empty.
+  - A section that holds only a table holds exactly its template's columns. An
+    added column fails, and so does a line starting with a pipe directly above
+    the header row.
   - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
     strict schema, so a misspelt rule or option fails instead of being ignored.
   - Migration step 3 writes these five policy files in their template's shape.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
+    A table written without its leading and trailing pipes moves too, and is
+    written with them.
 
 - **`qfai-sdd` writes contracts in the contract ID scheme, and references
   point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
@@ -506,6 +511,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as errors for the first time: the `playwright-cli` browser wrapper, readers
   of `.qfai/output/validate.json`, and hand-written per-skill handoff files.
 
+- **The migration guides describe what the migration writes today.** The
+  skill's `references/migration-guide.md` and `docs/MIGRATION-2.0.0.md` now
+  say that:
+  - each story-tree document the steps write is in its template's shape, and
+    content that does not fit is listed under `## For a person`;
+  - a pack's scope and source provenance, a story's `Parent`, `Source` and
+    `Flow` fields and a criterion's `# Parent:` line stay in the archive;
+  - step 3 routes the old structure catalog by section and writes no structure
+    document;
+  - rules are numbered `BR-<contract number>-NNNN` and written in each
+    contract format's own form, a `## Business rules` table in Markdown;
+  - the design lock, the token mirror and `prototype-handoff.yaml` are not
+    carried over, and the handoff now lives in `prototyping.json`.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
@@ -799,6 +818,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file.
 
 ### Fixed
+
+- **The UI-affecting check reads an API obligation by its current ID.** It
+  looked up an API obligation only in the retired `CON-API-*` form, so an
+  `API-NNNN` obligation never reached the contract behind it. It now reads an
+  `API-NNNN` ID from the API contract whose `QFAI-CONTRACT-ID` line declares
+  it, and a `CON-API-*` value has no entry.
 
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config

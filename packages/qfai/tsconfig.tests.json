@@ -585,6 +585,7 @@
     "tests/integration/init/noOpenaiYaml.test.ts",
     "tests/integration/init/upgradeStates.ts",
     "tests/integration/init/windowsParity.test.ts",
-    "tests/integration/workflow/theModeIsValidated.test.ts"
+    "tests/integration/workflow/theModeIsValidated.test.ts",
+    "tests/integration/uiAffectingApiObligation.test.ts"
   ]
 }

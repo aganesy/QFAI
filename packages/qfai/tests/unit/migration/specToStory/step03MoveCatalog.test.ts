@@ -598,6 +598,49 @@ describe("migration catalog move", () => {
     );
   });
 
+  it("moves a table written without its outer pipes and writes it with them", async () => {
+    // QFAI:EX-0004-0006-19
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\nTerm | Definition\n--- | ---\nOrder | A request\n| Receipt | Proof of a \\| paid order\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\nID | Constraint | Rationale | Impact |\n--- | --- | --- | --- |\nTC-01 | Node 22 | Runtime | Build |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const policy = (name: string): Promise<string> =>
+      readFile(path.join(context.specsDir, "01_policy", name), "utf8");
+    expect(await policy("glossary.md")).toBe(
+      "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n| Receipt | Proof of a \\| paid order |\n",
+    );
+    expect(await policy("constraint.md")).toContain(
+      "## Technical Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Node 22 | Runtime | Build |\n",
+    );
+    for (const name of ["glossary", "constraint"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("sends a pipeless body that is not a table to a person", async () => {
+    // QFAI:EX-0004-0006-19
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\nTerm | Definition\n--- | ---\nOrder | A request\n- Receipt | Proof\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of .qfai/spec/_policies/06_Glossary.md by hand',
+    );
+  });
+
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
     // QFAI:EX-0004-0006-03
     // QFAI:EX-0004-0003-21
