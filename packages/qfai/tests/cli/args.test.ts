@@ -248,6 +248,7 @@ describe("parseArgs", () => {
     expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
   });
 
+  // QFAI:EX-0001-0149-03
   it("parses --skeleton-mode {placeholder|full|stub} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["placeholder", "full", "stub"] as const) {
@@ -273,6 +274,7 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  // QFAI:EX-0001-0149-03
   it("parses --mode {convergence|exploration} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["convergence", "exploration"] as const) {
@@ -285,6 +287,7 @@ describe("parseArgs", () => {
     expect(bogus.options.help).toBe(true);
   });
 
+  // QFAI:EX-0001-0149-03
   it("requires a value for --mode", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode"], cwd);

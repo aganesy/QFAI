@@ -92,7 +92,7 @@ approved itself ([Authorization record](#authorization-record)).
 
 - **First write.** Run records are first written at the run's first `proceed`
   authorization or its first accepted stage result, as
-  `cli-0017-qfai-workflow.md#decline-audit` states. From then on `summary.json` is
+  BR-0017-0103 states. From then on `summary.json` is
   rewritten at every write operation that changes the run, except `finish`. An
   authorization file is written when recorded. Both use a temporary file and a
   rename. `finish` records `completed` only in the runtime journal and
@@ -147,7 +147,7 @@ approved itself ([Authorization record](#authorization-record)).
 - The row therefore reads the same where the record is absent. No column is
   added to the table. The core checks the row against the record when it
   accepts the stage that appended the row
-  (`cli-0017-qfai-workflow.md#story-tree-records`).
+  (BR-0017-0084).
 
 ## Plan files
 
@@ -234,7 +234,7 @@ internal identifier.
   `test_defect_example_layer`. A step with none always runs when its stage
   runs.
 - `proposed` holds when the checked route proposal lists the step in
-  `optionalSteps` (`cli-0017-qfai-workflow.md#route-proposal`).
+  `optionalSteps` (BR-0017-0032).
 - `test_defect_acceptance_layer` holds when the diagnosis's first matched ID is
   a BF or an AC, and `test_defect_example_layer` when it is an EX, as
   `.qfai/assistant/rule/test-layers.md` maps those layers. The `bugfix` plan's
@@ -295,7 +295,7 @@ The route-proposal schema and the runtime parser require every entry in
 closed `kind` values are `request`, `flow-id`, `contract-id`, `path` and
 `evidence`. The normative array allows the first four; the observed array
 allows `path` and `evidence`. `ref` is a nonempty string. The parser also checks
-the field-specific value rules in `cli-0017-qfai-workflow.md#route-proposal`. Neither
+the field-specific value rules in BR-0017-0025. Neither
 boundary accepts a legacy string entry, an unknown kind, or an extra entry key.
 Such payloads are `invalid-input` with reason `schema`, before proposal checks.
 Parser and schema verdicts agree on these shape cases.
@@ -306,7 +306,7 @@ every field of the shape the schema gives it, the proposal of a routing result
 included, and no key the schema does not declare. A payload that fails is
 `invalid-input` with reason `schema` before the run reads it, naming each
 faulty field. An `approved` or `authorization` key is refused as
-`cli-0017-qfai-workflow.md#stage-result` states.
+BR-0017-0094 states.
 
 - They ship because `package.json#files` lists `assets/`. `qfai init` does not
   copy them into a project, and `qfai-run`'s reference shows each payload as a

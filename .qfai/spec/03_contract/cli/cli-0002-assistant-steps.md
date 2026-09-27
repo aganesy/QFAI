@@ -12,7 +12,7 @@
 - Companion contracts:
   - `.qfai/spec/03_contract/cli/cli-0022-workflow-files.md` for the plan steps and the
     predicates that make a step active
-  - `.qfai/spec/03_contract/cli/cli-0017-qfai-workflow.md#work-order` for the steps and
+  - BR-0017-0037 and BR-0017-0044 for the steps and
     reviewers a work order carries
   - `.qfai/spec/03_contract/cli/cli-0001-assistant-routing.md` for the routing entry and
     review profile of each step
@@ -113,7 +113,7 @@ No review runs between two steps.
   by `qfai-implement` or `qfai-atdd` takes the `implementation-heavy` reviewers
   in that union.
 - The review of the whole change stays the independent `qa-gatekeeper` PASS
-  that `finish` requires (`cli-0017-qfai-workflow.md#completion`).
+  that `finish` requires (BR-0017-0142).
 
 ### Distribution
 
@@ -142,7 +142,7 @@ naming the file and the cause:
 
 A project missing a step a plan names does not start a run: `npx qfai workflow
 start` refuses as fail-closed with cause `contract-undeclared`
-(`cli-0017-qfai-workflow.md#fail-closed`).
+(BR-0017-0117).
 
 ## Rules
 
