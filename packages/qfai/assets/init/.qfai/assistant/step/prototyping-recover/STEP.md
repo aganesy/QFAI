@@ -61,8 +61,8 @@ npx qfai prototyping rescope --remove UI-0001 --reason "<decision that retired i
 It drops the surface from `frozenSurfaceUnion`, prunes it from any captured
 `iterate-plan.json#screens`, records `{surface, reason, cycle, at}` in
 `prototyping.json#rescopeLog`, and **leaves the loop at its current cycle**.
-`--remove` is repeatable; `--reason` is required and should cite the recorded
-delta or decision that retired the surface. `--dry-run` reports without
+`--remove` is repeatable; `--reason` is required and should cite the
+`decisions.md` row that retired the surface. `--dry-run` reports without
 writing.
 
 **Order matters.** Retire the surface upstream first — the spec, its UI
@@ -82,7 +82,7 @@ visible before the next `iterate` rather than at it. Three ways out:
 
 - **rescope** — the decision was real; apply it and keep every recorded
   iteration;
-- **restore** the retired spec's UI-bearing marker — the decision was not meant
+- **restore** the retired UI contract — the decision was not meant
   to remove this surface; or
 - **reset** deliberately from cycle 0
   (`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`), which

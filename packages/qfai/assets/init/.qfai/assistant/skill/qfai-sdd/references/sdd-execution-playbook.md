@@ -1,6 +1,6 @@
 # SDD Execution Playbook
 
-Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape.
+Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape, and spec-traceability-rules.md#document-shapes states what a template cannot show.
 
 ## Stage 0: source inventory
 
@@ -20,14 +20,14 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Stage 2: policy and flow
 
-1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, and tech.md.
-2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow has a Mermaid flowchart or sequenceDiagram.
+1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
+2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
 3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
 
 ## Stage 3: concrete stories
 
 1. Write each affected story directory with exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md, based on the matching templates.
-2. Each AC is a Gherkin scenario. Each EX has exactly one existing AC-Ref. Each AC has at least one EX. Preserve observable normal, boundary, and kept-failure outcomes.
+2. Each AC is one named Gherkin Scenario under its ID comment. Each EX has exactly one existing AC-Ref and plain Input and Expected values. Each AC has at least one EX. Preserve observable normal, boundary, and kept-failure outcomes.
 3. Check the BF → US → AC → EX edges before writing a BR. The test-layer policy later routes BF to E2E, AC to API or Integration, and EX to the applicable other layer.
 4. Record retired stories as decision rows. Do not recycle their IDs.
 
@@ -45,7 +45,8 @@ When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in 
 ## Stage 5: gate, review, and completion
 
 Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning
-source and rerun. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
+source and rerun. A document that fails its schema is reshaped to its template; adding a section or a note to explain the
+error is never the fix. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
 from ../templates/evidence/sdd-flow.md. Route independent reviewers under .qfai/assistant/step/common-review-cycle/STEP.md; all blocking
 verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 

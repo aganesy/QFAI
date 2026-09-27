@@ -194,9 +194,9 @@ The `common-gate-run` step runs a gate from this section and records it.
 
 ## FORMAT SSOT (Mandatory)
 
-- Before writing or editing `.qfai/**`, read the relevant README/template/sample for the target artifact.
+- Before writing or editing `.qfai/**`, read the template or sample for the target artifact.
 - Do not copy templates or samples into prompt markdown.
-- Generated artifacts must match README-defined structure, headings, ordering, and table columns.
+- Generated artifacts match their template's headings, ordering, content kinds and table columns, and add no section, including no history section. Under `<paths.specsDir>` a document schema rejects anything else; `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes` states what a template cannot show.
 - Completion requires a format self-check in evidence.
 
 ## Stage 0 - Steering completion refresh (mandatory)
@@ -383,7 +383,7 @@ Reporting the clean run and omitting the red ones satisfies every existing evide
 Before declaring completion, you MUST:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
-- verify every expected artifact exists and required sections are populated;
+- verify every expected artifact exists and required sections are populated — a table with no rows or a `- None.` list counts where the template allows it;
 - scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
 - run the smallest applicable smoke check and report its outcome. Only PASS satisfies this bullet: FAIL and UNRUN are blockers, so they go in a stop report with the reason, never next to a completion claim.
 
@@ -399,7 +399,8 @@ report instead of the completion claim.
 **`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register
 table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses
 `ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row.
-Discussion registers use their own template fields. Article II and `.qfai/assistant/rule/workflow.md` both end an
+Discussion registers use their own template fields. A register row's Status is structure too: `TODO` in the Status cell of a
+`decisions.md` or `open-questions.md` row is the row's state, not a placeholder. Article II and `.qfai/assistant/rule/workflow.md` both end an
 unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an
 unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a
 value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.

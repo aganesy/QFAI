@@ -235,9 +235,9 @@ The `proposal` of a routing result.
 
 Each reference is exactly `{ kind, ref }`, with a nonempty string `ref` and a
 closed `kind`. `request` has `ref: "request"`; `flow-id` names a `BF-NNNN`;
-`contract-id` names a Short ID of `contracts.md`. `path` and `evidence` name
-project-relative file paths, without a glob or root escape. `evidence` is
-observed-only and is checked as a path, so naming a missing test or log cannot
+`contract-id` names a contract ID listed in `contracts.md`. `path` and
+`evidence` name project-relative file paths, without a glob or root escape.
+`evidence` is observed-only and is checked as a path, so naming a missing test or log cannot
 bypass `unknown-path`. A `kind` allowed in one reference array is not inferred
 from the spelling of `ref` or from an observer fact. A bare string or an unknown
 or disallowed `kind` is refused `invalid-input` with reason `schema` before

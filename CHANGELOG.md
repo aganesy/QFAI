@@ -276,6 +276,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The `prototype` stage of a `qfai-run` route no longer names
     `<paths.contractsDir>/design/**` as a write area. Nothing is written there.
 
+- **The shipped guidance states what each story-tree document may hold.** The
+  `qfai-sdd` skill, its steps and the shared rules now say that a document
+  under `.qfai/spec/` holds its template's headings and nothing else, with one
+  kind of content per section and no history section. The rules a template
+  cannot show — such as the story sentence, one named scenario per acceptance
+  criterion, plain example values and what a glossary term may not contain —
+  are listed once, in the skill's traceability rules.
+
+  - `QFAI-STORY-011` now names the `## Flow` section and its one diagram.
+  - The discussion templates name where `/qfai-sdd` carries success
+    criteria, terms and constraints, and the constraint IDs of a discussion
+    pack no longer share a prefix with the story tree's.
+  - References to retired record files (`08_Open-questions.md`,
+    `07_Decisions.md`, `*_delta.md` and the `Approved By` column) now name
+    `decisions.md` and `open-questions.md`.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves
