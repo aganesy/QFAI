@@ -9,11 +9,7 @@ import type { QfaiConfig } from "./config.js";
 import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
-import {
-  collectApiContractFiles,
-  collectDbContractFiles,
-  collectMarkdownContractIds,
-} from "./discovery.js";
+import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
@@ -2052,7 +2048,6 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
       }
     }
   }
-  for (const id of await collectMarkdownContractIds(apiRoot, API_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
@@ -2454,7 +2449,6 @@ async function collectDbContractIds(dbRoot: string): Promise<CollectedContractId
       }
     }
   }
-  for (const id of await collectMarkdownContractIds(dbRoot, DB_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }

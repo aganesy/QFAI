@@ -13,7 +13,6 @@ import {
 import {
   collectApiContractFiles,
   collectDbContractFiles,
-  collectMarkdownContractIds,
   collectUiContractFiles,
 } from "../discovery.js";
 import {
@@ -55,7 +54,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     collectDbContractFiles(dbRoot),
   ]);
 
-  if (uiFiles.length === 0 && !(await holdsMarkdownContract(uiRoot, "UI"))) {
+  if (uiFiles.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -66,7 +65,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (apiFiles.length === 0 && !(await holdsMarkdownContract(apiRoot, "API"))) {
+  if (apiFiles.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -77,7 +76,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
       ),
     );
   }
-  if (dbFiles.length === 0 && !(await holdsMarkdownContract(dbRoot, "DB"))) {
+  if (dbFiles.length === 0) {
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
@@ -120,12 +119,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...(await validateUiScreenEntries(root, config)));
 
   return issues;
-}
-
-/** Whether a Markdown contract under `root` declares an ID of `kind` in its H1. */
-async function holdsMarkdownContract(root: string, kind: ContractKind): Promise<boolean> {
-  const ids = await collectMarkdownContractIds(root, new RegExp(String.raw`^${kind}-\d{4}$`));
-  return ids.length > 0;
 }
 
 async function validateContractFile(file: string, kind: ContractKind): Promise<Issue[]> {

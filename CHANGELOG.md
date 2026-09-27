@@ -851,9 +851,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `## Business rules ##` and `## Contract Index ##` are read as the rules
     section and the index: a closing run of `#` is part of the heading syntax,
     not of the title.
-  - `QFAI-CONTRACT-000` no longer reports `api/`, `db/` or `ui/` as empty when
-    its only contracts are Markdown files that declare an ID of that kind in
-    their H1.
+
+- **A Markdown file under `api/`, `db/` or `ui/` is not a contract.** An API
+  contract is OpenAPI YAML or JSON, a DB contract SQL and a UI contract YAML;
+  Markdown is a contract form under `cli/`. The contract index and ATDD
+  coverage counted a Markdown file there whose H1 declared an ID of that kind,
+  although no document schema covers it. Now no check counts it or reads its
+  ID or rules, and `QFAI-CONTRACT-034` reports it once, naming the form its
+  directory takes.
 
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
