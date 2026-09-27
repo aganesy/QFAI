@@ -335,6 +335,11 @@ export const step07: MigrationStep = {
           forAPerson.push(
             `${repositoryRelative(context.root, source)}: ${oldId}: its statement names ${token}, which has no new ID`,
           );
+        if (/^cli\/.*\.md$/i.test(contract ?? ""))
+          for (const token of ruleIds(statement.text))
+            forAPerson.push(
+              `${repositoryRelative(context.root, target)}: ${mapped}: its statement names ${token}; a statement in a CLI contract names no rule, so rewrite it by hand`,
+            );
         const rule = { id: mapped ?? "", statement: statement.text, examples };
         if (present.has(oldId)) groups.set(target, [...(groups.get(target) ?? []), rule]);
         moved.add(oldId);

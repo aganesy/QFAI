@@ -201,7 +201,7 @@ const NOT_PROSE =
   /^\s*(?:[-*+]|\d+[.)])\s|^\s*\||^\s*(?:>|```|~~~)|^\s*#|^[ \t]{0,3}<[!/?A-Za-z]|^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/m;
 
 /** The paragraphs of a body that holds prose and nothing else, or null. */
-function paragraphsOf(body: string): string[] | null {
+export function paragraphsOf(body: string): string[] | null {
   const blocks = body
     .replace(/\r\n/g, "\n")
     .split(/\n[ \t]*\n/)

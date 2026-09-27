@@ -36,4 +36,12 @@ Feature: Move policy and catalog content into the merged files once
     Then each contract has a new contract ID, unique across kinds, a file name that carries it and a declaration of it
     And the contract map records each old path and old ID against the new ones
     And `contracts.md` lists every contract in the index table, and what it cannot hold is listed under For a person
+
+  # AC-0004-0006-05
+  Scenario: A Markdown CLI contract takes its template's shape, and what does not fit goes to a person
+    Given a Markdown contract under `cli/` with text and sections the CLI contract template has no place for
+    When step 3 runs
+    Then the contract holds only its heading, `## Ownership boundary` and `## Business rules`
+    And every part left out is listed under For a person with the old file and its archived copy
+    And once step 7 has written its rules the contract passes the CLI contract schema
 ```

@@ -372,6 +372,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `And` when they hold one step. A cell holding more steps is written as it
     stands, and the step lists it under `## For a person` and exits 3.
 
+- **Migration step 3 writes CLI contracts in the template's shape.**
+  - A Markdown contract under `cli/` holds its `# CLI-NNNN: <title>` heading,
+    `## Ownership boundary` and a `## Business rules` table, and nothing else,
+    so the migrated contract passes the CLI contract schema.
+  - An old ownership boundary of one to three paragraphs that name no rule is
+    kept. Where there is none, the section holds the template's placeholder and
+    the contract is listed under `## For a person`.
+  - The text before the first section and every other section are left out
+    and listed under `## For a person` with the old file and its copy under
+    `.qfai/evidence/migration-spec-to-story/retired/contract/`. Step 3 exits 3.
+  - Step 7 lists a rule it writes into a CLI contract whose statement names
+    another rule, which that contract's table does not admit, and exits 3.
+
 - **The business-flow and story documents have closed schemas.** The document
   lane now refuses any section, table, list or code block in these six
   documents that their `qfai-sdd` template does not declare, and the templates
