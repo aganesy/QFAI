@@ -82,17 +82,17 @@ describe("the frozen surface still resolves", () => {
     // The live case: two screens frozen at cycle 0, one retired by a product
     // decision, the loop still iterating.
     const root = await project();
-    await seedUiContract(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
+    await seedUiContract(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0002"], null);
 
     const issues = await run(root);
 
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-PROT-011"]);
-    expect(issues[0]?.refs).toEqual(["CON-UI-0002"]);
+    expect(issues[0]?.refs).toEqual(["UI-0002"]);
     expect(issues[0]?.file).toBe(".qfai/evidence/prototyping/prototyping.json");
     // The message has to say what survives, because that is what separates a
     // reduction from the all-markers-removed drift and decides the remedy.
-    expect(issues[0]?.message).toContain("CON-UI-0002");
+    expect(issues[0]?.message).toContain("UI-0002");
     expect(issues[0]?.message).toContain("stopReason=null");
     // Two routes now, and which one comes first is the point: the row used to
     // assert `--cycle 0` because the destructive reset was the only way out.
@@ -110,9 +110,9 @@ describe("the frozen surface still resolves", () => {
 
   it("stays silent when every frozen UI contract still resolves", async () => {
     const root = await project();
-    await seedUiContract(root, "CON-UI-0001");
-    await seedUiContract(root, "CON-UI-0002");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
+    await seedUiContract(root, "UI-0001");
+    await seedUiContract(root, "UI-0002");
+    await seedLoop(root, ["UI-0001", "UI-0002"], null);
 
     expect(await run(root)).toEqual([]);
   });
@@ -122,8 +122,8 @@ describe("the frozen surface still resolves", () => {
     // Reporting here would put a finding on every finished project whose specs
     // moved on afterwards.
     const root = await project();
-    await seedUiContract(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], "converged");
+    await seedUiContract(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0002"], "converged");
 
     expect(await run(root)).toEqual([]);
   });
@@ -133,14 +133,14 @@ describe("the frozen surface still resolves", () => {
     // and a different remedy. Two findings on one state would send automated
     // remediation down two paths.
     const root = await project();
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
+    await seedLoop(root, ["UI-0001", "UI-0002"], null);
 
     expect(await run(root)).toEqual([]);
   });
 
   it("stays silent when there is no loop at all", async () => {
     const root = await project();
-    await seedUiContract(root, "CON-UI-0001");
+    await seedUiContract(root, "UI-0001");
 
     expect(await run(root)).toEqual([]);
   });
@@ -150,7 +150,7 @@ describe("the frozen surface still resolves", () => {
     // Guessing here would report a scope reduction from a file this validator
     // could not read.
     const root = await project();
-    await seedUiContract(root, "CON-UI-0001");
+    await seedUiContract(root, "UI-0001");
     const dir = path.join(root, ".qfai", "evidence", "prototyping");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "prototyping.json"), "{ not json", "utf-8");

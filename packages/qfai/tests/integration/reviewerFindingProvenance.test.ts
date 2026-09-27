@@ -55,7 +55,7 @@ describe("reviewer finding provenance", () => {
       /Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,/,
     );
     expect(drift).toMatch(/Use full contract IDs, including every numeric segment/);
-    expect(drift).toMatch(/Do not shorten CON-API, CON-DB,\s+or CON-UI references/);
+    expect(drift).toMatch(/Do not shorten API, DB,\s+or UI references/);
   });
 
   it("makes record defects advisory only where a queue and drain exist", async () => {

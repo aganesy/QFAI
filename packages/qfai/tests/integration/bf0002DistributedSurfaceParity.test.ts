@@ -107,7 +107,7 @@ describe("BF-0002 distributed-surface guard parity", () => {
       expect(rejected.smokeClasses).toEqual(["internal story id"]);
       expect(rejected.lintPatterns).toHaveLength(1);
       expect(rejected.lintPatterns[0]).toMatch(
-        /^internal-story-(?:dec|oq|bf|us|ac|ex|br)-id-jsdoc-leak$/,
+        /^internal-story-(?:dec|oq|bf|us|ac|ex|br|contract)-id-jsdoc-leak$/,
       );
       expect(rejected.guard.status, rejected.guard.output).toBe(1);
       expect(rejected.guard.output).toContain("probe.md");

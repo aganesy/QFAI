@@ -109,6 +109,7 @@ describe("story-tree scaffold placeholders", () => {
       examples: [],
       rules: [],
       ruleRefs: [],
+      contracts: [],
       declarations: [],
       decisions: null,
       decisionFile: null,
