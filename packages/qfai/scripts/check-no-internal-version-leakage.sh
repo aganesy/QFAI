@@ -85,6 +85,11 @@ SINGLE_ID_END='(-([^0-9]|$)|[^0-9-]|$)'
 STORY_ID_RE="\b(DEC|OQ|BF|BR)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
 STORY_ID_RE="$STORY_ID_RE|\bUS-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
 STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$OUTSIDE_FOUR-[0-9]{2}|[0-9]{4}-[0-9]{4}-$OUTSIDE_TWO)\b"
+STORY_ID_RE="$STORY_ID_RE|\bBR-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
+# A contract ID stands alone: ERE has no lookbehind, so the character before it
+# is matched instead, which keeps the legacy `CON-UI-NNNN` form from reading as
+# `UI-NNNN`.
+STORY_ID_RE="$STORY_ID_RE|(^|[^A-Za-z0-9_-])(CLI|API|DB|UI|DESIGN)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas do not carry this field.

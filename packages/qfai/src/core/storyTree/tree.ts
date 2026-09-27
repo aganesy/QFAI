@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { declaredContractId } from "../contractsDecl.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
@@ -27,6 +28,8 @@ export type StoryTreeModel = {
   examples: ExampleDefinition[];
   rules: ContractRule[];
   ruleRefs: RuleReference[];
+  /** The `<KIND>-NNNN` ID each contract file under a kind directory declares. */
+  contracts: StoryTreeDeclaration[];
   declarations: StoryTreeDeclaration[];
   decisions: ParsedRecordTable | null;
   decisionFile: string | null;
@@ -69,7 +72,7 @@ function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
 }
 
 const RESERVED_ID =
-  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
+  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}(?:-\d{4}(?![\w-]))?|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
 
 /** Allocates after every declaration and every ID named in a decision row. */
 export function nextStoryTreeId(
@@ -120,6 +123,7 @@ export function buildStoryTreeModel(
     examples: [],
     rules: [],
     ruleRefs: [],
+    contracts: [],
     declarations: [],
     decisions: null,
     decisionFile: null,
@@ -202,6 +206,8 @@ export function buildStoryTreeModel(
       continue;
     model.contractFiles.push(file);
     if (/^(?:cli|design)\//.test(relative)) model.additionalContractFiles.push(file);
+    const contractId = relative.includes("/") ? declaredContractId(file, text) : null;
+    if (contractId) model.contracts.push({ id: contractId, file });
     const scan = parseContractRules(file, text);
     model.rules.push(...scan.rules);
     model.ruleRefs.push(...scan.refs.map((id) => ({ id, file })));
