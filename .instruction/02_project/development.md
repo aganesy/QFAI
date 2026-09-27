@@ -24,6 +24,8 @@ pnpm install
 pnpm build
 pnpm format:check
 pnpm lint
+pnpm lint:mdschema
+pnpm lint:mermaid
 pnpm check-types
 pnpm -C packages/qfai test
 pnpm verify:pack

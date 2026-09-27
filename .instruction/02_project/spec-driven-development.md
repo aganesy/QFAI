@@ -69,6 +69,7 @@ qfai report → .qfai/report/report.md
 ## 品質ゲート（最低限）
 
 - Each business flow and story has its required files and valid IDs.
+- Every spec-tree document conforms to its schema (`QFAI-DOCSCHEMA-001`).
 - The `BF → US → AC → EX ← BR` links resolve, with no undeclared ID.
 - Every BF has an E2E test, every AC an integration or API test, and every EX
   a selected non-E2E test, unless a `DONE` decision row exempts its own item.

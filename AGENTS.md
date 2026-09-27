@@ -88,8 +88,11 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
 - `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
 - `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
 - `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
-- `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
-  `packages/qfai/assets/mdschema/**` が SSOT)
+- `document-schema.md` (every spec-tree document conforms to its closed schema
+  in `packages/qfai/assets/mdschema/**`; `qfai validate` and the docs lane
+  check it, and no document opts out)
+- `document-schema.local.md` (the lanes, where the checkers live, and how a
+  schema is changed)
 - `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
 - `repository-language.md` (this repository is written in English)
 - `minimal-implementation.md` (the order to try solutions in, once a

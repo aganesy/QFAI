@@ -19,4 +19,13 @@ Scenario: The sample story tree passes both document lints
   Given the sample story tree built from the `qfai-sdd` templates
   When `pnpm lint:mdschema` and `pnpm lint:mermaid` run on it
   Then both report no failure
+
+# AC-0001-0011-03
+# Parent: US-0001-0011
+Scenario: Validation reports each document that breaks its schema
+  Given a story tree whose documents the mdschema manifest routes to a schema
+  When `qfai validate --profile sdd` runs on it
+  Then each violation of a document's schema is one `QFAI-DOCSCHEMA-001` error naming the document, the line and the column
+  And a document carrying the opt-out marker is reported rather than skipped, by `qfai validate` and by the document lane alike
+  And a check that could not run is one `QFAI-DOCSCHEMA-002` error rather than a pass
 ```

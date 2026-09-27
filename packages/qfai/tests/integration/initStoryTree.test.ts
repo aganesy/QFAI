@@ -130,6 +130,16 @@ describe("story-tree initialization", () => {
     expect(config).toContain("contractsDir: .qfai/spec/03_contract\n");
   });
 
+  it("writes no validation.require section into the project config", async () => {
+    // QFAI:EX-0001-0038-09
+    const root = await sandbox();
+    await init(root);
+    const config = await readFile(path.join(root, "qfai.config.yaml"), "utf-8");
+    expect(config).toContain("validation:\n");
+    expect(config).not.toMatch(/^\s+require:/m);
+    expect(config).not.toContain("specSections");
+  });
+
   it.each(["spec-0001", "_policies"])(
     "skips the new seed when the configured specs directory has %s",
     async (legacyName) => {

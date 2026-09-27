@@ -11,6 +11,7 @@ import {
 import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
+import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
@@ -200,7 +201,11 @@ export async function validateProject(
 
 function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
   if (!scope || finding.code === "QFAI-FLOW-005") return true;
-  if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
+  if (
+    !finding.code.startsWith("QFAI-STORY-") &&
+    finding.code !== "QFAI-CONTRACT-034" &&
+    finding.code !== "QFAI-DOCSCHEMA-001"
+  ) {
     return true;
   }
   if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
@@ -505,6 +510,7 @@ async function runStoryProfileValidators(
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
+    ...(await validateDocumentSchema(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
