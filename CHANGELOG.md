@@ -170,6 +170,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

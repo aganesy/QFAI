@@ -34,7 +34,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   it("accepts the canonical minimum field set", () => {
     const issues = validateHandoff({
       companyName: "Acme",
-      primaryUiContract: "CON-UI-0012",
+      primaryUiContract: "UI-0012",
       startDate: "2026-05-27",
       signature: "abc123",
       entryPattern: "qfai-sdd",
@@ -86,7 +86,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("parses a canonical YAML handoff into a record", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primaryUiContract: "CON-UI-0001"',
+      'primaryUiContract: "UI-0001"',
       'startDate: "2026-05-27"',
       'signature: "abc123"',
       'entryPattern: "qfai-sdd"',
@@ -96,19 +96,19 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
     const parsed = parseHandoff(yaml);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
+    expect(parsed?.primaryUiContract).toBe("UI-0001");
     expect(parsed?.productScope).toBe("saas");
   });
 
   it("parses a JSON handoff into a record (YAML is a strict superset)", () => {
     const json = JSON.stringify({
       companyName: "Acme",
-      primaryUiContract: "CON-UI-0001",
+      primaryUiContract: "UI-0001",
     });
     const parsed = parseHandoff(json);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
+    expect(parsed?.primaryUiContract).toBe("UI-0001");
   });
 
   it("returns null for empty input (YAML `null` document)", () => {
@@ -146,7 +146,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("preserves nested YAML object graphs (no data loss for non-flat payloads)", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primaryUiContract: "CON-UI-0001"',
+      'primaryUiContract: "UI-0001"',
       "signature:",
       '  by: "alice"',
       '  on: "2026-05-27"',

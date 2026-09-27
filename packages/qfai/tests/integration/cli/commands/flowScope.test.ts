@@ -211,7 +211,7 @@ describe("story-tree CLI flow scope", () => {
     );
     await writeFile(
       contract,
-      "# QFAI-CONTRACT-ID: CON-API-0001\nx-qfai-rules:\n  - id: BR-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
       "utf8",
     );
     await runReport({
@@ -235,7 +235,7 @@ describe("story-tree CLI flow scope", () => {
     );
     expect(graph.edges.map((edge) => edge.relation)).toContain("BF_TO_US");
     expect(graph.edges.map((edge) => edge.relation)).toContain("BR_TO_CON");
-    expect(graph.nodes.map((node) => node.id)).toContain("CON-API-0001");
+    expect(graph.nodes.map((node) => node.id)).toContain("API-0001");
   });
 
   it("does not derive an output directory from an invalid flow heading", async () => {

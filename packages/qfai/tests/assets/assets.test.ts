@@ -411,7 +411,7 @@ describe("assets guardrails", () => {
   it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
     // Every file under assistant/ is copied verbatim by `qfai init`, so
     // "this repository" resolves to the consuming project. Pairing that phrase
-    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `CON-API-NNNN` id
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `API-NNNN` id
     // therefore asserts a fact about an artifact the consumer does not have.
     //
     // The matcher, the soft-wrap normalizer and the file list live in

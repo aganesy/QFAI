@@ -106,7 +106,7 @@ async function seedProject(root: string): Promise<void> {
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: home",
       "    route: /",
@@ -179,7 +179,7 @@ describe("iterate --capture writes counted signals", () => {
     await seedProject(root);
     await writeFile(
       path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
       "utf-8",
     );
 

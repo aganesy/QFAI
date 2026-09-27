@@ -45,8 +45,8 @@ describe("validate reads no stage evidence", () => {
     await withInitProject(async (root) => {
       await put(
         root,
-        ".qfai/spec/03_contract/db/CON-DB-0001.sql",
-        "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE notify (id int);\n",
+        ".qfai/spec/03_contract/db/DB-0001.sql",
+        "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE notify (id int);\n",
       );
       const without = await issuesOf(root);
       await put(root, ".qfai/evidence/sdd-BF-0001.md", "# SDD BF-0001\n\nNo grilling record.\n");
@@ -61,7 +61,7 @@ describe("validate reads no stage evidence", () => {
       await put(
         root,
         ".qfai/spec/03_contract/ui/main.yaml",
-        '# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: SCR-001\n    route: "/"\n',
+        '# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: SCR-001\n    route: "/"\n',
       );
       // The prototyping outputs stand in the tree with no local record of the run that made them.
       await put(root, ".qfai/spec/03_contract/design/design-system.yaml", "source: DESIGN.md\n");

@@ -1,4 +1,4 @@
-# QFAI-CONTRACT-ID: CON-UI-0001
+# QFAI-CONTRACT-ID: UI-0003
 # Replace the sample BR and EX IDs with allocated IDs from the story tree.
 x-qfai-depends-on: []
 x-qfai-rules:
@@ -14,7 +14,7 @@ prototype:
   # Only the markers declared here are inspected; nothing derives them.
   markers:
     - id: mk_customer_id_input
-      selector: "[data-qfai='CON-UI-0001:customer_id_input']"
+      selector: "[data-qfai='UI-0003:customer_id_input']"
       purpose: customer id field on the order create form
 screens:
   - id: order_create

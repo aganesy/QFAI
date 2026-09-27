@@ -138,7 +138,7 @@ export async function validatePrototypingEvidence(
     issues.push(
       issue(
         "QFAI-PROT-002",
-        "prototyping.json uiContractsCovered[] must contain full CON-UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
+        "prototyping.json uiContractsCovered[] must contain full UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.uiContractsCovered",
