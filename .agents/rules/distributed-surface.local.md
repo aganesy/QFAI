@@ -38,6 +38,7 @@ the identifier does not belong in it.
 | Story example ID             | `EX-NNNN-NNNN-NN`                                           | `EX-0001-0010-01`        |
 | Story business-rule ID       | `BR-NNNN-NNNN`                                              | `BR-0001-0010`           |
 | Story contract ID            | `CLI-NNNN`, `API-NNNN`, `DB-NNNN`, `UI-NNNN`, `DESIGN-NNNN` | `CLI-0010`, `UI-0100`    |
+| Contract file name           | `cli-NNNN`, `api-NNNN`, `db-NNNN`, `ui-NNNN`                | `cli-0011-qfai-init.md`  |
 | Retired business-rule ID     | `BR-NNNN`                                                   | `BR-0010`                |
 | Retired contract ID          | `CON-<KIND>-NNNN`                                           | `CON-UI-0010`            |
 | Internal change ID           | `CHG-NNN`                                                   | `CHG-003`                |
@@ -56,8 +57,8 @@ the identifier does not belong in it.
   to `09`. An ID with any segment outside that sample band is internal. The
   short `DEC-NNNN` and `OQ-NNNN` patterns do not consume the leading segment of
   a legacy `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject
-  those. A contract ID counts only where no letter, digit, `_` or `-` precedes
-  it, so a `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as
+  those. A contract ID, and the lower-case form that starts a contract file
+  name, counts only where no letter, digit, `_` or `-` precedes it, so a `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as
   the retired contract ID.
 
 No shipped file uses a retired shape, apart from the sample-band IDs the

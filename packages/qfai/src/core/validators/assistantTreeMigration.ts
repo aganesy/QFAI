@@ -38,7 +38,7 @@ export async function validateAssistantTreeMigration(
     }
     const EXTRA_DIRS = new Set(["skill.local"]);
     // instructions/ and steering/ are pre-recut layers that get their
-    // own D-DEPRECATED-PATH below (symmetric per cli-0011-qfai-init.md contract).
+    // own D-DEPRECATED-PATH below, symmetric with the other retired layers.
     const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;

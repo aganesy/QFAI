@@ -261,9 +261,10 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   },
   {
     // A contract ID stands alone, and the retired `CON-<KIND>-NNNN` form is
-    // matched as a whole rather than read as `<KIND>-NNNN`.
+    // matched as a whole rather than read as `<KIND>-NNNN`. The lower-case
+    // `cli-NNNN` form is the start of a contract file name.
     name: "internal-story-contract-id-jsdoc-leak",
-    re: /(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bCON-(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    re: /(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN|cli|api|db|ui)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bCON-(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
     suggestion: "Keep story-tree contract IDs outside shipped source comments.",
     appliesTo: ["src-comment"],
   },

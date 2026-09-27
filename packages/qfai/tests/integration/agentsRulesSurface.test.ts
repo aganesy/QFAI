@@ -1429,6 +1429,7 @@ describe("rule overlays", () => {
         "BR-NNNN",
         "BR-NNNN-NNNN",
         "DESIGN-NNNN",
+        "`cli-NNNN`, `api-NNNN`",
         "every four-digit segment",
         "is not read as `UI-NNNN`",
         // The three exceptions — the sample IDs, the manifest version and the
