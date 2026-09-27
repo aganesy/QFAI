@@ -22,6 +22,27 @@ export const BUSINESS_FLOW_FILES = ["business-flow.md", "user-stories.md"] as co
 
 export const CONTRACT_LAYER_FILES = ["contracts.md", "tech.md"] as const;
 export const CONTRACT_KIND_DIRS = ["api", "db", "ui", "cli", "design"] as const;
+
+/** The form a contract takes in each kind directory that holds no Markdown contract. */
+export const NON_MARKDOWN_CONTRACT_FORMS = {
+  api: "OpenAPI YAML or JSON",
+  db: "SQL",
+  ui: "YAML",
+} as const;
+
+/**
+ * The kind directory of a Markdown file under `api/`, `db/` or `ui/`, which is
+ * not a contract, or `null` for any other path. `relative` is posix and
+ * relative to the contracts directory.
+ */
+export function markdownOutsideContractForm(
+  relative: string,
+): keyof typeof NON_MARKDOWN_CONTRACT_FORMS | null {
+  const match = /^(api|db|ui)\/.+\.[mM][dD]$/.exec(relative);
+  const directory = match?.[1];
+  return directory === "api" || directory === "db" || directory === "ui" ? directory : null;
+}
+
 export const STORY_TREE_ROOT_ENTRIES = [
   "decisions.md",
   "open-questions.md",

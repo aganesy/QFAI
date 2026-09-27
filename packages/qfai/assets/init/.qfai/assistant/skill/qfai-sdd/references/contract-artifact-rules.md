@@ -46,7 +46,9 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   `api/api-0002-orders.yaml` or `cli/cli-0001-checkout.md`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in
   its H1: `# CLI-0001: <title>`. A YAML or SQL contract declares it on a
-  `QFAI-CONTRACT-ID: API-0002` comment line at the top.
+  `QFAI-CONTRACT-ID: API-0002` comment line at the top. A Markdown file under
+  `api/`, `db/` or `ui/` is not a contract, whatever its H1 says:
+  `QFAI-CONTRACT-034` reports it, and no other check counts it.
 - **Rules are numbered after their contract.** A business rule's ID is
   `BR-<contract number>-NNNN`: `BR-0002-0001` is the first rule of `API-0002`.
   Only that contract declares it: under `x-qfai-rules` in YAML or JSON, on

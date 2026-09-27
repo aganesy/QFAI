@@ -258,13 +258,28 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0054-04
-  it("does not report a kind directory holding only Markdown contracts as empty", async () => {
+  it("reports a Markdown file under api/ once and counts it as no contract", async () => {
     // QFAI:EX-0001-0054-07
-    const root = await contractTree([], { "api/api-0003-refunds.md": "# API-0003: Refunds\n" });
+    const refunds = "api/api-0003-refunds.md";
+    const root = await contractTree([indexRow("API-0003", refunds)], {
+      [refunds]: contract("API-0003: Refunds", ["| BR-0003-0001 | Refund | EX-0001-0001-01 |"]),
+    });
     const empty = (await validateContracts(root, defaultConfig))
       .filter((entry) => entry.code === "QFAI-CONTRACT-000")
       .map((entry) => entry.rule);
-    expect(empty.sort()).toEqual(["contracts.db.files", "contracts.ui.files"]);
+    expect(empty.sort()).toEqual([
+      "contracts.api.files",
+      "contracts.db.files",
+      "contracts.ui.files",
+    ]);
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 .*api-0003-refunds\.md is Markdown, which is not a contract: api\/ holds OpenAPI YAML or JSON contracts$/,
+      ),
+    ]);
+    const model = await readStoryTreeModel(root, defaultConfig);
+    expect(model.contracts).toEqual([]);
+    expect(model.rules).toEqual([]);
   });
 
   // QFAI:AC-0001-0066-01
@@ -503,7 +518,9 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     expect(findings.join("\n")).not.toContain("archive");
   });
 
-  it("counts API-NNNN and DB-NNNN contracts and annotations in ATDD coverage", async () => {
+  // QFAI:AC-0001-0054-04
+  it("counts API-NNNN and DB-NNNN contracts, not Markdown files, in ATDD coverage", async () => {
+    // QFAI:EX-0001-0054-09
     const root = await contractTree([], {
       "api/api-0002-orders.yaml": API_CONTRACT,
       "db/db-0004-orders.sql": DB_CONTRACT,
@@ -518,8 +535,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     await put(root, "tests/atdd/malformed.test.ts", "// QFAI:API-0003-copy\n");
     await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
-    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004", "DB-0005"]);
+    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002"]);
+    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004"]);
     expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
     expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
       "annotated.test.ts",
