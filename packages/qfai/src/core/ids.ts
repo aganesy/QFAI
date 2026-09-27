@@ -8,10 +8,9 @@ export type IdPrefix =
  * into, and sweeping `DR-*` into that walk would make every citation of a
  * decision look like an undeclared spec item to the traceability rules.
  *
- * What was missing is the *format*. `qfai-implement` makes a non-empty `DR-ID`
- * the hard precondition for the `exception` status and `tddList.ts` enforces it
- * at `error`, but no ID class existed — so any non-empty string satisfied the
- * gate, including a token the operator invented on the spot.
+ * What it needs is a *format*. Without an ID class any non-empty string would
+ * pass as a `DR-*` citation, including a token the operator invented on the
+ * spot.
  */
 /**
  * `BF` joins them for the same reason, from the other end of the layering.

@@ -8,23 +8,15 @@
  * when the file under review is edited, which is the one thing the field
  * exists to detect.
  *
- * **Two gates read this and they must not disagree.**
- * `reviewArtifacts.ts` checks the `Revision:` field of a reviewer response;
- * `tddList.ts` embeds it as the `REV:` token of the `Evidence` pointer
- * grammar. Those two values are compared against each other for freshness, so
- * a spelling one accepts and the other rejects makes a legitimate observation
- * unrecordable: an uncommitted GREEN writes `working-tree+<hash>` into both,
- * and a ledger grammar that forbade `+` turned every such row into
- * `QFAI-TDDLIST-011` while the review gate called the identical
- * string correct.
+ * `reviewArtifacts.ts` checks the `Revision:` field of a reviewer response
+ * against it.
  *
  * **The `working-tree+` digest is lowercase and the rev is not.** A git rev is
  * whatever `git rev-parse` printed, and a human quoting an abbreviated one may
  * upper-case it. The content address is produced by the four-step procedure,
- * which fixes its notation, so accepting both cases there would let one producer
- * write an uppercase suffix and another a lowercase one for the same tree — and
- * the freshness comparison is exact, so the two read as different revisions and
- * a correct row never reaches `done`.
+ * which fixes its notation, so accepting both cases there would let two
+ * producers spell the same tree two ways, and an exact comparison would read
+ * them as different revisions.
  */
 export const REVISION_FORM_SOURCE = "(?:[0-9a-fA-F]{7,64}|working-tree\\+[0-9a-f]{64})";
 

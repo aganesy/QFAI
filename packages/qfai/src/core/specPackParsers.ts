@@ -314,11 +314,7 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
  * the named section and its example IDs are handed to the validators and the
  * report — and for a heading-less legacy document it flips a previously correct
  * resolution into a wrong one, because the hidden sample outranks the real
- * table. In `tdd/test-list.md` the same hole was worse: a schema-complete sample
- * ledger row in an indented block was collected as a real row, so a spec with no
- * ledger at all could satisfy `TDDLIST_TC_NOT_COVERED` — and owe no `Test file`
- * or `Evidence`, because a `todo` row owes neither — and pass
- * `validate --profile full --fail-on error` with no test behind it.
+ * table.
  *
  * Fence state wins over comment state: `<!--` inside a fenced sample is sample
  * text, not a comment opener, so an unclosed one cannot swallow the rest of the
@@ -446,13 +442,10 @@ const TC_ID_HEADER = "TC-ID";
  * column, and `resolveTestCaseTable` surfaces that as `no-tc-id-column` rather
  * than silently adopting an Appendix table instead.
  *
- * The agreement that matters is between the readers, not with the typo:
  * `atddTraceability.ts#collectTableTcLevels` reads through
- * `resolveTestCaseTables`, so both gates see the same tables. When the header
- * is mistyped neither gate resolves it — `validateTddList` reports
- * `TDDLIST_TC_TABLE_UNRESOLVED` and `QFAI-ATDD-112` sees no declared `Level`
- * and keeps the default obligation — so the TC is owed by both, not neither,
- * and fixing the header clears both.
+ * `resolveTestCaseTables`, so a mistyped header leaves the TC with no declared
+ * `Level` there, and `QFAI-ATDD-112` keeps the default obligation until the
+ * header is fixed.
  */
 function hasTcIdColumn(table: MarkdownTable): boolean {
   return table.headers.some((header) => header.trim() === TC_ID_HEADER);
@@ -533,19 +526,12 @@ export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
 /**
  * Every `TC-ID`-bearing table the spec declares, not only the first.
  *
- * A spec that splits `06_Test-Cases.md` into several tables — per BR, per AC,
- * or a migration table beside the authoritative one — was read by two different
- * rules in two different ways: `atddTraceability.ts#collectTableTcLevels`
- * iterates `parseAllMarkdownTables`, while `resolveTestCaseTable` returns the
- * first match. A `TC-*` in the second table was therefore visible to
- * `QFAI-ATDD-112` and invisible to `TDDLIST_TC_NOT_COVERED`.
+ * A spec may split `06_Test-Cases.md` into several tables — per BR, per AC, or
+ * a migration table beside the authoritative one. A reader that stopped at the
+ * first would miss the level every `TC-*` in the later tables declares.
  *
- * That was survivable while both rules demanded something. It stops being
- * survivable once L1/L2 is excluded from `QFAI-ATDD-112` and the ledger becomes
- * the only gate: an L1 TC in a second table would then be owed by neither.
- *
- * `resolveTestCaseTable` is unchanged — `reportTddCoverage` and `specPack`
- * describe a spec's *shape* and want the single authoritative table.
+ * `resolveTestCaseTable` returns the single authoritative table instead, for a
+ * caller that describes a spec's *shape*.
  */
 /**
  * True when the document has a `## Test Case Table` section at all.

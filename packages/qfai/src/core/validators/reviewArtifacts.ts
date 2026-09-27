@@ -17,10 +17,6 @@ const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
-// The two forms `evidence-revision.md` defines, and nothing else. Shared with
-// the `REV:` token of the ledger `Evidence` grammar (`tddList.ts`), because the
-// two values are compared against each other — see `evidenceRevision.ts`.
-
 /**
  * What a `--spec` run is allowed to judge here.
  *

@@ -682,8 +682,8 @@ export type AtddCodeTraceabilityResult = {
    * declared `Level` is Unit or Component. Reported at `info`
    * (`QFAI-ATDD-117`) so the exclusion is visible rather than silent — the
    * shape a coverage scan must never take, since "nothing owed" and "nothing
-   * scanned" are otherwise indistinguishable. `/qfai-implement`'s ledger gate
-   * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
+   * scanned" are otherwise indistinguishable. No validate rule demands a test
+   * for them.
    */
   unitComponentTcIds: string[];
   /**
@@ -976,8 +976,7 @@ export async function evaluateAtddCodeTraceability(
       if (homeKind === null) {
         // Unit / Component: no ATDD annotation obligation, and therefore no
         // forbidden placement either. Annotating a `tests/integration/**` test
-        // with an L1 TC is a project's own choice, not a rule violation — the
-        // rule that owns L1/L2 is `TDDLIST_TC_NOT_COVERED` on the ledger.
+        // with an L1 TC is a project's own choice, not a rule violation.
         continue;
       }
       if (kind === homeKind && known) {
@@ -1473,13 +1472,9 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
   // being an obligation of their own.
   const tcText = maskNonSpecRegions(rawTcText);
   const levels = new Map<string, string>();
-  // First-seen, not last: `set` on every pair made the *last* duplicate heading
-  // win here while the ledger gate kept the first, so a TC headed `L1` and then
-  // `L1`-superseded-by-`L3` was excluded from `QFAI-ATDD-112` by one collector
-  // and claimed by `TDDLIST_TC_NOT_COVERED` by the other — owed twice, which is
-  // the two-gates-disagree failure this routing exists to remove. The table pass
-  // below and `resolveTestCaseTables` already resolve duplicates first-seen, so
-  // the heading pass was the one shape out of step.
+  // First-seen, not last, so a TC declared twice resolves to one level whichever
+  // shape declares it: the table pass below and `resolveTestCaseTables` resolve
+  // duplicates first-seen too.
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
     if (!levels.has(id)) {
       levels.set(id, level);
@@ -1496,14 +1491,10 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
 /**
  * Table-form levels, read from the same tables `resolveTestCaseTables` reads.
  *
- * These two collectors decide the same TC's fate from opposite ends —
- * `QFAI-ATDD-112` excludes an L1/L2 TC, `TDDLIST_TC_NOT_COVERED` demands a
- * ledger row for it — so they must agree on which tables are authoritative.
- * Scanning every table in the document meant an explanatory table above the
- * `## Test Case Table` heading won under first-declaration-wins: an example
- * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112`, while the
- * section-scoped ledger gate read the real `L3` row and did not claim it
- * either. Full validation then passed with no test at all.
+ * Scanning every table in the document let an explanatory table above the
+ * `## Test Case Table` heading win under first-declaration-wins: an example
+ * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112` although the
+ * real table declared it `L3`, and full validation passed with no test at all.
  */
 function collectTableTcLevels(tcText: string): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
@@ -1556,22 +1547,19 @@ const TC_TOKEN_RE = /\bTC-\d{4}(?:-\d{4})?\b/g;
 export function collectDeclaredTcIds(rawTcText: string): Set<string> {
   const ids = new Set(collectHeadingTcIdsFrom(rawTcText));
   // The section, not `resolveTestCaseTables`: that filter is case-exact on the
-  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids — the
-  // ledger reports `TDDLIST_TC_TABLE_UNRESOLVED` and ATDD keeps the default
-  // obligation, so fixing the header clears both. What the section boundary
-  // excludes is the appendix table, which declares nothing.
+  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids, so
+  // ATDD keeps the default obligation until the header is fixed. What the
+  // section boundary excludes is the appendix table, which declares nothing.
   const masked = maskNonSpecRegions(rawTcText);
   const section = extractTestCaseTableSection(masked) ?? masked;
   for (const table of parseAllMarkdownTables(section)) {
     const idIndex = table.headers.findIndex((header) => header.trim().toUpperCase() === "TC-ID");
     if (idIndex < 0) {
-      // The header is mistyped — `TC Id`, say — so this table is unresolvable
-      // and `TDDLIST_TC_TABLE_UNRESOLVED` reports it. Its ids are still
-      // **declared**: dropping them removed the obligation entirely, and with
-      // no ledger `TDDLIST_MISSING` is only a warning, so a spec could pass
-      // `--profile full --fail-on error` with neither a test nor a ledger row.
-      // Conservative here, loud there — keeping the tokens preserves the
-      // obligation while the header is what gets fixed.
+      // The header is mistyped — `TC Id`, say — so no level is read from this
+      // table. Its ids are still **declared**: dropping them would remove the
+      // obligation with nothing reporting it, and a spec could pass
+      // `--profile full --fail-on error` with no test behind it. Keeping the
+      // tokens preserves the obligation while the header is what gets fixed.
       for (const row of table.rows) {
         for (const value of row) {
           for (const match of value.matchAll(TC_TOKEN_RE)) {
@@ -1594,9 +1582,8 @@ export function collectDeclaredTcIds(rawTcText: string): Set<string> {
  *
  * `collectHeadingTcLevelsFrom` yields a pair only when a `- Level:` line
  * follows the heading, so it cannot answer "does this spec declare this TC?" —
- * a level-less TC is still declared. `validateTddList` needs both questions
- * answered from the same shape: the id set decides whether a ledger `TC-Refs`
- * value is known, the level pairs decide whether it is a coverage target.
+ * a level-less TC is still declared. {@link collectDeclaredTcIds} reads this
+ * for that reason.
  */
 export function collectHeadingTcIdsFrom(rawTcText: string): string[] {
   const ids: string[] = [];
@@ -1693,24 +1680,11 @@ function normalizeLevel(level: string): string {
  * `tests/integration/**` — the all-integration collapse the layer model exists
  * to prevent.
  *
- * These obligations are not unguarded: `tdd/test-list.md` carries a row per
- * coverage-target TC and `TDDLIST_TC_NOT_COVERED` (`error`) reports a missing
- * one, which is `/qfai-implement`'s gate and the stage that owns Unit and
- * Component.
+ * No validate rule demands a test for these levels. `QFAI-ATDD-117` reports
+ * each excluded TC at `info`, so the exclusion is visible rather than silent.
  *
- * **One vocabulary, not two.** This is `UNIT_COMPONENT_LAYERS` itself, not a
- * second copy of its members. The handoff above is the whole safety argument
- * for dropping the ATDD obligation, and it only holds while the set ATDD stops
- * owing is the set the ledger starts owing: a spelling in one and not the
- * other is a `Level` owed by no gate at all, which is the hole this exclusion
- * was written to avoid opening. Two literals with the same members and two
- * private normalizations is exactly how `resolveAtddHomeKind` came to have
- * three answers, so the vocabulary is imported rather than restated. The two
- * modules still ask different questions of it — "does this owe an ATDD
- * annotation" here, "is this a ledger coverage target" there — and those
- * predicates stay separate; only the word list is shared. Both normalize with
- * `trim().toLowerCase()`, which `tddHelpers` documents as the membership
- * contract of the set.
+ * The members are lower-case, so a `Level` goes through {@link normalizeLevel}
+ * before it is looked up.
  */
 const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
 
