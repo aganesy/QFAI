@@ -191,11 +191,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `glossary.md` is one Term and Definition table.
   - `constraint.md` has Technical, Operational and Business sections, each one
     ID, Constraint, Rationale and Impact table, which may be empty.
+  - A section that holds only a table holds exactly its template's columns. An
+    added column fails, and so does a line starting with a pipe directly above
+    the header row.
   - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
     strict schema, so a misspelt rule or option fails instead of being ignored.
   - Migration step 3 writes these five policy files in their template's shape.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
+    A table written without its leading and trailing pipes moves too, and is
+    written with them.
 
 - **`qfai-sdd` writes contracts in the contract ID scheme, and references
   point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the

@@ -17,19 +17,20 @@ afterEach(async () => {
 
 const FLOW = ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md";
 
-async function template(): Promise<string> {
+const GLOSSARY = ".qfai/spec/01_policy/glossary.md";
+
+async function template(
+  relative = "02_business-flow/business-flow-NNNN/business-flow.md",
+): Promise<string> {
   const text = await readFile(
-    path.join(
-      getInitAssetsDir(),
-      ".qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN/business-flow.md",
-    ),
+    path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-sdd/templates/spec", relative),
     "utf-8",
   );
   return text.replace(/\r\n/g, "\n");
 }
 
-/** A tree holding one business flow, with the default configured paths. */
-async function treeWithFlow(body: string): Promise<string> {
+/** A tree holding one document, with the default configured paths. */
+async function treeWith(file: string, body: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-docschema-"));
   roots.push(root);
   await writeFile(
@@ -37,9 +38,14 @@ async function treeWithFlow(body: string): Promise<string> {
     "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     "utf-8",
   );
-  await mkdir(path.dirname(path.join(root, FLOW)), { recursive: true });
-  await writeFile(path.join(root, FLOW), body, "utf-8");
+  await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+  await writeFile(path.join(root, file), body, "utf-8");
   return root;
+}
+
+/** A tree holding one business flow. */
+function treeWithFlow(body: string): Promise<string> {
+  return treeWith(FLOW, body);
 }
 
 async function schemaFindings(
@@ -84,6 +90,27 @@ describe("qfai validate runs the document-schema check", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ code: "QFAI-DOCSCHEMA-001", file: FLOW });
     expect(findings[0]?.message).toContain("is not accepted");
+  });
+
+  it("reports an added column and a pipe line above the header of a policy table", async () => {
+    // QFAI:AC-0001-0011-04
+    // QFAI:EX-0001-0011-10
+    // QFAI:EX-0001-0011-11
+    const glossary = await template("01_policy/glossary.md");
+    expect(await schemaFindings(await treeWith(GLOSSARY, glossary))).toEqual([]);
+
+    for (const changed of [
+      glossary
+        .replace("| Term | Definition |", "| Term | Definition | Owner |")
+        .replace("| ---- | ---------- |", "| ---- | ---------- | --- |"),
+      glossary.replace("| Term | Definition |", "| explanatory note\n| Term | Definition |"),
+    ]) {
+      expect(changed).not.toBe(glossary);
+      const findings = await schemaFindings(await treeWith(GLOSSARY, changed));
+      expect(findings).toHaveLength(1);
+      expect(findings[0]).toMatchObject({ code: "QFAI-DOCSCHEMA-001", file: GLOSSARY });
+      expect(findings[0]?.message).toContain("[forbidden-text]");
+    }
   });
 
   it("reports a check that could not run as an error of its own", () => {

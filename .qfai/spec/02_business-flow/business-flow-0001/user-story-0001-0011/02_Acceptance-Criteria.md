@@ -24,4 +24,11 @@ Feature: Story-tree layout described by mdschema
     Then each violation of a document's schema is one `QFAI-DOCSCHEMA-001` error naming the document, the line and the column
     And a document carrying the opt-out marker is reported rather than skipped, by `qfai validate` and by the document lane alike
     And a check that could not run is one `QFAI-DOCSCHEMA-002` error rather than a pass
+
+  # AC-0001-0011-04
+  Scenario: A table-only section holds its template's table and nothing else
+    Given a policy document, `decisions.md` or `open-questions.md` whose section holds only a table
+    When the document is checked against its schema
+    Then a column the template's table does not have is a violation
+    And a pipe line directly above the table's header row is a violation
 ```
