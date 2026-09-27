@@ -51,7 +51,7 @@ const FIXTURE_FLOW: Record<string, string> = {
   [`${STORY}/03_Example.md`]:
     "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| ----- | ------ | ----- | -------- |\n| EX-0001-0001-01 | AC-0001-0001-01 | A valid order | Accepted |\n",
   [CONTRACT]:
-    "# API Contract: orders\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001 | An order is validated | EX-0001-0001-01 |\n",
+    "# API-0001: Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001-0001 | An order is validated | EX-0001-0001-01 |\n",
 };
 
 // Writes the fixture flow once; a later fact adds to it.
@@ -68,8 +68,8 @@ const rule =
   async (root, value) => {
     await fixtureFlow(root);
     const text = await readFile(path.join(root, CONTRACT), "utf8");
-    const next = (text.match(/^\| BR-\d{4} /gm) ?? []).length + 1;
-    const id = `BR-${String(next).padStart(4, "0")}`;
+    const next = (text.match(/^\| BR-0001-\d{4} /gm) ?? []).length + 1;
+    const id = `BR-0001-${String(next).padStart(4, "0")}`;
     await appendTo(CONTRACT, `| ${id} | ${sentence(value)} | EX-0001-0001-01 |`)(root, value);
   };
 

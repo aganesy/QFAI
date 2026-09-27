@@ -108,7 +108,6 @@ describe("story-tree scaffold placeholders", () => {
       acceptanceCriteria: [{ id: ac.id, storyId: ac.storyId, file: "" }],
       examples: [],
       rules: [],
-      ruleRefs: [],
       contracts: [],
       declarations: [],
       decisions: null,

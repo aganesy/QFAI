@@ -478,7 +478,6 @@ export const GATE_GROUP_FAMILIES = {
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
   "contract-parse": ["QFAI-CONTRACT-021"],
-  "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
   "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
@@ -559,7 +558,6 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "contracts",
     "ui-screen-entries",
     "contract-parse",
-    "contract-ssot-modules",
     "package-self-governance",
     "review-artifacts",
   ],
@@ -572,7 +570,6 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "contracts",
     "ui-screen-entries",
     "contract-parse",
-    "contract-ssot-modules",
   ],
   "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
   drift: ["drift"],
@@ -1306,12 +1303,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
-  // the expected state names the contracts root by role. Pinning the default
-  // path sent a project that moved its contracts to repair a directory it does
-  // not use, and the offending file is already on the finding's own line.
-  "QFAI-CONTRACT-050":
-    "Every `- SSOT modules:` entry in a contract under the configured contracts directory must resolve to a readable file or directory that travels with the project.",
   // `paths.contractsDir` is configurable, so the expected state names the file
   // by role rather than pinning the default location: a project that moved its
   // contracts must not be told to repair a directory it does not use. The

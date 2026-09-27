@@ -251,8 +251,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
 });
 
 describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
-  // Realizes TC-0003-0033 (AC-0003-0028; BR-0003-0027 "guard breadth is
-  // invariant", NFR-C0005). Bullet mapping:
+  // Realizes BR-0020-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
   //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
   //     it()s. The REAL committed guard is spawned against a temp-staged
   //     package fixture — planted trailers live only on temp copies, never

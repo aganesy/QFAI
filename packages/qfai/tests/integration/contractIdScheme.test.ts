@@ -1,6 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -19,11 +20,40 @@ import { validateContracts } from "../../src/core/validators/contracts.js";
 import { validateDbContractApplyOrder } from "../../src/core/validators/dbContractApplyOrder.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "..",
+);
 const roots: string[] = [];
 const spec = ".qfai/spec";
 const contracts = `${spec}/03_contract`;
 const story = `${spec}/02_business-flow/business-flow-0001/user-story-0001-0001`;
 const check = `${contracts}/cli/cli-0003-check.md`;
+
+/** A path to a source, test or script file, as a contract would write it. */
+const IMPLEMENTATION_PATH =
+  /(?<![\w./-])(?:packages\/[\w-]+\/)?(?:src|tests?|scripts)\/[\w./-]+\.(?:[cm]?[jt]sx?|sh)\b/g;
+
+/** Every file under this repository's contract kind directories. */
+async function contractFiles(): Promise<string[]> {
+  const base = path.join(REPO_ROOT, ".qfai/spec/03_contract");
+  const kinds = ["cli", "api", "db", "ui", "design"];
+  const listed = await Promise.all(
+    kinds.map(async (kind) => {
+      const entries = await readdir(path.join(base, kind), {
+        recursive: true,
+        withFileTypes: true,
+      }).catch(() => []);
+      return entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => path.join(entry.parentPath, entry.name));
+    }),
+  );
+  return listed.flat();
+}
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -127,7 +157,6 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(model.contracts).toEqual([{ id: "CLI-0003", file: check }]);
     expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-0003-0005");
     expect(nextStoryTreeId(model, "BR", "API-0007")).toBe("BR-0007-0001");
-    expect(nextId("BR", ["BR-0003-0001", "BR-0007"])).toBe("BR-0008");
     expect(() => nextId("BR", [], "CON-UI-0001")).toThrow(TypeError);
     const suffixed = buildStoryTreeModel(
       tree(
@@ -163,7 +192,7 @@ describe("contract IDs and contract-scoped business rules", () => {
   });
 
   // QFAI:AC-0001-0057-07
-  it("reads a Business rules table as the Rules table is read", () => {
+  it("reads a Business rules table with its statement and examples", () => {
     // QFAI:EX-0001-0057-10
     const text = contract("CLI-0003: Check", [
       "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
@@ -177,40 +206,17 @@ describe("contract IDs and contract-scoped business rules", () => {
           file: check,
         },
       ],
-      refs: [],
       errors: [],
     });
     expect(ruleFindings(tree(text))).toEqual([]);
-    const legacy = `# Check\n\n${rulesTable("Rules", ["| BR-0001 | Legacy | EX-0001-0001-01 |"], "Rule refs: BR-0001")}`;
-    expect(parseContractRules(check, legacy).rules.map(({ id }) => id)).toEqual(["BR-0001"]);
-    expect(parseContractRules(check, legacy).refs).toEqual(["BR-0001"]);
   });
 
   // QFAI:AC-0001-0057-07
-  it("rejects a Rule refs line under Business rules", () => {
+  it("rejects a Business rules table without the Examples column", () => {
     // QFAI:EX-0001-0057-11
-    const text = contract(
-      "CLI-0003: Check",
-      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
-      "Rule refs: BR-0003-0001",
-    );
-    expect(parseContractRules(check, text).refs).toEqual([]);
-    expect(ruleFindings(tree(text))).toEqual([
-      `A Rule refs line is not allowed under ## Business rules in ${check}`,
-    ]);
-    const indented = contract(
-      "CLI-0003: Check",
-      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
-      "   Rule refs: BR-0003-0001",
-    );
-    expect(parseContractRules(check, indented).errors).toEqual([
-      `A Rule refs line is not allowed under ## Business rules in ${check}`,
-    ]);
     const columns =
       "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-0003-0001 | Two columns |\n";
-    expect(parseContractRules(check, columns).errors).toEqual([
-      `Invalid Business rules columns in ${check}`,
-    ]);
+    expect(ruleFindings(tree(columns))).toContain(`Invalid Business rules columns in ${check}`);
   });
 
   // QFAI:AC-0001-0054-03
@@ -305,12 +311,6 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       rules: [{ id: "BR-0003-0001" }],
       errors: [],
     });
-    const commentedRefs = contract(
-      "CLI-0003: Check",
-      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
-      "```md\nRule refs: BR-0001\n```\n",
-    );
-    expect(parseContractRules(check, commentedRefs).errors).toEqual([]);
     const twoSections = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n${rulesTable("Business rules", ["| BR-0003-0002 | Second | EX-0001-0001-01 |"])}`;
     expect(parseContractRules(check, twoSections).errors).toContain(
       `More than one ## Business rules section in ${check}`,
@@ -324,18 +324,6 @@ describe("the new contract IDs in the checks that read the old ones", () => {
         "<!--\n# API-0003: Old title\n-->\n\n# API-0002: Orders\n",
       ),
     ).toBe("API-0002");
-  });
-
-  it("declares nothing when a file mixes a new and an old declaration", () => {
-    expect(declaredContractId("cli/cli-0001-check.yaml", "# QFAI-CONTRACT-ID: CLI-0001\n")).toBe(
-      "CLI-0001",
-    );
-    expect(
-      declaredContractId(
-        "cli/cli-0001-check.yaml",
-        "# QFAI-CONTRACT-ID: CLI-0001\n# QFAI-CONTRACT-ID: CON-API-0002\n",
-      ),
-    ).toBeNull();
   });
 
   // QFAI:AC-0001-0054-03
@@ -371,33 +359,21 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     ]);
   });
 
-  it("reads a new ID in an index with the old columns", async () => {
+  // QFAI:AC-0001-0054-03
+  it("reads an index whose delimiter row has fewer than three hyphens", async () => {
+    // QFAI:EX-0001-0054-05
     const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
     await put(
       root,
       `${contracts}/contracts.md`,
-      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n",
+      [
+        ...INDEX_HEADER.slice(0, 5),
+        "| -- | :-- | --: | :-: | - | -- |",
+        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        "",
+      ].join("\n"),
     );
     expect(await indexFindings(root)).toEqual([]);
-    await put(root, `${contracts}/cli/cli-0002-check.md`, "# CLI-0002: Check\n");
-    await put(
-      root,
-      `${contracts}/contracts.md`,
-      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n| CLI-0002 | `cli/cli-0002-check.md` |\n",
-    );
-    expect(await indexFindings(root)).toEqual([
-      expect.stringMatching(
-        /^QFAI-CONTRACT-034 Contract number 0002 is declared by more than one contract: /,
-      ),
-    ]);
-    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
-    expect(await indexFindings(root)).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(
-          /^QFAI-CONTRACT-034 Contract API-0003 is not listed with its file in .*api-0003-refunds\.md$/,
-        ),
-      ]),
-    );
   });
 
   it("checks the apply order of a DB-NNNN contract", async () => {
@@ -436,5 +412,33 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
       "annotated.test.ts",
     ]);
+  });
+});
+
+describe("a contract names no implementation file", () => {
+  // QFAI:AC-0001-0009-04
+  // QFAI:EX-0001-0009-17
+  it("keeps source, test and script paths out of the contracts and says so", async () => {
+    const files = await contractFiles();
+    expect(files.length).toBeGreaterThan(0);
+    const named = await Promise.all(
+      files.map(async (file) =>
+        [...(await readFile(file, "utf-8")).matchAll(IMPLEMENTATION_PATH)].map(
+          ([match]) => `${path.relative(REPO_ROOT, file)}: ${match}`,
+        ),
+      ),
+    );
+    expect(named.flat()).toEqual([]);
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const rules = await readFile(
+        path.join(
+          REPO_ROOT,
+          tree,
+          "assistant/skill/qfai-sdd/references/contract-artifact-rules.md",
+        ),
+        "utf-8",
+      );
+      expect(rules.replace(/\s+/g, " ")).toContain("A contract never names an implementation file");
+    }
   });
 });

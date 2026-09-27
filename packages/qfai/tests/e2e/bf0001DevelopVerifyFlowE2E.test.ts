@@ -201,13 +201,13 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     );
     await put(
       root,
-      `${spec}/03_contract/cli/checkout.md`,
-      `# Checkout contract\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
+      `${spec}/03_contract/cli/cli-0001-checkout.md`,
+      `# CLI-0001: Checkout\n\n## Ownership boundary\n\nThis contract decides how a cart total is calculated.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
     );
     await put(
       root,
       `${spec}/03_contract/contracts.md`,
-      "# Contracts\n\n## Contract Index\n\n| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| CLI-001 | Checkout | - | cli/checkout.md | - | - | Calculate the cart total. |\n",
+      "# Contracts\n\n## Contract Index\n\n| ID | Title | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- |\n| CLI-0001 | Checkout | cli/cli-0001-checkout.md | - | - | Calculate the cart total. |\n",
     );
     await put(
       root,
@@ -341,7 +341,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       ),
     ) as { nodes: Array<{ id: string }> };
     expect(graph.nodes.map((node) => node.id)).toEqual(
-      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-0001"]),
+      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-0001-0001"]),
     );
   });
 });

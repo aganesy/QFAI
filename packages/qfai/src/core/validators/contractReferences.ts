@@ -1,27 +1,13 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { buildContractIndex } from "../contractIndex.js";
-import {
-  isTableSeparator,
-  looksLikeTableRow,
-  maskNonSpecRegions,
-  splitMarkdownRow,
-} from "../specPackParsers.js";
+import { looksLikeTableRow, maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
-import { CONTRACT_KIND_BY_DIR, contractNumber, isContractId } from "../storyTree/ids.js";
+import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 
-/**
- * A cell that *is* one canonical contract id, decoration aside.
- *
- * Anchored end to end on purpose: a canonical column states the id, it does not
- * merely mention one. Surrounding backticks / emphasis are stripped first
- * because an index author marks up a path or an id freely.
- */
-const CANONICAL_CELL_ID_RE = /^(?:CON-(?:API|DB|UI)-\d+|(?:API|DB|UI)-\d{4})$/i;
 const CELL_DECORATION_RE = /^[`*_]+|[`*_]+$/g;
 
 type IndexTableRow = { cells: string[]; line: number };
@@ -43,90 +29,8 @@ export async function validateStoryTreeContractReferences(
     (table) => table.heading.toLowerCase() === "contract index",
   );
   const current = underIndex.length > 0 ? underIndex : currentTables.slice(0, 1);
-  if (current.length > 0) {
-    const rows = current.flatMap((table) => table.rows);
-    return validateContractIndex({ root, contractsDir, indexFile }, rows, model);
-  }
-  // SIMPLIFIED: an index without the `ID | Title | File | Depends On | Reconciled With |
-  // Purpose` columns is still read by its `Declared ID` and `File` columns.
-  // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-  const indexedIds = new Set<string>();
-  const indexedPaths = new Set<string>();
-  for (const table of tables) {
-    const headers = table.headers.map(normalizeHeaderKey);
-    const idColumn = headers.indexOf("declaredid");
-    const fileColumn = headers.indexOf("file");
-    if (idColumn < 0 || fileColumn < 0) continue;
-    for (const row of table.rows) {
-      const id = canonicalCellContractId(row.cells[idColumn] ?? "");
-      if (id) indexedIds.add(id);
-      const listed = (row.cells[fileColumn] ?? "").trim().replace(/^[`*]+|[`*]+$/g, "");
-      if (listed) indexedPaths.add(toPosixPath(listed).replace(/^\.\//, ""));
-    }
-  }
-  const index = await buildContractIndex(root, config);
-  const issues: Issue[] = [];
-  const listedPath = (file: string): boolean => {
-    const relative = toPosixPath(path.relative(contractsDir, file));
-    const repoRelative = toPosixPath(path.relative(root, file));
-    return (
-      indexedPaths.has(relative) ||
-      indexedPaths.has(repoRelative) ||
-      indexedPaths.has(toPosixPath(file))
-    );
-  };
-  for (const file of model.contractFiles) {
-    const declared = [...index.idToFiles.entries()]
-      .filter(([, paths]) =>
-        [...paths].some((candidate) => path.resolve(candidate) === path.resolve(file)),
-      )
-      .map(([id]) => id);
-    if (declared.length > 0) {
-      for (const id of declared) {
-        if (indexedIds.has(id) && listedPath(file)) continue;
-        issues.push(
-          issue(
-            "QFAI-CONTRACT-034",
-            `Contract ${id} is not listed with its file in ${indexFile}: ${file}`,
-            "error",
-            file,
-            "contracts.storyTreeIndex",
-            [id],
-          ),
-        );
-      }
-      continue;
-    }
-    const scheme = model.contracts.find((entry) => path.resolve(entry.file) === path.resolve(file));
-    if (scheme) {
-      if (indexedIds.has(scheme.id) && listedPath(file)) continue;
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-034",
-          `Contract ${scheme.id} is not listed with its file in ${indexFile}: ${file}`,
-          "error",
-          file,
-          "contracts.storyTreeIndex",
-          [scheme.id],
-        ),
-      );
-      continue;
-    }
-    if (model.additionalContractFiles.includes(file) && !listedPath(file)) {
-      issues.push(
-        issue(
-          "QFAI-CONTRACT-034",
-          `Contract file is not listed in ${indexFile}: ${file}`,
-          "error",
-          file,
-          "contracts.storyTreeIndex",
-          [file],
-        ),
-      );
-    }
-  }
-  issues.push(...duplicateContractNumbers(model));
-  return issues;
+  const rows = current.flatMap((table) => table.rows);
+  return validateContractIndex({ root, contractsDir, indexFile }, rows, model);
 }
 
 /** The current index columns, as {@link normalizeHeaderKey} spells them. */
@@ -242,26 +146,6 @@ function bareCell(cell: string): string {
 }
 
 /**
- * The one canonical id a `Declared ID` / `Contract ID` cell states, if it states
- * one.
- *
- * The cell must **be** a full `API-NNNN`, `DB-NNNN` or `UI-NNNN` id, not merely contain
- * something that normalizes to one. `extractCellContractIds` also reads the
- * short spelling, which is right for `QFAI-CONTRACT-030` — every id written
- * anywhere in an index must resolve — and wrong here: a canonical cell reading
- * `API-001` normalized to `CON-API-0001`, so a row that never states the
- * canonical id counted as coverage and silenced `QFAI-CONTRACT-034`, while the
- * row checks skipped that same row for want of an id it could read. The digits
- * are kept verbatim, as `extractDeclaredContractIds` keeps them, so a cell and
- * the file's own declaration compare as written.
- */
-function canonicalCellContractId(cell: string): string | undefined {
-  const bare = cell.trim().replace(CELL_DECORATION_RE, "").trim();
-  const upper = bare.toUpperCase();
-  return isContractId(upper) || CANONICAL_CELL_ID_RE.test(bare) ? upper : undefined;
-}
-
-/**
  * Every markdown table in the file, as header + body rows with 1-based lines.
  *
  * The scan runs over {@link maskNonSpecRegions}, so the regions markdown does
@@ -295,7 +179,7 @@ function parseIndexTables(text: string): IndexTable[] {
       if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
       continue;
     }
-    if (!looksLikeTableRow(headerLine) || !isTableSeparator(separatorLine)) {
+    if (!looksLikeTableRow(headerLine) || !isDelimiterRow(separatorLine)) {
       continue;
     }
 
@@ -306,7 +190,7 @@ function parseIndexTables(text: string): IndexTable[] {
       if (rowLine === undefined || !looksLikeTableRow(rowLine)) {
         break;
       }
-      if (!isTableSeparator(rowLine)) {
+      if (!isDelimiterRow(rowLine)) {
         rows.push({ cells: splitMarkdownRow(rowLine), line: rowIndex + 1 });
       }
       rowIndex++;
@@ -317,6 +201,16 @@ function parseIndexTables(text: string): IndexTable[] {
   }
 
   return tables;
+}
+
+/**
+ * A GFM delimiter row: every cell is one or more hyphens, with an optional colon
+ * at either end, so `| -- |` separates a header as `| --- |` does.
+ */
+function isDelimiterRow(line: string): boolean {
+  if (!looksLikeTableRow(line)) return false;
+  const cells = splitMarkdownRow(line).filter((cell) => cell.length > 0);
+  return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
 }
 
 function toPosixPath(value: string): string {

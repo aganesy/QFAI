@@ -301,9 +301,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
 
   const id = ids[0] ?? "";
   const expectedPrefix = `${kind}-`;
-  // SIMPLIFIED: `CON-<kind>-` is still accepted beside `<kind>-NNNN`.
-  // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-  if (!id.startsWith(expectedPrefix) && !id.startsWith(`CON-${kind}-`)) {
+  if (!id.startsWith(expectedPrefix)) {
     return [
       issue(
         "QFAI-CONTRACT-012",

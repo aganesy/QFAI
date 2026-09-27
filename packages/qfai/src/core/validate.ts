@@ -51,7 +51,6 @@ import {
   detectPlatform,
   validateAgentDefinition,
   validateBpApDb,
-  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -515,7 +514,6 @@ async function runStoryProfileValidators(
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
     ...(await validateSddDesignContractReadiness(root, config)),
-    ...(await validateContractSsotModules(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
@@ -543,7 +541,6 @@ async function runStoryProfileValidators(
     ...(includeDrift ? await validateStoryTreeDrift(root, config, "tdd") : []),
     ...(await validateTestTodoStubs(root, config)),
     ...(includeContracts ? await validateContracts(root, config) : []),
-    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
   switch (profile) {
     case "sdd":

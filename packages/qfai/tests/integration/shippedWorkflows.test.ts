@@ -203,7 +203,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
 });
 
 describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist credentials and full history stays job-scoped", () => {
-  // The STATIC half of TC-0003-0028 (AC-0003-0025 / BR-0003-0022): checkout
+  // The STATIC half of this TC (BR-0020-0002): checkout
   // credential hygiene asserted directly against the shipped tree. The
   // TC's lane bullets (planted-tree exit 1 / clean exit 0, and the
   // file+job+rule naming in the lane output) are the workflow-hygiene
@@ -295,8 +295,8 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
 
 // QFAI:EX-0002-0006-01
 describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
-  // Realizes TC-0003-0029 (AC-0003-0026 / BR-0003-0023 "extend, never
-  // replace"), one it() per verify bullet. Scoping decisions, disclosed:
+  // Realizes this TC (BR-0020-0003: every new shipped file carries the same
+  // install branches, which are never replaced), one it() per verify bullet. Scoping decisions, disclosed:
   //   - Install-shape bullets apply to shipped files that HAVE install
   //     steps. The qfai-tests lanes ship install-less by the skeleton's
   //     staging design (their install bodies land with the lane-enabling
@@ -308,7 +308,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   //     at run time (never hardcoded). Prose-form header completeness is
   //     TC-0003-0042's surface.
 
-  /** The five install branches BR-0003-0023 requires, as body markers. */
+  /** The five install branches BR-0020-0003 requires, as body markers. */
   const INSTALL_BRANCH_MARKERS: readonly string[] = [
     "pnpm install --frozen-lockfile",
     "yarn install --immutable",
@@ -543,7 +543,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   });
 
   it("every install-bearing shipped file carries the same five-branch install shape", async () => {
-    // The "extend, never replace" half of BR-0003-0023: a new shipped file
+    // The "every new shipped file" half of BR-0020-0003: a new shipped file
     // that introduces an install step must reproduce the full branch form.
     // Deliberate overlap with the first it (per-step branch presence) —
     // this it judges at file level so a future file with a partial install

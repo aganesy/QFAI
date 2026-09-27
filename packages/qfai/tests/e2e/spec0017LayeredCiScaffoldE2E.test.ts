@@ -277,7 +277,7 @@ describe(
 
       // The drift-proof half, and the reason this row is not satisfied by a job merely existing:
       // a verdict that enumerates need names by hand goes stale the moment a lane is added, which
-      // is the failure `BR-0017-0001` is written against.
+      // is the failure `BR-0018-0001` is written against.
       //
       // The set answers it by having ONE lane. Its layers are matrix legs, so adding a layer adds
       // a value to the axis and no need at all — and a `needs` list of one cannot fall behind a
@@ -1259,7 +1259,7 @@ describe(
     it("triggers on pull_request, which is where a lint lane would run", async () => {
       // The invariant the story rests on. Measured: the shipped orchestrator does not invoke the
       // hygiene lane yet — `❌` in the matrix — but a lane added to a workflow that never runs on a
-      // pull request would be the "aggregate nobody runs" failure `BR-0017-0041` names, so the trigger
+      // pull request would be the "aggregate nobody runs" failure `BR-0018-0041` names, so the trigger
       // is the half worth pinning and it stays true after the lane lands.
       const parsed: unknown = parseYaml(await workflowText(ORCHESTRATOR));
       // `on` is read under two keys: YAML 1.1 folds the bare word to the boolean `true`.
@@ -1306,7 +1306,7 @@ describe(
       // Measured: `qfai-validate.yml` still ships, so the retirement half is `❌` in the matrix. The
       // invariant either way is that the validate work is somewhere reachable — the failure this story
       // guards against is a workflow retired while the check that depended on it keeps its name and
-      // loses its content, which is the "green check over nothing" case `BR-0017-0032` is about.
+      // loses its content, which is the "green check over nothing" case `BR-0018-0032` is about.
       const text = await workflowText("qfai-validate.yml");
       const map = await jobs();
       const reachable =

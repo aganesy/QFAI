@@ -278,8 +278,7 @@ describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and
     // remove it, and no oracle available to this row does.
     //
     // The pin says nothing about `title` or `details`, AND NEITHER IS SWEPT HERE.
-    // TC-0006-0030 clause (a), BR-0006-0020 and the contract's "Required message
-    // content" all scope requirement 4 to the message BODY, so an assertion over
+    // BR-0008-0020 scopes requirement 4 to the message BODY, so an assertion over
     // the other rendered fields is a reviewer-originated obligation — recorded as
     // advisory and routed to the Change Request path, never encoded as a hard
     // assertion. One was carried here for three rounds and removed on
@@ -290,7 +289,7 @@ describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and
     // upstream; nothing here waits on it.
     //
     // WHO OWNS THE TWO UNSWEPT FIELDS, and what each ownership does NOT reach:
-    //   - `details` is BR-0006-0022's closed four-key payload, TDD-0036's to pin.
+    //   - `details` is BR-0008-0022's closed four-key payload, TDD-0036's to pin.
     //     Every constructible violation needs an EXTRA key — `nextActions: ["qfai
     //     init --force"]`, the shape `skills.integrity` actually ships, and its
     //     tab-escaped form `["qfai\tinit\t--force"]` alike — so a `toEqual` on the
@@ -314,9 +313,9 @@ describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and
       `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`;
 
     // REQUIREMENT 2 — the packaged source path to copy from — as ONE needle
-    // over the whole repair clause, directional because TC-0006-0030's Verify
-    // (a) is (「install 済み package 内の copy で当該ファイルを置き換える」)
-    // and BR-0006-0020 names the packaged copy as the INSTRUMENT. NOT the
+    // over the whole repair clause, directional because BR-0008-0020 has the
+    // message name the packaged copy to replace each stale file WITH: the
+    // copy is the INSTRUMENT. NOT the
     // closure — the pin is — and its limit is that it constrains ADJACENCY, so
     // a negation governing from OUTSIDE the clause it anchors passes it.
     //
@@ -385,7 +384,7 @@ describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and
     expect
       .soft(
         message,
-        "the message must instruct the operator to replace the listed files WITH the packaged copy — one affirmative clause, no clause boundary inside it, the packaged source path unrelativized on the `with` side — per the contract's required message content and BR-0006-0020",
+        "the message must instruct the operator to replace the listed files WITH the packaged copy — one affirmative clause, no clause boundary inside it, the packaged source path unrelativized on the `with` side — per BR-0008-0020",
       )
       .toMatch(directionalRepair);
 

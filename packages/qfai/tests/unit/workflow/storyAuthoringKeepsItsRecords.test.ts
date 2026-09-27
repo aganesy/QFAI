@@ -54,14 +54,14 @@ const cites = (answer: Answer, stated: Stated = {}) =>
 
 function contract(examples: string, statement = "One email per customer"): string {
   return [
-    "# Notify",
+    "# CLI-0001: Notify",
     "",
-    "## Rules",
+    "## Business rules",
     "",
     "| BR-ID | Statement | Examples |",
     "| --- | --- | --- |",
-    `| BR-0001 | ${statement} | ${examples} |`,
-    "| BR-0002 | Emails are unique | EX-0001-0005-02 |",
+    `| BR-0001-0001 | ${statement} | ${examples} |`,
+    "| BR-0001-0002 | Emails are unique | EX-0001-0005-02 |",
     "",
   ].join("\n");
 }
@@ -137,7 +137,7 @@ function accept(accepted: Accepted) {
 
 const changeQuestion = {
   kind: "decision",
-  text: "Add the empty-value example to user-story-0001-0005 and cite it from BR-0001?",
+  text: "Add the empty-value example to user-story-0001-0005 and cite it from BR-0001-0001?",
   options: [
     {
       optionId: "apply",
@@ -418,8 +418,8 @@ it("Seeding that also rewords the rule's Statement", () => {
 
 it("Seeding that cites the new example from two rules", () => {
   const twice = contract(seeded).replace(
-    "| BR-0002 | Emails are unique | EX-0001-0005-02 |",
-    "| BR-0002 | Emails are unique | EX-0001-0005-02, EX-0001-0005-03 |",
+    "| BR-0001-0002 | Emails are unique | EX-0001-0005-02 |",
+    "| BR-0001-0002 | Emails are unique | EX-0001-0005-02, EX-0001-0005-03 |",
   );
 
   expect(

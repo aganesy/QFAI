@@ -144,10 +144,7 @@ function schemaFiles(): string[] {
  */
 function templateFor(schemaRelative: string): string | undefined {
   if (schemaRelative.startsWith("story/")) {
-    const relative = schemaRelative
-      .slice("story/".length)
-      .replace("03_contract/cli/contract.mdschema.yml", "03_contract/cli/command.mdschema.yml")
-      .replace(/\.mdschema\.yml$/, ".md");
+    const relative = schemaRelative.slice("story/".length).replace(/\.mdschema\.yml$/, ".md");
     const candidate = path.join(TEMPLATE_ROOT, relative);
     return existsSync(candidate) ? candidate : undefined;
   }
@@ -175,13 +172,7 @@ describe("shipped Markdown schemas", () => {
     // An unreferenced schema is a rule nobody runs. It reads as coverage in a
     // directory listing and enforces nothing.
     const referenced = new Set(manifest.map((entry) => entry.schema));
-    // SIMPLIFIED: the closed CLI contract schema is held against its template
-    // below but routes no document, because this repository's CLI contracts
-    // still carry the loose shape the manifest routes them to.
-    // Lift when: every `cli/cli-*.md` contract has the closed shape and the
-    // manifest routes `cli/*.md` to this schema.
-    const notYetRouted = new Set(["story/03_contract/cli/cli-NNNN-title.mdschema.yml"]);
-    const orphans = schemas.filter((file) => !referenced.has(file) && !notYetRouted.has(file));
+    const orphans = schemas.filter((file) => !referenced.has(file));
 
     expect(orphans).toEqual([]);
   });

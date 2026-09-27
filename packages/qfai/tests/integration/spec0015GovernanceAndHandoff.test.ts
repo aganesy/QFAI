@@ -98,7 +98,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     // Section heading present but body lacks all required buckets.
     // The validator must fire R-AUTOPILOT-POLICY-MISSING (error) and
     // name the missing buckets in the justification per the
-    // BR-0015-0010 / AC-0015-0015 two-condition trigger
+    // BR-0001-0011 two-condition trigger
     // (present-but-incomplete case).
     const headingOnly = "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
     await writeSkillMd("qfai-x", headingOnly);

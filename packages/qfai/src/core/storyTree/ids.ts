@@ -7,10 +7,7 @@ const ID_PATTERNS: Record<StoryTreeIdKind, RegExp> = {
   US: /^US-\d{4}-\d{4}$/,
   AC: /^AC-\d{4}-\d{4}-\d{2}$/,
   EX: /^EX-\d{4}-\d{4}-\d{2}$/,
-  // SIMPLIFIED: a single-segment `BR-NNNN` is still accepted beside the
-  // contract-scoped `BR-NNNN-NNNN`.
-  // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-  BR: /^BR-\d{4}(?:-\d{4})?$/,
+  BR: /^BR-\d{4}-\d{4}$/,
   DEC: /^DEC-\d{4}$/,
   OQ: /^OQ-\d{4}$/,
 };
@@ -71,8 +68,8 @@ function allocationScope(
   kind: StoryTreeIdKind,
   parentId: string | undefined,
 ): { prefix: string; width: number } {
-  if (kind === "BR" && parentId !== undefined) {
-    const number = contractNumber(parentId);
+  if (kind === "BR") {
+    const number = contractNumber(parentId ?? "");
     if (!number) throw new TypeError("BR requires a valid contract parent ID");
     return { prefix: `BR-${number}-`, width: 4 };
   }
@@ -92,8 +89,7 @@ function allocationScope(
 
 /**
  * The highest ID the list names under the parent's prefix, plus one. A BR takes
- * the contract that declares it as its parent; with no parent it takes the
- * single-segment shape.
+ * the contract that declares it as its parent.
  */
 export function nextId(
   kind: StoryTreeIdKind,

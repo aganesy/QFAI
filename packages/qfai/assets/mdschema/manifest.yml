@@ -78,5 +78,5 @@ documents:
     pattern: "{contractsDir}/tech.md"
 
   - id: story-cli-contract
-    schema: story/03_contract/cli/contract.mdschema.yml
-    pattern: "{contractsDir}/cli/*.md"
+    schema: story/03_contract/cli/cli-NNNN-title.mdschema.yml
+    pattern: "{contractsDir}/cli/cli-*.md"

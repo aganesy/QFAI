@@ -26,7 +26,7 @@ import {
 afterEach(removeStoryProjects);
 
 const SEEDED = "| EX-0001-0001-03 | AC-0001-0001-01 | A cancelled line | No row |";
-const ROW = "| BR-0001 | One row per order line | EX-0001-0001-01, EX-0001-0001-02 |";
+const ROW = "| BR-0001-0001 | One row per order line | EX-0001-0001-01, EX-0001-0001-02 |";
 
 it("The sdd_append work order after a missing-test diagnosis matching AC-0001-0001-01", async () => {
   const root = await storyProject();
@@ -70,13 +70,13 @@ async function seedWith(edit: (text: string) => string) {
 const CITED = "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03";
 
 it("Seeding that adds the new example's ID to the rule's Examples cell", async () => {
-  const cited = `| BR-0001 | One row per order line | ${CITED} |`;
+  const cited = `| BR-0001-0001 | One row per order line | ${CITED} |`;
 
   expect(await seedWith((text) => text.replace(ROW, cited))).toEqual([]);
 });
 
 it("Seeding that also rewords the rule's Statement", async () => {
-  const reworded = `| BR-0001 | One row for each order line | ${CITED} |`;
+  const reworded = `| BR-0001-0001 | One row for each order line | ${CITED} |`;
 
   expect(await seedWith((text) => text.replace(ROW, reworded))).toEqual([
     { reason: "rule-changed", subject: CONTRACT },

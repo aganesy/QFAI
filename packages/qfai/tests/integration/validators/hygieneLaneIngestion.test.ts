@@ -1,7 +1,6 @@
 /**
  * Integration: the Reviewer Gate ingests the two workflow-set lint codes without
- * demanding a justification (TC-0015-0035, TC-0015-0036; AC-0015-0022 /
- * BR-0015-0017).
+ * demanding a justification (BR-0001-0016).
  *
  * The rule under test is a **recorded temporary divergence**, and the two ways
  * of getting it wrong are what the rows below are shaped around.
@@ -110,7 +109,7 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
     expect(ingested, "the hygiene drift finding was not surfaced at all").toHaveLength(1);
     // Surfaced at the severity the LANE emits it with, which is error class.
     //
-    // `BR-0015-0017` says the gate "does not re-derive, re-word or re-classify" the payload,
+    // `BR-0001-0016` says the gate "does not re-derive, re-word or re-classify" the payload,
     // that both codes are "declared lint-failure codes in `CLI-0020`, i.e. error class", and
     // that what is deferred is rejecting them for an empty `justification:`. The BR grants that
     // one exemption and no other — severity re-classification is not among them. Reporting

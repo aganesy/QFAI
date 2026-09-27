@@ -207,7 +207,6 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
 
   const examples = new Set(model.examples.map((entry) => entry.id));
   const citedExamples = new Set<string>();
-  const rules = new Set(model.rules.map((entry) => entry.id));
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
       issues.push(
@@ -238,15 +237,6 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
           example.file,
           [example.id],
         ),
-      );
-    }
-  }
-  for (const ref of model.ruleRefs) {
-    if (!rules.has(ref.id)) {
-      issues.push(
-        finding("QFAI-STORY-005", `${ref.id} is not defined in a contract: ${ref.file}`, ref.file, [
-          ref.id,
-        ]),
       );
     }
   }

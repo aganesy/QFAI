@@ -108,3 +108,18 @@ describe("routing keyed by step", () => {
     ).not.toEqual([]);
   });
 });
+
+describe("routing defaults come from the installed package", () => {
+  // QFAI:AC-0001-0167-03
+  // QFAI:EX-0001-0167-11
+  it("stops and names the install command when the package is not installed", async () => {
+    const rule = (await readShipped("rule/agent-selection.md")).replace(/\s+/g, " ");
+    expect(rule).toContain(
+      "If it is unavailable, stop and ask for a local install with `npm install -D qfai`.",
+    );
+    expect(rule).toContain(
+      "Do not infer routing from a skill body or continue without the defaults.",
+    );
+    expect(rule).toContain("The project does not own copies of these default files.");
+  });
+});

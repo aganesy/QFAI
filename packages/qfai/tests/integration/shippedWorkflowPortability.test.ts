@@ -346,7 +346,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   //   this row's, asserted in it1.
   // - The `node-version-file:` half of it3 is the fail-closed form the
   //   TC's third bullet forbids: it fails the job for every adopter
-  //   without such a file, which is the whole hazard BR-0003-0037 names.
+  //   without such a file, which is the whole hazard BR-0020-0017 names.
 
   /** The Node-version resolution body of one job, asserted extractable. */
   function resolutionBody(job: ShippedJob): string {
