@@ -19,7 +19,7 @@ outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and requir
 requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
 second fictional flow.
 
-Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract; dependent contracts update rule refs.
+Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract, and no other contract cites it.
 
 ## Decision and question rows
 
@@ -100,7 +100,9 @@ row here. The stage returns `blocked`, with each finding listed in `debts`.
 
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US. BR spans all contracts. DEC and OQ each span their table. Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
+A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
+Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
 

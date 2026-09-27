@@ -129,6 +129,13 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(nextStoryTreeId(model, "BR", "API-0007")).toBe("BR-0007-0001");
     expect(nextId("BR", ["BR-0003-0001", "BR-0007"])).toBe("BR-0008");
     expect(() => nextId("BR", [], "CON-UI-0001")).toThrow(TypeError);
+    const suffixed = buildStoryTreeModel(
+      tree(
+        contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"]),
+        "| DEC-0001 | Notes on BR-0003-0009copy | None | DONE |",
+      ),
+    );
+    expect(nextStoryTreeId(suffixed, "BR", "CLI-0003")).toBe("BR-0003-0002");
   });
 
   // QFAI:AC-0001-0008-04
@@ -189,6 +196,14 @@ describe("contract IDs and contract-scoped business rules", () => {
     );
     expect(parseContractRules(check, text).refs).toEqual([]);
     expect(ruleFindings(tree(text))).toEqual([
+      `A Rule refs line is not allowed under ## Business rules in ${check}`,
+    ]);
+    const indented = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "   Rule refs: BR-0003-0001",
+    );
+    expect(parseContractRules(check, indented).errors).toEqual([
       `A Rule refs line is not allowed under ## Business rules in ${check}`,
     ]);
     const columns =
@@ -285,6 +300,11 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     expect(parseContractRules(check, twoTables).errors).toEqual([
       `More than one Business rules table in ${check}`,
     ]);
+    const commentedSection = `${contract("CLI-0003: Check", ["| BR-0003-0001 | Real | EX-0001-0001-01 |"])}\n<!--\n${rulesTable("Business rules", ["| BR-0003-0009 | Hidden | EX-0001-0001-01 |"])}-->\n`;
+    expect(parseContractRules(check, commentedSection)).toMatchObject({
+      rules: [{ id: "BR-0003-0001" }],
+      errors: [],
+    });
     const commentedRefs = contract(
       "CLI-0003: Check",
       ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
@@ -332,7 +352,9 @@ describe("the new contract IDs in the checks that read the old ones", () => {
         ...INDEX_HEADER.slice(4),
         indexRow("API-0009", "api/api-0009-example.yaml"),
         "",
-        ...INDEX_HEADER.slice(2),
+        "  ## Contract Index",
+        "",
+        ...INDEX_HEADER.slice(4),
         indexRow("API-0002", "api/api-0002-orders.yaml"),
         "",
         "### More",
@@ -399,6 +421,7 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       "db/db-0004-orders.sql": DB_CONTRACT,
     });
     await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
+    await put(root, `${contracts}/db/db-0005-lines.md`, "# DB-0005: Lines\n");
     await put(
       root,
       "tests/api/orders.test.ts",
@@ -408,7 +431,7 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
     expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
-    expect([...result.activeDbContractIds]).toEqual(["DB-0004"]);
+    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004", "DB-0005"]);
     expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
     expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
       "annotated.test.ts",

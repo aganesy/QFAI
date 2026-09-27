@@ -83,7 +83,7 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
   "qfai-configure": ["business-flow id", "testfileglobs", "tooling choice"],
   "qfai-discussion": ["requirement source", "affected bf"],
   "qfai-sdd": ["requirement source", "affected flow"],
-  "qfai-verify": ["con-ui-nnnn", "story source", "affected bf-nnnn"],
+  "qfai-verify": ["ui-nnnn", "story source", "affected bf-nnnn"],
   // A grilling session interrogates one subject, and that subject is the root
   // of the decision tree the whole method reads. There is no default for what a
   // design conversation is about: picking one would be the skill answering the
@@ -274,7 +274,7 @@ export function collectHardRequiredEntries(content: string): string[] {
  * answering for itself is what closes that.
  *
  * A spaced dash joins too, because {@link normalizeHardRequiredEntry} keeps a
- * one-word dash clause. A dash inside an identifier such as `CON-UI-NNNN` is
+ * one-word dash clause. A dash inside an identifier such as `UI-NNNN` is
  * part of that name.
  *
  * Parentheses are skipped because a qualifier is prose and may hold any of

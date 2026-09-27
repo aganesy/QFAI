@@ -26,6 +26,8 @@ structure:
             regex: true
           - pattern: '(?m)^[ \t]*(?:>|```|~~~)'
             regex: true
+          - pattern: '(?m)^[ \t]{0,3}<[!/?A-Za-z]'
+            regex: true
           - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
           - pattern: '(?:\A(?:[ \t]*\n)*|\n[ \t]*\n)(?: {4}|\t)'
@@ -41,7 +43,9 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
-          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
       - heading:
           pattern: "^## Dependencies$"
@@ -54,7 +58,9 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
-          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
       - heading:
           pattern: "^## Milestones$"
@@ -68,4 +74,6 @@ structure:
             required_headers: [Milestone, Description]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true

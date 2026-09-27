@@ -5,7 +5,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { escapeTableCell } from "../../core/specPackParsers.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
 import { readIdMap } from "./idMap.js";
-import { parseLegacyRecords, type LegacyKind } from "./legacyRecords.js";
+import { parseLegacyRecords, plainExampleCells, type LegacyKind } from "./legacyRecords.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -164,8 +164,14 @@ export const step05: MigrationStep = {
         continue;
       }
       casesToExamples.push(`${oldId} → ${mappedEx}`);
+      const plain = plainExampleCells(row.cells.Steps ?? "", row.cells.Expected ?? "");
+      for (const column of plain.notPlain) {
+        forAPerson.push(
+          `${repositoryRelative(context.root, file)}: ${mappedEx} ${column} is Gherkin steps, not one plain value; rewrite it`,
+        );
+      }
       if (new RegExp(`\\|\\s*${mappedEx}\\s*\\|`).test(content)) continue;
-      const cells = [mappedEx, mappedAc, row.cells.Steps ?? "", row.cells.Expected ?? ""];
+      const cells = [mappedEx, mappedAc, plain.input, plain.expected];
       const rendered = `| ${cells.map(escapeTableCell).join(" | ")} |`;
       additions.set(file, [...(additions.get(file) ?? []), rendered]);
     }

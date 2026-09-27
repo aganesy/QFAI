@@ -165,7 +165,7 @@ export type QfaiPrototypingConfig = {
   execution?: QfaiPrototypingExecutionConfig;
   /**
    * Explicit primary UI contract for `/qfai-prototyping`.
-   * Uses the full `CON-UI-NNNN` identifier.
+   * Uses the full `UI-NNNN` identifier.
    */
   primaryUiContract?: string;
   /**
@@ -726,7 +726,7 @@ function normalizePrototyping(
     issues.push(
       configIssue(
         configPath,
-        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: CON-UI-NNNN.",
+        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: UI-NNNN.",
       ),
     );
   }
@@ -775,16 +775,16 @@ function normalizePrimaryUiContract(
     issues.push(
       configIssue(
         configPath,
-        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
+        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;
   }
-  if (!/^CON-UI-\d{4}$/.test(raw)) {
+  if (!/^UI-\d{4}$/.test(raw)) {
     issues.push(
       configIssue(
         configPath,
-        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
+        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;

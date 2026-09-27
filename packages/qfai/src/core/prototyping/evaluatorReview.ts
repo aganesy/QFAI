@@ -285,7 +285,7 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  * Reviewer-driven per-spec / per-screen review payload.
  *
  * This is the schema written to
- * `iter-NN/CON-UI-NNNN/<screen>.review.json` by the product-surface
+ * `iter-NN/UI-NNNN/<screen>.review.json` by the product-surface
  * reviewer sub-agent and consumed by the prototyping CLI loop. The
  * SSOT for this schema is the shipped reference at
  * `.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`,
@@ -535,7 +535,7 @@ function pushDmvErrors(
  * reviewer prompt typically fixes more than one problem per retry.
  *
  * Validation rules (closed schema, 11 required top-level fields):
- *   - `uiContractId` required in canonical `CON-UI-NNNN` form;
+ *   - `uiContractId` required in canonical `UI-NNNN` form;
  *     `screenId` required as a non-empty string
  *   - `cycle` required as an integer in `0..MAX_ITERATION_INDEX`
  *     (currently `0..9`); upper-bound violations are rejected to keep
@@ -572,8 +572,8 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   let uiContractId: string | null = null;
   if (!("uiContractId" in input)) {
     errors.push("missing field: uiContractId");
-  } else if (typeof input.uiContractId !== "string" || !/^CON-UI-\d{4}$/.test(input.uiContractId)) {
-    errors.push("uiContractId must match CON-UI-NNNN");
+  } else if (typeof input.uiContractId !== "string" || !/^UI-\d{4}$/.test(input.uiContractId)) {
+    errors.push("uiContractId must match UI-NNNN");
   } else {
     uiContractId = input.uiContractId;
   }

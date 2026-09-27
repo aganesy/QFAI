@@ -104,8 +104,8 @@ async function readProto(root: string): Promise<Record<string, unknown>> {
 /** The state the issue describes: `0011` retired upstream, `0001` still live. */
 async function reducedScope(): Promise<string> {
   const root = await project();
-  await seedUiBearingSpec(root, "CON-UI-0001");
-  await seedLoop(root, ["CON-UI-0001", "CON-UI-0011"], null);
+  await seedUiBearingSpec(root, "UI-0001");
+  await seedLoop(root, ["UI-0001", "UI-0011"], null);
   return root;
 }
 
@@ -115,7 +115,7 @@ const run = (
 ): Promise<number> =>
   runPrototypingRescope({
     root,
-    remove: ["CON-UI-0011"],
+    remove: ["UI-0011"],
     reason: "DELTA-022",
     dryRun: false,
     ...over,
@@ -125,7 +125,7 @@ describe("prototyping rescope refuses", () => {
   it("without --remove", async () => {
     const root = await reducedScope();
     expect(await run(root, { remove: [] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("without --reason", async () => {
@@ -134,12 +134,12 @@ describe("prototyping rescope refuses", () => {
     // rather than recorded as blank.
     const root = await reducedScope();
     expect(await run(root, { reason: "   " })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("when there is no frozen scope to reduce", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "CON-UI-0001");
+    await seedUiBearingSpec(root, "UI-0001");
     await seedLoop(root, [], null);
     expect(await run(root)).toBe(2);
   });
@@ -148,15 +148,15 @@ describe("prototyping rescope refuses", () => {
     // A closed loop's scope is history: reducing it would rewrite what the
     // completed loop covered.
     const root = await project();
-    await seedUiBearingSpec(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0011"], "converged");
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011"], "converged");
     expect(await run(root)).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("an id the frozen union does not contain", async () => {
     const root = await reducedScope();
-    expect(await run(root, { remove: ["CON-UI-0099"] })).toBe(2);
+    expect(await run(root, { remove: ["UI-0099"] })).toBe(2);
   });
 
   it("a surface that STILL RESOLVES — the refusal that keeps this from being drift", async () => {
@@ -165,16 +165,16 @@ describe("prototyping rescope refuses", () => {
     // the operator's real situation is that the decision was never applied
     // upstream.
     const root = await reducedScope();
-    expect(await run(root, { remove: ["CON-UI-0001"] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect(await run(root, { remove: ["UI-0001"] })).toBe(2);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("the whole batch when one member still resolves", async () => {
     // All-or-nothing: a partially applied reduction would leave the loop in a
     // state neither the operator nor the finding described.
     const root = await reducedScope();
-    expect(await run(root, { remove: ["CON-UI-0011", "CON-UI-0001"] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect(await run(root, { remove: ["UI-0011", "UI-0001"] })).toBe(2);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 });
 
@@ -182,11 +182,11 @@ describe("the two refusals say different things", () => {
   // Both exit 2, so the exit code cannot tell them apart — and the advice is
   // not interchangeable. A typo told to "remove the surface upstream first"
   // sends the operator to edit specs over a mistyped digit.
-  const frozen = ["CON-UI-0001", "CON-UI-0011"] as const;
-  const missing = ["CON-UI-0011"] as const;
+  const frozen = ["UI-0001", "UI-0011"] as const;
+  const missing = ["UI-0011"] as const;
 
   it("says `check the id` for an id outside the frozen union", () => {
-    const message = refuseUnremovable(["CON-UI-0099"], frozen, missing);
+    const message = refuseUnremovable(["UI-0099"], frozen, missing);
     expect(message).not.toBeNull();
     expect(message).toContain("not in frozenSurfaceUnion");
     expect(message).toContain("check the id");
@@ -194,7 +194,7 @@ describe("the two refusals say different things", () => {
   });
 
   it("says `remove it upstream first` for a surface that still resolves", () => {
-    const message = refuseUnremovable(["CON-UI-0001"], frozen, missing);
+    const message = refuseUnremovable(["UI-0001"], frozen, missing);
     expect(message).not.toBeNull();
     expect(message).toContain("still resolves");
     expect(message).toContain("upstream first");
@@ -203,7 +203,7 @@ describe("the two refusals say different things", () => {
 
   it("returns null for a surface that is frozen and unreachable", () => {
     // The direction that must stay open, or the operation refuses everything.
-    expect(refuseUnremovable(["CON-UI-0011"], frozen, missing)).toBeNull();
+    expect(refuseUnremovable(["UI-0011"], frozen, missing)).toBeNull();
   });
 });
 
@@ -213,11 +213,11 @@ describe("prototyping rescope applies", () => {
     expect(await run(root)).toBe(0);
 
     const proto = await readProto(root);
-    expect(proto.frozenSurfaceUnion).toEqual(["CON-UI-0001"]);
-    expect(proto.uiContractsCovered).toEqual(["CON-UI-0001"]);
+    expect(proto.frozenSurfaceUnion).toEqual(["UI-0001"]);
+    expect(proto.uiContractsCovered).toEqual(["UI-0001"]);
     const log = proto.rescopeLog as { surface: string; reason: string; cycle: number }[];
     expect(log).toHaveLength(1);
-    expect(log[0]?.surface).toBe("CON-UI-0011");
+    expect(log[0]?.surface).toBe("UI-0011");
     expect(log[0]?.reason).toBe("DELTA-022");
     expect(log[0]?.cycle).toBe(3);
   });
@@ -237,16 +237,16 @@ describe("prototyping rescope applies", () => {
 
   it("appends to an existing log rather than replacing it", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0011"], null, {
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011"], null, {
       rescopeLog: [
-        { surface: "CON-UI-0007", reason: "DELTA-010", cycle: 1, at: "2026-01-01T00:00:00Z" },
+        { surface: "UI-0007", reason: "DELTA-010", cycle: 1, at: "2026-01-01T00:00:00Z" },
       ],
     });
 
     expect(await run(root)).toBe(0);
     const log = (await readProto(root)).rescopeLog as { surface: string }[];
-    expect(log.map((entry) => entry.surface)).toEqual(["CON-UI-0007", "CON-UI-0011"]);
+    expect(log.map((entry) => entry.surface)).toEqual(["UI-0007", "UI-0011"]);
   });
 
   it("refuses a second time, because the id is no longer frozen", async () => {
@@ -259,12 +259,12 @@ describe("prototyping rescope applies", () => {
 
   it("removes several surfaces under one reason", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0011", "CON-UI-0012"], null);
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011", "UI-0012"], null);
 
-    expect(await run(root, { remove: ["CON-UI-0011", "CON-UI-0012"] })).toBe(0);
+    expect(await run(root, { remove: ["UI-0011", "UI-0012"] })).toBe(0);
     const proto = await readProto(root);
-    expect(proto.frozenSurfaceUnion).toEqual(["CON-UI-0001"]);
+    expect(proto.frozenSurfaceUnion).toEqual(["UI-0001"]);
     expect((proto.rescopeLog as unknown[]).length).toBe(2);
   });
 });
@@ -295,7 +295,7 @@ describe("a --reason that does not read as an id", () => {
 
     expect(lines.join("")).toContain("does not read as a recorded");
     expect(lines.join("")).toContain("DEC-0001");
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001"]);
   });
 
   it("writes the reason to the log exactly as given", async () => {
@@ -358,21 +358,21 @@ describe("prototyping rescope and the recorded review", () => {
     expect(review.proseCritique).toBe(PROSE);
     const retired = review.retiredSurfaces as { surface: string; reason: string }[];
     expect(retired).toHaveLength(1);
-    expect(retired[0]?.surface).toBe("CON-UI-0011");
+    expect(retired[0]?.surface).toBe("UI-0011");
     expect(retired[0]?.reason).toBe("DELTA-022");
   });
 
   it("does not annotate the same surface twice", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "CON-UI-0001");
-    await seedLoop(root, ["CON-UI-0001", "CON-UI-0011", "CON-UI-0012"], null);
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011", "UI-0012"], null);
     const abs = await seedReview(root, PROSE);
-    await run(root, { remove: ["CON-UI-0011"] });
-    await run(root, { remove: ["CON-UI-0012"] });
+    await run(root, { remove: ["UI-0011"] });
+    await run(root, { remove: ["UI-0012"] });
 
     const review = JSON.parse(await readFile(abs, "utf-8")) as Record<string, unknown>;
     const retired = review.retiredSurfaces as { surface: string }[];
-    expect(retired.map((entry) => entry.surface)).toEqual(["CON-UI-0011", "CON-UI-0012"]);
+    expect(retired.map((entry) => entry.surface)).toEqual(["UI-0011", "UI-0012"]);
   });
 
   it("prunes the retired surface out of a captured plan", async () => {
@@ -386,8 +386,8 @@ describe("prototyping rescope and the recorded review", () => {
         {
           cycle: 0,
           screens: [
-            { uiContractId: "CON-UI-0001", screenId: "home" },
-            { uiContractId: "CON-UI-0011", screenId: "blocklist" },
+            { uiContractId: "UI-0001", screenId: "home" },
+            { uiContractId: "UI-0011", screenId: "blocklist" },
           ],
         },
         null,
@@ -401,7 +401,7 @@ describe("prototyping rescope and the recorded review", () => {
       cycle: number;
       screens: { uiContractId: string }[];
     };
-    expect(plan.screens.map((screen) => screen.uiContractId)).toEqual(["CON-UI-0001"]);
+    expect(plan.screens.map((screen) => screen.uiContractId)).toEqual(["UI-0001"]);
     expect(plan.cycle).toBe(0);
   });
 
@@ -412,14 +412,14 @@ describe("prototyping rescope and the recorded review", () => {
     const abs = path.join(dir, "iterate-plan.json");
     await writeFile(
       abs,
-      JSON.stringify({ screens: [{ id: "home", uiContractIds: ["CON-UI-0001", "CON-UI-0011"] }] }),
+      JSON.stringify({ screens: [{ id: "home", uiContractIds: ["UI-0001", "UI-0011"] }] }),
       "utf-8",
     );
     expect(await run(root)).toBe(0);
     const plan = JSON.parse(await readFile(abs, "utf-8")) as {
       screens: { uiContractIds: string[] }[];
     };
-    expect(plan.screens).toEqual([{ id: "home", uiContractIds: ["CON-UI-0001"] }]);
+    expect(plan.screens).toEqual([{ id: "home", uiContractIds: ["UI-0001"] }]);
   });
 });
 
@@ -431,14 +431,14 @@ describe("prototyping rescope --dry-run", () => {
     const planAbs = path.join(dir, "iterate-plan.json");
     await writeFile(
       planAbs,
-      `${JSON.stringify({ cycle: 0, screens: [{ uiContractId: "CON-UI-0011" }] }, null, 2)}\n`,
+      `${JSON.stringify({ cycle: 0, screens: [{ uiContractId: "UI-0011" }] }, null, 2)}\n`,
       "utf-8",
     );
     const before = await readFile(planAbs, "utf-8");
 
     expect(await run(root, { dryRun: true })).toBe(0);
 
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
     expect((await readProto(root)).rescopeLog).toBeUndefined();
     expect(await readFile(planAbs, "utf-8")).toBe(before);
   });

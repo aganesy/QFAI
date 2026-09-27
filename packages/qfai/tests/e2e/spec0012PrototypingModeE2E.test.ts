@@ -101,7 +101,7 @@ async function seedProject(
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
 }

@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
+import {
+  escapeTableCell,
+  parseAllMarkdownTables,
+  splitMarkdownRow,
+} from "../../core/specPackParsers.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { MigrationInputError } from "./harness.js";
 
@@ -62,6 +66,8 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       "who is the user?": "Users",
       'what is "success"?': "Success criteria",
       "what is success?": "Success criteria",
+      outcome: "Objective",
+      purpose: "Objective",
     },
   },
   "initiative.md": {
@@ -90,6 +96,10 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       "axioms (non-negotiable)": "Axioms (Non-negotiable)",
       "decision priorities": "Decision priorities",
       "compatibility vs change rubric": "Compatibility vs Change Rubric",
+    },
+    suggestions: {
+      "judgment criteria": "Decision priorities",
+      "decision lens": "Decision priorities",
     },
   },
   "glossary.md": {
@@ -134,6 +144,9 @@ export function newPolicyDraft(target: string): PolicyDraft {
   return { target, lists: new Map(), paragraphs: new Map(), rows: new Map() };
 }
 
+/** A thematic break, which the list and prose sections of the policy schemas reject. */
+const THEMATIC_BREAK = /^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
 const nonBlank = (body: string): string[] =>
   body
     .replace(/\r\n/g, "\n")
@@ -159,21 +172,33 @@ export function listItems(body: string, keys: readonly string[] = []): string[] 
       blank = true;
       continue;
     }
-    if (/^\s*#/.test(line)) return null;
+    // A tab in the indentation has no fixed width here, so nesting cannot be kept safely.
+    if (/^[ ]*\t/.test(line)) return null;
+    if (/^\s*#/.test(line) || THEMATIC_BREAK.test(line)) return null;
     const marker = /^( {0,3})- \S/.exec(line);
     base ??= marker?.[1]?.length ?? null;
-    if (marker && marker[1]?.length === base) items.push(line.trimStart());
+    const markerIndent = marker?.[1]?.length;
+    if (markerIndent !== undefined && markerIndent === base) items.push(line.trimStart());
+    // A marker indented less than two past the first item's is neither its sibling at the
+    // same indentation nor clearly nested under it, so a person reads the list.
+    else if (markerIndent !== undefined && markerIndent < (base ?? 0) + 2) return null;
     else if (blank || items.length === 0 || /^[ \t]?[^-\s]/.test(line)) return null;
-    else items[items.length - 1] = `${items.at(-1) ?? ""}\n${line.slice(base ?? 0)}`;
+    else {
+      // The item is written from column 0, so its content starts at column 2; a line
+      // under it keeps its depth relative to the item and never less than that.
+      const lead = /^[ \t]*/.exec(line)?.[0].length ?? 0;
+      const depth = Math.max(2, lead - (base ?? 0));
+      items[items.length - 1] = `${items.at(-1) ?? ""}\n${" ".repeat(depth)}${line.trimStart()}`;
+    }
     blank = false;
   }
   const hasKey = (key: string): boolean => items.some((item) => item.startsWith(`- ${key}: `));
   return items.length > 0 && keys.every(hasKey) ? items : null;
 }
 
-/** A line that starts a list, a table, a quote, a fence, a heading or a thematic break. */
+/** A line that starts a list, a table, a quote, a fence, a heading, an HTML block or a thematic break. */
 const NOT_PROSE =
-  /^\s*(?:[-*+]|\d+[.)])\s|^\s*\||^\s*(?:>|```|~~~)|^\s*#|^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/m;
+  /^\s*(?:[-*+]|\d+[.)])\s|^\s*\||^\s*(?:>|```|~~~)|^\s*#|^[ \t]{0,3}<[!/?A-Za-z]|^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/m;
 
 /** The paragraphs of a body that holds prose and nothing else, or null. */
 function paragraphsOf(body: string): string[] | null {
@@ -203,7 +228,9 @@ export function tableRows(
   if (tables.length !== 1 || table === undefined || table.rows.length !== lines.length - 2) {
     return null;
   }
-  if (table.rows.some((row) => row.length > table.headers.length)) return null;
+  if (table.rows.some((row) => row.length !== table.headers.length)) return null;
+  // GFM reads a block as a table only when its delimiter row has as many cells as its header.
+  if (splitMarkdownRow(lines[1] ?? "").length !== table.headers.length) return null;
   const headers = table.headers.map((header) => header.trim().toLowerCase());
   const indexes = columns.map((column) =>
     [column, ...(aliases[column] ?? [])]
@@ -212,10 +239,7 @@ export function tableRows(
   );
   if (indexes.some((index) => index === undefined)) return null;
   const used = new Set(indexes);
-  const dropped = table.headers.filter(
-    (_header, index) =>
-      !used.has(index) && table.rows.some((row) => (row[index] ?? "").trim() !== ""),
-  );
+  const dropped = table.headers.filter((_header, index) => !used.has(index));
   const rows = table.rows.map((row) => indexes.map((index) => (row[index ?? -1] ?? "").trim()));
   return { rows, dropped };
 }

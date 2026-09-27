@@ -96,7 +96,7 @@ export type ParsedArgs = {
     prototypingUpgradeScopeFull?: boolean;
     /** --license-patch <file> for `qfai prototyping iterate`. */
     prototypingLicensePatch?: string;
-    /** --primary-ui-contract <CON-UI-NNNN> for `qfai prototyping iterate`. */
+    /** --primary-ui-contract <UI-NNNN> for `qfai prototyping iterate`. */
     prototypingPrimaryUiContract?: string;
     /**
      * --check-convergence for `qfai prototyping iterate`. Read-only peek

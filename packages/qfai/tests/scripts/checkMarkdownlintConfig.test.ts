@@ -22,7 +22,9 @@ describe("check-markdownlint-config", () => {
   });
 
   it("rejects an unknown rule name", () => {
-    expect(findConfigProblems('{ "MD999": false }')).not.toEqual([]);
+    expect(findConfigProblems('{ "MD999": false }')).toContain(
+      "/ must NOT have additional properties: MD999",
+    );
   });
 
   it("rejects an option value of the wrong type", () => {
@@ -30,11 +32,15 @@ describe("check-markdownlint-config", () => {
   });
 
   it("rejects a misspelt option name", () => {
-    expect(findConfigProblems('{ "MD013": { "lineLength": 10 } }')).not.toEqual([]);
+    expect(findConfigProblems('{ "MD013": { "lineLength": 10 } }')).toContain(
+      "/MD013 must NOT have additional properties: lineLength",
+    );
   });
 
   it("rejects text that is not JSONC", () => {
-    expect(findConfigProblems('{ "MD013": ')).not.toEqual([]);
+    expect(findConfigProblems('{ "MD013": ')).toContain(
+      "unparsable JSONC at offset 11: ValueExpected",
+    );
   });
 
   it("passes on the repository's own configuration", () => {

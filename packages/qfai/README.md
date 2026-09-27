@@ -22,14 +22,14 @@ Invoking a stage skill such as `/qfai-sdd` yourself remains available as the exp
 - Prototyping is UI-only and runs through `qfai prototyping iterate --cycle <n>`.
   It evaluates every UI-bearing contract and each screen that contract declares.
   `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary
-  contract; `--primary-ui-contract CON-UI-0001` overrides it. Cycle 0 records
+  contract; `--primary-ui-contract UI-0001` overrides it. Cycle 0 records
   the full UI contract set as `uiContractsCovered` and `frozenSurfaceUnion` in
   `prototyping.json`. The loop runs through cycles 0..9 with deterministic stop
   codes: 0 (continue), 64 (converged), 65 (cycle limit), 66 (license check),
   and 2 (input or lock drift).
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iteration evidence is a single
-  `iter-NN/CON-UI-NNNN/<screen>.review.json` per UI contract and screen pair
+  `iter-NN/UI-NNNN/<screen>.review.json` per UI contract and screen pair
   (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
   `designMdViolations[]`, and `pivotDirective`). It is the only
@@ -146,7 +146,7 @@ Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
     evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Evidence refs must resolve to concrete repository-relative artifacts;
     absolute paths are invalid. UI coverage and per-screen reviews use full
-    `CON-UI-NNNN` IDs.
+    `UI-NNNN` IDs.
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
@@ -372,14 +372,18 @@ QFAI keeps policy, behavior and enforcing contracts in one story tree:
 - `02_business-flow/` holds the flow index, each BF and its user stories. Each
   story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
 - `03_contract/` holds the contract index and API, DB, UI, CLI and design
-  contracts. A BR is defined in the contract that enforces it.
+  contracts. The directory sets a contract's kind, and its ID is
+  `<KIND>-NNNN`, such as `API-0002`, with a number no other contract of any
+  kind uses. The file is named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in
+  the contract that enforces it, as `BR-<contract number>-NNNN`.
 - `decisions.md` and `open-questions.md` record project decisions and open
   questions in append-only four-column tables.
 
 The traceability chain is BF → US → AC → EX, with BR → EX from the contracts.
 Each EX names one AC in its story; every AC has an EX, and every EX is cited by
-a BR. Validation checks this chain and the independent BF, AC and EX test
-obligations.
+a BR. A BR cites only EX, only code and tests cite a BR, and a contract never
+names an implementation file. Validation checks this chain and the independent
+BF, AC and EX test obligations.
 
 ## SSOT boundaries
 

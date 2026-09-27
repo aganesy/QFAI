@@ -1162,7 +1162,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
   "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
-  "QFAI-STORY-005": "Every business rule and contract reference resolves.",
+  "QFAI-STORY-005":
+    "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
   "QFAI-STORY-006":
     "The selected profile's story obligations have test annotations: BF and AC in ATDD, EX in TDD.",
   "QFAI-STORY-007":
@@ -1248,7 +1249,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
-    "qfai.config.yaml: prototyping.primaryUiContract names a CON-UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
+    "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
@@ -1296,7 +1297,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
-  "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
+  "QFAI-CONTRACT-034":
+    "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID and file. Every row names a contract file, and no two contracts share a number.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   // Reads the implementation tree rather than another declaration, so what it
@@ -1411,7 +1413,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
-    "Correct the named contract index row or add its missing contract file, then rerun validate.",
+    "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
@@ -1425,7 +1427,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
   "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
   "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
-  "QFAI-STORY-005": "Define the missing business rule or contract, or correct the cited reference.",
+  "QFAI-STORY-005":
+    "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
     "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
   "QFAI-STORY-007":

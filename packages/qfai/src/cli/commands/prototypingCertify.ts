@@ -191,10 +191,10 @@ function resolveFullProfileGatesSignalRel(config: ConfigLoadResult["config"]): s
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
 /**
- * Frozen UI contract IDs are full CON-UI-NNNN values. The anchored shape
+ * Frozen UI contract IDs are full UI-NNNN values. The anchored shape
  * keeps review payload paths inside their iteration directories.
  */
-const CANONICAL_SPEC_ID = /^CON-UI-\d{4}$/u;
+const CANONICAL_SPEC_ID = /^UI-\d{4}$/u;
 
 /** Legacy `prototyping.json` shape (OC-60). Named so the code is greppable. */
 const DEPRECATED_SCHEMA_CODE = "D-DEPRECATED-SCHEMA" as const;
@@ -653,7 +653,7 @@ export async function runPrototypingCertify(
       error(
         `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
           `UI contract set (uiContractsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
-          "but no iter-NN/CON-UI-NNNN/<screen>.review.json layout is present. " +
+          "but no iter-NN/UI-NNNN/<screen>.review.json layout is present. " +
           "Each declared contract and screen requires its own review payload.",
       );
       // Exit 64 covers missing reviewer evidence.
@@ -662,7 +662,7 @@ export async function runPrototypingCertify(
       if (!hasPerSpecLayout) {
         // State the required layout before listing missing pairs.
         info(
-          `qfai prototyping certify: ${acceptedIterDir}/CON-UI-NNNN layout not detected — ` +
+          `qfai prototyping certify: ${acceptedIterDir}/UI-NNNN layout not detected — ` +
             "every declared UI contract and screen needs its review payload under the contract directory.",
         );
       }
@@ -1919,7 +1919,7 @@ type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly
  * The (UI contract, screen, cycle) triple a payload is filed under.
  *
  * `specDirName` is `null` for a payload outside a canonical
- * `CON-UI-NNNN` directory. Such a path anchors only its screen and cycle.
+ * `UI-NNNN` directory. Such a path anchors only its screen and cycle.
  */
 type ReviewPayloadExpectation = {
   readonly specDirName: string | null;
@@ -2038,7 +2038,7 @@ async function auditStrayPayloads(args: {
 }
 
 /**
- * Canonical `CON-UI-NNNN` subdirectories, sorted. An unreadable
+ * Canonical `UI-NNNN` subdirectories, sorted. An unreadable
  * directory yields `[]`.
  */
 async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
@@ -2063,7 +2063,7 @@ async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
  *
  * The walk is recursive on purpose. `buildCompletionCertificate`
  * digests the evidence root recursively, so a payload one level down
- * (`CON-UI-NNNN/archive/old.review.json`) is sealed into the certificate
+ * (`UI-NNNN/archive/old.review.json`) is sealed into the certificate
  * exactly like a top-level sibling. A shallow `readdir` here would let
  * that nested file ship without ever being parsed — the audited set
  * must be at least as wide as the digested set.
@@ -2113,7 +2113,7 @@ async function collectReviewPayloadFiles(
 
 /**
  * Every `*.review.json` under an accepted-iteration directory that does
- * not inside a canonical `CON-UI-NNNN` subtree. Historical
+ * not inside a canonical `UI-NNNN` subtree. Historical
  * `spec-NNNN` evidence is preserved and ignored. Paths are relative
  * to the iteration directory.
  */
@@ -2135,7 +2135,7 @@ function payloadScreenId(rel: string): string {
 /**
  * Derive the `(UI contract, screen, cycle)` a payload path claims, given
  * its iteration-relative path. The contract is anchored only when the
- * first segment is a canonical `CON-UI-NNNN` directory; see
+ * first segment is a canonical `UI-NNNN` directory; see
  * {@link ReviewPayloadExpectation}.
  */
 function payloadExpectationFromRel(rel: string, cycle: number): ReviewPayloadExpectation {
@@ -2332,11 +2332,11 @@ async function fileExists(absPath: string): Promise<boolean> {
  * Canonical UI contract evidence directory. Historical `spec-NNNN`
  * directories are excluded from the current review gate.
  */
-const CANONICAL_SPEC_DIR = /^CON-UI-\d{4}$/u;
+const CANONICAL_SPEC_DIR = /^UI-\d{4}$/u;
 
 /**
  * Returns `true` when the accepted iter directory contains at least
- * one canonical `CON-UI-NNNN` subdirectory. A missing directory yields
+ * one canonical `UI-NNNN` subdirectory. A missing directory yields
  * false; the coverage gate reports missing pair evidence.
  */
 async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {

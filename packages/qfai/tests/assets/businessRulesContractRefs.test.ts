@@ -17,7 +17,7 @@ describe("business rules are owned by enforcing contracts and cite examples", ()
       );
       expect(rules).toContain("YAML and JSON contracts put rules under x-qfai-rules");
       expect(rules).toContain("SQL contracts use -- Rule and -- Examples: lines");
-      expect(rules).toContain("Markdown contracts use a ## Rules table");
+      expect(rules).toContain("Markdown contracts use a ## Business rules table");
       expect(rules).toContain("Each rule includes ID, statement, and full example IDs");
       expect(rules).toContain("The authoritative contract defines a shared BR once");
     });

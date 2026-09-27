@@ -30,7 +30,7 @@ async function seedUiContracts(root: string): Promise<void> {
   await writeFile(
     path.join(contractsDir, "ui-0001-orders.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: orders-dashboard",
       "    title: Orders Dashboard",

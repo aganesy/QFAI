@@ -170,6 +170,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
+
 - **The policy-layer documents and the two registers have closed schemas.**
   `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
   `constraint.md`, `decisions.md` and `open-questions.md` now accept only
@@ -187,6 +197,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Migration step 3 writes these five policy files in their template's shape.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
+
+- **`qfai-sdd` writes contracts in the contract ID scheme, and references
+  point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
+  constitution, the drift protocol and the agent cards now say:
+  - A new contract takes its kind from its directory and the next contract
+    number, which no other contract of any kind uses and which is never
+    reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares its ID in
+    its H1 or on a `QFAI-CONTRACT-ID` line.
+  - Its rules are `BR-<contract number>-NNNN`, under `## Business rules` in a
+    Markdown contract. The shipped samples show `BR-0001-NNNN`,
+    `BR-0002-0001` and `BR-0003-NNNN`.
+  - A rule cites only examples, and only code and tests cite a rule. A rule
+    several contracts rely on is defined once and cited by no other contract;
+    the skill no longer writes rule refs. A contract never names an
+    implementation file.
+  - A flow's contracts are the ones whose rules cite its examples.
+  - The contract index has the columns `ID`, `Title`, `File`, `Depends On`,
+    `Reconciled With` and `Purpose`.
+  - `qfai validate` describes `QFAI-CONTRACT-034` and `QFAI-STORY-005` by the
+    checks they make on contract IDs and rule numbers.
+
+- **`qfai --help` no longer names an internal contract beside
+  `handoff upgrade`.**
 
 - **The story tree has no `structure.md`.** `qfai init` no longer writes
   `03_contract/structure.md`, and nothing reads it. Its facts have other
@@ -226,6 +259,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and `qfai validate` no longer reports it. A migration under way
   continues under the new name from the step it reached: the plan, the ID map
   and the archives stay in `.qfai/evidence/migration-spec-to-story/`.
+
+- **Migration step 4 writes stories and criteria in the template's shape.**
+  - `01_User-story.md` holds the story heading, the one
+    `As a …, I want …, so that ….` sentence under `## User Story`, and the old
+    non-goals under `## Non-goals` when there are any.
+  - The pack's scope and source provenance are no longer copied into the
+    story. They stay in the retained archive under
+    `.qfai/evidence/migration-spec-to-story/retired/`.
+  - `02_Acceptance-Criteria.md` opens `Feature:` with the story title and
+    indents each scenario as the template does. A criterion no longer carries a
+    `# Parent:` line; its directory names the story.
+  - A story block that is not one such sentence is written as it stands, and a
+    story with no criterion that takes a new ID gets no
+    `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
+    exits 3.
+
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
+
+- **Migration steps 4 and 5 write criteria and examples in their closed
+  shapes.**
+  - Each criterion holds one named `Scenario:`, the first one it had. A
+    `Background:`, a further scenario, a scenario named only by an ID and a
+    `Scenario Outline:` are not written. Step 4 lists each under
+    `## For a person` with its old file and exits 3.
+  - A criterion left with no named scenario holds a placeholder scenario, and
+    step 4 lists its new file.
+  - An example's Input and Expected lose a leading `Given`, `When`, `Then` or
+    `And` when they hold one step. A cell holding more steps is written as it
+    stands, and the step lists it under `## For a person` and exits 3.
 
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their

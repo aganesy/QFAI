@@ -145,7 +145,7 @@ describe("migration catalog move", () => {
     await put(
       context.root,
       ".qfai/spec/_policies/01_Objective.md",
-      "# 01 Objective\n\n## Success criteria\n\n| ID | Criterion | How it is measured |\n| --- | --- | --- |\n|  | Orders are kept | A restart loses none |\n\n## Out of scope\n\n- Refunds.\n",
+      "# 01 Objective\n\n## Success criteria\n\n| Criterion | How it is measured |\n| --- | --- |\n| Orders are kept | A restart loses none |\n\n## Out of scope\n\n- Refunds.\n",
     );
     await put(
       context.root,
@@ -498,6 +498,103 @@ describe("migration catalog move", () => {
     ).not.toContain("No native modules");
     expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
       "No violations",
+    );
+  });
+
+  it("keeps a short continuation and reports an unused column or a short row", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n   - Refunds.\n  Handled by support.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition | Owner |\n| --- | --- | --- |\n| Order | A request | |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n|| Node 22 | Runtime | Build |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/product.md",
+      "# Product\n\n## Non-goals\n\n   - Resale.\n- Rentals.\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const objective = await readFile(
+      path.join(context.specsDir, "01_policy", "objective.md"),
+      "utf8",
+    );
+    expect(objective).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n");
+    expect(objective).not.toContain("Rentals");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Non-goals" of .qfai/assistant/catalog/product.md by hand',
+    );
+    expect(conformance(context.specsDir, "objective")).toContain("No violations");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/glossary.md ## Terms: carry the "Owner" column of "## Terms" in .qfai/spec/_policies/06_Glossary.md by hand',
+    );
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand',
+    );
+  });
+
+  it("sends thematic breaks and HTML blocks to a person and names a section for old headings", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Outcome\n\nOrders can be placed.\n\n## Out of scope\n\n- Refunds.\n\n- - -\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Initiative\n\nShip the order flow.\n\n<!-- hidden -->\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Outcome" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/initiative.md ## Initiative: rewrite "## Initiative" of ${policies}/02_Initiative.md by hand`,
+    );
+    for (const name of ["objective", "initiative"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
+  it("sends tab-indented lists and tables with a short delimiter row to a person", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n- Parent\n\t- Child\n\t\t- Grandchild\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- |\n| Order | A request |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of ${policies}/06_Glossary.md by hand`,
     );
   });
 

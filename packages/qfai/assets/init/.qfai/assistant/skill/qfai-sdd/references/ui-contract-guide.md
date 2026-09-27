@@ -1,6 +1,7 @@
 # UI Contract Authoring Guide
 
-Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: CON-UI-NNNN` and a nonempty `screens[]` list. Add its exact file and ID to `<paths.contractsDir>/contracts.md` in the same change. A filename is a locator; it does not define the contract ID or its flow coverage.
+Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`, each named `ui-NNNN-<slug>.yaml` after its ID. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its row to `<paths.contractsDir>/contracts.md` in the same change.
+The flows a UI contract serves are the flows whose examples its rules cite; the file name does not select them.
 
 ## `screens[].primary_tasks` shape
 
@@ -92,7 +93,7 @@ element the marker stands for.
 ## `data-qfai` marker convention
 
 - The value is `CONTRACT_ID:ELEMENT_ID`, as in
-  `data-qfai="CON-UI-0001:search_input"`.
+  `data-qfai="UI-0001:search_input"`.
 - The suffix is `elements[].id`, never `elements[].label`. An id survives a copy
   change and a label does not.
 - Markers are what give an element fidelity coverage when its text is not
@@ -186,10 +187,10 @@ downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
 
 ## Prototyping coverage
 
-The prototyping cycle resolves UI-bearing contracts by their declared full `CON-UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `primaryUiContract` and `--primary-ui-contract` accept only a full ID; the CLI flag takes precedence. There is no filename alias or numeric shorthand.
+The prototyping cycle resolves UI-bearing contracts by their declared full `UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `primaryUiContract` and `--primary-ui-contract` accept only a full ID; the CLI flag takes precedence. There is no filename alias or numeric shorthand.
 
 Cycle 0 freezes the full set of UI-bearing IDs in `uiContractsCovered[]` and its union of screen surfaces in
-`frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/CON-UI-NNNN/<screen>.review.json`. A later
+`frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/UI-NNNN/<screen>.review.json`. A later
 iterate, certify, or show reads that frozen set. If an older record has `specsCovered` or `frozenSpecsCovered`, or lacks
 the new fields, seed a fresh cycle 0 with `npx qfai prototyping iterate --cycle 0`; retain the older evidence as history.
 
