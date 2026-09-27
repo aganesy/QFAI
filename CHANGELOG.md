@@ -289,6 +289,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The two repository CI constraints on where a gate runs and on evidence for
     a parallelism change are now rules of the repository CI contract.
 
+- **The contracts for `qfai atdd scaffold`, `qfai audit log`,
+  `qfai discussion`, `qfai handoff upgrade`, `qfai report`, the migration
+  scripts and the shipped workflow set are in the CLI contract form.** Each
+  holds an ownership boundary and one business-rules table, and every
+  obligation its other sections stated is now a rule citing the examples
+  that show it. The rules are numbered by contract, as `BR-0012-0001`.
+
 - **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
   contracts are written as business rules.** This repository's contracts for
   those commands now hold an ownership boundary and one business-rules table,

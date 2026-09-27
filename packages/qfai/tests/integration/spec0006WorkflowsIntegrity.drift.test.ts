@@ -519,7 +519,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
   // must NOT fire. It lives in this row because this row introduces that
   // emission, and narrowing a new emission to its own licence is part of
   // adding it — the licence is the closed state enum of
-  // `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` §3, where a name with no
+  // `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` (BR-0020-0021), where a name with no
   // provenance entry is `adopter-owned` (present on disk) or `absent`, and
   // BOTH rows mandate silence from `qfai doctor`. The doctor contract states
   // the same thing twice: its emission table keys `ok` to `installed` alone,
@@ -529,7 +529,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
   // An empty record therefore has to produce ZERO checks, not an `ok` one:
   // with no recorded name there is no `installed` name either, so an `ok`
   // check would be claiming a match QFAI never looked for. This is also the
-  // exact tree of §3's known limitation — an adopter who installed before
+  // exact tree of BR-0020-0045's known limitation — an adopter who installed before
   // the record existed — for which the contract says the drift channel is
   // silent.
   //
@@ -567,7 +567,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     // assertion that fails instead of the run passing on an unmutated tree.
     expect(
       Object.keys((await readInstallProvenance(dir)).workflows),
-      "the record must read as empty, or this is not the state §3 reasons about",
+      "the record must read as empty, or this is not the state BR-0020-0045 reasons about",
     ).toEqual([]);
     // Precondition: the files are still ON DISK and still differ from the
     // packaged copy. That makes every shipped name `adopter-owned` (no

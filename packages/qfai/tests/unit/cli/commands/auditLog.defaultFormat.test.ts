@@ -25,6 +25,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0179-02
 describe("TC-0015-0029: runAuditLog default format + empty store", () => {
   it("returns 0 and writes a header-only TSV table when the directory is absent", async () => {
     const written: string[] = [];
