@@ -39,7 +39,7 @@ describe("qfai doctor reports a missing document-schema lane", () => {
 
     const check = await docsLane(root);
 
-    expect(check?.severity).toBe("warning");
+    expect(check?.severity).toBe("error");
     expect(check?.message).toContain(LANE);
     expect(check?.message).toContain("qfai-docs.yml");
   });
@@ -50,7 +50,7 @@ describe("qfai doctor reports a missing document-schema lane", () => {
     const root = await project(true);
     await rm(path.join(root, LANE));
 
-    expect((await docsLane(root))?.severity).toBe("warning");
+    expect((await docsLane(root))?.severity).toBe("error");
   });
 
   it("is ok when the lane is present", async () => {

@@ -162,7 +162,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   - `@jackchuka/mdschema` 0.15.4 is now a dependency of the package, and the
     shipped `qfai-docs.yml` installs the same version.
-  - `npx qfai doctor` warns in `workflows.docsLane` when
+  - `npx qfai doctor` reports an error in `workflows.docsLane` when
     `.github/workflows/qfai-docs.yml` is missing, and names the packaged copy
     to restore.
   - `npx qfai init` ships the rule master `.agents/rules/document-schema.md`

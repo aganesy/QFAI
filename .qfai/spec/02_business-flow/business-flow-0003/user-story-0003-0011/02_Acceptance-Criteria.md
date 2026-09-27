@@ -81,6 +81,6 @@ Scenario: drift finding の details が declined を透過的に列挙する
 Scenario: A missing document-schema lane is reported
   Given a project whose `.github/workflows/qfai-docs.yml` is absent, whether never installed or removed after install
   When `qfai doctor` runs
-  Then the `workflows.docsLane` check is a warning naming the file and the packaged copy to restore it from
+  Then the `workflows.docsLane` check is an error naming the file and the packaged copy to restore it from
   And with the file present the check is `ok`
 ```

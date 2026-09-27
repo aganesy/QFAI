@@ -8,7 +8,7 @@ const DOCS_LANE = ".github/workflows/qfai-docs.yml";
 
 export type DocsLaneCheck = {
   id: "workflows.docsLane";
-  severity: "ok" | "warning";
+  severity: "ok" | "error";
   title: string;
   message: string;
   details: { path: string; packagedCopy?: string };
@@ -53,7 +53,7 @@ export async function checkDocsLane(root: string): Promise<DocsLaneCheck> {
   const source = packagedCopy();
   return {
     id: "workflows.docsLane",
-    severity: "warning",
+    severity: "error",
     title,
     message:
       `${DOCS_LANE} is missing, and the document-schema lane is required. ` +
