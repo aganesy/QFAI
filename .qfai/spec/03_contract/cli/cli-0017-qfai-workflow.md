@@ -350,10 +350,10 @@ counts with the `implementation-heavy` reviewers instead:
 `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer`. Every
 other step keeps its own profile.
 
-A step's owner is read from its name, as `cli-0022-workflow-files.md#vocabulary` states.
+A step's owner is read from its name, as BR-0002-0001 of `cli-0002-assistant-steps.md` states.
 
 `scope.allowedEffects` holds each external effect the stage declares in its plan
-(`cli-0022-workflow-files.md#format`, `stages[].effects`) that the run's
+(`cli-0022-workflow-files.md`, BR-0022-0011, `stages[].effects`) that the run's
 `project_policy` authorization also names. An effect the stage declares and no
 `project_policy` names is left out. The stage runs without it, the core performs
 no external effect itself, and the completion report lists the effect as not
@@ -523,7 +523,7 @@ of such a result the core compares both tables with their state at issue:
   `Change request:` may stand at WIP or DONE only when its Approach cites the
   `<runId>/<authorizationId>` of a `human_decision` this run recorded for it and
   states that record's `answeredBy`, its `recordedAt` and the label of each
-  option it chose, as `cli-0022-workflow-files.md#authorization-record` sets out. The
+  option it chose, as BR-0022-0009 of `cli-0022-workflow-files.md` sets out. The
   core checks each against the run's local authorization record. Otherwise the
   result is `record-unauthorized`.
 
@@ -547,7 +547,7 @@ answer is appended only by the attempt that holds it:
   change authorized by the drift gate. The stage asks once and changes nothing:
   it returns `awaiting_input` with one `decision` question showing the change
   target and the proposal. A concrete-abstract cycle finding that goes to the
-  user adds a further `decision` question beside it, as BR-0751 in
+  user adds a further `decision` question beside it, as BR-0021-0058 in
   `cli-0021-story-tree-authoring.md` states. The attempt holding the `human_decision`
   makes the change and appends the row at WIP, citing that answer. A row citing
   only `request_scope` is refused `record-unauthorized`.
@@ -564,7 +564,7 @@ A row a run appends carries no options or recommendation of its own, as BR-0016-
 asks of a change request raised outside a run: they are the ones the stage's
 question showed. The row states the option the operator chose, and the run's
 local authorization record holds the whole question
-(`cli-0022-workflow-files.md#authorization-record`).
+(`cli-0022-workflow-files.md`, BR-0022-0009).
 
 A stage that finds upstream drift outside the run's checked scope appends no
 `Change request:` row for it. It returns `blocked`, and the change is made by
@@ -936,13 +936,13 @@ Every condition has a fixed `owner`, which extends the rule that a blocked run
 names `operator` or the step or skill that owns the work
 ([State machine](#state-machine)):
 
-| `condition`                        | `owner`                                                                                                                                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                                                             |
-| `stage-unaccepted`                 | The skill of the stage with no accepted result, as `cli-0022-workflow-files.md#vocabulary` maps its stage kind; for `test_fix`, the skill the kind of the diagnosis's first matched ID selects |
-| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill owning the verify stage's steps                                                                                                                                       |
-| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                                                    |
-| Every other condition              | `operator`                                                                                                                                                                                     |
+| `condition`                        | `owner`                                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                                                                  |
+| `stage-unaccepted`                 | The skill of the stage with no accepted result, as BR-0022-0013 of `cli-0022-workflow-files.md` maps its stage kind; for `test_fix`, the skill the kind of the diagnosis's first matched ID selects |
+| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill owning the verify stage's steps                                                                                                                                            |
+| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                                                         |
+| Every other condition              | `operator`                                                                                                                                                                                          |
 
 A run with no accepted verify stage is reported as `verify-missing` only, never
 also as `stage-unaccepted`.
@@ -1281,7 +1281,7 @@ release that ships it, and by deterministic fixtures on every pull request.
 
 ## Rules
 
-Rule refs: BR-0016-0050, BR-0016-0051, BR-0241, BR-0320, BR-0341, BR-0676, BR-0680, BR-0681, BR-0682, BR-0683, BR-0741
+Rule refs: BR-0016-0050, BR-0016-0051, BR-0004-0012, BR-0021-0030, BR-0004-0035, BR-0001-0024, BR-0001-0028, BR-0001-0029, BR-0001-0030, BR-0001-0031, BR-0021-0053
 
 | BR-ID   | Statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Examples                                                                                                                                                                                                                                                                                                         |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
