@@ -94,11 +94,10 @@ async function validateDesignContractReadinessForStage(
 ): Promise<Issue[]> {
   const uiBearing = (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
 
-  // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
-  // Every other check in this validator presupposes UI contracts that
-  // only exist once prototyping has started, but the sample gate has to
-  // fire earlier than that: the sample can be copied in at any point, and UI
-  // contracts are only authored later in SDD.
+  // The unreplaced-sample gate runs first. Every other check runs only for a
+  // UI-bearing project, known once SDD has authored UI contracts; the sample
+  // gate has to fire earlier than that, because the sample can be copied in
+  // at any point.
   //
   // A cli-only project skips the gate outright rather than degrading it to a
   // warning: the carve-out says root DESIGN.md is not part of its contract at

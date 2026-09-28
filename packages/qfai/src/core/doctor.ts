@@ -166,8 +166,8 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
 /**
  * `title` of every `workflows.integrity` emission.
  *
- * Shared by the three emission branches: drift, content-identical, and the
- * skip taken when the packaged copy cannot be resolved. The four
+ * Shared by the three emission branches: drift, `ok`, and the skip taken when
+ * the packaged copy cannot be resolved. The four
  * `skills.integrity` copies below are left inline — different check, and this
  * constant is not theirs to share.
  *
@@ -388,19 +388,18 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // with an empty `modified`, at which point silence is no longer what that
   // status produces, while the unreachability is unaffected.
   //
-  // That moment has arrived — the unresolved skip arm below emits at `info` — and the two
-  // halves of the sentence above landed as predicted: silence is no longer what
-  // the status produces, and the conjunct is still unreachable, because `status`
-  // still carries one value per run. So it is NOT this row that pays for it: the
-  // state needs a reader reporting `modified` with an unresolved operand, which no
-  // row has opened.
+  // The unresolved skip arm below now emits at `info`, and both halves of the
+  // sentence above hold: silence is no longer what the status produces, and the
+  // conjunct is still unreachable, because `status` still carries one value per
+  // run. So the skip arm does NOT pay for it: the state needs a reader reporting
+  // `modified` with an unresolved operand, and no reader does.
   //
   // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
   // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
   // `eslint` all unchanged (measured — it is not load-bearing for lint either),
   // so no oracle exists in the deletion direction and none can be written while
   // the state is unreachable. It survives as an executable statement of the
-  // contract's content requirement, to be paid for by the row that makes the
+  // contract's content requirement, to be paid for by a test that makes the
   // state reachable.
   const workflowsDiff = await diffInstalledShippedWorkflows(root);
   if (
@@ -606,8 +605,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // one on the same emission.
     //
     // EXCLUSIVITY holds twice over, and the tests that pin one
-    // `workflows.integrity` check per run with `toHaveLength(1)` depend on it: `status` carries one value per run, so
-    // no two arms' status tests can both be true, and `else if` makes that
+    // `workflows.integrity` check per run with `toHaveLength(1)` depend on it:
+    // `status` carries one value per run, so no two arms' status tests can both
+    // be true, and `else if` makes that
     // structural rather than value-dependent. The chain form is the belt and not
     // the load — measured, converting this arm to a standalone `if` leaves both of
     // those suites green — so keep it anyway rather than resting the pins on the
@@ -625,9 +625,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `undefined`.
     //
     // Its WORDING is not contract-fixed, the emission table having no row for this
-    // state, but it is not free to edit either. FOUR pins hold this string, enumerated so an editor knows
-    // which one will redden: `/\S/` for non-emptiness (the renderer prints
-    // `[severity] id: message` and nothing else); `details.modified` must stay
+    // state, but it is not free to edit either. FOUR pins hold this string,
+    // enumerated so an editor knows which one will redden: `/\S/` for
+    // non-emptiness (the renderer prints `[severity] id: message` and nothing
+    // else); `details.modified` must stay
     // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
     // (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`) and the
     // literal `undefined`. Both sweeps are broader than the contract deliberately: a
@@ -639,10 +640,11 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // widening it.
     //
     // It also carries no command token, which is measured rather than asserted:
-    // under the mutation that makes this arm fire in the drift test's fixture, all
-    // eight of that test's command tokens pass on this text. The unresolved-copy
-    // rule scopes the no-command rule to the DRIFT finding's body, so no oracle
-    // holds it here — but that test's sweeps do read this message under that mutation, so an edit adding a `qfai`
+    // under the mutation that makes this arm fire in the repair-text test's
+    // fixture, all eight of that test's command tokens pass on this text. The
+    // unresolved-copy rule scopes the no-command rule to the DRIFT finding's
+    // body, so no oracle holds it here — but the repair-text test's sweeps do
+    // read this message under that mutation, so an edit adding a `qfai`
     // subcommand to it would surface there and not here.
     addCheck(checks, {
       id: "workflows.integrity",

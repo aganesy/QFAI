@@ -100,8 +100,8 @@ comment names the form.
   basename allowlist.
 - The three implementations hold the same pattern set. Changing one means
   changing the other two and this file in the same change.
-- The pre-build lint also rejects a `REQ-` or `TDD-` ID of any number in a
-  source comment. That rule enforces `documentation-clarity.md` § 1, not this
+- The pre-build lint also rejects a `REQ-` or `TDD-` ID with any four-digit
+  number in a source comment. That rule enforces `documentation-clarity.md` § 1, not this
   file, so the other two guards do not carry it.
 
 Where each runs:
