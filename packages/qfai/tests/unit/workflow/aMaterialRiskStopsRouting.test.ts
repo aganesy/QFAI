@@ -3,6 +3,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
   ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
@@ -60,8 +61,8 @@ function routeWithRisk(signal: string) {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "add-feature",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Change how user records are stored.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -102,7 +103,7 @@ for (const [title, signal] of signals) {
     expect(actual).toEqual({
       state: "awaiting_input",
       questions: [{ kind: "decision", text: expectedText }],
-      events: ["question-opened", "binding-recorded", "unsettled-material-input"],
+      events: ["route-decided", "question-opened", "binding-recorded", "unsettled-material-input"],
     });
   });
 }

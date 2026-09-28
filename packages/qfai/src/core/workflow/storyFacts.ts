@@ -53,6 +53,14 @@ export function changeRequestsOf(decisions: string): NonNullable<WorkflowFacts["
     .map((row) => ({ rowId: row.row.id, inForce: row.inForce, paths: row.refs }));
 }
 
+// Each `decisions.md` row and whether it is in force: a change request in force, or any other row
+// the table records as DONE.
+export function decisionRowsOf(decisions: string): NonNullable<WorkflowFacts["decisionRows"]> {
+  return parseRecordTable(decisions, "decisions")
+    .rows.map(classifyRecordRow)
+    .map((row) => ({ rowId: row.row.id, inForce: row.inForce || row.row.status === "DONE" }));
+}
+
 // The bound flow's obligations as the tree and its tests read now: its BF, AC and EX IDs, the
 // examples a test annotates, whether an acceptance-layer obligation is unmet, and whether a UI
 // contract serves the flow.

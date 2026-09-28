@@ -20,6 +20,7 @@ import {
   workflow,
   write,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 export const FLOW_ID = "BF-0001";
 export const STORY_ID = "US-0001-0001";
@@ -43,8 +44,8 @@ const ATDD_EVIDENCE = ".qfai/evidence/atdd-BF-0001.md";
 
 /** The routing proposal: one new story that creates its business flow. */
 export const FEATURE_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "add-feature",
+  requestKind: "routed",
+  extraction: extractionFor("add-feature"),
   goal: "Let each customer register up to five notification addresses.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],

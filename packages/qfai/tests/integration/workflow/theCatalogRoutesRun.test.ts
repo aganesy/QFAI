@@ -7,6 +7,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planFacts } from "../../../src/core/workflow/observe.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -28,8 +29,8 @@ async function planOf(route: string, writeScope: string[]): Promise<NonNullable<
 
 function proposal(route: string, flows: string[], scope: string[] = []): Proposal {
   return {
-    requestKind: "change",
-    candidateRoute: route,
+    requestKind: "routed",
+    extraction: extractionFor(route),
     goal: "Serve the request.",
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: [],

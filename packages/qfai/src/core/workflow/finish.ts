@@ -5,6 +5,7 @@ import {
   isRunChange,
   refusedInput,
 } from "./common.js";
+import { carries } from "./modifiers.js";
 import { endsAtTriageClose, flowBindingOf, runsVerifyBlock } from "./stages.js";
 import { ownerOfSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
@@ -117,6 +118,14 @@ function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
         !isAuthorOrRecommender(actorHistory, review.agentInstance),
     );
   return independentPass ? [] : unmetOf("review-missing", ["qa-gatekeeper"]);
+}
+
+// A run under `gate:release` completes only once a release approval is recorded. While the
+// release question is open, the run's wait is what `finish` names.
+function releaseUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  if (!carries(snapshot, "gate:release") || snapshot.releaseApproval) return [];
+  const asking = (snapshot.openQuestions ?? []).some((question) => question.purpose === "release");
+  return asking ? [] : unmetOf("release-unapproved", ["gate:release"]);
 }
 
 function inForceChangeRequests(facts: WorkflowFacts) {
@@ -235,6 +244,7 @@ function completionUnmet(
     ...reviewUnmet(snapshot),
     ...validateGate(snapshot, failingFindings(completion)),
     ...scopeUnmet(snapshot, facts, completion),
+    ...releaseUnmet(snapshot),
     ...debtUnmet(snapshot, completion),
     ...driftUnmet(snapshot, completion),
     ...unmetOf("uncommitted", completion.uncommittedPaths),
@@ -281,13 +291,15 @@ export function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): 
   const receipts: WorkflowGateReceipt[] = [
     { gateId: "validate", verdict, trustLevel: "cli_observed" },
   ];
+  const adopted = snapshot.adopted?.length ? { adopted: snapshot.adopted } : {};
   if (unmet.length > 0 || run.state !== "ready") {
-    return { verdict: { ok: true, run, unmet, ...delivery, receipts }, events: [] };
+    return { verdict: { ok: true, run, unmet, ...delivery, receipts, ...adopted }, events: [] };
   }
   const completed = { ...run, state: "completed", sequence: run.sequence + 1 };
   const validate = { verdict, findings: failing, trustLevel: "cli_observed" as const };
+  const target = completionTarget;
   return {
-    verdict: { ok: true, run: completed, target: completionTarget, unmet, ...delivery, receipts },
+    verdict: { ok: true, run: completed, target, unmet, ...delivery, receipts, ...adopted },
     events: [{ type: "validated-final-result-and-target", validate }],
   };
 }

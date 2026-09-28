@@ -9,6 +9,7 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("Decide accept of a routing result whose proposal passes every check", () => {
   const boundedPlan = {
@@ -38,8 +39,8 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
       expectedSequence: 2,
       outcome: "accepted",
       proposal: {
-        requestKind: "change",
-        candidateRoute: "add-feature",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Reject an empty notification email with a clear message.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },

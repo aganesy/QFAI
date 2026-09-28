@@ -1,3 +1,5 @@
+import type { WorkflowExtraction } from "./extraction.js";
+import type { WorkflowModifierEntry } from "./modifiers.js";
 import type { WorkflowMeasurement } from "./parse.js";
 import type {
   NormativeReferenceKind,
@@ -29,6 +31,27 @@ export interface WorkflowQuestion {
   story?: WorkflowStorySlot;
   // On a question a story-authoring stage opened: its answer authorizes that stage's change.
   changeRequest?: true;
+  // On a question the core opens itself: which route to take, whether to run the plan, or
+  // whether to release.
+  purpose?: "route" | "plan" | "release";
+}
+
+// A decision a step took itself rather than put to the operator, and why.
+export interface WorkflowAdopted {
+  step: string;
+  decision: string;
+  reason: string;
+}
+
+// A route the unsure reading of a request could take, with its plan and the rule that gave it.
+export interface WorkflowRouteCandidate {
+  route: string;
+  rule: number | null;
+  clause: number;
+  plan: WorkflowPlan;
+  flowId?: string;
+  // The route's default modifiers, which the run gains when the route is chosen.
+  modifiers: WorkflowModifierEntry[];
 }
 
 // The run's own view of the bound flow's obligations when a work order was issued.
@@ -86,6 +109,17 @@ export interface WorkflowEvent {
   recordsAtIssue?: WorkflowRecordsAtIssue;
   // On an accepted story-authoring result: the `decisions.md` rows it appended.
   appendedRows?: string[];
+  // On `route-decided`: the route, the decision rule that chose it (`null` for the fallback),
+  // and the extraction it was chosen from.
+  route?: string;
+  rule?: number | null;
+  extraction?: WorkflowExtraction;
+  // The modifiers this event adds to the run.
+  modifiers?: WorkflowModifierEntry[];
+  // The decisions this event records as adopted.
+  adopted?: WorkflowAdopted[];
+  // On routing that asks which route to take: the candidate routes.
+  candidates?: WorkflowRouteCandidate[];
 }
 
 // A path an in-force change request changed outside the run, admitted into the run change
@@ -174,6 +208,7 @@ export type UnmetCondition =
   | "gate-failed"
   | "diff-out-of-scope"
   | "approval-unanswered"
+  | "release-unapproved"
   | "debt-open"
   | "tool-drift"
   | "policy-drift"
@@ -240,6 +275,8 @@ export interface WorkflowWorkOrder {
   requiredReviewerRoles?: string[];
   actorHistory?: WorkflowActor[];
   settled?: WorkflowSettled;
+  // The run's modifiers when the work order was issued.
+  modifiers?: string[];
 }
 
 export interface WorkflowActor {
@@ -287,6 +324,8 @@ export interface WorkflowVerdict {
   classedReceipts?: WorkflowReceiptClass[];
   retry?: { attempt: number; nextDelaySeconds: number };
   halt?: WorkflowHalt;
+  // At `finish`: every decision the run adopted, which the completion report lists.
+  adopted?: WorkflowAdopted[];
   error?:
     | { code: "invalid-input"; message: string; reasons?: InputRefusal[] }
     | {
@@ -332,7 +371,8 @@ export type InputRefusalReason =
   | "record-unauthorized"
   | "rule-changed"
   | "pass-not-allowed"
-  | "pass-obligation-open";
+  | "pass-obligation-open"
+  | "decision-unasked";
 
 export interface InputRefusal {
   reason: InputRefusalReason;
@@ -404,6 +444,7 @@ export interface WorkflowSnapshot {
   scopeDigest?: string;
   plan?: {
     route: string;
+    goal?: string;
     stages: PlanStages;
     writeScope?: string[];
     riskSignals?: string[];
@@ -473,6 +514,18 @@ export interface WorkflowSnapshot {
   appendedRows?: string[];
   // The bounded adjustments `resume` made to the run's starting state.
   startAdjustments?: WorkflowStartAdjustment[];
+  // The route the decision rules chose and the rule that chose it.
+  routeDecision?: { route: string; rule: number | null };
+  // The facts routing read out of the request.
+  extraction?: WorkflowExtraction;
+  // Each modifier the run carries, with where it came from. It only grows.
+  modifiers?: WorkflowModifierEntry[];
+  // The candidate routes while the question choosing among them is open.
+  routeCandidates?: WorkflowRouteCandidate[];
+  // The authorization that approved the release, once one is recorded.
+  releaseApproval?: string;
+  // Every decision the run adopted rather than put to the operator.
+  adopted?: WorkflowAdopted[];
 }
 
 export interface WorkflowAuthorizationRef {
@@ -533,14 +586,13 @@ export interface WorkflowNewStory {
 
 export interface WorkflowProposal {
   requestKind: string;
-  candidateRoute: string | null;
+  extraction: WorkflowExtraction;
   goal?: string;
   affectedFlowIds?: string[];
   riskSignals?: string[];
   unresolvedQuestions?: unknown[];
   proposedWriteScope?: string[];
   protectedTargets?: string[];
-  confidence?: number;
   rationale?: string;
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
@@ -560,6 +612,8 @@ export interface WorkflowResult {
   bindings?: WorkflowBinding[];
   notRun?: WorkflowNotRun;
   passes?: WorkflowPass[];
+  adopted?: WorkflowAdopted[];
+  raise?: { modifier: string; reason: string }[];
   debts?: WorkflowDebt[];
   closure?: WorkflowClosure;
   seamRequest?: { targetTestId: string };
@@ -632,7 +686,14 @@ export interface WorkflowFacts {
   // Whether a BF or AC of the bound flow still lacks its acceptance-layer test, which keeps
   // `atdd-author` from passing.
   acceptanceObligationsUnmet?: boolean;
-  plans?: Record<string, { route: string; stages: PlanStages }>;
+  plans?: Record<
+    string,
+    { route: string; stages: PlanStages; family?: string; defaultModifiers?: string[] }
+  >;
+  // The always-required reviewers of the `heavy` review profile, which `review:heavy` adds.
+  heavyReviewerRoles?: string[];
+  // Each `decisions.md` row and whether it is in force.
+  decisionRows?: { rowId: string; inForce: boolean }[];
   // The business flows the story tree declares.
   flows?: string[];
   // Where the project keeps its discussion packs.

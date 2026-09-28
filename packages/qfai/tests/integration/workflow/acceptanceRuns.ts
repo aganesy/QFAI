@@ -18,6 +18,7 @@ import {
   workflow,
   write,
 } from "../../e2e/workflowJourney.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 export { EXAMPLE_IDS, FLOW_ID };
 
@@ -66,7 +67,7 @@ export async function withOtherFlows(root: string): Promise<void> {
 }
 
 const base = {
-  requestKind: "change",
+  requestKind: "routed",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
   riskSignals: [],
@@ -109,7 +110,7 @@ export function proposalFor(route: string, extra: object = {}): object {
       ],
     },
   };
-  return { ...base, candidateRoute: route, ...byRoute[route], ...extra };
+  return { ...base, extraction: extractionFor(route), ...byRoute[route], ...extra };
 }
 
 /**

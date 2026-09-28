@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planFacts } from "../../../src/core/workflow/observe.js";
 import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Facts = Parameters<typeof decide>[2];
@@ -260,8 +261,8 @@ describe("a route proposal names no stage and no step", () => {
     testObservation: "not_applicable",
     actor: { agentInstance: "router-1" },
     proposal: {
-      requestKind: "change",
-      candidateRoute: "add-feature",
+      requestKind: "routed",
+      extraction: extractionFor("add-feature"),
       goal: "Export an order as CSV.",
       expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
       observedRefs: [],

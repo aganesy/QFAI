@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const bugfixStages = [
   planStage("bugfix-diagnose", "diagnose"),
@@ -54,8 +55,8 @@ function routeRestoringACheck() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "fix-defect",
+          requestKind: "routed",
+          extraction: extractionFor("fix-defect"),
           goal: "Restore the permission check on the export endpoint.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],

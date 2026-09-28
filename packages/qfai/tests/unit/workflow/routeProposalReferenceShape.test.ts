@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs: unknown[] }) {
   const snapshot = {
@@ -29,8 +30,8 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
             expectedSequence: 2,
             outcome: "accepted",
             proposal: {
-              requestKind: "change",
-              candidateRoute: "add-feature",
+              requestKind: "routed",
+              extraction: extractionFor("add-feature"),
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
               newStories: [

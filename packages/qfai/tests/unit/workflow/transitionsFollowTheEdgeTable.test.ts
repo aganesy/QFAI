@@ -6,6 +6,7 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import type { WorkflowDecision } from "../../../src/core/workflow/decide.js";
 import { finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
 import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -59,8 +60,8 @@ function routingProposal(
   }[] = [],
 ) {
   return {
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Return 404 for a missing export.",
     expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
     observedRefs: [],
@@ -197,7 +198,7 @@ it("capture-request", () => {
 it("plan-accepted", () => {
   expect(edge(acceptRouting("accepted", routingProposal()))).toEqual({
     state: "ready",
-    events: ["binding-recorded", "plan-accepted"],
+    events: ["route-decided", "binding-recorded", "plan-accepted"],
   });
 });
 
@@ -212,7 +213,7 @@ it("unsettled-material-input", () => {
 
   expect(edge(acceptRouting("accepted", routingProposal([story])))).toEqual({
     state: "awaiting_input",
-    events: ["question-opened", "unsettled-material-input"],
+    events: ["route-decided", "question-opened", "unsettled-material-input"],
   });
 });
 
