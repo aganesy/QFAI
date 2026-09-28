@@ -16,10 +16,7 @@ const directPlan = {
 };
 const bugfixPlan = {
   route: "bugfix",
-  stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-verify", "verify", "always"),
-  ],
+  stages: [planStage("bugfix-diagnose", "diagnose"), planStage("bugfix-verify", "verify")],
 };
 
 function acceptChangedFiles(

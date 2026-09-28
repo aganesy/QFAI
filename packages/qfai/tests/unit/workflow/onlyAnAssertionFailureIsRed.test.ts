@@ -11,10 +11,10 @@ type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 const plan = {
   route: "bounded-change",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const flowBinding = { flowId: "BF-0007" };

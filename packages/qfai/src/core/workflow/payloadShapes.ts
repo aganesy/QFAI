@@ -105,8 +105,6 @@ export const ROUTE_PROPOSAL = object(
     ),
     proposedWriteScope: list(text),
     protectedTargets: list(text),
-    requiredStages: list(text),
-    optionalSteps: list(text),
     rationale: text,
     confidence: { kind: "number" },
   },
@@ -122,7 +120,6 @@ export const ROUTE_PROPOSAL = object(
     "newStories",
     "proposedWriteScope",
     "protectedTargets",
-    "requiredStages",
     "rationale",
   ],
 );
@@ -173,6 +170,7 @@ export const STAGE_RESULT = object(
         everyField({ kind: oneOf("reused"), receiptRef: text }),
       ],
     },
+    passes: list(everyField({ step: text, reason: text, evidenceRef: text })),
     red: everyField({
       testId: text,
       failureKind: oneOf("assertion", "collection", "import", "startup", "timeout"),

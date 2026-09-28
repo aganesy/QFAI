@@ -56,7 +56,6 @@ function narrowed() {
     newStories: [],
     proposedWriteScope: ["src/api/**"],
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   };
   const plans = { "bounded-change": { route: "bounded-change", stages: bounded } };
   expect(run.accept({ proposal }, { flows: [FLOW], plans }).verdict.run?.state).toBe("ready");

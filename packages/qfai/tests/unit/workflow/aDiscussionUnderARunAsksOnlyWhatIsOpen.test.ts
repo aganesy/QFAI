@@ -9,9 +9,9 @@ type Snapshot = Parameters<typeof decide>[0];
 type Decision = ReturnType<typeof decide>;
 
 const boundedStages = [
-  planStage("bounded-sdd-delta", "sdd_delta", "always"),
-  planStage("bounded-implement", "implement", "always"),
-  planStage("bounded-verify", "verify", "always"),
+  planStage("bounded-sdd-delta", "sdd_delta"),
+  planStage("bounded-implement", "implement"),
+  planStage("bounded-verify", "verify"),
 ];
 const facts = {
   plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
@@ -54,7 +54,6 @@ function route(): Decision {
           newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

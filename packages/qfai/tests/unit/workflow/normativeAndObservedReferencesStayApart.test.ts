@@ -52,7 +52,6 @@ it("Decide accept of a routing result with normative references, observed refere
                 },
               ],
               proposedWriteScope: ["src/notify/**"],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },
@@ -63,8 +62,8 @@ it("Decide accept of a routing result with normative references, observed refere
             feature: {
               route: "feature",
               stages: [
-                { stageInstanceId: "sdd", stageKind: "sdd", when: "always" },
-                { stageInstanceId: "verify", stageKind: "verify", when: "always" },
+                { stageInstanceId: "sdd", stageKind: "sdd" },
+                { stageInstanceId: "verify", stageKind: "verify" },
               ],
             },
           },

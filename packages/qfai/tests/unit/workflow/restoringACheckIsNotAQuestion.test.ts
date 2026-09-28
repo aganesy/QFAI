@@ -6,10 +6,10 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
 const bugfixStages = [
-  planStage("bugfix-diagnose", "diagnose", "always"),
-  planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
-  planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
-  planStage("bugfix-verify", "verify", "always"),
+  planStage("bugfix-diagnose", "diagnose"),
+  planStage("bugfix-acceptance", "acceptance"),
+  planStage("bugfix-implement", "implement"),
+  planStage("bugfix-verify", "verify"),
 ];
 const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
 const facts = {
@@ -18,7 +18,7 @@ const facts = {
   acceptanceObligationsUnmet: true,
   reviewerRoles: {
     "implement-diagnose": runtimeHeavy,
-    "implement-regression-fix": runtimeHeavy,
+    "implement-tdd": runtimeHeavy,
     "atdd-scaffold": ["completion-reviewer"],
     "atdd-author": ["completion-reviewer"],
     "verify-context": runtimeHeavy,
@@ -28,8 +28,8 @@ const facts = {
 };
 const flowBinding = { flowId: "BF-0007" };
 const diagnosis = {
-  verdict: "regression",
-  reproductionRef: "evidence/regression.json",
+  verdict: "missing-test",
+  reproductionRef: "evidence/missing-check.json",
   matchedIds: ["EX-0007-0002-01"],
 };
 
@@ -65,7 +65,6 @@ function routeRestoringACheck() {
           newStories: [],
           proposedWriteScope: ["src/export/**"],
           protectedTargets: [],
-          requiredStages: ["diagnose", "verify"],
         },
       },
     },
@@ -105,8 +104,8 @@ it("A bugfix routing result whose only risk signal is authorization-restored", (
   const heavy = ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"];
   expect(rolesByStage).toEqual([
     [["implement-diagnose"], heavy],
-    [["atdd-scaffold", "atdd-author"], heavy],
-    [["implement-regression-fix"], heavy],
+    [["atdd-scaffold", "atdd-credentials", "atdd-author"], heavy],
+    [["implement-tdd", "implement-checkpoint"], heavy],
     [["verify-context", "verify-qfai-gate", "verify-repo-gate"], runtimeHeavy],
   ]);
 });

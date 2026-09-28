@@ -9,16 +9,17 @@ import {
 } from "./common.js";
 import { activeStages, planNotReady } from "./stages.js";
 import {
-  activeSteps,
   ownerOfStep,
   repairOwnerOf,
   SEAM_STEP,
   servingStage,
   servingSteps,
+  stageSteps,
   stepRefs,
 } from "./steps.js";
 import type {
   PlanStages,
+  PlanStep,
   WorkflowDecision,
   WorkflowEvent,
   WorkflowFacts,
@@ -163,9 +164,7 @@ function recordAreasOf(
     case "regression_fix":
       return implement;
     case "test_fix":
-      return (workOrder.steps ?? []).some((step) => ownerOfStep(step.name) === "qfai-atdd")
-        ? atdd
-        : implement;
+      return [...atdd, ...implement];
     case "acceptance":
       return atdd;
     case "sdd_append": {
@@ -188,10 +187,14 @@ function baseWorkOrder(
   plan: Plan,
   stage: PlanStage,
   facts: WorkflowFacts,
-  steps: string[],
+  steps: PlanStep[],
 ): WorkflowWorkOrder {
   const attempt = (snapshot.attempts?.[stage.stageInstanceId] ?? 0) + 1;
-  const reviewerRoles = requiredReviewerRoles(steps, plan, facts);
+  const reviewerRoles = requiredReviewerRoles(
+    steps.map((step) => step.name),
+    plan,
+    facts,
+  );
   const actorHistory = snapshot.actorHistory ?? [];
   const receiptRefs = snapshot.receiptRefs ?? [];
   return {
@@ -265,8 +268,16 @@ function obligationsOf(flowId: string | undefined, facts: WorkflowFacts) {
   };
 }
 
-// SIMPLIFIED: a stage whose predicate does not hold is recorded as a receipt carrying
-// `not_applicable` and the predicate as its reason, when `next` issues the stage after it.
+// Why the run passed over a stage: a prototype stage runs only for a flow a UI contract serves,
+// and every other stage passed over belongs to a branch the diagnosis did not choose.
+function passedOverReason(stage: PlanStage): string {
+  return stage.stageKind === "prototype"
+    ? "no UI contract rule cites an example of the flow"
+    : "the diagnosis chose another branch";
+}
+
+// SIMPLIFIED: a stage the run passes over is recorded as a receipt carrying `not_applicable` and
+// the reason, when `next` issues the stage after it.
 // Lift when: the run evidence gains its own record of skipped stages.
 function skippedBefore(
   plan: Plan,
@@ -282,7 +293,7 @@ function skippedBefore(
     .map((stage) => ({
       type: "receipt-recorded",
       stageInstanceId: stage.stageInstanceId,
-      notRun: { kind: "not_applicable", reason: `predicate ${stage.when ?? "none"} does not hold` },
+      notRun: { kind: "not_applicable", reason: passedOverReason(stage) },
     }));
 }
 
@@ -342,25 +353,20 @@ function planRevision(
 }
 
 // The stage `next` issues, and the steps it runs: the first selected stage not yet accepted,
-// with its active steps. While a repair is open, the first active stage holding a step that
-// serves the next finding's owner, with only the steps that serve it; the stage that found it
-// runs whole. A repair owned by no active stage never reaches here: `accept` sends it back to
-// routing. A stage none of whose steps holds is not issued.
+// with every step. While a repair is open, the first active stage holding a step that serves the
+// next finding's owner, with only the steps that serve it; the stage that found it runs whole. A
+// repair owned by no active stage never reaches here: `accept` sends it back to routing.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
-  plan: Plan,
   selected: PlanStages,
-): { stage?: PlanStage | undefined; steps: string[]; refused?: true } {
+): { stage?: PlanStage | undefined; steps: PlanStep[]; refused?: true } {
   const owner = repairOwnerOf(snapshot);
-  const serving = owner ? servingStage(selected, owner, plan, snapshot.diagnosis) : undefined;
+  const serving = owner ? servingStage(selected, owner) : undefined;
   if (owner && !serving) return { steps: [], refused: true };
   const stage = serving ?? selected[(snapshot.acceptedStages ?? []).length];
   if (!stage) return { steps: [] };
   const detecting = stage.stageInstanceId === snapshot.repairRequest?.stageInstanceId;
-  const steps =
-    owner && !detecting
-      ? servingSteps(stage, owner, plan, snapshot.diagnosis)
-      : activeSteps(stage, plan, snapshot.diagnosis);
+  const steps = owner && !detecting ? servingSteps(stage, owner) : stageSteps(stage);
   const declared = (stage.steps ?? []).length > 0;
   return declared && steps.length === 0 ? { steps, refused: true } : { stage, steps };
 }
@@ -372,7 +378,7 @@ function stageWorkOrder(
   stage: PlanStage,
   selected: PlanStages,
   facts: WorkflowFacts,
-  steps: string[],
+  steps: PlanStep[],
 ): WorkflowDecision {
   const targeted = withTarget(snapshot, baseWorkOrder(snapshot, plan, stage, facts, steps));
   if ("verdict" in targeted) return targeted;
@@ -404,7 +410,7 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   if (!plan || planNotReady(snapshot, facts)) return refusedInput(run, "The plan is not ready.");
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
   const selected = activeStages(plan, snapshot, facts);
-  const next = stageToIssue(snapshot, plan, selected);
+  const next = stageToIssue(snapshot, selected);
   if (next.refused) return refusedInput(run, "The work order is not ready.");
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
   return stageWorkOrder(snapshot, plan, next.stage, selected, facts, next.steps);

@@ -13,10 +13,10 @@ type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 const plan = {
   route: "bounded-change",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const facts = { acceptanceObligationsUnmet: true };

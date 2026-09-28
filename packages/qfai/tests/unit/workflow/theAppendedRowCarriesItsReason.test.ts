@@ -8,10 +8,10 @@ import { planStage } from "./kindSteps.js";
 const plan = {
   route: "bugfix",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
-    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-sdd-append", "sdd_append"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
   ],
   writeScope: ["src/forms/**"],
 };

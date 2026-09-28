@@ -212,7 +212,6 @@ export const DISCOVERY_PROPOSAL = {
   newStories: [],
   proposedWriteScope: ["docs/**"],
   protectedTargets: [],
-  requiredStages: ["discussion"],
   rationale: "The request names no behaviour a story already states.",
 };
 
@@ -231,7 +230,6 @@ export const FEATURE_PROPOSAL = {
     },
   ],
   proposedWriteScope: [".qfai/spec/02_business-flow/**", "src/**"],
-  requiredStages: ["sdd", "implement", "verify"],
 };
 
 /**

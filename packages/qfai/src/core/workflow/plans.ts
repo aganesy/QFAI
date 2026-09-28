@@ -25,7 +25,6 @@ export interface PlanStage {
   id: string;
   kind: string;
   steps: PlanStep[];
-  when: string;
   after: string[];
   effects: string[];
 }
@@ -44,6 +43,7 @@ export type PlanRefusalReason =
   | "effects"
   | "out-of-vocabulary"
   | "kind-mismatch"
+  | "pass-through"
   | "after-missing"
   | "cycle"
   | "unreachable"
@@ -79,8 +79,8 @@ export function planDigestKey(route: WorkflowRoute): string {
 }
 
 const PLAN_KEYS = ["route", "stages"];
-const STAGE_KEYS = ["id", "kind", "steps", "when", "after", "effects"];
-const STEP_KEYS = ["step", "when"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "effects"];
+const STEP_KEYS = ["step", "passThrough"];
 
 const SDD_STEPS = ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "common-design-md"];
 
@@ -114,18 +114,22 @@ const KINDS: Record<string, string[]> = {
 // `implement-seam` is a step of the vocabulary that no plan stage may run.
 const STEPS = new Set([...Object.values(KINDS).flat(), SEAM_STEP]);
 
-const PREDICATES = [
-  "always",
-  "missing_example_needed",
-  "diagnosis_missing_test",
-  "test_defect_found",
-  "regression_found",
-  "acceptance_obligations_unmet",
-  "prototype_decision_needed",
-  "full_discussion_needed",
+// The steps a plan may mark pass-through: each runs, and passes with evidence when it can show
+// it has nothing to write.
+const PASS_THROUGH = [
+  "sdd-flow",
+  "sdd-contract",
+  "sdd-cycle",
+  "sdd-story",
+  "common-design-md",
+  "atdd-credentials",
+  "atdd-author",
+  "discussion-uiux",
+  "atdd-test-fix",
+  "implement-test-fix",
+  "maintain-edit",
+  "verify-change-note",
 ];
-
-const STEP_PREDICATES = ["proposed", "test_defect_acceptance_layer", "test_defect_example_layer"];
 
 const EFFECTS = [
   "push",
@@ -157,25 +161,25 @@ function vocabularyRefusals(stage: PlanStage, refuse: Refuse) {
   const kind = KINDS[stage.kind];
   const outside = [
     ...(kind ? [] : [stage.kind]),
-    ...(PREDICATES.includes(stage.when) ? [] : [stage.when]),
-    ...stage.steps.flatMap((step) => [
-      ...(STEPS.has(step.name) ? [] : [step.name]),
-      ...(step.when === undefined || STEP_PREDICATES.includes(step.when) ? [] : [step.when]),
-    ]),
+    ...stage.steps.flatMap((step) => (STEPS.has(step.name) ? [] : [step.name])),
   ];
   for (const name of outside) refuse("out-of-vocabulary", name);
+  for (const step of stage.steps) {
+    if (step.passThrough && !PASS_THROUGH.includes(step.name)) refuse("pass-through", step.name);
+  }
   if (outside.length > 0 || !kind) return;
   if (stage.steps.some((step) => !kind.includes(step.name))) refuse("kind-mismatch", stage.id);
 }
 
-// One step entry: a step name, or `{ step, when }` for a step with its own predicate.
+// One step entry: a step name, or `{ step, passThrough }` for a step that may pass.
 function stepOf(value: unknown, refuse: Refuse): PlanStep | null {
   if (typeof value === "string") return { name: value };
   if (!isRecord(value)) return null;
   unknownKeys(value, STEP_KEYS, refuse);
-  const { step, when } = value;
-  if (typeof step !== "string" || (when !== undefined && typeof when !== "string")) return null;
-  return when === undefined ? { name: step } : { name: step, when };
+  const { step, passThrough } = value;
+  if (typeof step !== "string") return null;
+  if (passThrough === undefined) return { name: step };
+  return typeof passThrough === "boolean" ? { name: step, passThrough } : null;
 }
 
 // A stage's steps, or undefined when the list is empty, holds a malformed entry or repeats one.
@@ -191,7 +195,7 @@ function stepsOf(value: unknown, refuse: Refuse): PlanStep[] | undefined {
 function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!isRecord(value)) return refused(refuse, "shape", "stages");
   unknownKeys(value, STAGE_KEYS, refuse);
-  const { id, kind, when } = value;
+  const { id, kind } = value;
   const steps = stepsOf(value.steps, refuse);
   const after = value.after === undefined ? [] : stringList(value.after);
   const effects = value.effects === undefined ? [] : stringList(value.effects);
@@ -201,8 +205,8 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
-  if (typeof when !== "string" || !effects) return refused(refuse, "shape", id);
-  const stage = { id, kind, steps, when, after, effects };
+  if (!effects) return refused(refuse, "shape", id);
+  const stage = { id, kind, steps, after, effects };
   vocabularyRefusals(stage, refuse);
   return stage;
 }

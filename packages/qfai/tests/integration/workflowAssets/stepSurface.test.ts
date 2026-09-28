@@ -22,19 +22,19 @@ import {
 } from "../../helpers/shippedAssistant.js";
 
 /** Every step each plan kind runs, across the five built-in plans, in first-seen order. */
-async function kindSteps(kinds: string[]): Promise<{ names: string[]; proposed: string[] }> {
+async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
   const names: string[] = [];
-  const proposed: string[] = [];
+  const passThrough: string[] = [];
   for (const route of PLAN_ROUTES) {
     for (const stage of await planStageSteps(route)) {
       if (!kinds.includes(stage.kind)) continue;
       for (const step of stage.steps) {
         if (!names.includes(step.name)) names.push(step.name);
-        if (step.when === "proposed" && !proposed.includes(step.name)) proposed.push(step.name);
+        if (step.passThrough && !passThrough.includes(step.name)) passThrough.push(step.name);
       }
     }
   }
-  return { names, proposed };
+  return { names, passThrough };
 }
 
 /** The steps of one plan's stages of one kind, as names. */
@@ -159,7 +159,7 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
-  it("runs only qfai-discussion's steps in discovery, the UI sidecars when proposed", async () => {
+  it("runs only qfai-discussion's steps in discovery, the UI sidecar a pass-through step", async () => {
     const owned = await skillSteps("qfai-discussion");
     expect(owned).toEqual([
       "discussion-research",
@@ -170,7 +170,7 @@ describe("the skills a workflow run's steps belong to", () => {
     ]);
     const discussion = await kindSteps(["discussion"]);
     expect(discussion.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect(discussion.proposed).toEqual(["discussion-uiux"]);
+    expect(discussion.passThrough).toEqual(["discussion-uiux"]);
   });
 
   // QFAI:AC-0001-0211-02

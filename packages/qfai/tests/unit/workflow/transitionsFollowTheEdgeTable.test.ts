@@ -70,7 +70,6 @@ function routingProposal(
     newStories,
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   };
 }
 
@@ -317,9 +316,9 @@ it("scope-or-obligation-revision", () => {
   const bugfixPlan = {
     route: "bugfix",
     stages: [
-      planStage("bugfix-diagnose", "diagnose", "always"),
-      planStage("bugfix-implement", "implement", "always"),
-      planStage("bugfix-verify", "verify", "always"),
+      planStage("bugfix-diagnose", "diagnose"),
+      planStage("bugfix-implement", "implement"),
+      planStage("bugfix-verify", "verify"),
     ],
   };
   const ready = {

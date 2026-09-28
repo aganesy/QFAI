@@ -19,9 +19,9 @@ function plan(stageKind: string) {
     route: "bounded-change",
     writeScope: ["src/**", "tests/**", ".qfai/spec/02_business-flow/**"],
     stages: [
-      planStage("sdd-delta", "sdd_delta", "always"),
-      planStage("middle", stageKind, "always"),
-      planStage("verify", "verify", "always"),
+      planStage("sdd-delta", "sdd_delta"),
+      planStage("middle", stageKind),
+      planStage("verify", "verify"),
     ],
   };
 }

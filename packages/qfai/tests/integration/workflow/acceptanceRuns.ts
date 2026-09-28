@@ -82,13 +82,11 @@ export function proposalFor(route: string, extra: object = {}): object {
       goal: "Fix the typo in the README.",
       affectedFlowIds: [],
       proposedWriteScope: ["README.md"],
-      requiredStages: ["maintenance", "verify"],
     },
     bugfix: {
       goal: "A sixth address is accepted again; refuse it.",
       affectedFlowIds: [FLOW_ID],
       proposedWriteScope: ["src/**", "tests/**"],
-      requiredStages: ["diagnose", "verify"],
     },
     "bounded-change": {
       goal: "Allow ten notification addresses per customer.",
@@ -98,7 +96,6 @@ export function proposalFor(route: string, extra: object = {}): object {
         "src/**",
         "tests/**",
       ],
-      requiredStages: ["sdd_delta", "implement", "verify"],
     },
   };
   return { ...base, candidateRoute: route, ...byRoute[route], ...extra };

@@ -68,25 +68,25 @@ export const PLAN_STEP_OWNERS = [
 /** The five built-in plans, one per route. */
 export const PLAN_ROUTES = ["direct", "bugfix", "bounded-change", "feature", "discovery"] as const;
 
-/** One step of a built-in plan stage, with the predicate of its own it carries, if any. */
+/** One step of a built-in plan stage, and whether the plan marks it pass-through. */
 export interface ShippedPlanStep {
   name: string;
-  when?: string;
+  passThrough?: boolean;
 }
 
 function planStepOf(entry: unknown): ShippedPlanStep[] {
   if (typeof entry === "string") return [{ name: entry }];
   if (typeof entry !== "object" || entry === null || !("step" in entry)) return [];
   const { step } = entry;
-  const when = "when" in entry ? entry.when : undefined;
+  const passThrough = "passThrough" in entry ? entry.passThrough : undefined;
   if (typeof step !== "string") return [];
-  return [typeof when === "string" ? { name: step, when } : { name: step }];
+  return [passThrough === true ? { name: step, passThrough } : { name: step }];
 }
 
-/** Each stage of a built-in plan: its ID, kind and predicate, and its steps in order. */
+/** Each stage of a built-in plan: its ID and kind, and its steps in order. */
 export async function planStageSteps(
   route: string,
-): Promise<{ id: string; kind: string; when: string; steps: ShippedPlanStep[] }[]> {
+): Promise<{ id: string; kind: string; steps: ShippedPlanStep[] }[]> {
   const parsed: unknown = parse(await readDefault(`workflows/${route}.yml`));
   const stages: unknown[] =
     typeof parsed === "object" && parsed !== null && "stages" in parsed
@@ -102,7 +102,6 @@ export async function planStageSteps(
       {
         id: String(record.id),
         kind: String(record.kind),
-        when: String(record.when),
         steps: steps.flatMap(planStepOf),
       },
     ];

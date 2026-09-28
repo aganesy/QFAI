@@ -93,30 +93,6 @@ function builtInPlanOf(proposal: WorkflowProposal, facts: WorkflowFacts) {
   return proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
 }
 
-function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
-  const required = proposal.requiredStages;
-  const plan = builtInPlanOf(proposal, facts);
-  const planKinds = (plan?.stages ?? []).map((stage) => stage.stageKind);
-  const omittedAlways = (plan?.stages ?? [])
-    .filter((stage) => stage.when === "always" && !required.includes(stage.stageKind))
-    .map((stage) => stage.stageKind);
-  const changeRoute = proposal.candidateRoute !== null && proposal.candidateRoute !== "discovery";
-  const omittedVerify = changeRoute && !required.includes("verify") ? ["verify"] : [];
-  const unknown = plan ? required.filter((kind) => !planKinds.includes(kind)) : [];
-  return [
-    ...new Set([...omittedAlways, ...omittedVerify, ...unknown, ...unproposable(proposal, facts)]),
-  ];
-}
-
-// Each optional step the proposal lists that no stage of its plan gates with `proposed`.
-function unproposable(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
-  const stages = builtInPlanOf(proposal, facts)?.stages ?? [];
-  const gated = stages.flatMap((stage) =>
-    (stage.steps ?? []).filter((step) => step.when === "proposed").map((step) => step.name),
-  );
-  return (proposal.optionalSteps ?? []).filter((step) => !gated.includes(step));
-}
-
 // Whether the proposal's plan has a stage that takes the bound flow as its target.
 function takesFlowTarget(proposal: WorkflowProposal, facts: WorkflowFacts): boolean {
   const plan = builtInPlanOf(proposal, facts);
@@ -175,7 +151,6 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     ...refusalsOf("scope-escape", proposal.requestKind === "change" ? [] : [proposal.requestKind]),
     ...refusalsOf("scope-escape", scope.filter(escapesRoot)),
     ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
-    ...refusalsOf("stage-set", stageSetGaps(proposal, facts)),
     ...refusalsOf("flow-binding", binding === undefined ? [] : [binding]),
   ];
 }
@@ -191,7 +166,6 @@ function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): Workflow
     expectedBehaviorRefs: proposal.expectedBehaviorRefs,
     observedRefs: proposal.observedRefs,
     ...(proposal.riskSignals?.length ? { riskSignals: proposal.riskSignals } : {}),
-    ...(proposal.optionalSteps?.length ? { optionalSteps: proposal.optionalSteps } : {}),
   };
 }
 
@@ -203,8 +177,6 @@ function routingShapeIsBroken(proposal: WorkflowProposal | undefined): boolean {
     (proposal.requestKind === "change" && !proposal.candidateRoute) ||
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
-    !Array.isArray(proposal.requiredStages) ||
-    (proposal.optionalSteps !== undefined && !Array.isArray(proposal.optionalSteps)) ||
     !Array.isArray(stories) ||
     (proposal.candidateRoute === "feature" && stories.length === 0) ||
     stories.some(

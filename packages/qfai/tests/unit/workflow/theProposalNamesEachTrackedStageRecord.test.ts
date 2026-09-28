@@ -13,7 +13,6 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 
 const STORY = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
@@ -53,7 +52,6 @@ function routeNaming(record?: string) {
             ...(record ? [record] : []),
           ],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

@@ -67,7 +67,6 @@ export const FEATURE_PROPOSAL = {
     "tests/**",
   ],
   protectedTargets: [],
-  requiredStages: ["sdd", "acceptance", "implement", "verify"],
   rationale: "A new capability that no story represents.",
 };
 

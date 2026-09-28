@@ -56,7 +56,6 @@ it("a routing result for an explanation only is refused, and the run stays in ro
     newStories: [],
     proposedWriteScope: [],
     protectedTargets: [],
-    requiredStages: [],
     rationale: "An explanation is not a change.",
   };
   const refused = await submit(

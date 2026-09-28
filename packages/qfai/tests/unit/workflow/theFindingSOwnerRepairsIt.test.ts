@@ -62,7 +62,8 @@ function issued(run: JournalRun) {
   return `${workOrder.stageInstanceId}#${String(workOrder.attempt)}@${steps}`;
 }
 
-const SDD_DELTA = "sdd-triage+sdd-story+sdd-gate";
+// The sdd_delta steps qfai-sdd owns, which a finding it owns is repaired with.
+const SDD_DELTA = "sdd-triage+sdd-flow+sdd-story+sdd-contract+sdd-gate";
 const IMPLEMENT = "implement-tdd+implement-checkpoint";
 const VERIFY = "verify-context+verify-qfai-gate+verify-repo-gate";
 

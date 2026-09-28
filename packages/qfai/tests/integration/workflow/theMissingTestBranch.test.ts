@@ -10,18 +10,20 @@ it("Load the shipped bugfix", async () => {
   const { bugfix } = await loadBuiltInPlans();
 
   expect({
-    stages: bugfix.stages.map((stage) => [stage.kind, stage.when]),
+    stages: bugfix.stages.map((stage) => stage.kind),
+    append: bugfix.stages[1]?.steps,
     last: bugfix.stages.at(-1)?.steps.map((step) => step.name),
   }).toEqual({
     stages: [
-      ["diagnose", "always"],
-      ["sdd_append", "missing_example_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "diagnosis_missing_test"],
-      ["regression_fix", "regression_found"],
-      ["test_fix", "test_defect_found"],
-      ["verify", "always"],
+      "diagnose",
+      "sdd_append",
+      "acceptance",
+      "implement",
+      "regression_fix",
+      "test_fix",
+      "verify",
     ],
+    append: [{ name: "sdd-story", passThrough: true }, { name: "sdd-gate" }],
     last: ["verify-context", "verify-qfai-gate", "verify-repo-gate"],
   });
 });

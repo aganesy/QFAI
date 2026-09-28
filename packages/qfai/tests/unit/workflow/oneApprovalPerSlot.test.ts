@@ -63,7 +63,6 @@ it("Two new stories open two CREATE questions in one routing round", () => {
         ],
         proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
-        requiredStages: ["sdd", "verify"],
         rationale: "Neither story exists in the current scope.",
       },
     },

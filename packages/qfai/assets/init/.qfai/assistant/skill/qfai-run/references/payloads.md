@@ -75,8 +75,6 @@ The routing work order's result carries the proposal.
     "newStories": [],
     "proposedWriteScope": ["src/checkout/**", "tests/checkout/**"],
     "protectedTargets": [],
-    "requiredStages": ["diagnose", "implement", "verify"],
-    "optionalSteps": [],
     "rationale": "A short reason a reviewer can check"
   }
 }
@@ -104,13 +102,8 @@ The routing work order's result carries the proposal.
   `.qfai/evidence/workflow/`, `.qfai/evidence/decision/`, or `decisions.md` or
   `open-questions.md` under `paths.specsDir`, and never overlaps a protected
   target. The run refuses any of these.
-- `optionalSteps` names each step the plan runs only when proposed that the
-  request needs: `sdd-flow`, `sdd-contract` or `common-design-md` for a story
-  change that touches a flow, a contract or `DESIGN.md`; `atdd-credentials`
-  for acceptance tests that sign in; `discussion-uiux` for a product with
-  screens. The run refuses a step the plan does not run that way. A stage that
-  finds it needs a step nobody proposed returns `needs_repair` naming that step
-  as `resolvingOwner`, and the run goes back to routing.
+- A proposal names no stage and no step. The route's plan fixes both, and the
+  run refuses `requiredStages` or `optionalSteps` as unknown keys.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
@@ -177,10 +170,21 @@ A routing or stage result carries a question as:
   "stageKind": "implement",
   "target": { "kind": "flow", "flowId": "BF-0002" },
   "steps": [
-    { "name": "implement-tdd", "path": ".qfai/assistant/step/implement-tdd/STEP.md" },
+    {
+      "name": "implement-tdd",
+      "path": ".qfai/assistant/step/implement-tdd/STEP.md",
+      "mode": null,
+      "passThrough": false,
+      "decisionPoint": null,
+      "branchPoint": false
+    },
     {
       "name": "implement-checkpoint",
-      "path": ".qfai/assistant/step/implement-checkpoint/STEP.md"
+      "path": ".qfai/assistant/step/implement-checkpoint/STEP.md",
+      "mode": null,
+      "passThrough": false,
+      "decisionPoint": null,
+      "branchPoint": false
     }
   ],
   "scope": {
@@ -201,8 +205,10 @@ A routing or stage result carries a question as:
 }
 ```
 
-- `steps` lists the steps the stage runs, in order. The sub-agent reads a
+- `steps` lists every step the stage runs, in order. The sub-agent reads a
   step's `path` when it reaches that step, never before.
+- A step with `passThrough: true` still runs. When it shows it has nothing to
+  write, the result records a pass for it, and writes nothing for that step.
 - The stage is reviewed once, after its last step, by every role in
   `requiredReviewerRoles`.
 - The routing work order carries `executor` `qfai-run` and `operation` `route`
@@ -215,3 +221,8 @@ skill gave it, and never edits its outcome, its review results or its
 changed-file list. It names its author in `actor`, as the routing result does.
 A result with no `actor`, a field of the wrong shape or an unknown key is
 refused before the run reads it.
+
+- `passes` holds `{ step, reason, evidenceRef }` for each pass-through step
+  that had nothing to write. `evidenceRef` names a git-ignored record of what
+  the step read. The run refuses a pass for a step its work order does not mark
+  `passThrough`, and a pass while work the step owns remains.

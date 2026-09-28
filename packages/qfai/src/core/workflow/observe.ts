@@ -150,7 +150,6 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
           stageInstanceId: stage.id,
           stageKind: stage.kind,
           steps: stage.steps,
-          when: stage.when,
           ...(stage.effects.length > 0 ? { effects: stage.effects } : {}),
         })),
       },

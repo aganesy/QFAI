@@ -6,7 +6,7 @@ import {
   refusedInput,
 } from "./common.js";
 import { activeStages } from "./stages.js";
-import { activeSteps, ownerOfSteps, stepNamesOf } from "./steps.js";
+import { ownerOfSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
   FindingIdentity,
   Severity,
@@ -79,7 +79,7 @@ function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowU
       unmetOf(
         "stage-unaccepted",
         [stage.stageInstanceId],
-        ownerOfSteps(activeSteps(stage, plan, snapshot.diagnosis)),
+        ownerOfSteps(stageSteps(stage).map((step) => step.name)),
       ),
     );
 }

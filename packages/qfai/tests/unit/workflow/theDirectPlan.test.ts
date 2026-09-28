@@ -11,8 +11,8 @@ type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
 
 const directStages = [
-  planStage("direct-edit", "maintenance", "always"),
-  planStage("direct-verify", "verify", "always"),
+  planStage("direct-edit", "maintenance"),
+  planStage("direct-verify", "verify"),
 ];
 
 const startFacts: Facts = {
@@ -54,7 +54,6 @@ const proposal = {
   newStories: [],
   proposedWriteScope: ["README.md"],
   protectedTargets: [],
-  requiredStages: ["maintenance", "verify"],
 };
 
 // The completion gate's independent review, which the canned verify result carries.

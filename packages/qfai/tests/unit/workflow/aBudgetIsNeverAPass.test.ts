@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { completion, finishPlan } from "./finishFixture.js";
-import { issuedSteps, kindSteps, planStage } from "./kindSteps.js";
+import { kindSteps, planStage, servedSteps } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -13,9 +13,9 @@ const flowBinding = { flowId: "BF-0007" };
 const bugfixPlan = {
   route: "bugfix",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-implement", "implement", "always"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
   ],
 };
 
@@ -168,6 +168,6 @@ it("other-path", () => {
   expect(fourthRepair(".qfai/specs/BF-0007/05_Examples.md")).toEqual({
     state: "ready",
     halt: undefined,
-    issued: issuedSteps("sdd-triage", "sdd-story", "sdd-gate"),
+    issued: servedSteps("sdd_delta", "qfai-sdd"),
   });
 });

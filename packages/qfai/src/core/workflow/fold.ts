@@ -240,6 +240,7 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
     ...(record.gateResults ? { gateResults: record.gateResults } : {}),
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
+    ...(record.passes ? { passes: record.passes } : {}),
     ...(record.reports ? { reports: record.reports } : {}),
     ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
@@ -310,7 +311,7 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     withAppendedRows(withHalt(snapshot, record), record),
   "material-decision": withAppendedRows,
-  // A stage `next` passed over because its predicate did not hold stays skipped.
+  // A stage `next` passed over stays passed over.
   "receipt-recorded": (snapshot, record) =>
     record.notRun?.kind === "not_applicable" && record.stageInstanceId
       ? { ...snapshot, skippedStages: [...(snapshot.skippedStages ?? []), record.stageInstanceId] }

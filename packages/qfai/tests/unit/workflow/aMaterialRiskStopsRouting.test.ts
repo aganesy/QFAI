@@ -13,7 +13,6 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
   plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
@@ -72,7 +71,6 @@ function routeWithRisk(signal: string) {
           newStories: [],
           proposedWriteScope: ["src/users/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

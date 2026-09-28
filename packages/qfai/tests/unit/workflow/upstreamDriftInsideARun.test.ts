@@ -3,16 +3,16 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
-import { issuedSteps, planStage } from "./kindSteps.js";
+import { planStage, servedSteps } from "./kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Debt = NonNullable<Result["debts"]>[number];
 
 const stages = [
-  planStage("bounded-sdd-delta", "sdd_delta", "always"),
-  planStage("bounded-implement", "implement", "always"),
-  planStage("bounded-verify", "verify", "always"),
+  planStage("bounded-sdd-delta", "sdd_delta"),
+  planStage("bounded-implement", "implement"),
+  planStage("bounded-verify", "verify"),
 ];
 const plan = {
   route: "bounded-change",
@@ -131,7 +131,7 @@ it("drift inside the checked scope goes to qfai-sdd", () => {
 
   expect({ state: run.state, steps: next.verdict.workOrder?.steps }).toEqual({
     state: "ready",
-    steps: issuedSteps("sdd-triage", "sdd-story", "sdd-gate"),
+    steps: servedSteps("sdd_delta", "qfai-sdd"),
   });
 });
 
