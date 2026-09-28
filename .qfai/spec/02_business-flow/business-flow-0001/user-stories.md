@@ -115,7 +115,7 @@
 | US-0001-0112 | Deterministic iteration stop codes                                                     | `user-story-0001-0112/` |
 | US-0001-0113 | Low-cost per-iteration evidence                                                        | `user-story-0001-0113/` |
 | US-0001-0114 | Cycle-zero design hash recording                                                       | `user-story-0001-0114/` |
-| US-0001-0115 | Design lock drift rejection                                                            | `user-story-0001-0115/` |
+| US-0001-0115 | DESIGN.md hash drift rejection                                                         | `user-story-0001-0115/` |
 | US-0001-0116 | Deterministic design-token violation scan                                              | `user-story-0001-0116/` |
 | US-0001-0118 | Project-wide UI-contract resolution                                                    | `user-story-0001-0118/` |
 | US-0001-0119 | Reviewer-operated prototype navigation                                                 | `user-story-0001-0119/` |

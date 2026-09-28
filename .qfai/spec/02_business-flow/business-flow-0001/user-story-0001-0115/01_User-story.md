@@ -1,4 +1,4 @@
-# US-0001-0115: Design lock drift rejection
+# US-0001-0115: DESIGN.md hash drift rejection
 
 ## User Story
 

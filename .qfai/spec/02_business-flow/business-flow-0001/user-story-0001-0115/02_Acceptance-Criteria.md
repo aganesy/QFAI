@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Design lock drift rejection
+Feature: DESIGN.md hash drift rejection
   # AC-0001-0115-01
   Scenario: Cycle ≥1 hash gate
     Given `prototyping.json#designMdSha256 === H_recorded`,
