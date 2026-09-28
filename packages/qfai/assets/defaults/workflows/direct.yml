@@ -1,0 +1,11 @@
+route: direct
+stages:
+  - id: edit
+    kind: maintenance
+    steps: [maintain-edit]
+    when: always
+  - id: verify
+    kind: verify
+    steps: [verify-context, verify-qfai-gate, verify-repo-gate]
+    when: always
+    after: [edit]

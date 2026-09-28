@@ -115,7 +115,7 @@ function regexAllowedAfter(previous: ts.SyntaxKind | undefined): boolean {
  * intact, so a failure report points at the line the offending string is
  * really on.
  */
-export function stripComments(source: string): string {
+export function stripComments(source: string, stripRegexLiterals = false): string {
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, /* skipTrivia */ false);
   scanner.setText(source);
   const chars = source.split("");
@@ -145,7 +145,8 @@ export function stripComments(source: string): string {
       braceDepth -= 1;
     } else if (
       token === ts.SyntaxKind.SingleLineCommentTrivia ||
-      token === ts.SyntaxKind.MultiLineCommentTrivia
+      token === ts.SyntaxKind.MultiLineCommentTrivia ||
+      (stripRegexLiterals && token === ts.SyntaxKind.RegularExpressionLiteral)
     ) {
       for (let index = scanner.getTokenStart(); index < scanner.getTokenEnd(); index += 1) {
         if (chars[index] !== "\n" && chars[index] !== "\r") {
@@ -175,7 +176,8 @@ export function findJapaneseLines(source: string): JapaneseLine[] {
   if (!CJK_RE.test(source)) {
     return [];
   }
-  return scanLines(stripComments(source));
+  // A regular expression may accept Japanese input without emitting Japanese text.
+  return scanLines(stripComments(source, true));
 }
 
 /**

@@ -99,7 +99,7 @@ export async function readUiContractScreenContracts(
   // override — a least-astonishment violation that would silently
   // break certify's per-(spec × screen) gate.
   // Other call sites (lockAbs, designContractReadiness, designToken,
-  // uiDefinitionConsistency, bpApDb, designAudit, doctor) still use
+  // uiDefinitionConsistency, designAudit, doctor) still use
   // `path.join` and remain a deferred follow-up. This site is fixed here
   // because it directly partners with `readPerSpecScreens` and would
   // otherwise produce divergent contract-discovery behaviour between CLI

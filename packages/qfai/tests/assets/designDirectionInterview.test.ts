@@ -17,15 +17,16 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const SKILLS = "assistant/skills";
+const SKILLS = "assistant/skill";
 const INTAKE = `${SKILLS}/qfai-discussion/references/design-dna-intake.md`;
 const MATRIX = `${SKILLS}/qfai-discussion/references/discussion-completion-matrix.md`;
 const CONTEXT_TEMPLATE = `${SKILLS}/qfai-discussion/templates/01_Context.md`;
-const DISCUSSION_SKILL = `${SKILLS}/qfai-discussion/SKILL.md`;
 const AUTHORING = `${SKILLS}/qfai-sdd/references/design-md-authoring.md`;
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -36,8 +37,13 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 describe("the design direction is the user's decision", () => {
   for (const tree of QFAI_TREES) {
+    // QFAI:EX-0001-0090-01
     it(`${tree}: the pack has a place to record the choice`, async () => {
       const template = await read(tree, CONTEXT_TEMPLATE);
+      const skill = flat(await readDiscussionSkill(path.join(repoRoot, tree, "assistant")));
+
+      // The record is the handoff; the brand file is not discussion's to write.
+      expect(skill).toContain("Root DESIGN.md is not a discussion output");
 
       expect(template).toContain("## Design Direction");
       for (const field of ["adopted_theme:", "brand_accent:", "conventions_kept:", "chosen_by:"]) {
@@ -77,7 +83,7 @@ describe("the design direction is the user's decision", () => {
     // is the opposite of asking the user to choose a theme. It still holds for
     // the screen explorations, which the prototype loop ranks by iterating.
     it(`${tree}: planner-first is scoped to the screen explorations`, async () => {
-      const skill = flat(await read(tree, DISCUSSION_SKILL));
+      const skill = flat(await readDiscussionSkill(path.join(repoRoot, tree, "assistant")));
       const matrix = flat(await read(tree, MATRIX));
 
       expect(skill).toContain("carry the screen explorations unranked");
@@ -93,6 +99,7 @@ describe("the design direction is the user's decision", () => {
       expect(matrix).toContain("nothing downstream reads a theme for a surface that renders");
     });
 
+    // QFAI:EX-0001-0090-02
     it(`${tree}: Phase 0 reads the recorded direction and stops without one`, async () => {
       const authoring = flat(await read(tree, AUTHORING));
 

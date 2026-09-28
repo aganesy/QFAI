@@ -58,16 +58,10 @@ export type ParsedArgs = {
     doctorAutoremediate?: boolean;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
-    guardrailsAction?: "list" | "extract" | "check";
-    guardrailsPaths: string[];
-    guardrailsMax?: number;
-    guardrailsKeyword?: string;
-    /** --format <text|json> for `qfai guardrails list|extract|check`. */
-    guardrailsFormat?: "text" | "json";
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
+    prototypingAction?: "preflight" | "iterate" | "certify" | "show-ui-contract" | "rescope";
     /** `rescope --remove <surface-id>`, repeatable. */
     rescopeRemove: string[];
     /** `rescope --reason <delta-id>`: the decision that retired the surface. */
@@ -102,8 +96,8 @@ export type ParsedArgs = {
     prototypingUpgradeScopeFull?: boolean;
     /** --license-patch <file> for `qfai prototyping iterate`. */
     prototypingLicensePatch?: string;
-    /** --primary-spec-id <value> for `qfai prototyping iterate`. */
-    prototypingPrimarySpecId?: string;
+    /** --primary-ui-contract <UI-NNNN> for `qfai prototyping iterate`. */
+    prototypingPrimaryUiContract?: string;
     /**
      * --check-convergence for `qfai prototyping iterate`. Read-only peek
      * of the canonical prototyping state file; reports stopReason +
@@ -149,8 +143,8 @@ export type ParsedArgs = {
      * loop posture:
      *   - `convergence` (default): all gates apply at error severity.
      *   - `exploration`: medium gate relaxation — soft-rubric gates
-     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030..032 design
-     *     compliance) downgrade error → warning. Schema / path /
+     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030 root
+     *     DESIGN.md presence) downgrade error → warning. Schema / path /
      *     license (exit 66) gates stay hard error.
      * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
      * are rejected via markInvalid(reason).
@@ -178,12 +172,20 @@ export type ParsedArgs = {
     sddAssumptions: string[];
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
-    /** `--spec <id>` value for `qfai atdd scaffold`. */
+    /** Retired `--spec <id>` value, retained for `qfai atdd scaffold` migration errors. */
     atddSpecId?: string;
-    /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
-    validateSpecIds: string[];
-    /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
-    reportSpecIds: string[];
+    atddStoryId?: string;
+    atddFlowId?: string;
+    /** `--flow <BF-NNNN>` values for `qfai validate`. */
+    validateFlowIds: string[];
+    /** `--flow <BF-NNNN>` values for `qfai report`. */
+    reportFlowIds: string[];
+    /** The operation of `qfai workflow <operation>`. */
+    workflowAction?: WorkflowOperation;
+    /** `--run <runId>` for `qfai workflow`. */
+    workflowRun?: string;
+    /** `--in <path>` for `qfai workflow`: the payload file under `.qfai/run/`. */
+    workflowIn?: string;
     help: boolean;
     /**
      * `--version` / `-V`: print the resolved tool version to stdout and
@@ -204,6 +206,19 @@ export type ParsedArgs = {
   };
 };
 
+/** The seven operations of `qfai workflow`, and no other. */
+export const WORKFLOW_OPERATIONS = [
+  "start",
+  "next",
+  "accept",
+  "decision",
+  "status",
+  "resume",
+  "finish",
+] as const;
+
+export type WorkflowOperation = (typeof WORKFLOW_OPERATIONS)[number];
+
 /** Every spelling of the help flag the parser accepts. */
 const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
 
@@ -222,9 +237,6 @@ const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
 
-/** `qfai guardrails <action>` のサブコマンド名。 */
-type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
-
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     rescopeRemove: [],
@@ -242,9 +254,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     doctorFormat: "text",
     validateFormat: "text",
     strict: false,
-    guardrailsPaths: [],
-    validateSpecIds: [],
-    reportSpecIds: [],
+    validateFlowIds: [],
+    reportFlowIds: [],
     sddAssumptions: [],
     help: false,
     version: false,
@@ -324,7 +335,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    *
    * One predicate rather than one per flag: two that mean almost the same
    * thing are two contracts to keep in step, and this is the shape
-   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
+   * `ownedByPrototyping` below already uses.
    */
   const ownedBy = (...commands: string[]): boolean =>
     command !== null && commands.includes(command);
@@ -337,32 +348,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     return action !== undefined && actions.includes(action);
   };
 
-  /**
-   * `qfai guardrails <action>` 版の flag-ownership guard。
-   * action トークンも flag loop より前に確定するため、ループ内から安全に
-   * 呼べる (`--max` は extract、`--keyword` は list/extract のみが読む)。
-   */
-  const ownedByGuardrails = (...actions: GuardrailsAction[]): boolean => {
-    if (command !== "guardrails") {
-      return false;
-    }
-    const action = options.guardrailsAction;
-    return action !== undefined && actions.includes(action);
-  };
-
-  if (command === "guardrails") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      const action = normalizeGuardrailsAction(candidate);
-      if (action) {
-        options.guardrailsAction = action;
-      } else {
-        markInvalid(subcommandReason("guardrails", candidate));
-      }
-      args.shift();
-    }
-  }
-
   // `qfai prototyping <subcommand>` pulls the subcommand token before the
   // flag loop.
   if (command === "prototyping") {
@@ -372,7 +357,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         candidate === "preflight" ||
         candidate === "iterate" ||
         candidate === "certify" ||
-        candidate === "show-spec" ||
+        candidate === "show-ui-contract" ||
         candidate === "rescope"
       ) {
         options.prototypingAction = candidate;
@@ -424,6 +409,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
+      }
+      args.shift();
+    }
+  }
+
+  if (command === "workflow") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      const operation = WORKFLOW_OPERATIONS.find((known) => known === candidate);
+      if (operation) {
+        options.workflowAction = operation;
+      } else {
+        markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
     }
@@ -731,8 +729,23 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "report") {
           options.reportIn = next;
+        } else if (command === "workflow") {
+          options.workflowIn = next;
         } else {
           markInvalid(notValidHere("--in"));
+        }
+        break;
+      }
+      case "--run": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--run"));
+          break;
+        }
+        if (command === "workflow") {
+          options.workflowRun = next;
+        } else {
+          markInvalid(notValidHere("--run"));
         }
         break;
       }
@@ -753,52 +766,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.reportBaseUrl = next;
         } else {
           markInvalid(notValidHere("--base-url"));
-        }
-        break;
-      }
-      case "--path": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--path"));
-          break;
-        }
-        if (command === "guardrails") {
-          options.guardrailsPaths.push(next);
-        } else {
-          markInvalid(notValidHere("--path"));
-        }
-        break;
-      }
-      case "--max": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--max"));
-          break;
-        }
-        const parsed = Number.parseInt(next, 10);
-        // usage(): `guardrails extract` のみ。runGuardrails は list /
-        // check パスで max を読まないため、そこでは誤指定として拒否する。
-        if (!ownedByGuardrails("extract")) {
-          markInvalid(notValidHere("--max"));
-        } else if (Number.isNaN(parsed)) {
-          markInvalid(badValue("--max", next, "an integer"));
-        } else {
-          options.guardrailsMax = parsed;
-        }
-        break;
-      }
-      case "--keyword": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--keyword"));
-          break;
-        }
-        // usage(): `guardrails list/extract` のみ。check パスは
-        // runGuardrails が keyword フィルタ前に early return する。
-        if (ownedByGuardrails("list", "extract")) {
-          options.guardrailsKeyword = next;
-        } else {
-          markInvalid(notValidHere("--keyword"));
         }
         break;
       }
@@ -899,16 +866,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--primary-spec-id": {
+      case "--primary-ui-contract": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid(missingValue("--primary-spec-id"));
+          markInvalid(missingValue("--primary-ui-contract"));
           break;
         }
         if (ownedByPrototyping("iterate")) {
-          options.prototypingPrimarySpecId = next;
+          options.prototypingPrimaryUiContract = next;
         } else {
-          markInvalid(notValidHere("--primary-spec-id"));
+          markInvalid(notValidHere("--primary-ui-contract"));
         }
         break;
       }
@@ -916,8 +883,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // Read-only peek of the canonical prototyping state file. No
         // value; presence flips the boolean. Only meaningful for
         // `qfai prototyping iterate`; main.ts wires it through only on
-        // the iterate path. See
-        // .qfai/contracts/cli/qfai-prototyping-iterate.md.
+        // the iterate path.
         if (ownedByPrototyping("iterate")) {
           options.prototypingCheckConvergence = true;
         } else {
@@ -1022,18 +988,38 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "atdd") {
           options.atddSpecId = next;
-        } else if (command === "validate") {
-          // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
-          options.validateSpecIds.push(next);
-        } else if (command === "report") {
-          // Repeatable, same shape as `validate`. Without this branch the
-          // per-spec scoping `validate --spec` introduced stopped one command
-          // later: a slice worker holding `validate.spec-0003.json` had no way
-          // to render its own slice without writing the shared `report.md`.
-          options.reportSpecIds.push(next);
+        } else if (command === "validate" || command === "report") {
+          markInvalid(`${scope()}: --spec is no longer supported. Use --flow BF-NNNN.`);
         } else {
           markInvalid(notValidHere("--spec"));
         }
+        break;
+      }
+      case "--flow": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--flow"));
+          break;
+        }
+        if (command === "atdd") {
+          options.atddFlowId = next;
+        } else if (command === "validate") {
+          options.validateFlowIds.push(next);
+        } else if (command === "report") {
+          options.reportFlowIds.push(next);
+        } else {
+          markInvalid(notValidHere("--flow"));
+        }
+        break;
+      }
+      case "--story": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--story"));
+          break;
+        }
+        if (command === "atdd") options.atddStoryId = next;
+        else markInvalid(notValidHere("--story"));
         break;
       }
       case "--assume": {
@@ -1138,9 +1124,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid(`qfai doctor: --target-url requires --profile prototyping.`);
   }
-  if (command === "guardrails" && !options.help && !options.guardrailsAction) {
-    markInvalid(subcommandReason("guardrails", null));
-  }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
     markInvalid(subcommandReason("prototyping", null));
   }
@@ -1171,13 +1154,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
 /** `qfai <command> <subcommand>` で受理されるサブコマンドの集合。 */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
-  ["guardrails", "list|extract|check"],
-  ["prototyping", "preflight|iterate|certify|show-spec"],
+  ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
   ["audit", "log"],
   ["handoff", "upgrade"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
+  ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 
 /**
@@ -1276,13 +1259,6 @@ function applyFormatOption(
     }
     return false;
   }
-  if (command === "guardrails") {
-    if (value === "text" || value === "json") {
-      options.guardrailsFormat = value;
-      return true;
-    }
-    return false;
-  }
   if (command === "db-drift") {
     if (value === "text" || value === "json") {
       options.dbDriftFormat = value;
@@ -1291,17 +1267,6 @@ function applyFormatOption(
     return false;
   }
   return false;
-}
-
-function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" | null {
-  switch (value) {
-    case "list":
-    case "extract":
-    case "check":
-      return value;
-    default:
-      return null;
-  }
 }
 
 function isSkillProfileName(value: string): boolean {

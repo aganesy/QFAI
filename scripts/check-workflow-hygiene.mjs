@@ -5,7 +5,7 @@
  *
  * Scope is the own tree ONLY. The shipped set under
  * `packages/qfai/assets/init/root/.github/workflows/**` is governed by
- * `.qfai/contracts/cli/shipped-workflows.md` §5/§6 and by a different spec; the
+ * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` (BR-0020-0023, BR-0020-0043) and by a different spec; the
  * rules that reach it arrive with the shipped-file half of this lane, not here.
  * A lane that quietly scanned both would enforce this repository's conventions on
  * every adopter's tree.
@@ -55,7 +55,7 @@ const CODE = "R-WORKFLOW-HYGIENE-DRIFT";
 /**
  * The rule set, SCOPED, and printed on success so a green run names its own coverage.
  *
- * The scope is load-bearing rather than decorative. `BR-0017-0037` closes the set over
+ * The scope is load-bearing rather than decorative. `BR-0018-0037` closes the set over
  * `.github/workflows/**` at exactly five obligations, and the declaration rule is not one of
  * them — its subject is a JSON file checked against the workflows and it comes from a
  * different criterion. Printing the two groups separately is what makes "exactly five"
@@ -125,7 +125,7 @@ const SCOPES = [
  * The two workflow trees the structural rules cover.
  *
  * Two roots rather than copying the shipped files into the workflows directory inside the CI
- * checkout. Both satisfy `BR-0017-0044`, and the copy makes the reported path ambiguous — an
+ * checkout. Both satisfy `BR-0018-0044`, and the copy makes the reported path ambiguous — an
  * adopter told to look at `.github/workflows/qfai-tests.yml` is being sent to a file they do
  * not have. The rule requires the shipped path to be named AS the shipped path.
  */
@@ -143,7 +143,7 @@ const WORKFLOW_ROOTS = [
 /**
  * The third-party action owners the shipped set may reference.
  *
- * A closed sanctioned SET, not a count of zero. `BR-0017-0046` rejects the count formulation
+ * A closed sanctioned SET, not a count of zero. `BR-0020-0027` rejects the count formulation
  * by name, and for a concrete reason: the shipped pin policy legitimately keeps the
  * package-manager setup action, so "zero third-party references" would fail the lane on the
  * one entry it is supposed to allow.
@@ -191,7 +191,7 @@ export function hasReachablePermissions(entry) {
  * Declaration-only counting — job-level blocks alone.
  *
  * Kept and exported deliberately, even though no rule judges by it:
- * `BR-0017-0014` forbids declaration-only counting *because* it cannot falsify a
+ * `BR-0018-0014` forbids declaration-only counting *because* it cannot falsify a
  * requirement written against reachability, and the cheapest way to keep that
  * claim honest is for both counters to exist and be compared by a test.
  */
@@ -1260,7 +1260,7 @@ function shellCommandLines(body) {
 /**
  * Every global package install names where the package comes from.
  *
- * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0017-0037` closes the set over
+ * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0018-0037` closes the set over
  * `.github/workflows/**` at exactly five obligations and `TC-0017-0045` pins that count — this rule
  * comes from a different criterion, the way the declaration rule does, so it is announced under its
  * own heading and counted separately. A green run stays readable and the five stay five.
@@ -1639,7 +1639,7 @@ function needsClosure(jobsByKey, jobKey) {
 /**
  * The shipped set references no unsanctioned third-party action.
  *
- * Scoped to the shipped tree because that is what `BR-0017-0046` governs: the own tree's
+ * Scoped to the shipped tree because that is what `BR-0020-0027` governs: the own tree's
  * third-party posture is a different question and is not decided here.
  */
 function checkShippedThirdParty(uses) {

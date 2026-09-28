@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { validateReviewArtifacts } from "../../../src/core/validators/reviewArtifacts.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../../src/core/gitignore.js";
+import { resolveFlowScope } from "../../../src/core/flowScope.js";
+import { buildStoryTreeModel } from "../../../src/core/storyTree/tree.js";
 
 const tempDirs: string[] = [];
 
@@ -605,6 +607,56 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
     expect(sddCodes).not.toContain("QFAI-REVIEW-005");
   });
 
+  it("files an acceptance-test pack under its own producer", async () => {
+    // QFAI:EX-0001-0155-04
+    const flowPath = ".qfai/specs/02_business-flow/business-flow-0001";
+
+    const complete = await newTempDir();
+    await scaffoldRoot(complete);
+    await writeReviewPack(
+      complete,
+      "review-20260401000000000",
+      makeV2Summary({ producer: "atdd", target: { kind: "flow", path: flowPath } }),
+    );
+    const completeIssues = await validateReviewArtifacts(complete, {
+      specScope: undefined,
+      specsRoot: path.join(complete, ".qfai", "specs"),
+      discussionRoot: path.join(complete, ".qfai", "discussion"),
+    });
+    expect(completeIssues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+
+    const unanswered = await newTempDir();
+    await seedIncompletePack(unanswered, {
+      version: "2.0",
+      producer: "atdd",
+      target: { kind: "flow", path: flowPath },
+    });
+    for (const producer of ["sdd", "discussion"]) {
+      const codes = (
+        await validateReviewArtifacts(unanswered, stageScope(unanswered, producer))
+      ).map((entry) => entry.code);
+      expect(codes).not.toContain("QFAI-REVIEW-005");
+      expect(codes).not.toContain("QFAI-REVIEW-007");
+    }
+    const full = (await validateReviewArtifacts(unanswered)).map((entry) => entry.code);
+    expect(full).toContain("QFAI-REVIEW-005");
+
+    const inFlight = await newTempDir();
+    await scaffoldRoot(inFlight);
+    const packDir = path.join(inFlight, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "review_request.md"),
+      `# Review Request\n\n- Producer: \`atdd\`\n- target: \`${flowPath}\`\n`,
+      "utf-8",
+    );
+    const sddCodes = (await validateReviewArtifacts(inFlight, stageScope(inFlight, "sdd"))).map(
+      (entry) => entry.code,
+    );
+    expect(sddCodes).not.toContain("QFAI-REVIEW-004");
+    expect(sddCodes).not.toContain("QFAI-REVIEW-005");
+  });
+
   // Over-correction pin: the packs the SDD gate is FOR must keep failing it,
   // whether they name their producer or predate the field.
   it("still gates the sdd cycle's own packs, declared or legacy", async () => {
@@ -709,6 +761,39 @@ describe("validateReviewArtifacts — a target the pack's own path contradicts",
 
     const issues = await validateReviewArtifacts(root, sddSliceScope(root));
     expect(issues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+  });
+
+  it("accepts an SDD flow target and scopes review packs to its flow", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const specsRoot = path.join(root, ".qfai", "spec");
+    const flowOne = path.join(specsRoot, "02_business-flow", "business-flow-0001");
+    const flowTwo = path.join(specsRoot, "02_business-flow", "business-flow-0002");
+    const tree = buildStoryTreeModel(
+      new Map([
+        [path.join(flowOne, "business-flow.md"), "# BF-0001: First"],
+        [path.join(flowTwo, "business-flow.md"), "# BF-0002: Second"],
+      ]),
+      { specsDir: specsRoot },
+    );
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ producer: "sdd", target: { kind: "flow", path: flowOne } }),
+    );
+    const sibling = path.join(root, ".qfai", "review", "review-20260402000000000");
+    await mkdir(sibling, { recursive: true });
+    await writeFile(path.join(sibling, "review_request.md"), `Target: ${flowTwo}\n`, "utf8");
+
+    const findings = await validateReviewArtifacts(root, {
+      specScope: undefined,
+      flowScope: resolveFlowScope(["BF-0001"], tree),
+      specsRoot,
+      discussionRoot: path.join(root, ".qfai", "discussion"),
+      producers: new Set(["sdd"]),
+    });
+    expect(findings.some((entry) => entry.code === "QFAI-REVIEW-007")).toBe(false);
+    expect(findings.some((entry) => entry.code === "QFAI-REVIEW-004")).toBe(false);
   });
 
   it("says nothing about a target outside both configured roots", async () => {

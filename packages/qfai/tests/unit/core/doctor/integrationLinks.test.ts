@@ -99,10 +99,10 @@ async function canCreateSymlink(root: string): Promise<boolean> {
 
 /** The canonical tree the wrappers point at, plus every wrapper init writes. */
 async function wireProject(root: string): Promise<void> {
-  const canonical = path.join(root, ".qfai", "assistant", "skills", SHIPPED_SKILL);
+  const canonical = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
   await mkdir(canonical, { recursive: true });
   await writeFile(path.join(canonical, "SKILL.md"), "# skill\n", "utf-8");
-  await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
 
   for (const dir of SKILL_INTEGRATION_DIRS) {
     const absolute = path.join(root, ...dir.split("/"));
@@ -111,7 +111,7 @@ async function wireProject(root: string): Promise<void> {
       ...dir.split("/").map(() => ".."),
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       SHIPPED_SKILL,
     );
     await symlink(target, path.join(absolute, SHIPPED_SKILL), "dir");
@@ -136,7 +136,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      await repoint(root, [".qfai", "assistant", "skills", "gone"]);
+      await repoint(root, [".qfai", "assistant", "skill", "gone"]);
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
@@ -336,7 +336,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      await repoint(root, [".qfai", "assistant", "skills", "gone"]);
+      await repoint(root, [".qfai", "assistant", "skill", "gone"]);
 
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
       const actions = check?.details?.["nextActions"];
@@ -364,7 +364,7 @@ describe("integration.links", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
-      await repoint(root, [".qfai", "assistant", "skills", "gone"]);
+      await repoint(root, [".qfai", "assistant", "skill", "gone"]);
 
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
 

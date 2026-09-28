@@ -237,10 +237,10 @@ async function collectReachable(): Promise<Set<string>> {
 /**
  * Deliberately an unanchored substring match, not an exact one. The findings
  * array is written `Issue[]`, `readonly Issue[]` and `Promise<readonly
- * Issue[]>` across the validators — `validateDesignMdPatchZone`,
- * `detectEvidenceMutationUnlogged` and `detectSkillManifestDrift` all use the
- * readonly form — so anchoring this would silently exempt that whole family
- * from the dispatch assertion below. `readonlyFindingsShapes` pins it.
+ * Issue[]>` across the validators — `detectEvidenceMutationUnlogged` and
+ * `detectSkillManifestDrift` both use the readonly form — so anchoring this
+ * would silently exempt that whole family from the dispatch assertion below.
+ * `readonlyFindingsShapes` pins it.
  */
 const FINDINGS_ARRAY = /\bIssue\[\]/;
 

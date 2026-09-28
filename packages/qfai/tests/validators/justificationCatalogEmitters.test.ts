@@ -256,7 +256,7 @@ function isIssueCallee(expression: ts.Expression): boolean {
  * re-implemented here — and comments and dead constants drop out for free.
  *
  * Returns the whole set rather than answering one code at a time so a file is
- * parsed once for all eight catalog codes, not once per code.
+ * parsed once for all seven catalog codes, not once per code.
  */
 export function emittedIssueCodes(source: string): Set<string> {
   const parsed = ts.createSourceFile(
@@ -319,7 +319,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
  * code -> package-relative files under `src/` that construct an `Issue` for it.
  *
  * Built once and shared: parsing the whole of `src/` per catalog code would
- * repeat the same work eight times over, and every test below asks about a
+ * repeat the same work seven times over, and every test below asks about a
  * different code from the same unchanged tree.
  */
 let srcEmitterIndex: Promise<ReadonlyMap<string, readonly string[]>> | undefined;

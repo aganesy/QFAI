@@ -5,20 +5,17 @@ import path from "node:path";
 import { REVISION_FORM } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import { owningSpecNumber, type SpecScope } from "../specScope.js";
+import { flowScopeContainsFile, type FlowScope } from "../flowScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { QFAI_GITIGNORE_MARKER, missingRecommendedGitignoreEntries } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
-const ALLOWED_TARGET_KINDS = new Set(["spec", "discussion"]);
+const ALLOWED_TARGET_KINDS = new Set(["spec", "flow", "discussion"]);
 const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
-
-// The two forms `evidence-revision.md` defines, and nothing else. Shared with
-// the `REV:` token of the ledger `Evidence` grammar (`tddList.ts`), because the
-// two values are compared against each other — see `evidenceRevision.ts`.
 
 /**
  * What a `--spec` run is allowed to judge here.
@@ -30,6 +27,7 @@ const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 export type ReviewArtifactsScope = {
   specScope: SpecScope | undefined;
   specsRoot: string | undefined;
+  flowScope?: FlowScope | undefined;
   /**
    * Absolute `discussionDir`, used to attribute a pack whose `summary.json`
    * cannot be read. Optional: a caller that omits it simply loses that half of
@@ -55,9 +53,11 @@ export type ReviewArtifactsScope = {
  * `--profile sdd --fail-on error` with `QFAI-REVIEW-004/005` on a downstream
  * pack the SDD cycle has no business gating. The producer is the stable
  * attribute: one value per stage, written once when the pack is created, and
- * unrelated to what the pack points at.
+ * unrelated to what the pack points at. `qfai-atdd` has a value of its own
+ * rather than borrowing `implement`, so an acceptance-test pack can be told
+ * apart from an implementation pack of the same flow.
  */
-const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement"]);
+const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement", "atdd"]);
 
 /** The producers each stage-scoped profile is the gate for. */
 export const SDD_PACK_PRODUCERS: ReadonlySet<string> = new Set(["sdd"]);
@@ -73,7 +73,8 @@ function producerKind(producer: string): string | null {
       return "discussion";
     case "sdd":
     case "implement":
-      return "spec";
+    case "atdd":
+      return "flow";
     default:
       return null;
   }
@@ -92,6 +93,7 @@ function kindProducer(kind: string): string | null {
     case "discussion":
       return "discussion";
     case "spec":
+    case "flow":
       return "sdd";
     default:
       return null;
@@ -111,10 +113,9 @@ export async function validateReviewArtifacts(
   try {
     const content = await readFile(rootGitignorePath, "utf-8");
     // The marker is the requirement. Which paths a project chooses to ignore
-    // is the project's call: `.qfai/evidence/**`, `.qfai/review/**` and
-    // `.qfai/discussion/**` hold governance records that a project may
-    // legitimately want tracked, and failing validation for tracking your own
-    // audit trail is the wrong answer.
+    // is the project's call: a project may legitimately want `.qfai/review/**`
+    // or `.qfai/discussion/**` tracked, and failing validation for that is the
+    // wrong answer.
     hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
     // Read across the WHOLE file, not just the managed block: an entry the
     // project ignores from its own section satisfies the recommendation just as
@@ -186,6 +187,7 @@ export async function validateReviewArtifacts(
     specsRoot,
     discussionRoot: scope?.discussionRoot,
     specScope: isScopedRun ? specScope : undefined,
+    flowScope: scope?.flowScope,
     producers: scope?.producers,
   };
   const reviewPackDirs = await selectPacks(packs, selection);
@@ -452,7 +454,7 @@ function targetViolations(parsed: Record<string, unknown>, selection: PackSelect
   const declaredKind = readString(target?.kind);
   const targetPath = readString(target?.path);
   if (declaredKind === null || !ALLOWED_TARGET_KINDS.has(declaredKind)) {
-    violations.push("`target.kind` は spec|discussion のいずれかが必須です");
+    violations.push("`target.kind` は spec|flow|discussion のいずれかが必須です");
   }
   if (targetPath === null) {
     violations.push("`target.path` は非空文字列が必須です");
@@ -476,7 +478,7 @@ function targetViolations(parsed: Record<string, unknown>, selection: PackSelect
     );
   }
   const declared = producer === null ? null : producerKind(producer);
-  if (declared !== null && declared !== proven) {
+  if (declared !== null && !compatibleTargetKind(declared, proven)) {
     violations.push(
       `\`producer\` (${producer}) が \`target.path\` (${targetPath}) と矛盾しています。このパスは ${proven} を指しています`,
     );
@@ -686,7 +688,7 @@ async function validateSummarySchema(
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
-            "The two forms and the procedure behind the content hash are in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md`.",
+            "The two forms and the procedure behind the content hash are in `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`.",
           ),
         ]
       : [];
@@ -716,7 +718,7 @@ async function validateSummarySchema(
             // stale verdict passes the freshness check this field exists for.
             "Record the state under review in `revision`: a git rev, or " +
               "`working-tree+<content hash>` while it is uncommitted. The procedure for that " +
-              "hash is in `.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` " +
+              "hash is in `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` " +
               "and is not summarised here — a summary would be a second procedure, and two of " +
               "them give one tree two addresses.",
           ),
@@ -782,6 +784,7 @@ type PackSelection = {
   discussionRoot: string | undefined;
   /** Present only for a `--spec` run. */
   specScope: SpecScope | undefined;
+  flowScope: FlowScope | undefined;
   producers: ReadonlySet<string> | undefined;
 };
 
@@ -816,7 +819,11 @@ async function selectPacks(
   packDirs: readonly string[],
   selection: PackSelection,
 ): Promise<string[]> {
-  if (selection.specScope === undefined && selection.producers === undefined) {
+  if (
+    selection.specScope === undefined &&
+    selection.flowScope === undefined &&
+    selection.producers === undefined
+  ) {
     return [...packDirs];
   }
   const selected: string[] = [];
@@ -832,9 +839,39 @@ async function selectPacks(
     ) {
       continue;
     }
+    if (
+      selection.flowScope !== undefined &&
+      !isRepoLevelPack(attribution) &&
+      !(await packBelongsToFlow(packDir, selection))
+    ) {
+      continue;
+    }
     selected.push(packDir);
   }
   return selected;
+}
+
+async function packBelongsToFlow(packDir: string, selection: PackSelection): Promise<boolean> {
+  const scope = selection.flowScope;
+  if (!scope) return true;
+  try {
+    const parsed: unknown = JSON.parse(await readFile(path.join(packDir, "summary.json"), "utf8"));
+    const target = asRecord(asRecord(parsed)?.target);
+    const targetPath = readString(target?.path);
+    if (targetPath && flowScopeContainsFile(scope, path.resolve(selection.root, targetPath))) {
+      return true;
+    }
+  } catch {
+    // An incomplete pack may still name its target in the request.
+  }
+  try {
+    const request = await readFile(path.join(packDir, "review_request.md"), "utf8");
+    return pathTokens(request).some((token) =>
+      flowScopeContainsFile(scope, path.resolve(selection.root, token)),
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -954,6 +991,13 @@ function kindFromPath(targetPath: string, selection: PackSelection): string | nu
   ) {
     return "spec";
   }
+  if (selection.specsRoot !== undefined) {
+    const absolute = path.isAbsolute(targetPath)
+      ? targetPath
+      : path.resolve(selection.root, targetPath);
+    const relative = path.relative(selection.specsRoot, absolute).replace(/\\/g, "/");
+    if (/^02_business-flow\/business-flow-\d{4}(?:\/|$)/.test(relative)) return "flow";
+  }
   return isUnderDiscussionRoot(targetPath, selection) ? "discussion" : null;
 }
 
@@ -1034,9 +1078,15 @@ function agreeingProducer(producer: string | null, provenKind: string | null): s
     return null;
   }
   const declaredKind = producerKind(producer);
-  return declaredKind !== null && provenKind !== null && declaredKind !== provenKind
+  return declaredKind !== null &&
+    provenKind !== null &&
+    !compatibleTargetKind(declaredKind, provenKind)
     ? null
     : producer;
+}
+
+function compatibleTargetKind(declared: string, proven: string): boolean {
+  return declared === proven || (declared === "flow" && proven === "spec");
 }
 
 /** True when `token` resolves inside the run's `discussionDir`. */

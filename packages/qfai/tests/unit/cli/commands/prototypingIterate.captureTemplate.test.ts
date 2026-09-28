@@ -2,16 +2,14 @@
  * Unit: `qfai prototyping iterate --capture` evidence-template
  * skeleton emission.
  *
- * - TC-0012-0478: the emitted skeleton MUST include every required
- *   `taskFidelity` keyword as a placeholder so the keyword set cannot
- *   be silently forgotten by the operator.
+ * The emitted skeleton includes every required `taskFidelity` keyword
+ * as a placeholder.
  *
  * The emitter lives at
  * `core/prototyping/captureTemplate.ts` (`buildTaskFidelityTemplate` /
  * `writeTaskFidelityTemplate`) and reads the SSOT keyword list from
  * `validators/taskFidelityKeywords.ts`.
  */
-// QFAI:SPEC-0012:TC-0012-0478
 
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -35,7 +33,7 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-describe("TC-0012-0478: --capture template skeleton names every required taskFidelity keyword", () => {
+describe("--capture template skeleton names every required taskFidelity keyword", () => {
   it("buildTaskFidelityTemplate includes a placeholder line per required keyword", () => {
     const text = buildTaskFidelityTemplate();
     expect(text).toContain("## taskFidelity");

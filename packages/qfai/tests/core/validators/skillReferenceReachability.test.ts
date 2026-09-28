@@ -56,7 +56,7 @@ async function skillGraphIssues(root: string): Promise<Issue[]> {
 }
 
 async function writeSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "demo-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -89,7 +89,7 @@ async function writeSkillFixture(root: string): Promise<string> {
  * must still be reported.
  */
 async function writeNamesakeSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "other-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "other-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -109,7 +109,7 @@ async function writeNamesakeSkillFixture(root: string): Promise<string> {
  * parser has to read them the same way the collector does.
  */
 async function writeCharsetSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "charset-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "charset-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -137,7 +137,7 @@ async function writeCharsetSkillFixture(root: string): Promise<string> {
  * — in prose as written, and in a Markdown link in its percent-encoded form.
  */
 async function writeSpacedNameSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "spaced-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "spaced-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -168,7 +168,7 @@ async function writeSpacedNameSkillFixture(root: string): Promise<string> {
  * file.
  */
 async function writePercentEncodedSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "encoded-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "encoded-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -196,7 +196,7 @@ async function writePercentEncodedSkillFixture(root: string): Promise<string> {
  * if the spelling searched for is the one a link actually carries.
  */
 async function writeReservedCharSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "reserved-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "reserved-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -223,7 +223,7 @@ async function writeReservedCharSkillFixture(root: string): Promise<string> {
  * a copy under `templates/` cannot make a reference readable.
  */
 async function writeTemplateRootSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "template-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "template-skill");
   const referencesDir = path.join(skillDir, "references");
   const templateDir = path.join(skillDir, "templates", "scaffold");
   await mkdir(referencesDir, { recursive: true });
@@ -246,7 +246,7 @@ async function writeTemplateRootSkillFixture(root: string): Promise<string> {
 
 /** A skill that spells its citation with the native separator of Windows. */
 async function writeWindowsPathSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "windows-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "windows-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -420,6 +420,24 @@ describe("skill reference reachability", () => {
     }
   });
 
+  it("follows a step's STEP.md as a root, by project-root-relative path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
+    try {
+      await writeSkillFixture(root);
+      const stepDir = path.join(root, ".qfai", "assistant", "step", "demo-step");
+      await mkdir(stepDir, { recursive: true });
+      await writeFile(
+        path.join(stepDir, "STEP.md"),
+        "# demo-step\n\nRead `.qfai/assistant/skill/demo-skill/references/orphan.md`.\n",
+        "utf-8",
+      );
+
+      expect(await reachabilityIssues(root)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("follows a chain through a tree the crawl skips, to its end", async () => {
     // The crawl passes over a hidden skill directory, so a document there is read
     // only where a reachable step names it — and each link is found by
@@ -429,7 +447,7 @@ describe("skill reference reachability", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-chain-"));
     try {
       const referencesDir = await writeSkillFixture(root);
-      const vendored = path.join(root, ".qfai", "assistant", "skills", ".vendor");
+      const vendored = path.join(root, ".qfai", "assistant", "skill", ".vendor");
       await mkdir(vendored, { recursive: true });
       const links = 24;
       for (let step = 0; step < links; step += 1) {
@@ -657,7 +675,7 @@ describe("skill reference reachability", () => {
    * yielded the tail after it. Neither resolved under any base.
    *
    * This case passed then too — hence the title. The `skillsDirPrefix` recovery
-   * in `resolveCitationToken` finds `.qfai/assistant/skills/` still present in
+   * in `resolveCitationToken` finds `.qfai/assistant/skill/` still present in
    * the truncated tail and resolves from there, which is why the token being
    * wrong was not a false finding. It stays as the net for that cover: the
    * citation is absolute because the author wrote it that way, which is
@@ -678,7 +696,7 @@ describe("skill reference reachability", () => {
         root,
         ".qfai",
         "assistant",
-        "skills",
+        "skill",
         "demo-skill",
         "references",
       );
@@ -721,7 +739,7 @@ describe("skill reference reachability", () => {
   it("resolves a relative citation of a tilde name (net: the by-path pass covers it)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-tildename-"));
     try {
-      const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+      const skillDir = path.join(root, ".qfai", "assistant", "skill", "demo-skill");
       const referencesDir = path.join(skillDir, "references");
       await mkdir(referencesDir, { recursive: true });
       await writeFile(

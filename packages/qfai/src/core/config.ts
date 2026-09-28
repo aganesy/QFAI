@@ -52,12 +52,7 @@ export type QfaiPaths = {
 
 export type QfaiValidationConfig = {
   failOn: FailOn;
-  require: {
-    specSections: string[];
-  };
   testStrategy: {
-    maxE2eScenarioRatio: number | null;
-    maxE2eScenarioCount: number | null;
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
      * construct of each supported stack in test files (QFAI-TEST-001). On
@@ -80,10 +75,8 @@ export type QfaiValidationConfig = {
     requireSizeTags: boolean;
   };
   traceability: {
-    scMustHaveTest: boolean;
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
-    unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
      * 読み込み時に QFAI-CFG-001 が error として出る。既存の設定
@@ -123,8 +116,8 @@ export type QfaiUiuxConfig = {
    * already carries, so a project that has one restates it rather than
    * translating it.
    *
-   * Which registry is primary is prose, and lives in
-   * `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+   * Which registry is primary is named by the `Component catalogue` row of the
+   * Stack table in `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
    */
   registries?: Record<string, string>;
   designTokensDir?: string;
@@ -138,6 +131,12 @@ export type QfaiUiuxConfig = {
    * registered are still held to the same three fields.
    */
   catalogue_refs_min?: number;
+  /**
+   * Repository-relative POSIX globs of the paths that render a user-visible
+   * surface. An empty list states that the project renders none; an absent
+   * key declares nothing.
+   */
+  surfacePaths?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
 };
@@ -162,12 +161,10 @@ export type QfaiPrototypingConfig = {
   calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
   /**
-   * Explicit primary spec ID for `/qfai-prototyping`. If omitted,
-   * `resolvePrimaryPrototypingSpec` auto-detects via the prototyping marker
-   * (`surface_type: ui-bearing`) in `01_Spec.md`. Format: 4-digit string,
-   * e.g. `"0001"`.
+   * Explicit primary UI contract for `/qfai-prototyping`.
+   * Uses the full `UI-NNNN` identifier.
    */
-  primarySpecId?: string;
+  primaryUiContract?: string;
   /**
    * Second-wave loop posture discriminator.
    *
@@ -217,10 +214,26 @@ export type QfaiAtddConfig = {
   /**
    * Number of consecutive un-skip + re-skip cycles tolerated before the
    * scaffold-cycle escalation fires. Default (when unset) is applied at
-   * the call-site. Pre-positioned for the spec-0008 ATDD scaffold slice.
+   * the call-site.
    */
   scaffoldEscalateCycles?: number;
 };
+
+/**
+ * Project routing overrides replace a complete entry, keyed by the step or the
+ * skill it routes. An entry carries exactly one of `step:` and `skill:`.
+ */
+export type QfaiRoutingEntry = Record<string, unknown> & { step?: string; skill?: string };
+
+/** The name a routing entry is keyed by: its `step:`, else its `skill:`. */
+export function routingEntryName(entry: { step?: unknown; skill?: unknown }): string | undefined {
+  if (typeof entry.step === "string" && entry.step.length > 0) return entry.step;
+  if (typeof entry.skill === "string" && entry.skill.length > 0) return entry.skill;
+  return undefined;
+}
+
+/** Project review-profile overrides replace a complete profile, keyed by name. */
+export type QfaiReviewProfile = Record<string, unknown>;
 
 export type QfaiConfig = {
   paths: QfaiPaths;
@@ -231,6 +244,8 @@ export type QfaiConfig = {
   review?: QfaiReviewConfig;
   report?: QfaiReportConfig;
   atdd?: QfaiAtddConfig;
+  routing?: QfaiRoutingEntry[];
+  reviewProfiles?: Record<string, QfaiReviewProfile>;
   baseBranch?: string;
 };
 
@@ -286,32 +301,25 @@ export type ConfigSearchResult = {
 
 export const defaultConfig: QfaiConfig = {
   paths: {
-    contractsDir: ".qfai/contracts",
-    specsDir: ".qfai/specs",
+    contractsDir: ".qfai/spec/03_contract",
+    specsDir: ".qfai/spec",
     discussionDir: ".qfai/discussion",
     outDir: ".qfai/report",
-    skillsDir: ".qfai/assistant/skills",
-    promptsDir: ".qfai/assistant/prompts",
+    skillsDir: ".qfai/assistant/skill",
+    promptsDir: ".qfai/assistant/prompt",
     srcDir: "src",
     testsDir: "tests",
   },
   validation: {
     failOn: "error",
-    require: {
-      specSections: [],
-    },
     testStrategy: {
-      maxE2eScenarioRatio: null,
-      maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
       requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
       requireSizeTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
     },
     traceability: {
-      scMustHaveTest: true,
       testFileGlobs: [],
       testFileExcludeGlobs: [],
-      unknownContractIdSeverity: "error",
     },
   },
   output: {
@@ -372,7 +380,31 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues);
+  if (readWorkflowMode(parsed) === null) {
+    issues.push(configIssue(configPath, WORKFLOW_MODE_MESSAGE));
+  }
   return { config: normalized, issues, configPath, document: parsed };
+}
+
+const WORKFLOW_MODES = ["active", "shadow", "off"] as const;
+
+/** The config issue an invalid `workflow.mode` raises. */
+export const WORKFLOW_MODE_MESSAGE =
+  "workflow.mode must be active, shadow or off; an absent key means active.";
+
+export type WorkflowMode = (typeof WORKFLOW_MODES)[number];
+
+/**
+ * The workflow mode in force, read from the parsed config document. `null` means the value is
+ * none of the three, and no mode is guessed in its place.
+ */
+export function readWorkflowMode(document: unknown): WorkflowMode | null {
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  if (workflow === undefined) return "active";
+  if (!isRecord(workflow)) return null;
+  const mode = workflow.mode;
+  if (mode === undefined) return "active";
+  return WORKFLOW_MODES.find((known) => known === mode) ?? null;
 }
 
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
@@ -390,6 +422,8 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
+  const routing = normalizeRouting(raw.routing, configPath, issues);
+  const reviewProfiles = normalizeReviewProfiles(raw.reviewProfiles, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
@@ -410,11 +444,77 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   if (atdd) {
     base.atdd = atdd;
   }
+  if (routing) {
+    base.routing = routing;
+  }
+  if (reviewProfiles) {
+    base.reviewProfiles = reviewProfiles;
+  }
   const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
   if (baseBranch !== undefined) {
     base.baseBranch = baseBranch;
   }
   return base;
+}
+
+function normalizeRouting(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiRoutingEntry[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) {
+    issues.push(
+      configIssue(configPath, "routing must be a list of entries keyed by step or skill."),
+    );
+    return undefined;
+  }
+  const entries: QfaiRoutingEntry[] = [];
+  const seen = new Set<string>();
+  for (const [index, value] of raw.entries()) {
+    const name = isRecord(value) ? routingEntryName(value) : undefined;
+    const keys = isRecord(value)
+      ? [value.step, value.skill].filter((key) => key !== undefined)
+      : [];
+    if (!isRecord(value) || name === undefined || keys.length !== 1) {
+      issues.push(
+        configIssue(configPath, `routing[${index}] must have exactly one non-empty step or skill.`),
+      );
+      continue;
+    }
+    if (seen.has(name)) {
+      issues.push(configIssue(configPath, `routing has duplicate entry ${name}.`));
+      continue;
+    }
+    seen.add(name);
+    entries.push(
+      isNonEmptyString(value.step) ? { ...value, step: name } : { ...value, skill: name },
+    );
+  }
+  return entries;
+}
+
+function normalizeReviewProfiles(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): Record<string, QfaiReviewProfile> | undefined {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) {
+    issues.push(
+      configIssue(configPath, "reviewProfiles must be a map of profile names to entries."),
+    );
+    return undefined;
+  }
+  const profiles: Record<string, QfaiReviewProfile> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!isNonEmptyString(name) || !isRecord(value)) {
+      issues.push(configIssue(configPath, `reviewProfiles.${name} must be an entry.`));
+      continue;
+    }
+    profiles[name] = { ...value };
+  }
+  return profiles;
 }
 
 function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
@@ -446,14 +546,14 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
 
   return {
     ...(migrationsDir !== undefined ? { migrationsDir } : {}),
-    contractsDir: readDirString(
+    contractsDir: readTreeDirString(
       raw.contractsDir,
       base.contractsDir,
       "paths.contractsDir",
       configPath,
       issues,
     ),
-    specsDir: readDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
+    specsDir: readTreeDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
     discussionDir: readDirString(
       raw.discussionDir,
       base.discussionDir,
@@ -485,16 +585,6 @@ function normalizeValidation(
     return base;
   }
 
-  let requireRaw: Record<string, unknown> | undefined;
-  if (raw.require === undefined) {
-    requireRaw = undefined;
-  } else if (isRecord(raw.require)) {
-    requireRaw = raw.require;
-  } else {
-    issues.push(configIssue(configPath, "validation.require はオブジェクトである必要があります。"));
-    requireRaw = undefined;
-  }
-
   let traceabilityRaw: Record<string, unknown> | undefined;
   if (raw.traceability === undefined) {
     traceabilityRaw = undefined;
@@ -523,30 +613,7 @@ function normalizeValidation(
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
-    require: {
-      specSections: readStringArray(
-        requireRaw?.specSections,
-        base.require.specSections,
-        "validation.require.specSections",
-        configPath,
-        issues,
-      ),
-    },
     testStrategy: {
-      maxE2eScenarioRatio: readOptionalRatio(
-        testStrategyRaw?.maxE2eScenarioRatio,
-        base.testStrategy.maxE2eScenarioRatio,
-        "validation.testStrategy.maxE2eScenarioRatio",
-        configPath,
-        issues,
-      ),
-      maxE2eScenarioCount: readOptionalNonNegativeInt(
-        testStrategyRaw?.maxE2eScenarioCount,
-        base.testStrategy.maxE2eScenarioCount,
-        "validation.testStrategy.maxE2eScenarioCount",
-        configPath,
-        issues,
-      ),
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,
         base.testStrategy.forbidTestTodoStubs,
@@ -576,13 +643,6 @@ function normalizeValidation(
       ),
     },
     traceability: {
-      scMustHaveTest: readBoolean(
-        traceabilityRaw?.scMustHaveTest,
-        base.traceability.scMustHaveTest,
-        "validation.traceability.scMustHaveTest",
-        configPath,
-        issues,
-      ),
       testFileGlobs: readStringArray(
         traceabilityRaw?.testFileGlobs,
         base.traceability.testFileGlobs,
@@ -594,13 +654,6 @@ function normalizeValidation(
         traceabilityRaw?.testFileExcludeGlobs,
         base.traceability.testFileExcludeGlobs,
         "validation.traceability.testFileExcludeGlobs",
-        configPath,
-        issues,
-      ),
-      unknownContractIdSeverity: readTraceabilitySeverity(
-        traceabilityRaw?.unknownContractIdSeverity,
-        base.traceability.unknownContractIdSeverity,
-        "validation.traceability.unknownContractIdSeverity",
         configPath,
         issues,
       ),
@@ -644,15 +697,23 @@ function normalizePrototyping(
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
-  const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
+  if (Object.prototype.hasOwnProperty.call(raw, "primarySpecId")) {
+    issues.push(
+      configIssue(
+        configPath,
+        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: UI-NNNN.",
+      ),
+    );
+  }
+  const primaryUiContract = normalizePrimaryUiContract(raw.primaryUiContract, configPath, issues);
   const mode = normalizePrototypingMode(raw.mode, configPath, issues);
-  if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
+  if (!calibration && !execution && primaryUiContract === undefined && mode === undefined) {
     return undefined;
   }
   return {
     ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
-    ...(primarySpecId !== undefined ? { primarySpecId } : {}),
+    ...(primaryUiContract !== undefined ? { primaryUiContract } : {}),
     ...(mode !== undefined ? { mode } : {}),
   };
 }
@@ -677,7 +738,7 @@ function normalizePrototypingMode(
   return undefined;
 }
 
-function normalizePrimarySpecId(
+function normalizePrimaryUiContract(
   raw: unknown,
   configPath: string,
   issues: Issue[],
@@ -685,25 +746,28 @@ function normalizePrimarySpecId(
   if (raw === undefined || raw === null) {
     return undefined;
   }
-  if (typeof raw !== "string") {
-    issues.push(
-      configIssue(
-        configPath,
-        'prototyping.primarySpecId は4桁の文字列で指定してください (例: "0012")。',
-      ),
-    );
-    return undefined;
-  }
-  if (!/^\d{4}$/.test(raw)) {
-    issues.push(
-      configIssue(
-        configPath,
-        `prototyping.primarySpecId は4桁の数字文字列である必要があります (got "${raw}")。`,
-      ),
-    );
+  if (typeof raw !== "string" || !/^UI-\d{4}$/.test(raw)) {
+    issues.push(configIssue(configPath, primaryUiContractMessage(raw)));
     return undefined;
   }
   return raw;
+}
+
+function primaryUiContractMessage(raw: unknown): string {
+  return `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`;
+}
+
+/**
+ * Why the file's `prototyping.primaryUiContract` was rejected, or `undefined` when the file sets
+ * none or the value was accepted. A command that selects the primary UI contract refuses on it,
+ * because the loaded config would otherwise fall back to the first UI contract.
+ */
+export function readRejectedPrimaryUiContract(loaded: ConfigLoadResult): string | undefined {
+  const prototyping = isRecord(loaded.document) ? loaded.document.prototyping : undefined;
+  const raw = isRecord(prototyping) ? prototyping.primaryUiContract : undefined;
+  if (raw === undefined || raw === null) return undefined;
+  if (loaded.config.prototyping?.primaryUiContract !== undefined) return undefined;
+  return primaryUiContractMessage(raw);
 }
 
 function normalizePrototypingCalibration(
@@ -961,8 +1025,8 @@ function readString(
  * A configured directory, with any trailing separators removed.
  *
  * Readers use these values two ways: joined with a child path, where a trailing
- * separator is harmless, and tested as a prefix, where it is not. `".qfai/specs/"`
- * builds the prefix `".qfai/specs//"`, which no repository path starts with, so a
+ * separator is harmless, and tested as a prefix, where it is not. `".qfai/spec/"`
+ * builds the prefix `".qfai/spec//"`, which no repository path starts with, so a
  * gate keyed on it selects nothing and reports a pass over an empty set. Settling
  * the spelling here is what stops one reader from working on a value another
  * silently drops.
@@ -982,6 +1046,25 @@ function readDirString(
   return trimmed.length > 0 ? trimmed : raw;
 }
 
+/**
+ * A story-tree root, with every backslash read as `/` on every platform.
+ *
+ * The shipped document-schema checker reads these two keys itself, outside the
+ * package, and takes a backslash as a separator. Folding here as well keeps
+ * `qfai validate` and that checker on one directory for one value: on Linux and
+ * macOS the platform's own path rules would otherwise read `.qfai\spec` as a
+ * single directory name.
+ */
+function readTreeDirString(
+  value: unknown,
+  fallback: string,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): string {
+  return readDirString(value, fallback, label, configPath, issues).replace(/\\/g, "/");
+}
+
 function readOptionalString(
   value: unknown,
   label: string,
@@ -996,51 +1079,6 @@ function readOptionalString(
   }
   issues.push(configIssue(configPath, `${label} は空でない文字列である必要があります。`));
   return undefined;
-}
-
-function readOptionalRatio(
-  value: unknown,
-  fallback: number | null,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number | null {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === null) {
-    return null;
-  }
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1) {
-    return value;
-  }
-  issues.push(configIssue(configPath, `${label} は 0〜1 の数値である必要があります。`));
-  return fallback;
-}
-
-function readOptionalNonNegativeInt(
-  value: unknown,
-  fallback: number | null,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): number | null {
-  if (value === undefined) {
-    return fallback;
-  }
-  if (value === null) {
-    return null;
-  }
-  if (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    Number.isInteger(value) &&
-    value >= 0
-  ) {
-    return value;
-  }
-  issues.push(configIssue(configPath, `${label} は 0 以上の整数である必要があります。`));
-  return fallback;
 }
 
 function readStringArray(
@@ -1093,24 +1131,6 @@ function readFailOn(
   return fallback;
 }
 
-function readTraceabilitySeverity(
-  value: unknown,
-  fallback: TraceabilitySeverity,
-  label: string,
-  configPath: string,
-  issues: Issue[],
-): TraceabilitySeverity {
-  if (value === "warning" || value === "error") {
-    return value;
-  }
-  if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は warning|error のいずれかである必要があります。`),
-    );
-  }
-  return fallback;
-}
-
 /**
  * `validation.traceability` keys that were declared, defaulted and parsed but
  * that no validator ever read. They are still accepted so an existing config
@@ -1126,6 +1146,8 @@ const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
   "scNoTestSeverity",
   "orphanContractsPolicy",
+  "scMustHaveTest",
+  "unknownContractIdSeverity",
 ] as const;
 
 function reportRetiredTraceabilityKeys(
@@ -1243,6 +1265,21 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
+      );
+    }
+  }
+  if (raw.surfacePaths !== undefined) {
+    const surfacePaths = raw.surfacePaths;
+    if (
+      Array.isArray(surfacePaths) &&
+      surfacePaths.every(
+        (entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0,
+      )
+    ) {
+      result.surfacePaths = surfacePaths.map((entry) => entry.trim());
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.surfacePaths must be a list of non-empty glob strings."),
       );
     }
   }

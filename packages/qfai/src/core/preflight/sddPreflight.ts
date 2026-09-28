@@ -455,7 +455,8 @@ function normalizeTextList(values: string[] | undefined): string[] {
  * With a `REQ-ID` column, only that column's declarations count. A column that
  * holds none — a different ID scheme, a renamed cell — makes the count unknown
  * (`null`) rather than a scan of the prose, which counts mentions: a sentence
- * saying the pack does not use `REQ-0001` counted as one requirement. Only a
+ * naming a requirement ID only to say the pack does not use it counted as one
+ * requirement. Only a
  * file with no `REQ-ID` column at all falls back to distinct IDs in the text.
  */
 function countReqIds(text: string): number | null {

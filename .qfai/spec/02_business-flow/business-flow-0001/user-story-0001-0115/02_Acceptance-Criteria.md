@@ -1,0 +1,12 @@
+# Acceptance Criteria
+
+## Criteria
+
+```gherkin
+Feature: DESIGN.md hash drift rejection
+  # AC-0001-0115-01
+  Scenario: Cycle ≥1 hash gate
+    Given `prototyping.json#designMdSha256 === H_recorded`,
+    When `qfai prototyping iterate --cycle <n>` (n ≥ 1) runs and on-disk `sha256(DESIGN.md) !== H_recorded`,
+    Then it exits with code `2` and stderr contains `"DESIGN.md hash mismatch"`. The user must restore `DESIGN.md` or restart from cycle 0.
+```

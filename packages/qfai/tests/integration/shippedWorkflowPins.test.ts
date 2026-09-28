@@ -2,7 +2,7 @@
  * Integration: shipped GitHub Actions workflow-set action pinning.
  *
  * Covers the supply-chain pin half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §6): every `uses:`
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0004 and BR-0020-0005): every `uses:`
  * reference in the shipped set is a bare 40-hex commit SHA pin with no
  * floating major / minor / branch reference anywhere, and no test in the
  * suite retains a floating-major expectation for the shipped workflows (the
@@ -77,7 +77,7 @@ const SHA_PIN_RE = /^[0-9a-f]{40}$/;
 // tag is still not a SHA pin and is caught by the 40-hex assertion.
 const FLOATING_REF_RES: readonly RegExp[] = [/^v[0-9]+$/, /^v[0-9]+\.[0-9]+$/, /^(?:main|master)$/];
 
-// QFAI:SPEC-0003:TC-0003-0030
+// QFAI:EX-0002-0002-01
 describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin", () => {
   it("every uses: value in every shipped workflow is pinned to a 40-hex commit SHA", async () => {
     const violations: string[] = [];
@@ -115,11 +115,19 @@ describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin"
     // pinned tree until this scan was widened).
     const testFiles = (await fg(["**/*.ts"], { cwd: TESTS_DIR, absolute: true })).sort();
     const offending: string[] = [];
+    const plantedFixtureFiles = new Set([
+      "integration/bf0002Acceptance.test.ts",
+      "unit/bf0002Examples.test.ts",
+    ]);
     for (const filePath of testFiles) {
       const source = await readFile(filePath, "utf-8");
       const relative = path.relative(TESTS_DIR, filePath).split(path.sep).join("/");
       source.split(/\r?\n/).forEach((line, index) => {
-        if (/@v[0-9]/.test(line)) {
+        // These two inputs deliberately plant an unpinned checkout reference
+        // in a temporary workflow to prove that the shipped pin guard rejects it.
+        const plantedFixture =
+          plantedFixtureFiles.has(relative) && line.trim().startsWith('"uses: actions/checkout@');
+        if (/@v[0-9]/.test(line) && !plantedFixture) {
           offending.push(`${relative}:${index + 1}: ${line.trim()}`);
         }
       });
@@ -128,14 +136,15 @@ describe("TC-0003-0030 (TDD-0030): every shipped uses value is a 40-hex SHA pin"
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0031
+// QFAI:AC-0002-0002-01
+// QFAI:EX-0002-0002-04
 describe("TC-0003-0031 (TDD-0031): readable version lives in the step name without a leading letter", () => {
   // The readable form: digits-dot-digits(-dot-digits). This pattern asserts
   // version PRESENCE in each pinned step's name and nothing more — it can
   // match inside a leading-v string too (e.g. the "4.0" substring of
   // "v4.4.0"). The leading-v PROHIBITION is deliberately not this oracle's
   // job: it is enforced by the guard-pattern zero-match it below, per
-  // TC-0003-0031 bullet 3 / CLI-WFSET §6 (presence and leading-v live in
+  // TC-0003-0031 bullet 3 / BR-0020-0005 (presence and leading-v live in
   // separate oracles by the TC's own split).
   const READABLE_VERSION_RE = /\b[0-9]+\.[0-9]+(\.[0-9]+)?\b/;
 
@@ -242,8 +251,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
 });
 
 describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
-  // Realizes TC-0003-0033 (AC-0003-0028; BR-0003-0027 "guard breadth is
-  // invariant", NFR-C0005). Bullet mapping:
+  // Realizes BR-0020-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
   //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
   //     it()s. The REAL committed guard is spawned against a temp-staged
   //     package fixture — planted trailers live only on temp copies, never
@@ -362,12 +370,12 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
   it("guard-diff-is-empty: the committed script keeps its unfiltered scan line and gains no pragma / allow-list / exclusion handling", async () => {
     const script = await readFile(GUARD_SCRIPT_PATH, "utf-8");
     // The one scan pipeline every distributed surface goes through, pinned
-    // byte-for-byte: all three pattern classes feed a single recursive grep
+    // byte-for-byte: all four pattern classes feed a single recursive grep
     // with no inverted-grep filter, no exclusion flag and no pragma layer
     // in between. (The INTERNAL_VERSION_RE literal feeding it is byte-pinned
     // by TDD-0031's SSOT-sync assertion above — referenced, not repeated.)
     expect(script).toContain(
-      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)',
+      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)',
     );
     // No pragma support of any spelling has been added to the guard (the
     // `qfai-shipping:allow` pragma exists only in the pre-build src-comment
@@ -383,6 +391,7 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
   });
 });
 
+// QFAI:EX-0002-0002-02
 describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an unsanctioned owner", () => {
   // Realizes TC-0003-0032 (AC-0003-0027, EX-0003-0029). The rule under test is
   // `shipped-third-party` in the workflow-hygiene lane: every third-party
@@ -513,5 +522,30 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     // the reverse.
     expect(findingsOf(run.output), "the untouched shipped set produced a finding").toBe("");
     expect(run.exitCode, `the untouched shipped set must pass the lane:\n${run.output}`).toBe(0);
+  });
+});
+
+/**
+ * The docs lane installs the checker's engine itself, and the package depends
+ * on the same engine. Two versions would let the lane and `qfai validate` give
+ * two verdicts about one document, so all three pins are one.
+ */
+describe("the docs lane installs the mdschema version the package depends on", () => {
+  const PACKAGE = /"@jackchuka\/mdschema":\s*"([^"]+)"/;
+
+  it("pins @jackchuka/mdschema to the version both package manifests name", async () => {
+    const lane = await readFile(
+      path.join(shippedGithubDir(), "workflows", "qfai-docs.yml"),
+      "utf-8",
+    );
+    const shipped = /@jackchuka\/mdschema@(\d+\.\d+\.\d+)/.exec(lane)?.[1];
+    const own = PACKAGE.exec(await readFile(path.join(packageRoot, "package.json"), "utf-8"))?.[1];
+    const repository = PACKAGE.exec(
+      await readFile(path.join(packageRoot, "..", "..", "package.json"), "utf-8"),
+    )?.[1];
+
+    expect(shipped).toBeDefined();
+    expect(own).toBe(shipped);
+    expect(repository).toBe(shipped);
   });
 });

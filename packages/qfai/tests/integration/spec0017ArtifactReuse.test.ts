@@ -1,5 +1,5 @@
 /**
- * `BR-0017-0029`, as the conditional it is written as.
+ * `BR-0018-0029`, as the conditional it is written as.
  *
  * ## What changed, and why it is not a weakening
  *
@@ -21,7 +21,7 @@
  * **This does not say artifact reuse is done.** It is not: no leg downloads the build, no baseline has
  * been captured, and the requirement stays open in `10_Plan.md` and in `09_delta.md`'s follow-ups. What
  * this row now guarantees is that the day someone adopts reuse, they cannot adopt it without the
- * numbers — which is what `BR-0017-0030` asks for and what the old formulation could not check,
+ * numbers — which is what `BR-0018-0030` asks for and what the old formulation could not check,
  * because it was red either way.
  */
 
@@ -48,10 +48,10 @@ interface ReuseState {
 }
 
 /**
- * `BR-0017-0029`. Vacuous while nothing downloads, and exact the moment something does.
+ * `BR-0018-0029`. Vacuous while nothing downloads, and exact the moment something does.
  *
  * The `before`/`after` pair is an input rather than something read here: the numbers live in the
- * decision record and the pull-request description, per `BR-0017-0030`, and whoever adopts reuse is
+ * decision record and the pull-request description, per `BR-0018-0030`, and whoever adopts reuse is
  * the party that measured them.
  */
 export function reuseRuleHolds(input: {
@@ -133,8 +133,8 @@ async function readState(): Promise<ReuseState> {
   return { rebuildLegs: rebuildLegs.sort(), downloadSteps, packLifecycleSites };
 }
 
-// QFAI:SPEC-0017:TC-0017-0032
 describe("the build-artifact reuse rule holds, and holds vacuously until reuse is adopted", () => {
+  // QFAI:EX-0002-0016-01
   it("names the legs that would change, and binds the numbers to the moment one of them downloads", async () => {
     const state = await readState();
 
@@ -171,7 +171,7 @@ describe("the build-artifact reuse rule holds, and holds vacuously until reuse i
       "reuse adopted, nothing rebuilding, and a recorded fall is the accepting shape",
     ).toBe(true);
     const missing = reuseRuleHolds({ state: adopted, recordedBefore: null, recordedAfter: null });
-    expect(missing.holds, "adopting it without the numbers is what BR-0017-0030 forbids").toBe(
+    expect(missing.holds, "adopting it without the numbers is what BR-0018-0030 forbids").toBe(
       false,
     );
     // The REASON, not just the verdict. Deleting the null check leaves `null >= null`, which is `true`
