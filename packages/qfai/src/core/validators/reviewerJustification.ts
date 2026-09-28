@@ -15,7 +15,7 @@ import { exists, issue } from "./utils.js";
 // Empty justification is treated as advisory-failing (error severity).
 //
 // The set is composed from three sources:
-//   1. R-REJECTED-READOPT (REQ-0006 contract).
+//   1. R-REJECTED-READOPT, raised when a rejected option is adopted again.
 //   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
 //   3. The 7-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.

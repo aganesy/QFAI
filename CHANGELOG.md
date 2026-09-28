@@ -13,10 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   new clause of `.agents/rules/user-questions.md`.
 
   - The stage skills' final reports and the `qfai-run` completion report end
-    with that question.
+    with that question. `qfai-discussion` offers `/qfai-sdd` through it, in
+    place of the fixed handoff sentence it printed.
   - Where the question tool is not available, the rule's plain-text fallback
     lists the same actions. Under a no-question mode such as `--auto` nothing
     is asked, and the report lists the next actions.
+  - The question resolves no ambiguity, so the clarification budget does not
+    cap it. A stop is confirmed in one line, every open decision is listed as
+    open, and nothing is asked. A `qfai-run` halt ends with its halt notice.
   - The reminder shown on every prompt names the case, and the rule summaries
     `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the Copilot
     instructions cite it. A summary an earlier release wrote and nobody edited
@@ -185,6 +189,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
     declares and has a row that agrees with both. A disagreement is
     `QFAI-CONTRACT-034`.
+- **Parallel pull requests no longer pick the same new story-tree IDs** (#2623).
+  `scripts/story-ids.mjs` is a repository tool; the package does not ship it.
+  - `next <scope>...` prints one free ID per scope — `DEC`, `OQ`, `BF`,
+    `US-<flow>`, `AC-<flow>-<story>`, `EX-<flow>-<story>` or `BR-<contract>` —
+    and nothing else on stdout. It counts the way the package's allocator does,
+    over main, every open pull request and the working tree.
+  - `check` names each ID the branch declares that main or another open pull
+    request declares too, so two branches that picked the same number before
+    either was pushed find out before merging.
+  - Both cost one REST listing and one `git fetch`, however many pull requests
+    are open, and report the remaining allowance on stderr.
+  - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
 
@@ -1043,6 +1059,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   also reject `cli-NNNN`, `api-NNNN`, `db-NNNN` and `ui-NNNN` outside the
   sample band where no letter, digit, `_` or `-` precedes them. The comments
   state what they relied on in plain words instead.
+
+- **The published type declarations no longer cite this repository's own
+  documents.** Source comments named requirement, test-design and test-case
+  IDs, spec IDs, contract file names, workstream labels and a decision number
+  that a reader of the package cannot follow. They now state the fact in plain
+  words. The pre-build lint rejects a `REQ-` or `TDD-` ID with any four-digit
+  number at the start of a source comment line, so the rule holds without
+  review.
 
 ## [1.12.3] - 2026-09-24
 

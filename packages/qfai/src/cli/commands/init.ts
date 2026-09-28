@@ -1926,7 +1926,8 @@ async function runUpgradeAssistantTree(destRoot: string, dryRun: boolean): Promi
   const anyLegacyExists = surfaceExistence.some(Boolean);
   if (!anyLegacyExists) {
     // Already-upgraded project: emit info-only note so the operator
-    // sees the migration helper ran (REQ-0020 + W-USER-EDIT-PRESERVED).
+    // sees the migration helper ran, under the same `W-USER-EDIT-PRESERVED`
+    // code the preserved-edit notes use.
     preservedNotes.push(
       "  W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found; no migration was needed.",
     );

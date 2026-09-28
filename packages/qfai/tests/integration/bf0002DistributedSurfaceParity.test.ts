@@ -126,6 +126,18 @@ describe("BF-0002 distributed-surface guard parity", () => {
     },
   );
 
+  // QFAI:AC-0002-0012-02
+  // QFAI:EX-0002-0012-03
+  it.each(["REQ-0006", "TDD-0039"])(
+    "rejects %s in a source comment in the pre-build lint alone, outside the shared set",
+    async (id) => {
+      const observed = await observe(fixture, id);
+      expect(observed.lintPatterns).toEqual(["local-reference-id-comment"]);
+      expect(observed.smokeClasses).toEqual([]);
+      expect(observed.guard.status, observed.guard.output).toBe(0);
+    },
+  );
+
   // QFAI:EX-0002-0009-02
   it.each([
     ["DEC-0001-0042", "internal-dec-id-jsdoc-leak"],
