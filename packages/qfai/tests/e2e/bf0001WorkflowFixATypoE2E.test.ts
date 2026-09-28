@@ -97,7 +97,7 @@ it("the edit-text plan edits the one file, verifies in full, and finish complete
   });
 }, 300_000);
 
-it("a typo that turns out to change behaviour is returned for a new route before any edit", async () => {
+it("a typo that turns out to change behaviour stops the run before any edit, naming the skill that owns it", async () => {
   const root = await readmeProject();
   const { runId } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
@@ -120,15 +120,16 @@ it("a typo that turns out to change behaviour is returned for a new route before
       debts: [semantic],
     }),
   );
-  const routing = workflow(root, ["next", "--run", runId]);
+  const stopped = workflow(root, ["next", "--run", runId]);
 
   expect({
     returned: [returned.status, field(returned.json, "run.state")],
-    routing: [
-      field(routing.json, "workOrder.stageKind"),
-      field(routing.json, "workOrder.executor.skill"),
+    stopped: [
+      field(stopped.json, "workOrder"),
+      field(stopped.json, "halt.blocker"),
+      field(stopped.json, "halt.owner"),
     ],
-  }).toEqual({ returned: [0, "routing"], routing: ["route", "qfai-run"] });
+  }).toEqual({ returned: [0, "blocked"], stopped: [null, "stage-blocked", "qfai-sdd"] });
 }, 300_000);
 
 it("a maintenance result changing a file outside the checked scope is refused, and the run stays running", async () => {

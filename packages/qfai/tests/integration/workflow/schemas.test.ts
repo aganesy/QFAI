@@ -158,6 +158,7 @@ it("Validate every payload example and fixture with the parser and with the five
       "routing result",
       "stage result with a flowless debt",
       "stage result measured with nulls",
+      "stage result reporting a branch",
       "proposal",
       "question",
       "measurement",

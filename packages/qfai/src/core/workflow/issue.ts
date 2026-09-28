@@ -12,12 +12,12 @@ import { releaseQuestion } from "./routeDecision.js";
 import { flowBindingOf, planNotReady } from "./stages.js";
 import {
   isReadOnlyStage,
+  issuableSteps,
   ownerOfStep,
   repairOwnerOf,
   SEAM_STEP,
   servingStage,
   servingSteps,
-  stageSteps,
   stepRefs,
 } from "./steps.js";
 import type {
@@ -342,8 +342,9 @@ function planRevision(
 
 // The stage `next` issues, and the steps it runs: the first stage not yet accepted, with every
 // step. While a repair is open, the first stage holding a step that serves the next finding's
-// owner, with only the steps that serve it; the stage that found it runs whole. A repair owned
-// by no stage of the plan never reaches here: `accept` sends it back to routing.
+// owner, with only the steps that serve it; the stage that found it runs whole, less a step a
+// carried receipt satisfied. A repair owned by no stage of the plan never reaches here: `accept`
+// blocks the run on it.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
   selected: PlanStages,
@@ -354,7 +355,7 @@ function stageToIssue(
   const stage = serving ?? selected[(snapshot.acceptedStages ?? []).length];
   if (!stage) return { steps: [] };
   const detecting = stage.stageInstanceId === snapshot.repairRequest?.stageInstanceId;
-  const steps = owner && !detecting ? servingSteps(stage, owner) : stageSteps(stage);
+  const steps = owner && !detecting ? servingSteps(stage, owner) : issuableSteps(snapshot, stage);
   const declared = (stage.steps ?? []).length > 0;
   return declared && steps.length === 0 ? { steps, refused: true } : { stage, steps };
 }

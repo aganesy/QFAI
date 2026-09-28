@@ -58,8 +58,9 @@ A change to a file listed under [Never a maintenance edit](#never-a-maintenance-
 or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
 edited: stop, and report that the change is not a maintenance edit.
 
-Inside a workflow run the stage returns it this way, and the run is reclassified
-from there:
+Inside a workflow run the stage returns it this way. No stage of the route
+serves the finding's owner, so the run is `blocked`, naming the finding and the
+owner skill to invoke by name:
 
 - The outcome is `needs_repair`, and `changedFiles` is empty.
 - `debts` holds one entry for the finding:

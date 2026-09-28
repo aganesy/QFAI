@@ -12,6 +12,7 @@ import {
   RUN_RECORDS_DIR,
   writeSnapshot,
   writeRunRecords,
+  ACCEPTED_EVENTS,
 } from "../../core/workflow/fold.js";
 import {
   baselineOf,
@@ -413,8 +414,6 @@ function replayKey(input: WorkflowInput, decision: WorkflowDecision, digest?: st
   const answer = decision.events.find((event) => event.authorization)?.authorization?.answer;
   return input.questionId && answer ? { key: `question:${input.questionId}`, answer } : undefined;
 }
-
-const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
 
 function routingSettled(decision: WorkflowDecision): boolean {
   return decision.events.some(

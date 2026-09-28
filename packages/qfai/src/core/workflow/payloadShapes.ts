@@ -265,6 +265,11 @@ export const STAGE_RESULT = object(
         pattern: /^(BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})$/,
       }),
     }),
+    // What a step at a branch point reports; which outcome and route the point declares is the
+    // decision function's to judge.
+    branch: object({ outcome: text, route: text, extraction: everyField(READING_FIELDS) }, [
+      "outcome",
+    ]),
     bindings: list(
       everyField({
         slotId: text,

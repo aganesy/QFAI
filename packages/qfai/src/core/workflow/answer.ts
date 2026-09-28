@@ -10,6 +10,7 @@ import type {
   WorkflowFacts,
   WorkflowInput,
   WorkflowQuestion,
+  WorkflowReroute,
   WorkflowRun,
   WorkflowSettled,
   WorkflowSnapshot,
@@ -48,17 +49,21 @@ function valueDigestOf(value: string | undefined, key: string | undefined) {
   return normalized ? keyedDigest(normalized, key) : undefined;
 }
 
-// The answer's record, what it fixes (the route a candidate question chose), and its effect.
+// The answer's record, what it fixes (the route a candidate question chose), and its effect. A
+// `proceed` to a re-route past the cap takes the re-route.
 function answerEvents(
   authorization: WorkflowAuthorization,
   settled: WorkflowSettled | undefined,
   fixed: WorkflowEvent[],
+  reroute: WorkflowReroute | undefined,
 ): WorkflowEvent[] {
   const events: WorkflowEvent[] = [
     { type: "authorization-recorded", authorization, ...(settled ? { settled } : {}) },
     ...fixed,
   ];
-  if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
+  if (authorization.effect === "proceed" && reroute) {
+    events.push({ type: "declared-reroute", reroute });
+  } else if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
   if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
   return events;
@@ -224,7 +229,9 @@ export function decideAnswer(
   );
   const chosen = "optionIds" in answered.answer ? answered.answer.optionIds : [];
   const fixed = routeChoiceEvents(snapshot, question.purpose, chosen);
-  const events = answerEvents(authorization, settledWith(snapshot, question, input), fixed);
+  const reroute = question.purpose === "reroute" ? snapshot.pendingReroute : undefined;
+  const settled = settledWith(snapshot, question, input);
+  const events = answerEvents(authorization, settled, fixed, reroute);
   // A plan the operator has not confirmed, or a route not chosen yet, keeps the run waiting
   // whatever other question this answer settles.
   const gateOpen = (snapshot.openQuestions ?? []).some(
@@ -233,7 +240,8 @@ export function decideAnswer(
       (open.purpose === "plan" || open.purpose === "route"),
   );
   const proceeds = answered.effect === "proceed";
-  const state = proceeds && gateOpen ? "awaiting_input" : STATE_AFTER_EFFECT[answered.effect];
+  const moved = proceeds && reroute ? "routing" : STATE_AFTER_EFFECT[answered.effect];
+  const state = proceeds && gateOpen ? "awaiting_input" : moved;
   return {
     verdict: { ok: true, run: { ...run, state, sequence: run.sequence + events.length } },
     events,

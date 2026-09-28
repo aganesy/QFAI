@@ -310,7 +310,7 @@ it("observed-session-interruption", () => {
   });
 });
 
-it("scope-or-obligation-revision", () => {
+it("declared-reroute", () => {
   const bugfixPlan = {
     route: "fix-defect",
     stages: [
@@ -346,10 +346,23 @@ it("scope-or-obligation-revision", () => {
         },
       },
     },
-    {},
+    {
+      plans: {
+        "fix-defect": {
+          route: "fix-defect",
+          stages: bugfixPlan.stages,
+          branchPoints: [
+            {
+              step: "implement-diagnose",
+              outcomes: [{ outcome: "expectation-differs", routes: ["decide-acceptance"] }],
+            },
+          ],
+        },
+      },
+    },
   );
 
-  expect(edge(accepted)).toEqual({ state: "routing", events: ["scope-or-obligation-revision"] });
+  expect(edge(accepted)).toEqual({ state: "routing", events: ["declared-reroute"] });
 });
 
 it("valid-answer-no-replan", () => {

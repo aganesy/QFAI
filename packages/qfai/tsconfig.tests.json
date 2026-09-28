@@ -485,6 +485,7 @@
     "tests/integration/workflow/plans.test.ts",
     "tests/integration/workflow/routeCatalogPlans.test.ts",
     "tests/integration/workflow/theCatalogRoutesRun.test.ts",
+    "tests/integration/workflow/aBranchPointReroutesTheRun.test.ts",
     "tests/integration/scripts/checkRouteCatalog.test.ts",
     "tests/integration/workflow/aRetiredRouteIsReadAsItsSuccessor.test.ts",
     "tests/integration/workflow/receiptRun.ts",

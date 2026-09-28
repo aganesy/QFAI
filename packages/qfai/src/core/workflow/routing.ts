@@ -13,13 +13,16 @@ import {
   proposalRefusals,
   routingShapeIsBroken,
 } from "./proposal.js";
+import { reusedStepOf } from "./reroute.js";
 import {
   candidateQuestion,
   defaultsIn,
   planQuestion,
+  reroutedOutcome,
   routingOutcome,
   type RoutingOutcome,
 } from "./routeDecision.js";
+import { isWorkflowRoute } from "./routes.js";
 import type {
   ProposalRefusal,
   WorkflowDecision,
@@ -39,6 +42,7 @@ type QuestionInput = NonNullable<ReturnType<typeof parseQuestionInput>>;
 
 // What every routing decision records beside its questions.
 interface Routed {
+  snapshot: WorkflowSnapshot;
   run: WorkflowRun;
   proposal: WorkflowProposal;
   facts: WorkflowFacts;
@@ -118,17 +122,23 @@ function fixedRoute(routed: Routed, outcome: RoutingOutcome, taken: RouteChoice)
     modifiers: outcome.modifiers,
   };
   const before = [decided, ...(flowId ? [{ type: "binding-recorded", flowId }] : [])];
+  // A re-route's destination starts with the step a receipt of the run may already satisfy.
+  const reused =
+    routed.snapshot.pendingReroute && plan
+      ? reusedStepOf(routed.snapshot, plan.stages, facts)
+      : undefined;
+  const carried = reused ? { reused } : {};
   const confirm = carries(outcome, "gate:user");
   const questions = routingQuestions(routed, (id) =>
     confirm && plan ? planQuestion(id, plan) : undefined,
   );
   if (questions.length === 0) {
     if (!plan) return routingNotReady(run);
-    const events = [...before, { type: "plan-accepted", plan, settled, resultRef }];
+    const events = [...before, { type: "plan-accepted", plan, settled, resultRef, ...carried }];
     const ready = { ...run, state: "ready", sequence: run.sequence + events.length };
     return { verdict: { ok: true, run: ready, plan }, events };
   }
-  const after = { type: "unsettled-material-input", proposal, settled, resultRef };
+  const after = { type: "unsettled-material-input", proposal, settled, resultRef, ...carried };
   return waitingOn(routed, questions, before, after, plan);
 }
 
@@ -191,6 +201,21 @@ function blockedRouting(run: WorkflowRun, result: WorkflowResult): WorkflowDecis
   return { verdict: { ok: true, run: blocked }, events: [event] };
 }
 
+// The route routing gives: the destination a re-route fixed, which the decision rules do not
+// choose again, or the route the decision rules give the extraction.
+function outcomeOf(
+  snapshot: WorkflowSnapshot,
+  proposal: WorkflowProposal,
+  facts: WorkflowFacts,
+): RoutingOutcome | undefined {
+  const pending = snapshot.pendingReroute;
+  const defaults = defaultsIn(facts.plans);
+  if (!pending) return routingOutcome(proposal.extraction, defaults);
+  if (!isWorkflowRoute(pending.route)) return undefined;
+  const taken = { route: pending.route, rule: pending.rule ?? null, clause: 0 };
+  return reroutedOutcome(proposal.extraction, taken, defaults);
+}
+
 // `accept` of the routing work order's result: a blocked result blocks the run; otherwise the
 // decision rules choose the route from the extraction, and the proposal is checked against it.
 export function acceptRouting(
@@ -204,7 +229,8 @@ export function acceptRouting(
   if (result.outcome !== "accepted" || !proposal || routingShapeIsBroken(proposal)) {
     return routingNotReady(run);
   }
-  const outcome = routingOutcome(proposal.extraction, defaultsIn(facts.plans));
+  const outcome = outcomeOf(snapshot, proposal, facts);
+  if (!outcome) return routingNotReady(run);
   const routes = outcome.taken
     ? [outcome.taken.route]
     : outcome.candidates.map((each) => each.route);
@@ -217,6 +243,7 @@ export function acceptRouting(
   }
   const settled = { routingResultId: result.resultId, answers: snapshot.settled?.answers ?? [] };
   const routed = {
+    snapshot,
     run,
     proposal,
     facts,

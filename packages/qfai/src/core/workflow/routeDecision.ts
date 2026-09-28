@@ -91,6 +91,21 @@ export function routingOutcome(
   return { candidates, taken: main, modifiers };
 }
 
+// The route and modifiers routing gives a re-route: the destination the branch point fixed, which
+// the decision rules do not choose again, with the extraction's modifiers and the destination's
+// defaults.
+export function reroutedOutcome(
+  extraction: WorkflowExtraction,
+  taken: RouteChoice,
+  defaultsOf: (route: string) => WorkflowModifier[],
+): RoutingOutcome {
+  const modifiers = withModifiers(
+    entriesOf(extractionModifiers(extraction), "extraction"),
+    entriesOf(defaultsOf(taken.route), "default"),
+  );
+  return { candidates: [taken], taken, modifiers };
+}
+
 const FAMILY_LABELS: Record<string, string> = {
   close: "Close the request without a change",
   decide: "Settle the decision before any change",
@@ -148,6 +163,38 @@ export function planQuestion(questionId: string, plan: WorkflowPlan): WorkflowQu
         optionId: "stop",
         label: "Stop",
         description: "The run ends and changes nothing.",
+        effect: "stop",
+      },
+    ],
+    selection: { min: 1, max: 1 },
+    recommendation: "proceed",
+  };
+}
+
+// The one question a re-route past the cap puts: the destination named by what it does and the
+// stages it runs.
+export function rerouteQuestion(
+  questionId: string,
+  family: string | undefined,
+  stages: readonly string[],
+): WorkflowQuestion {
+  const label = FAMILY_LABELS[family ?? ""] ?? "Run another plan";
+  return {
+    questionId,
+    kind: "decision",
+    purpose: "reroute",
+    text: `The run has changed its plan twice already. Change it again to: ${label}?`,
+    options: [
+      {
+        optionId: "proceed",
+        label,
+        description: `The run goes through the stages ${stages.join(", ")}.`,
+        effect: "proceed",
+      },
+      {
+        optionId: "stop",
+        label: "Stop",
+        description: "The run ends here.",
         effect: "stop",
       },
     ],

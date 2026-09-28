@@ -132,12 +132,18 @@ it("A maintain result needs_repair whose finding names an owner the edit-text pl
   expect({
     state: decision.verdict.run?.state,
     events: decision.events.map((event) => event.type),
-    replans: run.snapshot.replans,
+    halt: run.snapshot.halt,
+    route: run.snapshot.plan?.route,
     repairRequest: run.snapshot.repairRequest,
   }).toEqual({
-    state: "routing",
-    events: ["scope-or-obligation-revision"],
-    replans: 1,
+    state: "blocked",
+    events: ["unrun-or-unresolved-dependency"],
+    halt: {
+      blocker: "stage-blocked",
+      owner: "qfai-implement",
+      subjects: ["maintain-semantic-effect@src/orders.ts"],
+    },
+    route: "edit-text",
     repairRequest: undefined,
   });
 });

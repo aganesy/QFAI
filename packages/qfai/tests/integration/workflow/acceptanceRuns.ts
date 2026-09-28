@@ -15,6 +15,7 @@ import {
   resultFor,
   routedRun,
   stepNames,
+  submit,
   workflow,
   write,
 } from "../../e2e/workflowJourney.js";
@@ -114,20 +115,37 @@ export function proposalFor(route: string, extra: object = {}): object {
 }
 
 /**
- * A run of `route` on BF-0001 whose diagnose stage reported `diagnosis`; returns the next order.
- * Stages before the diagnose stage are accepted with a canned result.
+ * A fix-defect run on BF-0001 whose diagnose stage reported `diagnosis`; returns the next order.
+ * Given the `destination` that diagnosis re-routes the run to, the routing work order the re-route
+ * issued is answered with a proposal for it, and the destination's stages before its first
+ * stage that changes anything are accepted with a canned result; the next order is then that stage.
  */
-export async function diagnosed(root: string, diagnosis: object, route = "fix-defect") {
-  const { runId } = await routedRun(root, proposalFor(route));
-  let diagnose = workflow(root, ["next", "--run", runId]);
-  for (let step = 1; !stepNames(diagnose.json).includes("implement-diagnose"); step += 1) {
-    if (step > 3) throw new Error(`no diagnose work order: ${diagnose.stdout}`);
-    diagnose = (await acceptThenNext(root, runId, diagnose.json, `before-${String(step)}`)).next;
+export async function diagnosed(root: string, diagnosis: object, destination?: string) {
+  const { runId } = await routedRun(root, proposalFor("fix-defect"));
+  const diagnose = workflow(root, ["next", "--run", runId]);
+  const reported = { diagnosis: { reproductionRef: REPORT, ...diagnosis } };
+  const { accepted, next } = await acceptThenNext(
+    root,
+    runId,
+    diagnose.json,
+    "diagnose-1",
+    reported,
+  );
+  if (destination === undefined) return { runId, diagnose, accepted, next };
+  const routed = await submit(
+    root,
+    runId,
+    "accept",
+    resultFor(next.json, "reroute-1", { proposal: proposalFor(destination) }),
+  );
+  if (field(routed.json, "ok") !== true) throw new Error(`reroute: ${routed.stdout}`);
+  let issued = workflow(root, ["next", "--run", runId]);
+  for (let step = 1; field(issued.json, "workOrder.stageKind") === "diagnose"; step += 1) {
+    if (step > 3) throw new Error(`no stage after diagnosis: ${issued.stdout}`);
+    const extra = stepNames(issued.json).includes("implement-diagnose") ? reported : {};
+    issued = (await acceptThenNext(root, runId, issued.json, `after-${String(step)}`, extra)).next;
   }
-  const { accepted, next } = await acceptThenNext(root, runId, diagnose.json, "diagnose-1", {
-    diagnosis: { reproductionRef: REPORT, ...diagnosis },
-  });
-  return { runId, diagnose, accepted, next };
+  return { runId, diagnose, accepted, next: issued };
 }
 
 /** A run of `route` driven with canned accepted results until `next` issues `stageKind`. */
