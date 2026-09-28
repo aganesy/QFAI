@@ -319,6 +319,21 @@ names, in its `steps:` list, and no other.
 5. Return the stage result the work order asks for. A finding another owner
    must repair is a debt naming that owner, not an edit made here.
 
+### A pass-through step
+
+A step the work order marks `passThrough` always runs. It first reads what its
+`## Passes when` section names. When that shows it has nothing to write, it
+writes nothing, keeps what it read in a git-ignored record, and returns a pass
+in the result's `passes` as `{ step, reason, evidenceRef }`: `reason` names the
+fact that leaves nothing to write, and `evidenceRef` names the record.
+
+- A pass is not a skip. The step stays in the result, and the stage's reviewers
+  judge its reason.
+- `accept` refuses a pass on a step the work order does not mark, and a pass
+  while the step's obligation remains.
+- Invoked by name, a step with a `## Passes when` section passes the same way,
+  and the report names the pass and its reason.
+
 ## Default Autopilot Policy inside a run
 
 Inside a run, each bucket of a skill's Default Autopilot Policy is

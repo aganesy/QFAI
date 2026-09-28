@@ -70,6 +70,17 @@ from there:
     `direct` plan names: `qfai-implement` for a code or configuration change,
     `qfai-sdd` for a story or contract.
 
+## Passes when
+
+This applies in a stage that follows a behaviour change the run already made.
+Read first: that change, and the documents that describe the behaviour it
+changed. The step passes when no document the change makes wrong exists. The pass names the
+documents it read. Otherwise it brings each wrong document in line with the
+change, as [The edit](#the-edit) says. A document that states a command the
+change altered is brought in line too: the behaviour already changed, so the
+edit changes none. Any other entry under
+[Never a maintenance edit](#never-a-maintenance-edit) still stops the step.
+
 ## What the stage returns
 
 - The diff.

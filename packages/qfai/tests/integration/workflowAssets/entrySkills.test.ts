@@ -34,9 +34,10 @@ const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
-const SIX_PROFILES = [
+const PROFILES = [
   "architecture-heavy",
   "default",
+  "heavy",
   "implementation-heavy",
   "requirements-heavy",
   "runtime-heavy",
@@ -256,7 +257,7 @@ describe("the entry skills' routing entries", () => {
     expect(reviewing.length, "qfai-maintain has a blocking reviewer phase").toBeGreaterThan(0);
     expect(authors, "the reviewer is not an author").not.toContain("completion-reviewer");
 
-    expect(Object.keys(await profiles()).sort()).toEqual(SIX_PROFILES);
+    expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 
     const shippedRoot = path.dirname(path.dirname(SHIPPED_ASSISTANT));
     expect(await validateAgentDefinition(shippedRoot, defaultConfig)).toEqual([]);

@@ -42,6 +42,12 @@ rules against their examples. Follow
   an equal, including or included case is not raised again, nor one a pending
   or declined change request already answers.
 
+## Passes when
+
+Read first: what `sdd-contract` wrote in this stage. The step passes when
+`sdd-contract` wrote or changed no BR Statement and no Examples cell, which is
+when no cycle runs. The pass names the contracts it read.
+
 ## Record
 
 The flow evidence's `## Concrete-Abstract Cycle` table holds the cycles, as

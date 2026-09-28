@@ -269,6 +269,7 @@
     "tests/integration/workflowAssets/entrySkills.test.ts",
     "tests/integration/workflowAssets/implementInRun.test.ts",
     "tests/integration/workflowAssets/implementRouteSteps.test.ts",
+    "tests/integration/workflowAssets/passThroughSteps.test.ts",
     "tests/integration/workflowAssets/runGovernance.test.ts",
     "tests/integration/workflowAssets/stepSurface.test.ts",
     "tests/integration/workflowAssets/storyAuthoringInRun.test.ts",
