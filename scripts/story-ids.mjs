@@ -30,9 +30,12 @@
  * Scopes: `DEC`, `OQ`, `BF`, `US-<flow>`, `AC-<flow>-<story>`,
  * `EX-<flow>-<story>`, `BR-<contract>`.
  *
+ * Requires Node.js 22.18 or later, which runs the package's TypeScript
+ * story-tree parser directly. On an older runtime it exits 2 before any call.
+ *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
  * budget below the reserve (the answer is still printed); 2 the arguments,
- * `git` or `gh` could not be read; 3 a scope has no number left.
+ * the runtime, `git` or `gh` could not be used; 3 a scope has no number left.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -387,9 +390,15 @@ const USAGE = [
   "Scopes: DEC, OQ, BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
 ].join("\n");
 
+/** The package's story-tree parser, which is TypeScript. */
+function loadStoryTree() {
+  return import("../packages/qfai/src/core/storyTree/tree.ts");
+}
+
 /**
- * Runs one command. `options.cwd` is the repository to read and
- * `options.list` replaces the REST listing; both exist for the tests.
+ * Runs one command. `options.cwd` is the repository to read, and
+ * `options.list` and `options.loadTree` replace the REST listing and the
+ * parser; all three exist for the tests.
  */
 export async function run(argv, options = {}) {
   const [command, ...rest] = argv;
@@ -402,12 +411,21 @@ export async function run(argv, options = {}) {
     return 2;
   }
 
+  // Loaded before the listing, so a runtime that cannot run it spends no call.
+  let tree;
+  try {
+    tree = await (options.loadTree ?? loadStoryTree)();
+  } catch (cause) {
+    console.error(`The story-tree parser did not load: ${String(cause?.message ?? cause)}`);
+    console.error("This tool needs Node.js 22.18 or later.");
+    return 2;
+  }
+  const { buildStoryTreeModel, nextStoryTreeId } = tree;
+
   const cwd = options.cwd ?? ROOT;
   const { code: listed, pulls } = (options.list ?? listOpenPulls)(cwd);
   if (pulls === undefined) return listed;
 
-  const { buildStoryTreeModel, nextStoryTreeId } =
-    await import("../packages/qfai/src/core/storyTree/tree.ts");
   const reader = new TreeReader(cwd, buildStoryTreeModel);
   let code;
   try {

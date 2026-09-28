@@ -273,8 +273,8 @@ function ghApi(apiPath) {
 /**
  * The reading the caller is left with, and whether it is above the reserve.
  *
- * Reported on stdout beside the answer rather than on demand, so no invocation
- * leaves the caller guessing.
+ * Reported beside the answer rather than on demand, so no invocation leaves the
+ * caller guessing: on stdout by default, or wherever the caller's `log` writes.
  */
 function reportBudget(reading, log) {
   log(describeReading(reading));

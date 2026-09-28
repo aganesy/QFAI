@@ -150,6 +150,19 @@ describe("arguments", () => {
     expect(await run(argv, { list })).toBe(2);
     expect(list).not.toHaveBeenCalled();
   });
+
+  it("stops with exit 2 before any call on a runtime that cannot load the parser", async () => {
+    const list = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const loadTree = () => Promise.reject(new Error('Unknown file extension ".ts"'));
+      expect(await run(["next", "DEC"], { list, loadTree })).toBe(2);
+      expect(list).not.toHaveBeenCalled();
+      expect(error.mock.calls.flat().join("\n")).toContain("Node.js 22.18 or later");
+    } finally {
+      error.mockRestore();
+    }
+  });
 });
 
 /** A clone whose `origin` is a bare repository standing in for GitHub. */
