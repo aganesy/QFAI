@@ -39,4 +39,5 @@ Feature: Story-tree layout described by mdschema
     Then the lane exits 1 naming the file, under every scope that includes it
     And `qfai validate` reports it as one `QFAI-DOCSCHEMA-001` error naming the file
     And a spelling of `paths.specsDir` or `paths.contractsDir` that `qfai validate` resolves to the same directory covers the same files
+    And the lane and `qfai validate` read a `\` in either key as `/` on every platform, so one value names one directory for both
 ```

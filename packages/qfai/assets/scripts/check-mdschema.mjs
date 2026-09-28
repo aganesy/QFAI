@@ -217,7 +217,8 @@ function mdschemaEntryPoint(packageDir) {
  * The value is returned tree-relative with forward slashes, the form the
  * walked document paths take, so `./.qfai/spec` and `.qfai\spec` name the same
  * tree as `.qfai/spec`, as they do for `qfai validate`. A backslash is read as a
- * separator on every platform: a directory name holding one is not a spelling
+ * separator on every platform, which is how the package's configuration loader
+ * reads these two keys too: a directory name holding one is not a spelling
  * anyone writes on purpose.
  *
  * @returns {string} Configured directory, or its default.
