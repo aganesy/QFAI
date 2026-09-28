@@ -318,7 +318,7 @@ describe("assets guardrails", () => {
     const baselinePath = path.join(
       templateQfaiDir,
       "assistant",
-      "constitution",
+      "rule",
       "shared-skill-delegation-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
@@ -336,11 +336,19 @@ describe("assets guardrails", () => {
       "the call that starts it returns at once",
       "the finished result arrives as a later message",
       "the orchestrator can wait for a result on purpose",
+      // Carrying on is recommended, not only permitted, and a host without the
+      // three capabilities keeps the orchestrator waiting.
+      "it carries on with its own work meanwhile, and waits only when it has nothing to do.",
+      "A host without all three keeps the orchestrator waiting.",
+      // What the orchestrator's own work covers, including an independent
+      // delegation gated by the parallelization policy.
+      "Its own work is planning, preparing the next work order, integrating outputs already returned, and starting another delegation that does not depend on the running one.",
+      "That last one needs the technical conditions of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md` to hold.",
       // The bounds: carrying on is not doing the delegated work, and an
-      // ordering another document makes mandatory still holds.
-      "It never includes the delegated work itself, the primary artifact or a review",
+      // ordering the parallelization policy makes mandatory still holds.
+      "That work never includes the delegated work itself, the primary artifact or a review",
       "The orchestrator must not generate the primary artifact first draft.",
-      "parallelization-policy.md` governs, and carrying on does not override it.",
+      "the parallelization policy governs, and carrying on does not override it.",
     ];
 
     for (const phrase of requiredPhrases) {

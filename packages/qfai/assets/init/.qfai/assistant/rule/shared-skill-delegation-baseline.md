@@ -16,9 +16,11 @@ failure is classified by the taxonomy below before any response.
 - The orchestrator must not generate the primary artifact first draft.
 - The orchestrator must not self-approve or act as reviewer for convenience.
 - The orchestrator is not required to block while a delegated work order runs. Where the host runs delegation in the background — the call that starts it returns at once, the finished result arrives as a later message, and the orchestrator can wait for a result on purpose —
-  it may carry on with its own work meanwhile: planning, preparing the next work order, and integrating outputs already returned.
-- That work stays the orchestrator's own. It never includes the delegated work itself, the primary artifact or a review, and the two prohibitions above bound it.
-- Where the stage's ledger or a seam makes an ordering mandatory, `.qfai/assistant/skills/qfai-implement/references/parallelization-policy.md` governs, and carrying on does not override it.
+  it carries on with its own work meanwhile, and waits only when it has nothing to do. A host without all three keeps the orchestrator waiting.
+- Its own work is planning, preparing the next work order, integrating outputs already returned, and starting another delegation that does not depend on the running one.
+  That last one needs the technical conditions of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md` to hold.
+- That work never includes the delegated work itself, the primary artifact or a review, and the two prohibitions above bound it.
+- Where the stage's ledger or a seam makes an ordering mandatory, the parallelization policy governs, and carrying on does not override it.
 
 ### Capability Probe (MUST)
 
