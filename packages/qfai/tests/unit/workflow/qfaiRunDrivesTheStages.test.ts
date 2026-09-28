@@ -138,10 +138,10 @@ it("bounded-change", () => {
   const plan = {
     route: "bounded-change",
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta", "always"),
-      planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
-      planStage("bounded-implement", "implement", "always"),
-      planStage("bounded-verify", "verify", "always"),
+      planStage("bounded-sdd-delta", "sdd_delta"),
+      planStage("bounded-acceptance", "acceptance"),
+      planStage("bounded-implement", "implement"),
+      planStage("bounded-verify", "verify"),
     ],
   };
   const facts = { acceptanceObligationsUnmet: true };
@@ -281,13 +281,13 @@ it("bugfix", () => {
   const plan = {
     route: "bugfix",
     stages: [
-      planStage("bugfix-diagnose", "diagnose", "always"),
-      planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
-      planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
-      planStage("bugfix-implement", "implement", "missing_example_needed"),
-      planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
-      planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
-      planStage("bugfix-verify", "verify", "always"),
+      planStage("bugfix-diagnose", "diagnose"),
+      planStage("bugfix-sdd-append", "sdd_append"),
+      planStage("bugfix-acceptance", "acceptance"),
+      planStage("bugfix-implement", "implement"),
+      planStage("bugfix-regression-fix", "regression_fix"),
+      planStage("bugfix-test-fix", "test_fix"),
+      planStage("bugfix-verify", "verify"),
     ],
   };
   const missingTestDiagnosis = {
@@ -537,10 +537,10 @@ it("feature", () => {
   const plan = {
     route: "feature",
     stages: [
-      planStage("feature-sdd", "sdd", "always"),
-      planStage("feature-acceptance", "acceptance", "acceptance_obligations_unmet"),
-      planStage("feature-implement", "implement", "always"),
-      planStage("feature-verify", "verify", "always"),
+      planStage("feature-sdd", "sdd"),
+      planStage("feature-acceptance", "acceptance"),
+      planStage("feature-implement", "implement"),
+      planStage("feature-verify", "verify"),
     ],
   };
   const approval = {
@@ -572,7 +572,7 @@ it("feature", () => {
 it("discovery", () => {
   const plan = {
     route: "discovery",
-    stages: [planStage("discovery-discussion", "discussion", "full_discussion_needed")],
+    stages: [planStage("discovery-discussion", "discussion")],
   };
 
   const actual = driveWithCannedResults(

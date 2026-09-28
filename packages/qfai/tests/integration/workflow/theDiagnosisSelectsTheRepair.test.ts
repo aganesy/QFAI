@@ -126,17 +126,15 @@ it("A defective test goes to the owner of its layer: qfai-atdd for a criterion, 
     "ready",
     VERIFY_STEPS,
   ]);
+  // Both layers' steps run; the one that does not own the layer passes.
+  const testFix = {
+    stageKind: "test_fix",
+    steps: ["atdd-test-fix", "implement-test-fix"],
+    target: { kind: "flow", flowId: FLOW_ID },
+  };
   expect([orderOf(byCriterion.next.json), orderOf(byExample.next.json)]).toEqual([
-    {
-      stageKind: "test_fix",
-      steps: ["atdd-test-fix"],
-      target: { kind: "flow", flowId: FLOW_ID },
-    },
-    {
-      stageKind: "test_fix",
-      steps: ["implement-test-fix"],
-      target: { kind: "flow", flowId: FLOW_ID },
-    },
+    testFix,
+    testFix,
   ]);
 }, 600_000);
 
@@ -166,7 +164,7 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
 }, 300_000);
 
 // No active stage of the bugfix plan can change a criterion: its one story-authoring stage only
-// appends examples, and the run skipped it. So the repair goes back to routing, which settles a
+// appends examples, and the run passed it over. So the repair goes back to routing, which settles a
 // plan that can.
 // QFAI:EX-0001-0194-04
 it("A test fix that changes what its test checks is refused, and its repair returns the run to routing", async () => {

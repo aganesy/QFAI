@@ -51,7 +51,7 @@ afterEach(removeProjects);
 
 const BOUND = { kind: "flow", flowId: FLOW_ID };
 const BASELINE = "shared-skill-operating-baseline.md";
-const ACCEPTANCE = ["atdd-scaffold", "atdd-author"];
+const ACCEPTANCE = ["atdd-scaffold", "atdd-credentials", "atdd-author"];
 
 it("one create question, one change approval, every stage from its work order, and finish qfai_done", async () => {
   const root = await discussedProject();
@@ -108,7 +108,15 @@ it("one create question, one change approval, every stage from its work order, a
     approved: "ready",
     sdd: {
       stageKind: "sdd",
-      steps: ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"],
+      steps: [
+        "sdd-triage",
+        "sdd-flow",
+        "sdd-story",
+        "sdd-contract",
+        "common-design-md",
+        "sdd-cycle",
+        "sdd-gate",
+      ],
       target: { kind: "new_story", slotId: expect.any(String) },
     },
     slotBound: true,

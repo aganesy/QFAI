@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
-import { issuedSteps, kindSteps } from "./kindSteps.js";
+import { kindSteps, servedSteps } from "./kindSteps.js";
 
 const flowBinding = { flowId: "BF-0007" };
 const acceptedStages = [
@@ -74,7 +74,7 @@ it("An implement result with testObservation", () => {
     stageInstanceId: next.verdict.workOrder?.stageInstanceId,
   }).toEqual({
     retries: [undefined, undefined],
-    steps: issuedSteps("sdd-triage", "sdd-story", "sdd-gate"),
+    steps: servedSteps("sdd_delta", "qfai-sdd"),
     stageInstanceId: "bounded-sdd-delta",
   });
 });

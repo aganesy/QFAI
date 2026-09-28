@@ -52,20 +52,23 @@ const VOCABULARY: Record<string, string[]> = {
   ],
 };
 
-const PREDICATES = [
-  "always",
-  "missing_example_needed",
-  "diagnosis_missing_test",
-  "test_defect_found",
-  "regression_found",
-  "acceptance_obligations_unmet",
-  "prototype_decision_needed",
-  "full_discussion_needed",
+/** The steps a plan may mark pass-through. */
+const PASS_THROUGH = [
+  "sdd-flow",
+  "sdd-contract",
+  "sdd-cycle",
+  "sdd-story",
+  "common-design-md",
+  "atdd-credentials",
+  "atdd-author",
+  "discussion-uiux",
+  "atdd-test-fix",
+  "implement-test-fix",
+  "maintain-edit",
+  "verify-change-note",
 ];
 
-const STEP_PREDICATES = ["proposed", "test_defect_acceptance_layer", "test_defect_example_layer"];
-
-const STAGE_KEYS = ["id", "kind", "steps", "when", "after", "effects"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "effects"];
 
 const VERIFY = VOCABULARY.verify;
 
@@ -131,9 +134,8 @@ function expectStageInVocabulary(route: string, stage: Stage, ids: string[]) {
   expect(stage.steps.length, `${where}: runs a step`).toBeGreaterThan(0);
   for (const step of stage.steps) {
     expect(allowed, `${where}: step ${step.name}`).toContain(step.name);
-    if (step.when !== undefined) expect(STEP_PREDICATES, where).toContain(step.when);
+    if (step.passThrough) expect(PASS_THROUGH, where).toContain(step.name);
   }
-  expect(PREDICATES, where).toContain(stage.when);
   for (const dependency of stage.after) {
     expect(ids, `${where}: after ${dependency}`).toContain(dependency);
   }
@@ -171,28 +173,28 @@ describe("the built-in plans", () => {
   // QFAI:EX-0001-0192-13
   it("orders the feature plan story authoring, prototyping, acceptance, implement, verify", async () => {
     const { stages } = await plan("feature");
-    expect(stages.map((stage) => [stage.kind, stage.when])).toEqual([
-      ["sdd", "always"],
-      ["prototype", "prototype_decision_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "always"],
-      ["verify", "always"],
+    expect(stages.map((stage) => stage.kind)).toEqual([
+      "sdd",
+      "prototype",
+      "acceptance",
+      "implement",
+      "verify",
     ]);
     expect(names(stages.at(-1))).toEqual(VERIFY);
   });
 
   // QFAI:AC-0001-0193-01
   // QFAI:EX-0001-0193-13
-  it("runs the bugfix plan's implement stage on every missing-test diagnosis", async () => {
+  it("holds the bugfix plan's append, acceptance and implement stages after the diagnosis", async () => {
     const { stages } = await plan("bugfix");
-    expect(stages.map((stage) => [stage.kind, stage.when])).toEqual([
-      ["diagnose", "always"],
-      ["sdd_append", "missing_example_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "diagnosis_missing_test"],
-      ["regression_fix", "regression_found"],
-      ["test_fix", "test_defect_found"],
-      ["verify", "always"],
+    expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
+      ["diagnose", []],
+      ["sdd_append", ["diagnose"]],
+      ["acceptance", ["sdd-append"]],
+      ["implement", ["acceptance"]],
+      ["regression_fix", ["diagnose"]],
+      ["test_fix", ["diagnose"]],
+      ["verify", ["implement", "regression-fix", "test-fix"]],
     ]);
     expect(names(stages.at(-1))).toEqual(VERIFY);
   });
@@ -244,13 +246,13 @@ describe("the built-in plans", () => {
 
   // QFAI:AC-0001-0195-05
   // QFAI:EX-0001-0195-08
-  it("names no qfai-grill, and holds a discussion only under full_discussion_needed", async () => {
+  it("names no qfai-grill, and holds a discussion only in the discovery plan", async () => {
+    const discussing: string[] = [];
     for (const route of PLAN_ROUTES) {
       const { stages } = await plan(route);
       expect(stages.flatMap(names).map(ownerOf), route).not.toContain("qfai-grill");
-      for (const stage of stages.filter((each) => each.kind === "discussion")) {
-        expect(stage.when, `${route}/${stage.id}`).toBe("full_discussion_needed");
-      }
+      if (stages.some((stage) => stage.kind === "discussion")) discussing.push(route);
     }
+    expect(discussing).toEqual(["discovery"]);
   });
 });

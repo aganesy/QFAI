@@ -11,12 +11,12 @@ const flowBinding = { flowId: "BF-0007" };
 const plan = {
   route: "bugfix",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
-    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
-    planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
-    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-sdd-append", "sdd_append"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-regression-fix", "regression_fix"),
+    planStage("bugfix-test-fix", "test_fix"),
+    planStage("bugfix-verify", "verify"),
   ],
 };
 const diagnosis = {

@@ -42,7 +42,6 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
                   flowId: "BF-0001",
                 },
               ],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },

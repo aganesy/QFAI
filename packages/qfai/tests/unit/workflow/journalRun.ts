@@ -111,12 +111,8 @@ export function readyWith(
 }
 
 // One plan stage, in the order the plan files list its fields, carrying its kind's steps.
-export function stage(
-  stageInstanceId: string,
-  stageKind: string,
-  when = "always",
-): PlanStages[number] {
+export function stage(stageInstanceId: string, stageKind: string): PlanStages[number] {
   const steps = KIND_STEPS[stageKind];
   if (!steps) throw new Error(`no steps for stage kind ${stageKind}`);
-  return { stageInstanceId, stageKind, steps, when };
+  return { stageInstanceId, stageKind, steps };
 }

@@ -1,4 +1,5 @@
 // QFAI:AC-0001-0192-05
+// QFAI:AC-0001-0223-03
 // QFAI:EX-0001-0192-51
 
 import { afterEach, expect, it } from "vitest";
@@ -20,13 +21,16 @@ afterEach(removeStoryProjects);
 const FLOW_ID = "BF-0001";
 const CRITERION = "AC-0001-0001-01";
 
+const AUTHOR_PASS = {
+  step: "atdd-author",
+  reason: "Every obligation of the flow already has its acceptance-layer test.",
+  evidenceRef: ".qfai/report/atdd-author-pass.md",
+};
+
 // A bounded-change run bound to BF-0001 over a tree whose tests annotate `layers` and whose
-// decisions table holds `decisionRows`, driven through its sdd_delta stage; returns the stage
-// `next` issues after it.
-async function stageAfterSddDelta(
-  layers: Record<string, string[]>,
-  decisionRows?: string[],
-): Promise<string> {
+// decisions table holds `decisionRows`, driven to its acceptance stage, whose result passes
+// `atdd-author`. Returns what `accept` made of the pass.
+async function authorPassed(layers: Record<string, string[]>, decisionRows?: string[]) {
   const root = await storyProject();
   for (const [file, ids] of Object.entries(layers)) {
     await write(root, file, ids.map((id) => `// QFAI:${id}\nit("${id}", () => {});\n`).join("\n"));
@@ -37,40 +41,56 @@ async function stageAfterSddDelta(
   const facts = async () => storyFacts(root, run.snapshot);
   expect(run.next(await facts()).stageKind).toBe("sdd_delta");
   run.accept({}, await facts());
-  return run.next(await facts()).stageKind;
+  expect(run.next(await facts()).stageKind).toBe("acceptance");
+  const before = run.records.length;
+  const decision = run.accept({ passes: [AUTHOR_PASS] }, await facts());
+  const error = decision.verdict.error;
+  return {
+    state: decision.verdict.run?.state,
+    reasons: error && "reasons" in error ? error.reasons : [],
+    unchanged: run.records.length === before,
+  };
 }
+
+const accepted = { state: "ready", reasons: [], unchanged: false };
+const refused = {
+  state: "running",
+  reasons: [{ reason: "pass-obligation-open", subject: "atdd-author" }],
+  unchanged: true,
+};
 
 it("An E2E test annotates the flow and an integration test annotates its criterion", async () => {
   expect(
-    await stageAfterSddDelta({
+    await authorPassed({
       "tests/e2e/flow.test.ts": [FLOW_ID],
       "tests/integration/criteria.test.ts": [CRITERION],
     }),
-  ).toBe("implement");
+  ).toEqual(accepted);
 });
 
-it("The criterion is annotated only in a unit test", async () => {
+// QFAI:EX-0001-0223-03
+it("The criterion is annotated only in a unit test, and no exception row exempts it", async () => {
   expect(
-    await stageAfterSddDelta({
+    await authorPassed({
       "tests/e2e/flow.test.ts": [FLOW_ID],
       "tests/unit/criteria.test.ts": [CRITERION],
     }),
-  ).toBe("acceptance");
+  ).toEqual(refused);
 });
 
 it("The flow is annotated only in an integration test", async () => {
   expect(
-    await stageAfterSddDelta({
+    await authorPassed({
       "tests/integration/flow.test.ts": [FLOW_ID, CRITERION],
     }),
-  ).toBe("acceptance");
+  ).toEqual(refused);
 });
 
 // QFAI:EX-0001-0192-52
 it("A criterion a DONE test exception names, with no example annotated", async () => {
   expect(
-    await stageAfterSddDelta({ "tests/e2e/flow.test.ts": [FLOW_ID], [TEST]: [] }, [
+    await authorPassed({ "tests/e2e/flow.test.ts": [FLOW_ID], [TEST]: [] }, [
       `| DEC-0002 | Test exception: ${CRITERION} | Covered by the flow's E2E test | DONE |`,
     ]),
-  ).toBe("implement");
+  ).toEqual(accepted);
 });

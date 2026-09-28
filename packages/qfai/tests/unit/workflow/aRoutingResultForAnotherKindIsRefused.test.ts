@@ -36,7 +36,6 @@ function acceptRequestKind(requestKind: string) {
           newStories: [],
           proposedWriteScope: [],
           protectedTargets: [],
-          requiredStages: [],
         },
       },
     },

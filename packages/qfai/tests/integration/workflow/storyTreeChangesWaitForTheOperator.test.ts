@@ -94,7 +94,7 @@ it("Drift inside the checked scope is a repair owned by story authoring, not a h
 
   expect([field(repair.json, "run.state"), stepNames(next.json)]).toEqual([
     "ready",
-    ["sdd-triage", "sdd-story", "sdd-gate"],
+    ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-gate"],
   ]);
 }, 300_000);
 

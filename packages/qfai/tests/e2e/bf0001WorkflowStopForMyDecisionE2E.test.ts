@@ -161,7 +161,13 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
     answered: "ready",
     stage: [
       "discussion",
-      ["discussion-research", "discussion-interview", "discussion-pack", "discussion-oq"],
+      [
+        "discussion-research",
+        "discussion-interview",
+        "discussion-pack",
+        "discussion-oq",
+        "discussion-uiux",
+      ],
     ],
     routingResult: true,
     answers: [{ questionId, text: FORMAT.text, chosen: "CSV" }],

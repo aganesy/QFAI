@@ -110,8 +110,12 @@ export async function storyFacts(root: string, snapshot: WorkflowSnapshot) {
   return storyFactsOf(root, config, snapshot.flowBinding?.flowId, snapshot.diagnosis);
 }
 
-function stage(stageKind: string, steps: string[], when = "always") {
-  return { stageInstanceId: stageKind, stageKind, steps: steps.map((name) => ({ name })), when };
+// A plan stage running `steps`, those in `passThrough` marked pass-through.
+function stage(stageKind: string, steps: string[], passThrough: string[] = []) {
+  const entries = steps.map((name) =>
+    passThrough.includes(name) ? { name, passThrough: true } : { name },
+  );
+  return { stageInstanceId: stageKind, stageKind, steps: entries };
 }
 
 const VERIFY = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
@@ -131,8 +135,8 @@ const BOUNDED = [
 
 const BUGFIX = [
   stage("diagnose", ["implement-diagnose"]),
-  stage("sdd_append", ["sdd-story", "sdd-gate"], "missing_example_needed"),
-  stage("implement", IMPLEMENT, "diagnosis_missing_test"),
+  stage("sdd_append", ["sdd-story", "sdd-gate"], ["sdd-story"]),
+  stage("implement", IMPLEMENT),
   stage("verify", VERIFY),
 ];
 

@@ -1,5 +1,6 @@
 import {
   areaCovers,
+  firstMatchedKind,
   isAuthorOrRecommender,
   notReady,
   REPLAN_BUDGET,
@@ -14,7 +15,7 @@ import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./pa
 import { DIAGNOSIS_VERDICTS } from "./payloadShapes.js";
 import { storyTreeChecks } from "./records.js";
 import { activeStages } from "./stages.js";
-import { activeSteps, repairOwnerOf, servingStage, servingSteps, stepNamesOf } from "./steps.js";
+import { repairOwnerOf, servingStage, servingSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
   InputRefusal,
   InputRefusalReason,
@@ -179,6 +180,54 @@ function receiptRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): 
   return refusals;
 }
 
+const EXAMPLE_FILE = /(^|\/)03_Example\.md$/;
+
+// Whether a pass-through step's own check shows work it owns remains. A step with no such check
+// is judged by the stage's reviewers.
+function passObligationOpen(
+  step: string,
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): boolean {
+  const kind = firstMatchedKind(snapshot.diagnosis);
+  switch (step) {
+    case "atdd-author":
+      return facts.acceptanceObligationsUnmet === true;
+    // An example states the diagnosed case only when the diagnosis matched one first, and a
+    // story-authoring stage that passes the step changes no example.
+    case "sdd-story":
+      return workOrder.stageKind === "sdd_append"
+        ? kind !== "EX"
+        : (result.changedFiles ?? []).some((file) => EXAMPLE_FILE.test(file.path));
+    // A BF or an AC names the acceptance layer, and an EX the example layer.
+    case "atdd-test-fix":
+      return kind === "BF" || kind === "AC";
+    case "implement-test-fix":
+      return kind === "EX";
+    default:
+      return false;
+  }
+}
+
+// A pass stands only for a step its work order marks pass-through, and only while nothing the
+// step owns remains.
+function passRefusals(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  return (result.passes ?? []).flatMap((pass): InputRefusal[] => {
+    const step = workOrder.steps?.find((each) => each.name === pass.step);
+    if (!step?.passThrough) return [{ reason: "pass-not-allowed", subject: pass.step }];
+    return passObligationOpen(pass.step, snapshot, result, workOrder, facts)
+      ? [{ reason: "pass-obligation-open", subject: pass.step }]
+      : [];
+  });
+}
+
 export function resultRefusals(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -191,6 +240,7 @@ export function resultRefusals(
     ...measurementRefusals(result),
     ...blockedRefusals(snapshot, result, workOrder, facts),
     ...scopeRefusals(result, workOrder, facts),
+    ...passRefusals(snapshot, result, workOrder, facts),
   ];
   const notRun = notRunRefusalOf(result.notRun, facts);
   if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
@@ -370,7 +420,7 @@ function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[
   if (workOrder.stageInstanceId === request.stageInstanceId) return undefined;
   const stage = selected.find((each) => each.stageInstanceId === workOrder.stageInstanceId);
   if (!stage) return undefined;
-  return { stage, steps: servingSteps(stage, owner, plan, snapshot.diagnosis) };
+  return { stage, steps: servingSteps(stage, owner) };
 }
 
 // Whether the result names the plan stage the run is at, with the fields that stage needs.
@@ -424,6 +474,7 @@ function acceptedEvents(
       stageInstanceId: workOrder.stageInstanceId,
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
+      ...(result.passes?.length ? { passes: result.passes } : {}),
       ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
       ...(result.diagnosis ? { diagnosis: result.diagnosis } : {}),
       ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
@@ -439,8 +490,7 @@ function acceptedEvents(
   ];
 }
 
-// A repair needs a new plan when no active step of the plan serves a finding's owner: a step the
-// plan gates with `proposed` and the proposal did not list is not active.
+// A repair needs a new plan when no step of the plan's active stages serves a finding's owner.
 function repairOutsidePlan(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -451,7 +501,7 @@ function repairOutsidePlan(
   const selected = activeStages(plan, snapshot, facts);
   return (result.debts ?? []).some((debt) => {
     const owner = skillOwnerOf(debt);
-    return owner !== undefined && !servingStage(selected, owner, plan, snapshot.diagnosis);
+    return owner !== undefined && !servingStage(selected, owner);
   });
 }
 
@@ -524,7 +574,7 @@ export function acceptStageResult(
   const repair = repairStageOf(snapshot, selected);
   const stage = repair?.stage ?? selected[accepted.length];
   if (!plan || !workOrder || !stage) return notReady(run, "stage result");
-  const steps = repair?.steps ?? activeSteps(stage, plan, snapshot.diagnosis);
+  const steps = (repair?.steps ?? stageSteps(stage)).map((step) => step.name);
   if (stageResultIsBroken(snapshot, workOrder, stage, result, steps)) {
     return notReady(run, "stage result");
   }
