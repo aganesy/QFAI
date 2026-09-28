@@ -27,7 +27,7 @@ const AUTHOR_PASS = {
   evidenceRef: ".qfai/report/atdd-author-pass.md",
 };
 
-// A bounded-change run bound to BF-0001 over a tree whose tests annotate `layers` and whose
+// An add-feature run bound to BF-0001 over a tree whose tests annotate `layers` and whose
 // decisions table holds `decisionRows`, driven to its acceptance stage, whose result passes
 // `atdd-author`. Returns what `accept` made of the pass.
 async function authorPassed(layers: Record<string, string[]>, decisionRows?: string[]) {
@@ -36,10 +36,10 @@ async function authorPassed(layers: Record<string, string[]>, decisionRows?: str
     await write(root, file, ids.map((id) => `// QFAI:${id}\nit("${id}", () => {});\n`).join("\n"));
   }
   if (decisionRows) await write(root, DECISIONS, decisions(decisionRows));
-  const bounded = (await planFacts())["bounded-change"]?.stages ?? [];
-  const run = new JournalRun(readyWith(planOf("bounded-change", bounded, ["src/**"]), FLOW_ID));
+  const addFeature = (await planFacts())["add-feature"]?.stages ?? [];
+  const run = new JournalRun(readyWith(planOf("add-feature", addFeature, ["src/**"]), FLOW_ID));
   const facts = async () => storyFacts(root, run.snapshot);
-  expect(run.next(await facts()).stageKind).toBe("sdd_delta");
+  expect(run.next(await facts()).stageKind).toBe("sdd");
   run.accept({}, await facts());
   expect(run.next(await facts()).stageKind).toBe("acceptance");
   const before = run.records.length;

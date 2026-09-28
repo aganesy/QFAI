@@ -7,7 +7,7 @@ import { planStage } from "./kindSteps.js";
 
 it("Issue the SDD work order, then accept an SDD result reporting bindings for the slot", () => {
   const plan = {
-    route: "feature",
+    route: "add-feature",
     stages: [
       planStage("feature-sdd", "sdd"),
       planStage("feature-implement", "implement"),

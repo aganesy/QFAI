@@ -27,7 +27,7 @@ function seed(requiresHumanInput: boolean, forbid: string[]): ScoredSeed {
     repoFacts: {},
     expected: {
       requestKind: "change",
-      allowedRoutes: ["bounded-change"],
+      allowedRoutes: ["add-feature"],
       requiresHumanInput,
       must: ["verify"],
       forbid,
@@ -54,10 +54,10 @@ it("Synthetic run records scored against their seeds, on four axes each", () => 
   const clear = { ...seed(false, ["discussion"]), id: "ROUTE-920" };
   const risky = { ...seed(true, ["execute_production_drop"]), id: "ROUTE-921" };
   const runs = [
-    { seedId: "ROUTE-920", route: "bounded-change", observed: ["verify"], askedQuestion: false },
+    { seedId: "ROUTE-920", route: "add-feature", observed: ["verify"], askedQuestion: false },
     {
       seedId: "ROUTE-921",
-      route: "direct",
+      route: "edit-text",
       observed: ["execute_production_drop"],
       askedQuestion: false,
     },

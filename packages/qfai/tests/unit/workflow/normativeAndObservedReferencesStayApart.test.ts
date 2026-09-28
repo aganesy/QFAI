@@ -37,7 +37,7 @@ it("Decide accept of a routing result with normative references, observed refere
             outcome: "accepted",
             proposal: {
               requestKind: "change",
-              candidateRoute: "feature",
+              candidateRoute: "add-feature",
               goal: "Let each customer register a notification email.",
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
@@ -59,8 +59,8 @@ it("Decide accept of a routing result with normative references, observed refere
           pathExistence: { "src/notify/email.ts": true, "tests/notify/email.test.ts": true },
           flows: ["BF-0007"],
           plans: {
-            feature: {
-              route: "feature",
+            "add-feature": {
+              route: "add-feature",
               stages: [
                 { stageInstanceId: "sdd", stageKind: "sdd" },
                 { stageInstanceId: "verify", stageKind: "verify" },

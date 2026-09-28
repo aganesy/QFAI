@@ -41,7 +41,7 @@ it("unknown-path", () => {
       debts: [],
       proposal: {
         requestKind: "change",
-        candidateRoute: "feature",
+        candidateRoute: "add-feature",
         goal: "Let each customer register a notification email.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -118,7 +118,7 @@ type Proposal = NonNullable<NonNullable<AcceptInput["result"]>["proposal"]>;
 function checkedProposal(): Proposal {
   return {
     requestKind: "change",
-    candidateRoute: "feature",
+    candidateRoute: "add-feature",
     goal: "Let each customer register a notification email.",
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: [],
@@ -203,9 +203,9 @@ it("unknown-id", () => {
 });
 
 const boundedPlan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    ["sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
+    ["sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
     ["implement", "implement", "qfai-implement", "implement"],
     ["verify", "verify", "qfai-verify", "verify-full"],
   ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -221,11 +221,11 @@ function boundedNaming(affectedFlowIds: string[]) {
   return acceptRouting(
     {
       ...checkedProposal(),
-      candidateRoute: "bounded-change",
+      candidateRoute: "add-feature",
       newStories: [],
       affectedFlowIds,
     },
-    { flows: ["BF-0001", "BF-0002"], plans: { "bounded-change": boundedPlan } },
+    { flows: ["BF-0001", "BF-0002"], plans: { "add-feature": boundedPlan } },
   );
 }
 

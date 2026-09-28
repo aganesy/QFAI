@@ -2,6 +2,8 @@
 // `assets/schemas/workflow/`: every required field present, every field of its type, and no key
 // a schema does not declare. What a payload means is the decision function's to judge.
 
+import { WORKFLOW_ROUTES } from "./routes.js";
+
 type Shape =
   | { kind: "string"; minLength?: number; pattern?: RegExp }
   | { kind: "integer"; minimum: number }
@@ -50,6 +52,22 @@ export const DIAGNOSIS_VERDICTS = [
   "product-race",
 ] as const;
 
+// How a `triage-close` result closed the request.
+export const CLOSURE_OUTCOMES = [
+  "no-work",
+  "other-owner",
+  "answered",
+  "duplicate",
+  "awaiting-info",
+  "accepted",
+  "declined",
+  "deferred",
+  "decided",
+  "split",
+  "handed-off",
+  "verified",
+] as const;
+
 const FLOW_ID: Shape = { kind: "string", pattern: /^BF-\d{4}$/ };
 const EFFECT = oneOf("proceed", "replan", "stop");
 
@@ -91,7 +109,7 @@ export const ROUTE_PROPOSAL = object(
       "cancel",
       "explicit_stage",
     ),
-    candidateRoute: oneOf("direct", "bugfix", "bounded-change", "feature", "discovery", null),
+    candidateRoute: oneOf(...WORKFLOW_ROUTES, null),
     goal: text,
     expectedBehaviorRefs: list(reference("request", "flow-id", "contract-id", "path")),
     observedRefs: list(reference("path", "evidence")),
@@ -186,6 +204,10 @@ export const STAGE_RESULT = object(
       ],
     },
     passes: list(everyField({ step: text, reason: text, evidenceRef: text })),
+    closure: everyField({
+      outcome: oneOf(...CLOSURE_OUTCOMES),
+      followUps: list(everyField({ goal: text, reason: text })),
+    }),
     red: everyField({
       testId: text,
       failureKind: oneOf("assertion", "collection", "import", "startup", "timeout"),

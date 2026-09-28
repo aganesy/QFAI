@@ -30,7 +30,7 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
             outcome: "accepted",
             proposal: {
               requestKind: "change",
-              candidateRoute: "feature",
+              candidateRoute: "add-feature",
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
               newStories: [

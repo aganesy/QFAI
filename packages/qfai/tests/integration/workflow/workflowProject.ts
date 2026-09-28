@@ -199,10 +199,13 @@ export async function startRun(root: string, input: unknown = START_INPUT): Prom
   return id;
 }
 
-/** A routing proposal for the discovery route, which binds no flow and needs no approval. */
+/**
+ * A routing proposal for the decide-design route, which binds no flow, needs no approval and
+ * writes only its discussion pack.
+ */
 export const DISCOVERY_PROPOSAL = {
   requestKind: "change",
-  candidateRoute: "discovery",
+  candidateRoute: "decide-design",
   goal: "Settle what the export should contain.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -210,15 +213,15 @@ export const DISCOVERY_PROPOSAL = {
   riskSignals: [],
   unresolvedQuestions: [],
   newStories: [],
-  proposedWriteScope: ["docs/**"],
+  proposedWriteScope: [".qfai/discussion/**"],
   protectedTargets: [],
   rationale: "The request names no behaviour a story already states.",
 };
 
-/** A routing proposal for the feature route, naming one new story in BF-0001. */
+/** A routing proposal for the add-feature route, naming one new story in BF-0001. */
 export const FEATURE_PROPOSAL = {
   ...DISCOVERY_PROPOSAL,
-  candidateRoute: "feature",
+  candidateRoute: "add-feature",
   goal: "Export an order as CSV.",
   newStories: [
     {
@@ -277,7 +280,7 @@ export async function routedRun(
   return { runId, routing, routed };
 }
 
-/** A feature run approved and driven, with canned accepted results, until `next` issues a
+/** An add-feature run approved and driven, with canned accepted results, until `next` issues a
  * work order of `stageKind`. Returns the run and that `next` output. */
 export async function featureRunAt(root: string, stageKind: string, input: unknown = START_INPUT) {
   const { runId, routed } = await routedRun(root, FEATURE_PROPOSAL, input);

@@ -201,7 +201,7 @@ function runDirOf(root: string, runId: string): string {
   return path.join(root, RUNS, runId);
 }
 
-// A discovery run routed and ready, whose journal holds four events.
+// A decide-design run routed and ready, whose journal holds four events.
 async function readyRun() {
   const root = await minimalProject();
   const { runId, routed } = await routedRun(root);
@@ -607,6 +607,7 @@ it("Run records of a feature run approved at routing", async () => {
   }).toEqual({
     summary: [
       "authorizationIds",
+      "closure",
       "completionTarget",
       "createdAt",
       "debts",

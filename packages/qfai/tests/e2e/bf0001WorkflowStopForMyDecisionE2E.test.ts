@@ -5,7 +5,7 @@
  * On a `qfai init` project, routing that carries a material risk opens one question and waits
  * with no work order; a `stop` then ends the run `cancelled`, and the run takes nothing further.
  * A missing fact is asked once as a value with no recommendation, and the discussion stage is
- * handed what the run has settled before the run returns to routing.
+ * handed what the run has settled before the run goes on to the stage that closes the request.
  */
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -127,7 +127,7 @@ it("an answer that changes the scope sends the run back to routing, and qfai-run
   });
 }, 300_000);
 
-it("one missing fact is asked as a value, and the discussion stage gets what is settled before the run returns to routing", async () => {
+it("one missing fact is asked as a value, and the discussion stage gets what is settled before the close stage", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, {
     ...DISCOVERY_PROPOSAL,
@@ -144,6 +144,7 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
   const issued = workflow(root, ["next", "--run", runId]);
   const settled = field(issued.json, "workOrder.settled");
   const returned = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
+  const closing = workflow(root, ["next", "--run", runId]);
   const installed = list(issued.json, "workOrder.steps").every((step) =>
     existsSync(path.join(root, String(field(step, "path")))),
   );
@@ -155,6 +156,7 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
     routingResult: Object.values(Object(settled)).includes("route-1"),
     answers: Object.values(Object(settled)).find((value) => Array.isArray(value)),
     returned: field(returned.json, "run.state"),
+    closing: [field(closing.json, "workOrder.stageKind"), stepNames(closing.json)],
     installed,
   }).toEqual({
     question: ["fact", undefined],
@@ -165,13 +167,14 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
         "discussion-research",
         "discussion-interview",
         "discussion-pack",
-        "discussion-oq",
         "discussion-uiux",
+        "discussion-oq",
       ],
     ],
     routingResult: true,
     answers: [{ questionId, text: FORMAT.text, chosen: "CSV" }],
-    returned: "routing",
+    returned: "ready",
+    closing: ["triage", ["triage-close"]],
     installed: true,
   });
 }, 300_000);

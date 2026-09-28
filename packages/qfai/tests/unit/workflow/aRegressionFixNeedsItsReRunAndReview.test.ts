@@ -7,7 +7,7 @@ import { kindSteps, planStage } from "./kindSteps.js";
 
 const flowBinding = { flowId: "BF-0007" };
 const plan = {
-  route: "bugfix",
+  route: "fix-red-main",
   stages: [
     planStage("bugfix-diagnose", "diagnose"),
     planStage("bugfix-regression-fix", "regression_fix"),

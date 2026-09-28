@@ -5,7 +5,7 @@ import {
   isRunChange,
   refusedInput,
 } from "./common.js";
-import { activeStages } from "./stages.js";
+import { endsAtTriageClose, flowBindingOf, runsVerifyBlock } from "./stages.js";
 import { ownerOfSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
   FindingIdentity,
@@ -67,13 +67,13 @@ function runStateUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   return unmetOf("run-waiting", [named ?? "blocked"], halt?.owner);
 }
 
-function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowUnmet[] {
+function stageUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   const plan = snapshot.plan;
   if (!plan) return [];
   const accepted = snapshot.acceptedStages ?? [];
   const isAccepted = (stageInstanceId: string) =>
     accepted.some((stage) => stage.stageInstanceId === stageInstanceId);
-  return activeStages(plan, snapshot, facts)
+  return plan.stages
     .filter((stage) => stage.stageKind !== "verify" && !isAccepted(stage.stageInstanceId))
     .flatMap((stage) =>
       unmetOf(
@@ -84,7 +84,9 @@ function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowU
     );
 }
 
+// A run with a plan needs the verify report only when its route runs the verify block.
 function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  if (snapshot.plan && !runsVerifyBlock(snapshot.plan.stages)) return [];
   const verifyStages = (snapshot.acceptedStages ?? []).filter(
     (stage) => stage.stageKind === "verify",
   );
@@ -102,7 +104,9 @@ function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionF
     : unmetOf("gate-failed", ["verify"]);
 }
 
+// A route that ends at `triage-close` changes nothing a gatekeeper has to pass.
 function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  if (endsAtTriageClose(snapshot.plan?.stages ?? [])) return [];
   const actorHistory = snapshot.actorHistory ?? [];
   const independentPass = (snapshot.acceptedStages ?? [])
     .flatMap((stage) => stage.reviewResults ?? [])
@@ -166,8 +170,10 @@ function scopeUnmet(
       : [];
   const escaped = escapedPaths(snapshot, completion.changedPaths, facts);
   const approval = snapshot.approval;
+  const unbound =
+    flowBindingOf(snapshot.plan?.stages ?? []) === "required" && !snapshot.flowBinding;
   const unanswered =
-    (approval && !approval.authorizationId) || (snapshot.plan?.route === "feature" && !approval)
+    (approval && !approval.authorizationId) || (unbound && !approval)
       ? [approval?.target?.slotId ?? "CREATE"]
       : [];
   return [
@@ -224,7 +230,7 @@ function completionUnmet(
 ): WorkflowUnmet[] {
   const unmet = [
     ...runStateUnmet(snapshot),
-    ...stageUnmet(snapshot, facts),
+    ...stageUnmet(snapshot),
     ...verifyUnmet(snapshot, completion),
     ...reviewUnmet(snapshot),
     ...validateGate(snapshot, failingFindings(completion)),

@@ -8,11 +8,12 @@
 import { describe, expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planFacts } from "../../../src/core/workflow/observe.js";
 import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { kindSteps, planStage } from "../../unit/workflow/kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Facts = Parameters<typeof decide>[2];
+type Plan = NonNullable<Snapshot["plan"]>;
 type WorkOrder = NonNullable<Snapshot["outstandingWorkOrder"]>;
 
 const FLOW = { flowId: "BF-0001" };
@@ -30,32 +31,31 @@ const REVIEWERS: NonNullable<Facts["reviewerRoles"]> = {
   "implement-checkpoint": ["completion-reviewer", "qa-gatekeeper"],
 };
 
-function boundedPlan(riskSignals: string[] = []) {
+const DIAGNOSIS = {
+  verdict: "missing-test",
+  reproductionRef: "tests/export.test.ts",
+  matchedIds: ["AC-0001-0001-01"],
+};
+
+// The shipped plan of `route`, as a checked plan carries it.
+async function shippedPlan(route: string, riskSignals: string[] = []): Promise<Plan> {
+  const stages = (await planFacts())[route]?.stages;
+  if (!stages) throw new Error(`no shipped plan for ${route}`);
   return {
-    route: "bounded-change",
+    route,
     writeScope: ["src/**"],
+    stages,
     ...(riskSignals.length > 0 ? { riskSignals } : {}),
-    stages: [
-      planStage("sdd-delta", "sdd_delta"),
-      planStage("acceptance", "acceptance"),
-      planStage("implement", "implement"),
-      planStage("verify", "verify"),
-    ],
   };
 }
 
 const facts: Facts = { reviewerRoles: REVIEWERS };
 
 // The work order `next` issues on a ready run of the plan, after the stages already accepted.
-function issued(
-  plan: NonNullable<Snapshot["plan"]>,
-  accepted: string[] = [],
-  extra: Partial<Snapshot> = {},
-) {
-  const kinds: Record<string, string> = { "sdd-delta": "sdd_delta" };
+function issued(plan: Plan, accepted: string[] = [], extra: Partial<Snapshot> = {}) {
   const acceptedStages = accepted.map((id) => ({
     stageInstanceId: id,
-    stageKind: kinds[id] ?? id.replace("-", "_"),
+    stageKind: plan.stages.find((stage) => stage.stageInstanceId === id)?.stageKind ?? id,
     outcome: "accepted",
   }));
   const snapshot = {
@@ -99,44 +99,62 @@ function names(workOrder: WorkOrder): string[] {
   return (workOrder.steps ?? []).map((step) => step.name);
 }
 
+// The work-order entry of a step no route marks as a branch point.
+function stepEntry(name: string, passThrough: boolean, decisionPoint: "user" | null = null) {
+  const path = `.qfai/assistant/step/${name}/STEP.md`;
+  return { name, path, mode: null, passThrough, decisionPoint, branchPoint: false };
+}
+
 describe("a stage runs every step its route names", () => {
   // QFAI:EX-0001-0216-01
-  // QFAI:EX-0001-0216-05
-  it("names every step of the stage in plan order, each with its pass-through mark", () => {
-    const { workOrder } = issued(boundedPlan());
+  it("names every step of the add-feature sdd stage in plan order, each with its pass-through mark", async () => {
+    const { workOrder } = issued(await shippedPlan("add-feature"));
+    const steps = workOrder.steps ?? [];
 
     expect({
+      names: names(workOrder),
+      passThrough: steps.filter((step) => step.passThrough).map((step) => step.name),
+    }).toEqual({
+      names: [
+        "sdd-triage",
+        "sdd-flow",
+        "sdd-story",
+        "sdd-contract",
+        "common-design-md",
+        "sdd-cycle",
+        "sdd-gate",
+      ],
+      passThrough: ["sdd-flow", "sdd-contract", "common-design-md", "sdd-cycle"],
+    });
+  });
+
+  // QFAI:EX-0001-0216-05
+  it("names each step of the restate-records spec stage with its marks, and no executor or operation", async () => {
+    const plan = await shippedPlan("restate-records");
+    const { workOrder } = issued(plan, ["diagnose"], { diagnosis: DIAGNOSIS });
+
+    expect({
+      stage: workOrder.stageInstanceId,
       steps: workOrder.steps,
-      passThrough: (workOrder.steps ?? []).filter((step) => step.passThrough).map((s) => s.name),
       executor: "executor" in workOrder,
       operation: "operation" in workOrder,
     }).toEqual({
-      steps: kindSteps("sdd_delta"),
-      passThrough: ["sdd-flow", "sdd-contract", "common-design-md"],
+      stage: "spec",
+      steps: [
+        stepEntry("sdd-triage", false, "user"),
+        stepEntry("sdd-story", false),
+        stepEntry("sdd-contract", true),
+        stepEntry("sdd-gate", false),
+      ],
       executor: false,
       operation: false,
     });
   });
 
   // QFAI:EX-0001-0216-02
-  it("keeps a pass-through step in the work order and records its pass in the result", () => {
-    const bugfix = {
-      route: "bugfix",
-      writeScope: ["src/**"],
-      stages: [
-        planStage("diagnose", "diagnose"),
-        planStage("sdd-append", "sdd_append"),
-        planStage("acceptance", "acceptance"),
-        planStage("implement", "implement"),
-        planStage("verify", "verify"),
-      ],
-    };
-    const diagnosis = {
-      verdict: "missing-test",
-      reproductionRef: "tests/export.test.ts",
-      matchedIds: ["AC-0001-0001-01"],
-    };
-    const acceptance = issued(bugfix, ["diagnose", "sdd-append"], { diagnosis });
+  it("keeps a pass-through step in the work order and records its pass in the result", async () => {
+    const plan = await shippedPlan("fix-defect");
+    const acceptance = issued(plan, ["diagnose", "spec"], { diagnosis: DIAGNOSIS });
     const credentials = {
       step: "atdd-credentials",
       reason: "No acceptance test of the change signs in.",
@@ -159,40 +177,39 @@ describe("a stage runs every step its route names", () => {
   });
 
   // QFAI:EX-0001-0216-06
-  it("requires the union of every step's reviewers, each once", () => {
-    const sdd = issued(boundedPlan()).workOrder;
-    const acceptance = issued(boundedPlan(), ["sdd-delta"]).workOrder;
+  it("requires the union of every step's reviewers, each once", async () => {
+    const restate = await shippedPlan("restate-records");
+    const build = await shippedPlan("apply-settled-build");
+    const acceptance = issued(build, ["spec"]).workOrder;
 
     expect([
-      sdd.requiredReviewerRoles,
+      issued(restate, ["diagnose"], { diagnosis: DIAGNOSIS }).workOrder.requiredReviewerRoles,
+      issued(build).workOrder.requiredReviewerRoles,
       names(acceptance),
       acceptance.requiredReviewerRoles,
     ]).toEqual([
-      ["completion-reviewer", "architecture-reviewer", "product-surface-reviewer"],
+      ["completion-reviewer", "architecture-reviewer"],
+      ["completion-reviewer"],
       ["atdd-scaffold", "atdd-credentials", "atdd-author"],
       ["completion-reviewer", "qa-gatekeeper"],
     ]);
   });
 
   // QFAI:EX-0001-0216-08
-  it("raises only the implementation steps' review in a run restoring an authorization", () => {
-    const plan = boundedPlan(["authorization-restored"]);
+  it("raises only the implementation steps' review in a run restoring an authorization", async () => {
+    const plan = await shippedPlan("apply-settled-build", ["authorization-restored"]);
     const heavy = ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"];
 
     expect([
       issued(plan).workOrder.requiredReviewerRoles,
-      issued(plan, ["sdd-delta"]).workOrder.requiredReviewerRoles,
-      issued(plan, ["sdd-delta", "acceptance"]).workOrder.requiredReviewerRoles,
-    ]).toEqual([
-      ["completion-reviewer", "architecture-reviewer", "product-surface-reviewer"],
-      heavy,
-      heavy,
-    ]);
+      issued(plan, ["spec"]).workOrder.requiredReviewerRoles,
+      issued(plan, ["spec", "acceptance"]).workOrder.requiredReviewerRoles,
+    ]).toEqual([["completion-reviewer"], heavy, heavy]);
   });
 
   // QFAI:EX-0001-0216-07
-  it("accepts one result for the whole work order, with one verdict per required role", () => {
-    const accepted = acceptOn(issued(boundedPlan(), ["sdd-delta"]), {
+  it("accepts one result for the whole work order, with one verdict per required role", async () => {
+    const accepted = acceptOn(issued(await shippedPlan("apply-settled-build"), ["spec"]), {
       reviewResults: [
         { role: "completion-reviewer", agentInstance: "cr-1", verdict: "PASS", reportRef: "a" },
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "b" },
@@ -203,18 +220,18 @@ describe("a stage runs every step its route names", () => {
   });
 
   // QFAI:EX-0001-0216-04
-  it("returns the run to routing when the stage finds work no step of its route does", () => {
-    const first = issued(boundedPlan());
+  it("returns the run to routing when the stage finds work no step of its route does", async () => {
+    const first = issued(await shippedPlan("apply-settled-spec"));
     const returned = acceptOn(first, {
       outcome: "needs_repair",
       debts: [
         {
-          findingCode: "prototype-needed",
-          path: "src/orders/export.ts",
-          cause: "The change needs a screen nobody has prototyped.",
+          findingCode: "flow-unsettled",
+          path: ".qfai/spec/02_business-flow/business-flows.md",
+          cause: "The change needs a business flow the cited record never settled.",
           owningFlow: "BF-0001",
-          detectingCommand: "sdd-story review",
-          resolvingOwner: "qfai-prototyping",
+          detectingCommand: "sdd-triage review",
+          resolvingOwner: "sdd-flow",
           blockingExtent: "stage",
         },
       ],
@@ -227,7 +244,7 @@ describe("a stage runs every step its route names", () => {
     }).toEqual({
       state: "routing",
       events: ["scope-or-obligation-revision"],
-      steps: kindSteps("sdd_delta").map((step) => step.name),
+      steps: ["sdd-triage", "sdd-story", "sdd-contract", "sdd-gate"],
     });
   });
 });
@@ -244,7 +261,7 @@ describe("a route proposal names no stage and no step", () => {
     actor: { agentInstance: "router-1" },
     proposal: {
       requestKind: "change",
-      candidateRoute: "bounded-change",
+      candidateRoute: "add-feature",
       goal: "Export an order as CSV.",
       expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
       observedRefs: [],

@@ -9,12 +9,12 @@ type Snapshot = Parameters<typeof decide>[0];
 type Decision = ReturnType<typeof decide>;
 
 const boundedStages = [
-  planStage("bounded-sdd-delta", "sdd_delta"),
+  planStage("bounded-sdd-delta", "sdd"),
   planStage("bounded-implement", "implement"),
   planStage("bounded-verify", "verify"),
 ];
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
   flows: ["BF-0007"],
 };
 const statusQuestion = {
@@ -45,7 +45,7 @@ function route(): Decision {
         outcome: "accepted",
         proposal: {
           requestKind: "change",
-          candidateRoute: "bounded-change",
+          candidateRoute: "add-feature",
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],

@@ -36,7 +36,7 @@ it("Two new stories open two CREATE questions in one routing round", () => {
       debts: [],
       proposal: {
         requestKind: "change",
-        candidateRoute: "feature",
+        candidateRoute: "add-feature",
         goal: "Let customers manage notification email addresses and delivery preferences.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },

@@ -29,6 +29,7 @@ import { checkPlans } from "../../../src/core/workflow/plans.js";
 import { isRecord } from "../../../src/core/workflow/parse.js";
 import { runStep } from "../../../src/migration/specToStory/harness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import { captureStdout } from "../../helpers/stdout.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
@@ -185,10 +186,7 @@ async function writeConfig(root: string, edit: (config: Record<string, unknown>)
 
 /** The default `sdd-triage` routing entry with `completion-reviewer` taken out of its review phase. */
 async function routingWithoutCompletionReviewer(): Promise<Record<string, unknown>> {
-  const defaults: unknown = parseYaml(
-    await readFile(path.resolve(getInitAssetsDir(), "../defaults/agent-routing.yml"), "utf8"),
-  );
-  const routing = isRecord(defaults) && Array.isArray(defaults.routing) ? defaults.routing : [];
+  const routing = await defaultRoutingEntries();
   const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-triage");
   if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-triage routing");
   const phases = entry.phases.map((phase: unknown) =>
@@ -589,7 +587,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const contract = await stepIn(missing, 12);
     expect(contract.code).toBe(3);
     expect(section(contract.output, "For a person")).toEqual([
-      "contract-undeclared: .qfai/assistant/step/sdd-gate/STEP.md: the bugfix plan runs this step and it is not installed",
+      "contract-undeclared: .qfai/assistant/step/sdd-gate/STEP.md: the repair-consistency plan runs this step and it is not installed",
     ]);
     expect(await fingerprint(missing)).toBe(before12);
   });

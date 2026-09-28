@@ -21,9 +21,11 @@ import {
   packagePlansDir,
   planDigestKey,
   WORKFLOW_ROUTES,
+  type WorkflowPlanFile,
 } from "./plans.js";
 import { storyFactsOf } from "./storyFacts.js";
 import type {
+  PlanStep,
   WorkflowDependency,
   WorkflowFacts,
   WorkflowProposal,
@@ -138,18 +140,32 @@ export async function baselineOf(root: string): Promise<NonNullable<WorkflowSnap
   return { findings, toolVersion, cliEntryDigest: entryDigest, policyDigests };
 }
 
+// Each step as a work order names it: the points the route declares at it are marked on it.
+function markedSteps(plan: WorkflowPlanFile, steps: readonly PlanStep[]): PlanStep[] {
+  const branches = plan.branchPoints.map((point) => point.step);
+  return steps.map((step) => {
+    const decision = plan.decisionPoints.includes(step.name) ? "user" : undefined;
+    const point = plan.releasePoint === step.name ? "release" : decision;
+    return {
+      ...step,
+      ...(point ? { decisionPoint: point } : {}),
+      ...(branches.includes(step.name) ? { branchPoint: true } : {}),
+    };
+  });
+}
+
 // The built-in plans, in the form the decision function reads.
 export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> {
   const plans = await loadBuiltInPlans();
   return Object.fromEntries(
-    WORKFLOW_ROUTES.map((route) => [
-      route,
+    plans.map((plan) => [
+      plan.route,
       {
-        route,
-        stages: plans[route].stages.map((stage) => ({
+        route: plan.route,
+        stages: plan.stages.map((stage) => ({
           stageInstanceId: stage.id,
           stageKind: stage.kind,
-          steps: stage.steps,
+          steps: markedSteps(plan, stage.steps),
           ...(stage.effects.length > 0 ? { effects: stage.effects } : {}),
         })),
       },
@@ -215,6 +231,7 @@ export async function routingFacts(
     plans,
     flows: story.flows,
     specsDir: story.specsDir,
+    discussionDir: config.paths.discussionDir,
   };
 }
 
@@ -411,9 +428,6 @@ export async function completionFacts(
     changeRequests: story.changeRequests,
     ...(story.acceptanceObligationsUnmet !== undefined
       ? { acceptanceObligationsUnmet: story.acceptanceObligationsUnmet }
-      : {}),
-    ...(story.prototypeDecisionNeeded !== undefined
-      ? { prototypeDecisionNeeded: story.prototypeDecisionNeeded }
       : {}),
     fileDigests: Object.fromEntries(
       digests.flatMap(([file, digest]) => (digest ? [[file, digest]] : [])),

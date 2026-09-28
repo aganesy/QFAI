@@ -14,6 +14,7 @@ import {
   initProject,
   resultFor,
   routedRun,
+  stepNames,
   workflow,
   write,
 } from "../../e2e/workflowJourney.js";
@@ -78,17 +79,27 @@ const base = {
 /** A routing proposal for `route`, bound to BF-0001 where the plan takes a flow target. */
 export function proposalFor(route: string, extra: object = {}): object {
   const byRoute: Record<string, object> = {
-    direct: {
+    "edit-text": {
       goal: "Fix the typo in the README.",
       affectedFlowIds: [],
       proposedWriteScope: ["README.md"],
     },
-    bugfix: {
+    "fix-defect": {
       goal: "A sixth address is accepted again; refuse it.",
       affectedFlowIds: [FLOW_ID],
       proposedWriteScope: ["src/**", "tests/**"],
     },
-    "bounded-change": {
+    "fix-red-main": {
+      goal: "The default branch accepts a sixth address again; refuse it.",
+      affectedFlowIds: [FLOW_ID],
+      proposedWriteScope: ["src/**", "tests/**"],
+    },
+    "repair-test": {
+      goal: "The test of the address limit asserts the wrong count; repair it.",
+      affectedFlowIds: [FLOW_ID],
+      proposedWriteScope: ["src/**", "tests/**"],
+    },
+    "add-feature": {
       goal: "Allow ten notification addresses per customer.",
       affectedFlowIds: [FLOW_ID],
       proposedWriteScope: [
@@ -101,10 +112,17 @@ export function proposalFor(route: string, extra: object = {}): object {
   return { ...base, candidateRoute: route, ...byRoute[route], ...extra };
 }
 
-/** A bugfix run on BF-0001 whose diagnose stage reported `diagnosis`; returns the next order. */
-export async function diagnosed(root: string, diagnosis: object) {
-  const { runId } = await routedRun(root, proposalFor("bugfix"));
-  const diagnose = workflow(root, ["next", "--run", runId]);
+/**
+ * A run of `route` on BF-0001 whose diagnose stage reported `diagnosis`; returns the next order.
+ * Stages before the diagnose stage are accepted with a canned result.
+ */
+export async function diagnosed(root: string, diagnosis: object, route = "fix-defect") {
+  const { runId } = await routedRun(root, proposalFor(route));
+  let diagnose = workflow(root, ["next", "--run", runId]);
+  for (let step = 1; !stepNames(diagnose.json).includes("implement-diagnose"); step += 1) {
+    if (step > 3) throw new Error(`no diagnose work order: ${diagnose.stdout}`);
+    diagnose = (await acceptThenNext(root, runId, diagnose.json, `before-${String(step)}`)).next;
+  }
   const { accepted, next } = await acceptThenNext(root, runId, diagnose.json, "diagnose-1", {
     diagnosis: { reproductionRef: REPORT, ...diagnosis },
   });

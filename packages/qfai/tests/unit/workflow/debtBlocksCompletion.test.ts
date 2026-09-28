@@ -10,7 +10,7 @@ import { RUN_ID, finish, finishPlan, metFacts, readySnapshot } from "./finishFix
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
@@ -82,7 +82,7 @@ const crossSpecDebt = {
 
 function acceptImplementWithDebt() {
   const accepted = [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
   ];
   const base = { plan: finishPlan, flowBinding: { flowId: "BF-0007" }, acceptedStages: accepted };
   const issued = decide(

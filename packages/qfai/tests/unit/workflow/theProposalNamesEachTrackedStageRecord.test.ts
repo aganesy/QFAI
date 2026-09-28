@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -40,7 +40,7 @@ function routeNaming(record?: string) {
         outcome: "accepted",
         proposal: {
           requestKind: "change",
-          candidateRoute: "bounded-change",
+          candidateRoute: "add-feature",
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -56,7 +56,7 @@ function routeNaming(record?: string) {
       },
     },
     {
-      plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+      plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
       flows: ["BF-0001"],
     },
   );

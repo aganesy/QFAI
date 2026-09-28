@@ -71,7 +71,7 @@ async function typoRun() {
   const root = await initProject();
   await write(root, "README.md", "# Notifications\n\nYou recieve one email per address.\n");
   commitAll(root);
-  const { runId } = await routedRun(root, proposalFor("direct"));
+  const { runId } = await routedRun(root, proposalFor("edit-text"));
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Notifications\n\nYou receive one email per address.\n");
   return { root, runId, edit };

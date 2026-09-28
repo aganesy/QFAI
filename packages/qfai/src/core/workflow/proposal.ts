@@ -1,8 +1,9 @@
 import path from "node:path";
 
-import { DEFAULT_SPECS_DIR, refusedWith, UNTARGETED_KINDS } from "./common.js";
+import { areaCovers, DEFAULT_SPECS_DIR, refusedWith } from "./common.js";
 import { createQuestion } from "./issue.js";
 import { parseQuestionInput } from "./parse.js";
+import { endsAtTriageClose, flowBindingOf } from "./stages.js";
 import type {
   ProposalRefusal,
   ProposalRefusalReason,
@@ -93,25 +94,35 @@ function builtInPlanOf(proposal: WorkflowProposal, facts: WorkflowFacts) {
   return proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
 }
 
-// Whether the proposal's plan has a stage that takes the bound flow as its target.
-function takesFlowTarget(proposal: WorkflowProposal, facts: WorkflowFacts): boolean {
-  const plan = builtInPlanOf(proposal, facts);
-  return (plan?.stages ?? []).some((stage) => !UNTARGETED_KINDS.includes(stage.stageKind));
-}
-
 // The one flow a proposal with no new story binds, or the subject a `flow-binding` refusal
-// names.
+// names. A route that binds a flow needs exactly one; a route whose only stage facing a flow is a
+// test fix takes the one named, or none; any other route binds none, whatever the proposal names.
 export function flowToBind(
   proposal: WorkflowProposal,
   facts: WorkflowFacts,
 ): { flowId?: string; refused?: string } {
-  if (proposal.newStories.length > 0 || !takesFlowTarget(proposal, facts)) return {};
+  const plan = builtInPlanOf(proposal, facts);
+  const binding = plan ? flowBindingOf(plan.stages) : "none";
+  if (proposal.newStories.length > 0 || binding === "none") return {};
   const named = proposal.affectedFlowIds ?? [];
+  if (binding === "optional" && named.length === 0) return {};
   const [flowId] = named;
   if (named.length !== 1 || flowId === undefined || !(facts.flows ?? []).includes(flowId)) {
     return { refused: named.length > 0 ? named.join(",") : "affectedFlowIds" };
   }
   return { flowId };
+}
+
+// A route that ends at `triage-close` writes only the records its discussion stage keeps: the
+// project's discussion packs, and `DESIGN.md` for a UI-bearing target.
+function recordEscapes(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
+  const stages = builtInPlanOf(proposal, facts)?.stages ?? [];
+  if (!endsAtTriageClose(stages)) return [];
+  const discusses = stages.some((stage) => stage.stageKind === "discussion");
+  const records = discusses ? [facts.discussionDir ?? ".qfai/discussion", "DESIGN.md"] : [];
+  const covered = (area: string) =>
+    records.some((record) => areaCovers(record, area) || areaCovers(record, literalPrefix(area)));
+  return (proposal.proposedWriteScope ?? []).filter((area) => !covered(area));
 }
 
 function refusalsOf(reason: ProposalRefusalReason, subjects: readonly string[]): ProposalRefusal[] {
@@ -150,6 +161,7 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     ...refusalsOf("protected-surface", protectedAreas),
     ...refusalsOf("scope-escape", proposal.requestKind === "change" ? [] : [proposal.requestKind]),
     ...refusalsOf("scope-escape", scope.filter(escapesRoot)),
+    ...refusalsOf("scope-escape", recordEscapes(proposal, facts)),
     ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
     ...refusalsOf("flow-binding", binding === undefined ? [] : [binding]),
   ];
@@ -178,7 +190,6 @@ function routingShapeIsBroken(proposal: WorkflowProposal | undefined): boolean {
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
     !Array.isArray(stories) ||
-    (proposal.candidateRoute === "feature" && stories.length === 0) ||
     stories.some(
       (story) =>
         !story.goal ||

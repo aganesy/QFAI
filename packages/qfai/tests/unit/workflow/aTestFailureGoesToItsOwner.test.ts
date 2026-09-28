@@ -8,7 +8,7 @@ import { kindSteps, servedSteps } from "./kindSteps.js";
 
 const flowBinding = { flowId: "BF-0007" };
 const acceptedStages = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 // The test fails because the example it asserts is wrong, so the spec's owner repairs it.
 const failingExample = {
@@ -74,7 +74,7 @@ it("An implement result with testObservation", () => {
     stageInstanceId: next.verdict.workOrder?.stageInstanceId,
   }).toEqual({
     retries: [undefined, undefined],
-    steps: servedSteps("sdd_delta", "qfai-sdd"),
+    steps: servedSteps("sdd", "qfai-sdd"),
     stageInstanceId: "bounded-sdd-delta",
   });
 });

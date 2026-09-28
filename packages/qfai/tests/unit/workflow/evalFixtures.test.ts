@@ -21,7 +21,7 @@ it("The vocabulary check fails a synthetic seed carrying a token the vocabulary 
     repoFacts: {},
     expected: {
       requestKind: "change",
-      allowedRoutes: ["bounded-change"],
+      allowedRoutes: ["add-feature"],
       requiresHumanInput: false,
       must: ["verify", "made_up_token"],
       forbid: ["direct_delete", "unknown_class"],

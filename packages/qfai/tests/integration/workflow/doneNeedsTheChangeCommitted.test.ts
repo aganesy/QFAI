@@ -30,11 +30,11 @@ const git = (root: string, args: string[]) =>
     encoding: "utf8",
   });
 
-// A direct run that edits README.md, with its verify stage accepted: ready to finish.
+// An edit-text run that edits README.md, with its verify stage accepted: ready to finish.
 async function editedRun(root: string): Promise<string> {
   await write(root, "README.md", "# Notifications\n\nYou recieve one email per address.\n");
   commitAll(root);
-  const { runId } = await routedRun(root, proposalFor("direct"));
+  const { runId } = await routedRun(root, proposalFor("edit-text"));
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Notifications\n\nYou receive one email per address.\n");
   await submit(

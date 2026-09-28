@@ -56,9 +56,9 @@ it("An implement stage adds an example to a story of the bound flow", async () =
   });
 });
 
-it("An sdd_delta stage adds one example and removes another a test annotated", async () => {
+it("An sdd stage adds one example and removes another a test annotated", async () => {
   const root = await storyProject();
-  const { snapshot } = await issued(root, readySnapshot("sdd_delta"));
+  const { snapshot } = await issued(root, readySnapshot("sdd"));
   await write(
     root,
     EXAMPLES,

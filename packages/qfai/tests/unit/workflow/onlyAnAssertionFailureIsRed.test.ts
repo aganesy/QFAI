@@ -9,9 +9,9 @@ import { kindSteps, planStage } from "./kindSteps.js";
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-sdd-delta", "sdd"),
     planStage("bounded-acceptance", "acceptance"),
     planStage("bounded-implement", "implement"),
     planStage("bounded-verify", "verify"),
@@ -20,7 +20,7 @@ const plan = {
 const flowBinding = { flowId: "BF-0007" };
 const facts = { acceptanceObligationsUnmet: true };
 const deltaAccepted = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
 function acceptRed(red: NonNullable<AcceptResult["red"]>) {

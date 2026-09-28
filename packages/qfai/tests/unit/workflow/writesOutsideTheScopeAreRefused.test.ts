@@ -11,11 +11,11 @@ type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
 const flowBinding = { flowId: "BF-0007" };
 const directPlan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const bugfixPlan = {
-  route: "bugfix",
+  route: "fix-defect",
   stages: [planStage("bugfix-diagnose", "diagnose"), planStage("bugfix-verify", "verify")],
 };
 

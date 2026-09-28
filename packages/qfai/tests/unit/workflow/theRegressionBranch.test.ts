@@ -3,20 +3,19 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
-import { kindSteps, planStage } from "./kindSteps.js";
+import { planStage } from "./kindSteps.js";
 
 type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
+// The route a `regression` verdict re-routes the run to, with the stages its plan file lists.
 const flowBinding = { flowId: "BF-0007" };
 const plan = {
-  route: "bugfix",
+  route: "fix-red-main",
   stages: [
-    planStage("bugfix-diagnose", "diagnose"),
-    planStage("bugfix-sdd-append", "sdd_append"),
-    planStage("bugfix-implement", "implement"),
-    planStage("bugfix-regression-fix", "regression_fix"),
-    planStage("bugfix-test-fix", "test_fix"),
-    planStage("bugfix-verify", "verify"),
+    { stageInstanceId: "bisect", stageKind: "diagnose", steps: [{ name: "implement-bisect" }] },
+    planStage("diagnose", "diagnose"),
+    planStage("fix", "regression_fix"),
+    planStage("verify", "verify"),
   ],
 };
 const diagnosis = {
@@ -35,6 +34,9 @@ const facts = {
   },
 };
 
+const stepNames = (workOrder: WorkOrder | undefined) =>
+  (workOrder?.steps ?? []).map((step) => step.name);
+
 function resultFor(workOrder: WorkOrder, expectedSequence: number) {
   return {
     resultId: `result-${workOrder.stageInstanceId}`,
@@ -43,7 +45,7 @@ function resultFor(workOrder: WorkOrder, expectedSequence: number) {
     attempt: workOrder.attempt,
     expectedSequence,
     outcome: "accepted",
-    ...(workOrder.stageKind === "diagnose" ? { diagnosis } : {}),
+    ...(stepNames(workOrder).includes("implement-diagnose") ? { diagnosis } : {}),
     ...(workOrder.stageKind === "regression_fix"
       ? {
           regressionFix: {
@@ -73,7 +75,7 @@ it("A diagnose result regression for an annotated example", () => {
       facts,
     );
     if (!accepted.verdict.ok || !accepted.verdict.run) break;
-    if (workOrder.stageKind === "diagnose") recordedDiagnosis = diagnosis;
+    if (stepNames(workOrder).includes("implement-diagnose")) recordedDiagnosis = diagnosis;
     acceptedStages = [
       ...acceptedStages,
       {
@@ -85,18 +87,21 @@ it("A diagnose result regression for an annotated example", () => {
     run = accepted.verdict.run;
   }
   const regressionFix = issued.find((workOrder) => workOrder.stageKind === "regression_fix");
-  const diagnose = issued.find((workOrder) => workOrder.stageKind === "diagnose");
+  const diagnose = issued.find((workOrder) => workOrder.stageInstanceId === "diagnose");
 
   expect({
-    issued: issued.map(({ stageKind, steps }) => [stageKind, steps]),
+    issued: issued.map((workOrder) => [workOrder.stageKind, stepNames(workOrder)]),
+    state: run.state,
     digestRecorded: typeof regressionFix?.obligations?.digest === "string",
     digestUnchanged: regressionFix?.obligations?.digest === diagnose?.obligations?.digest,
   }).toEqual({
     issued: [
-      ["diagnose", kindSteps("diagnose")],
-      ["regression_fix", kindSteps("regression_fix")],
-      ["verify", kindSteps("verify")],
+      ["diagnose", ["implement-bisect"]],
+      ["diagnose", ["implement-diagnose"]],
+      ["regression_fix", ["implement-regression-fix"]],
+      ["verify", ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"]],
     ],
+    state: "ready",
     digestRecorded: true,
     digestUnchanged: true,
   });

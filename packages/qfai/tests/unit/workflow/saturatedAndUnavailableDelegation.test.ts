@@ -82,7 +82,7 @@ it("Four results in turn with delegation", () => {
 
 it("A delegation unavailable on a stage after the first delegated one", () => {
   const snapshot = running([
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
   ]);
   const decision = decide(
     snapshot,

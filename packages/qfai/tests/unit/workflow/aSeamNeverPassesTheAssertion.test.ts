@@ -7,17 +7,15 @@ import { planStage } from "./kindSteps.js";
 
 const base = {
   plan: {
-    route: "bounded-change",
+    route: "add-feature",
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta"),
+      planStage("bounded-sdd-delta", "sdd"),
       planStage("bounded-acceptance", "acceptance"),
       planStage("bounded-verify", "verify"),
     ],
   },
   flowBinding: { flowId: "BF-0007" },
-  acceptedStages: [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
-  ],
+  acceptedStages: [{ stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" }],
   seamRequest: {
     parentWorkOrderId: "work-order-bounded-acceptance-1",
     stageInstanceId: "bounded-acceptance",

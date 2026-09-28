@@ -20,6 +20,7 @@ import { validateAgentDefinition } from "../../../src/core/validators/agentDefin
 import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
+  defaultRoutingEntries,
   flat,
   frontMatterOf,
   readDefault,
@@ -67,8 +68,7 @@ async function routingEntry(
   name: string,
   key: "skill" | "step" = "skill",
 ): Promise<Record<string, unknown> | undefined> {
-  const manifest: unknown = parse(await readDefault("agent-routing.yml"));
-  const routing = isRecord(manifest) && Array.isArray(manifest.routing) ? manifest.routing : [];
+  const routing = await defaultRoutingEntries();
   return routing.filter(isRecord).find((entry) => entry[key] === name);
 }
 
@@ -126,13 +126,14 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0192-40
   it("names the narrowest write areas per stage kind, and never a stage's own records", async () => {
     const text = sectionOf(await readShipped(PAYLOADS), "## Routing result");
-    expect(rowOf(text, "`sdd_delta`")).toMatch(
+    expect(rowOf(text, "`sdd`")).toMatch(
       /the story and contract files of the bound flow it changes/i,
     );
     expect(rowOf(text, "| `sdd` ")).toMatch(/the new story's directory, or the new flow's/i);
     expect(rowOf(text, "`discussion`")).toMatch(
       /its tracked records, and `DESIGN\.md` for a UI-bearing target/i,
     );
+    expect(rowOf(text, "`triage` and `diagnose`")).toMatch(/\| Nothing +\|/);
     const flatText = flat(text);
     expect(flatText).toMatch(
       /never names `\.git\/`, `\.qfai\/run\/`, `\.qfai\/evidence\/workflow\/`, `\.qfai\/evidence\/decision\/`/,
@@ -238,7 +239,7 @@ describe("the entry skills' routing entries", () => {
   // QFAI:EX-0001-0192-16
   it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and an independent reviewer", async () => {
     const run = await routingEntry("qfai-run");
-    expect(run, "agent-routing.yml has a qfai-run entry").toBeDefined();
+    expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
     const runPhases = phasesOf(run);
     expect(runPhases.length, "qfai-run has a phase").toBeGreaterThan(0);
     expect([...new Set(runPhases.flatMap(phaseAgents))]).toEqual(["orchestrator"]);

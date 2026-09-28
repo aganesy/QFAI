@@ -15,7 +15,7 @@ function acceptImplementClaimingValidatePass() {
       plan: finishPlan,
       flowBinding,
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     { operation: "next" },
@@ -31,7 +31,7 @@ function acceptImplementClaimingValidatePass() {
       flowBinding,
       outstandingWorkOrder: workOrder,
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     {

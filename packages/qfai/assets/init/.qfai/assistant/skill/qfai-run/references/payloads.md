@@ -62,7 +62,7 @@ The routing work order's result carries the proposal.
   "actor": { "agentInstance": "routing-1" },
   "proposal": {
     "requestKind": "change",
-    "candidateRoute": "bugfix",
+    "candidateRoute": "fix-defect",
     "goal": "One sentence",
     "expectedBehaviorRefs": [
       { "kind": "request", "ref": "request" },
@@ -85,15 +85,18 @@ The routing work order's result carries the proposal.
 - `requestKind` is `change`, `read_only`, `plan_only`, `verify_only`, `resume`,
   `cancel` or `explicit_stage`. Only `change` takes a route; the others carry
   `candidateRoute: null` and write nothing.
-- `candidateRoute` is `direct`, `bugfix`, `bounded-change`, `feature` or
-  `discovery`.
+- `candidateRoute` is one route of the catalog, such as `fix-defect`,
+  `add-feature`, `edit-text` or `answer-question`.
 - `expectedBehaviorRefs` takes `request`, `flow-id`, `contract-id` and `path`.
   `observedRefs` takes `path` and `evidence`. A path is project-relative, names
   a file that exists, and holds no glob.
 - A `contract-id` reference is refused as unknown. Name the contract file as a
   `path` instead.
 - `affectedFlowIds` names exactly one business flow when `newStories` is empty
-  and the plan has a stage that works on a flow.
+  and the plan has a stage that works on a flow. A route whose only such stage
+  is a test fix takes one flow or none, and any other route binds none.
+- A route that ends by closing the request writes nothing but the records its
+  discussion stage keeps, so its `proposedWriteScope` names nothing else.
 - `newStories` holds `{ goal, covers, excludes, evidence, flowId }` for each
   story the plan needs that no existing story represents. `flowId` is the flow
   it joins, or `null` when the story needs a new flow. `evidence` is what shows
@@ -107,11 +110,11 @@ The routing work order's result carries the proposal.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
-| Stage kind   | Write areas                                                             |
-| ------------ | ----------------------------------------------------------------------- |
-| `sdd_delta`  | The story and contract files of the bound flow it changes               |
-| `sdd`        | The new story's directory, or the new flow's for a story that needs one |
-| `discussion` | Its tracked records, and `DESIGN.md` for a UI-bearing target            |
+| Stage kind              | Write areas                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `sdd`                   | The story and contract files of the bound flow it changes, and the new story's directory, or the new flow's for a story that needs one |
+| `discussion`            | Its tracked records, and `DESIGN.md` for a UI-bearing target                                                                           |
+| `triage` and `diagnose` | Nothing                                                                                                                                |
 
 A stage's own evidence file and table rows are not named: the run derives them
 from the stage kind.

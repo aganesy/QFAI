@@ -62,16 +62,18 @@ it("A run in running", async () => {
 
 it("The run edits qfai", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
+  // An edit-text plan, whose write scope may name the policy file.
   const proposal = {
     ...DISCOVERY_PROPOSAL,
-    proposedWriteScope: [...DISCOVERY_PROPOSAL.proposedWriteScope, "qfai.config.yaml"],
+    candidateRoute: "edit-text",
+    proposedWriteScope: ["qfai.config.yaml"],
   };
   const { runId, routed } = await routedRun(root, proposal);
   const issued = workflow(root, ["next", "--run", runId]);
   const config = path.join(root, "qfai.config.yaml");
   const edited = "workflow:\n  mode: active\n# edited inside the run\n";
   await writeFile(config, edited);
-  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
+  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "edit-1"));
 
   expect({
     routed: field(routed.json, "ok"),

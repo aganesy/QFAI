@@ -6,6 +6,7 @@ import { parseDocument, parse as parseYaml } from "yaml";
 
 import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
+import { readRoutingDefaultsFiles } from "../../core/routingDefaults.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { planContracts, type ContractPlan } from "./contractIds.js";
 import { renderContractIndex } from "./contractIndex.js";
@@ -191,6 +192,18 @@ async function defaultsFile(name: string): Promise<string> {
   return readInput(absolute);
 }
 
+/** The package's routing defaults, every file's `routing:` list joined in reading order. */
+async function defaultRoutingEntries(): Promise<unknown[]> {
+  const entries: unknown[] = [];
+  for (const file of await readRoutingDefaultsFiles()) {
+    const routing: unknown = asRecord(parseYamlInput(file.text, file.rel), file.rel).routing;
+    if (!Array.isArray(routing)) throw new MigrationInputError("Routing must be a list.");
+    const list: unknown[] = routing;
+    entries.push(...list);
+  }
+  return entries;
+}
+
 async function planOverrides(
   root: string,
   surfacePaths: string[] | undefined,
@@ -213,14 +226,9 @@ async function planOverrides(
       parseYamlInput(await readInput(routingPath), routingPath),
       routingPath,
     );
-    const defaults = asRecord(
-      parseYamlInput(await defaultsFile("agent-routing.yml"), "default agent-routing.yml"),
-      "default agent-routing.yml",
-    );
-    if (!Array.isArray(project.routing) || !Array.isArray(defaults.routing))
-      throw new MigrationInputError("Routing must be a list.");
+    if (!Array.isArray(project.routing)) throw new MigrationInputError("Routing must be a list.");
     const defaultByName = new Map(
-      defaults.routing.map((entry) => {
+      (await defaultRoutingEntries()).map((entry) => {
         const name = routingEntryName(asRecord(entry, "default routing entry"));
         if (name === undefined)
           throw new MigrationInputError("Default routing entry needs a step or a skill.");

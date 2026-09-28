@@ -10,8 +10,8 @@ type Snapshot = Parameters<typeof decide>[0];
 
 const flowBinding = { flowId: "BF-0007" };
 
-const bugfixPlan = {
-  route: "bugfix",
+const fixDefectPlan = {
+  route: "fix-defect",
   stages: [
     planStage("bugfix-diagnose", "diagnose"),
     planStage("bugfix-implement", "implement"),
@@ -23,7 +23,7 @@ const bugfixPlan = {
 function diagnosing(replans: number) {
   const ready: Snapshot = {
     run: { id: "run-budget", state: "ready", sequence: 10 + replans },
-    plan: bugfixPlan,
+    plan: fixDefectPlan,
     flowBinding,
     replans,
     completionTarget: "qfai_done",
@@ -31,7 +31,7 @@ function diagnosing(replans: number) {
   const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
-  if (!workOrder || !run) throw new Error("the bugfix run issues its diagnose work order");
+  if (!workOrder || !run) throw new Error("the fix-defect run issues its diagnose work order");
   return { ...ready, run, outstandingWorkOrder: workOrder };
 }
 
@@ -96,7 +96,7 @@ const finding = {
 function fourthRepair(path: string) {
   const run = { id: "run-repair-budget", state: "running", sequence: 20 };
   const acceptedStages = [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     { stageInstanceId: "bounded-implement", stageKind: "implement", outcome: "accepted" },
   ];
   const verifyOrder = {
@@ -168,6 +168,6 @@ it("other-path", () => {
   expect(fourthRepair(".qfai/specs/BF-0007/05_Examples.md")).toEqual({
     state: "ready",
     halt: undefined,
-    issued: servedSteps("sdd_delta", "qfai-sdd"),
+    issued: servedSteps("sdd", "qfai-sdd"),
   });
 });

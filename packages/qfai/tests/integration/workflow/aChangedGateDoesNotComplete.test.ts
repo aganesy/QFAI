@@ -20,7 +20,12 @@ afterEach(removeProjects);
 
 it("Built CLI", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
-  const proposal = { ...DISCOVERY_PROPOSAL, proposedWriteScope: ["qfai.config.yaml"] };
+  // An edit-text plan, whose write scope may name the policy file.
+  const proposal = {
+    ...DISCOVERY_PROPOSAL,
+    candidateRoute: "edit-text",
+    proposedWriteScope: ["qfai.config.yaml"],
+  };
   const { runId, routed } = await routedRun(root, proposal);
   await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n# edited\n");
   const finished = workflow(root, ["finish", "--run", runId]);

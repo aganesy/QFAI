@@ -8,10 +8,10 @@ import { planStage } from "./kindSteps.js";
 type Question = NonNullable<Parameters<typeof decide>[0]["openQuestions"]>[number];
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/export/**"],
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-sdd-delta", "sdd"),
     planStage("bounded-implement", "implement"),
     planStage("bounded-verify", "verify"),
   ],

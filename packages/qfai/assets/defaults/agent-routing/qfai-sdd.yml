@@ -1,0 +1,101 @@
+# Routing defaults for the `qfai-sdd` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  # `requirements-analyst` writes the triage decision rows the planner judges,
+  # so a `REVISE` has to reach the author: under `failed-agents-only` only the
+  # planner would re-run, re-reading an unchanged table.
+  - step: sdd-triage
+    phases:
+      - id: slice-and-scope
+        mandatory_agents: [delivery-planner, requirements-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [delivery-planner]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: sdd-flow
+    phases:
+      - id: design
+        mandatory_agents: [solution-architect, requirements-analyst]
+        conditional_agents: [product-experience-architect]
+        parallel_groups: []
+        blocking_agents: [solution-architect]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # `product-experience-architect` joins exactly when the target flow is
+  # UI-bearing. The flow's surface decides, never which files the run edited.
+  # This key says which agent may join, never whether it may be skipped.
+  - step: sdd-story
+    phases:
+      - id: design
+        mandatory_agents: [requirements-analyst, test-design-analyst]
+        conditional_agents: [qa-strategist, product-experience-architect]
+        parallel_groups: []
+        blocking_agents: [requirements-analyst]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: sdd-contract
+    phases:
+      - id: design
+        mandatory_agents: [solution-architect]
+        conditional_agents: [test-design-analyst, product-experience-architect]
+        parallel_groups: []
+        blocking_agents: [solution-architect]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, architecture-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer, architecture-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: architecture-heavy
+
+  # Examples are the concrete side and business rules the abstract side, so
+  # both authors re-run with every cycle.
+  - step: sdd-cycle
+    phases:
+      - id: design
+        mandatory_agents: [requirements-analyst, solution-architect]
+        conditional_agents: [test-design-analyst]
+        parallel_groups: []
+        blocking_agents: [solution-architect]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: sdd-gate
+    phases:
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: [qa-gatekeeper]
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default

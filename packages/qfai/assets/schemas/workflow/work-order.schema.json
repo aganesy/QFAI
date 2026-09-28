@@ -27,7 +27,7 @@
         "required": ["stageKind"],
         "properties": {
           "stageKind": {
-            "enum": ["route", "discussion", "maintenance", "verify"]
+            "enum": ["route", "triage", "discussion", "maintenance", "verify"]
           }
         }
       },
@@ -37,12 +37,6 @@
           "properties": {
             "target": true
           }
-        }
-      },
-      "else": {
-        "required": ["target"],
-        "properties": {
-          "target": true
         }
       }
     },
@@ -169,7 +163,7 @@
       }
     },
     "target": {
-      "description": "Absent only on the routing, discussion, maintenance and verify work orders, which bind no flow and no new story.",
+      "description": "Absent on the routing, triage, discussion, maintenance and verify work orders, and on every work order of a run that binds no flow.",
       "oneOf": [
         {
           "type": "object",

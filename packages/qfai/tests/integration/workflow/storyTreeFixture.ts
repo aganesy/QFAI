@@ -118,7 +118,7 @@ function stage(stageKind: string, steps: string[], passThrough: string[] = []) {
   return { stageInstanceId: stageKind, stageKind, steps: entries };
 }
 
-const VERIFY = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
 const IMPLEMENT = ["implement-tdd", "implement-checkpoint"];
 
 const acceptedStage = (stageKind: string) => ({
@@ -127,26 +127,26 @@ const acceptedStage = (stageKind: string) => ({
   outcome: "accepted",
 });
 
-const BOUNDED = [
-  stage("sdd_delta", ["sdd-triage", "sdd-story", "sdd-gate"]),
+const ADD_FEATURE = [
+  stage("sdd", ["sdd-triage", "sdd-story", "sdd-gate"]),
   stage("implement", IMPLEMENT),
-  stage("verify", VERIFY),
+  stage("verify", VERIFY, ["verify-change-note"]),
 ];
 
-const BUGFIX = [
+const FIX_DEFECT = [
   stage("diagnose", ["implement-diagnose"]),
   stage("sdd_append", ["sdd-story", "sdd-gate"], ["sdd-story"]),
   stage("implement", IMPLEMENT),
-  stage("verify", VERIFY),
+  stage("verify", VERIFY, ["verify-change-note"]),
 ];
 
 /**
- * A ready run bound to BF-0001 whose next stage is `stageKind`: of the bounded-change plan, or of
- * the bugfix plan after a missing-test diagnosis for defect example seeding.
+ * A ready run bound to BF-0001 whose next stage is `stageKind`: of the add-feature plan, or of
+ * the fix-defect plan after a missing-test diagnosis for defect example seeding.
  */
 export function readySnapshot(stageKind: string, extra: Partial<WorkflowSnapshot> = {}) {
   const seeding = stageKind === "sdd_append";
-  const stages = seeding ? BUGFIX : BOUNDED;
+  const stages = seeding ? FIX_DEFECT : ADD_FEATURE;
   const before = stages.slice(
     0,
     stages.findIndex((each) => each.stageKind === stageKind),
@@ -154,7 +154,7 @@ export function readySnapshot(stageKind: string, extra: Partial<WorkflowSnapshot
   const snapshot: WorkflowSnapshot = {
     run: { id: "run-20260926000000000", state: "ready", sequence: 6 },
     plan: {
-      route: seeding ? "bugfix" : "bounded-change",
+      route: seeding ? "fix-defect" : "add-feature",
       stages,
       writeScope: ["src/**", "tests/**"],
     },

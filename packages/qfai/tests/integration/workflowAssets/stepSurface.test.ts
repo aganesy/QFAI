@@ -42,7 +42,7 @@ const VERIFY_BLOCK = [
   "verify-repo-gate",
 ];
 
-/** Every step each plan kind runs, across the five built-in plans, in first-seen order. */
+/** Every step each plan kind runs, across the built-in plans, in first-seen order. */
 async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
   const names: string[] = [];
   const passThrough: string[] = [];
@@ -131,7 +131,9 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(owned).toEqual(["atdd-scaffold", "atdd-credentials", "atdd-author", "atdd-test-fix"]);
     const acceptance = await kindSteps(["acceptance"]);
     expect(acceptance.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect((await stageNames("bugfix", "test_fix")).flat()).toContain("atdd-test-fix");
+    for (const route of ["repair-test", "quarantine-flaky"]) {
+      expect((await stageNames(route, "test_fix")).flat(), route).toContain("atdd-test-fix");
+    }
   });
 
   // QFAI:AC-0001-0207-02
@@ -163,7 +165,7 @@ describe("the skills a workflow run's steps belong to", () => {
     );
     const implement = await kindSteps(["diagnose", "implement", "regression_fix"]);
     expect(implement.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect((await stageNames("bugfix", "test_fix")).flat()).toContain("implement-test-fix");
+    expect((await stageNames("repair-test", "test_fix")).flat()).toContain("implement-test-fix");
     const every = await kindSteps(Object.keys(await everyKind()));
     expect(every.names).not.toContain("implement-seam");
   });
@@ -172,30 +174,36 @@ describe("the skills a workflow run's steps belong to", () => {
   // QFAI:EX-0001-0214-04
   it("runs only qfai-sdd's own steps in the story-authoring stages", async () => {
     const owned = await skillSteps("qfai-sdd");
-    const authoring = await kindSteps(["sdd", "sdd_delta", "sdd_append"]);
+    const authoring = await kindSteps(["sdd", "sdd_append"]);
     expect(authoring.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect(await stageNames("bugfix", "sdd_append")).toEqual([["sdd-story", "sdd-gate"]]);
+    for (const route of PLAN_ROUTES) {
+      for (const append of await stageNames(route, "sdd_append")) {
+        expect(append, route).toEqual(["sdd-story", "sdd-gate"]);
+      }
+    }
+    expect(await stageNames("fix-defect", "sdd_append")).toEqual([["sdd-story", "sdd-gate"]]);
   });
 
   // QFAI:AC-0001-0215-07
   // QFAI:EX-0001-0215-08
-  it("lists qfai-verify's nine steps and runs only verify-block steps in each verify stage", async () => {
+  // QFAI:EX-0001-0223-06
+  it("lists qfai-verify's nine steps and runs the whole verify block in every change route", async () => {
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
-    for (const route of ["direct", "bugfix", "bounded-change", "feature"]) {
-      const [verify = [], ...others] = await stageNames(route, "verify");
-      expect(others, route).toEqual([]);
-      expect(verify.length, route).toBeGreaterThan(0);
-      const positions = verify.map((step) => VERIFY_BLOCK.indexOf(step));
-      expect(positions, `${route}: only verify-block steps`).not.toContain(-1);
-      expect(positions, `${route}: in the block's order`).toEqual(
-        [...positions].sort((a, b) => a - b),
+    let changeRoutes = 0;
+    for (const route of PLAN_ROUTES) {
+      const blocks = (await stageNames(route, "verify")).filter((steps) =>
+        steps.includes("verify-repo-gate"),
       );
+      if (blocks.length === 0) continue;
+      changeRoutes += 1;
+      expect(blocks, route).toEqual([VERIFY_BLOCK]);
     }
+    expect(changeRoutes).toBe(26);
   });
 
   // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
-  it("runs only qfai-discussion's steps in discovery, and the UI sidecars step may pass", async () => {
+  it("runs only qfai-discussion's steps in the decide plans, and the UI sidecars step may pass", async () => {
     const owned = await skillSteps("qfai-discussion");
     expect(owned).toEqual([
       "discussion-research",
@@ -216,7 +224,7 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0211-02
   // QFAI:EX-0001-0211-02
-  it("runs the four prototyping steps of the loop in the feature plan", async () => {
+  it("runs the four prototyping steps of the loop in the prototype-feature plan", async () => {
     const owned = await skillSteps("qfai-prototyping");
     expect(owned).toEqual([
       "prototyping-grill",
@@ -225,7 +233,7 @@ describe("the skills a workflow run's steps belong to", () => {
       "prototyping-recover",
       "prototyping-handoff",
     ]);
-    expect(await stageNames("feature", "prototype")).toEqual([
+    expect(await stageNames("prototype-feature", "prototype")).toEqual([
       owned.filter((step) => step !== "prototyping-recover"),
     ]);
   });
