@@ -86,6 +86,8 @@ explicit PASS or REVISE for the current revision.
 
 The invocation completes on the gate of its last step and a PASS of the review
 above. For `<BF-ID>`, that is the completion gate of `implement-checkpoint`.
+The report ends with a question listing the next actions, `/qfai-verify`
+recommended, as `.agents/rules/user-questions.md` § 6 sets out.
 
 ## Default Autopilot Policy
 

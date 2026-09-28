@@ -65,7 +65,9 @@ states.
 ## Completion
 
 The invocation completes on the gate of its last step and a PASS of that
-review. Report what that gate names.
+review. Report what that gate names. The report ends with a question listing the
+next actions, `/qfai-implement` recommended, as
+`.agents/rules/user-questions.md` § 6 sets out.
 
 ## Default Autopilot Policy
 

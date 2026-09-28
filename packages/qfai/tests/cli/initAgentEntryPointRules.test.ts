@@ -2823,3 +2823,42 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 });
+
+/**
+ * The question-form summary an earlier release wrote, before the rule said how a
+ * turn that waits on the user ends. An unedited copy takes the new wording in
+ * every entry point, the Copilot file included.
+ */
+describe("a later init refreshes the question-form summary an earlier release wrote", () => {
+  const master = ".agents/rules/user-questions.md";
+  const superseded =
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.";
+
+  const bulletIn = (text: string): string | undefined =>
+    text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
+
+  it("replaces the unedited bullet in every entry point and changes nothing else", async () => {
+    await withProject(async (root) => {
+      for (const name of AGENT_ENTRY_POINT_FILES) {
+        await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+      }
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(".github", "copilot-instructions.md");
+      const generated = new Map<string, string>();
+      for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
+        const written = await readEntryPoint(root, name);
+        const current = bulletIn(written);
+        expect(current, `${name} has no bullet for ${master}`).toBeDefined();
+        expect(current).toContain("a turn that waits on the user ends with a question");
+        generated.set(name, written);
+        await writeFile(path.join(root, name), written.replace(current ?? "", superseded), "utf-8");
+      }
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, written] of generated) {
+        expect(await readEntryPoint(root, name), name).toBe(written);
+      }
+    });
+  });
+});
