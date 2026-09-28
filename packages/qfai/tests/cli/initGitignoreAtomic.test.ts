@@ -24,7 +24,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   };
 });
 
-const { ensureRootGitignoreEntries } = await import("../../src/cli/commands/init.js");
+const { ensureRootGitignoreEntries } = await import("../../src/core/init/rootGitignore.js");
 const { QFAI_GITIGNORE_MARKER } = await import("../../src/core/gitignore.js");
 
 function ownerFor(content: string): string {

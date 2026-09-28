@@ -18,7 +18,7 @@ import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
 import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
-import { error, info, warn } from "./lib/logger.js";
+import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
 import { resolveToolVersion } from "../core/version.js";
 

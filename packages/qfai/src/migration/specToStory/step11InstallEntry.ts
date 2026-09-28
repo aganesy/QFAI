@@ -1,17 +1,17 @@
 import { lstat, mkdir, readdir, readlink, realpath, rename, stat } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  collectCanonicalSkillIds,
-  createSkillLink,
-  planEntryDirective,
-  SKILL_ARCHIVE_DIR,
-  SKILL_INTEGRATION_DIRS,
-} from "../../cli/commands/init.js";
-import { collectTemplateFiles, copyTemplatePaths } from "../../cli/lib/fs.js";
+import { collectTemplateFiles, copyTemplatePaths } from "../../core/fs/templateCopy.js";
 import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { hashAssistantAssetFile } from "../../core/assistantAssetProvenance.js";
 import { isEnoent } from "../../core/fs/errno.js";
+import { planEntryDirective } from "../../core/init/entryDirective.js";
+import {
+  collectCanonicalSkillIds,
+  SKILL_ARCHIVE_DIR,
+  SKILL_INTEGRATION_DIRS,
+} from "../../core/init/integrationDirs.js";
+import { createSkillLink } from "../../core/init/managedLink.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";

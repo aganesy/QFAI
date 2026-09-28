@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
-import { copyTemplateTree } from "../../src/cli/lib/fs.js";
+import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   isPathIgnored,

@@ -27,7 +27,7 @@ import {
 } from "../../core/discussionPack.js";
 import { runSddPreflight, type SddPreflightResult } from "../../core/preflight/sddPreflight.js";
 import { readDiscussionCurrentId } from "../../core/state.js";
-import { error as logError, info as logInfo } from "../lib/logger.js";
+import { error as logError, info as logInfo } from "../../core/logger.js";
 
 export type SddPreflightCommandOptions = {
   /** Project root (`.qfai/discussion` / `.qfai/report` resolve underneath). */

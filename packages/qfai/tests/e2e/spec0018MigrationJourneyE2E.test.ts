@@ -32,7 +32,7 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 
-import { ensureRootGitignoreEntries } from "../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");

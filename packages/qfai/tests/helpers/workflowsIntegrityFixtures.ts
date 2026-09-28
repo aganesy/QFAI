@@ -310,7 +310,7 @@ export type DoctorTextRun = { exitCode: number; stdout: string };
  * `summary:` line, which only the diagnostic pass emits.
  *
  * `stdout` is captured rather than left to leak into the reporter because
- * `runDoctor` renders through `cli/lib/logger`'s `info`, i.e.
+ * `runDoctor` renders through `core/logger`'s `info`, i.e.
  * `process.stdout.write`, which is exactly what `captureStdout` swaps out. It is
  * returned rather than discarded so the rendered text is available to the row
  * that owns 2-group placement.

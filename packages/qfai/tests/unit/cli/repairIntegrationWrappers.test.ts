@@ -24,8 +24,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AGENT_INTEGRATION_CONFIGS,
   SKILL_INTEGRATION_DIRS,
-  repairIntegrationWrappers,
-} from "../../../src/cli/commands/init.js";
+} from "../../../src/core/init/integrationDirs.js";
+import { repairIntegrationWrappers } from "../../../src/core/init/wrapperRepair.js";
 import type * as InitAssets from "../../../src/cli/lib/assets.js";
 import type * as FsPromises from "node:fs/promises";
 
