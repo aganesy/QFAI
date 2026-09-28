@@ -124,4 +124,11 @@ Feature: Deliver a clear new feature from one request
     And an appended row naming an approval-required operation, or opening `Change request:`, stands at WIP or DONE only when its Approach cites a `human_decision` this run recorded for it
     And that Approach states who answered, when, and each option chosen, as the run's authorization record holds them
     And any other result is refused with the run unchanged
+
+  # AC-0001-0192-17
+  Scenario: The completion report ends with the next actions
+    Given `finish` has judged the run
+    When the completion report is given
+    Then it ends with a question listing the next actions, the recommended one first
+    And under a no-question mode it lists them without asking
 ```

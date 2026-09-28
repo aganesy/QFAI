@@ -95,6 +95,11 @@ describe("the structured-question reminder", () => {
     expect(payload).toContain("No question is light enough to skip it");
     // The fallback, so a host without the tool is not read as an exemption.
     expect(payload).toContain("through that rule's fallback where it is not");
+    // The turn that waits on the user, which otherwise ends on a report and
+    // leaves the session idle with nothing saying it waits.
+    expect(payload).toContain(
+      "A turn that leaves the next step to the user ends with such a question, listing the next actions with the recommended one first",
+    );
   });
 
   it.each([

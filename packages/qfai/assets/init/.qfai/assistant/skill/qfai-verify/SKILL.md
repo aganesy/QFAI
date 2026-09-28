@@ -95,8 +95,9 @@ the user to answer. This skill does not write `open-questions.md`.
 
 The completion message lists each adopted decision — every
 `grilling(<Session>@<run key>/agents)` row — with its reason and any
-disagreeing position, and does not wait for an answer. It then lists every
-next action:
+disagreeing position, and does not wait for an answer. It then ends with a
+question listing every next action, as `.agents/rules/user-questions.md` § 6
+sets out:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
   verification evidence summary as its description.
