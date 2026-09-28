@@ -4,7 +4,7 @@
  * AC-0015-0018).
  *
  * `validateReviewerJustification` enforces the advisory-failing catalog.
- * The catalog SSOT (`justificationCatalog.ts`) supplies the 8 codes; this test
+ * The catalog SSOT (`justificationCatalog.ts`) supplies the 7 codes; this test
  * fixtures a reviewer-report JSON under `.qfai/review/` with each
  * catalog code in two variants (empty + filled justification) and
  * asserts the validator flags only the empty variants.
@@ -88,7 +88,7 @@ describe("TC-0015-0027: validateReviewerJustification rejects empty justificatio
     expect(issues.find((i) => i.code === "QFAI-CRIT-008")).toBeUndefined();
   });
 
-  it("exposes exactly 8 catalog codes in the SSOT set", () => {
-    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(8);
+  it("exposes exactly 7 catalog codes in the SSOT set", () => {
+    expect(CATALOG_ADVISORY_FAILING_CODES.size).toBe(7);
   });
 });

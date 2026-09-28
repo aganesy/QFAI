@@ -454,11 +454,7 @@ export const GATE_GROUP_FAMILIES = {
     "R-AUTOPILOT-POLICY-*",
     "R-REJECTED-READOPT",
   ],
-  "reviewer-gate-shared": [
-    "R-MOCK-HREF-DRIFT",
-    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    "R-EVIDENCE-MUTATION-UNLOGGED",
-  ],
+  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT", "R-EVIDENCE-MUTATION-UNLOGGED"],
   "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
   contracts: [
     "QFAI-CONTRACT-000",

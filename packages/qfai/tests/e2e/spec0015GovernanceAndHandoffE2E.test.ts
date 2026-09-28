@@ -6,7 +6,7 @@
  *     decision record.
  *   - US-0015-0011: canonical cross-skill handoff schema /
  *     R-HANDOFF-SCHEMA-DRIFT.
- *   - US-0015-0012: eight-code Reviewer-Gate finding catalog (mandatory
+ *   - US-0015-0012: seven-code Reviewer-Gate finding catalog (mandatory
  *     non-empty justification).
  *   - US-0015-0013: `qfai audit log` CLI surface.
  *   - US-0015-0014: `qfai handoff upgrade` legacy adapter.
@@ -175,17 +175,16 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
 });
 
 describe("spec-0015 US-0015-0012 finding-code catalog (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: all 8 catalog codes are registered", () => {
+  it("QFAI:BF-0001 — normal: all 7 catalog codes are registered", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
     expect(codes).toContain("R-AUTOPILOT-POLICY-MISSING");
     expect(codes).toContain("R-HANDOFF-SCHEMA-DRIFT");
     expect(codes).toContain("R-EVIDENCE-MUTATION-UNLOGGED");
-    expect(codes).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
     expect(codes).toContain("R-PACK-LOCATION-DRIFT");
     expect(codes).toContain("R-SKILL-MANIFEST-DRIFT");
     expect(codes).toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
     expect(codes).toContain("R-MOCK-HREF-DRIFT");
-    expect(codes).toHaveLength(8);
+    expect(codes).toHaveLength(7);
   });
 
   it("QFAI:BF-0001 — error: empty justification on a catalog code is rejected by validate ingestion", async () => {

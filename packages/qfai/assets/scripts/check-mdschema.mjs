@@ -214,6 +214,12 @@ function mdschemaEntryPoint(packageDir) {
  * single scalar under a single mapping. A missing or unreadable config is not
  * an error — the documented default is what a fresh tree has.
  *
+ * The value is returned tree-relative with forward slashes, the form the
+ * walked document paths take, so `./.qfai/spec` and `.qfai\spec` name the same
+ * tree as `.qfai/spec`, as they do for `qfai validate`. A backslash is read as a
+ * separator on every platform: a directory name holding one is not a spelling
+ * anyone writes on purpose.
+ *
  * @returns {string} Configured directory, or its default.
  */
 function readConfiguredDir(root, key, fallback) {
@@ -238,7 +244,11 @@ function readConfiguredDir(root, key, fallback) {
     return fallback;
   }
   const value = found[1].trim();
-  return value === "" ? fallback : value.replace(/\/+$/, "");
+  if (value === "") {
+    return fallback;
+  }
+  const absolute = path.resolve(root, value.replaceAll("\\", "/"));
+  return path.relative(root, absolute).split(path.sep).join("/");
 }
 
 /**

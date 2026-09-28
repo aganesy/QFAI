@@ -79,7 +79,6 @@ import {
   validateReviewerJustification,
   validateReviewerGate,
   detectMockHrefDrift,
-  validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
   runPackageSelfGovernanceValidators,
@@ -682,12 +681,9 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    // Second-wave reviewer-gate findings (prototyping
-    // surface). Both detectors no-op when their gating files are
-    // absent (consumer repo without the validator source / without a
-    // DESIGN.md.backup snapshot), so the prototyping profile stays
-    // safe to run on freshly-bootstrapped projects.
-    ...(await validateDesignMdPatchZone(root, config)),
+    // Reviewer-gate finding on the prototyping surface. The detector
+    // no-ops in a consumer repo without the validator source, so the
+    // prototyping profile stays safe to run on a fresh project.
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),

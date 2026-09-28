@@ -292,20 +292,6 @@ const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
     },
   ],
   [
-    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    {
-      modules: [
-        "src/core/validators/designMdPatchZone.ts",
-        "src/core/validators/justificationCatalog.ts",
-      ],
-      treatment:
-        "Genuinely cross-dispatch: `validateDesignMdPatchZone` from " +
-        "`runPrototypingValidators`, `validateReviewerJustification` from `runSddValidators`. " +
-        "`reviewer-gate-shared`, which BOTH profiles list, so neither is told it skipped a " +
-        "code it can emit.",
-    },
-  ],
-  [
     "R-MOCK-HREF-DRIFT",
     {
       modules: [
@@ -313,9 +299,10 @@ const DUAL_EMITTED_CODES: ReadonlyMap<string, DualEmitter> = new Map([
         "src/core/validators/reviewerGate.ts",
       ],
       treatment:
-        "As R-DESIGN-MD-PATCH-OUT-OF-ZONE: `detectMockHrefDrift` from " +
+        "Genuinely cross-dispatch: `detectMockHrefDrift` from " +
         "`runPrototypingValidators`, the catalog re-emit from `runSddValidators`. " +
-        "`reviewer-gate-shared`.",
+        "`reviewer-gate-shared`, which BOTH profiles list, so neither is told it skipped a " +
+        "code it can emit.",
     },
   ],
   [

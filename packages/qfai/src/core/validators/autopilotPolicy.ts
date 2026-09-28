@@ -520,7 +520,7 @@ function findWidenedAutoDecideTokens(block: string): string[] {
  * distinct from MISSING (different remediation: narrow the auto-decide
  * bucket back to the canonical set vs add the section), still useful
  * as a signal, but its severity (`warning`) and advisory contract are
- * not the same as the 8-code error-class catalog. It is intentionally
+ * not the same as the 7-code error-class catalog. It is intentionally
  * NOT added to `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`.
  */
 export async function validateAutopilotPolicy(

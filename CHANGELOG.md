@@ -154,10 +154,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Contracts can carry their own IDs, and number their rules after them.**
   `qfai validate` reads them.
-  - A contract under `cli/`, `api/`, `db/`, `ui/` or `design/` declares a
-    contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
-    contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
-    otherwise. The number is unique across kinds.
+  - A contract under `cli/`, `api/`, `db/` or `ui/` declares a contract ID
+    such as `CLI-0001` or `API-0002`: in its H1 for a Markdown contract
+    (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line otherwise. The number is unique across kinds.
   - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
     another number is a BR-to-EX error (`QFAI-STORY-005`).
   - A Markdown contract holds its rules under `## Business rules`.
@@ -174,7 +173,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entry names, or that two entries name, now fails the document lane under
   every scope that includes it, and `npx qfai validate` reports it as
   `QFAI-DOCSCHEMA-001` with the `[coverage]` rule. Before, such a file was
-  skipped.
+  skipped. The lane reads the two directories from `qfai.config.yaml` as
+  `qfai validate` does, so `./.qfai/spec` and `.qfai\spec` name the same
+  directory as `.qfai/spec`.
 
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
@@ -522,12 +523,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `prototyping.primaryUiContract`;
   - the `expected` text of `QFAI-UIE-001` and `QFAI-UIE-002`, which name
     `<paths.contractsDir>/ui/`;
-  - the design-lock messages of `qfai prototyping iterate`,
-    `qfai prototyping certify` and the design validators, which send the
-    operator to the design lock step of `/qfai-sdd`;
-  - the `--force` entry of `qfai --help`, the sample `prototype-handoff.yaml`,
-    the example in the seeded `waivers.yml`, and the sample `DESIGN.md`
-    comment.
+  - the `--force` entry of `qfai --help`, the example in the seeded
+    `waivers.yml`, and the sample `DESIGN.md` comment.
 
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial start from describing
@@ -595,14 +592,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such exemption on a passing run instead of reading only the compiler
   configuration.
 
-- **`qfai prototyping iterate` writes `design-system.yaml` when the loop
-  ends.** The cycle that stops the loop, on convergence (exit 64) or on the
-  cycle budget (exit 65), writes `<paths.contractsDir>/design/design-system.yaml`
-  from the root `DESIGN.md`: its token tables, `source: DESIGN.md`, and the
-  file's sha256 as `designMdSha256`. The same `DESIGN.md` always gives the
-  same bytes. The `/qfai-prototyping` skill no longer asks the agent to write
-  the file by hand.
-
 - **Breaking: `.qfai/evidence/` is local and never committed.** `qfai init`
   ignores the whole directory, and a rerun strips the evidence negations
   earlier releases wrote into the managed `.gitignore` block. Stage evidence,
@@ -630,9 +619,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The migration gives every 1.x contract its 2.x contract ID.** No old
   `CON-*` ID is left where a step can rewrite it.
-  - Step 3 numbers every contract under `cli/`, `api/`, `db/`, `ui/` and
-    `design/` that has no 2.x ID, from `0001` across kinds, in the order CLI,
-    API, DB, UI, design, then by old number. It renames each file to
+  - Step 3 numbers every contract under `cli/`, `api/`, `db/` and `ui/`
+    that has no 2.x ID, from `0001` across kinds, in the order CLI, API, DB,
+    UI, then by old number. It renames each file to
     `<kind>-NNNN-<slug>.<ext>`, declares the new ID in its H1 or
     `QFAI-CONTRACT-ID` line, and rewrites the old IDs in `-- Depends on:` and
     `x-qfai-depends-on`. Its dry run names each rename with the new ID.
@@ -642,7 +631,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
     old index's other sections go to a person.
   - The plan still names a rule's contract by its old path. Step 4 refuses a
-    path outside the five contract directories, or one that names no
+    path outside those four contract directories, or one that names no
     contract, and numbers each contract's rules `BR-<contract number>-NNNN`.
   - Step 7 writes a Markdown contract's rules under `## Business rules`, and
     rewrites the old IDs in each rule statement through the ID map.
@@ -709,6 +698,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `QFAI-BPAP-001` to `QFAI-BPAP-012` are gone.
   - Design token files are read only from the directory
     `uiux.designTokensDir` names. With it unset, none is read.
+
+- **Breaking: the `DESIGN.md` patch zone.** `qfai validate` no longer
+  compares root `DESIGN.md` with `.qfai/contracts/design/DESIGN.md.backup`,
+  and a `patch_zone:` block in its front matter is no longer read.
+  `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is gone, and the Reviewer-Gate catalog of
+  codes that need a justification holds seven. A waiver that names it is
+  reported as naming an unknown rule (`QFAI-WAIVER-004`).
 
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,
@@ -881,8 +877,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Fixed
 
 - **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
-  - A business-flow `traceability-graph.json` names a Markdown, CLI or design
-    contract by the `<KIND>-NNNN` ID it declares, not by its file path.
+  - A business-flow `traceability-graph.json` names a Markdown or CLI contract
+    by the `<KIND>-NNNN` ID it declares, not by its file path.
   - `## Business rules ##` and `## Contract Index ##` are read as the rules
     section and the index: a closing run of `#` is part of the heading syntax,
     not of the title.
@@ -932,12 +928,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `work-order.schema.json` required a `target` on every other stage kind but
   accepted one on the `route`, `discussion`, `maintenance` and `verify` work
   orders, which carry none.
-
-- **The prototyping reference check reads the handoff from the configured
-  contracts directory.** It read `prototype-handoff.yaml` only from
-  `.qfai/contracts/design/`, so a project with another `paths.contractsDir`
-  never had the handoff's `finalArtifact` and `designSystemMirror` paths
-  checked. It now reads `<paths.contractsDir>/design/prototype-handoff.yaml`.
 
 - **`prototyping.yaml` is offered only to a pack that can use it.** The README
   and the discussion skill offered the file to every UI-bearing discussion

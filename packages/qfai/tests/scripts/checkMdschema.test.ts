@@ -386,6 +386,29 @@ describe("a Markdown file no schema covers", () => {
     expect(other.status, other.stderr).toBe(0);
   });
 
+  // QFAI:EX-0001-0011-15
+  it.each([
+    ["a leading ./", "./.qfai/specs", "./.qfai/contracts/"],
+    ["backslashes", ".qfai\\specs", ".qfai\\contracts\\"],
+  ])(
+    "reads configured directories spelled with %s as the same tree",
+    async (_, specs, contracts) => {
+      const root = await newTempDir();
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `paths:\n  specsDir: ${specs}\n  contractsDir: ${contracts}\n`,
+        "utf-8",
+      );
+      await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+
+      const result = runDriver(["--root", root, "--scope", "all"]);
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("1 file(s) conform");
+      expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    },
+  );
+
   it("is returned to a caller as a coverage violation", async () => {
     const root = await newTempDir();
     const notes = ".qfai/specs/README.md";

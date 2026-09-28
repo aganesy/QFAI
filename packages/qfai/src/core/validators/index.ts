@@ -80,7 +80,6 @@ export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.j
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
-export { detectDesignMdPatchOutOfZone, validateDesignMdPatchZone } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";

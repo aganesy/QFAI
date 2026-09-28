@@ -147,7 +147,6 @@
 | US-0001-0145 | Structured prior-cycle context                                                         | `user-story-0001-0145/` |
 | US-0001-0146 | Out-of-range cycle guidance                                                            | `user-story-0001-0146/` |
 | US-0001-0147 | Optional surface skeleton capture                                                      | `user-story-0001-0147/` |
-| US-0001-0148 | Design patch zone and hash                                                             | `user-story-0001-0148/` |
 | US-0001-0149 | Exploration and convergence modes                                                      | `user-story-0001-0149/` |
 | US-0001-0150 | Explicit critique evidence keywords                                                    | `user-story-0001-0150/` |
 | US-0001-0151 | Prototyping mutation log                                                               | `user-story-0001-0151/` |

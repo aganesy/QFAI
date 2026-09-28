@@ -38,4 +38,5 @@ Feature: Story-tree layout described by mdschema
     When the document lane or `qfai validate --profile sdd` runs over it
     Then the lane exits 1 naming the file, under every scope that includes it
     And `qfai validate` reports it as one `QFAI-DOCSCHEMA-001` error naming the file
+    And a spelling of `paths.specsDir` or `paths.contractsDir` that `qfai validate` resolves to the same directory covers the same files
 ```
