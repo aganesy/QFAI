@@ -232,7 +232,7 @@ describe("against a repository", () => {
         "| EX-0001-0001-03 | AC-0001-0001-01 | mine | kept |",
       ),
     );
-  }, 60_000);
+  });
 
   afterAll(() => {
     rmSync(root, { recursive: true, force: true });
@@ -253,7 +253,7 @@ describe("against a repository", () => {
     } finally {
       log.mockRestore();
     }
-  }, 60_000);
+  });
 
   it("names the collision with another pull request and not with this branch's own", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -265,7 +265,7 @@ describe("against a repository", () => {
       log.mockRestore();
       error.mockRestore();
     }
-  }, 60_000);
+  });
 
   it("passes a listing that crossed the reserve on as exit 1, with the answer printed", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -275,5 +275,5 @@ describe("against a repository", () => {
     } finally {
       log.mockRestore();
     }
-  }, 60_000);
+  });
 });
