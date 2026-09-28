@@ -26,7 +26,7 @@ import {
   SKILL_INTEGRATION_DIRS,
 } from "../../../src/core/init/integrationDirs.js";
 import { repairIntegrationWrappers } from "../../../src/core/init/wrapperRepair.js";
-import type * as InitAssets from "../../../src/cli/lib/assets.js";
+import type * as InitAssets from "../../../src/shared/assets.js";
 import type * as FsPromises from "node:fs/promises";
 
 import type { Issue } from "../../../src/core/types.js";
@@ -55,7 +55,7 @@ let inspectionThrows = false;
 let symlinkDenied = false;
 let initAssetsOverride: string | null = null;
 
-vi.mock("../../../src/cli/lib/assets.js", async (importOriginal) => {
+vi.mock("../../../src/shared/assets.js", async (importOriginal) => {
   const actual = await importOriginal<typeof InitAssets>();
   return {
     ...actual,
