@@ -49,6 +49,21 @@ const protocolPaths = [
   ),
   path.join(repoRoot, ".qfai", "assistant", "rule", "research-first-protocol.md"),
 ];
+const webResearchSkillPaths = [
+  path.join(
+    repoRoot,
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    ".qfai",
+    "assistant",
+    "skill",
+    "web-research",
+    "SKILL.md",
+  ),
+  path.join(repoRoot, ".qfai", "assistant", "skill", "web-research", "SKILL.md"),
+];
 
 /** The heading spelling `validateResearchSummary` keys off. */
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
@@ -220,8 +235,9 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     it(`${path.relative(repoRoot, protocolPath)}: descriptions mark any phrase kept from the source`, async () => {
       const quotation = section(await readFile(protocolPath, "utf-8"), "## Quotation Rule");
-      expect(quotation).toContain("indirect speech");
+      expect(quotation).toContain("analyst's own words");
       expect(quotation).toContain("marked as a quotation");
+      expect(quotation).toContain("ordinary quotation marks");
       // The rule is taught by one worked example: the source, the entry, and why.
       expect(quotation).toContain("The source says:");
       expect(quotation).toContain("description:");
@@ -232,6 +248,20 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       const names = section(await readFile(protocolPath, "utf-8"), "## Name Verification Rule");
       expect(names).toContain("Search it as it was");
       expect(names).toContain("not grounds to skip the search");
+      // The lookup is a source like any other, so a verified name is told apart
+      // from one answered from memory.
+      expect(names).toContain("Record what the search found in the summary's `sources`");
+    });
+  }
+
+  for (const skillPath of webResearchSkillPaths) {
+    it(`${path.relative(repoRoot, skillPath)}: points to both rules instead of restating them`, async () => {
+      const skill = await readFile(skillPath, "utf-8");
+      expect(skill).toContain("research-first-protocol.md#name-verification-rule");
+      expect(skill).toContain("research-first-protocol.md#quotation-rule");
+      // A copy of the clause text would drift from the protocol it restates.
+      expect(skill).not.toContain("not grounds to skip the search");
+      expect(skill).not.toContain("This is correct because");
     });
   }
 

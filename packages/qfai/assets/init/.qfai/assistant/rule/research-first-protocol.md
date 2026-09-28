@@ -73,8 +73,9 @@ research_summary:
 
 ## Quotation Rule
 
-Each `best_practices` and `anti_patterns` `description` is the analyst's own
-indirect speech. A phrase kept from the source is marked as a quotation.
+Each `best_practices` and `anti_patterns` `description` is written in the
+analyst's own words. A phrase kept from the source is marked as a quotation
+with ordinary quotation marks.
 
 An unmarked passage lifted from a page reads as the project's own finding, and
 the `source_id` beside it then attributes the wrong words.
@@ -101,6 +102,10 @@ written.
 
 Recognizing the name is not grounds to skip the search. Partial background on a
 name is what makes an out-of-date answer sound authoritative.
+
+Record what the search found in the summary's `sources`, the same way as any
+other source. A later reader can then tell a verified name from one answered
+from memory.
 
 ## Conflict Protocol
 

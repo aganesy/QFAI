@@ -100,6 +100,8 @@ The web research pipeline consists of **8 stages** executed in strict order:
 7. **verify** — Cross-reference extracted claims; flag contradictions and low-confidence assertions.
 8. **cite** — Generate structured citation output with source attribution.
 
+Names are verified per `.qfai/assistant/rule/research-first-protocol.md#name-verification-rule`; findings are worded per `.qfai/assistant/rule/research-first-protocol.md#quotation-rule`.
+
 Each stage writes its output to the **session log** (see Section 4.1).
 The final citation block is appended to the research artifact.
 
