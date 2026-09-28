@@ -16,7 +16,7 @@ import {
 import { createHash } from "node:crypto";
 import path from "node:path";
 
-import { SKILL_ARCHIVE_DIR, SKILL_INTEGRATION_DIRS } from "../../cli/commands/init.js";
+import { SKILL_ARCHIVE_DIR, SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
 import {
   loadConfig,
   resolvePath,

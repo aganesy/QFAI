@@ -95,7 +95,7 @@ import {
 import { readUiContractInventory } from "../../core/prototyping/specResolution.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../core/logger.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { profileSuffixedReportPath } from "./validate.js";
 

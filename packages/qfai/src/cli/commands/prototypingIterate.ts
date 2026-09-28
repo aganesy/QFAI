@@ -48,7 +48,7 @@ import {
 import path from "node:path";
 
 import { EXIT_CODES } from "../lib/exitCodes.js";
-import { error, info, warn } from "../lib/logger.js";
+import { error, info, warn } from "../../core/logger.js";
 import { loadConfig, readRejectedPrimaryUiContract, type QfaiConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { isEnoent } from "../../core/fs/errno.js";

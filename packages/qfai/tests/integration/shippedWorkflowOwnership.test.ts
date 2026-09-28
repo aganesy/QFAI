@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
-import { copyTemplatePaths } from "../../src/cli/lib/fs.js";
+import { copyTemplatePaths } from "../../src/core/fs/templateCopy.js";
 import {
   readInstallProvenance,
   resolveWorkflowFileState,

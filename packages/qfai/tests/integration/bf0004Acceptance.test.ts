@@ -20,7 +20,8 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { ensureRootGitignoreEntries, runInit } from "../../src/cli/commands/init.js";
+import { runInit } from "../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -486,11 +487,11 @@ describe("BF-0004 acceptance criteria", () => {
     const links = await readFile(path.join(source, "step09RepointLinks.ts"), "utf8");
     const ignore = await readFile(path.join(source, "step10UpdateGitignore.ts"), "utf8");
     expect(links).toContain(
-      'import { repairIntegrationWrappers } from "../../cli/commands/init.js"',
+      'import { repairIntegrationWrappers } from "../../core/init/wrapperRepair.js"',
     );
     expect(links).toContain("await repairIntegrationWrappers(");
     expect(ignore).toContain(
-      'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../cli/commands/init.js"',
+      'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../core/init/rootGitignore.js"',
     );
     expect(ignore).toContain("await ensureRootGitignoreEntries(root, false");
     expect(ignore).toContain("await replaceRootGitignore(root, file,");

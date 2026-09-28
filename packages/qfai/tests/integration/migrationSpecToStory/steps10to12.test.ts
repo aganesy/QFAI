@@ -20,8 +20,9 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { ensureRootGitignoreEntries, runInit } from "../../../src/cli/commands/init.js";
-import { collectTemplateFiles } from "../../../src/cli/lib/fs.js";
+import { runInit } from "../../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries } from "../../../src/core/init/rootGitignore.js";
+import { collectTemplateFiles } from "../../../src/core/fs/templateCopy.js";
 import { hashAssistantAssetFile } from "../../../src/core/assistantAssetProvenance.js";
 import { loadConfig, readWorkflowMode } from "../../../src/core/config.js";
 import { validateProject } from "../../../src/core/validate.js";

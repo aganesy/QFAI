@@ -6,13 +6,14 @@ import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
-import { ensureRootGitignoreEntries, repairIntegrationWrappers } from "./init.js";
+import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
+import { repairIntegrationWrappers } from "../../core/init/wrapperRepair.js";
 import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import type { Issue } from "../../core/types.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
 import { resolveFailOn } from "../lib/failOn.js";
-import { info } from "../lib/logger.js";
+import { info } from "../../core/logger.js";
 
 export type DoctorCommandOptions = {
   root: string;
