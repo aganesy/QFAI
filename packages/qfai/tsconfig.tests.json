@@ -417,6 +417,7 @@
     "tests/helpers/readmeClaim.ts",
     "tests/helpers/routingEval.ts",
     "tests/helpers/routingEvalOverlays.ts",
+    "tests/helpers/routingEvalRoutes.ts",
     "tests/integration/workflow/acceptanceRuns.ts",
     "tests/integration/workflow/aResultStaysInItsScope.test.ts",
     "tests/integration/workflow/doneNeedsTheChangeCommitted.test.ts",
