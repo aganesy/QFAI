@@ -52,12 +52,21 @@ export function routingRun(runId = "run-20260928000000100"): JournalRun {
   ]);
 }
 
-/** What routing and every stage of these runs is decided on. */
+// The receipt of the routing result `routedBy` accepts: `JournalRun.accept` names a result by
+// the run's sequence, which is 3 once `routingRun` has seeded its records.
+const ROUTING_RECEIPT = "results/result-3.json";
+
+/**
+ * What routing and every stage of these runs is decided on. The routing receipt is `valid`, as the
+ * command finds one whose dependencies are unchanged; without that `next` sends the run back to
+ * routing.
+ */
 export async function runFacts(extra: Facts = {}): Promise<NonNullable<Facts>> {
   return {
     plans: await planFacts(),
     flows: [FLOW],
     heavyReviewerRoles: HEAVY_REVIEWERS,
+    receiptValidity: { [ROUTING_RECEIPT]: "valid" },
     now: "2026-09-28T00:00:00.000Z",
     ...extra,
   };
