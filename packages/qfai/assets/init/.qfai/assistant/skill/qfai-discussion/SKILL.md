@@ -90,7 +90,8 @@ After the last step, run one review of the pack under work with
 of the reviewers of the steps that ran: `completion-reviewer` and
 `requirements-reviewer` always, `product-surface-reviewer` when
 `discussion-uiux` ran, and `architecture-reviewer` when the pack records an
-architecture-affecting decision.
+architecture-affecting decision. Roles are selected under
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ### Reviewer Gate (MUST)
 
