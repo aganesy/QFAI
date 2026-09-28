@@ -811,6 +811,22 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
+    // A turn that leaves the next step to the user and ends on a report leaves
+    // the session idle with nothing saying it waits. One token per clause: the
+    // question is owed, it lists the next actions recommended first, the
+    // fallback carries it, no budget counts it, and a no-question mode reports
+    // the actions instead of asking.
+    it.each(MASTERS)("%s ends a turn that waits on the user with the next actions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /A\s+turn\s+that\s+leaves\s+the\s+next\s+step\s+to\s+the\s+user\s+ends\s+with\s+a\s+question\s+listing\s+the\s+next\s+actions/,
+      );
+      expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
+      expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
+      expect(text).toMatch(/no\s+question\s+budget\s+counts\s+it/);
+      expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
+    });
+
     it.each(MASTERS)("%s says what it is not", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/Not\s+a\s+question\s+budget/);
@@ -835,6 +851,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/in\s+the\s+shape\s+its\s+answer\s+has/);
       expect(text).toMatch(/a\s+plain\s+request/);
       expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
+    });
+
+    // The entry points `qfai init` writes are where an adopter's agent meets
+    // the rule, so their summary names the turn that waits on the user too.
+    it.each([
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the next-action question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /user-questions\.md` — [^\n]*a turn that waits on the user ends with a question listing the next actions/,
+      );
     });
 
     // The two rules divide one subject: which questions to ask, and what each

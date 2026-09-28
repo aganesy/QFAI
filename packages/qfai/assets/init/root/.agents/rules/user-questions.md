@@ -3,16 +3,18 @@
 The form every question to the user arrives in.
 
 This rule does not decide how many questions to ask, or whether a question is
-worth asking. It decides only what a question looks like when it is put.
+worth asking. It decides what a question looks like when it is put, and one
+place a question is always put: the end of a turn that waits on the user.
 
 ## Scope
 
-| Target                                      | Applies                                     |
-| ------------------------------------------- | ------------------------------------------- |
-| Any question put to the user                | Always                                      |
-| The tool is callable in this invocation     | The tool, every time                        |
-| The tool is not callable in this invocation | The fallback below, carrying the same parts |
-| How many questions to ask                   | Outside this rule — see § 6                 |
+| Target                                       | Applies                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| Any question put to the user                 | Always                                      |
+| The tool is callable in this invocation      | The tool, every time                        |
+| The tool is not callable in this invocation  | The fallback below, carrying the same parts |
+| A turn that leaves the next step to the user | Ends with a question — see § 6              |
+| How many questions to ask                    | Outside this rule — see § 7                 |
 
 **Callable, not present.** A host may carry a structured-question capability
 that this invocation cannot use — a mode that offers no structured tool, a
@@ -183,7 +185,26 @@ Say why the tool was not callable. Otherwise the fallback reads as a choice the
 agent made about how to ask, and the next reader cannot tell a limitation from a
 preference.
 
-## 6. What this rule is not
+## 6. A turn that waits on the user
+
+A turn that leaves the next step to the user ends with a question listing the
+next actions. A phase approved, a plan ready, a stage finished and a fork in the
+work each end such a turn.
+
+- Each option is one concrete next action, and says what choosing it does.
+- The recommended action comes first, under § 3.
+- Where the tool is not callable, § 5's fallback carries the same list.
+
+A status report, or an offer written in prose, does not end that turn. Nothing
+tells the user the session is waiting, so it sits idle until they come back to
+ask whether anything is happening.
+
+The question asks for nothing the work needed, so no question budget counts it.
+
+**Under a no-question mode nothing is asked.** The run records the next actions
+in its report instead.
+
+## 7. What this rule is not
 
 - Not a question budget. How many questions are worth asking is a separate
   subject, and the two are independent: one bounds the count, this bounds the
@@ -209,8 +230,8 @@ no network, and prints one message from `.agents/rules/reminders.json`. A missin
 or unreadable file prints nothing, so it cannot fail the session it is attached
 to.
 
-What it carries is where this rule lives and the line an agent reaches past when
-it would rather not ask. The rest is here.
+What it carries is where this rule lives, the line an agent reaches past when it
+would rather not ask, and the turn that waits on the user. The rest is here.
 
 ## Related
 

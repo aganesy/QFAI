@@ -1138,6 +1138,12 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
     ],
   ],
+  [
+    ".agents/rules/user-questions.md",
+    [
+      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
+    ],
+  ],
 ]);
 
 /** A document after its superseded bullets are refreshed, and the masters they cite. */
