@@ -160,10 +160,6 @@ export type ParsedArgs = {
     auditClause?: string;
     /** --format <table|json> for `qfai audit log`. */
     auditFormat?: "table" | "json";
-    /** Subcommand for `qfai handoff <upgrade>`. */
-    handoffAction?: "upgrade";
-    /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
-    handoffLegacyFile?: string;
     /** Subcommand for `qfai sdd <preflight>`. */
     sddAction?: "preflight";
     /** --format <text|json> for `qfai sdd preflight`. */
@@ -330,8 +326,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    *
    * - `dir`, `upgradeAssistantTree` — `init`
    * - `yes` — `init`, `doctor`
-   * - `force` — `init`, `handoff`, `prototyping`
-   * - `dryRun` — `init`, `doctor`, `handoff`, `prototyping`
+   * - `force` — `init`, `prototyping`
+   * - `dryRun` — `init`, `doctor`, `prototyping`
    *
    * One predicate rather than one per flag: two that mean almost the same
    * thing are two contracts to keep in step, and this is the shape
@@ -378,26 +374,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         markInvalid(subcommandReason("audit", candidate));
       }
       args.shift();
-    }
-  }
-
-  // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
-  if (command === "handoff") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      if (candidate === "upgrade") {
-        options.handoffAction = candidate;
-      } else {
-        markInvalid(subcommandReason("handoff", candidate));
-      }
-      args.shift();
-      if (options.handoffAction === "upgrade") {
-        const fileCandidate = args[0];
-        if (isPositionalToken(fileCandidate)) {
-          options.handoffLegacyFile = fileCandidate;
-          args.shift();
-        }
-      }
     }
   }
 
@@ -518,8 +494,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--force":
-        // Read by the `init`, `handoff` and `prototyping` arms and nowhere else.
-        if (ownedBy("init", "handoff", "prototyping")) {
+        // Read by the `init` and `prototyping` arms and nowhere else.
+        if (ownedBy("init", "prototyping")) {
           options.force = true;
         } else {
           markInvalid(notValidHere("--force"));
@@ -534,8 +510,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--dry-run":
-        // Read by `init`, `doctor`, `handoff` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
-        if (ownedBy("init", "doctor", "handoff", "prototyping")) {
+        // Read by `init`, `doctor` and `prototyping`. Accepted elsewhere it let an operator believe a run was a rehearsal.
+        if (ownedBy("init", "doctor", "prototyping")) {
           options.dryRun = true;
         } else {
           markInvalid(notValidHere("--dry-run"));
@@ -1100,11 +1076,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       default:
-        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
-        // parse error として markInvalid() する。位置引数
-        // (`discussion use <id>` / `handoff upgrade <legacy>` など) は
-        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
-        // はなく `--` プレフィックスで判定する。
+        // Only a token starting with `--` is read as an unknown flag and
+        // marked invalid. A positional such as the `<id>` of
+        // `discussion use` must stay out of it, so the test is the `--`
+        // prefix rather than "matched no case above".
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
@@ -1133,9 +1108,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "audit" && !options.help && !options.auditAction) {
     markInvalid(subcommandReason("audit", null));
   }
-  if (command === "handoff" && !options.help && !options.handoffAction) {
-    markInvalid(subcommandReason("handoff", null));
-  }
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
   }
@@ -1157,7 +1129,6 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
   ["audit", "log"],
-  ["handoff", "upgrade"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
@@ -1203,15 +1174,14 @@ function isSubcommandToken(token: string | undefined): token is string {
 }
 
 /**
- * Whether a token can be the positional value after a subcommand — the
- * `<legacy-file>` of `handoff upgrade`, the `<id>` of `discussion use`.
+ * Whether a token can be the positional value after a subcommand, such as the
+ * `<id>` of `discussion use`.
  *
- * A positional is caller data rather than a closed set, and a relative path may
- * legitimately begin with a single `-`: `qfai handoff upgrade -legacy.yaml`
- * names a file in the working directory and has to keep converting. So this
- * position excludes only the spellings the parser actually reserves — any `--`
- * long flag, plus RESERVED_SHORT_FLAGS — which still keeps `-V` and `-h` out
- * of the positional and lets them reach the flag loop.
+ * A positional is caller data rather than a closed set, and it may legitimately
+ * begin with a single `-`. So this position excludes only the spellings the
+ * parser actually reserves — any `--` long flag, plus RESERVED_SHORT_FLAGS —
+ * which still keeps `-V` and `-h` out of the positional and lets them reach the
+ * flag loop.
  */
 function isPositionalToken(token: string | undefined): token is string {
   return (

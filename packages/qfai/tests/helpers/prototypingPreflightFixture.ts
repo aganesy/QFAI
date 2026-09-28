@@ -20,7 +20,7 @@ export const PASSING_UI_CONTRACT = [
   "    title: Home",
   "    route: /",
   "    primary_tasks:",
-  "      - Browse the surface",
+  "      - { id: browse, label: Browse the surface, acceptance: done }",
   "",
 ].join("\n");
 

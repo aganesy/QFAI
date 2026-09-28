@@ -12,8 +12,8 @@ Feature: `primary_tasks` ceiling + accepted shape documented
     And a screen declaring more than 7 emits the warning, while one declaring 1 to 7 does not, because there is no floor
 
   # AC-0001-0161-02
-  Scenario: `primary_tasks` accepts string-only and structured shapes
-    Given a UI contract whose `primary_tasks` entries are string-only (legacy) OR structured `{id, label, acceptance}` (all-required, closed schema per DR-0268),
-    When `auditProfile.ts` evaluates them during the deprecation window,
-    Then both shapes are accepted (string-only continues to PASS); a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys, is rejected.
+  Scenario: `primary_tasks` accepts only the structured shape
+    Given a UI contract whose `primary_tasks` entries are structured `{id, label, acceptance}` (all-required, closed schema per DR-0268) or plain strings,
+    When `auditProfile.ts` evaluates them,
+    Then a complete structured item is accepted; a plain string item, a structured item missing any of `id` / `label` / `acceptance`, or one carrying extra keys, is rejected.
 ```

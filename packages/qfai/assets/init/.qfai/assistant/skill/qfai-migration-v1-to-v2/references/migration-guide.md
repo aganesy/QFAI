@@ -352,11 +352,12 @@ migration is committed.
 
 The upgrade notes for each release are in the QFAI changelog, under that
 release's heading. The memos announced deprecation windows, and every one of
-them closed at 1.10.0. A project upgrading from an earlier release meets these
-forms as errors for the first time:
+them has closed. A project upgrading from an earlier release meets these forms
+as errors for the first time:
 
 | Old form                                                             | Current form                                                                               |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `playwright-cli` as the browser wrapper or `prototyping.browserTool` | `playwright`                                                                               |
 | A reader of `.qfai/output/validate.json`                             | `.qfai/report/validate-<profile>.json`, or `.qfai/report/validate.json` for the latest run |
-| A hand-written, per-skill handoff file                               | The canonical `handoff.yaml`. `npx qfai handoff upgrade <legacy-file>` converts one        |
+| A hand-written, per-skill handoff file                               | The canonical `.qfai/handoff.yaml`, rewritten by hand                                      |
+| A plain string in a UI contract's `screens[].primary_tasks`          | A mapping with exactly `id`, `label` and `acceptance`                                      |

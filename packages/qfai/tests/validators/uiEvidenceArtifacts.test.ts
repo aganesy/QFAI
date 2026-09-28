@@ -36,7 +36,7 @@ async function seedUiContracts(root: string): Promise<void> {
       "    title: Orders Dashboard",
       "    route: /orders",
       "    primary_tasks:",
-      "      - View latest orders",
+      "      - { id: view_orders, label: View latest orders, acceptance: done }",
     ].join("\n"),
     "utf-8",
   );

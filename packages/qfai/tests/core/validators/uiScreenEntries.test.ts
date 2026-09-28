@@ -40,12 +40,11 @@ async function projectWith(files: Readonly<Record<string, readonly string[]>>): 
   return root;
 }
 
-const screen = (id: string, route: string, tasks = "      - Browse"): string[] => [
-  `  - id: ${id}`,
-  `    route: ${route}`,
-  "    primary_tasks:",
-  tasks,
-];
+const screen = (
+  id: string,
+  route: string,
+  tasks = "      - { id: browse, label: Browse, acceptance: done }",
+): string[] => [`  - id: ${id}`, `    route: ${route}`, "    primary_tasks:", tasks];
 
 describe("a UI contract entry no screen is read from is reported", () => {
   it("says nothing about a contract whose every entry is a screen", async () => {

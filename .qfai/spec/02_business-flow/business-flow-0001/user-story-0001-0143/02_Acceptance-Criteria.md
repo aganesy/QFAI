@@ -5,7 +5,7 @@
 ```gherkin
 Feature: Duplicate capture and missing-route findings
   # AC-0001-0143-01
-  Scenario: md5 duplicate-capture + missing-route advisory-failing detection (OQ-0109)
+  Scenario: md5 duplicate-capture + missing-route advisory-failing detection
     Given a post-capture iter with ≥ 2 distinct declared `screens[].id` entries whose PNG md5 hashes match,
     When `iterate` runs duplicate detection,
     Then `lap-009: duplicate-capture` MUST be surfaced in `layoutAntiPatternsDetected[]` with severity `error` and mandatory Reviewer `justification:` for any override.

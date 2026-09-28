@@ -1589,15 +1589,32 @@ async function buildPrototypingUiContractsCheck(
   // A prototype is built around each screen's primary tasks, so the stage does
   // not start while a screen has none. The audit lane refuses the same contract
   // under `QFAI-AUD-001`; without this, the stage's own preflight passed it.
+  // A screen whose every entry is malformed has no task either, but telling
+  // its author to add one hides the cause: the entries are there, in the
+  // wrong shape.
   const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
   if (withoutTasks.length > 0) {
+    const refs = (list: typeof screens): string =>
+      list.map((screen) => screen.sourceRef || screen.screenId).join(", ");
+    const malformed = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length > 0);
+    const empty = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length === 0);
+    const problems = [
+      ...(empty.length > 0
+        ? [
+            `UI contract screen(s) with no primary_tasks: ${refs(empty)}; add at least one primary_task to each screen`,
+          ]
+        : []),
+      ...(malformed.length > 0
+        ? [
+            `UI contract screen(s) whose primary_tasks entries are not {id, label, acceptance} mappings: ${refs(malformed)}; write each entry as a mapping with exactly id, label and acceptance`,
+          ]
+        : []),
+    ];
     return {
       id: "prototyping.uiContracts",
       severity: "error",
       title: "UI contracts",
-      message: `UI contract screen(s) with no primary_tasks: ${withoutTasks
-        .map((screen) => screen.sourceRef || screen.screenId)
-        .join(", ")}; add at least one primary_task to each screen before prototyping`,
+      message: `${problems.join("; ")} before prototyping`,
       details: {
         contractsDir: config.paths.contractsDir,
         screenIds: withoutTasks.map((screen) => screen.screenId),

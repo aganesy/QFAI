@@ -5,9 +5,9 @@
 ```gherkin
 Feature: Audit profile task forms
   # AC-0001-0052-01
-  Scenario: Both primary_tasks forms pass and QFAI-AUD-020 names the count band
-    Given a UI contract whose `primary_tasks` items use the legacy string-only form
-    When `auditProfile.ts` evaluates the contract
-    Then the string-only items continue to PASS during the deprecation window, AND a structured `{id, label, acceptance}` (all three required, `additionalProperties: false` per DR-0268) form is also accepted
-    And the `QFAI-AUD-020` warning text names the recommended count band `3..7` (per DR-0267)
+  Scenario: Only the structured primary_tasks form passes and QFAI-AUD-020 names the ceiling
+    Given a UI contract whose `primary_tasks` items use the string-only form, and a sibling contract whose items are structured
+    When `auditProfile.ts` evaluates both contracts
+    Then each string-only item is rejected with `QFAI-AUD-021`, AND the structured `{id, label, acceptance}` form (all three required, `additionalProperties: false` per DR-0268) is accepted
+    And the `QFAI-AUD-020` warning text names the recommended ceiling `at most 7`
 ```

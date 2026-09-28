@@ -2,7 +2,7 @@
  * Integration acceptance for spec-0015 CHG-006 test cases
  * TC-0015-0020..0033 (autopilot policy gate, envelope-deviation
  * audit-log, handoff schema drift, seven-code finding catalog,
- * `qfai audit log` CLI, `qfai handoff upgrade` legacy adapter, doc
+ * `qfai audit log` CLI, doc
  * realignment / stale-reference report).
  *
  * Deterministic temp-fixture form: each `it` seeds a `mkdtemp` root
@@ -22,8 +22,6 @@
 // QFAI:EX-0001-0178-01
 // QFAI:EX-0001-0179-01
 // QFAI:EX-0001-0179-01
-// QFAI:EX-0001-0180-01
-// QFAI:EX-0001-0180-01
 // QFAI:EX-0001-0181-01
 // QFAI:EX-0001-0181-01
 
@@ -34,7 +32,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAuditLog } from "../../src/cli/commands/auditLog.js";
-import { runHandoffUpgrade } from "../../src/cli/commands/handoffUpgrade.js";
 import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
 import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
@@ -339,44 +336,6 @@ describe("spec-0015 audit log CLI CHG-006", () => {
     // stdout stays TSV: header row, zero data rows.
     expect(written.join("\n")).toBe("timestamp\tscope\toperator\tclause");
     expect(errs.join("\n")).toMatch(/no decision records/i);
-  });
-});
-
-describe("spec-0015 handoff upgrade CHG-006", () => {
-  it("QFAI:EX-0001-0180-01 — normal: emits conforming .qfai/handoff.yaml with legacy: preserved", async () => {
-    await writeFile(
-      path.join(root, "session-handoff.yaml"),
-      "companyName: Acme\nprimarySpecId: spec-0012\ncustomField: legacy-data\n",
-      "utf-8",
-    );
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "session-handoff.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/legacy:/);
-    expect(body).toMatch(/customField/);
-  });
-
-  it("QFAI:EX-0001-0180-01 — error: malformed input fails without partial overwrite", async () => {
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: original\n", "utf-8");
-    await writeFile(path.join(root, "malformed.yaml"), "   \n", "utf-8");
-    const errs: string[] = [];
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "malformed.yaml",
-      write: () => undefined,
-      writeErr: (m) => errs.push(m),
-    });
-    expect(exit).not.toBe(0);
-    expect(errs.join("\n")).toMatch(/malformed|no recognizable/i);
-    const after = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(after).toBe("companyName: original\n");
   });
 });
 

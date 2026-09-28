@@ -415,6 +415,40 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
+  // QFAI:EX-0001-0122-10
+  it("exits 2 when prototyping.json carries no top-level runId, even with fullHarness.runId", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        fullHarness: { runId: "run-x" },
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain("prototyping.json#runId is required");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

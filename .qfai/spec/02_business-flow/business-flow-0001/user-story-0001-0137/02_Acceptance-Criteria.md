@@ -5,7 +5,7 @@
 ```gherkin
 Feature: Prototyping-phase certification check
   # AC-0001-0137-01
-  Scenario: Self-completable certify via verify.json#scope (OQ-0107 Option B)
+  Scenario: Self-completable certify via verify.json#scope
     Given a `verify.json` carrying `scope: "prototyping"`,
     When `qfai prototyping certify --check` runs,
     Then certify MUST return exit 0 WITHOUT requiring `/qfai-atdd` or `/qfai-implement` artifacts.

@@ -177,7 +177,6 @@
 | US-0001-0177 | Cross-skill `handoff.yaml` schema                                                      | `user-story-0001-0177/` |
 | US-0001-0178 | New Reviewer-Gate finding-code catalog                                                 | `user-story-0001-0178/` |
 | US-0001-0179 | `qfai audit log` CLI surface                                                           | `user-story-0001-0179/` |
-| US-0001-0180 | Cross-skill handoff legacy adapter helper                                              | `user-story-0001-0180/` |
 | US-0001-0181 | Cross-skill documentation realignment to implementation                                | `user-story-0001-0181/` |
 | US-0001-0182 | Reviewer-Gate ingests workflow-hygiene and shipped-shape drift                         | `user-story-0001-0182/` |
 | US-0001-0183 | Standard Research Pipeline Execution                                                   | `user-story-0001-0183/` |

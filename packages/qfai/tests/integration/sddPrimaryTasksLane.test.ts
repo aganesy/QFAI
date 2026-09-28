@@ -170,7 +170,7 @@ function uiContractWithPopulatedPrimaryTasks(): string {
     "    title: Create Order",
     "    route: /orders/new",
     "    primary_tasks:",
-    "      - create_order",
+    "      - { id: create_order, label: Create an order, acceptance: done }",
     "",
   ].join("\n");
 }
@@ -220,13 +220,33 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
 
     const empty = await prototypingPreflight(
       PASSING_UI_CONTRACT.replace(
-        ["    primary_tasks:", "      - Browse the surface"].join(String.fromCharCode(10)),
+        [
+          "    primary_tasks:",
+          "      - { id: browse, label: Browse the surface, acceptance: done }",
+        ].join(String.fromCharCode(10)),
         "    primary_tasks: []",
       ),
     );
     expect(empty.exitCode).toBe(1);
     expect(empty.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
     expect(empty.errors[0]?.message).toContain(".qfai/spec/03_contract/ui/ui-0001.yaml#home");
+  });
+
+  // QFAI:EX-0001-0159-04
+  it("names the entry shape when a screen lists only plain string primary tasks", async () => {
+    const strings = await prototypingPreflight(
+      PASSING_UI_CONTRACT.replace(
+        "      - { id: browse, label: Browse the surface, acceptance: done }",
+        "      - Browse the surface",
+      ),
+    );
+    expect(strings.exitCode).toBe(1);
+    expect(strings.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
+    const message = strings.errors[0]?.message ?? "";
+    expect(message).toContain(
+      "primary_tasks entries are not {id, label, acceptance} mappings: .qfai/spec/03_contract/ui/ui-0001.yaml#home",
+    );
+    expect(message).not.toContain("with no primary_tasks");
   });
 });
 

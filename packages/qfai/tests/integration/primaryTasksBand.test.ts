@@ -84,7 +84,10 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
 }
 
 function uiContractWithPrimaryTaskCount(count: number): string {
-  const items = Array.from({ length: count }, (_, idx) => `      - task_${idx + 1}`);
+  const items = Array.from(
+    { length: count },
+    (_, idx) => `      - { id: task_${idx + 1}, label: task_${idx + 1}, acceptance: done }`,
+  );
   return [
     "screens:",
     "  - id: dashboard",
