@@ -112,8 +112,17 @@ describe("a stage skill's final report ends with the next-action question", () =
       expect(start, `${root}/${skill} has no ${heading}`).toBeGreaterThan(-1);
       const next = content.indexOf("\n## ", start + heading.length + 1);
       const section = content.slice(start, next === -1 ? undefined : next).replace(/\s+/g, " ");
-      expect(section).toMatch(/ends? (?:the turn )?with a question listing (?:every|the|those)/);
+      expect(section).toMatch(/ends? (?:the turn )?with a question listing (?:every|the|those)/i);
       expect(section).toContain("`.agents/rules/user-questions.md` § 6");
+      // A no-question mode asks nothing, so the report carries the actions.
+      expect(section).toMatch(
+        /under a no-question mode,? (?:it )?lists? them in the report instead/i,
+      );
+      // The adopted decisions are reported, not asked, so the one question the
+      // report ends with is the next-action question.
+      if (skill === "qfai-verify") {
+        expect(section).toContain("None of them is put as a question.");
+      }
     }
   });
 });

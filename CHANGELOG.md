@@ -13,10 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   new clause of `.agents/rules/user-questions.md`.
 
   - The stage skills' final reports and the `qfai-run` completion report end
-    with that question.
+    with that question. `qfai-discussion` offers `/qfai-sdd` through it, in
+    place of the fixed handoff sentence it printed.
   - Where the question tool is not available, the rule's plain-text fallback
     lists the same actions. Under a no-question mode such as `--auto` nothing
     is asked, and the report lists the next actions.
+  - The question resolves no ambiguity, so the clarification budget does not
+    cap it. A stop is confirmed in one line, every open decision is listed as
+    open, and nothing is asked. A `qfai-run` halt ends with its halt notice.
   - The reminder shown on every prompt names the case, and the rule summaries
     `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the Copilot
     instructions cite it. A summary an earlier release wrote and nobody edited
