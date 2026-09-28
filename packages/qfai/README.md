@@ -154,9 +154,9 @@ Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
   - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
     (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
     JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
-    `.qfai/run/`; its summary and the answers it recorded are tracked under
-    `.qfai/evidence/workflow/<runId>/`. Only `finish` reports a run complete, after it runs
-    `validate` itself.
+    `.qfai/run/`; its summary and the answers it recorded are written to
+    `.qfai/evidence/workflow/<runId>/`, which stays local like all evidence. Only `finish`
+    reports a run complete, after it runs `validate` itself.
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes the summary run-scoped at
