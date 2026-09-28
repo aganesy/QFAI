@@ -14,6 +14,7 @@ import {
   submit,
   workflow,
 } from "../../e2e/workflowJourney.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 import { FLOW_ID, flowProject, proposalFor, withOtherFlows } from "./acceptanceRuns.js";
 
 afterEach(removeProjects);
@@ -89,7 +90,7 @@ it("An unknown flow, a missing path, a bare string and two flows are each refuse
     root,
     proposalFor("add-feature", {
       expectedBehaviorRefs: [{ kind: "flow-id", ref: "BF-9999" }],
-      confidence: 1,
+      extraction: extractionFor("add-feature", { confidence: "medium" }),
     }),
   );
   await submit(root, unknownFlow.runId, "decision", { stop: true, answeredBy: "operator" });

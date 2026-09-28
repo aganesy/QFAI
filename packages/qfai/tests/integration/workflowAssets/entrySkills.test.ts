@@ -32,6 +32,7 @@ import {
 const RUN = "skill/qfai-run/SKILL.md";
 const PAYLOADS = "skill/qfai-run/references/payloads.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
+const EXTRACTION = "skill/qfai-run/references/extraction.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 
@@ -81,6 +82,139 @@ function phasesOf(entry: Record<string, unknown> | undefined): Phase[] {
   return entry && Array.isArray(entry.phases) ? entry.phases.filter(isRecord) : [];
 }
 
+// The closed vocabulary of each extraction field, as the workflow contract states it.
+const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
+  intent: [
+    "question-how",
+    "question-why",
+    "question-help",
+    "question-hosted",
+    "no-work",
+    "defect",
+    "defect-regression",
+    "defect-silent",
+    "defect-crash",
+    "defect-conformance",
+    "performance",
+    "security",
+    "surface-contradiction",
+    "model-gap",
+    "unenforced",
+    "stale-record",
+    "feature",
+    "design",
+    "epic",
+    "behaviour-change",
+    "deprecation",
+    "refactor",
+    "docs",
+    "flaky-test",
+    "test-defect",
+    "ci",
+    "dependency",
+    "release",
+    "order",
+    "follow-up",
+  ],
+  entryFlags: [
+    "repro",
+    "cause",
+    "fix",
+    "expect",
+    "decision",
+    "upstream",
+    "bundle",
+    "vague",
+    "last-good",
+    "env",
+    "intermittent",
+    "trace",
+    "bot",
+    "measured",
+    "stale",
+  ],
+  qualifiers: [
+    "docs-answerable",
+    "known-duplicate",
+    "mixed-bundle",
+    "human-run",
+    "distribution-incident",
+    "settled-design",
+    "red-since-change",
+    "check-misses",
+    "mechanism-inert",
+    "removal-requested",
+    "visual-open",
+    "contradicts-record",
+  ],
+  signals: [
+    "approved-record-task",
+    "grilling-required",
+    "decide-by-change-request",
+    "disabled-test",
+    "flaky-label",
+    "backport",
+    "release-notes",
+    "test-plan",
+  ],
+  risks: ["security", "data-loss", "silent", "breaking", "upgrade", "performance"],
+  gate: ["none", "decide", "approve", "external"],
+  artifacts: [
+    "code",
+    "tests",
+    "spec",
+    "contract",
+    "ui",
+    "docs",
+    "config",
+    "ci",
+    "deps",
+    "data",
+    "release",
+    "assistant",
+  ],
+  confidence: ["high", "medium", "low"],
+};
+
+// The section of the extraction reference that defines each field's values.
+const EXTRACTION_SECTIONS: Record<string, string> = {
+  intent: "## Intent",
+  entryFlags: "## Entry flags",
+  qualifiers: "## Qualifiers",
+  signals: "## Signals",
+  risks: "## Risks",
+  gate: "## Gate",
+  artifacts: "## Artifacts",
+  confidence: "## Confidence and alternatives",
+};
+
+// The code-spanned value opening each table row of a section, sorted.
+function firstCells(section: string): string[] {
+  return section
+    .split("\n")
+    .map((line) => /^\| `([^`]+)` /.exec(line)?.[1])
+    .filter((value): value is string => value !== undefined)
+    .sort();
+}
+
+// The proposal of the routing result example the payload reference shows.
+function routingProposal(payloads: string): Record<string, unknown> {
+  const block = payloads.split("## Routing result")[1]?.split("```json\n")[1]?.split("```")[0];
+  const result: unknown = JSON.parse(block ?? "null");
+  return isRecord(result) && isRecord(result.proposal) ? result.proposal : {};
+}
+
+// Each `field: value` of an extraction that its field's vocabulary does not hold.
+function outsideVocabulary(extraction: Record<string, unknown>): string[] {
+  return Object.entries(extraction).flatMap(([field, value]) => {
+    const allowed = EXTRACTION_VOCABULARIES[field] ?? [];
+    const values = Array.isArray(value) ? value : [value];
+    return values
+      .filter((each) => !(typeof each === "string" && allowed.includes(each)))
+      .map((each) => `${field}: ${String(each)}`);
+  });
+}
+
 async function filesUnder(root: string): Promise<string[]> {
   const entries = await readdir(root, { recursive: true, withFileTypes: true });
   return entries
@@ -98,15 +232,100 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0197-01
   // QFAI:EX-0001-0197-01
-  it("starts a run only for a change, and serves every other request kind another way", async () => {
+  it("starts a run only for a routed request, a question included, and serves every other kind another way", async () => {
     const text = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
-    expect(text).toMatch(/only `change` calls `start`/i);
+    expect(text).toMatch(/only `routed` calls `start`/i);
+    expect(text).toMatch(/`routed`: a change, a question, a proposal to decide or a report/i);
+    expect(text).toMatch(/a question runs a route that answers it and changes nothing/i);
     expect(text).toMatch(/`resume`, or `continue` on a run in progress: call `resume`/i);
     expect(text).toMatch(/`cancel`: call `decision` with `stop`/i);
-    expect(text).toMatch(
-      /`explicit_stage`, `plan_only`, `verify_only`: invoke the stage skill by name/i,
+    expect(text).toMatch(/`explicit_stage`, `verify_only`: invoke the stage skill by name/i);
+    const everyFile = await Promise.all(
+      (await filesUnder(path.join(SHIPPED_ASSISTANT, "skill", "qfai-run"))).map((file) =>
+        readFile(file, "utf-8"),
+      ),
     );
-    expect(text).toMatch(/`read_only`: answer it in the conversation/i);
+    expect(everyFile.join("\n")).not.toMatch(/read_only|plan_only/);
+  });
+
+  // QFAI:AC-0001-0218-05
+  // QFAI:EX-0001-0218-35
+  it("defines every extraction value, shows a routing result with an extraction and no route, and names no route", async () => {
+    const reference = await readShipped(EXTRACTION);
+    const defined = Object.fromEntries(
+      Object.entries(EXTRACTION_SECTIONS).map(([field, heading]) => [
+        field,
+        firstCells(sectionOf(reference, heading)),
+      ]),
+    );
+    expect(defined).toEqual(
+      Object.fromEntries(
+        Object.entries(EXTRACTION_VOCABULARIES).map(([field, values]) => [
+          field,
+          [...values].sort(),
+        ]),
+      ),
+    );
+
+    const proposal = routingProposal(await readShipped(PAYLOADS));
+    const extraction = isRecord(proposal.extraction) ? proposal.extraction : {};
+    expect(Object.keys(proposal)).not.toContain("candidateRoute");
+    expect(Object.keys(proposal)).not.toContain("route");
+    expect(Object.keys(extraction).sort()).toEqual(Object.keys(EXTRACTION_VOCABULARIES).sort());
+    expect(outsideVocabulary(extraction)).toEqual([]);
+
+    const skill = flat(await readShipped(RUN));
+    expect(skill).toMatch(
+      /choose a route\. the cli's decision rules choose it from the extraction/i,
+    );
+    expect(skill).toMatch(/write the routing result around it, naming no route/i);
+    const routes = (await readdir(path.join(PACKAGE_DEFAULTS, "workflows")))
+      .filter((file) => file.endsWith(".yml"))
+      .map((file) => file.replace(/\.yml$/, ""));
+    const files = await filesUnder(path.join(SHIPPED_ASSISTANT, "skill", "qfai-run"));
+    const naming: string[] = [];
+    for (const file of files) {
+      const text = await readFile(file, "utf-8");
+      for (const route of routes) {
+        if (new RegExp(`(?<![\\w-])${route}(?![\\w-])`).test(text)) {
+          naming.push(`${path.basename(file)}: ${route}`);
+        }
+      }
+    }
+    expect(routes.length).toBe(39);
+    expect(naming).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-06
+  it("relays the route question with plain options, the recommendation apart, and answers it with the first option under a no-question mode", async () => {
+    const questions = sectionOf(await readShipped(SCREENS), "## Questions");
+    const row = rowOf(questions, "The route question");
+    expect(row).toMatch(/one option per reading of the request, two or three/i);
+    expect(row).toMatch(
+      /a short label and one sentence on what that route will change and check, with no route identifier/i,
+    );
+    expect(row).toMatch(/the recommendation stands on a line of its own/i);
+    expect(row).toMatch(/the question says one may be chosen/i);
+    const text = flat(questions);
+    expect(text).toMatch(
+      /its options come in the order the decision rules reach them, and it recommends the main reading/i,
+    );
+    expect(text).toMatch(
+      /`qfai-run` chooses nothing between the readings while a question can be put/i,
+    );
+    expect(text).toMatch(
+      /under a no-question mode `qfai-run` answers it itself with `decision` and the first option/i,
+    );
+    expect(text).toMatch(/the completion report lists that choice as an assumption/i);
+    expect(flat(sectionOf(await readShipped(RUN), "## The run"))).toMatch(
+      /under `--auto` the route question is not put: answer it with `decision` and its first option/i,
+    );
+    expect(
+      flat(sectionOf(await readShipped(EXTRACTION), "## Confidence and alternatives")),
+    ).toMatch(
+      /never raise it to avoid a question or lower it to cause one, under `--auto` included/i,
+    );
   });
 
   // QFAI:AC-0001-0199-01

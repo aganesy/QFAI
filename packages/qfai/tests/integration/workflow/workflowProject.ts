@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
 import { removeTempTree } from "../../helpers/tempTree.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const PLANS = path.join(PACKAGE_ROOT, "assets", "defaults", "workflows");
@@ -200,12 +201,12 @@ export async function startRun(root: string, input: unknown = START_INPUT): Prom
 }
 
 /**
- * A routing proposal for the decide-design route, which binds no flow, needs no approval and
- * writes only its discussion pack.
+ * A routing proposal for the decide-design route, which binds no flow and writes only its
+ * discussion pack. The route carries `gate:user`, so routing asks to confirm the plan.
  */
 export const DISCOVERY_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "decide-design",
+  requestKind: "routed",
+  extraction: extractionFor("decide-design"),
   goal: "Settle what the export should contain.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -221,7 +222,7 @@ export const DISCOVERY_PROPOSAL = {
 /** A routing proposal for the add-feature route, naming one new story in BF-0001. */
 export const FEATURE_PROPOSAL = {
   ...DISCOVERY_PROPOSAL,
-  candidateRoute: "add-feature",
+  extraction: extractionFor("add-feature"),
   goal: "Export an order as CSV.",
   newStories: [
     {
@@ -263,7 +264,28 @@ export async function submit(root: string, runId: string, operation: string, pay
   return workflow(root, [operation, "--run", runId, "--in", file]);
 }
 
-/** A started run whose routing result for `proposal` has been submitted. */
+/**
+ * Answers the plan confirmation a route carrying `gate:user` opens at routing, when it is the
+ * only question routing opened; any other routing result is returned as it is.
+ */
+export async function confirmedPlan(root: string, runId: string, routed: CliRun): Promise<CliRun> {
+  const questions = field(routed.json, "questions");
+  const [only] = Array.isArray(questions) ? questions : [];
+  if (!Array.isArray(questions) || questions.length !== 1 || field(only, "purpose") !== "plan") {
+    return routed;
+  }
+  return submit(root, runId, "decision", {
+    questionId: field(only, "questionId"),
+    answer: { optionIds: ["proceed"] },
+    answeredBy: "operator",
+    expectedSequence: field(routed.json, "run.sequence"),
+  });
+}
+
+/**
+ * A started run whose routing result for `proposal` has been submitted, with a plan confirmation
+ * that is routing's only question answered: `routed` is where routing left the run.
+ */
 export async function routedRun(
   root: string,
   proposal: object = DISCOVERY_PROPOSAL,
@@ -271,13 +293,14 @@ export async function routedRun(
 ) {
   const runId = await startRun(root, input);
   const routing = workflow(root, ["next", "--run", runId]);
-  const routed = await submit(
+  const accepted = await submit(
     root,
     runId,
     "accept",
     resultFor(routing.json, "route-1", { proposal }),
   );
-  return { runId, routing, routed };
+  const routed = await confirmedPlan(root, runId, accepted);
+  return { runId, routing, routed, accepted };
 }
 
 /** An add-feature run approved and driven, with canned accepted results, until `next` issues a

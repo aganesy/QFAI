@@ -16,6 +16,7 @@ import {
   submit,
   workflow,
 } from "./workflowProject.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
@@ -65,7 +66,7 @@ it("The run edits qfai", async () => {
   // An edit-text plan, whose write scope may name the policy file.
   const proposal = {
     ...DISCOVERY_PROPOSAL,
-    candidateRoute: "edit-text",
+    extraction: extractionFor("edit-text"),
     proposedWriteScope: ["qfai.config.yaml"],
   };
   const { runId, routed } = await routedRun(root, proposal);

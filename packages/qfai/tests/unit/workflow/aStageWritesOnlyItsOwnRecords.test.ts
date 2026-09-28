@@ -6,6 +6,7 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import type { PlanStep } from "../../../src/core/workflow/types.js";
 import { KIND_STEPS, planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -178,8 +179,8 @@ function checkedPlanDocument() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "add-feature",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],

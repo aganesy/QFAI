@@ -2,7 +2,7 @@ import { decideAnswer, decideStop, replayedAnswer } from "./answer.js";
 import { notReady, refusedFailClosed, scopeOf, TERMINAL_STATES } from "./common.js";
 import { decideFinish } from "./finish.js";
 import { issueNext } from "./issue.js";
-import { acceptRouting } from "./proposal.js";
+import { acceptRouting } from "./routing.js";
 import { acceptPreamble, acceptSeamOnly, acceptStageResult, blockOnResult } from "./result.js";
 import { decideResume, foundCause } from "./resume.js";
 import { isRetiredRoute, reportedRoute } from "./routes.js";
@@ -41,6 +41,7 @@ export function workOrderDocument(
       allowedEffects: scope.allowedEffects ?? [],
       nonGoals: [],
     },
+    modifiers: workOrder.modifiers ?? [],
     recordAreas: workOrder.recordAreas ?? [],
     inputs: workOrder.inputs ?? [],
     requiredGates: [],

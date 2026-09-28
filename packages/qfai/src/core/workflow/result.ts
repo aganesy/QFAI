@@ -11,6 +11,7 @@ import {
   type PlanStage,
 } from "./common.js";
 import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
+import { carries, entriesOf, isModifier, withModifiers } from "./modifiers.js";
 import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
 import { DIAGNOSIS_VERDICTS } from "./payloadShapes.js";
 import { storyTreeChecks } from "./records.js";
@@ -242,6 +243,41 @@ function closureRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): 
     : [{ reason: "schema", subject: "closure" }];
 }
 
+const DECISION_ROW = /\bDEC-\d{4}(?:-\d{4})?\b/g;
+
+// A step at a user decision point under `gate:user` puts its decision to the operator: it takes
+// the decision itself only where the request's upstream record already made it, a
+// `decisions.md` row in force that its reason cites. A cited row that is missing or not in force
+// answers nothing, whether or not `gate:user` holds.
+function adoptedRefusals(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  const gated = carries(snapshot, "gate:user");
+  const upstream = snapshot.extraction?.entryFlags.includes("upstream") === true;
+  const inForce = (id: string) =>
+    (facts.decisionRows ?? []).some((row) => row.rowId === id && row.inForce);
+  return (result.adopted ?? []).flatMap((entry, index): InputRefusal[] => {
+    const step = workOrder.steps?.find((each) => each.name === entry.step);
+    if (step?.decisionPoint !== "user") return [];
+    const cited = entry.reason.match(DECISION_ROW) ?? [];
+    const answered = upstream && cited.length > 0 && cited.every(inForce);
+    const unanswered = upstream && cited.some((id) => !inForce(id));
+    return unanswered || (gated && !answered)
+      ? [{ reason: "decision-unasked", subject: `adopted[${index}]` }]
+      : [];
+  });
+}
+
+// A result may raise only a modifier of the closed set.
+function raiseRefusals(result: WorkflowResult): InputRefusal[] {
+  return (result.raise ?? []).flatMap((entry, index): InputRefusal[] =>
+    isModifier(entry.modifier) ? [] : [{ reason: "schema", subject: `raise[${index}]` }],
+  );
+}
+
 export function resultRefusals(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -249,6 +285,8 @@ export function resultRefusals(
   facts: WorkflowFacts,
 ): InputRefusal[] {
   const refusals: InputRefusal[] = [
+    ...adoptedRefusals(snapshot, result, workOrder, facts),
+    ...raiseRefusals(result),
     ...reviewerRefusals(result, snapshot.actorHistory ?? []),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
@@ -490,6 +528,7 @@ function acceptedEvents(
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
       ...(result.passes?.length ? { passes: result.passes } : {}),
+      ...(result.adopted?.length ? { adopted: result.adopted } : {}),
       ...(result.closure ? { closure: result.closure } : {}),
       ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
       ...(result.diagnosis ? { diagnosis: result.diagnosis } : {}),
@@ -592,7 +631,29 @@ export function acceptStageResult(
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
   const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
   if (refusals.length > 0) return refusedWith(run, refusals);
-  return settleResult(snapshot, workOrder, result, storyTree.extras);
+  return withRaised(snapshot, result, settleResult(snapshot, workOrder, result, storyTree.extras));
+}
+
+// A result that raises a modifier the run does not carry yet adds it, whatever its outcome: the
+// core appends `modifier-raised` before the result's own transition. Nothing lowers one.
+function withRaised(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  decision: WorkflowDecision,
+): WorkflowDecision {
+  const held = snapshot.modifiers ?? [];
+  const raised = (result.raise ?? []).flatMap((entry) =>
+    isModifier(entry.modifier)
+      ? entriesOf([entry.modifier], "raised").map((each) => ({ ...each, reason: entry.reason }))
+      : [],
+  );
+  const added = withModifiers(held, raised).slice(held.length);
+  const run = decision.verdict.run;
+  if (!decision.verdict.ok || added.length === 0 || !run) return decision;
+  return {
+    verdict: { ...decision.verdict, run: { ...run, sequence: run.sequence + 1 } },
+    events: [{ type: "modifier-raised", modifiers: added }, ...decision.events],
+  };
 }
 
 // A seam-only result closes its seam request and returns the run to the acceptance stage it

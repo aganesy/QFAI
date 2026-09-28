@@ -11,6 +11,7 @@
     "stageInstanceId",
     "attempt",
     "stageKind",
+    "modifiers",
     "scope",
     "recordAreas",
     "inputs",
@@ -160,6 +161,14 @@
             "type": "boolean"
           }
         }
+      }
+    },
+    "modifiers": {
+      "description": "The run's modifiers when the work order was issued.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["review:heavy", "gate:user", "gate:release"]
       }
     },
     "target": {

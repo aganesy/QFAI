@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { refusedInput, refusedWith } from "./common.js";
 import { carriedAuthorization, type QuestionEffect } from "./parse.js";
+import { routeChoiceEvents } from "./routing.js";
 import type {
   WorkflowAuthorization,
   WorkflowDecision,
@@ -47,12 +48,15 @@ function valueDigestOf(value: string | undefined, key: string | undefined) {
   return normalized ? keyedDigest(normalized, key) : undefined;
 }
 
+// The answer's record, what it fixes (the route a candidate question chose), and its effect.
 function answerEvents(
   authorization: WorkflowAuthorization,
   settled: WorkflowSettled | undefined,
+  fixed: WorkflowEvent[],
 ): WorkflowEvent[] {
   const events: WorkflowEvent[] = [
     { type: "authorization-recorded", authorization, ...(settled ? { settled } : {}) },
+    ...fixed,
   ];
   if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
@@ -218,8 +222,18 @@ export function decideAnswer(
     input.answeredBy ?? "",
     facts.now,
   );
-  const events = answerEvents(authorization, settledWith(snapshot, question, input));
-  const state = STATE_AFTER_EFFECT[answered.effect];
+  const chosen = "optionIds" in answered.answer ? answered.answer.optionIds : [];
+  const fixed = routeChoiceEvents(snapshot, question.purpose, chosen);
+  const events = answerEvents(authorization, settledWith(snapshot, question, input), fixed);
+  // A plan the operator has not confirmed, or a route not chosen yet, keeps the run waiting
+  // whatever other question this answer settles.
+  const gateOpen = (snapshot.openQuestions ?? []).some(
+    (open) =>
+      open.questionId !== question.questionId &&
+      (open.purpose === "plan" || open.purpose === "route"),
+  );
+  const proceeds = answered.effect === "proceed";
+  const state = proceeds && gateOpen ? "awaiting_input" : STATE_AFTER_EFFECT[answered.effect];
   return {
     verdict: { ok: true, run: { ...run, state, sequence: run.sequence + events.length } },
     events,

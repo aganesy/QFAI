@@ -1,32 +1,18 @@
 import path from "node:path";
 
-import { areaCovers, DEFAULT_SPECS_DIR, refusedWith } from "./common.js";
-import { createQuestion } from "./issue.js";
-import { parseQuestionInput } from "./parse.js";
+import { areaCovers, DEFAULT_SPECS_DIR } from "./common.js";
 import { endsAtTriageClose, flowBindingOf } from "./stages.js";
 import type {
+  PlanStages,
   ProposalRefusal,
   ProposalRefusalReason,
-  WorkflowDecision,
-  WorkflowEvent,
   WorkflowFacts,
   WorkflowPlan,
   WorkflowProposal,
-  WorkflowQuestion,
-  WorkflowResult,
-  WorkflowRun,
-  WorkflowSnapshot,
 } from "./types.js";
 
-const REQUEST_KINDS = [
-  "change",
-  "read_only",
-  "plan_only",
-  "verify_only",
-  "resume",
-  "cancel",
-  "explicit_stage",
-];
+// Only a routed request takes a route; any other kind is refused as a scope escape.
+const REQUEST_KINDS = ["routed", "verify_only", "resume", "cancel", "explicit_stage"];
 
 const PROTECTED_PREFIXES = [
   ".git/",
@@ -90,19 +76,16 @@ function unaskedRiskSignals(proposal: WorkflowProposal): string[] {
   return (proposal.riskSignals ?? []).filter((signal) => signal !== "authorization-restored");
 }
 
-function builtInPlanOf(proposal: WorkflowProposal, facts: WorkflowFacts) {
-  return proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
-}
-
-// The one flow a proposal with no new story binds, or the subject a `flow-binding` refusal
-// names. A route that binds a flow needs exactly one; a route whose only stage facing a flow is a
-// test fix takes the one named, or none; any other route binds none, whatever the proposal names.
+// The one flow a proposal with no new story binds on a route's plan, or the subject a
+// `flow-binding` refusal names. A route that binds a flow needs exactly one; a route whose only
+// stage facing a flow is a test fix takes the one named, or none; any other route binds none,
+// whatever the proposal names.
 export function flowToBind(
   proposal: WorkflowProposal,
+  stages: PlanStages | undefined,
   facts: WorkflowFacts,
 ): { flowId?: string; refused?: string } {
-  const plan = builtInPlanOf(proposal, facts);
-  const binding = plan ? flowBindingOf(plan.stages) : "none";
+  const binding = stages ? flowBindingOf(stages) : "none";
   if (proposal.newStories.length > 0 || binding === "none") return {};
   const named = proposal.affectedFlowIds ?? [];
   if (binding === "optional" && named.length === 0) return {};
@@ -115,8 +98,11 @@ export function flowToBind(
 
 // A route that ends at `triage-close` writes only the records its discussion stage keeps: the
 // project's discussion packs, and `DESIGN.md` for a UI-bearing target.
-function recordEscapes(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
-  const stages = builtInPlanOf(proposal, facts)?.stages ?? [];
+function recordEscapes(
+  proposal: WorkflowProposal,
+  stages: PlanStages,
+  facts: WorkflowFacts,
+): string[] {
   if (!endsAtTriageClose(stages)) return [];
   const discusses = stages.some((stage) => stage.stageKind === "discussion");
   const records = discusses ? [facts.discussionDir ?? ".qfai/discussion", "DESIGN.md"] : [];
@@ -149,26 +135,54 @@ function referenceRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pr
   return [...refusalsOf("unknown-path", unknownPaths), ...refusalsOf("unknown-id", unknownIds)];
 }
 
-function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): ProposalRefusal[] {
+// The part of the proposal's write scope a route admits: all of it, or on a route that ends at
+// `triage-close` only the records its discussion stage keeps.
+export function admittedScope(
+  proposal: WorkflowProposal,
+  stages: PlanStages,
+  facts: WorkflowFacts,
+): string[] {
+  const escaped = recordEscapes(proposal, stages, facts);
+  return (proposal.proposedWriteScope ?? []).filter((area) => !escaped.includes(area));
+}
+
+// Every failed check of the proposal against the routes it may take: one route once routing has
+// fixed it, or each candidate while a question chooses among them. A candidate is checked for
+// its flow binding; its write scope is narrowed to what it admits instead of refused.
+export function proposalRefusals(
+  proposal: WorkflowProposal,
+  facts: WorkflowFacts,
+  routes: readonly string[],
+): ProposalRefusal[] {
+  const [route = ""] = routes;
+  const fixed = routes.length === 1 ? (facts.plans?.[route]?.stages ?? []) : [];
   const specs = facts.specsDir ?? DEFAULT_SPECS_DIR;
   const scope = proposal.proposedWriteScope ?? [];
   const protectedAreas = scope.filter((area) =>
     touchesProtectedSurface(area, proposal.protectedTargets ?? [], specs),
   );
-  const binding = flowToBind(proposal, facts).refused;
+  const bindings = routes.flatMap(
+    (each) => flowToBind(proposal, facts.plans?.[each]?.stages, facts).refused ?? [],
+  );
+  const kind = proposal.requestKind;
   return [
     ...referenceRefusals(proposal, facts),
     ...refusalsOf("protected-surface", protectedAreas),
-    ...refusalsOf("scope-escape", proposal.requestKind === "change" ? [] : [proposal.requestKind]),
+    ...refusalsOf("scope-escape", kind === "routed" ? [] : [kind]),
     ...refusalsOf("scope-escape", scope.filter(escapesRoot)),
-    ...refusalsOf("scope-escape", recordEscapes(proposal, facts)),
+    ...refusalsOf("scope-escape", recordEscapes(proposal, fixed, facts)),
     ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
-    ...refusalsOf("flow-binding", binding === undefined ? [] : [binding]),
+    ...refusalsOf("flow-binding", [...new Set(bindings)]),
   ];
 }
 
-function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): WorkflowPlan | undefined {
-  const builtIn = builtInPlanOf(proposal, facts);
+// The plan of `route` with the checked proposal's goal, scope and references.
+export function checkedPlan(
+  proposal: WorkflowProposal,
+  facts: WorkflowFacts,
+  route: string,
+): WorkflowPlan | undefined {
+  const builtIn = facts.plans?.[route];
   if (!builtIn || !proposal.goal || !Array.isArray(proposal.proposedWriteScope)) return undefined;
   return {
     route: builtIn.route,
@@ -182,11 +196,17 @@ function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): Workflow
 }
 
 // Whether a routing result carries what routing needs to be checked at all.
-function routingShapeIsBroken(proposal: WorkflowProposal | undefined): boolean {
-  if (!proposal || !REQUEST_KINDS.includes(proposal.requestKind)) return true;
+export function routingShapeIsBroken(proposal: WorkflowProposal): boolean {
+  if (!REQUEST_KINDS.includes(proposal.requestKind)) return true;
   const stories = proposal.newStories;
+  const extraction = proposal.extraction;
   return (
-    (proposal.requestKind === "change" && !proposal.candidateRoute) ||
+    typeof extraction !== "object" ||
+    !Array.isArray(extraction.entryFlags) ||
+    !Array.isArray(extraction.qualifiers) ||
+    !Array.isArray(extraction.signals) ||
+    !Array.isArray(extraction.risks) ||
+    !Array.isArray(extraction.artifacts) ||
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
     !Array.isArray(stories) ||
@@ -200,103 +220,4 @@ function routingShapeIsBroken(proposal: WorkflowProposal | undefined): boolean {
         (story.flowId !== null && typeof story.flowId !== "string"),
     )
   );
-}
-
-function routingNotReady(run: WorkflowRun): WorkflowDecision {
-  const message = "The routing result is not ready. Check it and submit again.";
-  return { verdict: { ok: false, run, error: { code: "invalid-input", message } }, events: [] };
-}
-
-function proposalRefused(run: WorkflowRun, reasons: ProposalRefusal[]): WorkflowDecision {
-  const message = "The route proposal failed a check. Revise it and submit it again.";
-  return {
-    verdict: { ok: false, run, error: { code: "proposal-refused", message, reasons } },
-    events: [],
-  };
-}
-
-// One `create` question per new-story slot, then each unresolved question in its order.
-function routingQuestions(
-  run: WorkflowRun,
-  proposal: WorkflowProposal,
-  inputs: NonNullable<ReturnType<typeof parseQuestionInput>>[],
-): WorkflowQuestion[] {
-  const questions: WorkflowQuestion[] = proposal.newStories.map((story, index) =>
-    createQuestion(`question-${run.sequence + 1}-${index + 1}`, {
-      goal: story.goal,
-      covers: story.covers,
-      excludes: story.excludes,
-      flowId: story.flowId,
-      slotId: `slot-${run.sequence + 1}-${index + 1}`,
-    }),
-  );
-  for (const input of inputs) {
-    questions.push({
-      ...input,
-      questionId: `question-${run.sequence + 1}-${questions.length + 1}`,
-    });
-  }
-  return questions;
-}
-
-// The checked routing result: the plan accepted, or the questions it opens first. A proposal
-// with no new story binds its one flow in the same step.
-function routedDecision(
-  snapshot: WorkflowSnapshot,
-  result: WorkflowResult,
-  proposal: WorkflowProposal,
-  facts: WorkflowFacts,
-): WorkflowDecision {
-  const { run } = snapshot;
-  const plan = checkedPlan(proposal, facts);
-  const settled = { routingResultId: result.resultId, answers: snapshot.settled?.answers ?? [] };
-  const resultRef = `results/${result.resultId}.json`;
-  const inputs = (proposal.unresolvedQuestions ?? []).map(parseQuestionInput);
-  const parsed = inputs.flatMap((question) => question ?? []);
-  if (parsed.length !== inputs.length) {
-    return refusedWith(run, [{ reason: "schema", subject: "unresolvedQuestions" }]);
-  }
-  const flowId = flowToBind(proposal, facts).flowId;
-  const binding: WorkflowEvent[] = flowId ? [{ type: "binding-recorded", flowId }] : [];
-  if (proposal.newStories.length === 0 && parsed.length === 0) {
-    if (!plan) return routingNotReady(run);
-    const events = [...binding, { type: "plan-accepted", plan, settled, resultRef }];
-    const ready = { ...run, state: "ready", sequence: run.sequence + events.length };
-    return { verdict: { ok: true, run: ready, plan }, events };
-  }
-  const questions = routingQuestions(run, proposal, parsed);
-  const events: WorkflowEvent[] = [
-    ...questions.map((question) => ({ type: "question-opened", question })),
-    ...binding,
-    { type: "unsettled-material-input", proposal, settled, resultRef },
-  ];
-  const waiting = { ...run, state: "awaiting_input", sequence: run.sequence + events.length };
-  return { verdict: { ok: true, run: waiting, questions, ...(plan ? { plan } : {}) }, events };
-}
-
-// `accept` of the routing work order's result: a blocked result blocks the run, and a checked
-// proposal becomes the run's plan.
-export function acceptRouting(
-  snapshot: WorkflowSnapshot,
-  result: WorkflowResult,
-  facts: WorkflowFacts,
-): WorkflowDecision {
-  const { run } = snapshot;
-  if (result.outcome === "blocked") {
-    const blocked = { ...run, state: "blocked", sequence: run.sequence + 1 };
-    const event = {
-      type: "missing-capability",
-      resultRef: `results/${result.resultId}.json`,
-      stageInstanceId: result.stageInstanceId,
-      outcome: result.outcome,
-    };
-    return { verdict: { ok: true, run: blocked }, events: [event] };
-  }
-  const proposal = result.proposal;
-  if (result.outcome !== "accepted" || routingShapeIsBroken(proposal) || !proposal) {
-    return routingNotReady(run);
-  }
-  const refusals = proposalRefusals(proposal, facts);
-  if (refusals.length > 0) return proposalRefused(run, refusals);
-  return routedDecision(snapshot, result, proposal, facts);
 }

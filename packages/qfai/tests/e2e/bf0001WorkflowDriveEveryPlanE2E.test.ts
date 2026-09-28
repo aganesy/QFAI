@@ -31,6 +31,7 @@ import {
   workflow,
   write,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
@@ -141,32 +142,32 @@ const base = {
 const PROPOSALS: Record<string, object> = {
   "edit-text": {
     ...base,
-    requestKind: "change",
-    candidateRoute: "edit-text",
+    requestKind: "routed",
+    extraction: extractionFor("edit-text"),
     goal: "Fix the typo in the README.",
     affectedFlowIds: [],
     proposedWriteScope: ["README.md"],
   },
   "fix-defect": {
     ...base,
-    requestKind: "change",
-    candidateRoute: "fix-defect",
+    requestKind: "routed",
+    extraction: extractionFor("fix-defect"),
     goal: "A sixth address is accepted again; refuse it.",
     affectedFlowIds: [FLOW_ID],
     proposedWriteScope: ["src/**", "tests/**"],
   },
   "add-feature": {
     ...base,
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Allow ten notification addresses per customer.",
     affectedFlowIds: [FLOW_ID],
     proposedWriteScope: [".qfai/spec/02_business-flow/**", "src/**", "tests/**"],
   },
   "add-feature with a new story": {
     ...base,
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Let a customer mark one address as preferred.",
     affectedFlowIds: [],
     newStories: [

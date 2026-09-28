@@ -42,7 +42,7 @@ describe.each(trees)("%s project memory scope", (tree) => {
   });
 
   it("resolves package defaults and project overrides for routing", async () => {
-    const selection = await read(tree, "assistant/rule/agent-selection.md");
+    const selection = (await read(tree, "assistant/rule/agent-selection.md")).replace(/\s+/g, " ");
     expect(selection).toContain("assets/defaults/agent-routing/");
     expect(selection).toContain("assets/defaults/review-profiles.yml");
     expect(selection).toContain("qfai.config.yaml");

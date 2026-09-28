@@ -22,12 +22,13 @@ import {
   workflow,
   write,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
 const EDIT_TEXT_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "edit-text",
+  requestKind: "routed",
+  extraction: extractionFor("edit-text"),
   goal: "Fix the typo 'recieve' in the README.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [{ kind: "path", ref: "README.md" }],

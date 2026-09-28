@@ -19,8 +19,8 @@ Once the plan is checked, and before the first stage:
 - the stages in order;
 - the write scope.
 
-It asks nothing and lists no skipped stage. Text that is not a change request
-gets no run and no announcement.
+It asks nothing and lists no skipped stage. Text that is not a request gets no
+run and no announcement.
 
 ## Questions
 
@@ -29,20 +29,30 @@ Put each open question as `status` or `next` returns it, in the form
 round; a dependent one waits for its answer. Relay each answer with `decision`,
 carrying who answered.
 
-| Question            | How it is put                                                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `create`            | Two options, create the story or not, each saying what follows, and a recommendation citing the evidence that no story represents it |
-| `decision`          | The finding in at most two sentences, each option with its effect, how many may be chosen, and a recommendation                      |
-| A story-tree change | A `decision` question naming the files the stage would change and the proposed change, with the options to apply it or not           |
-| `fact`              | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                    |
+| Question            | How it is put                                                                                                                                                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create`            | Two options, create the story or not, each saying what follows, and a recommendation citing the evidence that no story represents it                                                                                                                           |
+| `decision`          | The finding in at most two sentences, each option with its effect, how many may be chosen, and a recommendation                                                                                                                                                |
+| A story-tree change | A `decision` question naming the files the stage would change and the proposed change, with the options to apply it or not                                                                                                                                     |
+| `fact`              | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                                                                                                                                              |
+| The route question  | One option per reading of the request, two or three. Each option is a short label and one sentence on what that route will change and check, with no route identifier. The recommendation stands on a line of its own, and the question says one may be chosen |
 
-- The announcement follows the answer to a `create` question and does not
+- Routing opens the route question when the request reads more than one way.
+  Its options come in the order the decision rules reach them, and it
+  recommends the main reading. Relay it as the CLI returns it; `qfai-run`
+  chooses nothing between the readings while a question can be put.
+- The announcement follows the answer to a question routing opened and does not
   repeat it.
 - A refused answer is put again with the reason in one sentence.
 - The operator's `stop` goes to `decision` at once, whether or not a question
   is open.
 - Under a no-question mode, put no question. The run stays `awaiting_input`,
   and the halt notice names what is open.
+- The route question is the exception. Under a no-question mode `qfai-run`
+  answers it itself with `decision` and the first option, the reading the
+  decision rules reach first, even where another is recommended. The run
+  already carries the gates and review of every reading, and the completion
+  report lists that choice as an assumption.
 
 ## Halt notice
 

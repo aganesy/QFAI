@@ -3,6 +3,37 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
+
+type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
+
+function routingResult(requestKind: string): Result {
+  return {
+    resultId: "routing-result-1",
+    workOrderId: "routing-1",
+    stageInstanceId: "routing-stage-1",
+    attempt: 1,
+    expectedSequence: 2,
+    outcome: "accepted",
+    testObservation: "not_applicable",
+    actor: { agentInstance: "router-1" },
+    proposal: {
+      requestKind,
+      extraction: extractionFor("answer-question"),
+      goal: "Explain how notification emails are sent.",
+      expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
+      observedRefs: [],
+      affectedFlowIds: [],
+      riskSignals: [],
+      unresolvedQuestions: [],
+      newStories: [],
+      proposedWriteScope: [],
+      protectedTargets: [],
+      rationale: "The request asks how something works.",
+    },
+  };
+}
 
 function acceptRequestKind(requestKind: string) {
   const decision = decide(
@@ -15,30 +46,7 @@ function acceptRequestKind(requestKind: string) {
         stageKind: "route",
       },
     },
-    {
-      operation: "accept",
-      result: {
-        resultId: "routing-result-1",
-        workOrderId: "routing-1",
-        stageInstanceId: "routing-stage-1",
-        attempt: 1,
-        expectedSequence: 2,
-        outcome: "accepted",
-        proposal: {
-          requestKind,
-          candidateRoute: null,
-          goal: "Explain how notification emails are sent.",
-          expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
-          observedRefs: [],
-          affectedFlowIds: [],
-          riskSignals: [],
-          unresolvedQuestions: [],
-          newStories: [],
-          proposedWriteScope: [],
-          protectedTargets: [],
-        },
-      },
-    },
+    { operation: "accept", result: routingResult(requestKind) },
     {},
   );
   const error = decision.verdict.error;
@@ -59,12 +67,22 @@ function scopeEscape(requestKind: string) {
   };
 }
 
-it("read-only", () => {
-  expect(acceptRequestKind("read_only")).toEqual(scopeEscape("read_only"));
-});
+function schemaFaults(requestKind: string) {
+  return stageResultRefusals({ ...routingResult(requestKind) });
+}
 
-it("plan-only", () => {
-  expect(acceptRequestKind("plan_only")).toEqual(scopeEscape("plan_only"));
+it("A request kind outside the closed set is refused as a shape", () => {
+  expect({
+    readOnly: schemaFaults("read_only"),
+    planOnly: schemaFaults("plan_only"),
+    change: schemaFaults("change"),
+    routed: schemaFaults("routed"),
+  }).toEqual({
+    readOnly: [{ reason: "schema", subject: "proposal.requestKind" }],
+    planOnly: [{ reason: "schema", subject: "proposal.requestKind" }],
+    change: [{ reason: "schema", subject: "proposal.requestKind" }],
+    routed: [],
+  });
 });
 
 it("verify-only", () => {

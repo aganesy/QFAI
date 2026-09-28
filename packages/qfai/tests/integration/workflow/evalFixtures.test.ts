@@ -133,7 +133,7 @@ it("The verification-only seed with repair not authorized forbids repairing", as
   expect(verifyOnly.map((each) => each.expected.forbid.includes("auto_repair"))).toEqual([true]);
 });
 
-it("An untrusted log and a quoted request route where nothing changes and carry no authority", async () => {
+it("An untrusted log and a quoted request route to a question that changes nothing and carry no authority", async () => {
   const seeds = await routingSeeds();
   const untrusted = seeds.find((each) => "untrustedLog" in each.repoFacts);
   const quoted = seeds.find((each) => each.repoFacts.quotedRequestOnly === true);
@@ -142,11 +142,15 @@ it("An untrusted log and a quoted request route where nothing changes and carry 
   expect(
     [untrusted, quoted].map(
       (each) =>
-        each && [each.expected.requestKind, each.expected.allowedRoutes, each.expected.forbid],
+        each && [
+          each.expected.requestKind,
+          each.expected.allowedRoutes.every((route) => route !== null && answering.includes(route)),
+          each.expected.forbid,
+        ],
     ),
   ).toEqual([
-    ["routed", answering, expect.arrayContaining(["follow_log_instruction"])],
-    ["routed", answering, expect.arrayContaining(["implement_quoted_request"])],
+    ["routed", true, expect.arrayContaining(["follow_log_instruction"])],
+    ["routed", true, expect.arrayContaining(["implement_quoted_request"])],
   ]);
 });
 

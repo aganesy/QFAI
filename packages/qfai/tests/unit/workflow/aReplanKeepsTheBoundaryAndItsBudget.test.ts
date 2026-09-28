@@ -10,6 +10,7 @@ import { expect, it } from "vitest";
 
 import { receiptValidityOf, routingDependenciesOf } from "../../../src/core/workflow/observe.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const FLOW = "BF-0007";
 const bounded = [
@@ -47,8 +48,8 @@ function narrowed() {
   );
   run.next(facts);
   const proposal = {
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Change the API only.",
     expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
     observedRefs: [],

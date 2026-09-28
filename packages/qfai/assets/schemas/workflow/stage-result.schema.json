@@ -184,6 +184,47 @@
         }
       }
     },
+    "adopted": {
+      "description": "Each decision a step took itself rather than put to the operator, and why.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step", "decision", "reason"],
+        "properties": {
+          "step": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "raise": {
+      "description": "Each modifier the result raises for the rest of the run, and why. Nothing lowers one.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["modifier", "reason"],
+        "properties": {
+          "modifier": {
+            "enum": ["review:heavy", "gate:user", "gate:release"]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "closure": {
       "description": "How a triage-close result closed the request, and each further request the route found.",
       "type": "object",

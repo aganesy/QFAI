@@ -1,5 +1,6 @@
 import { parse as parseYaml } from "yaml";
 
+import { isModifier } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
@@ -79,8 +80,6 @@ const OUTCOME_KEYS = ["outcome", "routes"];
 
 // Each step mode, with the one step it may sit on.
 const MODES: Record<string, string> = { settled: "sdd-triage", "read-only": "implement-diagnose" };
-
-const MODIFIERS = ["review:heavy", "gate:user", "gate:release"];
 
 const SDD_APPEND = ["sdd-story", "sdd-gate"];
 
@@ -370,7 +369,7 @@ function modifiersOf(value: unknown, refuse: Refuse): string[] {
     return [];
   }
   for (const modifier of modifiers) {
-    if (!MODIFIERS.includes(modifier)) refuse("out-of-vocabulary", modifier);
+    if (!isModifier(modifier)) refuse("out-of-vocabulary", modifier);
   }
   return modifiers;
 }
