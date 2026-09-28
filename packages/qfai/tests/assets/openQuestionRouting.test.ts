@@ -11,13 +11,14 @@ const read = (tree: string, rel: string): Promise<string> =>
 const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe.each(trees)("%s open-question routing", (tree) => {
-  const registers = {
-    "qfai-configure": "open-questions.md",
-    "qfai-verify": "open-questions.md",
+  // Where each skill states its completion checklist.
+  const registers: Record<string, readonly [string, string]> = {
+    "qfai-configure": ["open-questions.md", "references/completion.md"],
+    "qfai-verify": ["open-questions.md", "SKILL.md"],
   };
-  for (const [name, register] of Object.entries(registers)) {
+  for (const [name, [register, file]] of Object.entries(registers)) {
     it(`${name} routes new product obligations to SDD`, async () => {
-      const skill = flat(await read(tree, `assistant/skill/${name}/SKILL.md`));
+      const skill = flat(await read(tree, `assistant/skill/${name}/${file}`));
       expect(skill).toContain("Open questions that place a **new obligation on the product**");
       expect(skill).toContain("owner phase (`/qfai-sdd`)");
       expect(skill).toContain(

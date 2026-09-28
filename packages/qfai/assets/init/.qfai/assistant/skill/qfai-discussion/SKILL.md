@@ -70,7 +70,8 @@ checking pack completeness.
 ## UI-bearing Canonical Sidecar Family
 
 Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
-before running `discussion-uiux`.
+before running `discussion-uiux`. It holds the surface mapping and the signals
+that decide it.
 
 Every UI-bearing pack carries `uiux/00_index.md`, `uiux/40_screen_contracts.md`
 and `uiux/50_review_input_bundle.md`. That is the whole family, on every
@@ -100,7 +101,10 @@ The reviewers check each `## Gate` section of the steps that ran.
 ## Completion
 
 The full logic, including the UI-bearing conditions, is
-`references/discussion-completion-matrix.md`. Completion requires all of these:
+`references/discussion-completion-matrix.md`. Read it when you judge whether the
+pack is complete and a condition below does not settle it; it is not needed
+while each condition plainly holds or plainly fails. Completion requires all of
+these:
 
 - All 15 mandatory pack files exist and are populated, and the UI sidecar family
   is complete when the target is UI-bearing.

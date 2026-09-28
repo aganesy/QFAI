@@ -25,7 +25,8 @@ Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user
 for every user question. With `--auto`, they MUST ask nothing and record
 explicit assumptions in the migration report.
 
-Read `references/migration-guide.md` before changing the project. Run this
+Read `references/migration-guide.md` before changing the project; it holds each
+step, what it writes and what it leaves for a person. Run this
 skill from the project root, where `qfai.config.yaml` and a locally installed
 `qfai` package are available. The twelve scripts use the installed package.
 They do not add a `qfai` subcommand or make network calls.

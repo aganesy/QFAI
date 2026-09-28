@@ -16,8 +16,10 @@ The operator states a change once. This skill proposes the route and hands each
 work order to a sub-agent that runs its steps; `npx qfai workflow` decides what
 happens next.
 
-- Every call and payload shape: `references/payloads.md`.
+- Every call and payload shape: `references/payloads.md`. Read it before you
+  make a `npx qfai workflow` call or write a file for one.
 - What the operator sees, and how questions are put: `references/operator-screens.md`.
+  Read it before you show the operator anything or put a question to them.
 - Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
 ## What this skill never does
