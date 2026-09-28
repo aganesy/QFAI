@@ -204,6 +204,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: a request runs one of 39 fixed routes, chosen by rules.** The
+  five routes `direct`, `bugfix`, `bounded-change`, `feature` and `discovery`
+  are replaced by a catalog of 39 routes with verb-object names, such as
+  `edit-text`, `fix-defect`, `add-feature`, `prototype-feature`,
+  `decide-design` and `answer-question`.
+
+  - `qfai-run` reports what a request asks — its intent, flags, risks and
+    confidence — and never names a route. `npx qfai workflow` picks the route
+    with 29 ordered decision rules. A route proposal no longer carries
+    `candidateRoute`, `requiredStages` or `optionalSteps`, and a plan no longer
+    carries `when`.
+  - Every run of a route runs the same steps. A step with nothing to write
+    passes with evidence and is refused when work it owns remains.
+  - Three modifiers raise review or add a stop without changing the steps:
+    `review:heavy`, `gate:user` and `gate:release`. A request that reads two
+    ways stops to ask which route to take.
+  - Questions, duplicates and hand-offs run routes that change no file, owned
+    by the new `qfai-triage` skill. A diagnosis that shows the run is on the
+    wrong route moves it at a declared point, keeping its evidence.
+  - A run record written under an old route id is read under the route that
+    replaced it; an unfinished run on an old route cannot continue.
+
 - **An acceptance-test review pack names its own producer.** A review pack
   that `/qfai-atdd` writes declares `producer: "atdd"` in `summary.json` and
   `Producer: atdd` in `review_request.md`, with a `flow` target. It used to

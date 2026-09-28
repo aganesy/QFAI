@@ -31,7 +31,7 @@ Feature: Run `/qfai-sdd` as a stage of a run
     Given the /qfai-sdd SKILL.md and the built-in plans
     When its steps frontmatter is read
     Then it lists every step whose owner is qfai-sdd
-    And every step a plan gives an sdd, sdd_delta or sdd_append stage is one of them
+    And every step a plan gives an sdd or sdd_append stage is one of them
 
   # AC-0001-0214-05
   Scenario: Stage 0 reuses the shared snapshot but not SDD's own check
@@ -42,7 +42,7 @@ Feature: Run `/qfai-sdd` as a stage of a run
 
   # AC-0001-0214-06
   Scenario: An SDD-kind stage changes the tree only on the operator's answer
-    Given an sdd, sdd_append or sdd_delta work order
+    Given an sdd or sdd_append work order
     When the stage has a proposal for the story-tree and contract files it would change
     Then it asks once and changes nothing: it opens one decision question showing the change target and the proposal, with outcome awaiting_input
     And the attempt holding the human_decision makes the change and appends one Change request row naming every protected file it changed, at WIP, with an Approach citing that answer

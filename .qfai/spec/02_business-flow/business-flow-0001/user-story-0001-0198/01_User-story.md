@@ -6,4 +6,4 @@ As an operator, I want a typo in a comment or in non-normative prose fixed witho
 
 ## Non-goals
 
-- The direct route for a dependency, a workflow, a setting, a normative README command, or QFAI's own skills and rules.
+- The text-edit route for a dependency, a workflow, a setting, a normative README command, or QFAI's own skills and rules.

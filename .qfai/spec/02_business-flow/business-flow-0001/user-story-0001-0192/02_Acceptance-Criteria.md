@@ -95,7 +95,7 @@ Feature: Deliver a clear new feature from one request
 
   # AC-0001-0192-13
   Scenario: The announced scope names the tracked files a stage will write
-    Given a plan with an `sdd`, `sdd_delta`, `discussion` or UI-bearing `prototype` stage
+    Given a plan with an `sdd`, `discussion` or UI-bearing `prototype` stage
     When `qfai-run` submits its route proposal
     Then the write scope names each tracked file those stages will write, and only the narrowest set for each stage
     And a proposal naming a decisions table, a decision record or another protected path is refused
@@ -118,7 +118,7 @@ Feature: Deliver a clear new feature from one request
 
   # AC-0001-0192-16
   Scenario: A story-authoring stage only appends rows, and each approved row cites this run's answer
-    Given a result of an `sdd`, `sdd_append` or `sdd_delta` stage
+    Given a result of an `sdd` or `sdd_append` stage
     When `accept` compares `decisions.md` and `open-questions.md` with their state at issue
     Then a row present at issue is unchanged, apart from the Status of a row this run appended
     And an appended row naming an approval-required operation, or opening `Change request:`, stands at WIP or DONE only when its Approach cites a `human_decision` this run recorded for it

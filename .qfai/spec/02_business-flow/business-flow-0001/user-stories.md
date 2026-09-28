@@ -212,5 +212,16 @@
 | US-0001-0213 | Seed a diagnosed missing example under an existing criterion                           | `user-story-0001-0213/` |
 | US-0001-0214 | Run `/qfai-sdd` as a stage of a run                                                    | `user-story-0001-0214/` |
 | US-0001-0215 | Verify as the final stage of a run                                                     | `user-story-0001-0215/` |
-| US-0001-0216 | Run only the steps a change needs, reviewed once per stage                             | `user-story-0001-0216/` |
+| US-0001-0216 | Run every step of the route, reviewed once per stage                                   | `user-story-0001-0216/` |
 | US-0001-0217 | Refuse a step tree that a run or a stage skill cannot use                              | `user-story-0001-0217/` |
+| US-0001-0218 | Route a request through a fixed decision table                                         | `user-story-0001-0218/` |
+| US-0001-0219 | Raise review and gates without changing the steps                                      | `user-story-0001-0219/` |
+| US-0001-0220 | Stop for me when the router is unsure                                                  | `user-story-0001-0220/` |
+| US-0001-0221 | Close, answer or hand back a request without a change                                  | `user-story-0001-0221/` |
+| US-0001-0222 | Re-route a run when diagnosis shows it is on the wrong route                           | `user-story-0001-0222/` |
+| US-0001-0223 | Pass a step with evidence when it has nothing to write                                 | `user-story-0001-0223/` |
+| US-0001-0224 | Change the route catalog only with a recorded approval                                 | `user-story-0001-0224/` |
+| US-0001-0225 | Refuse a route catalog a run cannot use                                                | `user-story-0001-0225/` |
+| US-0001-0226 | Read a run recorded under a retired route id                                           | `user-story-0001-0226/` |
+| US-0001-0227 | Get one fixed plan for every kind of request                                           | `user-story-0001-0227/` |
+| US-0001-0228 | Judge the router against labelled requests before a release                            | `user-story-0001-0228/` |
