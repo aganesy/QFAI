@@ -10,6 +10,16 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
+// The managed-block writer init calls, shared with the migration steps.
+const ROOT_GITIGNORE_WRITER = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "core",
+  "init",
+  "rootGitignore.ts",
+);
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
@@ -198,9 +208,8 @@ describe("TC-0003-0015: Symlink idempotency (3 consecutive runs)", () => {
 // This block records the TC→implementation coverage link for traceability.
 describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
   it("init wires QFAI_GITIGNORE_BLOCK writer into runInit", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("ensureRootGitignoreEntries");
-    expect(content).toContain("QFAI_GITIGNORE_BLOCK");
+    expect(await readFile(INIT_CLI, "utf-8")).toContain("ensureRootGitignoreEntries");
+    expect(await readFile(ROOT_GITIGNORE_WRITER, "utf-8")).toContain("QFAI_GITIGNORE_BLOCK");
   });
 });
 
@@ -208,7 +217,7 @@ describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
 // Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
 describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () => {
   it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
+    const content = await readFile(ROOT_GITIGNORE_WRITER, "utf-8");
     expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
     expect(content).toContain("removeManagedBlock");
   });

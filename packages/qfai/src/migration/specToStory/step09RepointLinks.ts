@@ -1,4 +1,4 @@
-import { repairIntegrationWrappers } from "../../cli/commands/init.js";
+import { repairIntegrationWrappers } from "../../core/init/wrapperRepair.js";
 import { MigrationInputError, type MigrationStep } from "./harness.js";
 
 const WOULD_RELINK = "  would relink ";

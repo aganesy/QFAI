@@ -278,7 +278,7 @@ describe("a --reason that does not read as an id", () => {
   // reduction — worse than a weak field, because it blocks the operation this
   // exists to provide. So both rows assert exit 0 and differ only in whether
   // the operator was told.
-  // `lib/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
+  // `core/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
   // stream so a piped run sees the whole narrative in order. Spying on stderr
   // captured nothing, which is how this row found out.
   const captureWarnings = (): string[] => {

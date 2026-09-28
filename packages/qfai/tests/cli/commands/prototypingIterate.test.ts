@@ -458,7 +458,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     }));
     await seedPrototypingJson(root, iterations);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
@@ -514,7 +514,7 @@ describe("runPrototypingIterate input validation", () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({
@@ -1397,7 +1397,7 @@ describe("runPrototypingIterate cycle >= 1 DESIGN.md drift stderr (TC-0012-0373)
       { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1657,7 +1657,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1710,7 +1710,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1805,7 +1805,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     const configPath = path.join(root, "qfai.config.yaml");
     const config = await readFile(configPath, "utf-8");
     await writeFile(configPath, `${config}\nprototyping:\n  primaryUiContract: UI-0002\n`, "utf-8");
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       // The configured pin names a contract that does not exist.
@@ -1838,7 +1838,7 @@ describe("runPrototypingIterate UI contract scope", () => {
       `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
       "utf-8",
     );
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(
@@ -1861,7 +1861,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [{ index: 0, blockingFindings: [] }]);
     await addUiContract(root, "UI-0002", "settings");
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
@@ -1943,7 +1943,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     // `undefined` drops the key from the serialized record.
     await seedWithCatalog(root, undefined);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
@@ -1961,7 +1961,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
       allowedSources: [...baseFrozenCatalog.allowedSources, "pinterest"],
     });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1979,7 +1979,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     const { sourceHosts: _omit, ...catalogWithoutHosts } = baseFrozenCatalog;
     await seedWithCatalog(root, catalogWithoutHosts);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2002,7 +2002,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
       },
     });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2065,7 +2065,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2102,7 +2102,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2128,7 +2128,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({
@@ -2173,7 +2173,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2192,7 +2192,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
     await seedMinimalProject(root, { uiBearing: false });
     // prototyping.json absent — fresh project ran `--cycle 1` first.
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2221,7 +2221,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2294,7 +2294,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2361,7 +2361,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2399,7 +2399,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
   }
 
   async function refusalMessages(root: string, cycle: number): Promise<string[]> {
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
@@ -2417,7 +2417,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
     const root = await newTempDir();
     await seedSealedLoop(root, "converged");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({

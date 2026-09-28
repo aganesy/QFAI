@@ -252,7 +252,7 @@ describe("qfai prototyping certify (generate)", () => {
       await rm(path.join(root, rel), { force: true });
     }
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errors: string[] = [];
     const errorSpy = vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
       errors.push(args.map(String).join(" "));
@@ -281,7 +281,7 @@ describe("qfai prototyping certify (generate)", () => {
     // never readable.
     await writeFile(path.join(root, ".qfai/report/verify.json"), "{ not json", "utf-8");
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -320,7 +320,7 @@ describe("qfai prototyping certify (generate)", () => {
       }),
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -438,7 +438,7 @@ describe("qfai prototyping certify (generate)", () => {
       "utf-8",
     );
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -522,7 +522,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       "utf-8",
     );
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -662,7 +662,7 @@ describe("qfai prototyping show-ui-contract", () => {
       uiContractsCovered: ["UI-0012"],
       frozenSurfaceUnion: ["UI-0012"],
     });
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
       expect(await runPrototypingShowUiContract({ root })).toBe(0);
@@ -717,7 +717,7 @@ describe("qfai prototyping show-ui-contract", () => {
       `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
@@ -799,7 +799,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
       '<span style="color:#abcdef">stale</span>\n',
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);

@@ -14,7 +14,7 @@ import { isEperm } from "../fs/errno.js";
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
  * wrapper directories with the filename suffix each one uses.
  *
- * Kept in step with `cli/commands/init.ts#SKILL_INTEGRATION_DIRS` /
+ * Kept in step with `core/init/integrationDirs.ts#SKILL_INTEGRATION_DIRS` /
  * `#AGENT_INTEGRATION_CONFIGS`. `tests/core/integrationSurface.test.ts` asserts
  * the lists agree, so a new integration target cannot ship unprobed.
  */

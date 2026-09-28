@@ -1,14 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  extractManagedBlock,
-  planEntryDirective,
-  SKILL_INTEGRATION_DIRS,
-} from "../../cli/commands/init.js";
 import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { planEntryDirective } from "../../core/init/entryDirective.js";
+import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
+import { extractManagedBlock } from "../../core/init/rootGitignore.js";
 import { QFAI_RUN_STATE_IGNORE } from "../../core/gitignore.js";
 import { allPlanRefusals, type PlanRefusal } from "../../core/workflow/plans.js";
 import { isRecord } from "../../core/workflow/parse.js";
