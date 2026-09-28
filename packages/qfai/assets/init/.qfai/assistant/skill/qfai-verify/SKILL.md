@@ -15,6 +15,7 @@ roles:
     implementation-reviewer,
   ]
 steps: [verify-context, verify-qfai-gate, verify-repo-gate]
+requires: [common-review-cycle]
 mode: evidence-focused
 ---
 
@@ -67,13 +68,6 @@ code. Each step's `## Gate` section says what its reviewers check.
 - `qa-gatekeeper` confirms gate coverage before approval.
 - Do not hand off until all routed blocking reviewers return `PASS`.
 
-### Reviewer Gate
-
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-gate counts and ratios are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
-
 ## Completion
 
 The invocation completes on the gate of `verify-repo-gate` and a PASS of the
@@ -108,16 +102,6 @@ next action:
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick
-- ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
-  - destructive operations (rm / overwrite / force-push)
-  - version-pin changes (`package.json#version`, branch pin)
-  - scope expansions outside the active envelope
 - hard-required:
   - brand intent when a prototyping-scoped run consumes an unresolved visual design decision
   - a full `UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract from the invocation or current evidence

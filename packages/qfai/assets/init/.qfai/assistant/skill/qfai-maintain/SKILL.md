@@ -6,6 +6,7 @@ argument-hint: "<the text or comment to change>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator, doc-steward, completion-reviewer]
 steps: [maintain-edit]
+requires: [common-review-cycle]
 mode: execution-focused
 ---
 
@@ -41,10 +42,8 @@ made. A REVISE sends the finding back to the step's author.
 
 ### Reviewer Gate
 
-The Drift Protocol applies: an edit that would change a story, a contract or a
-decision is not this skill's, and stops. This skill writes no test, so
-`.qfai/assistant/rule/test-layers.md` has nothing to place, and a test-layer
-ratio is a signal, not a gate.
+An edit that would change a story, a contract or a decision is not this
+skill's, and stops.
 
 ## Completion
 
@@ -57,12 +56,6 @@ The stage returns what `maintain-edit` lists under "What the stage returns".
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - equivalent-option pick
-- ask-user:
-  - scope expansions outside the active envelope
-  - destructive operations (rm / overwrite / force-push)
 - hard-required:
   - edit target (the text or comment to change; an empty target is asked for, never guessed)
 

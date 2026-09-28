@@ -200,12 +200,15 @@ async function unionOfReviewers(steps: string[]): Promise<string[]> {
 describe("a parent skill invoked by name", () => {
   // QFAI:AC-0001-0202-07
   it("reads one step at a time, in order, and reviews once after the last step", async () => {
-    const byName = flat(
-      sectionOf(
-        await readShipped("rule/shared-skill-operating-baseline.md"),
-        "### A parent skill invoked by name",
-      ),
+    const baseline = await readShipped("rule/shared-skill-operating-baseline.md");
+    expect(flat(sectionOf(baseline, "## Running Steps"))).toMatch(
+      /a parent's `requires` names the `common-\*` steps its own body runs\*\*, such as `common-review-cycle`/i,
     );
+    for (const skill of PLAN_STEP_OWNERS) {
+      const front = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`));
+      expect(front.requires, skill).toContain("common-review-cycle");
+    }
+    const byName = flat(sectionOf(baseline, "### A parent skill invoked by name"));
     expect(byName).toMatch(/take the steps from the parent's `steps:` list, in that order/i);
     expect(byName).toMatch(/read that step's `STEP\.md` and no other, run it/i);
     expect(byName).toMatch(/after the last step, run one review through `common-review-cycle`/i);

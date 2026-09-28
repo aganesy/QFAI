@@ -17,6 +17,7 @@ roles:
     implementation-reviewer,
   ]
 steps: [atdd-scaffold, atdd-credentials, atdd-author, atdd-test-fix]
+requires: [common-review-cycle]
 mode: execution-focused
 ---
 
@@ -56,11 +57,7 @@ Questions to the user follow
 ### Reviewer Gate
 
 The one review after the last step checks what the `Review` section of each
-step that ran names. The test author cannot sign off their own work.
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-test volume and planning estimates are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
+step that ran names.
 
 ## Completion
 
@@ -69,12 +66,9 @@ review. Report what that gate names.
 
 ## Default Autopilot Policy
 
-- auto-decide: test selectors, fixture organization, and output formatting
-  within the active BF and its declared contracts.
-- ask-user: approval-required operations, scope expansion, and product
-  decisions not settled by the story tree. In `--auto`, report these as
-  pending instead of supplying an answer.
-- hard-required:
+- auto-decide: test selectors and fixture organization within the active BF
+  and its declared contracts.
+- ask-user: product decisions the story tree does not settle.
 
 project_memory:
 
