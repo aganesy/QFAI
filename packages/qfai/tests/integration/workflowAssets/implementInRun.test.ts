@@ -96,7 +96,7 @@ describe("qfai-implement in a workflow run", () => {
 
   // QFAI:AC-0001-0208-02
   // QFAI:EX-0001-0208-02
-  it("returns exactly one of four verdicts, the matched IDs and a reproduction record", async () => {
+  it("returns exactly one verdict, the matched IDs and a reproduction record", async () => {
     const text = await step(DIAGNOSE);
     expect(text).toMatch(
       /exactly one verdict in `diagnosis\.verdict`, one of: `missing-test`, `defective-test`, `regression`, `expectation-differs`/i,
