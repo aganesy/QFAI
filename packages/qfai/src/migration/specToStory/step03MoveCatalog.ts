@@ -339,15 +339,12 @@ async function routeStructure(
   draftFor: (target: string) => PolicyDraft,
 ): Promise<ReturnType<typeof routeStructureCatalog>> {
   const techSource = path.join(context.root, ".qfai/assistant/catalog/tech.md");
-  const constraint = relative(
-    context.root,
-    path.join(context.specsDir, "01_policy", "constraint.md"),
-  );
+  const techTarget = relative(context.root, path.join(context.contractsDir, "tech.md"));
   return routeStructureCatalog({
     ...parts,
     commands: entrypointCommands((await exists(techSource)) ? await readInput(techSource) : ""),
-    constraints: () => draftFor(constraint),
-    techTarget: relative(context.root, path.join(context.contractsDir, "tech.md")),
+    tech: () => draftFor(techTarget),
+    techTarget,
   });
 }
 

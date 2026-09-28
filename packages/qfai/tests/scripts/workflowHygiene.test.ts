@@ -447,6 +447,21 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
 // inside leaves the repository broken when it crashes between edit and restore.
 // ───────────────────────────────────────────────────────────────────────────
 
+// QFAI:EX-0002-0014-11
+describe("the release workflow keeps the file name npm trusted publishing is bound to", () => {
+  it("publishes the package from release.yml, holding the identity token", () => {
+    const workflow: unknown = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf8"),
+    );
+    const jobs = isRecord(workflow) ? workflow["jobs"] : undefined;
+    const publish = isRecord(jobs) ? jobs["publish"] : undefined;
+    const permissions = isRecord(publish) ? publish["permissions"] : undefined;
+
+    expect(isRecord(permissions) ? permissions["id-token"] : undefined).toBe("write");
+    expect(JSON.stringify(isRecord(publish) ? publish["steps"] : [])).toContain("npm publish");
+  });
+});
+
 // QFAI:EX-0002-0014-01
 describe("TC-0017-0015 (TDD-0015): reachability and declaration are two different measurements", () => {
   it("accepts an inheriting fixture job that the declaration-only counter rejects", async () => {

@@ -2,15 +2,15 @@
 
 ## Technical Constraints
 
-| ID  | Constraint | Rationale | Impact |
-| --- | ---------- | --------- | ------ |
+| ID  | Constraint | Rationale |
+| --- | ---------- | --------- |
 
 ## Operational Constraints
 
-| ID  | Constraint | Rationale | Impact |
-| --- | ---------- | --------- | ------ |
+| ID  | Constraint | Rationale |
+| --- | ---------- | --------- |
 
 ## Business Constraints
 
-| ID  | Constraint | Rationale | Impact |
-| --- | ---------- | --------- | ------ |
+| ID  | Constraint | Rationale |
+| --- | ---------- | --------- |

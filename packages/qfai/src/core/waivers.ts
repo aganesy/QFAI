@@ -1157,6 +1157,7 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
     "QFAI-STORY-004",
     "QFAI-STORY-005",
     "QFAI-STORY-011",
+    "QFAI-STORY-012",
     "QFAI-SPACK-102",
   ].map((code) => ({ keys: [code, code.slice("QFAI-".length)], severity: "error" as const })),
   // This module's own findings, emitted on every run that parses a waiver file.

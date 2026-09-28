@@ -170,8 +170,8 @@ create-only: compare a project's edited copies with the new shipped
 templates and apply changes deliberately. Update `qfai.config.yaml` test
 globs and the Standard commands in `03_contract/tech.md` to match the
 project's test layout. Step 3 moves the old structure catalog's entrypoints
-to Skeleton lines in `tech.md`, its technical constraints to
-`constraint.md` and its UI surface paths to `uiux.surfacePaths` in
+to Skeleton lines in `tech.md`, its layer table to the Architecture
+section of `tech.md` and its UI surface paths to `uiux.surfacePaths` in
 `qfai.config.yaml`, and lists the rest for a person.
 
 ## Roll back or resume

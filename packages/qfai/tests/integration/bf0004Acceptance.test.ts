@@ -1176,7 +1176,7 @@ describe("BF-0004 acceptance criteria", () => {
       ],
       [
         ".qfai/assistant/catalog/structure.md",
-        ".qfai/spec/01_policy/constraint.md",
+        ".qfai/spec/03_contract/tech.md",
         "Structure source marker",
       ],
       [

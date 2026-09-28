@@ -13,9 +13,14 @@ import {
 } from "./policyDocuments.js";
 
 const STACK = "Stack";
+const ARCHITECTURE = "Architecture";
 const DEPENDENCIES = "Dependencies";
 const COMMANDS = "Standard commands (copy-paste)";
 const STACK_COLUMNS = ["Component", "Choice"] as const;
+const ARCHITECTURE_COLUMNS = ["Layer", "Responsibility", "Depends on"] as const;
+
+/** A path, a file name or a command, which a layer row names by responsibility instead. */
+const LOCATED = /[`/\\]/;
 
 /** Old headings, in lower case, whose `Key: value` items become Stack rows. */
 const STACK_LISTS = new Set([
@@ -103,6 +108,30 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
   return person;
 }
 
+/**
+ * Moves an old architecture section into the `## Architecture` table of the `tech.md` draft
+ * when it is one table of layers: a Layer, a Responsibility and a Depends on column, with no
+ * path or file name in a row. Returns what a person has to do otherwise.
+ */
+export function moveArchitectureSection(draft: PolicyDraft, section: PolicySection): string[] {
+  const table = tableRows(section.body, ARCHITECTURE_COLUMNS);
+  if (table === null) return [rewrite(draft, section, ARCHITECTURE)];
+  const person = table.dropped.map(
+    (column) =>
+      `${draft.target} ## ${ARCHITECTURE}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+  );
+  const rows: string[][] = [];
+  for (const row of table.rows) {
+    if (row.some((cell) => LOCATED.test(cell)))
+      person.push(
+        `${draft.target} ## ${ARCHITECTURE}: rewrite the layer ${row[0] || "with no name"} of "## ${section.heading}" in ${section.source} without a path or file name by hand (kept at ${section.archive})`,
+      );
+    else rows.push(row);
+  }
+  addUnique(draft.rows, ARCHITECTURE, rows, sameRow);
+  return person;
+}
+
 /** Adds standard-command items already in the template's form, such as Skeleton items. */
 export function addTechCommands(draft: PolicyDraft, items: string[]): void {
   addUnique(draft.lists, COMMANDS, items, sameText);
@@ -158,8 +187,8 @@ const commandLabel = (item: string): string => /^- ([^:\n]+):/.exec(item)?.[1] ?
 
 /**
  * `tech.md` as its template gives it, with each Stack row and each command the draft
- * holds in place of the template's item of the same name, and the draft's dependencies
- * in place of the template's.
+ * holds in place of the template's item of the same name, and the draft's layers and
+ * dependencies in place of the template's.
  */
 export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
   return renderTemplate("03_contract/tech.md", (title, templateBody) => {
@@ -171,6 +200,10 @@ export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
         STACK_COLUMNS,
         mergeByName(templateRows, rows, (row) => row[0] ?? ""),
       );
+    }
+    if (title === ARCHITECTURE) {
+      const rows = draft.rows.get(ARCHITECTURE) ?? [];
+      return rows.length === 0 ? templateBody : tableText(ARCHITECTURE_COLUMNS, rows);
     }
     if (title === DEPENDENCIES) return draft.lists.get(DEPENDENCIES)?.join("\n") ?? templateBody;
     if (title === COMMANDS) {

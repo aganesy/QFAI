@@ -97,7 +97,7 @@ export function flowToBind(
 }
 
 // A route that ends at `triage-close` writes only the records its discussion stage keeps: the
-// project's discussion packs, and `DESIGN.md` for a UI-bearing target.
+// project's discussion packs. `DESIGN.md` is the specification stage's to write.
 function recordEscapes(
   proposal: WorkflowProposal,
   stages: PlanStages,
@@ -105,7 +105,7 @@ function recordEscapes(
 ): string[] {
   if (!endsAtTriageClose(stages)) return [];
   const discusses = stages.some((stage) => stage.stageKind === "discussion");
-  const records = discusses ? [facts.discussionDir ?? ".qfai/discussion", "DESIGN.md"] : [];
+  const records = discusses ? [facts.discussionDir ?? ".qfai/discussion"] : [];
   const covered = (area: string) =>
     records.some((record) => areaCovers(record, area) || areaCovers(record, literalPrefix(area)));
   return (proposal.proposedWriteScope ?? []).filter((area) => !covered(area));

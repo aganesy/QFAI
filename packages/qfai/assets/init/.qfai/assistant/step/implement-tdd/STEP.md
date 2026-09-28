@@ -63,7 +63,9 @@ states the case is worked as an EX no test annotates, and where none does,
    `<paths.contractsDir>/tech.md`, as
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`
    states. Obtain Test, Lint, Typecheck, and Build commands only from that
-   section, and run each gate with `common-gate-run`.
+   section, and run each gate with `common-gate-run`. Read its
+   `## Architecture` table too: place each new module in one layer, and
+   import only from the layers that layer's row lists.
 3. Read the current `/qfai-atdd` handoff in
    `.qfai/evidence/atdd-BF-NNNN.md`. The file is local; where this checkout
    lacks it, find the tests by their `QFAI:BF-NNNN` and

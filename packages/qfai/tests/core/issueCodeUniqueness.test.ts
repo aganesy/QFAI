@@ -12,6 +12,7 @@ import {
   resolveIssueExpected,
   resolveIssueFix,
 } from "../../src/cli/commands/validate.js";
+import { EMITTED_RULE_CODES } from "../../src/core/emittedRuleCodes.js";
 import { type IssueCodeUsage, collectIssueCodeUsage } from "../helpers/issueCodes.js";
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -593,5 +594,27 @@ describe("issue report metadata", () => {
     expect(catalogued).not.toBe(UNCATALOGUED_FIX);
     expect(catalogued).toContain("Delete the named key");
     expect(resolveIssueFix({ ...base, code: "QFAI-NOT-A-CATALOGUED-CODE" })).toBe(UNCATALOGUED_FIX);
+  });
+});
+
+describe("the form of a finding code", () => {
+  /** Capital letters in hyphen-separated words, then three digits. */
+  const FORM = /^[A-Z]+(?:-[A-Z]+)*-\d{3}$/;
+
+  /**
+   * Codes emitted before a new code had to take the form and an expected state.
+   * The count may only go down.
+   */
+  const PREDATING = 153;
+
+  // QFAI:EX-0001-0039-13
+  it("gives every new code a letter prefix, three digits and an expected state", () => {
+    const outside = EMITTED_RULE_CODES.filter(
+      (code) => !FORM.test(code) || !(code in ISSUE_EXPECTED_BY_CODE),
+    );
+    expect(outside.length).toBeLessThanOrEqual(PREDATING);
+    expect("QFAI-STORY-012").toMatch(FORM);
+    expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
+    expect("W-SKILL-DOC-BROKEN-REF").not.toMatch(FORM);
   });
 });
