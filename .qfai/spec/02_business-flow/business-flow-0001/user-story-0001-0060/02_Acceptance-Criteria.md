@@ -3,11 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Markdown report generation
+Feature: Repository links
   # AC-0001-0060-01
-  Scenario: A Markdown report is written
+  Scenario: --base-url links file paths to the repository
     Given `validate.json` exists
-    When `qfai report --format md` runs
-    Then `report.md` is written under `paths.outDir`
-    And it holds an executive summary, an issue list and a traceability matrix
+    When `qfai report --format md --base-url https://github.com/org/repo` runs
+    Then the file paths in the report link to the repository URL
 ```

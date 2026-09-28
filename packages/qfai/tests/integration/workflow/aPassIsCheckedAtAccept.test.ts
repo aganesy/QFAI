@@ -1,6 +1,6 @@
-// QFAI:AC-0001-0223-01
-// QFAI:AC-0001-0223-02
-// QFAI:AC-0001-0223-03
+// QFAI:AC-0001-0216-01
+// QFAI:AC-0001-0216-02
+// QFAI:AC-0001-0216-03
 
 import { expect, it } from "vitest";
 
@@ -134,7 +134,7 @@ function refused(state: string, reason: string, subject: string) {
   return { state, reasons: [{ reason, subject }], events: 0 };
 }
 
-// QFAI:EX-0001-0223-01
+// QFAI:EX-0001-0216-01
 it("A story-authoring result passing three pass-through steps, each with its reason and record", () => {
   const passes = [pass("sdd-flow"), pass("common-design-md"), pass("sdd-cycle")];
   const { workOrder, decision } = acceptNext(
@@ -156,7 +156,7 @@ it("A story-authoring result passing three pass-through steps, each with its rea
   });
 });
 
-// QFAI:EX-0001-0223-02
+// QFAI:EX-0001-0216-02
 it("A pass for implement-tdd, and a pass for implement-diagnose", () => {
   const diagnosis = diagnosisOf("missing-test", "EX-0001-0001-01");
   const implementing: Case = {
@@ -185,7 +185,7 @@ it("A pass for implement-tdd, and a pass for implement-diagnose", () => {
   ]);
 });
 
-// QFAI:EX-0001-0223-04
+// QFAI:EX-0001-0216-04
 it("An append result passing sdd-story for a criterion no example states, and a story-authoring result passing it while changing an example", () => {
   const append = acceptNext(
     {
@@ -209,7 +209,7 @@ it("An append result passing sdd-story for a criterion no example states, and a 
   ]);
 });
 
-// QFAI:EX-0001-0223-05
+// QFAI:EX-0001-0216-05
 it("A test fix passing the step that owns the diagnosed layer, then one passing the other layer's step", () => {
   const repairing: Case = {
     plan: repairTestPlan,

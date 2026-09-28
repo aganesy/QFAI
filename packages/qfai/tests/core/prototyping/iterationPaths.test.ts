@@ -47,7 +47,7 @@ afterEach(async () => {
 });
 
 describe("iterationDirPerUiContract / iterationReviewPathPerUiContract path composition", () => {
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("composes zero-padded iter dir + screen review path for a (idx, spec, screen) triple", () => {
     expect(iterationDirPerUiContract(2, "UI-0007")).toBe(
       ".qfai/evidence/prototyping/iter-02/UI-0007",
@@ -57,7 +57,7 @@ describe("iterationDirPerUiContract / iterationReviewPathPerUiContract path comp
     );
   });
 
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("zero-pads single-digit indices and respects two-digit indices", () => {
     expect(iterationDirPerUiContract(0, "UI-0001")).toBe(
       ".qfai/evidence/prototyping/iter-00/UI-0001",
@@ -72,7 +72,7 @@ describe("iterationDirPerUiContract / iterationReviewPathPerUiContract path comp
 });
 
 describe("findIterationReviewFiles", () => {
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("globs across iter-NN/UI-*/<screen>.review.json and returns sorted absolute paths, ignoring .png/.html siblings", async () => {
     const root = await newTempDir();
 
@@ -118,7 +118,7 @@ describe("findIterationReviewFiles", () => {
     }
   });
 
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("returns [] when the iteration directory does not exist", async () => {
     const root = await newTempDir();
     const result = await findIterationReviewFiles(root, 5);
@@ -127,7 +127,7 @@ describe("findIterationReviewFiles", () => {
 });
 
 describe("findStaleIterDirs / deleteStaleIterDirs", () => {
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("matches only /^iter-\\d{2,}$/ directories and leaves unrelated siblings intact", async () => {
     const root = await newTempDir();
 
@@ -164,7 +164,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
     expect(remaining.sort()).toEqual(["iter-1", "iter-bad", "prototyping.json", "sandbox"].sort());
   });
 
-  // QFAI:EX-0001-0123-02
+  // QFAI:EX-0001-0119-02
   it("returns [] when the prototyping evidence root does not exist", async () => {
     const root = await newTempDir();
     const matched = await findStaleIterDirs(root);
@@ -175,7 +175,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
 });
 
 describe("parseIterationReviewPath round-trip", () => {
-  // QFAI:EX-0001-0123-01
+  // QFAI:EX-0001-0119-01
   it("is a left-inverse of iterationReviewPathPerUiContract across representative (idx, spec, screen) triples", () => {
     const indices = [0, 1, 9, 10, 99];
     const uiContractIds = ["UI-0007", "UI-0012"];
@@ -192,7 +192,7 @@ describe("parseIterationReviewPath round-trip", () => {
     }
   });
 
-  // QFAI:EX-0001-0123-01
+  // QFAI:EX-0001-0119-01
   it("returns null on malformed inputs", () => {
     expect(parseIterationReviewPath("")).toBeNull();
     expect(parseIterationReviewPath("not/a/path.json")).toBeNull();

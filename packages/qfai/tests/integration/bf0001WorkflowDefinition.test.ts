@@ -105,7 +105,7 @@ describe("BF-0001 workflow definition", () => {
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 
-  // QFAI:EX-0001-0001-04
+  // QFAI:EX-0001-0001-03
   it("routes the specification output to the three story-tree layers", async () => {
     const sdd = await readSdd();
     expect(sdd).toContain("`01_policy/");

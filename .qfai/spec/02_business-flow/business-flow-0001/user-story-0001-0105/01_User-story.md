@@ -1,5 +1,5 @@
-# US-0001-0105: Stable inputs for prototype evaluation
+# US-0001-0105: Explicit reviewer pivot directive
 
 ## User Story
 
-As an evaluator, I want screenshots, HTML snapshots, axis definitions, prior reviewer-score context, and design-system inputs gathered before scoring, so that visual judgment is grounded in stable inputs.
+As an AI agent generating the prototype, I want an explicit `pivotDirective` of `continue`, `refine` or `pivot` from the reviewer each cycle, so that I can scrap the prior visual language and reimagine the artifact when the structural ceiling is recognized.

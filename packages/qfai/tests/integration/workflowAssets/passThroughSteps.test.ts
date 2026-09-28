@@ -44,8 +44,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 describe("a step that may pass with evidence", () => {
-  // QFAI:AC-0001-0223-04
-  // QFAI:EX-0001-0223-08
+  // QFAI:AC-0001-0216-04
+  // QFAI:EX-0001-0216-08
   it("states what it reads first and what shows it has nothing to write", async () => {
     for (const step of PASS_THROUGH) {
       const text = await passesWhen(step);
@@ -71,8 +71,8 @@ describe("a step that may pass with evidence", () => {
     expect(baseline).toMatch(/a pass is not a skip/i);
   });
 
-  // QFAI:AC-0001-0223-04
-  // QFAI:EX-0001-0223-07
+  // QFAI:AC-0001-0216-04
+  // QFAI:EX-0001-0216-07
   it("lets sdd-story pass in an sdd stage when the change stays in the documents that own the truth", async () => {
     const text = await passesWhen("sdd-story");
     expect(text).toMatch(/passes in two cases, and the pass names both facts it rests on/i);

@@ -3,43 +3,37 @@
 ## Criteria
 
 ```gherkin
-Feature: Story-tree layout and ID validation
+Feature: Decision and open-question table validation
   # AC-0001-0053-01
-  Scenario: The story tree runs the story-tree validators
-    Given a project whose `paths.specsDir` holds no `spec-*/` and no `_policies/` directory (the story tree)
+  Scenario: A table with the wrong columns is reported
+    Given the story tree, and a `decisions.md` or `open-questions.md` table that has a column other than ID, Content, Approach and Status, or lacks one of those four
     When `qfai validate --profile sdd` runs
-    Then the story-tree finding families run on it and the spec-pack validators report nothing about it
-    And a `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files raises `QFAI-LAYOUT-001` as the only finding, and no other validator runs
+    Then an error names the file and the column
 
   # AC-0001-0053-02
-  Scenario: A story directory without exactly its three files is reported
-    Given the story tree, and a `user-story-NNNN-NNNN/` directory that lacks `01_User-story.md`, `02_Acceptance-Criteria.md` or `03_Example.md`, holds any other file, or holds a subdirectory
+  Scenario: A Status outside the vocabulary is reported
+    Given the story tree, and a row whose Status is outside its table's vocabulary — TODO, WIP or DONE in both tables, plus `SUPERSEDED (by DEC-NNNN)` and REJECTED in `decisions.md`, and DEFERRED in `open-questions.md`
     When `qfai validate --profile sdd` runs
-    Then an error names the directory and each missing or extra entry
-    And a story directory holding exactly the three files raises no such error
+    Then an error names the file and the row ID
+    And a SUPERSEDED Status not written as `SUPERSEDED (by DEC-NNNN)` is outside the vocabulary
 
   # AC-0001-0053-03
-  Scenario: A malformed ID is reported
-    Given the story tree, and an ID the tree defines that does not match its shape — `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN`, `DEC-NNNN` or `OQ-NNNN`
+  Scenario: A row ID of the other table's shape is reported
+    Given the story tree, and a `decisions.md` row whose ID has the `OQ-NNNN` shape, or an `open-questions.md` row whose ID has the `DEC-NNNN` shape
     When `qfai validate --profile sdd` runs
-    Then an error names the ID and the file that defines it
+    Then an error names the file and the row ID
 
   # AC-0001-0053-04
-  Scenario: An ID defined twice is reported
-    Given the story tree, and an ID of one of the seven shapes defined in more than one place
-    When `qfai validate --profile sdd` runs
-    Then one error names the ID and every file that defines it
+  Scenario: A keyword row is in force by its Status alone
+    Given the story tree, and a table row whose Content cell opens with `Test exception:`, `Change request:` or `Unadjudicated:`
+    When a validator that reads that keyword runs
+    Then it reads the IDs or paths after the colon, separated by commas, as the row's references
+    And it decides whether the row is in force from the Status cell alone: `Test exception:` while DONE, `Change request:` while WIP or DONE, `Unadjudicated:` while TODO or WIP
 
   # AC-0001-0053-05
-  Scenario: An ID out of place is reported
-    Given the story tree, and a story ID that does not start with its flow's number, an AC or EX ID that does not start with its story's ID, or a `business-flow-NNNN/` or `user-story-NNNN-NNNN/` directory whose name does not match the ID it holds
+  Scenario: An open Unadjudicated question raises QFAI-SPACK-102
+    Given the story tree, and an `open-questions.md` row opening `Unadjudicated:` with Status TODO or WIP
     When `qfai validate --profile sdd` runs
-    Then an error names the ID and the file that defines it
-
-  # AC-0001-0053-06
-  Scenario: A constraint ID out of sequence is reported
-    Given the story tree, and a row of `01_policy/constraint.md` whose ID is not its section's prefix followed by its place in the table, counted from 01
-    When `qfai validate --profile sdd` runs
-    Then an error names the ID and the ID its place gives
-    And a constraint document whose IDs run from 01 in each section raises no such error
+    Then `QFAI-SPACK-102` is raised at error naming the file and the row ID
+    And the same row at DONE or DEFERRED raises no such finding
 ```

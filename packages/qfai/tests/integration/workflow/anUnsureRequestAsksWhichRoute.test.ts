@@ -1,9 +1,9 @@
-// QFAI:AC-0001-0220-01
-// QFAI:AC-0001-0220-02
-// QFAI:AC-0001-0220-03
-// QFAI:AC-0001-0220-04
-// QFAI:AC-0001-0220-05
-// QFAI:AC-0001-0221-05
+// QFAI:AC-0001-0213-01
+// QFAI:AC-0001-0213-02
+// QFAI:AC-0001-0213-03
+// QFAI:AC-0001-0213-04
+// QFAI:AC-0001-0213-05
+// QFAI:AC-0001-0214-05
 
 import { expect, it } from "vitest";
 
@@ -28,7 +28,7 @@ const UNSURE = {
 const modifiersOf = (run: Awaited<ReturnType<typeof routedBy>>["run"]) =>
   (run.snapshot.modifiers ?? []).map((each) => each.modifier).sort();
 
-// QFAI:EX-0001-0220-01
+// QFAI:EX-0001-0213-01
 it("A low-confidence request asks one single-select question naming each candidate route", async () => {
   const { run, decision } = await routedBy(UNSURE);
   const [question] = decision.verdict.questions ?? [];
@@ -56,7 +56,7 @@ it("A low-confidence request asks one single-select question naming each candida
   });
 });
 
-// QFAI:EX-0001-0220-02
+// QFAI:EX-0001-0213-02
 it("Candidates that differ in their gates ask at medium confidence and carry the user gate", async () => {
   const { run, decision } = await routedBy({
     intent: "feature",
@@ -75,7 +75,7 @@ it("Candidates that differ in their gates ask at medium confidence and carry the
   });
 });
 
-// QFAI:EX-0001-0220-03
+// QFAI:EX-0001-0213-03
 it("A request that reads one way takes its route with no question and no added modifier", async () => {
   const high = await routedBy({ intent: "feature" });
   const medium = await routedBy({
@@ -97,7 +97,7 @@ it("A request that reads one way takes its route with no question and no added m
   ]);
 });
 
-// QFAI:EX-0001-0220-04
+// QFAI:EX-0001-0213-04
 it("Answered with its first option, as a harness that may ask nothing does, the earliest candidate is taken", async () => {
   const { run, decision } = await routedBy(UNSURE);
   const [question] = decision.verdict.questions ?? [];
@@ -114,7 +114,7 @@ it("Answered with its first option, as a harness that may ask nothing does, the 
   });
 });
 
-// QFAI:EX-0001-0220-05
+// QFAI:EX-0001-0213-05
 it("The route taken is never lighter than any candidate", async () => {
   const { run, decision } = await routedBy({
     intent: "feature",
@@ -147,7 +147,7 @@ const QA_PASS = [
   },
 ];
 
-// QFAI:EX-0001-0221-07
+// QFAI:EX-0001-0214-07
 it("Release notes are drafted, the run waits for release approval, and finish needs no verify stage", async () => {
   const { run } = await routedBy(
     { intent: "release", signals: ["release-notes"], artifacts: ["release"] },

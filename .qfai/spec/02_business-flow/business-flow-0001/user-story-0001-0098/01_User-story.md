@@ -1,5 +1,5 @@
-# US-0001-0098: Simplified Handoff Schema
+# US-0001-0098: Convergence and iteration budget
 
 ## User Story
 
-As an implementation worker, I want to read the prototyping handoff from `prototyping.json#handoff`, beside its image-source provenance, so that I receive the final prototype, the procurement record and the implementation notes without relying on the retired `mustPreserve`/`mayAdapt`/`mustNotCopy` triplets.
+As a reviewer, I want the iteration gate to use explicit convergence and budget rules, so that shallow success narratives are not mistaken for completed prototyping.

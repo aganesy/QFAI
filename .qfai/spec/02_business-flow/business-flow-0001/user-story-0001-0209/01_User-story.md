@@ -1,11 +1,12 @@
-# US-0001-0209: Fix a regression an existing correct test catches, leaving the covered example covered
+# US-0001-0209: Run every step of the route, reviewed once per stage
 
 ## User Story
 
-As an operator whose correct existing test for an example now fails, I want `/qfai-implement` to fix the production code against that example, so that the example stays covered and nothing claims its obligation changed.
+As an operator, I want each stage of a run to run every step its route names, in order, with no step added or dropped for one request, and to be reviewed once, at its end, by the reviewers those steps need, so that a run's plan is the same for every request of its kind and a small change pays only for the steps that have something to write.
 
 ## Non-goals
 
-- Rewriting the test
-- Filing a change request
-- Adding an example
+- A step added or dropped for one request.
+- A review at the end of every step.
+- The whole-change review at `finish`, which stays the independent `qa-gatekeeper` PASS.
+- Which steps exist and where they are installed, which the assistant-steps contract states.

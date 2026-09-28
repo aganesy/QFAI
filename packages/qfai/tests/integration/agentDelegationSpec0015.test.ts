@@ -2,9 +2,9 @@
  * Integration coverage for agent card definitions, package routing defaults,
  * and delegation behavior.
  */
-// QFAI:AC-0001-0167-01
-// QFAI:EX-0001-0169-01
-// QFAI:EX-0001-0169-02
+// QFAI:AC-0001-0161-01
+// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0163-02
 import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -119,7 +119,7 @@ describe("agent cards are the only definitions", () => {
 });
 
 describe("routing defaults are package data", () => {
-  // QFAI:EX-0001-0164-01
+  // QFAI:EX-0001-0158-01
   it("keeps routing and review profiles together outside init assets", async () => {
     const routing = await defaultRoutingEntries();
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
@@ -132,8 +132,8 @@ describe("routing defaults are package data", () => {
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
   });
 
-  // QFAI:AC-0001-0170-02
-  // QFAI:EX-0001-0170-01
+  // QFAI:AC-0001-0164-02
+  // QFAI:EX-0001-0164-01
   it("defines devils-advocate as an advisory mode that needs an alternative", async () => {
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       optional_modes: Record<string, Record<string, unknown>>;
@@ -342,7 +342,7 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
-  // QFAI:EX-0001-0169-06
+  // QFAI:EX-0001-0163-06
   it("retries a saturated delegation and reports an exhausted budget", async () => {
     for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
       const content = await readAsset(file);
@@ -354,8 +354,8 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
-  // QFAI:AC-0001-0169-06
-  // QFAI:EX-0001-0169-07
+  // QFAI:AC-0001-0163-06
+  // QFAI:EX-0001-0163-07
   it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
     // The reviewer-budget branch mandates recording the gate as PENDING;
     // a schema that allows only PASS/REVISE leaves an agent no legal way

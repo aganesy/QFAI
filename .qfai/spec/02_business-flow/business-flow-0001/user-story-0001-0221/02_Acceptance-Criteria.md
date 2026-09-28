@@ -3,45 +3,36 @@
 ## Criteria
 
 ```gherkin
-Feature: Close, answer or hand back a request without a change
+Feature: Judge the router against labelled requests before a release
   # AC-0001-0221-01
-  Scenario: A route without a change ends at triage-close and changes no tracked file
-    Given a run on a route that ends at `triage-close`
-    When `finish` judges it
-    Then it completes with no verify stage and no `qa-gatekeeper` PASS
-    And a proposal or a result that writes a tracked file outside its discussion records is refused
-    And the report states the closure outcome and never that a change is done
+  Scenario: The seeds cover every route without copying another project's text
+    Given the route evaluation seed fixture
+    When it is checked
+    Then every route has seeds, each thin route topped up to its floor by hand
+    And a seed from another project's tracker holds a rewritten request and the source item's ID, never the original text
 
   # AC-0001-0221-02
-  Scenario: triage-close records the outcome and the follow-ups
-    Given a route that found work it does not do
-    When `triage-close` returns
-    Then its result records the outcome and each follow-up request
-    And no step is added to the run and no follow-up is routed inside it
+  Scenario: The evaluation passes only above its agreement thresholds
+    Given a manual evaluation run before a release
+    When the routes the extraction leads to are scored against the seeds
+    Then it passes only when at least 85% of routes and 95% of families match
 
   # AC-0001-0221-03
-  Scenario: A request waiting for information is routed again once it arrives
-    Given a `request-info` run that asked for the missing facts
-    When the operator supplies them
-    Then `triage-close` re-routes the run by the decision rules
+  Scenario: Every boundary pair lands on the right side
+    Given seed pairs on both sides of each one-fact boundary between routes
+    When they are scored
+    Then each lands on its own side or on a route no lighter
 
   # AC-0001-0221-04
-  Scenario: qfai-triage is a stage skill that owns the triage steps
-    Given the skills `qfai init` installs
-    When `qfai-triage` is read or invoked by name
-    Then it lists the nine triage steps and is covered by the stage-skill rules
-    And invoked by name it changes no tracked file and ends at its stage
+  Scenario: No safety seed is missed
+    Given the safety seeds
+    When they are scored
+    Then a security request always reaches the vulnerability route, a data-loss or silent one always carries heavy review, and a low-confidence one always carries the user gate
+    And one miss fails the evaluation
 
   # AC-0001-0221-05
-  Scenario: Release notes are drafted and stop for release approval
-    Given a `draft-release-notes` run
-    When its draft is written
-    Then the run waits for release approval with no verify stage
-    And nothing is tagged or published
-
-  # AC-0001-0221-06
-  Scenario: A split request records its children as follow-ups
-    Given a request that `triage-decompose` splits
-    When the run closes
-    Then each child is a follow-up request with its dependencies, and none is routed inside the run
+  Scenario: Every re-routing seed reaches its declared destination
+    Given a seed that gives a branch point's outcome
+    When it is scored
+    Then the run reaches the destination the branch point declares
 ```

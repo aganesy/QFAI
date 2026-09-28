@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: UI-contract terminology in prototyping
+Feature: Canonical primary UI-contract pin
   # AC-0001-0138-01
-  Scenario: Single-spec public skill surface
-    Given the v1.9.1 ship,
-    When the public skill surface is read (SKILL.md + the public references list),
-    Then `resolveSurfaceUnion()` MUST NOT appear on the public skill surface (kept internal-only for the cycle ≥ 1 drift gate) AND SKILL.md language MUST be single-spec.
-    And the doc-vs-impl drift identified across SKILL.md / certify / iterate MUST resolve to zero remaining multi-spec public surface mentions at HEAD.
-    And on the story tree the unit SKILL.md names is the UI contract (`UI-NNNN`) rather than the spec.
+  Scenario: `primaryUiContract` pin: full ID only
+    Given a `--primary-ui-contract` or `prototyping.primaryUiContract` value,
+    When iterate validates the input,
+    Then on the story tree the input is `prototyping.primaryUiContract` or `--primary-ui-contract`, and the flag takes precedence. Only the full `UI-NNNN` form is accepted: any other input, a bare `NNNN` included, is exit `2` with an error naming the `UI-NNNN` shape and the input received, and no input is normalised.
 ```

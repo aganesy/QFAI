@@ -1,5 +1,5 @@
-# US-0001-0140: Recoverable cycle-zero restart
+# US-0001-0140: Audited license catalog extension
 
 ## User Story
 
-As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed, to move an existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing it, and to move the aggregate `screenshots/` and `html/` directories into `aggregate.backup-<ISO>/` on every cycle-0 run, so that a mistaken re-seed stays recoverable and a restarted loop holds no capture from the previous loop.
+As a license-compliance operator, I want `qfai prototyping iterate --license-patch <file>` to accept an add-only change to the frozen license catalog and record an audit row, so that I can broaden the catalog mid-run without restarting from cycle 0.

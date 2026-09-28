@@ -1,9 +1,9 @@
-// QFAI:AC-0001-0193-02
-// QFAI:AC-0001-0193-04
-// QFAI:AC-0001-0194-01
-// QFAI:AC-0001-0194-02
-// QFAI:AC-0001-0194-03
-// QFAI:EX-0001-0194-06
+// QFAI:AC-0001-0186-02
+// QFAI:AC-0001-0186-04
+// QFAI:AC-0001-0187-01
+// QFAI:AC-0001-0187-02
+// QFAI:AC-0001-0187-03
+// QFAI:EX-0001-0187-06
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -180,7 +180,7 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
 
 // No stage of the repair-test plan can change a criterion: it has no story-authoring stage. So the
 // run stops on the finding, naming the skill that owns it, and stays on its route.
-// QFAI:EX-0001-0194-04
+// QFAI:EX-0001-0187-04
 it("A test fix that changes what its test checks is refused, and its repair blocks the run on qfai-sdd", async () => {
   const root = await flowProject();
   const { runId, next: fix } = await diagnosed(

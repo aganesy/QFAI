@@ -1,9 +1,9 @@
-# US-0001-0062: Repository links
+# US-0001-0062: validate.json input
 
 ## User Story
 
-As an operator, I want `--base-url <url>` to turn the file paths in the report into links to the repository, so that a reader can open each file from the report.
+As an operator, I want `qfai report` to build the report from the `validate.json` named by `--in <path>` or by `config.output.validateJsonPath`, so that the report renders a validation run I already have.
 
 ## Non-goals
 
-- Checking that the links resolve
+- Generating `validate.json` automatically

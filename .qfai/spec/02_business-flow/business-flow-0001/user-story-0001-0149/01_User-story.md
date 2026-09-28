@@ -1,5 +1,5 @@
-# US-0001-0149: Exploration and convergence modes
+# US-0001-0149: Required Edge Enforcement
 
 ## User Story
 
-As an operator, I want a `prototyping.mode` setting (`convergence` or `exploration`) in `qfai.config.yaml`, overridable per run by `qfai prototyping iterate --mode <mode>` and defaulting to `convergence`, so that exploration iterations can use the relaxed gate table while `qfai prototyping certify` refuses to seal an exploration-mode iteration (`R-EXPLORATION-CERTIFY-ATTEMPT`) and `acceptedIterationIndex` points only at a convergence-mode iteration.
+As a QA engineer, I want US -> AC -> BR -> EX -> TC edge completeness enforced in the spec-pack layout, and BF -> US -> AC -> EX <- BR edge completeness on the story tree, so that traceability gaps are caught during SDD.

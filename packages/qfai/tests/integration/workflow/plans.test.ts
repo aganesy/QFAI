@@ -1,20 +1,20 @@
-// QFAI:AC-0001-0192-05
-// QFAI:AC-0001-0195-05
-// QFAI:AC-0001-0198-01
-// QFAI:AC-0001-0199-03
-// QFAI:AC-0001-0217-05
-// QFAI:AC-0001-0225-01
-// QFAI:AC-0001-0225-02
-// QFAI:AC-0001-0225-03
-// QFAI:AC-0001-0225-04
-// QFAI:AC-0001-0225-05
-// QFAI:EX-0001-0192-13
-// QFAI:EX-0001-0192-14
-// QFAI:EX-0001-0195-08
-// QFAI:EX-0001-0198-01
-// QFAI:EX-0001-0199-08
-// QFAI:EX-0001-0199-09
-// QFAI:EX-0001-0217-08
+// QFAI:AC-0001-0185-05
+// QFAI:AC-0001-0188-05
+// QFAI:AC-0001-0191-01
+// QFAI:AC-0001-0192-03
+// QFAI:AC-0001-0210-05
+// QFAI:AC-0001-0218-01
+// QFAI:AC-0001-0218-02
+// QFAI:AC-0001-0218-03
+// QFAI:AC-0001-0218-04
+// QFAI:AC-0001-0218-05
+// QFAI:EX-0001-0185-13
+// QFAI:EX-0001-0185-14
+// QFAI:EX-0001-0188-08
+// QFAI:EX-0001-0191-01
+// QFAI:EX-0001-0192-08
+// QFAI:EX-0001-0192-09
+// QFAI:EX-0001-0210-08
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -259,7 +259,7 @@ const loadRefusals: [string, (text: string) => string][] = [
 ];
 
 for (const [reason, change] of loadRefusals) {
-  // QFAI:EX-0001-0199-10
+  // QFAI:EX-0001-0192-10
   it(reason, async () => {
     const reasons = (await refusalsOf("edit-text", change)).map((refusal) => refusal.reason);
 
@@ -277,7 +277,7 @@ const stepRefusals: [string, string, string][] = [
 ];
 
 for (const [title, steps, reason] of stepRefusals) {
-  // QFAI:EX-0001-0199-10
+  // QFAI:EX-0001-0192-10
   it(title, async () => {
     const reasons = (await refusalsOf("edit-text", (text) => text.replace(EDIT_STEPS, steps))).map(
       (refusal) => refusal.reason,
@@ -297,7 +297,7 @@ const retiredNames: [string, string][] = [
 ];
 
 for (const [title, to] of retiredNames) {
-  // QFAI:EX-0001-0199-10
+  // QFAI:EX-0001-0192-10
   it(title, async () => {
     const refusals = await refusalsOf("edit-text", (text) => text.replace("kind: maintenance", to));
 
@@ -305,7 +305,7 @@ for (const [title, to] of retiredNames) {
   });
 }
 
-// QFAI:EX-0001-0225-01
+// QFAI:EX-0001-0218-01
 it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
   expect({
     guess: await refusalsOf("fix-defect", (text) =>
@@ -327,7 +327,7 @@ it("A plan naming implement-guess, a test fix under an implement kind, and a mix
   });
 });
 
-// QFAI:EX-0001-0225-02
+// QFAI:EX-0001-0218-02
 it("A plan marking implement-tdd pass-through, and one marking atdd-author", async () => {
   const marked = "steps: [{ step: implement-tdd, passThrough: true }, implement-checkpoint]";
 
@@ -339,7 +339,7 @@ it("A plan marking implement-tdd pass-through, and one marking atdd-author", asy
   }).toEqual({ tdd: [{ reason: "pass-through", subject: "implement-tdd" }], author: [] });
 });
 
-// QFAI:EX-0001-0199-10
+// QFAI:EX-0001-0192-10
 it("a pass-through mark on a step off the pass-through list", async () => {
   expect(
     await refusalsOf("edit-text", (text) =>
@@ -365,7 +365,7 @@ const SPLIT_VERIFY = [
   "",
 ].join("\n");
 
-// QFAI:EX-0001-0225-04
+// QFAI:EX-0001-0218-04
 it("A split verify block, and an answer-question whose last stage answers", async () => {
   const splitVerify = (text: string) =>
     text.replace(/ {2}- id: verify\n[\s\S]*?after: \[implement\]\n/, SPLIT_VERIFY);
@@ -381,7 +381,7 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   });
 });
 
-// QFAI:EX-0001-0225-05
+// QFAI:EX-0001-0218-05
 it("A point naming a step the plan lacks, an unknown destination, and a step run twice", async () => {
   expect({
     missing: await refusalsOf("edit-text", (text) =>
@@ -400,7 +400,7 @@ it("A point naming a step the plan lacks, an unknown destination, and a step run
   });
 });
 
-// QFAI:EX-0001-0225-06
+// QFAI:EX-0001-0218-06
 it("A stage carrying when: always, and a step entry carrying when: proposed", async () => {
   expect({
     stage: await refusalsOf("edit-text", (text) =>
@@ -415,7 +415,7 @@ it("A stage carrying when: always, and a step entry carrying when: proposed", as
   });
 });
 
-// QFAI:EX-0001-0225-07
+// QFAI:EX-0001-0218-07
 it("A mode on the wrong step, and a modifier outside the three", async () => {
   expect({
     readOnlyTriage: await refusalsOf("apply-settled-spec", (text) =>
@@ -438,7 +438,7 @@ it("crlf-equal", async () => {
   expect(await refusalsOf("edit-text", (text) => text.replace(/\r?\n/g, "\r\n"))).toEqual([]);
 });
 
-// QFAI:EX-0001-0199-11
+// QFAI:EX-0001-0192-11
 it("A plan copy under the project's assistant tree is never read", async () => {
   const root = await project();
   const copy = path.join(root, ".qfai", "assistant", "process", "workflows", "edit-text.yml");

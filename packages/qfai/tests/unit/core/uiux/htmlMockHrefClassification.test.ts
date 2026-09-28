@@ -8,8 +8,8 @@
  * links by default and that the discussion pack step instructs
  * anchor-form authoring. These guard the template ↔ validator contract.
  */
-// QFAI:EX-0001-0092-01
-// QFAI:EX-0001-0092-02
+// QFAI:EX-0001-0089-01
+// QFAI:EX-0001-0089-02
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";

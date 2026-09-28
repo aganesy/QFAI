@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0196-17
+// QFAI:EX-0001-0189-16
 
 import { expect, it } from "vitest";
 
@@ -403,7 +403,7 @@ it("reconciled-resume", () => {
   ]);
 });
 
-// QFAI:EX-0001-0196-16
+// QFAI:EX-0001-0189-15
 it("reconciled-with-blocker", () => {
   const resumed = decide(runningRun(), { operation: "resume" }, { cause: "policy-drift" });
 

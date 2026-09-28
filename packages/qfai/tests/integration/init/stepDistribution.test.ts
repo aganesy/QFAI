@@ -38,8 +38,8 @@ async function present(target: string): Promise<boolean> {
 }
 
 describe("qfai init distributes the step layer", () => {
-  // QFAI:AC-0001-0203-08
-  // QFAI:EX-0001-0203-21
+  // QFAI:AC-0001-0196-08
+  // QFAI:EX-0001-0196-21
   it("installs every shipped step and links none into a host skill directory", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-steps-"));
     try {
@@ -60,7 +60,7 @@ describe("qfai init distributes the step layer", () => {
     }
   });
 
-  // QFAI:EX-0001-0203-22
+  // QFAI:EX-0001-0196-22
   it("keeps an edited step on a plain run and restores it under --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-steps-"));
     try {
@@ -81,8 +81,8 @@ describe("qfai init distributes the step layer", () => {
     }
   });
 
-  // QFAI:AC-0001-0217-01
-  // QFAI:EX-0001-0217-01
+  // QFAI:AC-0001-0210-01
+  // QFAI:EX-0001-0210-01
   it("leaves a fresh install with no step-tree finding", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-steps-"));
     try {

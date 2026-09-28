@@ -63,8 +63,8 @@ afterEach(async () => {
 });
 
 describe("story-tree prototyping report", () => {
-  // QFAI:AC-0001-0067-02
-  // QFAI:EX-0001-0067-04
+  // QFAI:AC-0001-0065-02
+  // QFAI:EX-0001-0065-04
   it("shows the no-pack state as prototyping not run here when evidence is absent", async () => {
     const root = await sandbox();
     await seedReportInput(root, validation());
@@ -84,8 +84,8 @@ describe("story-tree prototyping report", () => {
     expect(written).toContain("- Status: no-pack");
   });
 
-  // QFAI:AC-0001-0067-01
-  // QFAI:EX-0001-0067-02
+  // QFAI:AC-0001-0065-01
+  // QFAI:EX-0001-0065-02
   it("reports accepted screenshot and missing HTML evidence with the validator finding", async () => {
     const root = await sandbox();
     const evidence = ".qfai/evidence/prototyping";

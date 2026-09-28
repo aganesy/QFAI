@@ -2,8 +2,8 @@
  * Integration: shipped GitHub Actions workflow-set topology.
  *
  * Covers the naming and topology half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0008, BR-0020-0009,
- * BR-0020-0036): the shipped `.github/` tree allows only `workflows/` as an immediate
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0008, BR-0018-0009,
+ * BR-0018-0036): the shipped `.github/` tree allows only `workflows/` as an immediate
  * child, every shipped filename matches the reserved `^qfai-[a-z0-9-]+\.yml$`
  * pattern, the set consists of two or more files, no shipped file references
  * another shipped file, and layer separation is expressed as jobs (or matrix
@@ -33,7 +33,7 @@ const repoRoot = path.resolve(packageRoot, "..", "..");
 /**
  * The adopter-facing test layers the orchestrator must separate as jobs or
  * matrix legs (spec REQ-0026's closed layer-name list). Value SSOT lives in
- * the test suite per the structural-shape philosophy (BR-0020-0023).
+ * the test suite per the structural-shape philosophy (BR-0018-0023).
  */
 const LAYER_NAMES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 

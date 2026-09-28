@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0201-19
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-19
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -183,7 +183,7 @@ it("A planted payload with an unknown key", async () => {
   }).toEqual({ reference: [false, false], measurement: [false, false] });
 });
 
-// QFAI:EX-0001-0216-05
+// QFAI:EX-0001-0209-05
 it("A stage work order names its steps, and only the routing work order its executor", async () => {
   const validate = await loadValidator();
   const example = (await payloadExamples()).find((entry) => entry.heading === "Work order");

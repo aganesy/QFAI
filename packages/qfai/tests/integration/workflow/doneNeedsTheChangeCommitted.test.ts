@@ -1,4 +1,4 @@
-// QFAI:AC-0001-0192-14
+// QFAI:AC-0001-0185-14
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -77,7 +77,7 @@ it("finish reports uncommitted and leaves the run ready until the run's changes 
   });
 }, 300_000);
 
-// QFAI:EX-0001-0192-41
+// QFAI:EX-0001-0185-41
 it("finish never waits on the run's own records, even where git does not ignore them", async () => {
   const root = await initProject();
   // A stale negation from an earlier managed block leaves the run's records visible to git.

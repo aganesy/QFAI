@@ -3,17 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: Prototyping mutation log
+Feature: Optional Side Artifact Neutrality
   # AC-0001-0151-01
-  Scenario: iter-NN evidence mutation audit-log (REQ-0165)
-    Given `iterate` or `certify` performing a destructive mutation (delete / overwrite) on any path under `.qfai/evidence/prototyping/iter-NN/*`,
-    When the mutation occurs,
-    Then a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` MUST be appended for every such mutation, including each file moved by `iterate --cycle 0 --force`.
-    And the mutation-log MUST be git-ignored by default.
+  Scenario: No usable source stops SDD preflight
+    Given there is no discussion pack, import-lite input, or explicit user requirement
+    When SDD preflight runs
+    Then SDD stops because it has no usable source.
 
   # AC-0001-0151-02
-  Scenario: Unlogged iter-NN mutation reviewer-gate finding (REQ-0165)
-    Given a PR introducing a code path that mutates iter-NN evidence,
-    When the path does not call the mutation-log writer,
-    Then Reviewer Gate MUST emit `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+  Scenario: An incomplete but usable pack remains source material
+    Given a usable discussion pack has an incomplete markdown file, a blocking OQ, or an optional side artifact such as `prototyping.yaml` that is absent, malformed or in a legacy format
+    When SDD preflight runs
+    Then those defects alone do not block SDD from reading the pack as source material
+    And the optional side artifact's state alone does not change preflight readiness
+    And SDD does not edit or rerun the discussion pack to clear its own gate.
 ```

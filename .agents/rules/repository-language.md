@@ -98,5 +98,5 @@ all.
 
 - Writing standard, once the language is settled: `documentation-clarity.md`
 - The `--format text` grammar those messages are printed in:
-  BR-0016-0093 to BR-0016-0096 in
-  `.qfai/spec/03_contract/cli/cli-0016-qfai-validate.md`
+  BR-0014-0092 to BR-0014-0095 in
+  `.qfai/spec/03_contract/cli/cli-0014-qfai-validate.md`

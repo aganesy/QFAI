@@ -32,7 +32,7 @@ async function templates(): Promise<string[]> {
 }
 
 describe("shipped contract templates", () => {
-  // QFAI:EX-0001-0057-09
+  // QFAI:EX-0001-0055-08
   it("parse as contracts with no rule-shape finding", async () => {
     const files = await templates();
     expect(files.length).toBeGreaterThanOrEqual(6);
@@ -42,7 +42,7 @@ describe("shipped contract templates", () => {
     }
   });
 
-  // QFAI:EX-0001-0057-09
+  // QFAI:EX-0001-0055-08
   it("show a Markdown rule as a BR-ID, Statement and Examples row", async () => {
     const file = path.join(
       SHIPPED_ASSISTANT,

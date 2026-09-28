@@ -3,11 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Tailwind-aware design-token validation
+Feature: Language-aware critique length
   # AC-0001-0128-01
-  Scenario: Tailwind ↔ gate alignment (preflight allowlist + body-scope)
-    Given an iter authored faithfully to the shipped `generator-prompt.md`,
-    When `findDesignMdViolations(html, designMd)` runs with the preflight literal allowlist and the gate scope narrowed to `<body>`,
-    Then `designMdViolations[]` MUST be empty for every preflight literal enumerated in the source pack §B-4 / §3 (Tailwind CDN preflight literals, internal `--tw-*` custom properties, alpha-modifier `rgba()`, standard utility shorthand names).
-    And async fixture loading paths in the scanner unit tests MUST propagate read errors explicitly (no silent swallow).
+  Scenario: proseCritique cap, unit selected by the text
+    Given a Japanese-only `proseCritique` of 800–1500 characters, an English critique of 200–500 words, and a short critique in either language,
+    When QFAI-PROT-002 evaluates the prose, selecting CJK characters as the unit where the text carries CJK and whitespace-separated words otherwise,
+    Then all three MUST pass: the cap binds only above it, and neither unit has a lower bound.
+    And over the cap the error text MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
 ```

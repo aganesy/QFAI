@@ -10,8 +10,8 @@
  *     under a one-minor-release deprecation window (sunset: qfai 1.10.0);
  *     non-blocking so legacy contracts can migrate without a hard break.
  */
-// QFAI:EX-0001-0159-02
-// QFAI:EX-0001-0159-02
+// QFAI:EX-0001-0153-02
+// QFAI:EX-0001-0153-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -232,7 +232,7 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
     expect(empty.errors[0]?.message).toContain(".qfai/spec/03_contract/ui/ui-0001.yaml#home");
   });
 
-  // QFAI:EX-0001-0159-04
+  // QFAI:EX-0001-0153-04
   it("names the entry shape when a screen lists only plain string primary tasks", async () => {
     const strings = await prototypingPreflight(
       PASSING_UI_CONTRACT.replace(
@@ -265,7 +265,7 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
   // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
   // authored but `primary_tasks: []`) remains severity=error.
-  // QFAI:EX-0001-0159-03
+  // QFAI:EX-0001-0153-03
   it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
     await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);

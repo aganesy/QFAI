@@ -118,7 +118,7 @@ describe("qfai report on a story tree", () => {
     await expect(runReport({ root, format: "json" })).rejects.toThrow("invalid shape");
   });
 
-  // QFAI:EX-0001-0064-01
+  // QFAI:EX-0001-0062-01
   it("exits 2 and names the missing input when no validate output exists", async () => {
     const root = await storyRoot();
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -128,7 +128,7 @@ describe("qfai report on a story tree", () => {
     );
   });
 
-  // QFAI:EX-0001-0063-02
+  // QFAI:EX-0001-0061-02
   it("reports a narrow profile run in CI at warning without failing on it", async () => {
     const root = await storyRoot();
     vi.stubEnv("CI", "true");
@@ -153,7 +153,7 @@ describe("qfai report on a story tree", () => {
     }
   });
 
-  // QFAI:EX-0001-0068-04
+  // QFAI:EX-0001-0066-04
   it("requires a scoped input file for --flow", async () => {
     const root = await storyRoot();
     await writeValidation(root, []);
@@ -175,7 +175,7 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/report.spec-0001.md"))).toBe(false);
   });
 
-  // QFAI:EX-0001-0064-02
+  // QFAI:EX-0001-0062-02
   it("refuses a legacy spec layout", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacy-"));
     roots.push(root);

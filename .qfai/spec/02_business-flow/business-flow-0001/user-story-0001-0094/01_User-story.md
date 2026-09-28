@@ -1,5 +1,5 @@
-# US-0001-0094: TDD Micro-Cycle Execution
+# US-0001-0094: Item Completion Gate
 
 ## User Story
 
-As a developer, I want `/qfai-implement` to run the TDD cycle (Red, Green, Refactor) one test at a time, taking next the example (EX) with the lowest ID that no test annotates and writing its test carrying `QFAI:EX-NNNN-NNNN-NN`, so that production code is test-driven and the next test is read from the tests themselves rather than from a ledger.
+As a QA engineer, I want a 10-point completion gate for each TDD item whose scoped validation runs per business flow (`--flow BF-NNNN`), so that no item is marked `done` without full TDD cycle evidence and reviewer approval.

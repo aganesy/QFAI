@@ -67,8 +67,8 @@ async function stageNames(route: string, kind: string): Promise<string[][]> {
 }
 
 describe("the skills a workflow run's steps belong to", () => {
-  // QFAI:AC-0001-0202-04
-  // QFAI:EX-0001-0202-07
+  // QFAI:AC-0001-0195-04
+  // QFAI:EX-0001-0195-07
   it("opens every owner's description with its trigger condition", async () => {
     for (const skill of PLAN_STEP_OWNERS) {
       const description = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`)).description;
@@ -82,8 +82,8 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
-  // QFAI:AC-0001-0202-05
-  // QFAI:EX-0001-0202-08
+  // QFAI:AC-0001-0195-05
+  // QFAI:EX-0001-0195-08
   it("lists each owner's steps in order, with no review profile of its own", async () => {
     expect(await skillSteps("qfai-maintain")).toEqual(["maintain-edit"]);
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
@@ -114,8 +114,8 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(sdd).toContain("common-design-md");
   });
 
-  // QFAI:AC-0001-0202-06
-  // QFAI:EX-0001-0202-09
+  // QFAI:AC-0001-0195-06
+  // QFAI:EX-0001-0195-09
   it("leaves every owner model-invocable", async () => {
     for (const skill of PLAN_STEP_OWNERS) {
       const text = await readShipped(`skill/${skill}/SKILL.md`);
@@ -124,8 +124,8 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
-  // QFAI:AC-0001-0204-02
-  // QFAI:EX-0001-0204-02
+  // QFAI:AC-0001-0197-02
+  // QFAI:EX-0001-0197-02
   it("runs only qfai-atdd's own steps in the acceptance stages", async () => {
     const owned = await skillSteps("qfai-atdd");
     expect(owned).toEqual(["atdd-scaffold", "atdd-credentials", "atdd-author", "atdd-test-fix"]);
@@ -136,8 +136,8 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
-  // QFAI:AC-0001-0207-02
-  // QFAI:EX-0001-0207-02
+  // QFAI:AC-0001-0200-02
+  // QFAI:EX-0001-0200-02
   it("runs only qfai-implement's own steps, and never the seam step, in the plans", async () => {
     const owned = await skillSteps("qfai-implement");
     expect([...owned].sort()).toEqual(
@@ -170,8 +170,8 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(every.names).not.toContain("implement-seam");
   });
 
-  // QFAI:AC-0001-0214-04
-  // QFAI:EX-0001-0214-04
+  // QFAI:AC-0001-0207-04
+  // QFAI:EX-0001-0207-04
   it("runs only qfai-sdd's own steps in the story-authoring stages", async () => {
     const owned = await skillSteps("qfai-sdd");
     const authoring = await kindSteps(["sdd", "sdd_append"]);
@@ -184,9 +184,9 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(await stageNames("fix-defect", "sdd_append")).toEqual([["sdd-story", "sdd-gate"]]);
   });
 
-  // QFAI:AC-0001-0215-07
-  // QFAI:EX-0001-0215-08
-  // QFAI:EX-0001-0223-06
+  // QFAI:AC-0001-0208-07
+  // QFAI:EX-0001-0208-08
+  // QFAI:EX-0001-0216-06
   it("lists qfai-verify's nine steps and runs the whole verify block in every change route", async () => {
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
     let changeRoutes = 0;
@@ -201,8 +201,8 @@ describe("the skills a workflow run's steps belong to", () => {
     expect(changeRoutes).toBe(26);
   });
 
-  // QFAI:AC-0001-0206-03
-  // QFAI:EX-0001-0206-03
+  // QFAI:AC-0001-0199-03
+  // QFAI:EX-0001-0199-03
   it("runs only qfai-discussion's steps in the decide plans, and the UI sidecars step may pass", async () => {
     const owned = await skillSteps("qfai-discussion");
     expect(owned).toEqual([
@@ -222,8 +222,8 @@ describe("the skills a workflow run's steps belong to", () => {
     );
   });
 
-  // QFAI:AC-0001-0211-02
-  // QFAI:EX-0001-0211-02
+  // QFAI:AC-0001-0204-02
+  // QFAI:EX-0001-0204-02
   it("runs the four prototyping steps of the loop in the prototype-feature plan", async () => {
     const owned = await skillSteps("qfai-prototyping");
     expect(owned).toEqual([
@@ -247,7 +247,7 @@ async function unionOfReviewers(steps: string[]): Promise<string[]> {
 }
 
 describe("a parent skill invoked by name", () => {
-  // QFAI:AC-0001-0202-07
+  // QFAI:AC-0001-0195-07
   it("reads one step at a time, in order, and reviews once after the last step", async () => {
     const baseline = await readShipped("rule/shared-skill-operating-baseline.md");
     expect(flat(sectionOf(baseline, "## Running Steps"))).toMatch(
@@ -266,7 +266,7 @@ describe("a parent skill invoked by name", () => {
     );
   });
 
-  // QFAI:EX-0001-0202-10
+  // QFAI:EX-0001-0195-10
   it("runs the verify block and reviews it once with completion-reviewer and qa-gatekeeper", async () => {
     const skill = await readShipped("skill/qfai-verify/SKILL.md");
     const steps = (await skillSteps("qfai-verify")).filter((step) =>
@@ -282,7 +282,7 @@ describe("a parent skill invoked by name", () => {
     expect(await unionOfReviewers(steps)).toEqual(["completion-reviewer", "qa-gatekeeper"]);
   });
 
-  // QFAI:EX-0001-0202-11
+  // QFAI:EX-0001-0195-11
   it("skips the DESIGN.md step on a flow no UI contract serves and reviews the rest once", async () => {
     const steps = await skillSteps("qfai-sdd");
     expect(steps).toEqual([

@@ -14,8 +14,8 @@
  *       same reset fails (REQ-0174).
  */
 
-// QFAI:EX-0001-0140-01
-// QFAI:EX-0001-0140-02
+// QFAI:EX-0001-0136-01
+// QFAI:EX-0001-0136-02
 
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -258,7 +258,7 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).toContain("iter-00");
   });
 
-  // QFAI:EX-0001-0140-04
+  // QFAI:EX-0001-0136-04
   it("keeps legacy spec evidence when re-seeding over a legacy scope record", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -644,7 +644,7 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(stderr.join("")).toContain("iter-01 was removed before this failed");
   });
 
-  // QFAI:EX-0001-0140-03
+  // QFAI:EX-0001-0136-03
   it("puts back what the reset moved when clearing the iteration directories fails", async () => {
     // The moves stand until the whole reset does. A run that stopped here left
     // the previous loop's captures in a backup directory nothing would move

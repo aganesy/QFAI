@@ -4,8 +4,8 @@
  * Covers TC-0004-0023 (project_memory shape) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
-// QFAI:EX-0001-0047-02
-// QFAI:EX-0001-0048-01
+// QFAI:EX-0001-0045-02
+// QFAI:EX-0001-0046-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -40,7 +40,7 @@ describe("skillDocReferences validator", () => {
     }
   });
 
-  // QFAI:EX-0001-0047-02
+  // QFAI:EX-0001-0045-02
   it("does not emit project_memory warning when the block is present", async () => {
     const root = await newRoot("skill-projmem-ok");
     try {
@@ -66,7 +66,7 @@ describe("skillDocReferences validator", () => {
   });
 
   // TC-0004-0024: W-SKILL-DOC-BROKEN-REF
-  // QFAI:EX-0001-0048-01
+  // QFAI:EX-0001-0046-01
   it("TC-0004-0024: emits W-SKILL-DOC-BROKEN-REF for legacy .qfai/assistant/steering/ refs in a SKILL.md", async () => {
     const root = await newRoot("skill-brokenref");
     try {
@@ -131,7 +131,7 @@ describe("skillDocReferences validator", () => {
   });
 
   // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail fires
-  // QFAI:EX-0001-0047-02
+  // QFAI:EX-0001-0045-02
   it("TC-0004-0023 (mid-file): project_memory: block followed by another heading fires the not-trailing warning", async () => {
     const root = await newRoot("skill-projmem-midfile");
     try {

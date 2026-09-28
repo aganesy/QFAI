@@ -124,7 +124,7 @@ async function prototypingIssues(root: string, code: string): Promise<string[]> 
 }
 
 describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
-  // QFAI:EX-0001-0042-17
+  // QFAI:EX-0001-0042-14
   it("TC-3.8.1: an authored root DESIGN.md passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -145,7 +145,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon030?.severity).toBe("error");
   });
 
-  // QFAI:EX-0001-0042-10
+  // QFAI:EX-0001-0042-08
   it("TC-3.8.5: a prototyping.json with no handoff → DCON-012 on prototyping.json", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -158,7 +158,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon012[0]?.severity).toBe("error");
   });
 
-  // QFAI:EX-0001-0042-11
+  // QFAI:EX-0001-0042-09
   it("TC-3.8.5b: no prototyping.json → no handoff finding", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -194,7 +194,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(messages[0]).not.toContain("[1,2]");
   });
 
-  // QFAI:EX-0001-0042-10
+  // QFAI:EX-0001-0042-08
   it("a complete handoff does NOT emit DCON-012 or DCON-013", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -222,7 +222,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     ]);
   });
 
-  // QFAI:EX-0001-0042-10
+  // QFAI:EX-0001-0042-08
   it("a non-string finalArtifact is rejected with DCON-013 (not as missing)", async () => {
     // Distinct phrasing: present-but-invalid is "must be ... (got ...)",
     // not "missing required field" — an operator who wrote the field is
@@ -570,7 +570,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
       expect(messages[0]).toContain("must be a mapping");
     });
 
-    // QFAI:EX-0001-0098-01
+    // QFAI:EX-0001-0095-01
     it("reports the shipped example, copied and filled in with nothing", async () => {
       // The documented example writes its cells as `<screen id>` and the like,
       // and the word-form placeholder list knows none of them — so the unfilled

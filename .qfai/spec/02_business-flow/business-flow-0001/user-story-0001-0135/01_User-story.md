@@ -1,5 +1,5 @@
-# US-0001-0135: Optional local prototype server
+# US-0001-0135: Accepted screen capture mirror
 
 ## User Story
 
-As a `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag that is off by default, so that iterate can start and tear down a local HTTP server through a runner that refuses a port another process holds.
+As a maintainer, I want accepted-iteration content mirrored to `.qfai/evidence/prototyping/screenshots/<screen-id>.png` and `.qfai/evidence/prototyping/html/<screen-id>.html` on convergence, with screen IDs normalised to underscore casing throughout, so that the aggregate directory and the per-UI-contract directory use the same form.

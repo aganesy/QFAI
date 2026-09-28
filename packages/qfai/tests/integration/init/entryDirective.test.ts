@@ -4,12 +4,12 @@
  * Copilot instructions. The oracle is the directive's place and the skill it names, never its
  * wording.
  */
-// QFAI:AC-0001-0203-03
-// QFAI:EX-0001-0203-05
-// QFAI:EX-0001-0203-06
-// QFAI:EX-0001-0203-07
-// QFAI:EX-0001-0203-08
-// QFAI:EX-0001-0203-09
+// QFAI:AC-0001-0196-03
+// QFAI:EX-0001-0196-05
+// QFAI:EX-0001-0196-06
+// QFAI:EX-0001-0196-07
+// QFAI:EX-0001-0196-08
+// QFAI:EX-0001-0196-09
 import { lstat, readFile, readlink, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 

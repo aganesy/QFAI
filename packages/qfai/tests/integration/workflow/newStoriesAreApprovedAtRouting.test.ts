@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0192-01
-// QFAI:AC-0001-0192-02
+// QFAI:AC-0001-0185-01
+// QFAI:AC-0001-0185-02
 
 import { afterEach, expect, it } from "vitest";
 
@@ -32,7 +32,7 @@ const TWO_STORIES = {
   newStories: [...FEATURE_PROPOSAL.newStories, SECOND_STORY],
 };
 
-// QFAI:EX-0001-0192-03
+// QFAI:EX-0001-0185-03
 it("Each new story is asked about once, in the routing round, and recorded through decision", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, TWO_STORIES);

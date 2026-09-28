@@ -1,10 +1,10 @@
-# US-0001-0188: Research Observability
+# US-0001-0188: Stop only for my decision or a fact only I hold
 
 ## User Story
 
-As a developer debugging a failed research workflow, I want structured logs that capture URLs, extraction results and verification outcomes, so that I can trace where the research went wrong.
+As an operator, I want a request that could lose data, break a contract or reach outside the repository to stop and ask me before anything irreversible happens, and a change to the story tree applied only once I approve it, so that otherwise I am asked only for a value the run cannot find itself.
 
 ## Non-goals
 
-- Native OpenTelemetry integration.
-- A real-time monitoring dashboard.
+- A question whose answer the request or the repository already gives.
+- An approval inferred from a mode, a confidence value or an agent's own words.

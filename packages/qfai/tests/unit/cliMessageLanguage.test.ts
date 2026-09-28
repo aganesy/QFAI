@@ -77,7 +77,7 @@ const VALIDATE_CONTRACT_MD = path.join(
   "spec",
   "03_contract",
   "cli",
-  "cli-0016-qfai-validate.md",
+  "cli-0014-qfai-validate.md",
 );
 
 function reportJapaneseLines(relPath: string, source: string): string[] {

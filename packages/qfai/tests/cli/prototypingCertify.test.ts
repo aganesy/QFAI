@@ -391,7 +391,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
-  // QFAI:EX-0001-0122-04
+  // QFAI:EX-0001-0118-04
   it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -415,7 +415,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
-  // QFAI:EX-0001-0122-10
+  // QFAI:EX-0001-0118-10
   it("exits 2 when prototyping.json carries no top-level runId, even with fullHarness.runId", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -653,7 +653,7 @@ describe("qfai prototyping show-ui-contract", () => {
     await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(record), "utf-8");
   }
 
-  // QFAI:EX-0001-0125-02
+  // QFAI:EX-0001-0121-01
   it("shows the frozen and live UI contract IDs with a full primary descriptor", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -701,7 +701,7 @@ describe("qfai prototyping show-ui-contract", () => {
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 
-  // QFAI:EX-0001-0142-02
+  // QFAI:EX-0001-0138-02
   it("refuses a configured primary UI contract the config loader rejected", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

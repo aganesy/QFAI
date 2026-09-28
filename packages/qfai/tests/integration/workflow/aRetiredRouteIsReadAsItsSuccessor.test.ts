@@ -1,6 +1,6 @@
-// QFAI:AC-0001-0226-01
-// QFAI:AC-0001-0226-02
-// QFAI:AC-0001-0226-03
+// QFAI:AC-0001-0219-01
+// QFAI:AC-0001-0219-02
+// QFAI:AC-0001-0219-03
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -90,7 +90,7 @@ const RETIRED: [string, string[], string][] = [
   ["feature", ["sdd", "verify"], "add-feature"],
 ];
 
-// QFAI:EX-0001-0226-01
+// QFAI:EX-0001-0219-01
 it("Completed runs recorded under the five retired route ids", async () => {
   const shown: string[] = [];
   const unchanged: boolean[] = [];
@@ -110,7 +110,7 @@ it("Completed runs recorded under the five retired route ids", async () => {
   });
 });
 
-// QFAI:EX-0001-0226-02
+// QFAI:EX-0001-0219-02
 it("A run left in ready on bugfix, then next, resume and a stop", async () => {
   const root = await minimalProject();
   const runId = await runOnRetiredRoute(root, "bugfix", ["diagnose", "verify"], false);
@@ -149,7 +149,7 @@ function successorsIn(notes: string, retired: string): string[] {
   return [...row.matchAll(/`([a-z-]+)`/g)].slice(1).map((match) => match[1] ?? "");
 }
 
-// QFAI:EX-0001-0226-03
+// QFAI:EX-0001-0219-03
 it("The migration notes of the release that retires the five route ids", async () => {
   const manifest: unknown = JSON.parse(
     await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf8"),

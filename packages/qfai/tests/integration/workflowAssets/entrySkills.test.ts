@@ -223,15 +223,15 @@ async function filesUnder(root: string): Promise<string[]> {
 }
 
 describe("qfai-run", () => {
-  // QFAI:AC-0001-0201-05
-  // QFAI:EX-0001-0201-13
+  // QFAI:AC-0001-0194-05
+  // QFAI:EX-0001-0194-13
   it("keeps its SKILL.md within 150 lines", async () => {
     const lines = (await readShipped(RUN)).replace(/\n$/, "").split("\n");
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
-  // QFAI:AC-0001-0197-01
-  // QFAI:EX-0001-0197-01
+  // QFAI:AC-0001-0190-01
+  // QFAI:EX-0001-0190-01
   it("starts a run only for a routed request, a question included, and serves every other kind another way", async () => {
     const text = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
     expect(text).toMatch(/only `routed` calls `start`/i);
@@ -248,8 +248,8 @@ describe("qfai-run", () => {
     expect(everyFile.join("\n")).not.toMatch(/read_only|plan_only/);
   });
 
-  // QFAI:AC-0001-0218-05
-  // QFAI:EX-0001-0218-35
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-35
   it("defines every extraction value, shows a routing result with an extraction and no route, and names no route", async () => {
     const reference = await readShipped(EXTRACTION);
     const defined = Object.fromEntries(
@@ -296,8 +296,8 @@ describe("qfai-run", () => {
     expect(naming).toEqual([]);
   });
 
-  // QFAI:AC-0001-0220-06
-  // QFAI:EX-0001-0220-06
+  // QFAI:AC-0001-0213-06
+  // QFAI:EX-0001-0213-06
   it("relays the route question with plain options, the recommendation apart, and answers it with the first option under a no-question mode", async () => {
     const questions = sectionOf(await readShipped(SCREENS), "## Questions");
     const row = rowOf(questions, "The route question");
@@ -328,8 +328,8 @@ describe("qfai-run", () => {
     );
   });
 
-  // QFAI:AC-0001-0199-01
-  // QFAI:EX-0001-0199-02
+  // QFAI:AC-0001-0192-01
+  // QFAI:EX-0001-0192-02
   it("writes nothing under shadow and starts no run under off", async () => {
     const mode = sectionOf(await readShipped(RUN), "## Mode");
     expect(flat(mode)).toMatch(/read the mode from `npx qfai workflow status` first/i);
@@ -341,8 +341,8 @@ describe("qfai-run", () => {
     );
   });
 
-  // QFAI:AC-0001-0192-13
-  // QFAI:EX-0001-0192-40
+  // QFAI:AC-0001-0185-13
+  // QFAI:EX-0001-0185-40
   it("names the narrowest write areas per stage kind, and never a stage's own records", async () => {
     const text = sectionOf(await readShipped(PAYLOADS), "## Routing result");
     expect(rowOf(text, "`sdd`")).toMatch(
@@ -367,16 +367,16 @@ describe("qfai-run", () => {
     expect(text).not.toMatch(/affectedSpecIds|newCapabilities|spec-id|\.qfai\/runs\//);
   });
 
-  // QFAI:AC-0001-0196-06
-  // QFAI:EX-0001-0196-15
+  // QFAI:AC-0001-0189-06
+  // QFAI:EX-0001-0189-14
   it("offers recovery as a reverse diff of the run's own paths only", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Halt notice"));
     expect(text).toMatch(/recovery is a reverse diff limited to the paths the run wrote/i);
     expect(text).toMatch(/never offer a reset, a stash, a branch switch or a worktree removal/i);
   });
 
-  // QFAI:AC-0001-0201-05
-  // QFAI:EX-0001-0201-17
+  // QFAI:AC-0001-0194-05
+  // QFAI:EX-0001-0194-17
   it("The operator-screens reference relays CLI strings in the operator's working language", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Every screen"));
     expect(text).toMatch(
@@ -384,7 +384,7 @@ describe("qfai-run", () => {
     );
   });
 
-  // QFAI:EX-0001-0192-07
+  // QFAI:EX-0001-0185-07
   it("announces the checked plan in plain words, naming no route or stage identifier and asking nothing", async () => {
     const screens = await readShipped(SCREENS);
     expect(flat(sectionOf(screens, "## Every screen"))).toMatch(
@@ -393,8 +393,8 @@ describe("qfai-run", () => {
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/it asks nothing/i);
   });
 
-  // QFAI:AC-0001-0192-17
-  // QFAI:EX-0001-0192-54
+  // QFAI:AC-0001-0185-17
+  // QFAI:EX-0001-0185-54
   it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Completion report"));
     expect(text).toMatch(
@@ -406,8 +406,8 @@ describe("qfai-run", () => {
 });
 
 describe("qfai-maintain", () => {
-  // QFAI:AC-0001-0198-01
-  // QFAI:EX-0001-0198-02
+  // QFAI:AC-0001-0191-01
+  // QFAI:EX-0001-0191-02
   it("edits only non-normative text in the write scope and returns the four receipts", async () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     expect(frontMatterOf(await readShipped(MAINTAIN)).steps).toEqual(["maintain-edit"]);
@@ -426,8 +426,8 @@ describe("qfai-maintain", () => {
     }
   });
 
-  // QFAI:AC-0001-0198-02
-  // QFAI:EX-0001-0198-04
+  // QFAI:AC-0001-0191-02
+  // QFAI:EX-0001-0191-04
   it("stops before an edit with a semantic effect and leaves the run blocked on the owner", async () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     const edit = flat(sectionOf(skill, "## The edit"));
@@ -454,10 +454,10 @@ describe("qfai-maintain", () => {
 });
 
 describe("the entry skills' routing entries", () => {
-  // QFAI:AC-0001-0167-05
-  // QFAI:EX-0001-0167-08
-  // QFAI:AC-0001-0192-05
-  // QFAI:EX-0001-0192-16
+  // QFAI:AC-0001-0161-05
+  // QFAI:EX-0001-0161-06
+  // QFAI:AC-0001-0185-05
+  // QFAI:EX-0001-0185-16
   it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and an independent reviewer", async () => {
     const run = await routingEntry("qfai-run");
     expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
@@ -504,7 +504,7 @@ describe("shipped text the workflow adds", () => {
     }
   });
 
-  // QFAI:EX-0001-0201-16
+  // QFAI:EX-0001-0194-16
   it("names the command as npx qfai workflow wherever the shipped tree mentions it", async () => {
     const files = [
       ...(await filesUnder(SHIPPED_ASSISTANT)),

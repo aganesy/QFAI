@@ -3,22 +3,39 @@
 ## Criteria
 
 ```gherkin
-Feature: Worker-Scoped Credential-Reuse Guidance
+Feature: Config Glob Tuning
   # AC-0001-0076-01
-  Scenario: Seven Credential-Reuse Rules and the Companion Rule Are Stated
-    Given the `/qfai-atdd` credential-reuse guidance artifact
-    When it is read
-    Then it states all seven rules as distinct statements — never sign in per test; never share one account across parallel workers; key the cached session by the pair of worker index and actor; tear the cache down at worker exit; re-authenticate and rewrite the cache when a restored session is rejected; a test that mutates its own account creates a dedicated one; test-level parallelism costs more workers, not more sign-ins — and it states the companion rule that an environment identifier injected by the caller forbids the harness from provisioning or tearing down that environment; and the skill entry point cross-links the artifact.
+  Scenario: Glob Pattern Coverage
+    Given the analysis results
+    When glob patterns are proposed
+    Then 3-10 include patterns cover all discovered test locations and no overly broad patterns (e.g., `**/*`) are used.
+    And exclude patterns are added only when the default exclusions do not cover the observed path.
 
   # AC-0001-0076-02
-  Scenario: Guidance Is Backend-Agnostic and Grows No Vocabulary
-    Given the credential-reuse guidance artifact
-    When it is scanned
-    Then it names no browser backend, contains no install command and no version pin, and presents any worked example as one illustration among possible backends; and it introduces no validator, no finding code, no new test layer and no new annotation token, so the layer token set, the allowed annotation forms and the ATDD finding-code set are unchanged from baseline.
+  Scenario: Config Minimal Diff
+    Given a project on the story tree with `qfai.config.yaml`
+    When /qfai-configure updates its configuration
+    Then it changes `validation.traceability.testFileGlobs` and, if needed, `testFileExcludeGlobs`
+    And it adds `paths.specsDir` only when that key is absent
+    And it adds routing or review-profile overrides only when the user requested them
+    And it writes nothing under `.qfai/assistant/`
 
   # AC-0001-0076-03
-  Scenario: Script-Naming Rule Is Adopter Guidance, Scoped to ATDD Layers
-    Given the credential-reuse guidance artifact
-    When its scope statement is read
-    Then the credential-class script-naming rule — a credential-free lane and a credentialed lane MUST be reachable by different script names — appears as adopter guidance only, the artifact states that QFAI keeps its own script names and that QFAI's own suite has zero credentials so none of this is dogfooded here, and the guidance obliges the E2E / API / Integration layers only, introducing no unit or component obligation (RJ-0008-0001).
+  Scenario: Story-Tree Specs Directory
+    Given a project on the story tree whose `qfai.config.yaml` has no `paths.specsDir`
+    When `/qfai-configure` updates the config
+    Then it writes `paths.specsDir: .qfai/spec`
+
+  # AC-0001-0076-04
+  Scenario: UI Surface Paths In The Configuration
+    Given a project on the story tree
+    When `/qfai-configure` updates its configuration
+    Then it writes `uiux.surfacePaths` with the globs of the paths observed to render a user-visible surface, or an empty list when the repository renders none
+    And the UI-affecting check reads the declared paths from that key alone
+
+  # AC-0001-0076-05
+  Scenario: Existing specs directory remains configured
+    Given a project on the story tree whose `qfai.config.yaml` already sets `paths.specsDir`
+    When `/qfai-configure` updates the config
+    Then the existing value is left unchanged
 ```

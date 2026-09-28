@@ -56,8 +56,8 @@ async function agentFindings(edit?: (text: string) => string): Promise<Issue[]> 
 }
 
 describe("routing keyed by step", () => {
-  // QFAI:AC-0001-0167-06
-  // QFAI:EX-0001-0167-09
+  // QFAI:AC-0001-0161-06
+  // QFAI:EX-0001-0161-07
   it("routes sdd-contract by its step name and leaves the parent and a profile-less step unrouted", async () => {
     const entries = await routingEntries();
     const matching = entries.filter((candidate) => candidate.step === "sdd-contract");
@@ -85,7 +85,7 @@ describe("routing keyed by step", () => {
     expect(await agentFindings()).toEqual([]);
   });
 
-  // QFAI:EX-0001-0167-09
+  // QFAI:EX-0001-0161-07
   it("reads the routing defaults as one list over files that each stay within the asset ceilings", async () => {
     const files = await readRoutingDefaultsFiles();
     const over = files.flatMap((file) => {
@@ -105,7 +105,7 @@ describe("routing keyed by step", () => {
     expect(keys).toContain("sdd-contract");
   });
 
-  // QFAI:EX-0001-0167-10
+  // QFAI:EX-0001-0161-08
   it("reports a step whose roles or routing-profile drift from its entry", async () => {
     const missingRole = await agentFindings((text) =>
       text.replace(/^\s*architecture-reviewer,?\s*$/m, ""),
@@ -132,8 +132,8 @@ describe("routing keyed by step", () => {
 });
 
 describe("routing defaults come from the installed package", () => {
-  // QFAI:AC-0001-0167-03
-  // QFAI:EX-0001-0167-11
+  // QFAI:AC-0001-0161-03
+  // QFAI:EX-0001-0161-09
   it("stops and names the install command when the package is not installed", async () => {
     const rule = (await readShipped("rule/agent-selection.md")).replace(/\s+/g, " ");
     expect(rule).toContain(

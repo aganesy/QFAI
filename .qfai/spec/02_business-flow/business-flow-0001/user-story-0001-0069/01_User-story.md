@@ -1,5 +1,5 @@
-# US-0001-0069: ATDD Test Volume Estimation
+# US-0001-0069: API Acceptance Test Implementation
 
 ## User Story
 
-As a QA engineer, I want a test volume estimate computed from the business flows and acceptance criteria in scope, so that I can plan ATDD coverage systematically.
+As a QA Engineer, I want an API test for every acceptance criterion exercised through the API, annotated with `QFAI:AC-NNNN-NNNN-NN`, so that the criteria an API contract enforces are verified at the API layer.

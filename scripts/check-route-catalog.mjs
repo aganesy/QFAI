@@ -36,7 +36,7 @@ import { blobAt, resolveRange } from "./check-shipped-ci-parity.mjs";
 const require = createRequire(import.meta.url);
 const { parse: parseYaml } = require("./../packages/qfai/node_modules/yaml");
 
-export const CONTRACT = ".qfai/spec/03_contract/cli/cli-0017-qfai-workflow.md";
+export const CONTRACT = ".qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md";
 export const DECISIONS = ".qfai/spec/decisions.md";
 export const PLANS_DIR = "packages/qfai/assets/defaults/workflows";
 

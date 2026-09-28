@@ -1,6 +1,6 @@
-// QFAI:AC-0001-0192-05
-// QFAI:AC-0001-0223-03
-// QFAI:EX-0001-0192-51
+// QFAI:AC-0001-0185-05
+// QFAI:AC-0001-0216-03
+// QFAI:EX-0001-0185-51
 
 import { afterEach, expect, it } from "vitest";
 
@@ -68,7 +68,7 @@ it("An E2E test annotates the flow and an integration test annotates its criteri
   ).toEqual(accepted);
 });
 
-// QFAI:EX-0001-0223-03
+// QFAI:EX-0001-0216-03
 it("The criterion is annotated only in a unit test, and no exception row exempts it", async () => {
   expect(
     await authorPassed({
@@ -86,7 +86,7 @@ it("The flow is annotated only in an integration test", async () => {
   ).toEqual(refused);
 });
 
-// QFAI:EX-0001-0192-52
+// QFAI:EX-0001-0185-52
 it("A criterion a DONE test exception names, with no example annotated", async () => {
   expect(
     await authorPassed({ "tests/e2e/flow.test.ts": [FLOW_ID], [TEST]: [] }, [

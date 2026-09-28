@@ -1,5 +1,5 @@
-# US-0001-0130: Safe CSS-wide keywords
+# US-0001-0130: Optional prototype capture
 
 ## User Story
 
-As an iteration author, I want `inherit`, `initial`, `unset`, `revert` and `currentColor` treated as safe by every scanner, so that idiomatic CSS-wide keywords do not block convergence.
+As a `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --capture` flag that is off by default, so that I can opt into PNG and HTML capture per the Capture contract without breaking the default no-capture posture.

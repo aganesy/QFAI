@@ -1,9 +1,9 @@
-// QFAI:AC-0001-0216-01
-// QFAI:AC-0001-0216-02
-// QFAI:AC-0001-0216-03
-// QFAI:AC-0001-0216-04
-// QFAI:AC-0001-0216-05
-// QFAI:AC-0001-0216-06
+// QFAI:AC-0001-0209-01
+// QFAI:AC-0001-0209-02
+// QFAI:AC-0001-0209-03
+// QFAI:AC-0001-0209-04
+// QFAI:AC-0001-0209-05
+// QFAI:AC-0001-0209-06
 
 import { describe, expect, it } from "vitest";
 
@@ -111,7 +111,7 @@ function stepEntry(name: string, passThrough: boolean, decisionPoint: "user" | n
 }
 
 describe("a stage runs every step its route names", () => {
-  // QFAI:EX-0001-0216-01
+  // QFAI:EX-0001-0209-01
   it("names every step of the add-feature sdd stage in plan order, each with its pass-through mark", async () => {
     const { workOrder } = issued(await shippedPlan("add-feature"));
     const steps = workOrder.steps ?? [];
@@ -133,7 +133,7 @@ describe("a stage runs every step its route names", () => {
     });
   });
 
-  // QFAI:EX-0001-0216-05
+  // QFAI:EX-0001-0209-05
   it("names each step of the restate-records spec stage with its marks, and no executor or operation", async () => {
     const plan = await shippedPlan("restate-records");
     const { workOrder } = issued(plan, ["diagnose"], { diagnosis: DIAGNOSIS });
@@ -156,7 +156,7 @@ describe("a stage runs every step its route names", () => {
     });
   });
 
-  // QFAI:EX-0001-0216-02
+  // QFAI:EX-0001-0209-02
   it("keeps a pass-through step in the work order and records its pass in the result", async () => {
     const plan = await shippedPlan("fix-defect");
     const acceptance = issued(plan, ["diagnose", "spec"], { diagnosis: DIAGNOSIS });
@@ -181,7 +181,7 @@ describe("a stage runs every step its route names", () => {
     });
   });
 
-  // QFAI:EX-0001-0216-06
+  // QFAI:EX-0001-0209-06
   it("requires the union of every step's reviewers, each once", async () => {
     const restate = await shippedPlan("restate-records");
     const build = await shippedPlan("apply-settled-build");
@@ -200,7 +200,7 @@ describe("a stage runs every step its route names", () => {
     ]);
   });
 
-  // QFAI:EX-0001-0216-08
+  // QFAI:EX-0001-0209-08
   it("raises only the implementation steps' review in a run restoring an authorization", async () => {
     const plan = await shippedPlan("apply-settled-build", ["authorization-restored"]);
     const heavy = ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"];
@@ -212,7 +212,7 @@ describe("a stage runs every step its route names", () => {
     ]).toEqual([["completion-reviewer"], heavy, heavy]);
   });
 
-  // QFAI:EX-0001-0216-07
+  // QFAI:EX-0001-0209-07
   it("accepts one result for the whole work order, with one verdict per required role", async () => {
     const accepted = acceptOn(issued(await shippedPlan("apply-settled-build"), ["spec"]), {
       reviewResults: [
@@ -224,7 +224,7 @@ describe("a stage runs every step its route names", () => {
     expect([accepted.verdict.ok, accepted.verdict.run?.state]).toEqual([true, "ready"]);
   });
 
-  // QFAI:EX-0001-0216-04
+  // QFAI:EX-0001-0209-04
   it("re-routes at its declared branch point when the stage finds work no step of its route does", async () => {
     const first = issued(await shippedPlan("apply-settled-spec"));
     const returned = acceptOn(
@@ -276,7 +276,7 @@ describe("a route proposal names no stage and no step", () => {
     },
   });
 
-  // QFAI:EX-0001-0216-03
+  // QFAI:EX-0001-0209-03
   it("refuses optional steps and required stages as unknown keys before the proposal is read", () => {
     expect([
       stageResultRefusals(routingResult({ optionalSteps: ["sdd-contract"] })),

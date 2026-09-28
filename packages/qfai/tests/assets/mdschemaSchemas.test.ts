@@ -600,7 +600,7 @@ describe("the constraint document states each limit in plain words", () => {
     ["a business rule ID", `${TECHNICAL}| TC-01 | BR-0003-0001 holds | Portable |\n`],
     ["an example ID", `${TECHNICAL}| TC-01 | Deterministic | EX-0001-0039-01 |\n`],
     ["an acceptance-criterion ID", `${TECHNICAL}| TC-01 | Deterministic | AC-0001-0039-01 |\n`],
-    ["a contract ID", `${TECHNICAL}| TC-01 | CLI-0016 decides it | Reproducible |\n`],
+    ["a contract ID", `${TECHNICAL}| TC-01 | CLI-0014 decides it | Reproducible |\n`],
     [
       "an Impact column",
       "| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters | CI |\n",

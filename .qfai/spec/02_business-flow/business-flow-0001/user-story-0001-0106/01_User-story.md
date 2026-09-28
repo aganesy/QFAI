@@ -1,5 +1,5 @@
-# US-0001-0106: Structural design checklist
+# US-0001-0106: Acceptance of the latest iteration
 
 ## User Story
 
-As a design reviewer, I want a fixed structural checklist for color, typography, spacing, border radius, shadow, and do's/don'ts, so that visual quality is reviewed against declared criteria.
+As a maintainer, I want the harness to accept the latest iteration whether or not it scores higher than earlier iterations, so that the AI is rewarded, not penalized, for attempting a radical reinvention.

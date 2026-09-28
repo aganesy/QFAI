@@ -1,5 +1,5 @@
 // QFAI:EX-0004-0001-01
-// QFAI:EX-0001-0053-06
+// QFAI:EX-0001-0051-06
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -81,7 +81,7 @@ describe("story-tree structure", () => {
     }
   });
 
-  // QFAI:EX-0001-0053-07
+  // QFAI:EX-0001-0051-07
   it("reports a constraint ID that is not its row's place in its section", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
     try {

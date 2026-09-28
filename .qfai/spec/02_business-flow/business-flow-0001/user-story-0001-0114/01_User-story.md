@@ -1,5 +1,5 @@
-# US-0001-0114: Cycle-zero design hash recording
+# US-0001-0114: Project-wide UI-contract resolution
 
 ## User Story
 
-As an AI generator, I want `qfai prototyping iterate --cycle 0` to record `sha256(DESIGN.md)` into `prototyping.json#designMd.sha256`, so that every later cycle and `certify` can tell whether `DESIGN.md` changed during the loop.
+As an AI developer operating the skill, I want one `/qfai-prototyping` invocation to resolve every UI-bearing UI contract (`UI-NNNN`) in the consumer project, so that the project-wide prototype set evolves in a single run without per-invocation primary-contract selection.

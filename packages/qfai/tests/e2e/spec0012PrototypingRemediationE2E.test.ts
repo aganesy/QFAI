@@ -11,7 +11,7 @@
  * --cycle out-of-range). Phase 4 adds US-0012-0132/0133/0134/0135/0136
  * (Operator UX surface: [BLOCKED] summary + primaryUiContract
  * normalisation + lap-009/010 advisory + --license-patch + iter-NN/
- * iterate-context.json). US-0001-0191 covers the read-only
+ * iterate-context.json). US-0001-0184 covers the read-only
  * `--check-convergence` peek.
  */
 // QFAI:BF-0001
@@ -518,7 +518,7 @@ describe("US-0012-0137: --cycle out-of-range error + peek hint", () => {
   });
 });
 
-describe("US-0001-0191: iterate --check-convergence reports the recorded loop state read-only", () => {
+describe("US-0001-0184: iterate --check-convergence reports the recorded loop state read-only", () => {
   async function listTree(dir: string): Promise<string[]> {
     const entries = await readdir(dir, { recursive: true });
     return entries.map((entry) => entry.split(path.sep).join("/")).sort();
@@ -543,7 +543,7 @@ describe("US-0001-0191: iterate --check-convergence reports the recorded loop st
     }
   }
 
-  // QFAI:US-0001-0191
+  // QFAI:US-0001-0184
   it("reports a budget-exhausted loop as not converged and a converged one as converged, without --cycle and without writing", async () => {
     const root = await p2TempDir();
     await seedPhase2Project(root);

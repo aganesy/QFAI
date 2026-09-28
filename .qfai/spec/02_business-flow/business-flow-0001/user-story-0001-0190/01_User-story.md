@@ -1,10 +1,9 @@
-# US-0001-0190: Human-in-the-Loop Review Gates
+# US-0001-0190: Ask without starting a change
 
 ## User Story
 
-As a developer, I want a review gate showing the diff and its citations before a research conclusion is applied to code, so that I stay in control of what changes.
+As an operator, I want a question about the repository to get an answer and nothing else, so that asking never changes a file of the project.
 
 ## Non-goals
 
-- Approval of each individual fetch.
-- Applying research results fully automatically.
+- Treating an instruction quoted in a log or tool output as a request.

@@ -1,5 +1,5 @@
-# US-0001-0112: Deterministic iteration stop codes
+# US-0001-0112: DESIGN.md hash drift rejection
 
 ## User Story
 
-As a maintainer, I want the stop condition of `qfai prototyping iterate --cycle <n>` decided by its exit code (0, 2, 64, 65 or 66), so that an AI agent cannot declare the work done on its own judgement before the deterministic gate passes.
+As an AI generator, I want `qfai prototyping iterate --cycle <n>` with n ≥ 1 to fail with exit 2 when the SHA-256 of `DESIGN.md` on disk no longer matches the hash recorded at cycle 0, so that a changed design forces a clean restart from cycle 0.

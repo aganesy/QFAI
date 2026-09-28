@@ -197,7 +197,7 @@ export async function quietUnrelatedWarnings(
  * Removes the whole install-provenance record from the adopter tree, leaving
  * every installed file on disk. This is the state of an adopter who installed
  * before the record existed: no entry for any name, so every shipped name is
- * `adopter-owned` under the shipped-workflows contract's state enum (BR-0020-0021).
+ * `adopter-owned` under the shipped-workflows contract's state enum (BR-0018-0021).
  *
  * The record path is duplicated from `src/shared/provenance.ts`, whose
  * `PROVENANCE_SEGMENTS` is module-private. The duplication is safe in the
@@ -214,7 +214,7 @@ export async function deleteInstallProvenanceRecord(dir: string): Promise<void> 
  * Removes ONE name's entry from the install-provenance record, leaving every
  * other entry — and every file on disk — untouched. Paired with
  * `deleteShippedWorkflow` it produces the `absent` state of the
- * shipped-workflows contract's state enum, BR-0020-0021 (no entry AND nothing on disk), for a
+ * shipped-workflows contract's state enum, BR-0018-0021 (no entry AND nothing on disk), for a
  * name the running package still ships, inside a record that stays non-empty.
  *
  * Goes through the production reader and writer instead of duplicating the
@@ -222,7 +222,7 @@ export async function deleteInstallProvenanceRecord(dir: string): Promise<void> 
  * edit needs the parsed record anyway. What that route costs, at least:
  *
  * - The round trip keeps only what the reader RETURNS and drops the rest: any
- *   top-level key beside `workflows` (BR-0020-0020 anticipates a second artifact
+ *   top-level key beside `workflows` (BR-0018-0020 anticipates a second artifact
  *   kind — make this a targeted JSON edit in the change that adds one), and any
  *   per-entry field outside the three the reader validates, an entry missing
  *   one of which the reader drops whole.

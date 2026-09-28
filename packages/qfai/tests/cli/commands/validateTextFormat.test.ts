@@ -29,7 +29,7 @@ import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
 const CONTRACT_PATH = path.resolve(
   __dirname,
-  "../../../../../.qfai/spec/03_contract/cli/cli-0016-qfai-validate.md",
+  "../../../../../.qfai/spec/03_contract/cli/cli-0014-qfai-validate.md",
 );
 
 const OPTIONAL_SLOTS = {
@@ -56,7 +56,7 @@ async function readGuideline(): Promise<string> {
     .rules.map((rule) => rule.statement)
     .filter((statement) => /text output|--format text|detail block/.test(statement));
   if (statements.length === 0) {
-    throw new Error("cli-0016-qfai-validate.md no longer states the text output grammar");
+    throw new Error("cli-0014-qfai-validate.md no longer states the text output grammar");
   }
   return statements.join("\n");
 }

@@ -1,9 +1,9 @@
-// QFAI:AC-0001-0222-02
-// QFAI:AC-0001-0222-03
-// QFAI:AC-0001-0222-04
-// QFAI:AC-0001-0222-05
-// QFAI:AC-0001-0222-06
-// QFAI:AC-0001-0221-03
+// QFAI:AC-0001-0215-02
+// QFAI:AC-0001-0215-03
+// QFAI:AC-0001-0215-04
+// QFAI:AC-0001-0215-05
+// QFAI:AC-0001-0215-06
+// QFAI:AC-0001-0214-03
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -109,7 +109,7 @@ const refusalsOf = (decision: { verdict: { error?: object } }) => {
   return error && "reasons" in error ? error.reasons : [];
 };
 
-// QFAI:EX-0001-0222-03
+// QFAI:EX-0001-0215-03
 it("Each verdict of a fix-defect diagnosis continues the route or re-routes it where the plan declares", async () => {
   const verdicts = [
     "missing-test",
@@ -148,7 +148,7 @@ it("Each verdict of a fix-defect diagnosis continues the route or re-routes it w
   });
 });
 
-// QFAI:EX-0001-0222-04
+// QFAI:EX-0001-0215-04
 it("A repair-consistency run re-routes on a check gap and on a retire outcome", async () => {
   const gap = await routed({ intent: "surface-contradiction" });
   await settle(gap, diagnosed("check-gap"));
@@ -163,7 +163,7 @@ it("A repair-consistency run re-routes on a check gap and on a retire outcome", 
   }).toEqual({ gap: "reroute:sweep-guard", triage: true, retire: "reroute:retire-mechanism" });
 });
 
-// QFAI:EX-0001-0222-05
+// QFAI:EX-0001-0215-05
 it("A bisect that reports a revert re-routes to revert-culprit; one reporting none continues", async () => {
   const regression: Reading = { intent: "defect-regression", entryFlags: ["repro", "last-good"] };
   const fixRegression = await routed(regression);
@@ -180,7 +180,7 @@ it("A bisect that reports a revert re-routes to revert-culprit; one reporting no
   ]);
 });
 
-// QFAI:EX-0001-0222-06
+// QFAI:EX-0001-0215-06
 it("A quarantine-flaky diagnosis of a product race re-routes; a defective test continues", async () => {
   const race = await routed({ intent: "flaky-test" });
   await settle(race);
@@ -195,7 +195,7 @@ it("A quarantine-flaky diagnosis of a product race re-routes; a defective test c
   ]);
 });
 
-// QFAI:EX-0001-0222-07
+// QFAI:EX-0001-0215-07
 it("A refactor that needs a behaviour change goes to the route it names among the declared ones", async () => {
   const compatible = await routed({ intent: "refactor" });
   await settle(compatible, {
@@ -217,7 +217,7 @@ it("A refactor that needs a behaviour change goes to the route it names among th
   });
 });
 
-// QFAI:EX-0001-0222-08
+// QFAI:EX-0001-0215-08
 it("A settled-record triage that finds more than the record settles changes nothing and re-routes", async () => {
   const run = await routed({ intent: "order", artifacts: ["spec"] });
   const { decision } = await settle(run, {
@@ -235,7 +235,7 @@ it("A settled-record triage that finds more than the record settles changes noth
   });
 });
 
-// QFAI:EX-0001-0222-09
+// QFAI:EX-0001-0215-09
 it("An adopted feature re-routes to the route triage-close names and keeps gate:user", async () => {
   const { run } = await adoptedToward("prototype-feature");
   const destination = await whereTo(run);
@@ -254,7 +254,7 @@ it("An adopted feature re-routes to the route triage-close names and keeps gate:
   });
 });
 
-// QFAI:EX-0001-0222-10
+// QFAI:EX-0001-0215-10
 it("A defect found while investigating re-routes by the decision rules", async () => {
   const run = await routed({ intent: "question-why" }, { proposedWriteScope: [] });
   await settle(run, { branch: { outcome: "defect-found", extraction: DEFECT } });
@@ -267,7 +267,7 @@ it("A defect found while investigating re-routes by the decision rules", async (
   });
 });
 
-// QFAI:EX-0001-0222-11
+// QFAI:EX-0001-0215-11
 it("A branch reported where the plan declares no such point is refused and changes nothing", async () => {
   const text = await routed(
     { intent: "docs", artifacts: ["docs"] },
@@ -294,7 +294,7 @@ it("A branch reported where the plan declares no such point is refused and chang
   });
 });
 
-// QFAI:EX-0001-0222-12
+// QFAI:EX-0001-0215-12
 it("A re-route keeps the diagnosis receipt at an unchanged revision and runs it again after a change", async () => {
   const kept = await routed({ intent: "defect" });
   await settle(kept, diagnosed("defective-test"));
@@ -323,7 +323,7 @@ it("A re-route keeps the diagnosis receipt at an unchanged revision and runs it 
   });
 });
 
-// QFAI:EX-0001-0222-12
+// QFAI:EX-0001-0215-12
 it("A carried receipt satisfying one step of a longer first stage leaves the stage's other steps", async () => {
   const diagnose = {
     stageInstanceId: "diagnose",
@@ -382,7 +382,7 @@ async function reroutedTwice(): Promise<JournalRun> {
 
 const adopted = { branch: { outcome: "adopted", route: "add-feature" }, closure: undefined };
 
-// QFAI:EX-0001-0222-13
+// QFAI:EX-0001-0215-13
 it("A third re-route asks the operator, whose proceed re-routes and whose stop cancels", async () => {
   const run = await reroutedTwice();
   const { decision: asked } = await settle(run, adopted);
@@ -443,7 +443,7 @@ it("A third re-route asks the operator, whose proceed re-routes and whose stop c
   });
 });
 
-// QFAI:EX-0001-0222-14
+// QFAI:EX-0001-0215-14
 it("A finding no stage of the route serves blocks the run and names the skill to invoke", async () => {
   const run = await routed({ intent: "test-defect" });
   await settle(run);
@@ -476,7 +476,7 @@ it("A finding no stage of the route serves blocks the run and names the skill to
   });
 });
 
-// QFAI:EX-0001-0222-15
+// QFAI:EX-0001-0215-15
 it("The routing work order of a re-route names it, and routing keeps the destination", async () => {
   const { run } = await adoptedToward("prototype-feature");
   const workOrder = run.next(await factsFor(run));
@@ -503,7 +503,7 @@ it("The routing work order of a re-route names it, and routing keeps the destina
   });
 });
 
-// QFAI:EX-0001-0219-08
+// QFAI:EX-0001-0212-08
 it("A re-route keeps review:heavy on a route with no default, and no payload lowers a modifier", async () => {
   const run = await routed({ intent: "defect", risks: ["data-loss"] });
   await settle(run, diagnosed("defective-test"));
@@ -530,7 +530,7 @@ it("A re-route keeps review:heavy on a route with no default, and no payload low
 
 const fact = (text: string) => ({ kind: "fact", text, effect: "proceed" });
 
-// QFAI:EX-0001-0221-04
+// QFAI:EX-0001-0214-04
 it("A request whose missing facts arrive is routed again by the decision rules", async () => {
   const run = await routed({ intent: "defect", entryFlags: ["vague"] }, { proposedWriteScope: [] });
   run.digestKey = "b".repeat(64);

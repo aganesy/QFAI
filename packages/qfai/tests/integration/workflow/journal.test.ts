@@ -1,19 +1,19 @@
-// QFAI:AC-0001-0195-05
-// QFAI:AC-0001-0196-01
-// QFAI:AC-0001-0196-04
-// QFAI:AC-0001-0196-05
-// QFAI:AC-0001-0196-09
-// QFAI:AC-0001-0199-01
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0195-11
-// QFAI:EX-0001-0196-03
-// QFAI:EX-0001-0196-09
-// QFAI:EX-0001-0196-11
-// QFAI:EX-0001-0196-12
-// QFAI:EX-0001-0196-13
-// QFAI:EX-0001-0199-03
-// QFAI:EX-0001-0201-18
-// QFAI:EX-0001-0201-20
+// QFAI:AC-0001-0188-05
+// QFAI:AC-0001-0189-01
+// QFAI:AC-0001-0189-04
+// QFAI:AC-0001-0189-05
+// QFAI:AC-0001-0189-09
+// QFAI:AC-0001-0192-01
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0188-11
+// QFAI:EX-0001-0189-03
+// QFAI:EX-0001-0189-08
+// QFAI:EX-0001-0189-10
+// QFAI:EX-0001-0189-11
+// QFAI:EX-0001-0189-12
+// QFAI:EX-0001-0192-03
+// QFAI:EX-0001-0194-18
+// QFAI:EX-0001-0194-20
 // Fault seeds: FAULT-001, FAULT-002, FAULT-005, FAULT-006, FAULT-022
 
 import { spawnSync } from "node:child_process";
@@ -94,7 +94,7 @@ async function trackedSummary(root: string, runId: string): Promise<unknown> {
   return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
 }
 
-// QFAI:EX-0001-0201-39
+// QFAI:EX-0001-0194-39
 it("Built CLI run with a distinctive request sentence under a temp root", async () => {
   const root = await minimalProject();
   const sentence = "Paint the zebra crossing ultraviolet at dawn.";
@@ -578,7 +578,7 @@ it("Built CLI status while", async () => {
   }).toEqual({ ok: true, sequence: field(routed.json, "run.sequence"), unchanged: true });
 });
 
-// QFAI:EX-0001-0201-40
+// QFAI:EX-0001-0194-40
 it("Run records of a feature run approved at routing", async () => {
   const root = await minimalProject();
   const { runId } = await featureRunAt(root, "implement");
