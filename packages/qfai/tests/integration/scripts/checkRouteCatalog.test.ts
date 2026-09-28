@@ -87,7 +87,7 @@ it("The shipped plans, an extra plan, a missing plan, and a plan its row no long
 });
 
 const TRIAGE_STALE = (cited: string) =>
-  `| BR-0017-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Default modifiers: none. Decision points: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
+  `| BR-0015-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Default modifiers: none. Decision points: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
 
 // The lines with `added` inserted after the last line `matches` holds.
 function insertedAfterLast(lines: string[], matches: (line: string) => boolean, added: string) {
