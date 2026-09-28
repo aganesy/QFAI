@@ -77,7 +77,8 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
 
-## Skipped when
+## Passes when
 
-Inside a run, the plan may gate this step with `when: proposed`: a change that
-touches no policy fact and no flow document leaves it out of the proposal.
+Read first: the triage rows and the scope they approve. The step passes when
+that scope changes no policy fact, no `tech.md` entry and no flow document. The
+pass names the triage rows it read.
