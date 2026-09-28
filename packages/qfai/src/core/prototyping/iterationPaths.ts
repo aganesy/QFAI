@@ -39,9 +39,8 @@ function padIndex(index: number): string {
  * picking the wrong one (which then failed at runtime with
  * `undefined` interpolated into the path). The `PerSpec` suffix
  * makes the (idx, specId) arity explicit. The legacy
- * `iteration.ts#iterationDir(idx)` remains in place until TDD-0384
- * (per-spec iter-dir migration) lands and removes the flat layout
- * altogether.
+ * `iteration.ts#iterationDir(idx)` remains in place while the flat
+ * iteration layout is still written.
  */
 export function iterationDirPerUiContract(index: number, uiContractId: string): string {
   return `${PROTOTYPING_EVIDENCE_REL}/iter-${padIndex(index)}/${uiContractId}`;

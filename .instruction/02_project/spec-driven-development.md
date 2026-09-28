@@ -58,7 +58,7 @@ qfai report → .qfai/report/report.md
 - Write contract rules from the agreed examples. A BR belongs to one contract
   and cites the EX IDs it explains.
 - Place contracts under `.qfai/spec/03_contract/` and keep
-  `03_contract/contracts.md` current. API, DB, UI and design contracts retain
+  `03_contract/contracts.md` current. API, DB and UI contracts retain
   their `QFAI-CONTRACT-ID` declarations; a CLI contract declares `CLI-NNNN` in
   its H1.
 

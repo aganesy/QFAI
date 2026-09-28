@@ -67,7 +67,7 @@ main or another open pull request adds too.
 
 ## Contracts
 
-- API, DB, UI and design contracts declare one
+- API, DB and UI contracts declare one
   `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`.
 - A CLI contract declares `# CLI-NNNN: <title>` as its H1 and is named
   `cli/cli-NNNN-<slug>.md`.

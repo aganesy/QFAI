@@ -18,7 +18,7 @@ and reporting.
   their US, AC and EX files. This repository has four flows: development,
   pull request CI, workspace diagnosis, and spec-pack migration.
 - `.qfai/spec/03_contract/`: contract index, technology stack and commands,
-  and contracts grouped by kind. API, DB, UI and design contracts declare
+  and contracts grouped by kind. API, DB and UI contracts declare
   `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`. A CLI contract
   declares `CLI-NNNN` in its H1 and is named `cli-NNNN-<slug>.md`.
 - `.qfai/spec/decisions.md` and `open-questions.md`: project-wide decision and
