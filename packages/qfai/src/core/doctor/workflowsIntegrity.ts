@@ -40,25 +40,6 @@
  * would report every installed workflow as drifted on a CRLF checkout — a
  * false advisory for every Windows adopter.
  *
- * The contracts do not merely omit that basis, they state the OPPOSITE one,
- * and the contradiction is named on both sides so a later reader can check it
- * rather than take it on trust. The implemented rule requires normalized-text
- * comparison. Contradicting it: the file-state rule of
- * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, whose `installed` / `modified`
- * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
- * sentence of the `workflows.integrity` rules of
- * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which says "whose bytes differ".
- * Neither file contains the string `normaliz`, `CRLF` or 改行 anywhere
- * (measured, not assumed), so the normalized basis is attributable to the
- * business rule ALONE.
- *
- * The contradiction is live and belongs to the contract owner, not to a
- * silence this module is free to fill — which is why the two contradicting
- * sections are cited by name above instead of being described. Implementing
- * the business rule is the deliberate call: raw bytes would ship the Windows
- * false advisory. Do not "align" this code to the contract wording without
- * that contradiction being resolved there first.
- *
  * These digests are consequently NOT comparable to the `sha256` field of a
  * provenance entry. That field is a RAW-BYTE digest of exactly the bytes the
  * installer wrote — the installer reads the written file with no encoding, so

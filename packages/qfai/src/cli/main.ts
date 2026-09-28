@@ -27,8 +27,8 @@ import { resolveToolVersion } from "../core/version.js";
  * Exit code for a command name nothing recognizes.
  *
  * Deliberately not `options.invalidExitCode`. That field carries the
- * CLI-arg-error code the exit-code rule in `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`
- * reserves — 2, for an unknown flag or a malformed value — and the parser never
+ * CLI-arg-error code the CLI's exit-code rule reserves — 2, for an unknown
+ * flag or a malformed value — and the parser never
  * sets `invalid` for an unrecognized command, so borrowing it here would file a
  * mistyped command under a row the contract wrote for something else. 1 keeps
  * the two distinguishable while still refusing to report success. A
