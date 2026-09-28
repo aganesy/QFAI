@@ -25,6 +25,6 @@ Feature: Fix a defective acceptance test with example coverage untouched
   Scenario: ATDD takes a test fix only for a test that checks a BF or an AC
     Given a diagnosis with the verdict defective-test
     When the first ID it matches is a BF or an AC
-    Then /qfai-atdd serves the test_fix work order
-    And it serves none when the first ID matched is an EX
+    Then `atdd-test-fix` repairs the test in the test-fix stage
+    And it passes when the first ID matched is an EX
 ```

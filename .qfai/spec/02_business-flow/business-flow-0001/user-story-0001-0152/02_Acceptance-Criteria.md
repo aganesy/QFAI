@@ -69,7 +69,7 @@ Feature: Unified SDD Workflow
 
   # AC-0001-0152-11
   Scenario: Inside A Run The Cycle Shapes The One Question
-    Given an `sdd` or `sdd_delta` stage inside a workflow run whose change touches a protected file,
+    Given an `sdd` stage inside a workflow run whose change touches a protected file,
     When its first attempt runs,
     Then the cycle runs on the proposal before the stage asks its one change question, the question shows the proposal as the cycle left it, each finding that goes to the user is a further `decision` question of the same `awaiting_input` result, and the attempt writes nothing.
     And the attempt holding the answer runs no further cycle, and writes the rejected findings and the records of the cycles the first attempt ran.

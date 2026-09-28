@@ -15,7 +15,7 @@ Feature: Diagnose a reported defect without changing product code
   Scenario: A diagnosis returns one verdict and what supports it
     Given a diagnose-only work order
     When the stage returns
-    Then the result carries exactly one verdict: a missing test, a defective test, a regression, or an expectation that differs from the request
+    Then the result carries exactly one verdict: a missing test, a defective test, a regression, an expectation that differs from the request, or one of the verdicts that end the run or move it to another route
     And it names the BF, AC or EX IDs of the bound flow that the next work order acts on
     And the reproduction, the cause candidates and the impact are in the record the result references
 

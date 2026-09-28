@@ -16,6 +16,6 @@ Feature: Skill orchestration design contract
     Given the skill order and the built-in route plans
     When each plan's stages are read against the order
     Then within each plan the stages of `qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd` and `qfai-verify` run in that order
-    And the plan places each `qfai-implement` and `qfai-maintain` stage
+    And the plan places each `qfai-implement`, `qfai-maintain` and `qfai-triage` stage
     And `qfai-run` sits above the order, and no plan names it
 ```

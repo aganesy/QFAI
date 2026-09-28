@@ -52,6 +52,6 @@ Feature: Verify as the final stage of a run
   Scenario: qfai-verify lists the steps every verify stage runs
     Given the qfai-verify SKILL.md and the built-in plans
     When its steps frontmatter is read
-    Then it lists every step whose owner is qfai-verify, in the order a verify stage runs them
-    And every verify stage of a plan names exactly those steps
+    Then it lists every step whose owner is qfai-verify
+    And the verify block of every change route names `verify-change-note`, `verify-context`, `verify-qfai-gate` and `verify-repo-gate`, in that order, and every other verify stage names steps from that list
 ```

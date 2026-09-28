@@ -25,6 +25,6 @@ Feature: Fix a defective example test with example coverage untouched
   Scenario: Implement takes a test fix only for a test that checks an EX
     Given a diagnosis with the verdict defective-test
     When the first ID it matches is an EX
-    Then /qfai-implement serves the test_fix work order
-    And it serves none when the first ID matched is a BF or an AC
+    Then `implement-test-fix` repairs the test in the test-fix stage
+    And it passes when the first ID matched is a BF or an AC
 ```

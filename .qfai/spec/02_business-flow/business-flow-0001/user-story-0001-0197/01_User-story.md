@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator, I want a question about the repository to get an answer and nothing else, so that no run starts and no file is written.
+As an operator, I want a question about the repository to get an answer and nothing else, so that asking never changes a file of the project.
 
 ## Non-goals
 
