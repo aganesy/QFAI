@@ -62,6 +62,8 @@ inputs:
       the drift its extraction removed. Pinning through a root-level `.node-version` was
       the other route and is not available — no agent may add a root file without
       approval.
+    # SHIPPED-CI: not-applicable
+    # Because: the description cites a business rule of this repository's own contracts, which the shipped templates do not carry.
     required: false
     default: "false"
 
