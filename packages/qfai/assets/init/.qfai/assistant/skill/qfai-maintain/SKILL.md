@@ -54,6 +54,8 @@ Markdown and link checks run over the changed files, each exiting 0. A check the
 project does not have is UNRUN, not a pass.
 
 The stage returns what `maintain-edit` lists under "What the stage returns".
+The report ends with a question listing the next actions, as
+`.agents/rules/user-questions.md` § 6 sets out.
 
 ## Default Autopilot Policy
 

@@ -172,6 +172,17 @@ describe("qfai-run", () => {
     );
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/it asks nothing/i);
   });
+
+  // QFAI:AC-0001-0192-17
+  // QFAI:EX-0001-0192-54
+  it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {
+    const text = flat(sectionOf(await readShipped(SCREENS), "## Completion report"));
+    expect(text).toMatch(
+      /the report ends with a question listing the next actions, the recommended one first/i,
+    );
+    expect(text).toContain("`.agents/rules/user-questions.md` § 6");
+    expect(text).toMatch(/under a no-question mode it lists them instead/i);
+  });
 });
 
 describe("qfai-maintain", () => {

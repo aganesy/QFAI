@@ -92,7 +92,8 @@ states. Resolve blocking findings using
 The invocation completes on the gate of `prototyping-handoff` and a PASS of the
 review above: `npx qfai prototyping certify --check` returns 0 and
 `/qfai-verify` returns PASS. Report every decision a session adopted, as that
-step says.
+step says. The report ends with a question listing the actions under Next, as
+`.agents/rules/user-questions.md` § 6 sets out.
 
 ## Next
 
