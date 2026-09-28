@@ -69,3 +69,6 @@ After `finish`:
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the run's history.
+- The report ends with a question listing the next actions, the recommended one
+  first, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question
+  mode it lists them instead.

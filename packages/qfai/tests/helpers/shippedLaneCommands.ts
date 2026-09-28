@@ -1364,8 +1364,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/document-schema.md`,
     // the rule master the run now seeds. Derived by running `qfai init` into a temp root; dropping
     // that one bullet reproduces `977424d0…` byte for byte.
+    //
+    // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
+    // ends with a question listing the next actions. Derived by running `qfai init` into a temp
+    // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     ".github/copilot-instructions.md",
-    "0a58ab20105052b8eebde3fe46304b46abddbb423bdf239cb8cf2e2b85723de6",
+    "dfa370bc935f988bf29374437af39a24cba55aacf178387e82e5a9f982869b0c",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1444,8 +1448,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for one more bullet in the same block, naming `.agents/rules/document-schema.md`,
   // the rule master the run now seeds. Dropping that one bullet from both written files
   // reproduces `51e3e03e…` and `07350d6a…` byte for byte.
-  ["AGENTS.md", "837a26630f7b9bf782ffcfa5c90800716be0bd0a76df364cfa582d17068d68d1"],
-  ["CLAUDE.md", "85cd31b5b97051166646738cd0758b13f03ffe437645d839c90c55c5e27e1cb0"],
+  //
+  // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
+  // ends with a question listing the next actions. Derived by running `qfai init` into a temp
+  // root; restoring the old wording in both written files reproduces `837a2663…` and
+  // `85cd31b5…` byte for byte.
+  ["AGENTS.md", "6d12562c684becef7fc90a742cc5c3413a594f6fbdcd7c92aa91c962f7a22305"],
+  ["CLAUDE.md", "1832d2675a3d78c7e67c0487c100479c2e15db28a40d468be4e6629bb1f57044"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

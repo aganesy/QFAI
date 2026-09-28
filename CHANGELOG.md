@@ -6,6 +6,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A turn that waits on you ends with a question.** When an agent reaches a
+  point where the next step is yours — a phase approved, a plan ready, a stage
+  finished — it ends the turn with a structured question listing the next
+  actions, the recommended one first, instead of a status report. The rule is a
+  new clause of `.agents/rules/user-questions.md`.
+
+  - The stage skills' final reports and the `qfai-run` completion report end
+    with that question.
+  - Where the question tool is not available, the rule's plain-text fallback
+    lists the same actions. Under a no-question mode such as `--auto` nothing
+    is asked, and the report lists the next actions.
+  - The reminder shown on every prompt names the case, and the rule summaries
+    `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the Copilot
+    instructions cite it. A summary an earlier release wrote and nobody edited
+    is refreshed.
+
 - **A change can be asked for in your own words.** The new `qfai-run` skill
   takes a request stated in free text, proposes a route, and runs each stage of
   it through the skill that owns the stage. The operator types no stage name.
