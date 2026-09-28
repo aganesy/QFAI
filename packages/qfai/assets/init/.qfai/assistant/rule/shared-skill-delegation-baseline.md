@@ -114,6 +114,7 @@ union of their reviewers
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
 
 - Final completion gate must be delegated to an independent reviewer.
+- Each reviewer records an explicit PASS or REVISE for the reviewed revision.
 
 ### Definition: independent reviewer (NORMATIVE)
 
