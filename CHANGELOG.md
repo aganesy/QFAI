@@ -27,8 +27,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     is refreshed.
 
 - **A change can be asked for in your own words.** The new `qfai-run` skill
-  takes a request stated in free text, proposes a route, and runs each stage of
-  it through the skill that owns the stage. The operator types no stage name.
+  takes a request stated in free text, reads it into facts, and runs each stage
+  of the route the CLI chooses from them through the skill that owns the stage.
+  The operator types no stage name.
   The run stops only for a decision the agent cannot take: whether to create a
   new story, whether to approve a change to the story tree, whether to accept
   a material risk such as data loss, a broken public contract or a production
@@ -38,10 +39,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     operations — `start`, `next`, `accept`, `decision`, `status`, `resume` and
     `finish` — and each prints one JSON document. It starts no agent and runs
     no repository command.
-  - A run follows one of five built-in plans — `direct`, `bugfix`,
-    `bounded-change`, `feature` and `discovery` — and binds at most one
-    business flow. The plans ship in the package and are not installed into
-    the project.
+  - A run follows one of 39 built-in routes, described in the next entry, and
+    binds at most one business flow. The plans ship in the package and are not
+    installed into the project.
   - A result that writes outside the checked scope, rewrites a row of
     `decisions.md` or `open-questions.md`, drops the test of an annotated
     example, or claims an approval the operator did not give is refused.
@@ -72,6 +72,56 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `qfai init` opens `AGENTS.md` and `CLAUDE.md` with a line that sends a
     first free-text change request to `qfai-run`, and adds it to an existing
     file that lacks it. Its summary names the workflow mode in force.
+
+- **A request runs one of 39 fixed routes, chosen by rules.** Each route has a
+  verb-object name, such as `edit-text`, `fix-defect`, `add-feature`,
+  `prototype-feature`, `decide-design` or `answer-question`, and belongs to one
+  of seven families: close, decide, consistency, change, fix, upkeep and
+  release.
+
+  - `qfai-run` reads the request into an extraction: its intent, entry flags,
+    qualifiers, signals, risks, gate, artifacts and confidence. It never names
+    a route. `npx qfai workflow` picks the route with 29 ordered decision
+    rules.
+  - A request that reads two ways stops with one question naming the candidate
+    routes by what they do, the main reading recommended. Under `--auto`,
+    `qfai-run` takes the first candidate and reports it as an assumption.
+  - Every run on a route runs the same steps. A pass-through step with nothing
+    to write records a pass with the evidence it read, and `accept` refuses the
+    pass while work the step owns remains.
+  - Three modifiers raise what a run asks without changing its steps:
+    `review:heavy` adds the blocking reviewers of the new `heavy` review
+    profile, `gate:user` stops at the route's decision points, and
+    `gate:release` asks for approval at the route's release point. They come
+    from the extraction and the route's defaults, a stage can raise one, and
+    nothing lowers one.
+  - A diagnosis at a branch point the route declares moves the run to a route
+    the plan names for that outcome. Accepted evidence is reused while the
+    revision is unchanged. A third re-route asks the operator first.
+  - A finding that no stage of the route serves leaves the run `blocked`, and
+    the notice names the stage skill to invoke.
+  - A run's `summary.json` records its `modifiers`, `reroutes` and `closure`.
+  - `scripts/check-route-catalog.mjs` keeps each plan equal to its row in the
+    workflow contract and refuses a route change that cites no new change
+    request. It is a repository tool; the package does not ship it.
+
+- **`qfai-triage` handles a request that ends without a change.** It answers a
+  question, closes a duplicate, asks for missing information, splits a request,
+  groups automated crash reports, takes in a security report, hands over an
+  operation only a person can run, and closes the request. It writes no tracked
+  file, and records any work the request needs as a follow-up request.
+
+- **More steps for the routes to run.**
+
+  - `qfai-implement` gains thirteen: bisect, revert, minimize, stress harness,
+    oracle parity, benchmark, refactor, retire, sweep, quarantine, dependency
+    bump, tooling change and backport.
+  - `implement-diagnose` ends in one of eleven verdicts, which decide where a
+    run on a fix route goes next, and has a read-only mode.
+  - `qfai-verify` gains six: change note, repeat run, external confirmation,
+    manual test plan, advisory and release notes.
+  - `sdd-triage` decides which of two disagreeing surfaces owns the truth, and
+    has a `settled` mode that reads recorded decisions without reopening them.
 
 - **Story-tree checks.** `qfai validate` reads the story tree through two new
   rule families.
@@ -125,7 +175,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     change request to `qfai-run`.
 
 - **Project overrides for agent routing and review profiles.** The defaults
-  ship inside the package, in `assets/defaults/agent-routing.yml` and
+  ship inside the package. The routing defaults are one file per owner under
+  `assets/defaults/agent-routing/`: one per skill whose steps they route,
+  `common.yml` for the `common-*` steps, `skills.yml` for the skills not split
+  into steps, and `_contract.yml` for what every file follows. Every reader,
+  `qfai validate` included, reads them in file-name order as one list, and a
+  finding about a routing default names its file. The review profiles are in
   `assets/defaults/review-profiles.yml`. A `routing:` or `reviewProfiles:`
   entry in `qfai.config.yaml` replaces the default entry of the same name as a
   whole, and a new name adds one. Migration step 3 turns the entries a project
@@ -152,8 +207,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Stage skills run in steps.** `qfai-discussion`, `qfai-sdd`,
   `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify` and
-  `qfai-maintain` are each a short list of steps. A run does only the steps its
-  change needs, and each stage is reviewed once, by the reviewers those steps
+  `qfai-maintain` are each a short list of steps. A run does every step its
+  route names, and each stage is reviewed once, by the reviewers those steps
   need.
 
   - `qfai init` installs each step as `.qfai/assistant/step/<name>/STEP.md`.
@@ -161,9 +216,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     lists the same skills.
   - A skill invoked by name runs its steps in order, reading one step at a
     time, and runs one review after the last.
-  - A plan stage names its steps. A step marked `proposed` runs only when the
-    route proposal lists it in `optionalSteps`. A work order names its steps
-    and requires the reviewers of all of them.
+  - A plan stage names its steps, and every step it names runs. A work order
+    names its steps and requires the reviewers of all of them.
   - Routing entries and `routing:` overrides in `qfai.config.yaml` are keyed
     by step.
   - `qfai validate` reports `QFAI-SKILLS-016` for a step tree that cannot be
@@ -204,35 +258,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The routing defaults are split into one file per owner.** The package's
-  routing defaults now live in `assets/defaults/agent-routing/`: one file per
-  skill whose steps they route, `common.yml` for the `common-*` steps and
-  `skills.yml` for the skills that are not split into steps. `_contract.yml`
-  holds what every file follows. Every reader, `qfai validate` included, reads
-  the files in file-name order as one list, and no routing entry changed. A
-  finding about a routing default names the file the entry is in.
+- **Breaking: the five routes of earlier 2.0.0 builds are retired.** A run
+  record written under one is read under its successor, and the record itself
+  is never rewritten.
 
-- **Breaking: a request runs one of 39 fixed routes, chosen by rules.** The
-  five routes `direct`, `bugfix`, `bounded-change`, `feature` and `discovery`
-  are replaced by a catalog of 39 routes with verb-object names, such as
-  `edit-text`, `fix-defect`, `add-feature`, `prototype-feature`,
-  `decide-design` and `answer-question`.
-
-  - `qfai-run` reports what a request asks — its intent, flags, risks and
-    confidence — and never names a route. `npx qfai workflow` picks the route
-    with 29 ordered decision rules. A route proposal no longer carries
-    `candidateRoute`, `requiredStages` or `optionalSteps`, and a plan no longer
-    carries `when`.
-  - Every run of a route runs the same steps. A step with nothing to write
-    passes with evidence and is refused when work it owns remains.
-  - Three modifiers raise review or add a stop without changing the steps:
-    `review:heavy`, `gate:user` and `gate:release`. A request that reads two
-    ways stops to ask which route to take.
-  - Questions, duplicates and hand-offs run routes that change no file, owned
-    by the new `qfai-triage` skill. A diagnosis that shows the run is on the
-    wrong route moves it at a declared point, keeping its evidence.
-  - A run record written under an old route id is read under the route that
-    replaced it; an unfinished run on an old route cannot continue.
+  - `direct` reads as `edit-text`, `bugfix` as `fix-defect`, `bounded-change`
+    as `add-feature` and `discovery` as `decide-design`.
+  - `feature` reads as `prototype-feature` when the run had a prototype stage,
+    and as `add-feature` otherwise.
+  - An unfinished run on a retired id cannot continue: every write operation
+    and `resume` refuse it `fail-closed`, and a `stop` still cancels it.
+  - `docs/MIGRATION-2.0.0.md` lists each retired id and the removed fields.
 
 - **An acceptance-test review pack names its own producer.** A review pack
   that `/qfai-atdd` writes declares `producer: "atdd"` in `summary.json` and
@@ -750,6 +786,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     separates its header as `| --- |` does.
 
 ### Removed
+
+- **Breaking: per-request step choices in a workflow run.** The route alone
+  fixes which steps run.
+
+  - A route proposal no longer carries `candidateRoute`, `requiredStages` or
+    `optionalSteps`. The run refuses each as an unknown key.
+  - A plan no longer carries `when` on a stage or a step, and no step is
+    marked `proposed`. What those decided is now a pass-through step's
+    obligation check or a branch point the route declares.
+  - `assets/defaults/agent-routing.yml` is gone; its entries are the files of
+    `assets/defaults/agent-routing/`, unchanged.
 
 - **Breaking: `qfai handoff upgrade` and string `primary_tasks` items.**
   The two compatibility forms whose sunset had passed are gone (#2564).

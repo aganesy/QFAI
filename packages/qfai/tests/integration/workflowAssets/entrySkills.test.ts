@@ -446,10 +446,10 @@ describe("qfai-maintain", () => {
     expect(effect).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
     expect(effect).toMatch(/`debts` holds one entry for the finding/i);
     expect(effect).toMatch(/`findingCode` is `maintain-semantic-effect`/);
-    expect(effect).toMatch(/`owningFlow` is `null`, because a `direct` run binds no flow/i);
+    expect(effect).toMatch(/`owningFlow` is `null`, because an `edit-text` run binds no flow/i);
     expect(effect).toMatch(/`detectingCommand` names the review or the command that found it/i);
     expect(effect).toMatch(
-      /`resolvingOwner` is the skill that owns that kind of change, never one the `direct` plan names/i,
+      /`resolvingOwner` is the skill that owns that kind of change, never one the `edit-text` plan names/i,
     );
   });
 });

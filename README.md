@@ -195,15 +195,27 @@ annotations do not satisfy these obligations.
 ## Operating model (free-text entry)
 
 You state the change once, in your own words.
-The `qfai-run` skill takes it from there: it proposes a route, `npx qfai workflow` checks it,
-and each stage runs through its own skill until `finish` confirms the completion target.
+The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
+`npx qfai workflow` then picks one of 39 fixed routes from those facts by ordered decision rules,
+and each stage of the route runs through its own skill until `finish` confirms the completion target.
 You type no stage name.
+
+- Every run on a route runs the same steps. A step with nothing to do records why and passes.
+- Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
+  stop for your approval. They never change the steps, and a run never loses one.
+- A question, a duplicate, a request missing information or an operation only a person can run
+  takes a route that changes no file, run by `qfai-triage`.
+- When a diagnosis shows the run is on the wrong route, the run moves at a point its route
+  declares and keeps its evidence. A third move asks you first.
+
+The package ships one plan file per route under `assets/defaults/workflows/`,
+named after the route.
 
 - Say `continue` to resume an interrupted run where it stopped.
 - Say `stop` to cancel the run.
-- The run asks you only for a decision it cannot take: creating a new story, approving a change
-  to the story tree, accepting a material risk such as data loss, a broken public contract or a
-  production effect, or a fact only you hold.
+- The run asks you only for a decision it cannot take: which route a request that reads two ways
+  should take, creating a new story, approving a change to the story tree, accepting a material
+  risk such as data loss, a broken public contract or a production effect, or a fact only you hold.
 - Say you do not want a commit, and the run stops at a verified working tree instead of done.
 
 `workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
@@ -211,7 +223,7 @@ You type no stage name.
 | Mode     | What the entry does                                    |
 | -------- | ------------------------------------------------------ |
 | `active` | The default. Runs the stages one after another         |
-| `shadow` | Proposes the stages and the reason, and writes nothing |
+| `shadow` | Says what the request asks and why, and writes nothing |
 | `off`    | Starts no run. You invoke the stage skills by name     |
 
 `active` chains stages only on a host whose capability report and first delegation pass.
@@ -233,8 +245,12 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages it needs,
-  hands each stage to the skill below that owns it, and reports when `finish` confirms the result.
+- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages of
+  the route the CLI picks, hands each stage to the skill below that owns it, and reports when
+  `finish` confirms the result.
+- **qfai-triage**: Answer a question, close a duplicate, ask for missing information, split a
+  request, group automated reports, take in a security report or hand over an operation only a
+  person can run. It changes no tracked file, and records any work needed as a follow-up request.
 - **qfai-maintain**: Fix a typo or other non-normative text inside a run, and show that no
   behaviour changed.
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
@@ -286,8 +302,8 @@ O->>R: Run npx qfai init
 R-->>O: Story tree and assistant kit installed
 
 O->>AG: Describe the change in your own words
-AG->>W: start, then propose the route
-W-->>AG: Checked plan
+AG->>W: start, then the facts read from the request
+W-->>AG: The route the rules chose, and its plan
 AG-->>O: The goal, the stages in order and the files it may change
 
 opt The change needs a new story

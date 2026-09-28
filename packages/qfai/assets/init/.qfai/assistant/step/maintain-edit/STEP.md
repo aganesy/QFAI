@@ -65,10 +65,10 @@ owner skill to invoke by name:
 - The outcome is `needs_repair`, and `changedFiles` is empty.
 - `debts` holds one entry for the finding:
   - `findingCode` is `maintain-semantic-effect`;
-  - `owningFlow` is `null`, because a `direct` run binds no flow;
+  - `owningFlow` is `null`, because an `edit-text` run binds no flow;
   - `detectingCommand` names the review or the command that found it;
   - `resolvingOwner` is the skill that owns that kind of change, never one the
-    `direct` plan names: `qfai-implement` for a code or configuration change,
+    `edit-text` plan names: `qfai-implement` for a code or configuration change,
     `qfai-sdd` for a story or contract.
 
 ## Passes when
