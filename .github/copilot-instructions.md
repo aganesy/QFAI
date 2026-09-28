@@ -49,3 +49,4 @@ Key rules to follow:
 - `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
 - `.agents/rules/document-schema.md` — every spec-tree document conforms to its closed schema: start from its template, write no history, and never opt out.
+- `.agents/rules/ai-readable-markdown.md` — a Markdown file an agent reads stays at or under 500 lines and a `SKILL.md` body at or under 20,000 characters; every pointer says when to read the file it names, and references stay one level deep.

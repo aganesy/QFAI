@@ -38,6 +38,11 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   call for the whole set. The remaining budget is in the response's headers, not
   in a rate-limit endpoint. `scripts/gh-budget.mjs` answers the two questions
   that cost the most when asked the expensive way.
+- A Markdown file an agent reads stays at or under 500 lines, and a `SKILL.md`
+  body at or under 20,000 characters. Every pointer says when to read the file
+  it names, and references stay one level deep. See
+  `.claude/rules/ai-readable-markdown.md` (master:
+  `.agents/rules/ai-readable-markdown.md`).
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's
   `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
   `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,

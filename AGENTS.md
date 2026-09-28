@@ -111,6 +111,9 @@ QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが
   the whole set; read the remaining budget off the response rather than from a
   rate-limit endpoint; the allowance belongs to the account and every session
   draws on it at once)
+- `ai-readable-markdown.md` (a Markdown file an agent reads stays at or under
+  500 lines and a `SKILL.md` body at or under 20,000 characters; every pointer
+  says when to read the file it names, and references stay one level deep)
 
 A `<name>.local.md` is an overlay. A rule that also governs an adopter's
 repository is written once, in the shipped master, and only what is specific to

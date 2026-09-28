@@ -28,6 +28,7 @@ the master rather than this file.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts; a turn that waits on the user ends with a question listing the next actions.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
 - `.agents/rules/document-schema.md` — every spec-tree document conforms to its closed schema: start from its template, write no history, and never opt out.
+- `.agents/rules/ai-readable-markdown.md` — a Markdown file an agent reads stays at or under 500 lines and a `SKILL.md` body at or under 20,000 characters; every pointer says when to read the file it names, and references stay one level deep.
 
 This section, markers included, is the only part `npx qfai init` writes, beside
 the review directive it adds when no operative copy exists. A repository that

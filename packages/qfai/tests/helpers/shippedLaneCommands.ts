@@ -1368,8 +1368,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
+    //
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/ai-readable-markdown.md`,
+    // the rule master the run now seeds. Derived from the list `buildCopilotInstructions` returns;
+    // dropping that one bullet reproduces `dfa370bc…` byte for byte.
     ".github/copilot-instructions.md",
-    "dfa370bc935f988bf29374437af39a24cba55aacf178387e82e5a9f982869b0c",
+    "7e2f90169f19937536c7e52edf9f31ef7213394e8306621aed03e9e4828b85b5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1453,8 +1457,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // ends with a question listing the next actions. Derived by running `qfai init` into a temp
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
-  ["AGENTS.md", "6d12562c684becef7fc90a742cc5c3413a594f6fbdcd7c92aa91c962f7a22305"],
-  ["CLAUDE.md", "1832d2675a3d78c7e67c0487c100479c2e15db28a40d468be4e6629bb1f57044"],
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/ai-readable-markdown.md`,
+  // the rule master the run now seeds. `qfai init` writes both files verbatim from `root/`, so the
+  // digests are those files hashed; dropping that one bullet from both reproduces `6d12562c…` and
+  // `1832d267…` byte for byte.
+  ["AGENTS.md", "749aa9989fb23df8b4553f017de46bc9bb874041891ba81b4aad9c768e8eaa66"],
+  ["CLAUDE.md", "7d8f56028259ba3f6b566532519a03bc79a4e3c3be6ceb32c23c94ebe4a02869"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1649,6 +1658,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/ai-readable-markdown.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
