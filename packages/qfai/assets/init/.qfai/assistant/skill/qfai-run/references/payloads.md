@@ -61,8 +61,17 @@ The routing work order's result carries the proposal.
   "testObservation": "not_applicable",
   "actor": { "agentInstance": "routing-1" },
   "proposal": {
-    "requestKind": "change",
-    "candidateRoute": "fix-defect",
+    "requestKind": "routed",
+    "extraction": {
+      "intent": "defect",
+      "entryFlags": ["repro", "expect"],
+      "qualifiers": [],
+      "signals": [],
+      "risks": [],
+      "gate": "none",
+      "artifacts": ["code", "tests"],
+      "confidence": "high"
+    },
     "goal": "One sentence",
     "expectedBehaviorRefs": [
       { "kind": "request", "ref": "request" },
@@ -80,13 +89,18 @@ The routing work order's result carries the proposal.
 }
 ```
 
-- `actor` names the agent instance that proposed the route. The run records it
-  as the recommender, and never counts it as an independent reviewer.
-- `requestKind` is `change`, `read_only`, `plan_only`, `verify_only`, `resume`,
-  `cancel` or `explicit_stage`. Only `change` takes a route; the others carry
-  `candidateRoute: null` and write nothing.
-- `candidateRoute` is one route of the catalog, such as `fix-defect`,
-  `add-feature`, `edit-text` or `answer-question`.
+- `actor` names the agent instance that wrote the extraction. The run records
+  it as the recommender, and never counts it as an independent reviewer.
+- `requestKind` is `routed`: a change, a question, a proposal to decide or a
+  report to close. The run refuses any other kind.
+- `extraction` holds the facts `references/extraction.md` defines: `intent`,
+  `entryFlags`, `qualifiers`, `signals`, `risks`, `gate`, `artifacts` and
+  `confidence`. `alternatives` is required at `low`, allowed at `medium` and
+  left out at `high`; each one is `{ intent, entryFlags, qualifiers, signals }`.
+- At `accept`, the CLI's decision rules choose the route from the extraction.
+  A proposal names no route, stage or step: the run refuses
+  `candidateRoute`, `route`, `requiredStages` and `optionalSteps` as unknown
+  keys.
 - `expectedBehaviorRefs` takes `request`, `flow-id`, `contract-id` and `path`.
   `observedRefs` takes `path` and `evidence`. A path is project-relative, names
   a file that exists, and holds no glob.
@@ -105,8 +119,9 @@ The routing work order's result carries the proposal.
   `.qfai/evidence/workflow/`, `.qfai/evidence/decision/`, or `decisions.md` or
   `open-questions.md` under `paths.specsDir`, and never overlaps a protected
   target. The run refuses any of these.
-- A proposal names no stage and no step. The route's plan fixes both, and the
-  run refuses `requiredStages` or `optionalSteps` as unknown keys.
+- A check that depends on the chosen route, such as the flow binding or the
+  write scope of a route that changes nothing, can refuse a proposal whose
+  extraction was valid. Revise it by the reasons `proposal-refused` lists.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
