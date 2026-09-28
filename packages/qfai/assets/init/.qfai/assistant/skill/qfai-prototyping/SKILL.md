@@ -94,6 +94,7 @@ review above: `npx qfai prototyping certify --check` returns 0 and
 `/qfai-verify` returns PASS. Report every decision a session adopted, as that
 step says. The report ends with a question listing the actions under Next, as
 `.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Next
 

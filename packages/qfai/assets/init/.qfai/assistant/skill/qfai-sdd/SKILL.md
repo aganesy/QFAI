@@ -98,6 +98,7 @@ reviewer verdicts, adopted grilling decisions, rejected options still excluded,
 and remaining questions. The next implementation route is `/qfai-atdd`; UI work
 may pass through `/qfai-prototyping` first. The report ends with a question
 listing those next actions, as `.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 

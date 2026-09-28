@@ -1374,15 +1374,6 @@ describe("assets guardrails", () => {
       absolute: true,
     });
     const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
-    const mandatoryDiscussSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
-    const discussSkillPath = path.resolve(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
     const approvedJapanesePaths = new Set([
       path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
@@ -1393,17 +1384,11 @@ describe("assets guardrails", () => {
       if (approvedJapanesePaths.has(normalizedPath)) {
         continue;
       }
-      const sanitized =
-        normalizedPath === discussSkillPath
-          ? content.replaceAll(mandatoryDiscussSentence, "")
-          : content;
-      if (japanesePattern.test(sanitized)) {
+      if (japanesePattern.test(content)) {
         matches.push(path.relative(repoRoot, filePath));
       }
     }
 
-    const discussContent = await readFile(discussSkillPath, "utf-8");
-    expect(discussContent).toContain(mandatoryDiscussSentence);
     expect(matches).toEqual([]);
   });
 
@@ -1878,7 +1863,7 @@ describe("assets guardrails", () => {
     expect(skill).toContain(canonicalPhrase);
   });
 
-  it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
+  it("ensures qfai-discussion hands off to /qfai-sdd through the next-action question", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1887,13 +1872,11 @@ describe("assets guardrails", () => {
       "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
-    const requiredSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
 
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
-    expect(content).toContain(requiredSentence);
-    expect(content).toMatch(/active user language/i);
-    expect(content).toContain("`/qfai-sdd`");
+    expect(content).toContain(
+      "End the turn with a question listing the next actions, `/qfai-sdd` recommended",
+    );
   });
 
   it("ensures qfai-discussion template packs exist", async () => {

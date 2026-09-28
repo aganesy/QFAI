@@ -2837,28 +2837,58 @@ describe("a later init refreshes the question-form summary an earlier release wr
   const bulletIn = (text: string): string | undefined =>
     text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
 
+  /**
+   * Every entry point and the Copilot file as that release left them. Returns
+   * what this release writes and what the earlier one did, per file.
+   */
+  async function seedSuperseded(
+    root: string,
+  ): Promise<Map<string, { current: string; earlier: string }>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const copilot = path.join(".github", "copilot-instructions.md");
+    const seeded = new Map<string, { current: string; earlier: string }>();
+    for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
+      const written = await readEntryPoint(root, name);
+      const bullet = bulletIn(written);
+      expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+      expect(bullet).toContain("a turn that waits on the user ends with a question");
+      const earlier = written.replace(bullet ?? "", superseded);
+      seeded.set(name, { current: written, earlier });
+      await writeFile(path.join(root, name), earlier, "utf-8");
+    }
+    return seeded;
+  }
+
   it("replaces the unedited bullet in every entry point and changes nothing else", async () => {
     await withProject(async (root) => {
-      for (const name of AGENT_ENTRY_POINT_FILES) {
-        await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
-      }
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const copilot = path.join(".github", "copilot-instructions.md");
-      const generated = new Map<string, string>();
-      for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
-        const written = await readEntryPoint(root, name);
-        const current = bulletIn(written);
-        expect(current, `${name} has no bullet for ${master}`).toBeDefined();
-        expect(current).toContain("a turn that waits on the user ends with a question");
-        generated.set(name, written);
-        await writeFile(path.join(root, name), written.replace(current ?? "", superseded), "utf-8");
-      }
+      const seeded = await seedSuperseded(root);
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      for (const [name, written] of generated) {
-        expect(await readEntryPoint(root, name), name).toBe(written);
+      for (const [name, { current }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(current);
       }
+    });
+  });
+
+  it("keeps the earlier bullet where the project edited its own question rule", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The update pass keeps an edited master, so the new summary would
+      // describe a clause this project's rule does not have.
+      const rule = path.join(root, ".agents", "rules", "user-questions.md");
+      const theirs = `${await readFile(rule, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(rule, theirs, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { earlier }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(earlier);
+      }
+      expect(await readFile(rule, "utf-8")).toBe(theirs);
     });
   });
 });

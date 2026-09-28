@@ -56,6 +56,7 @@ project does not have is UNRUN, not a pass.
 The stage returns what `maintain-edit` lists under "What the stage returns".
 The report ends with a question listing the next actions, as
 `.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 
