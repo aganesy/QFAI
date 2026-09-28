@@ -165,9 +165,13 @@ describe("qfai-implement in a workflow run", () => {
 
   // QFAI:AC-0001-0210-03
   // QFAI:EX-0001-0210-03
-  it("takes a test fix whose first matched ID is an EX, and leaves a BF or an AC", async () => {
+  it("repairs a test whose first matched ID is an EX, and passes on a BF or an AC", async () => {
     const text = await step(TEST_FIX);
-    expect(text).toMatch(/the first ID of the diagnosis's `matchedIds` is an EX/i);
-    expect(text).toMatch(/a BF or an AC is `qfai-atdd`'s/i);
+    expect(text).toContain("## Passes when");
+    expect(text).toMatch(/repairs the test when that ID is an EX/i);
+    expect(text).toMatch(
+      /When it is\s+a BF or an AC, this layer holds no defect: the step passes/i,
+    );
+    expect(text).toMatch(/A pass while the first matched ID is an EX is refused/i);
   });
 });
