@@ -827,6 +827,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   const details = {
     assistantDir: toRelativePath(root, report.assistantDir),
     maxLines: report.maxLines,
+    maxYamlLines: report.maxYamlLines,
     maxLineChars: report.maxLineChars,
     scanned: report.scanned,
     oversized: report.oversized,
@@ -861,11 +862,12 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       // opposite of what was checked.
       // Two counts, because the two ceilings measure different populations.
       // Every scanned asset is held to a width; the exempt ones are not held to
-      // a line count, so saying "all N are within 800 lines" would claim a check
+      // a line count, so saying "all N are within 500 lines" would claim a check
       // that did not run on them — and contradict the exemption note beside it.
       message:
         `all ${String(report.scanned - report.exempt.length)} assistant assets held to the ` +
-        `line ceiling are within ${report.maxLines} lines, and all ${report.scanned} are ` +
+        `line ceiling are within ${report.maxLines} lines (${report.maxYamlLines} for YAML), ` +
+        `and all ${report.scanned} are ` +
         `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
         `file carries a recorded width)${exemptNote}`,
       details,
@@ -903,7 +905,8 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
   const overruns = [
     ...(report.oversized.length > 0
       ? [
-          `${report.oversized.length} exceed ${report.maxLines} lines: ` +
+          `${report.oversized.length} exceed ${report.maxLines} lines ` +
+            `(${report.maxYamlLines} for YAML): ` +
             formatOversizedAssets(report.oversized),
         ]
       : []),

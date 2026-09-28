@@ -6,6 +6,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule for Markdown an agent reads.** The new shared rule
+  `.agents/rules/ai-readable-markdown.md` sets how such a file is sized and
+  split, and `qfai init` seeds it beside the other rule masters.
+
+  - A Markdown file an agent reads stays at or under 500 lines, and a
+    `SKILL.md` body at or under 20,000 characters.
+  - A split counts only when its pieces are loaded on demand, so the budget is
+    what a task loads rather than the size of one file.
+  - Every pointer to another file says when to read it, when not to, and what
+    it holds. References stay one level deep from the entry file, and one over
+    100 lines opens with a `## Contents` list.
+  - An obligation whose trigger an agent cannot judge for itself stays in the
+    entry file, and each rule has one home.
+  - The rule summaries `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the
+    Copilot instructions cite it.
+
 - **A turn that waits on you ends with a question.** When an agent reaches a
   point where the next step is yours — a phase approved, a plan ready, a stage
   finished — it ends the turn with a structured question listing the next
@@ -203,6 +219,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
+
+- **A Markdown file in the assistant tree may hold 500 lines.** `qfai doctor`
+  reports a `.qfai/assistant/` Markdown file over 500 lines, down from 800. A
+  YAML file there keeps its 800-line ceiling, and the width ceiling is
+  unchanged.
+
+- **The shipped skills follow the Markdown rule.**
+
+  - `qfai-configure` and `qfai-grilling` move sections their agents read only
+    in some runs into `references/`, word for word. The configure skill's
+    evidence template, principles and completion checklists, and the grilling
+    skill's rounds between agents, failed lookups, work-orders table, reviewer
+    gate and prototype-first questions each have a file. The body names each
+    one with when to read it.
+  - A skill reference no longer points to another reference. The step or skill
+    that loads it names the second file directly, with when to read it.
+  - A reference over 100 lines opens with a `## Contents` list of its sections.
+  - Every pointer from a `SKILL.md` to a reference says when to read it.
 
 - **An acceptance-test review pack names its own producer.** A review pack
   that `/qfai-atdd` writes declares `producer: "atdd"` in `summary.json` and

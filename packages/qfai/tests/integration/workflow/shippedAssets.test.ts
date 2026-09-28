@@ -14,6 +14,7 @@ import { afterEach, expect, it } from "vitest";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   ASSISTANT_ASSET_MAX_LINES,
+  ASSISTANT_YAML_ASSET_MAX_LINES,
   countLines,
   widestMeasurableLine,
 } from "../../../src/core/doctor/assetLineBudget.js";
@@ -57,17 +58,25 @@ it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the sc
   for (const file of files) {
     const text = await readFile(path.join(packageRoot, file), "utf8");
     const lines = countLines(text.replace(/\r?\n$/, ""));
-    if (lines > ASSISTANT_ASSET_MAX_LINES) over.push(`${file}: ${lines} lines`);
+    // Markdown is held to the Markdown ceiling; the plans and schemas are data.
+    const ceiling = file.endsWith(".md")
+      ? ASSISTANT_ASSET_MAX_LINES
+      : ASSISTANT_YAML_ASSET_MAX_LINES;
+    if (lines > ceiling) over.push(`${file}: ${lines} lines`);
     const widest = widestMeasurableLine(text);
     if (widest > ASSISTANT_ASSET_MAX_LINE_CHARS) over.push(`${file}: ${widest} characters`);
   }
 
   expect({
-    budget: [ASSISTANT_ASSET_MAX_LINES, ASSISTANT_ASSET_MAX_LINE_CHARS],
+    budget: [
+      ASSISTANT_ASSET_MAX_LINES,
+      ASSISTANT_YAML_ASSET_MAX_LINES,
+      ASSISTANT_ASSET_MAX_LINE_CHARS,
+    ],
     schemas: files.filter((file) => file.endsWith(".schema.json")).length,
     plans: files.filter((file) => file.endsWith(".yml")).length,
     over,
-  }).toEqual({ budget: [800, 400], schemas: 5, plans: 5, over: [] });
+  }).toEqual({ budget: [500, 800, 400], schemas: 5, plans: 5, over: [] });
 });
 
 // The post-build guard over a package that publishes only the plans and the schemas.

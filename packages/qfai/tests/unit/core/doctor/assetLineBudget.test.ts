@@ -123,6 +123,7 @@ import { createDoctorData } from "../../../../src/core/doctor.js";
 import {
   ASSISTANT_ASSET_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  ASSISTANT_YAML_ASSET_MAX_LINES,
   checkAssistantAssetLineBudget,
   countLines,
   widestMeasurableLine,
@@ -187,7 +188,32 @@ describe("countLines", () => {
 
 describe("checkAssistantAssetLineBudget", () => {
   it("exposes the ceiling as a runtime constant", () => {
-    expect(ASSISTANT_ASSET_MAX_LINES).toBe(800);
+    expect(ASSISTANT_ASSET_MAX_LINES).toBe(500);
+    expect(ASSISTANT_YAML_ASSET_MAX_LINES).toBe(800);
+  });
+
+  it("holds Markdown to its own ceiling and YAML to the YAML one", async () => {
+    await withTempRoot(async (root) => {
+      await writeAsset(root, "skill/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      // Over the Markdown ceiling, inside the YAML one: YAML is data, not prose.
+      await writeAsset(root, "skill/qfai-demo/templates/data.yaml", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(
+        root,
+        "skill/qfai-demo/templates/big.yml",
+        ASSISTANT_YAML_ASSET_MAX_LINES + 1,
+      );
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.maxYamlLines).toBe(ASSISTANT_YAML_ASSET_MAX_LINES);
+      expect(report.oversized).toEqual([
+        { path: "assistant/skill/qfai-demo/SKILL.md", lines: ASSISTANT_ASSET_MAX_LINES + 1 },
+        {
+          path: "assistant/skill/qfai-demo/templates/big.yml",
+          lines: ASSISTANT_YAML_ASSET_MAX_LINES + 1,
+        },
+      ]);
+    });
   });
 
   it("reports a file over the ceiling with its measured line count", async () => {
