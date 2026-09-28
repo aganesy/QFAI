@@ -69,9 +69,10 @@ function replayOf(snapshot: WorkflowSnapshot, input: WorkflowInput): WorkflowDec
 }
 
 // The routing work order. Its kind, executor and operation are built in, and no plan names it; it
-// changes no state, and `next` returns it again until its result is accepted.
+// changes no state, and `next` returns it again until its result is accepted. One a re-route
+// issues names the destination and what sent the run there.
 function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
-  const { run, outstandingWorkOrder } = snapshot;
+  const { run, outstandingWorkOrder, pendingReroute } = snapshot;
   if (outstandingWorkOrder?.stageKind === "route") {
     return { verdict: { ok: true, run, workOrder: outstandingWorkOrder }, events: [] };
   }
@@ -83,6 +84,15 @@ function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
     stageKind: "route",
     executor: { skill: "qfai-run" },
     operation: "route",
+    ...(pendingReroute
+      ? {
+          reroute: {
+            route: pendingReroute.route,
+            fromStep: pendingReroute.fromStep,
+            outcome: pendingReroute.outcome,
+          },
+        }
+      : {}),
   };
   return {
     verdict: { ok: true, run: { ...run, sequence: run.sequence + 1 }, workOrder },

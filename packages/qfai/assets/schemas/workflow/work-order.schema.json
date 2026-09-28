@@ -127,6 +127,26 @@
         }
       }
     },
+    "reroute": {
+      "description": "On a routing work order a re-route issued: the destination route, and the step and outcome that sent the run there.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "fromStep", "outcome"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fromStep": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "steps": {
       "description": "Every step of a plan stage, in the order they run, each with its entry file's project-relative path.",
       "type": "array",

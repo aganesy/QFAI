@@ -52,6 +52,25 @@ export function stageSteps(stage: PlanStage): PlanStep[] {
   return stage.steps ?? [];
 }
 
+// A stage's steps less the one a carried receipt already satisfied after a re-route.
+export function issuableSteps(
+  snapshot: Pick<WorkflowSnapshot, "reusedStep">,
+  stage: PlanStage,
+): PlanStep[] {
+  const reused = snapshot.reusedStep;
+  return stageSteps(stage).filter(
+    (step) => reused?.stageInstanceId !== stage.stageInstanceId || reused.step !== step.name,
+  );
+}
+
+// The stage skill an operator invokes by name for a finding's owner: the skill itself, or the
+// skill a step belongs to.
+export function skillToInvoke(owner: string): string {
+  if (owner.startsWith("qfai-")) return owner;
+  const skill = ownerOfStep(owner);
+  return skill === "common" ? owner : skill;
+}
+
 // Whether a step serves a finding's owner: the owner names the step, or the skill it belongs to.
 export function stepServes(step: string, owner: string): boolean {
   return step === owner || ownerOfStep(step) === owner;

@@ -73,7 +73,11 @@ function issued(plan: Plan, accepted: string[] = [], extra: Partial<Snapshot> = 
 }
 
 // `accept` of a result for the work order `issued` returned, carrying `fields`.
-function acceptOn(issuedOrder: ReturnType<typeof issued>, fields: Record<string, unknown>) {
+function acceptOn(
+  issuedOrder: ReturnType<typeof issued>,
+  fields: Record<string, unknown>,
+  extra: Facts = {},
+) {
   const { decision, snapshot, workOrder } = issuedOrder;
   const run = decision.verdict.run;
   if (!run) throw new Error("next moved the run");
@@ -92,7 +96,7 @@ function acceptOn(issuedOrder: ReturnType<typeof issued>, fields: Record<string,
         ...fields,
       },
     },
-    facts,
+    { ...facts, ...extra },
   );
 }
 
@@ -221,31 +225,26 @@ describe("a stage runs every step its route names", () => {
   });
 
   // QFAI:EX-0001-0216-04
-  it("returns the run to routing when the stage finds work no step of its route does", async () => {
+  it("re-routes at its declared branch point when the stage finds work no step of its route does", async () => {
     const first = issued(await shippedPlan("apply-settled-spec"));
-    const returned = acceptOn(first, {
-      outcome: "needs_repair",
-      debts: [
-        {
-          findingCode: "flow-unsettled",
-          path: ".qfai/spec/02_business-flow/business-flows.md",
-          cause: "The change needs a business flow the cited record never settled.",
-          owningFlow: "BF-0001",
-          detectingCommand: "sdd-triage review",
-          resolvingOwner: "sdd-flow",
-          blockingExtent: "stage",
-        },
-      ],
-    });
+    const returned = acceptOn(
+      first,
+      { branch: { outcome: "outside-record", route: "decide-design" } },
+      { plans: await planFacts() },
+    );
 
     expect({
       state: returned.verdict.run?.state,
       events: returned.events.map((event) => event.type),
+      reroute: returned.events[0]?.reroute,
       steps: names(first.workOrder),
+      branchPoint: first.workOrder.steps?.find((step) => step.name === "sdd-triage")?.branchPoint,
     }).toEqual({
       state: "routing",
-      events: ["scope-or-obligation-revision"],
+      events: ["declared-reroute"],
+      reroute: { route: "decide-design", fromStep: "sdd-triage", outcome: "outside-record" },
       steps: ["sdd-triage", "sdd-story", "sdd-contract", "sdd-gate"],
+      branchPoint: true,
     });
   });
 });

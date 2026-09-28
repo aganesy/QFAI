@@ -86,7 +86,7 @@ it("A regression on an annotated example is fixed by the fix-red-main fix stage,
   });
 }, 300_000);
 
-it("An expectation that differs from the story sends the run back to routing before any edit", async () => {
+it("An expectation that differs from the story re-routes the run to decide-acceptance before any edit", async () => {
   const root = await flowProject();
   const { runId, accepted, next } = await diagnosed(root, {
     verdict: "expectation-differs",
@@ -102,8 +102,14 @@ it("An expectation that differs from the story sends the run back to routing bef
   expect({
     state: field(accepted.json, "run.state"),
     next: [orderOf(next.json).stageKind, field(next.json, "workOrder.executor.skill")],
+    destination: field(next.json, "workOrder.reroute.route"),
     implement: kinds.includes("implement"),
-  }).toEqual({ state: "routing", next: ["route", "qfai-run"], implement: false });
+  }).toEqual({
+    state: "routing",
+    next: ["route", "qfai-run"],
+    destination: "decide-acceptance",
+    implement: false,
+  });
 }, 300_000);
 
 it("The repair-test fix stage runs both layers' steps for a criterion and for an example", async () => {
@@ -173,9 +179,9 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
 }, 300_000);
 
 // No stage of the repair-test plan can change a criterion: it has no story-authoring stage. So the
-// repair goes back to routing, which settles a plan that can.
+// run stops on the finding, naming the skill that owns it, and stays on its route.
 // QFAI:EX-0001-0194-04
-it("A test fix that changes what its test checks is refused, and its repair returns the run to routing", async () => {
+it("A test fix that changes what its test checks is refused, and its repair blocks the run on qfai-sdd", async () => {
   const root = await flowProject();
   const { runId, next: fix } = await diagnosed(
     root,
@@ -213,11 +219,16 @@ it("A test fix that changes what its test checks is refused, and its repair retu
   expect({
     refused: [field(refused.json, "error.code"), reasons(refused.json)],
     unchanged,
-    repair: [field(repair.json, "run.state"), orderOf(repair.json).stageKind],
+    repair: [
+      field(repair.json, "run.state"),
+      field(repair.json, "workOrder"),
+      field(repair.json, "halt.blocker"),
+      field(repair.json, "halt.owner"),
+    ],
   }).toEqual({
     refused: ["invalid-input", ["test-fix-meaning"]],
     unchanged: "running",
-    repair: ["routing", "route"],
+    repair: ["blocked", null, "stage-blocked", "qfai-sdd"],
   });
 }, 300_000);
 

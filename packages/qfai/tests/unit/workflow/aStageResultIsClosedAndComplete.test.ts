@@ -44,6 +44,8 @@ it("The parser's verdict on each stage result variant", async () => {
     "stage result binding a malformed flow ID": ["schema:bindings[0].flowId"],
     "stage result measured with nulls": [],
     "stage result with a debt missing its owner": ["schema:debts[0].resolvingOwner"],
+    "stage result reporting a branch": [],
+    "stage result whose branch names no outcome": ["schema:branch.outcome"],
   });
 });
 

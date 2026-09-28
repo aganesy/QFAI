@@ -413,6 +413,25 @@
         }
       }
     },
+    "branch": {
+      "description": "What a step at a branch point other than implement-diagnose reports: the outcome, the route it names among several destinations, and the reading the decision rules are given.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "extraction": {
+          "$ref": "urn:qfai:workflow:route-proposal#/$defs/reading"
+        }
+      }
+    },
     "bindings": {
       "type": "array",
       "items": {

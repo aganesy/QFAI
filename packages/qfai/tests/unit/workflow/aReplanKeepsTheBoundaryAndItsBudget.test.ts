@@ -26,26 +26,20 @@ const obligations = {
   digest: "1".repeat(64),
 };
 
-// An add-feature run over `src/**` whose implement stage found a finding only acceptance
-// authoring repairs, so routing settled a narrower plan over `src/api/**`.
+// An add-feature run over `src/**` whose routing receipt went stale after its first stage, so
+// routing settled a narrower plan over `src/api/**`.
 function narrowed() {
   const facts = { flows: [FLOW], obligations };
-  const run = new JournalRun(readyWith(planOf("add-feature", bounded, ["src/**"]), FLOW));
-  run.next(facts);
-  run.accept({}, facts);
-  run.next(facts);
-  const finding = {
-    findingCode: "QFAI-TRACE-002",
-    path: "src/ui/button.ts",
-    cause: "The criterion has no acceptance test",
-    owningFlow: FLOW,
-    detectingCommand: "qfai validate",
-    resolvingOwner: "qfai-atdd",
-    blockingExtent: "run",
-  };
-  expect(run.accept({ outcome: "needs_repair", debts: [finding] }, facts).verdict.run?.state).toBe(
-    "routing",
+  const seed = readyWith(planOf("add-feature", bounded, ["src/**"]), FLOW).map((record) =>
+    record.event === "plan-accepted"
+      ? { ...record, resultRef: "results/route-0.json", dependencies: [] }
+      : record,
   );
+  const run = new JournalRun(seed);
+  run.next({ ...facts, receiptValidity: { "results/route-0.json": "valid" } });
+  run.accept({}, facts);
+  const stale = { ...facts, receiptValidity: { "results/route-0.json": "stale" as const } };
+  expect(run.apply({ operation: "next" }, stale).verdict.run?.state).toBe("routing");
   run.next(facts);
   const proposal = {
     requestKind: "routed",

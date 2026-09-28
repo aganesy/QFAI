@@ -15,6 +15,7 @@ import type {
   WorkflowDependency,
   WorkflowEvent,
   WorkflowInput,
+  WorkflowReusedStep,
   WorkflowSnapshot,
 } from "./types.js";
 
@@ -75,6 +76,8 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     repairedStages: _repaired,
     repairRequest: _left,
     issuedStages: _issued,
+    pendingReroute: _settled,
+    reusedStep: _earlier,
     ...rest
   } = withoutWorkOrder(snapshot);
   const prior = [
@@ -94,7 +97,50 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(record.resultRef
       ? { routingReceiptRef: record.resultRef, routingDependencies: record.dependencies ?? [] }
       : {}),
+    ...reusedOf(plan, record.reused),
   };
+}
+
+// The destination step a carried receipt satisfies. When it is its stage's only step, the
+// stage is recorded as satisfied by that receipt and never issued; otherwise the stage is issued
+// without it.
+function reusedOf(
+  plan: Snapshot["plan"],
+  reused: WorkflowReusedStep | undefined,
+): Partial<Snapshot> {
+  const first = plan?.stages[0];
+  if (!reused || !first || first.stageInstanceId !== reused.stageInstanceId) return {};
+  const steps = (first.steps ?? []).map((step) => step.name);
+  if (steps.join(",") !== reused.step) return { reusedStep: reused };
+  const satisfied = {
+    stageInstanceId: first.stageInstanceId,
+    stageKind: first.stageKind,
+    outcome: "accepted",
+    steps,
+    reused: reused.receiptRef,
+  };
+  return { acceptedStages: [satisfied] };
+}
+
+// A re-route a branch point declared, or the operator approved past the cap: the run records it
+// and holds its destination until routing settles the destination's plan.
+function foldDeclaredReroute(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const held = record.resultRef ? foldAccepted(snapshot, record) : snapshot;
+  const reroute = record.reroute ?? snapshot.pendingReroute;
+  if (!reroute) return held;
+  const made = {
+    from: snapshot.plan?.route ?? "",
+    to: reroute.route,
+    step: reroute.fromStep,
+    outcome: reroute.outcome,
+  };
+  return { ...held, pendingReroute: reroute, reroutes: [...(snapshot.reroutes ?? []), made] };
+}
+
+// A re-route past the cap: the stage is accepted, and the destination waits on the operator.
+function foldRerouteAsked(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const held = foldAccepted(snapshot, record);
+  return record.reroute ? { ...held, pendingReroute: record.reroute } : held;
 }
 
 // The route the decision rules chose, or the candidate question's answer fixed, and its plan.
@@ -266,6 +312,10 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
     ...(record.reports ? { reports: record.reports } : {}),
     ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
+    ...(snapshot.outstandingWorkOrder?.steps
+      ? { steps: stepNamesOf(snapshot.outstandingWorkOrder) }
+      : {}),
+    ...(record.revision ? { revision: record.revision } : {}),
   };
 }
 
@@ -330,6 +380,8 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "authorization-recorded": foldAuthorization,
   "accept-nonfinal-result": foldAccepted,
   "scope-or-obligation-revision": foldAccepted,
+  "declared-reroute": foldDeclaredReroute,
+  "reroute-asked": foldRerouteAsked,
   "binding-recorded": foldBinding,
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     withAppendedRows(withHalt(snapshot, record), record),
@@ -392,6 +444,7 @@ const STATE_AFTER_EVENT: Record<string, string> = {
   "budget-exhausted": "blocked",
   "observed-session-interruption": "interrupted",
   "scope-or-obligation-revision": "routing",
+  "declared-reroute": "routing",
   "valid-answer-no-replan": "ready",
   "answer-changes-scope": "routing",
   "blocker-cleared-and-revalidated": "ready",
@@ -432,7 +485,14 @@ export function recordsOf(
   return records;
 }
 
-const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
+// The events that record an accepted stage result. A journal an earlier version wrote may hold
+// `scope-or-obligation-revision`, which no decision appends any more.
+export const ACCEPTED_EVENTS = [
+  "accept-nonfinal-result",
+  "declared-reroute",
+  "reroute-asked",
+  "scope-or-obligation-revision",
+];
 
 // What the journal keeps beside an event that the decision does not carry itself: the plan an
 // unsettled routing result proposed, and for an accepted stage result its kind, observation,
@@ -540,9 +600,7 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
     qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
     route: snapshot.plan?.route ?? null,
     modifiers: (snapshot.modifiers ?? []).map(({ modifier, source }) => ({ modifier, source })),
-    // SIMPLIFIED: a run never changes route, so it records no re-route.
-    // Lift when: a declared branch point re-routes the run.
-    reroutes: [],
+    reroutes: snapshot.reroutes ?? [],
     completionTarget: snapshot.completionTarget ?? "qfai_done",
     state: snapshot.run.state,
     targetBindings: records.flatMap((record) =>

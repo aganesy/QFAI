@@ -19,54 +19,34 @@ const fixDefectPlan = {
   ],
 };
 
-// A run whose diagnose work order is outstanding, after `replans` earlier replans.
-function diagnosing(replans: number) {
+// A run in `ready` after `replans` earlier replans, whose routing receipt no longer holds.
+function stale(replans: number) {
   const ready: Snapshot = {
     run: { id: "run-budget", state: "ready", sequence: 10 + replans },
     plan: fixDefectPlan,
     flowBinding,
     replans,
     completionTarget: "qfai_done",
+    routingReceiptRef: "results/route-1.json",
   };
-  const issued = decide(ready, { operation: "next" }, {});
-  const workOrder = issued.verdict.workOrder;
-  const run = issued.verdict.run;
-  if (!workOrder || !run) throw new Error("the fix-defect run issues its diagnose work order");
-  return { ...ready, run, outstandingWorkOrder: workOrder };
+  return ready;
 }
 
-function replan(snapshot: ReturnType<typeof diagnosing>) {
-  const workOrder = snapshot.outstandingWorkOrder;
+function replan(snapshot: Snapshot) {
   return decide(
     snapshot,
-    {
-      operation: "accept",
-      result: {
-        resultId: `result-replan-${snapshot.replans}`,
-        workOrderId: workOrder.workOrderId,
-        stageInstanceId: workOrder.stageInstanceId,
-        attempt: workOrder.attempt,
-        expectedSequence: snapshot.run.sequence,
-        outcome: "accepted",
-        diagnosis: {
-          verdict: "expectation-differs",
-          reproductionRef: "evidence/reproduction.json",
-          matchedIds: ["EX-0007-0002-01"],
-        },
-      },
-    },
-    {},
+    { operation: "next" },
+    { receiptValidity: { "results/route-1.json": "stale" } },
   );
 }
 
 it("Four replans in one run", () => {
-  const decisions = [0, 1, 2, 3].map((earlier) => replan(diagnosing(earlier)));
+  const decisions = [0, 1, 2, 3].map((earlier) => replan(stale(earlier)));
   const fourth = decisions[3]?.verdict;
   const blockedRun = fourth?.run;
   if (!blockedRun) throw new Error("the fourth replan returns the run");
-  const { outstandingWorkOrder: _issued, ...diagnosed } = diagnosing(3);
   const finished = decide(
-    { ...diagnosed, run: blockedRun },
+    { ...stale(3), run: blockedRun },
     { operation: "finish" },
     { completion: completion() },
   );
