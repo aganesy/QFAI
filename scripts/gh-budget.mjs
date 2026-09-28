@@ -276,8 +276,8 @@ function ghApi(apiPath) {
  * Reported on stdout beside the answer rather than on demand, so no invocation
  * leaves the caller guessing.
  */
-function reportBudget(reading) {
-  console.log(describeReading(reading));
+function reportBudget(reading, log) {
+  log(describeReading(reading));
   if (reading.remaining >= RESERVE) return 0;
   console.error(
     `Below the reserve of ${String(RESERVE)} calls. Ask git for what git can answer, and wait for the reset before calling again.`,
@@ -296,8 +296,13 @@ function refusesToCall() {
   return true;
 }
 
-/** One REST call, with the reading saved and reported. Returns the exit code. */
-export function callAndReport(apiPath, handleBody) {
+/**
+ * One REST call, with the reading saved and reported. Returns the exit code.
+ *
+ * `log` takes the budget line. A caller whose stdout is the answer passes
+ * `console.error`, so the answer can be captured on its own.
+ */
+export function callAndReport(apiPath, handleBody, log = console.log) {
   if (refusesToCall()) return 1;
   const response = ghApi(apiPath);
   if (response.text === undefined) {
@@ -311,12 +316,12 @@ export function callAndReport(apiPath, handleBody) {
   const code = statusCode(head);
   if (code !== 200) {
     console.error(`GitHub answered ${String(code ?? "nothing")} for ${apiPath}.`);
-    if (reading !== undefined) reportBudget(reading);
+    if (reading !== undefined) reportBudget(reading, log);
     return 2;
   }
   const handled = handleBody(body);
   if (handled !== 0) return handled;
-  return reading === undefined ? 0 : reportBudget(reading);
+  return reading === undefined ? 0 : reportBudget(reading, log);
 }
 
 /** `runs [branch]`: the state of every recent branch, or of one, from one call. */

@@ -235,7 +235,7 @@
         "scripts/fresh-init-findings.json": "591fbd87f24ba68427460af193101621beae50ab7885975fbc0bd6065180d7e1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
-        "scripts/gh-budget.mjs": "321643cbeb799ad42a5d6c09ad4ad937d054cb0092bf5de9dc18f5ef0d67b195",
+        "scripts/gh-budget.mjs": "3955faf1a30a190604a699d9c255b4e19d9fd4791c2aa11fad639e4f4d5ef302",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
         "scripts/lib/pack-github-topology.mjs": "9d41d310d32bc59c6712be5b74610f9de4655f76cc6c29e76fa99c9682a88679",
         "scripts/lib/pin-cost.mjs": "68c1c68351fce620f61d73b550ca3b92beecd5a150f720723730bab931c0ab43",
@@ -251,7 +251,7 @@
         "scripts/run-lint-checks.sh": "8f9e06c267d2bfa5771c54e723555189e55877aa38cb482783ce1d9d5d3642d2",
         "scripts/shipped-workflow-cost.mjs": "0134ffd873096051f9f249261dd703cb1bf273143ff955b61733f3542f5a792e",
         "scripts/smoke-qfai-cli.mjs": "7c223309c1791d97caf516d3218a845ca64e62dfe3fb1bb67e37470da688d4c2",
-        "scripts/story-ids.mjs": "04a0cb52dc90756f7300535032626d590e60e568ec3f403185ab951223c65a63",
+        "scripts/story-ids.mjs": "da5915db177ca572b4748babbc9b8a9310c333b6763c589c556e9a74ec0341ab",
         "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
         "scripts/verify-pack.mjs": "819db18f4fc24d33e0620ffdef7206c0e41e7130c58e3ef1ae5ba005e3e6bc3b"
       },
@@ -403,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "1c0127391f64ac1c",
-        "Verify the toolchain action before running it": "66519667c6310bee",
+        "Verify the toolchain action before running it": "39f2933fe3e50a84",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9471787697d783a3",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "c2e71203f93f0cf9",
