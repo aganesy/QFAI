@@ -955,6 +955,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Windows and on POSIX then hashes alike. The revision manifest keeps its own
   four digits.
 
+- **The leak guards reject a contract file name, not only a contract ID.**
+  Source comments named this repository's own contract files, such as
+  `cli-0011-qfai-init.md`, and the guards matched only the upper-case
+  `CLI-0011`. The pre-build lint, the post-build guard and the smoke test now
+  also reject `cli-NNNN`, `api-NNNN`, `db-NNNN` and `ui-NNNN` outside the
+  sample band where no letter, digit, `_` or `-` precedes them. The comments
+  state what they relied on in plain words instead.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed

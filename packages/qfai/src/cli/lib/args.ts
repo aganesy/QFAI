@@ -883,8 +883,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // Read-only peek of the canonical prototyping state file. No
         // value; presence flips the boolean. Only meaningful for
         // `qfai prototyping iterate`; main.ts wires it through only on
-        // the iterate path. See
-        // .qfai/spec/03_contract/cli/cli-0014-qfai-prototyping-iterate.md.
+        // the iterate path.
         if (ownedByPrototyping("iterate")) {
           options.prototypingCheckConvergence = true;
         } else {
