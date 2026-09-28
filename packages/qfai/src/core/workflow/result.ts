@@ -12,6 +12,7 @@ import {
 } from "./common.js";
 import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
 import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
+import { DIAGNOSIS_VERDICTS } from "./payloadShapes.js";
 import { storyTreeChecks } from "./records.js";
 import { activeStages } from "./stages.js";
 import { repairOwnerOf, servingStage, servingSteps, stageSteps, stepNamesOf } from "./steps.js";
@@ -410,8 +411,6 @@ function outcomeIsAcceptable(result: WorkflowResult, stageKind: string): boolean
   }
 }
 
-const DIAGNOSIS_VERDICTS = ["missing-test", "defective-test", "regression", "expectation-differs"];
-
 // The outstanding work order's stage when it repairs a finding another stage detected, and the
 // steps that serve the finding's owner there.
 function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[]) {
@@ -441,7 +440,7 @@ function stageResultIsBroken(
     (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
     (stage.stageKind === "diagnose" &&
       (!diagnosis ||
-        !DIAGNOSIS_VERDICTS.includes(diagnosis.verdict) ||
+        !DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) ||
         !diagnosis.reproductionRef ||
         !Array.isArray(diagnosis.matchedIds))) ||
     !outcomeIsAcceptable(result, stage.stageKind) ||

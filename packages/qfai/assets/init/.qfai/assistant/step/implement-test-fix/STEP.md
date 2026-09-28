@@ -18,9 +18,15 @@ routing-profile: runtime-heavy
 
 # implement-test-fix
 
-A diagnosis found a test defective. This step takes it when the first ID of
-the diagnosis's `matchedIds` is an EX. A BF or an AC is `qfai-atdd`'s, as
-`.qfai/assistant/rule/test-layers.md` maps those layers.
+A diagnosis found a test defective. This step repairs it at the example layer.
+
+## Passes when
+
+Read first: the diagnosis that found the test defective, and the first ID of
+its `matchedIds`. This step repairs the test when that ID is an EX. When it is
+a BF or an AC, this layer holds no defect: the step passes, naming that ID, and
+`atdd-test-fix` repairs the test, as `.qfai/assistant/rule/test-layers.md` maps
+those layers. A pass while the first matched ID is an EX is refused.
 
 ## Reads
 

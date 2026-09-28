@@ -302,7 +302,19 @@
       "required": ["verdict", "reproductionRef", "matchedIds"],
       "properties": {
         "verdict": {
-          "enum": ["missing-test", "defective-test", "regression", "expectation-differs"]
+          "enum": [
+            "missing-test",
+            "defective-test",
+            "regression",
+            "expectation-differs",
+            "as-specified",
+            "not-ours",
+            "duplicate",
+            "needs-info",
+            "surface-conflict",
+            "check-gap",
+            "product-race"
+          ]
         },
         "reproductionRef": {
           "type": "string",
