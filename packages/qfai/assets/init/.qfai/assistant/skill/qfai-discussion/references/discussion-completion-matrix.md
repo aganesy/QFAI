@@ -2,6 +2,14 @@
 
 Use this file for the full completion logic behind `/qfai-discussion`.
 
+## Contents
+
+- All Packs
+- UI-bearing Packs
+- CLI Packs
+- Non-UI Packs
+- Notes
+
 ## All Packs
 
 Blocking for every pack, UI-bearing or not:
@@ -89,7 +97,7 @@ so conditions 1 and 5 above do not apply to it:
   full screen-contract schema, unranked exploration directions, no forbidden legacy
   sidecar, and zero open OQs.
 - `route:` on a `cli` screen contract names the command invocation, not a web path (see
-  `ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`).
+  "Visual-prototyping Surfaces vs `cli`" in the UI-bearing playbook).
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface.
 - `primary_surface: cli` with a visual `secondary_surfaces` entry is NOT a cli-only pack —
   conditions 1 and 2 stay blocking for it.

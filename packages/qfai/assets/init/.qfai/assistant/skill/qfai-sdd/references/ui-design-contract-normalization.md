@@ -51,7 +51,7 @@ The remaining UI-bearing sidecar maps to its contract as follows:
 Project-specific anti-pattern notes live in `audience.do_not_look_like`
 of `DESIGN.md`. Evaluator axes are fixed by the review validation the
 QFAI CLI applies (restated in
-`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`)
+the prototyping reviewer prompt)
 and are no longer authored as sidecar files.
 
 ## Normalization Rules

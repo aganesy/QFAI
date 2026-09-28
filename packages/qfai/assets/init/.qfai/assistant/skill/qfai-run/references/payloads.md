@@ -3,6 +3,16 @@
 The calls `qfai-run` makes, and the files it writes for them. Field names are
 exact: an unknown key is refused.
 
+## Contents
+
+- Calls
+- Start input
+- Routing result
+- Question input
+- Decision input
+- Work order
+- Stage result
+
 ## Calls
 
 | Call                                                   | When                                                  |

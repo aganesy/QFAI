@@ -6,7 +6,7 @@ A passing example test must depend on the behavior it claims to verify. After GR
 
 A missing import, syntax error, fixture failure, or deliberate unimplemented throw does not prove the oracle. The failure must name the example's observable behavior. A mutation in an unrelated helper only proves that helper is used.
 
-The falsifiability run in red-not-observable.md already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.
+The falsifiability run of the RED-not-observable procedure already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.
 
 ## Weak oracles
 

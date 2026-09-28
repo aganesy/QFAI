@@ -16,6 +16,12 @@ The per-flow gate of the story tree, and the flow evidence the review reads.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-quality-gate.md`: what the
   gate checks.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#validation-and-review`.
+- `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
+  when a document fails its schema or holds a section its template does not
+  show; it states what each story-tree document may contain.
+- `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md` when a
+  DB contract changed; it holds the scratch-database check the gate expects
+  under Contract executability. Not needed when no DB contract changed.
 - `.qfai/assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md`: the flow
   evidence shape.
 

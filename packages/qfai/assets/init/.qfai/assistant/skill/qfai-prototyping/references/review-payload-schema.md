@@ -9,6 +9,15 @@ The schema is **closed**: any key not listed below is rejected, and a
 rejected payload is a hard failure, not a warning. A near-miss (extra
 key, misspelled field, legacy flat key) fails the whole file.
 
+## Contents
+
+- Path
+- Shape (11 required top-level fields)
+- Field rules
+- Not accepted
+- `sessionStatus` and the retry policy
+- What certify checks per payload (all exit 64)
+
 ## Path
 
 ```text
@@ -23,7 +32,7 @@ per-(UI contract × screen) artifact the Reviewer writes — no `.html`, no
 
 The Reviewer's other output is the per-cycle summary
 `iter-NN/review.json` (one per cycle, a different shape — see
-`references/reviewer-prompt.md`), which the orchestrator folds into
+the reviewer prompt), which the orchestrator folds into
 `prototyping.json#iterations[]`. It is not a per-screen artifact and
 is never parsed against this schema.
 

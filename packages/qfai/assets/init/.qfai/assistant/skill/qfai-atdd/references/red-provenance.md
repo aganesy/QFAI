@@ -49,8 +49,8 @@ proof.
 A test or fixture edit after RED changes the proof subject. Recompute the
 manifest and hash and retake the proof before a reviewer certifies it.
 A later flow that changes a shared fixture follows
-`references/shared-test-artifacts.md`. Do not overwrite the old record;
+the shared test artifact rules. Do not overwrite the old record;
 append the new attempt and identify the current one. The revision form is
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`, and
+the evidence revision form `/qfai-implement` ships, and
 the review seal and the rounds a blocking finding opens are
 `.qfai/assistant/step/common-review-cycle/STEP.md`.

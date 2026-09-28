@@ -11,6 +11,17 @@ outside this file.
 A reference copy is shipped in this skill at
 `templates/DESIGN.md.sample`.
 
+## Contents
+
+- File shape
+- Front-matter schema
+- `brand.archetype` allowed values
+- `brand.theme`
+- `accessibility` allowed keys
+- Validation rules
+- Issue shape
+- Hash
+
 ## File shape
 
 ```markdown
@@ -74,7 +85,7 @@ accessibility:
 ## `brand.archetype` allowed values
 
 The 8-archetype catalog is the SSOT in
-`.qfai/assistant/skill/qfai-sdd/references/design-md-brand-catalog.md`:
+the SDD brand catalog that `common-design-md` reads:
 `minimal | bold | corporate | playful | organic | tech | elegant |
 casual`. Read that reference for archetype semantics, do not duplicate
 here.

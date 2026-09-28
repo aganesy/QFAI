@@ -24,6 +24,14 @@ prototype accepted.
 - The accepted iteration `.qfai/prototype/iter-<final>/index.html`.
 - `.qfai/assistant/skill/qfai-prototyping/references/handoff.md` — inputs,
   outputs and the order the gates run in.
+- The "Output layout" section of
+  `.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md` when
+  the authoring or capture artifacts of the final iteration are missing or in
+  doubt; it holds where each one is written.
+- `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`
+  when checking `verify.json` before certify; it holds the field list and the
+  `scope` enum. Not needed when `/qfai-verify` returned PASS with
+  `scope: "prototyping"`.
 - `.qfai/evidence/prototyping/grilling.md`, for the completion report.
 
 ## Writes

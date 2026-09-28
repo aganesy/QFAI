@@ -28,6 +28,9 @@ the diagnosis's `matchedIds` is an EX. A BF or an AC is `qfai-atdd`'s, as
 - The example the test annotates, and its acceptance criterion.
 - `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md`, for
   what a sound assertion is.
+- `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md` when
+  the example's RED was not observable; its falsifiability run already proves
+  the oracle, so reuse it instead of mutating twice.
 - The commands of `common-gate-run`.
 
 ## Procedure

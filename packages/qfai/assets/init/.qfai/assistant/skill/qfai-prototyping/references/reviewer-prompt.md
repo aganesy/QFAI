@@ -15,12 +15,25 @@ review. Explain observable defects and corrective actions in prose. A favorable
 score never hides a blocking finding. Do not use numeric AC-pass or
 transition-pass percentages as a substitute for the qualitative review.
 
+## Contents
+
+- Inputs
+- Outputs — two files, two schemas
+- Per-cycle summary (`iter-NN/review.json`)
+- The four ordinal UX axes
+- Diagnostic criteria
+- Applying the four axes
+- What blocks
+- Layout anti-pattern matching (`lap-*`)
+- pivotDirective rules
+- Prose critique format (at most 500 English words, or 2500 Japanese/Chinese characters)
+
 ## Inputs
 
 - The live prototype URL and declared `screens[]` routes from the UI contract.
   Open each route in your own Playwright session and exercise its declared
   primary tasks. Record `sessionStatus` and `retryCount` in the per-screen
-  payload according to `references/review-payload-schema.md`.
+  payload according to the review payload schema.
 - When `iterate --capture` is selected, use the additional screenshot, HTML
   snapshot, and counted signals under
   `.qfai/evidence/prototyping/iter-NN/<screen>.*`. They are absent by default.
@@ -53,7 +66,7 @@ write them exactly there, or the CLI will not find them.
    screens, including a run with one contract. This is the file the
    prototyping CLI parses and certify requires. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
-   `references/review-payload-schema.md`. Write it from that
+   the review payload schema. Write it from that
    reference, not from the block below.
 2. **Per-cycle summary** —
    `.qfai/evidence/prototyping/iter-NN/review.json`, one per cycle.
@@ -124,7 +137,7 @@ review remains required when capture is off. When capture is on, the accepted
 iteration's readable HTML is re-scanned on convergence and certification; the
 re-scan result wins over a manually emptied array. Do not invent an
 `evidenceRefs` entry for a file that was not captured. See
-`generator-prompt.md` for the static gate.
+the generator prompt for the static gate.
 
 ## The four ordinal UX axes
 

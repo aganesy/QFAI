@@ -5,6 +5,19 @@ QFAI 2.x does not read the old spec-pack layout. A project that keeps spec packs
 must stay on a pinned 1.x release. To upgrade, migrate the project before using
 the 2.x validation and authoring workflow.
 
+## Contents
+
+- Prepare
+- Place stories and rules
+- Contract IDs
+- Business rules
+- Documents in their template's shape
+- Run the bundled steps
+- Write boundary
+- Resolve the reports
+- Install and check the free-text entry
+- Former migration memos
+
 ## Prepare
 
 1. Save the current project state in version control. Inspect custom
@@ -254,7 +267,7 @@ migrate; run steps 10 to 12 all the same.
 Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
 is archived under `retired/_policies/` and none of its sections was copied to
 `principle.md`. Current triage operations and ID allocation are in the shipped
-`qfai-sdd/references/sdd-triage.md`. Read `objective.md`, `initiative.md`, `principle.md`
+SDD triage reference the skill body names. Read `objective.md`, `initiative.md`, `principle.md`
 and `tech.md`. Remove facts repeated in different words. The
 scripts remove byte-identical repeats; a person must judge paraphrases. Quality
 gate commands have one home: the Standard commands section of `tech.md`, which

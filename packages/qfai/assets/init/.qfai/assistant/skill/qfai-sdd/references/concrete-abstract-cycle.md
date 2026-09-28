@@ -5,6 +5,17 @@ wrote against the examples they generalize. A rule can imply a case no example
 states, and an example can hold a case no rule explains. The cycle finds both
 while the author of the rule is still in the invocation.
 
+## Contents
+
+- When a cycle runs
+- The finder
+- Adjudication
+- Applying an adopted finding
+- Two cycles at most
+- Rejected findings
+- Inside a workflow run
+- The record
+
 ## When a cycle runs
 
 A cycle runs when Stage 4 of this invocation wrote or changed the Statement or
@@ -45,7 +56,7 @@ a missing citation.
 
 Each cycle has one griller. It is neither the finder nor an author of an item
 any finding targets. A reviewing role, or a separate instance of a drafting
-role, can take it, as in pre-draft grilling (`sdd-pre-draft-grilling.md`).
+role, can take it, as in pre-draft grilling.
 
 The griller runs a delegated session under
 `.qfai/assistant/rule/review-convergence.md#agent-to-agent-grilling-must`:
@@ -145,4 +156,4 @@ user. A finding left with no decision records `none` as its decision.
 
 The completion reviewer checks the record, and no validator reads it. The
 grounds on which it returns REVISE are in
-`sdd-quality-gate.md#concrete-abstract-cycle-record`.
+the Concrete-abstract cycle record section of the SDD quality gate.

@@ -79,7 +79,7 @@ into `uiux/`.
 
 Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads
 those records. The mapping from answer to field is
-`qfai-sdd/references/design-md-authoring.md`.
+the `DESIGN.md` authoring reference that step reads.
 
 Where the direction names a `DESIGN.md` key or an archetype — in a code span,
 a `yaml` block or an `archetype:` item — `npx qfai validate --profile

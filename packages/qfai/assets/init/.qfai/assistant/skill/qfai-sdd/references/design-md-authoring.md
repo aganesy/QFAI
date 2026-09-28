@@ -6,6 +6,13 @@ Applies only to a UI-bearing target — one whose classified surface set names
 `web`, `mobile`, `desktop` or `mixed`. A cli-only target has no root
 `DESIGN.md`.
 
+## Contents
+
+- Where the answers come from
+- Output mapping
+- Taking the values from the theme
+- When the file already exists
+
 ## Where the answers come from
 
 The interview is `/qfai-discussion`'s, and its record is the discussion pack
@@ -27,8 +34,8 @@ was translated. The competitor registry feeds brand and tokens; the component
 catalogue registry feeds screen structure, which is the contracts' business,
 not this file's.
 
-The questions behind those answers are in
-`../../qfai-discussion/references/design-dna-intake.md`.
+The questions behind those answers are in the design DNA intake that
+`/qfai-discussion` runs.
 
 ## Output mapping
 
@@ -47,7 +54,7 @@ three intent fields, so those come first.
   identities to avoid, not conventions.
 - Adopted reference points → the **Do** subsection of `# Brand Philosophy`.
 - Brand archetype → `brand.archetype`. Allowed values are the 8-archetype
-  catalog in `design-md-brand-catalog.md`
+  catalog in the brand archetype catalog
   (`minimal | bold | corporate | playful | organic | tech | elegant | casual`).
   Map the theme the pack records to the archetype that describes it; the
   Selection Guide's scoring is the fallback for a pack whose direction names
@@ -64,10 +71,10 @@ three intent fields, so those come first.
 - Visual decisions (color, typography, radius, shadow) → the `visual.*` token
   tree, **taken from the named theme's published values**. Schema and
   validation rules live in
-  `.qfai/assistant/skill/qfai-prototyping/references/design-md-spec.md`.
+  the `DESIGN.md` spec.
 
 For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes), read
-`qfai-prototyping/references/design-md-spec.md` and start from the sample at
+the `DESIGN.md` spec and start from the sample at
 `qfai-prototyping/templates/DESIGN.md.sample`.
 
 ## Taking the values from the theme

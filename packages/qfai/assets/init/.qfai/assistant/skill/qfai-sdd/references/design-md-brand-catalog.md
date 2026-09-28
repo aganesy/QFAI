@@ -2,8 +2,8 @@
 
 Reference catalog of 8 canonical brand archetypes. The SDD design stage picks one to fill the
 required `brand.archetype` field of the root `DESIGN.md`; each archetype supplies
-`aesthetic_properties` that become the starting tokens, and
-`design-md-authoring.md#output-mapping` defines where each value is written.
+`aesthetic_properties` that become the starting tokens, and the Output mapping section of the
+`DESIGN.md` authoring reference defines where each value is written.
 
 ---
 

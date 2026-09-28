@@ -24,6 +24,9 @@ waits until the acceptance stage has taken RED.
 - The acceptance result's seam request and the target test it names.
 - `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md` and
   `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md`.
+- `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md` when
+  production already satisfies the example; it holds the falsifiability proof
+  that replaces an observed RED.
 - The commands of `common-gate-run`.
 
 ## Procedure

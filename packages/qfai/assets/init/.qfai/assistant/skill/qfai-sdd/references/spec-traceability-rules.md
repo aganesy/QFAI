@@ -70,7 +70,7 @@ Do not substitute an AC for an EX in a BR citation. The examples are concrete ev
 
 ## Contract forms and index
 
-YAML and JSON contracts put rules under x-qfai-rules. SQL contracts use -- Rule and -- Examples: lines. Markdown contracts use a ## Business rules table. Each rule includes ID, statement, and full example IDs. Follow contract-artifact-rules.md and the contract's paired template for syntax.
+YAML and JSON contracts put rules under x-qfai-rules. SQL contracts use -- Rule and -- Examples: lines. Markdown contracts use a ## Business rules table. Each rule includes ID, statement, and full example IDs. Follow the contract artifact rules and the contract's paired template for syntax.
 
 Each contract file written has a contracts.md row in the same change. The index cites the file and its ID; it is not another rule definition. Confirm that a contract can realize each persisted attribute in its cited AC and EX directly or through a stated join. Reconcile paired contracts' state and error vocabularies.
 
@@ -84,7 +84,7 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 Triage, change requests, retired stories, and rejected options are rows of decisions.md. Open questions are rows of open-questions.md. Both tables have ID, Content, Approach, Status, and only Status changes after append. The change request's Content begins Change request: and names its allowed paths or IDs. A rejected option remains REJECTED unless a later decision explicitly reopens it.
 
-Use .qfai/assistant/rule/change-classification.md for Primary and Tags and references/requirements-decomposition.md for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
+Use .qfai/assistant/rule/change-classification.md for Primary and Tags and the requirements decomposition reference for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
 
 ## Gate
 
