@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator, I want to describe a new feature once in free text and have QFAI run story authoring, acceptance tests, implementation and verification without my typing a stage name, so that the only questions I answer are whether to create each new story and whether to approve the change the story-authoring stage makes to the story tree.
+As an operator, I want to describe a new feature once in free text and have QFAI run story authoring, acceptance tests, implementation and verification without my typing a stage name, so that the only questions the run needs answered are whether to create each new story and whether to approve the change the story-authoring stage makes to the story tree.
 
 ## Non-goals
 

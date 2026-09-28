@@ -4,7 +4,8 @@ The form every question to the user arrives in.
 
 This rule does not decide how many questions to ask, or whether a question is
 worth asking. It decides what a question looks like when it is put, and one
-place a question is always put: the end of a turn that waits on the user.
+place a question is always put, except under a no-question mode: the end of a
+turn that waits on the user.
 
 ## Scope
 
@@ -199,7 +200,14 @@ A status report, or an offer written in prose, does not end that turn. Nothing
 tells the user the session is waiting, so it sits idle until they come back to
 ask whether anything is happening.
 
-The question asks for nothing the work needed, so no question budget counts it.
+It is not a clarification: it resolves no ambiguity in the request, and the
+work it follows did not need its answer.
+
+**A user's stop is not such a turn.** The stop is confirmed in one line, every
+open decision is listed as open, and nothing is asked.
+
+**Neither is a `qfai-run` halt.** A blocked, fail-closed or failed run ends with
+the halt notice `qfai-run` sets out, which says what clears it.
 
 **Under a no-question mode nothing is asked.** The run records the next actions
 in its report instead.

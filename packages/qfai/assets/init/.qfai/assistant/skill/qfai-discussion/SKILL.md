@@ -114,9 +114,7 @@ The full logic, including the UI-bearing conditions, is
 
 ## Completion Message & Next Actions (MUST)
 
-You MUST close the report with a handoff sentence to `/qfai-sdd` in the active user language, then end the turn with a question listing the next actions, `/qfai-sdd` recommended, as `.agents/rules/user-questions.md` § 6 sets out.
-
-- Japanese output (use this exact sentence): ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
+End the turn with a question listing the next actions, `/qfai-sdd` recommended, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 

@@ -808,14 +808,11 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
     });
 
-    // The form and the count are independent. Without this the rule reads as a
-    // licence to ask more, and a well-shaped question that should not be asked
-    // is still one that should not be asked.
     // A turn that leaves the next step to the user and ends on a report leaves
     // the session idle with nothing saying it waits. One token per clause: the
     // question is owed, it lists the next actions recommended first, the
-    // fallback carries it, no budget counts it, and a no-question mode reports
-    // the actions instead of asking.
+    // fallback carries it, it is not a clarification, a stop asks nothing, and
+    // a no-question mode reports the actions instead of asking.
     it.each(MASTERS)("%s ends a turn that waits on the user with the next actions", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(
@@ -823,10 +820,22 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       );
       expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
       expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
-      expect(text).toMatch(/no\s+question\s+budget\s+counts\s+it/);
+      expect(text).toMatch(/It\s+is\s+not\s+a\s+clarification:\s+it\s+resolves\s+no\s+ambiguity/);
+      expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
+      expect(text).toMatch(
+        /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
+      );
+      // A halt's form is the halt notice `qfai-run` sets out, not this question.
+      expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
       expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
+      // The introduction states the same exception, or it promises a question
+      // the mode forbids.
+      expect(text).toMatch(/always\s+put,\s+except\s+under\s+a\s+no-question\s+mode/);
     });
 
+    // The form and the count are independent. Without this the rule reads as a
+    // licence to ask more, and a well-shaped question that should not be asked
+    // is still one that should not be asked.
     it.each(MASTERS)("%s says what it is not", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toMatch(/Not\s+a\s+question\s+budget/);
@@ -1040,6 +1049,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       // Written as the host-has-none case alone it would contradict the round
       // section above, where a mode withholding the tool falls back too.
       expect(text).toMatch(/never\s+because\s+the\s+answer\s+is\s+a\s+value/);
+    });
+
+    // Outside a session a question is a clarification and capped, but the one
+    // that ends a turn waiting on the user resolves no ambiguity. Without its
+    // own row the scope table caps the question the question-form rule owes.
+    it.each(MASTERS)("%s does not cap the question ending a waiting turn", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /\|\s*The question ending a turn that waits on the user\s*\|\s*Not a clarification, and not capped/,
+      );
     });
 
     // The frontier empties while a lookup is in flight, so an end condition
