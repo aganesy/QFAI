@@ -19,8 +19,15 @@ const COMMANDS = "Standard commands (copy-paste)";
 const STACK_COLUMNS = ["Component", "Choice"] as const;
 const ARCHITECTURE_COLUMNS = ["Layer", "Responsibility", "Depends on"] as const;
 
-/** A path, a file name or a command, which a layer row names by responsibility instead. */
-const LOCATED = /[`/\\]/;
+/**
+ * A path, a file name or a command, which a layer row names by responsibility instead: a
+ * backtick or a backslash; a path starting with `/`, `./` or `../`; a slash-joined name
+ * ending in a file extension; or three or more slash-joined lowercase segments, or one
+ * ending in a slash. A single slash between words, as in `I/O` or `and/or`, is prose. The
+ * `## Architecture` section of the `tech.md` document schema holds the same patterns.
+ */
+const LOCATED =
+  /[`\\]|(?:^|[\s(])\.{0,2}\/\w|\w\/[\w./-]*\.[A-Za-z][A-Za-z0-9]{0,4}\b|[a-z0-9_-]+\/[a-z0-9_-]+\/|[a-z0-9_-]\/(?:\s|$)/;
 
 /** Old headings, in lower case, whose `Key: value` items become Stack rows. */
 const STACK_LISTS = new Set([

@@ -331,7 +331,7 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
   if (table === null) return [rewrite(draft, section, undefined)];
   const person = table.dropped.map(
     (column) =>
-      `${draft.target}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+      `${draft.target}: move what the "${column}" column of "## ${section.heading}" in ${section.source} states to the contract or tech.md that owns it, or drop it (kept at ${section.archive})`,
   );
   for (const row of table.rows) {
     const into = CONSTRAINT_SECTIONS[/^([A-Z]{2})-/.exec(row[0] ?? "")?.[1] ?? ""];
@@ -350,6 +350,28 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
     addUnique(draft.rows, into, [row], sameRow);
   }
   return person;
+}
+
+/**
+ * Numbers each section of a constraint draft from 01 in table order, as the positional
+ * constraint IDs require: a 1.x table may skip numbers, and a row sent to a person leaves
+ * a gap. Returns one line per ID that changed, so a person can update what cites it.
+ */
+export function renumberConstraints(draft: PolicyDraft): string[] {
+  const changed: string[] = [];
+  for (const [prefix, into] of Object.entries(CONSTRAINT_SECTIONS)) {
+    const rows = draft.rows.get(into) ?? [];
+    rows.forEach((row, index) => {
+      const before = row[0] ?? "";
+      const after = `${prefix}-${String(index + 1).padStart(2, "0")}`;
+      if (before === after) return;
+      row[0] = after;
+      changed.push(
+        `${draft.target} ## ${into}: ${before} is now ${after}, its place in the table; update anything that cites ${before}`,
+      );
+    });
+  }
+  return changed;
 }
 
 /** A `qfai-sdd` spec template, named by its path under `templates/spec/`. */

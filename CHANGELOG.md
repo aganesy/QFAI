@@ -280,6 +280,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `constraint.md`.
   - Migration step 3 moves a layer table of an old `catalog/structure.md`
     into that section, drops the Impact column of an old constraint table,
+    numbers each constraint section from 01 and names every ID it changed,
     and lists anything else for a person.
 
 - **Breaking: the five routes of earlier 2.0.0 builds are retired.** A run

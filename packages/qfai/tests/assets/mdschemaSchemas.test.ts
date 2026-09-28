@@ -489,8 +489,33 @@ describe("the technology document holds only its three sections, each in its sha
       "[forbidden-text]",
     ],
     [
-      "a path in a layer row",
-      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/core | - |"),
+      "a rooted path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in /srv/app | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a relative path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in ./src | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a file with its extension in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/index.ts | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "three slash-joined segments in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in packages/core/src | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a directory ending in a slash in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/ today | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a Windows path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src\\core | - |"),
       "[forbidden-text]",
     ],
     [
@@ -514,11 +539,11 @@ describe("the technology document holds only its three sections, each in its sha
     expect(result.status).not.toBe(0);
   });
 
-  it("accepts layers that name the layers each imports from", () => {
+  it("accepts layers that name the layers each imports from, and a slash between words", () => {
     // QFAI:EX-0001-0006-07
     const template = readFileSync(TECH_TEMPLATE, "utf-8").replace(
       LAYER_ROW,
-      "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree | Shared |\n| Shared | Small helpers | - |",
+      "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX and HTTP/gRPC helpers | - |",
     );
     const result = check(template);
     expect(result.output).toContain("No violations");

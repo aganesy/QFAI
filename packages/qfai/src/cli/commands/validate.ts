@@ -1400,7 +1400,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
   "QFAI-STORY-012":
-    "Renumber the named section of `constraint.md` from 01 in table order. Constraint IDs are positional and no document cites them, so renumbering changes nothing else.",
+    "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

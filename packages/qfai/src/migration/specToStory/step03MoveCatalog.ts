@@ -22,6 +22,7 @@ import {
   movePolicySection,
   newPolicyDraft,
   renderPolicyDocument,
+  renumberConstraints,
   type PolicyDraft,
 } from "./policyDocuments.js";
 import { addTechCommands, moveTechSection, renderTechDocument } from "./techDocument.js";
@@ -451,6 +452,8 @@ export const step03: MigrationStep = {
       operations.push({ kind: "move", source, target: archive });
     }
     for (const [target, draft] of drafts) {
+      if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
+        forAPerson.push(...renumberConstraints(draft));
       const content =
         target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);

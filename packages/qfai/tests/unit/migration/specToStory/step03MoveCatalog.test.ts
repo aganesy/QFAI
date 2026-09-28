@@ -14,6 +14,7 @@ import {
   executePlannedStep,
   type MigrationContext,
 } from "../../../../src/migration/specToStory/harness.js";
+import { validateConstraintIds } from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
 import { defaultRoutingEntries } from "../../../helpers/shippedAssistant.js";
 
@@ -171,7 +172,7 @@ describe("migration catalog move", () => {
     await put(
       context.root,
       ".qfai/spec/_policies/07_Constraints.md",
-      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n| BC-02 | EU data | Contract |\n",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n| BC-01 | EU data | Contract |\n",
     );
     const result = await run(context);
     expect(result.code).toBe(0);
@@ -191,11 +192,55 @@ describe("migration catalog move", () => {
       "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | An accepted request with a receipt. |\n",
     );
     expect(await policy("constraint.md")).toBe(
-      "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n\n## Business Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| BC-02 | EU data | Contract |\n",
+      "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n\n## Business Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| BC-01 | EU data | Contract |\n",
     );
     for (const name of ["objective", "initiative", "principle", "glossary", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
+    expect(await validateConstraintIds(context.specsDir)).toEqual([]);
+  });
+
+  it("numbers each constraint section from 01 and names every ID it changed", async () => {
+    // QFAI:EX-0004-0006-28
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      [
+        "# 07 Constraints",
+        "",
+        "## Constraints",
+        "",
+        "| ID | Constraint | Rationale |",
+        "| --- | --- | --- |",
+        "| TC-02 | Runs on Linux | Adopters |",
+        "| TC-05 | Runs on Windows | Adopters |",
+        "| OC-03 | Releases are signed | Supply chain |",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const target = ".qfai/spec/01_policy/constraint.md";
+    for (const [section, before, after] of [
+      ["Technical Constraints", "TC-02", "TC-01"],
+      ["Technical Constraints", "TC-05", "TC-02"],
+      ["Operational Constraints", "OC-03", "OC-01"],
+    ]) {
+      expect(result.output).toContain(
+        `${target} ## ${section}: ${before} is now ${after}, its place in the table; update anything that cites ${before}`,
+      );
+    }
+    const constraint = await readFile(
+      path.join(context.specsDir, "01_policy", "constraint.md"),
+      "utf8",
+    );
+    expect(constraint).toContain(
+      "| TC-01 | Runs on Linux | Adopters |\n| TC-02 | Runs on Windows | Adopters |\n",
+    );
+    expect(constraint).toContain("| OC-01 | Releases are signed | Supply chain |\n");
+    expect(conformance(context.specsDir, "constraint")).toContain("No violations");
+    expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
@@ -224,7 +269,7 @@ describe("migration catalog move", () => {
       "kept at .qfai/evidence/migration-spec-to-story/retired/_policies/07_Constraints.md";
     const target = ".qfai/spec/01_policy/constraint.md";
     expect(result.output).toContain(
-      `${target}: carry the "Impact" column of "## Constraints" in ${source} by hand (${kept})`,
+      `${target}: move what the "Impact" column of "## Constraints" in ${source} states to the contract or tech.md that owns it, or drop it (${kept})`,
     );
     expect(result.output).toContain(
       `${target} ## Technical Constraints: rewrite TC-02 of "## Constraints" in ${source} in plain words, with no file name, command or rule ID, by hand (${kept})`,
@@ -240,6 +285,7 @@ describe("migration catalog move", () => {
       "## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n",
     );
     expect(conformance(context.specsDir, "constraint")).toContain("No violations");
+    expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
   it("routes the structure catalog to Skeleton lines, architecture layers and the UI paths key", async () => {
@@ -266,8 +312,8 @@ describe("migration catalog move", () => {
         "",
         "| Layer | Responsibility | Depends on |",
         "| --- | --- | --- |",
-        "| CLI | Parses arguments and composes Core | Core |",
-        "| Core | Lives in src/core | - |",
+        "| CLI | Parses arguments and/or reads I/O | Core |",
+        "| Core | Lives in src/core/index.ts | - |",
         "",
         "## Architecture constraints",
         "",
@@ -296,7 +342,7 @@ describe("migration catalog move", () => {
     expect(tech.match(/- Skeleton: /g)).toHaveLength(1);
     expect(tech).not.toContain("worker");
     expect(tech).toContain(
-      "## Architecture\n\n| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n| CLI | Parses arguments and composes Core | Core |\n\n## Dependencies",
+      "## Architecture\n\n| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n| CLI | Parses arguments and/or reads I/O | Core |\n\n## Dependencies",
     );
     expect(tech).not.toContain("kebab-case");
     expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
@@ -449,7 +495,7 @@ describe("migration catalog move", () => {
         "",
         "| ID | Constraint | Rationale |",
         "| --- | --- | --- |",
-        "| TC-04 | No native modules | Portable installs |",
+        "| TC-01 | No native modules | Portable installs |",
         "",
         "## Standard commands (copy-paste)",
         "",
@@ -485,8 +531,9 @@ describe("migration catalog move", () => {
       path.join(context.specsDir, "01_policy", "constraint.md"),
       "utf8",
     );
-    expect(constraint).toContain("| TC-04 | No native modules | Portable installs |\n");
+    expect(constraint).toContain("| TC-01 | No native modules | Portable installs |\n");
     expect(conformance(context.specsDir, "constraint")).toContain("No violations");
+    expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
   it("sends the technology content tech.md cannot take to a person", async () => {
@@ -681,6 +728,7 @@ describe("migration catalog move", () => {
     for (const name of ["glossary", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
+    expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
   it("sends a pipeless body that is not a table to a person", async () => {

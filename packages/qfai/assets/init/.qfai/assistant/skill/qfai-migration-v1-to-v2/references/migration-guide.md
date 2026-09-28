@@ -143,9 +143,12 @@ step exits 3:
   the content once a person rewrites it.
 - Step 3 also leaves as it is a policy file or `tech.md` that already exists
   and differs from what it would write.
-- A constraint row keeps only its ID, Constraint and Rationale; step 3 lists
-  an Impact column, and a row that names a file, a command or a rule ID, for a
-  person to rewrite in plain words.
+- A constraint row keeps only its ID, Constraint and Rationale. Step 3 lists
+  an Impact column, whose content belongs to the contract or `tech.md` that
+  owns it, and a row that names a file, a command or a rule ID, to be rewritten
+  in plain words.
+- Step 3 numbers each constraint section from 01 in table order, and lists
+  every ID that changed with the ID that replaces it.
 - Steps 4 and 5 write a story sentence or an example cell of another form as it
   stands, for a person to rewrite.
 - Step 4 lists every business flow, so that a person writes its alternate and
