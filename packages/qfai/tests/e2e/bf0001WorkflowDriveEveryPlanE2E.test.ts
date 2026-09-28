@@ -53,20 +53,20 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
-// A plan step entry that always runs: a bare name. An entry with its own `when` runs only when
-// the proposal or the diagnosis selects it, and none of these runs does.
-function unconditionalStep(entry: unknown): string[] {
-  return typeof entry === "string" ? [entry] : [];
+// The step a plan entry names: a bare name, or the `step` of an entry marking it pass-through.
+function stepOf(entry: unknown): string[] {
+  const step = typeof entry === "string" ? entry : record(entry).step;
+  return typeof step === "string" ? [step] : [];
 }
 
-// The stages of the package's plan for `route`, in plan order, with the steps each always runs.
+// The stages of the package's plan for `route`, in plan order, with every step each runs.
 async function planStages(route: string): Promise<PlanStage[]> {
   const plan = record(parseYaml(await readFile(path.join(PLANS, `${route}.yml`), "utf8")));
   return (Array.isArray(plan.stages) ? plan.stages : []).map((stage) => {
     const { kind, steps } = record(stage);
     return {
       kind: String(kind),
-      steps: (Array.isArray(steps) ? steps : []).flatMap(unconditionalStep),
+      steps: (Array.isArray(steps) ? steps : []).flatMap(stepOf),
     };
   });
 }
@@ -146,7 +146,6 @@ const PROPOSALS: Record<string, object> = {
     goal: "Fix the typo in the README.",
     affectedFlowIds: [],
     proposedWriteScope: ["README.md"],
-    requiredStages: ["maintenance", "verify"],
   },
   bugfix: {
     ...base,
@@ -155,7 +154,6 @@ const PROPOSALS: Record<string, object> = {
     goal: "A sixth address is accepted again; refuse it.",
     affectedFlowIds: [FLOW_ID],
     proposedWriteScope: ["src/**", "tests/**"],
-    requiredStages: ["diagnose", "verify"],
   },
   "bounded-change": {
     ...base,
@@ -164,7 +162,6 @@ const PROPOSALS: Record<string, object> = {
     goal: "Allow ten notification addresses per customer.",
     affectedFlowIds: [FLOW_ID],
     proposedWriteScope: [".qfai/spec/02_business-flow/**", "src/**", "tests/**"],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   },
   feature: {
     ...base,
@@ -182,7 +179,6 @@ const PROPOSALS: Record<string, object> = {
       },
     ],
     proposedWriteScope: [".qfai/spec/02_business-flow/**", "src/**", "tests/**"],
-    requiredStages: ["sdd", "implement", "verify"],
   },
   discovery: DISCOVERY_PROPOSAL,
 };
@@ -209,13 +205,13 @@ async function driven(route: string) {
   };
 }
 
-// The stages each change route issues on a flow whose obligations tests already annotate: the
-// acceptance stage has nothing to do, and no UI contract asks for a prototype.
+// The stages each change route issues on a flow no UI contract serves: a regression diagnosis
+// takes the bugfix run to its regression fix, and no route issues a prototype stage.
 const ISSUED: [string, string[]][] = [
   ["direct", ["maintenance", "verify"]],
   ["bugfix", ["diagnose", "regression_fix", "verify"]],
-  ["bounded-change", ["sdd_delta", "implement", "verify"]],
-  ["feature", ["sdd", "implement", "verify"]],
+  ["bounded-change", ["sdd_delta", "acceptance", "implement", "verify"]],
+  ["feature", ["sdd", "acceptance", "implement", "verify"]],
 ];
 
 for (const [route, kinds] of ISSUED) {

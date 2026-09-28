@@ -14,9 +14,9 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
   const boundedPlan = {
     route: "bounded-change",
     stages: [
-      planStage("sdd-delta", "sdd_delta", "always"),
-      planStage("implement", "implement", "always"),
-      planStage("verify", "verify", "always"),
+      planStage("sdd-delta", "sdd_delta"),
+      planStage("implement", "implement"),
+      planStage("verify", "verify"),
     ],
   };
   const snapshot = {
@@ -50,7 +50,6 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
         affectedFlowIds: ["BF-0007"],
         newStories: [],
         proposedWriteScope: ["src/notify/**", "tests/notify/**"],
-        requiredStages: ["sdd_delta", "implement", "verify"],
       },
     },
   };

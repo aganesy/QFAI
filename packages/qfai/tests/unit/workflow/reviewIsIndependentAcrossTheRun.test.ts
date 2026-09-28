@@ -10,10 +10,10 @@ import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 const plan = {
   route: "bounded-change",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-acceptance", "acceptance", "always"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const flowBinding = { flowId: "BF-0007" };

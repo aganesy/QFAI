@@ -14,8 +14,9 @@ const obligations = {
   digest: "7".repeat(64),
 };
 
-// A bugfix run bound to BF-0007 whose RED receipt was accepted for EX-0007-0001-02, then
-// reclassified: its verify stage found a story defect only story authoring can repair, and
+// A bugfix run bound to BF-0007 whose append and acceptance stages had nothing to add and whose
+// RED receipt was accepted for EX-0007-0001-02, then reclassified: its verify stage found that
+// the criterion itself has to change, which story triage decides and no bugfix stage runs, and
 // routing settled bounded-change. Returns the run in `ready` under the new plan.
 async function reclassified() {
   // The package's plans, as the command observes them.
@@ -31,6 +32,10 @@ async function reclassified() {
     matchedIds: ["EX-0007-0001-02"],
   };
   run.accept({ diagnosis }, facts);
+  for (const kind of ["sdd_append", "acceptance"]) {
+    expect(run.next(facts).stageKind).toBe(kind);
+    run.accept({}, facts);
+  }
   expect(run.next(facts).stageKind).toBe("implement");
   run.accept(
     { testObservation: "expected_red", red: { testId: "t", failureKind: "assertion" } },
@@ -39,11 +44,11 @@ async function reclassified() {
   expect(run.next(facts).stageKind).toBe("verify");
   const storyDefect = {
     findingCode: "QFAI-TRACE-002",
-    path: ".qfai/spec/02_business-flow/business-flow-0007/user-story-0007-0001/03_Example.md",
-    cause: "The example contradicts its criterion",
+    path: ".qfai/spec/02_business-flow/business-flow-0007/user-story-0007-0001/02_Acceptance-Criteria.md",
+    cause: "The criterion contradicts the behaviour the request asks for",
     owningFlow: FLOW,
     detectingCommand: "qfai validate",
-    resolvingOwner: "qfai-sdd",
+    resolvingOwner: "sdd-triage",
     blockingExtent: "run",
   };
   const replanned = run.accept({ outcome: "needs_repair", debts: [storyDefect] }, facts);
@@ -60,7 +65,6 @@ async function reclassified() {
     newStories: [],
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   };
   const routingFacts = {
     flows: [FLOW],
@@ -72,8 +76,14 @@ async function reclassified() {
 
 it("A RED receipt accepted for an example no test annotates, then a reclassification from bugfix to bounded-change, then next", async () => {
   const { run, receipts, routing } = await reclassified();
-  const [diagnose = "", red = ""] = receipts;
-  const receiptValidity = { [routing]: "valid", [diagnose]: "stale", [red]: "valid" } as const;
+  const [diagnose = "", append = "", acceptance = "", red = ""] = receipts;
+  const receiptValidity = {
+    [routing]: "valid",
+    [diagnose]: "stale",
+    [append]: "valid",
+    [acceptance]: "valid",
+    [red]: "valid",
+  } as const;
 
   const workOrder = run.next({ flows: [FLOW], obligations, receiptValidity });
 
@@ -84,14 +94,16 @@ it("A RED receipt accepted for an example no test annotates, then a reclassifica
     priorStageReceiptRefs: workOrder.priorStageReceiptRefs,
     prior: run.snapshot.priorStages?.map((stage) => stage.stageKind),
   }).toEqual({
-    receipts: 2,
+    receipts: 4,
     stageKind: "sdd_delta",
     obligationIds: obligations.ids,
     priorStageReceiptRefs: [
       { ref: diagnose, validity: "stale" },
+      { ref: append, validity: "valid" },
+      { ref: acceptance, validity: "valid" },
       { ref: red, validity: "valid" },
     ],
-    prior: ["diagnose", "implement"],
+    prior: ["diagnose", "sdd_append", "acceptance", "implement"],
   });
 });
 

@@ -60,6 +60,8 @@ export interface WorkflowEvent {
   flowId?: string;
   plan?: WorkflowPlan;
   notRun?: WorkflowNotRun;
+  // On an accepted stage result: each pass-through step that recorded a pass.
+  passes?: WorkflowPass[];
   seamRequest?: { targetTestId: string };
   repairs?: WorkflowDebt[];
   debts?: WorkflowDebt[];
@@ -187,6 +189,24 @@ export type CompletionTarget = "qfai_done" | "working_tree";
 export type WorkflowNotRun =
   { kind: "not_applicable"; reason?: string } | { kind: "reused"; receiptRef: string };
 
+// A pass-through step that ran and had nothing to write: why, and the git-ignored record of what
+// it read.
+export interface WorkflowPass {
+  step: string;
+  reason: string;
+  evidenceRef: string;
+}
+
+// One step of a work order, as the stage runs it.
+export interface WorkflowStepRef {
+  name: string;
+  path: string;
+  mode: string | null;
+  passThrough: boolean;
+  decisionPoint: "user" | "release" | null;
+  branchPoint: boolean;
+}
+
 export interface WorkflowBinding {
   slotId: string;
   flowId: string;
@@ -205,8 +225,8 @@ export interface WorkflowWorkOrder {
   // The routing work order's executor and operation, which no plan names.
   executor?: { skill: string };
   operation?: string;
-  // A plan stage's active steps, in order, each with its entry file's project-relative path.
-  steps?: { name: string; path: string }[];
+  // Every step of a plan stage, in order, each with its entry file's project-relative path.
+  steps?: WorkflowStepRef[];
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
   checkpointRef?: string;
@@ -308,7 +328,9 @@ export type InputRefusalReason =
   | "example-added"
   | "record-rewritten"
   | "record-unauthorized"
-  | "rule-changed";
+  | "rule-changed"
+  | "pass-not-allowed"
+  | "pass-obligation-open";
 
 export interface InputRefusal {
   reason: InputRefusalReason;
@@ -321,7 +343,6 @@ export type ProposalRefusalReason =
   | "protected-surface"
   | "scope-escape"
   | "unresolved-approval"
-  | "stage-set"
   | "flow-binding";
 
 export interface ProposalRefusal {
@@ -329,17 +350,16 @@ export interface ProposalRefusal {
   subject: string;
 }
 
-// One step of a plan stage, with the step predicate it runs under when it has one.
+// One step of a plan stage, and whether it may pass with evidence when it has nothing to write.
 export interface PlanStep {
   name: string;
-  when?: string;
+  passThrough?: boolean;
 }
 
 export type PlanStages = {
   stageInstanceId: string;
   stageKind: string;
   steps?: PlanStep[];
-  when?: string;
   effects?: string[];
 }[];
 
@@ -351,8 +371,6 @@ export interface WorkflowPlan {
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
   riskSignals?: string[];
-  // The `proposed` steps the checked proposal asked for.
-  optionalSteps?: string[];
 }
 
 export interface WorkflowDiagnosis {
@@ -376,7 +394,6 @@ export interface WorkflowSnapshot {
     stages: PlanStages;
     writeScope?: string[];
     riskSignals?: string[];
-    optionalSteps?: string[];
   };
   flowBinding?: { flowId: string };
   diagnosis?: WorkflowDiagnosis | null;
@@ -402,7 +419,7 @@ export interface WorkflowSnapshot {
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   // The results of stages issued out of plan order to repair a finding.
   repairedStages?: WorkflowAcceptedStage[];
-  // The current plan's stages the run skipped because their predicate did not hold.
+  // The current plan's stages the run passed over because the diagnosis chose another branch.
   skippedStages?: string[];
   // The current plan's stages the run has issued a work order for.
   issuedStages?: string[];
@@ -477,6 +494,7 @@ export interface WorkflowAcceptedStage {
   gateResults?: WorkflowGateReceipt[];
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
+  passes?: WorkflowPass[];
 }
 
 export interface WorkflowReview {
@@ -515,9 +533,6 @@ export interface WorkflowProposal {
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
   newStories: WorkflowNewStory[];
-  requiredStages: string[];
-  // The steps the plan gates with `proposed` that this request needs.
-  optionalSteps?: string[];
 }
 
 export interface WorkflowResult {
@@ -532,6 +547,7 @@ export interface WorkflowResult {
   diagnosis?: WorkflowDiagnosis;
   bindings?: WorkflowBinding[];
   notRun?: WorkflowNotRun;
+  passes?: WorkflowPass[];
   debts?: WorkflowDebt[];
   seamRequest?: { targetTestId: string };
   seam?: { targetTestId: string; observation: string };
@@ -600,6 +616,8 @@ export interface WorkflowFacts {
   specsDir?: string;
   contractsDir?: string;
   pathExistence?: Record<string, boolean>;
+  // Whether a BF or AC of the bound flow still lacks its acceptance-layer test, which keeps
+  // `atdd-author` from passing.
   acceptanceObligationsUnmet?: boolean;
   // Whether a UI contract serves the bound flow, which a prototype stage needs.
   prototypeDecisionNeeded?: boolean;

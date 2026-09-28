@@ -43,17 +43,19 @@ const VERIFY_BLOCK = [
 ];
 
 /** Every step each plan kind runs, across the five built-in plans, in first-seen order. */
-async function kindSteps(kinds: string[]): Promise<{ names: string[] }> {
+async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
   const names: string[] = [];
+  const passThrough: string[] = [];
   for (const route of PLAN_ROUTES) {
     for (const stage of await planStageSteps(route)) {
       if (!kinds.includes(stage.kind)) continue;
       for (const step of stage.steps) {
         if (!names.includes(step.name)) names.push(step.name);
+        if (step.passThrough && !passThrough.includes(step.name)) passThrough.push(step.name);
       }
     }
   }
-  return { names };
+  return { names, passThrough };
 }
 
 /** The steps of one plan's stages of one kind, as names. */
@@ -144,6 +146,19 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-test-fix",
         "implement-seam",
         "implement-checkpoint",
+        "implement-bisect",
+        "implement-revert",
+        "implement-minimize",
+        "implement-stress-harness",
+        "implement-oracle-parity",
+        "implement-benchmark",
+        "implement-refactor",
+        "implement-retire",
+        "implement-sweep",
+        "implement-quarantine",
+        "implement-dep-bump",
+        "implement-tooling",
+        "implement-backport",
       ].sort(),
     );
     const implement = await kindSteps(["diagnose", "implement", "regression_fix"]);
@@ -191,6 +206,7 @@ describe("the skills a workflow run's steps belong to", () => {
     ]);
     const discussion = await kindSteps(["discussion"]);
     expect(discussion.names.filter((step) => !owned.includes(step))).toEqual([]);
+    expect(discussion.passThrough).toEqual(["discussion-uiux"]);
     const uiux = await readShipped("step/discussion-uiux/STEP.md");
     expect(sectionOf(uiux, "## Skipped when")).toBe("");
     expect(flat(sectionOf(uiux, "## Passes when"))).toMatch(

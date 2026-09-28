@@ -9,9 +9,9 @@ const flowBinding = { flowId: "BF-0007" };
 const plan = {
   route: "bugfix",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-implement", "implement", "always"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
   ],
 };
 const diagnosis = {

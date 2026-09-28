@@ -9,9 +9,9 @@ const base = {
   plan: {
     route: "bounded-change",
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta", "always"),
-      planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
-      planStage("bounded-verify", "verify", "always"),
+      planStage("bounded-sdd-delta", "sdd_delta"),
+      planStage("bounded-acceptance", "acceptance"),
+      planStage("bounded-verify", "verify"),
     ],
   },
   flowBinding: { flowId: "BF-0007" },

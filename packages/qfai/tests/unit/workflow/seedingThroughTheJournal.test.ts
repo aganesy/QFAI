@@ -72,11 +72,7 @@ const question = {
 function answered(answeredBy: string) {
   const plan = planOf(
     "bugfix",
-    [
-      stage("diagnose", "diagnose"),
-      stage("sdd-append", "sdd_append", "missing_example_needed"),
-      stage("verify", "verify"),
-    ],
+    [stage("diagnose", "diagnose"), stage("sdd-append", "sdd_append"), stage("verify", "verify")],
     [STORY],
   );
   const issue = facts(ISSUED, contract("EX-0001-0005-01"), AT_ISSUE);

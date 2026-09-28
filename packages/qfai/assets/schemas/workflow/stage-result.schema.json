@@ -161,6 +161,29 @@
         }
       ]
     },
+    "passes": {
+      "description": "Each pass-through step that ran and had nothing to write, with its reason and the git-ignored record of what it read.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step", "reason", "evidenceRef"],
+        "properties": {
+          "step": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceRef": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "red": {
       "type": "object",
       "additionalProperties": false,
@@ -279,7 +302,19 @@
       "required": ["verdict", "reproductionRef", "matchedIds"],
       "properties": {
         "verdict": {
-          "enum": ["missing-test", "defective-test", "regression", "expectation-differs"]
+          "enum": [
+            "missing-test",
+            "defective-test",
+            "regression",
+            "expectation-differs",
+            "as-specified",
+            "not-ours",
+            "duplicate",
+            "needs-info",
+            "surface-conflict",
+            "check-gap",
+            "product-race"
+          ]
         },
         "reproductionRef": {
           "type": "string",

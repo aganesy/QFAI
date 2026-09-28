@@ -7,5 +7,4 @@ stages:
       - discussion-interview
       - discussion-pack
       - discussion-oq
-      - { step: discussion-uiux, when: proposed }
-    when: full_discussion_needed
+      - { step: discussion-uiux, passThrough: true }

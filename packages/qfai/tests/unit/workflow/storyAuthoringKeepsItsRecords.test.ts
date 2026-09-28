@@ -79,7 +79,7 @@ interface Accepted {
 // A story-authoring work order issued against `ISSUED`, and its result accepted against `after`.
 function accept(accepted: Accepted) {
   const { stageKind, after, changed = [], outcome = "accepted" } = accepted;
-  const stage = planStage(stageKind, stageKind, "always");
+  const stage = planStage(stageKind, stageKind);
   const workOrder = {
     workOrderId: `work-order-${stageKind}-1`,
     stageInstanceId: stageKind,

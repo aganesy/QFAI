@@ -35,6 +35,21 @@ const object = (
 ): Shape => ({ kind: "object", fields, required, ...(holds ? { holds } : {}) });
 const everyField = (fields: Record<string, Shape>): Shape => object(fields, Object.keys(fields));
 
+// The verdicts a diagnosis reports: what the run does next follows from the one it gives.
+export const DIAGNOSIS_VERDICTS = [
+  "missing-test",
+  "defective-test",
+  "regression",
+  "expectation-differs",
+  "as-specified",
+  "not-ours",
+  "duplicate",
+  "needs-info",
+  "surface-conflict",
+  "check-gap",
+  "product-race",
+] as const;
+
 const FLOW_ID: Shape = { kind: "string", pattern: /^BF-\d{4}$/ };
 const EFFECT = oneOf("proceed", "replan", "stop");
 
@@ -105,8 +120,6 @@ export const ROUTE_PROPOSAL = object(
     ),
     proposedWriteScope: list(text),
     protectedTargets: list(text),
-    requiredStages: list(text),
-    optionalSteps: list(text),
     rationale: text,
     confidence: { kind: "number" },
   },
@@ -122,7 +135,6 @@ export const ROUTE_PROPOSAL = object(
     "newStories",
     "proposedWriteScope",
     "protectedTargets",
-    "requiredStages",
     "rationale",
   ],
 );
@@ -173,6 +185,7 @@ export const STAGE_RESULT = object(
         everyField({ kind: oneOf("reused"), receiptRef: text }),
       ],
     },
+    passes: list(everyField({ step: text, reason: text, evidenceRef: text })),
     red: everyField({
       testId: text,
       failureKind: oneOf("assertion", "collection", "import", "startup", "timeout"),
@@ -186,7 +199,7 @@ export const STAGE_RESULT = object(
     ]),
     regressionFix: object({ testId: text, rerunRef: text, reviewRef: text }, ["testId"]),
     diagnosis: everyField({
-      verdict: oneOf("missing-test", "defective-test", "regression", "expectation-differs"),
+      verdict: oneOf(...DIAGNOSIS_VERDICTS),
       reproductionRef: text,
       matchedIds: list({
         kind: "string",

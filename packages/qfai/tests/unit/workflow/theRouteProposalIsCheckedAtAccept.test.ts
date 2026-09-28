@@ -66,7 +66,6 @@ it("unknown-path", () => {
         ],
         proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
-        requiredStages: ["sdd", "verify"],
         rationale: "The requested capability is not yet specified.",
       },
     },
@@ -137,7 +136,6 @@ function checkedProposal(): Proposal {
     ],
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
-    requiredStages: ["sdd", "verify"],
   };
 }
 
@@ -215,7 +213,6 @@ const boundedPlan = {
     stageKind,
     skill,
     operation,
-    when: "always",
   })),
 };
 
@@ -227,7 +224,6 @@ function boundedNaming(affectedFlowIds: string[]) {
       candidateRoute: "bounded-change",
       newStories: [],
       affectedFlowIds,
-      requiredStages: ["sdd_delta", "implement", "verify"],
     },
     { flows: ["BF-0001", "BF-0002"], plans: { "bounded-change": boundedPlan } },
   );
@@ -307,52 +303,10 @@ it("unresolved-approval", () => {
   expect(actual).toEqual(refused({ reason: "unresolved-approval", subject: "data-loss" }));
 });
 
-const featurePlan = {
-  route: "feature",
-  stages: [
-    { stageInstanceId: "sdd", stageKind: "sdd", when: "always" },
-    {
-      stageInstanceId: "acceptance",
-      stageKind: "acceptance",
-      when: "acceptance_obligations_unmet",
-    },
-    { stageInstanceId: "implement", stageKind: "implement", when: "always" },
-    { stageInstanceId: "verify", stageKind: "verify", when: "always" },
-  ],
-};
-
-it("stage-set", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), requiredStages: ["sdd", "deploy"] },
-    { plans: { feature: featurePlan } },
-  );
-  expect(actual).toEqual(
-    refused(
-      { reason: "stage-set", subject: "implement" },
-      { reason: "stage-set", subject: "verify" },
-      { reason: "stage-set", subject: "deploy" },
-    ),
-  );
-});
-
 const missingSpecReference: Proposal["expectedBehaviorRefs"] = [
   { kind: "request", ref: "request" },
   { kind: "flow-id", ref: "BF-9999" },
 ];
-
-it("A proposal failing unknown-id and stage-set at once", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), expectedBehaviorRefs: missingSpecReference, requiredStages: ["sdd"] },
-    { flows: [], plans: { feature: featurePlan } },
-  );
-  expect(actual).toEqual(
-    refused(
-      { reason: "unknown-id", subject: "BF-9999" },
-      { reason: "stage-set", subject: "implement" },
-      { reason: "stage-set", subject: "verify" },
-    ),
-  );
-});
 
 it("A proposal failing unknown-id with confidence", () => {
   const proposal = { ...checkedProposal(), expectedBehaviorRefs: missingSpecReference };

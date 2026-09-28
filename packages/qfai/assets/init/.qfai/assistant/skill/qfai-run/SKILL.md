@@ -57,9 +57,7 @@ Classify the request before any write call. Only `change` calls `start`.
    one business flow in `affectedFlowIds`; a story no existing story represents
    in `newStories`. A search that finds nothing is not evidence that no story
    represents the goal. `proposedWriteScope` names every file a stage will
-   write that git does not ignore. `optionalSteps` names each step the plan
-   runs only when proposed that the request needs: a contract change needs
-   `sdd-contract`. Submit the result with `accept`.
+   write that git does not ignore. Submit the result with `accept`.
 3. **Revise a refused proposal.** Fix every reason `proposal-refused` lists and
    submit again. The operator sees nothing unless a question or a halt follows.
 4. **Announce.** Once the plan is checked, give the goal, the stages in order

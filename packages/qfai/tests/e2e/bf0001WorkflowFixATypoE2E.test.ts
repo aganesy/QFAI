@@ -37,7 +37,6 @@ const DIRECT_PROPOSAL = {
   newStories: [],
   proposedWriteScope: ["README.md"],
   protectedTargets: [],
-  requiredStages: ["maintenance", "verify"],
   rationale: "A typo in prose only.",
 };
 

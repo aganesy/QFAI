@@ -19,6 +19,7 @@ const OPEN_QUESTIONS = ".qfai/spec/open-questions.md";
 // observer derives the story's examples file and the one contract citing that criterion.
 const facts = {
   specsDir: ".qfai/spec",
+  prototypeDecisionNeeded: true,
   seeding: { exampleFile: `${STORY}/03_Example.md`, contractFiles: [CONTRACT] },
 };
 
@@ -30,20 +31,15 @@ function ofKind(stageKind: string): Middle {
   return [stageKind, KIND_STEPS[stageKind] ?? []];
 }
 
-// A stage of a kind carrying exactly the named steps.
-function withSteps(stageKind: string, ...names: string[]): Middle {
-  return [stageKind, names.map((name) => ({ name }))];
-}
-
 // A bounded-change plan whose middle stage is the kind under test.
 function boundedPlan(stageKind: string, steps: PlanStep[]) {
   return {
     route: "bounded-change",
     writeScope: ["src/notify"],
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta", "always"),
-      { stageInstanceId: "bounded-middle", stageKind, steps, when: "always" },
-      planStage("bounded-verify", "verify", "always"),
+      planStage("bounded-sdd-delta", "sdd_delta"),
+      { stageInstanceId: "bounded-middle", stageKind, steps },
+      planStage("bounded-verify", "verify"),
     ],
   };
 }
@@ -143,9 +139,8 @@ const atddRecords = [".qfai/evidence/atdd-BF-0001.md"];
 const derivations: [string, Middle, string[] | undefined][] = [
   ["implement", implement, implementRecords],
   ["regression-fix", ofKind("regression_fix"), implementRecords],
-  ["test-fix-implement", withSteps("test_fix", "implement-test-fix"), implementRecords],
   ["acceptance", ofKind("acceptance"), atddRecords],
-  ["test-fix-atdd", withSteps("test_fix", "atdd-test-fix"), atddRecords],
+  ["test-fix", ofKind("test_fix"), [...atddRecords, ...implementRecords]],
   ["sdd-append", sddAppend, [`${STORY}/03_Example.md`, CONTRACT, DECISIONS, SDD_EVIDENCE]],
   ["prototype-not-ui-bearing", ofKind("prototype"), undefined],
   ["sdd", ofKind("sdd"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
@@ -194,7 +189,6 @@ function checkedPlanDocument() {
           newStories: [],
           proposedWriteScope: plan.writeScope,
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

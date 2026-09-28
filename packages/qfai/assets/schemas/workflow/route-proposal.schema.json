@@ -17,7 +17,6 @@
     "newStories",
     "proposedWriteScope",
     "protectedTargets",
-    "requiredStages",
     "rationale"
   ],
   "properties": {
@@ -139,22 +138,6 @@
       }
     },
     "protectedTargets": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "requiredStages": {
-      "description": "Stage kinds, in plan order.",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "optionalSteps": {
-      "description": "The steps the plan runs only when proposed that this request needs.",
       "type": "array",
       "items": {
         "type": "string",

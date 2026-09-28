@@ -52,7 +52,6 @@ export const DISCOVERY_PROPOSAL = {
   newStories: [],
   proposedWriteScope: ["docs/**"],
   protectedTargets: [],
-  requiredStages: ["discussion"],
   rationale: "What the export contains is not settled.",
 };
 

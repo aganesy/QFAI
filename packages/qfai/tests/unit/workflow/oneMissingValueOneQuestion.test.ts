@@ -13,7 +13,6 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
   plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
@@ -57,7 +56,6 @@ function routeWithOneMissingValue() {
           newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

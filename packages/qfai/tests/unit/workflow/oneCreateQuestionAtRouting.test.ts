@@ -56,7 +56,6 @@ it("Decide accept of a routing result whose checked proposal names one new story
         ],
         proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
-        requiredStages: ["sdd", "verify"],
         rationale: "No existing story owns notification email registration.",
       },
     },

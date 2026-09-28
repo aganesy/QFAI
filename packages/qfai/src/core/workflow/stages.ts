@@ -1,54 +1,45 @@
-import { firstMatchedKind } from "./common.js";
 import type { PlanStages, WorkflowFacts, WorkflowSnapshot } from "./types.js";
 
 type Plan = NonNullable<WorkflowSnapshot["plan"]>;
 
-type PredicateFacts = Pick<WorkflowFacts, "acceptanceObligationsUnmet" | "prototypeDecisionNeeded">;
+type PlanStage = PlanStages[number];
 
-// Whether one plan predicate holds for the run as it stands.
-function predicateHolds(
-  when: string | undefined,
+type StageFacts = Pick<WorkflowFacts, "prototypeDecisionNeeded">;
+
+// The diagnosis verdict whose branch each stage kind after a diagnose stage belongs to.
+const BRANCH_OF: Record<string, string> = {
+  sdd_append: "missing-test",
+  acceptance: "missing-test",
+  implement: "missing-test",
+  regression_fix: "regression",
+  test_fix: "defective-test",
+};
+
+// Every stage runs, with two exceptions no plan declares yet: after a diagnose stage, the
+// diagnosis verdict selects its branch's stages, and a prototype stage runs only while how a UI
+// contract serves the flow is open, which is when one of its rules cites an example of the flow.
+// SIMPLIFIED: the core selects these stages itself, since a plan declares no branch point.
+// Lift when: a plan declares branch points, and a verdict or a prototype need re-routes the run
+// to a route of its own.
+function stageRuns(
   plan: Plan,
+  stage: PlanStage,
   diagnosis: WorkflowSnapshot["diagnosis"],
-  facts: PredicateFacts,
+  facts: StageFacts,
 ): boolean {
-  const verdict = diagnosis?.verdict;
-  switch (when) {
-    // Every plan file names a predicate for each stage; a stage with none runs.
-    case undefined:
-    case "always":
-      return true;
-    // An example already stating the case is the diagnosis's first matched ID.
-    case "missing_example_needed":
-      return verdict === "missing-test" && firstMatchedKind(diagnosis) !== "EX";
-    case "diagnosis_missing_test":
-      return verdict === "missing-test";
-    case "acceptance_obligations_unmet":
-      return facts.acceptanceObligationsUnmet === true;
-    // While how a UI contract serves a flow is open, one does when one of its rules cites an
-    // example of the flow, so a project with no UI contract has no prototype stage.
-    case "prototype_decision_needed":
-      return facts.prototypeDecisionNeeded === true;
-    // Routing chose discovery because product scope is open, which is what a full discussion
-    // settles.
-    case "full_discussion_needed":
-      return plan.route === "discovery";
-    case "regression_found":
-      return verdict === "regression";
-    case "test_defect_found":
-      return verdict === "defective-test";
-    default:
-      return false;
-  }
+  if (stage.stageKind === "prototype") return facts.prototypeDecisionNeeded === true;
+  const branch = BRANCH_OF[stage.stageKind];
+  const diagnosed = plan.stages.some((each) => each.stageKind === "diagnose");
+  return !diagnosed || branch === undefined || diagnosis?.verdict === branch;
 }
 
 // The plan's stages that run, in plan order. A stage the run has issued keeps running whatever
-// its predicate says now, since its own work can change what the predicate reads, and one the
-// run recorded as skipped stays skipped. Every other stage runs when its predicate holds.
+// the diagnosis or the tree says now, since its own work can change what they say, and one the
+// run recorded as passed over stays so.
 export function activeStages(
   plan: Plan,
   snapshot: WorkflowSnapshot,
-  facts: PredicateFacts,
+  facts: StageFacts,
 ): PlanStages {
   const ran = new Set([
     ...(snapshot.acceptedStages ?? []).map((stage) => stage.stageInstanceId),
@@ -59,19 +50,9 @@ export function activeStages(
   return plan.stages.filter(
     (stage) =>
       ran.has(stage.stageInstanceId) ||
-      (!skipped.has(stage.stageInstanceId) &&
-        predicateHolds(stage.when, plan, snapshot.diagnosis, facts)),
+      (!skipped.has(stage.stageInstanceId) && stageRuns(plan, stage, snapshot.diagnosis, facts)),
   );
 }
-
-const BUGFIX_PREDICATES = [
-  "always",
-  "missing_example_needed",
-  "diagnosis_missing_test",
-  "acceptance_obligations_unmet",
-  "regression_found",
-  "test_defect_found",
-];
 
 function everyStageNamed(stages: PlanStages): boolean {
   return stages.every((stage) => (stage.steps ?? []).length > 0);
@@ -89,12 +70,11 @@ function directIsInvalid(stages: PlanStages): boolean {
   );
 }
 
-function boundedIsInvalid(stages: PlanStages, first: string, predicates: string[]): boolean {
+function boundedIsInvalid(stages: PlanStages, first: string): boolean {
   return (
     stages[0]?.stageKind !== first ||
     stages.at(-1)?.stageKind !== "verify" ||
-    !everyStageNamed(stages) ||
-    stages.some((stage) => !predicates.includes(stage.when ?? ""))
+    !everyStageNamed(stages)
   );
 }
 
@@ -121,11 +101,9 @@ export function routePlanIsInvalid(plan: Plan, snapshot: WorkflowSnapshot): bool
     case "direct":
       return directIsInvalid(stages);
     case "bugfix":
-      return !bound || boundedIsInvalid(stages, "diagnose", BUGFIX_PREDICATES);
+      return !bound || boundedIsInvalid(stages, "diagnose");
     case "bounded-change":
-      return (
-        !bound || boundedIsInvalid(stages, "sdd_delta", ["always", "acceptance_obligations_unmet"])
-      );
+      return !bound || boundedIsInvalid(stages, "sdd_delta");
     case "feature":
       return featureIsInvalid(stages, snapshot.approval);
     case "discovery":

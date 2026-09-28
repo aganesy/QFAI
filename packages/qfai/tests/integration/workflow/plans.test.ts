@@ -3,6 +3,7 @@
 // QFAI:AC-0001-0198-01
 // QFAI:AC-0001-0199-03
 // QFAI:AC-0001-0217-05
+// QFAI:AC-0001-0225-05
 // QFAI:EX-0001-0192-13
 // QFAI:EX-0001-0192-14
 // QFAI:EX-0001-0195-08
@@ -110,13 +111,11 @@ const started = {
   subjects: [],
 };
 
-// Each stage as its kind, its steps, each marked with its own predicate when it has one, and
-// the stage's predicate.
+// Each stage as its kind and its steps, a pass-through step marked with `°`.
 function shape(plan: WorkflowPlanFile | undefined) {
   return (plan?.stages ?? []).map((stage) => [
     stage.kind,
-    stage.steps.map((step) => (step.when ? `${step.name}?${step.when}` : step.name)),
-    stage.when,
+    stage.steps.map((step) => (step.passThrough ? `${step.name}°` : step.name)),
   ]);
 }
 
@@ -148,24 +147,18 @@ it("Load the shipped feature", async () => {
         "sdd-flow",
         "sdd-story",
         "sdd-contract",
-        "common-design-md?proposed",
+        "common-design-md°",
         "sdd-cycle",
         "sdd-gate",
       ],
-      "always",
     ],
     [
       "prototype",
       ["prototyping-grill", "prototyping-preflight", "prototyping-loop", "prototyping-handoff"],
-      "prototype_decision_needed",
     ],
-    [
-      "acceptance",
-      ["atdd-scaffold", "atdd-credentials?proposed", "atdd-author"],
-      "acceptance_obligations_unmet",
-    ],
-    ["implement", ["implement-tdd", "implement-checkpoint"], "always"],
-    ["verify", VERIFY, "always"],
+    ["acceptance", ["atdd-scaffold", "atdd-credentials°", "atdd-author°"]],
+    ["implement", ["implement-tdd", "implement-checkpoint"]],
+    ["verify", VERIFY],
   ]);
 });
 
@@ -192,13 +185,11 @@ it("Load the five shipped plans", async () => {
   expect({
     routes: Object.keys(plans).sort(),
     grill: stages.filter((stage) => stage.steps.some((step) => step.name.startsWith("grill"))),
-    discussion: stages
-      .filter((stage) => stage.kind === "discussion")
-      .map((stage) => [stage.route, stage.when]),
+    discussion: stages.filter((stage) => stage.kind === "discussion").map((stage) => stage.route),
   }).toEqual({
     routes: ["bounded-change", "bugfix", "direct", "discovery", "feature"],
     grill: [],
-    discussion: [["discovery", "full_discussion_needed"]],
+    discussion: ["discovery"],
   });
 });
 
@@ -206,8 +197,8 @@ it("Load the shipped direct", async () => {
   const plans = await loadBuiltInPlans();
 
   expect(shape(plans.direct)).toEqual([
-    ["maintenance", ["maintain-edit"], "always"],
-    ["verify", VERIFY, "always"],
+    ["maintenance", ["maintain-edit"]],
+    ["verify", VERIFY],
   ]);
 });
 
@@ -246,7 +237,7 @@ const loadRefusals: [string, (text: string) => string][] = [
   ["not-mapping", () => "- route\n- stages\n"],
   ["unknown-key", (text) => `${text}owner: platform-team\n`],
   ["route-name", (text) => text.replace("route: direct", "route: bugfix")],
-  ["out-of-vocabulary", (text) => text.replace("when: always", "when: sometimes")],
+  ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
   ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
   ["cycle", (text) => text.replace(DIRECT_STAGE, `${DIRECT_STAGE}    after: [verify]\n`)],
@@ -254,8 +245,7 @@ const loadRefusals: [string, (text: string) => string][] = [
   [
     "no-verify-path",
     (text) =>
-      `${text}  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n` +
-      "    when: always\n    after: [edit]\n",
+      `${text}  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [edit]\n`,
   ],
 ];
 
@@ -270,11 +260,6 @@ for (const [reason, change] of loadRefusals) {
 
 const stepRefusals: [string, string, string][] = [
   ["a step outside the vocabulary", "steps: [maintain-rewrite]", "out-of-vocabulary"],
-  [
-    "a step predicate outside the vocabulary",
-    "steps: [{ step: maintain-edit, when: sometimes }]",
-    "out-of-vocabulary",
-  ],
   ["a step another kind runs", "steps: [maintain-edit, sdd-gate]", "kind-mismatch"],
   ["the seam step in a plan", "steps: [implement-seam]", "kind-mismatch"],
   ["a step listed twice", "steps: [maintain-edit, maintain-edit]", "shape"],
@@ -297,7 +282,6 @@ const retiredNames: [string, string, string][] = [
   ["defect-reopen", "kind: maintenance", "kind: defect_reopen"],
   ["configure", "kind: maintenance", "kind: configure"],
   ["research", "kind: maintenance", "kind: research"],
-  ["ledger-reconcile-needed", "when: always", "when: ledger_reconcile_needed"],
 ];
 
 for (const [title, from, to] of retiredNames) {
@@ -310,6 +294,36 @@ for (const [title, from, to] of retiredNames) {
     );
   });
 }
+
+// QFAI:EX-0001-0199-10
+it("a pass-through mark on a step off the pass-through list", async () => {
+  const verify = "steps: [verify-context, verify-qfai-gate, verify-repo-gate]";
+  const marked =
+    "steps: [{ step: verify-context, passThrough: true }, verify-qfai-gate, verify-repo-gate]";
+  const loaded = parsePlan((await packagedDirect()).replace(verify, marked), "direct");
+
+  expect(loaded.ok ? [] : loaded.refusals).toEqual([
+    { route: "direct", reason: "pass-through", subject: "verify-context" },
+  ]);
+});
+
+// QFAI:EX-0001-0225-06
+it("A stage carrying when: always, and a step entry carrying when: proposed", async () => {
+  const direct = await packagedDirect();
+  const stageWhen = parsePlan(
+    direct.replace(EDIT_STEPS, `${EDIT_STEPS}\n    when: always`),
+    "direct",
+  );
+  const stepWhen = parsePlan(
+    direct.replace(EDIT_STEPS, "steps: [{ step: maintain-edit, when: proposed }]"),
+    "direct",
+  );
+
+  expect([stageWhen, stepWhen].map((loaded) => (loaded.ok ? [] : loaded.refusals))).toEqual([
+    [{ route: "direct", reason: "unknown-key", subject: "when" }],
+    [{ route: "direct", reason: "unknown-key", subject: "when" }],
+  ]);
+});
 
 it("crlf-equal", async () => {
   const loaded = parsePlan((await packagedDirect()).replace(/\r?\n/g, "\r\n"), "direct");
@@ -344,9 +358,8 @@ it("discovery-ends-routing", async () => {
           "discussion-interview",
           "discussion-pack",
           "discussion-oq",
-          "discussion-uiux?proposed",
+          "discussion-uiux°",
         ],
-        "full_discussion_needed",
       ],
     ],
     refusals: [],
