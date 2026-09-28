@@ -429,7 +429,7 @@ describe("qfai-maintain", () => {
 
   // QFAI:AC-0001-0198-02
   // QFAI:EX-0001-0198-04
-  it("stops before an edit with a semantic effect and returns the run for reclassification", async () => {
+  it("stops before an edit with a semantic effect and leaves the run blocked on the owner", async () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     const edit = flat(sectionOf(skill, "## The edit"));
     expect(edit).toMatch(/judge whether each planned edit has a semantic effect/i);
@@ -439,7 +439,10 @@ describe("qfai-maintain", () => {
     const effect = flat(sectionOf(skill, "## A semantic effect"));
     expect(effect).toMatch(/is not a maintenance edit\. nothing is edited/i);
     expect(effect).toMatch(/stop, and report that the change is not a maintenance edit/i);
-    expect(effect).toMatch(/the run is reclassified from there/i);
+    expect(effect).toMatch(
+      /no stage of the route serves the finding's owner, so the run is `blocked`, naming the finding and the owner skill to invoke by name/i,
+    );
+    expect(effect).not.toMatch(/reclassified/i);
     expect(effect).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
     expect(effect).toMatch(/`debts` holds one entry for the finding/i);
     expect(effect).toMatch(/`findingCode` is `maintain-semantic-effect`/);

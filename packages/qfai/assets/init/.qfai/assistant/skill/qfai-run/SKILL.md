@@ -66,7 +66,7 @@ Classify the request before any write call. Only `routed` calls `start`.
    submit again. The operator sees nothing unless a question or a halt follows.
 4. **Announce.** Once the plan is checked, give the goal, the stages in order
    and the write scope. Ask nothing.
-5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2.
+5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2. One carrying `reroute` has its route fixed already: the result supplies only the scope, the flows and the new stories for it, and the decision rules do not choose again.
    - Any other work order: hand it whole to one sub-agent. It reads the `path`
      of each entry in `steps`, in order and only the current one, and runs that
      step. After the last step it runs one review, by `requiredReviewerRoles`.

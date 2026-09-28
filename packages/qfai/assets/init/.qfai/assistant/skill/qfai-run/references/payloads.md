@@ -122,6 +122,10 @@ The routing work order's result carries the proposal.
 - A check that depends on the chosen route, such as the flow binding or the
   write scope of a route that changes nothing, can refuse a proposal whose
   extraction was valid. Revise it by the reasons `proposal-refused` lists.
+- After a re-route the routing work order carries `reroute`, and its route is
+  already fixed. The result has the same shape, extraction included, but the
+  decision rules do not choose again. It supplies the scope, the flows and the
+  new stories for the fixed route.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
@@ -232,6 +236,12 @@ A routing or stage result carries a question as:
   `requiredReviewerRoles`.
 - The routing work order carries `executor` `qfai-run` and `operation` `route`
   instead of `steps`.
+- A routing work order issued by a re-route also carries
+  `reroute: { route, fromStep, outcome }`: the route the run moves to, and the
+  step and the outcome that sent it there. Its result follows
+  [Routing result](#routing-result).
+- A step with `branchPoint: true` can send the run to another route. It reports
+  that through the stage result's `branch`, or its diagnosis `verdict`.
 
 ## Stage result
 
@@ -245,3 +255,15 @@ refused before the run reads it.
   that had nothing to write. `evidenceRef` names a git-ignored record of what
   the step read. The run refuses a pass for a step its work order does not mark
   `passThrough`, and a pass while work the step owns remains.
+- `branch` holds `{ outcome, route?, extraction? }` from a step marked
+  `branchPoint: true` other than `implement-diagnose`, which reports its
+  diagnosis `verdict` instead:
+  - `outcome` is one the step declares;
+  - `route` picks one of several destinations the step names for that outcome;
+  - `extraction` is `{ intent, entryFlags, qualifiers, signals }`, from which the
+    decision rules choose the destination when the step leaves it to them.
+- A `branch` moves the run to routing with the destination fixed. A result
+  without one continues the route.
+- A `branch` from a step that is not a branch point, an outcome the step does
+  not declare, or a `route` outside its destinations is refused `invalid-input`
+  with reason `branch-undeclared`.
