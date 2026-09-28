@@ -14,9 +14,13 @@ describe("autopilot choices cannot supply missing approval", () => {
     it(tree + ": SDD classifies its own decisions and stops for pending approval", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
+      // The skill adds its own inputs; the three buckets are the shared prototype's.
+      const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
       expect(skill).toContain("## Default Autopilot Policy");
-      for (const bucket of ["auto-decide:", "ask-user:", "hard-required:"]) {
-        expect(skill).toContain(bucket);
+      expect(skill).toContain("hard-required:");
+      expect(baseline).toContain("## Default Autopilot Policy (Shared)");
+      for (const bucket of ["| `auto-decide`", "| `ask-user`", "| `hard-required`"]) {
+        expect(baseline).toContain(bucket);
       }
       const step = await read(tree, "assistant/step/sdd-triage/STEP.md");
       expect(step).toContain("sdd-triage.md");

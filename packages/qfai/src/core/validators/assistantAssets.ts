@@ -39,7 +39,7 @@ import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
-const REVIEWER_GATE_HEADING_PATTERN = /^###\s+Reviewer Gate\b.*$/im;
+const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$/m;
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
 /**
@@ -302,7 +302,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     const content = documents.get(skillFile);
     if (content === undefined) {
       // Unreadable, and already reported as `QFAI-SKILLS-014` above. The
-      // marker and Reviewer-Gate checks have no bytes to judge.
+      // marker check has no bytes to judge.
       continue;
     }
 
@@ -317,33 +317,16 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
         ),
       );
     }
+  }
 
-    const reviewerGateSection = extractReviewerGateSection(content);
-    if (reviewerGateSection === null) {
-      issues.push(
-        issue(
-          "QFAI-SKILLS-011",
-          "SKILL.md に `### Reviewer Gate` セクションがありません。",
-          "error",
-          skillFile,
-          "skills.reviewerGate",
-        ),
-      );
-      continue;
-    }
-
-    const missingTerms = collectMissingReviewerGateTerms(reviewerGateSection);
-    if (missingTerms.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-SKILLS-012",
-          `Reviewer Gate に Drift/test-layer 観点が不足しています（不足: ${missingTerms.join(", ")}）。`,
-          "warning",
-          skillFile,
-          "skills.reviewerGatePolicy",
-        ),
-      );
-    }
+  // Every skill inherits the reviewer gate the delegation baseline states, so
+  // the obligation is checked there once rather than restated in each skill.
+  if (skillFiles.length > 0) {
+    issues.push(
+      ...(await collectReviewerGateBaselineIssues(
+        path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md"),
+      )),
+    );
   }
 
   // Registration is asked of the loader boundary, not of every file named
@@ -1464,20 +1447,56 @@ function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
   return relative.startsWith(".") && relative !== ".." && !relative.includes(path.sep);
 }
 
-function extractReviewerGateSection(content: string): string | null {
-  const headingMatch = REVIEWER_GATE_HEADING_PATTERN.exec(content);
+/**
+ * The `## Reviewer Gate Baseline` section with its subsections, or `null` when
+ * the heading is gone.
+ */
+function extractReviewerGateBaseline(content: string): string | null {
+  const headingMatch = REVIEWER_GATE_BASELINE_HEADING_PATTERN.exec(content);
   if (!headingMatch) {
     return null;
   }
-  const headingStart = headingMatch.index;
-  const headingText = headingMatch[0];
-  const sectionStart = headingStart + headingText.length;
-  const remainder = content.slice(sectionStart);
-  const nextHeadingMatch = ANY_MARKDOWN_HEADING_PATTERN.exec(remainder);
-  if (!nextHeadingMatch) {
-    return remainder;
+  const remainder = content.slice(headingMatch.index + headingMatch[0].length);
+  const nextSectionMatch = /^#{1,2}\s+/m.exec(remainder);
+  return nextSectionMatch ? remainder.slice(0, nextSectionMatch.index) : remainder;
+}
+
+/**
+ * `QFAI-SKILLS-011` when the delegation baseline no longer carries the reviewer
+ * gate every skill inherits, and `QFAI-SKILLS-012` when that gate has lost one
+ * of the three obligations a skill no longer restates.
+ */
+async function collectReviewerGateBaselineIssues(baselinePath: string): Promise<Issue[]> {
+  let content: string;
+  try {
+    content = await readFile(baselinePath, "utf-8");
+  } catch (error) {
+    if (!isEnoent(error)) throw error;
+    content = "";
   }
-  return remainder.slice(0, nextHeadingMatch.index);
+  const section = extractReviewerGateBaseline(content);
+  if (section === null) {
+    return [
+      issue(
+        "QFAI-SKILLS-011",
+        "The shared delegation baseline has no `## Reviewer Gate Baseline` section, so no skill inherits a reviewer gate. Run `qfai init --force` to restore it.",
+        "error",
+        baselinePath,
+        "skills.reviewerGate",
+      ),
+    ];
+  }
+  const missingTerms = collectMissingReviewerGateTerms(section);
+  if (missingTerms.length === 0) return [];
+  return [
+    issue(
+      "QFAI-SKILLS-012",
+      `The Reviewer Gate Baseline no longer states every obligation a skill inherits (missing: ${missingTerms.join(", ")}).`,
+      "warning",
+      baselinePath,
+      "skills.reviewerGatePolicy",
+    ),
+  ];
 }
 
 /**

@@ -170,6 +170,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     mismatched name, an unknown owner, a list naming a missing step, a step
     its owner does not list or that nothing uses, and a `requires` list that
     names anything but common steps, or appears on a common step.
+  - A skill that runs steps lists, in a `requires:` key of its own frontmatter,
+    the common steps its body runs itself, such as the review after its last
+    step. `QFAI-SKILLS-016` checks that list as it checks a step's, and counts
+    no common step as used unless a skill, a plan or a step names it.
 
 - **Contracts can carry their own IDs, and number their rules after them.**
   `qfai validate` reads them.
@@ -186,6 +190,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `QFAI-CONTRACT-034`.
 
 ### Changed
+
+- **An acceptance-test review pack names its own producer.** A review pack
+  that `/qfai-atdd` writes declares `producer: "atdd"` in `summary.json` and
+  `Producer: atdd` in `review_request.md`, with a `flow` target. It used to
+  declare `implement`, so it could not be told apart from an implementation
+  pack of the same flow. `npx qfai validate` accepts `atdd` as a producer, and
+  neither `--profile sdd` nor `--profile discussion` judges such a pack.
+
+- **A skill no longer restates the shared skill baselines.** `qfai validate`
+  checks each shared obligation once, where the baseline states it, and a
+  skill's `SKILL.md` carries only what is its own.
+
+  - The shared Default Autopilot Policy lives in
+    `rule/shared-skill-operating-baseline.md`. A skill's own
+    `## Default Autopilot Policy` section lists only what it adds, and a skill
+    that adds nothing carries none. `R-AUTOPILOT-POLICY-MISSING` is raised when
+    the baseline loses its shared section or one of its three buckets, and when
+    a skill's section no longer names a hard-required input declared for that
+    skill.
+  - The reviewer gate lives in `rule/shared-skill-delegation-baseline.md`.
+    `QFAI-SKILLS-011` and `QFAI-SKILLS-012` now read its
+    `## Reviewer Gate Baseline` section, and a skill no longer needs a
+    `### Reviewer Gate` section of its own. Both messages are now in English.
+  - A `project_memory:` block is optional. `W-SKILL-PROJECT-MEMORY` is raised
+    only when a declared block is not the last content of its `SKILL.md`.
+  - The shipped stage skills drop the text the baselines already state.
+    `qfai init --force` refreshes an installed copy.
 
 - **The doctor check of root `DESIGN.md` is named after it.** Under
   `qfai doctor --profile prototyping` the readiness check of root `DESIGN.md`

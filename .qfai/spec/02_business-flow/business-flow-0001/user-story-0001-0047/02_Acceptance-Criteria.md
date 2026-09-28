@@ -11,9 +11,9 @@ Feature: Deprecated assistant paths and skill project memory
     Then `D-DEPRECATED-PATH` warning is emitted with the body string literally containing `sunset: v1.10.0`; in v1.10.0+ the same condition escalates to error per REQ-0008 (handled by spec-0003 sunset semantics + spec-0004 validator severity table)
 
   # AC-0001-0047-02
-  Scenario: A SKILL.md without a trailing project_memory block raises a warning
-    Given a `qfai-*` skill whose SKILL.md does not end with a `project_memory:` YAML block
+  Scenario: A project_memory block that is not trailing raises a warning
+    Given a `qfai-*` skill whose SKILL.md declares a `project_memory:` YAML block followed by other content
     When `qfai validate` runs
-    Then `W-SKILL-PROJECT-MEMORY` is emitted at warning, naming the skill and the missing block
+    Then `W-SKILL-PROJECT-MEMORY` is emitted at warning, naming the skill and the block
     And a trailing `project_memory:` block raises no such warning whatever sub-keys it holds
 ```

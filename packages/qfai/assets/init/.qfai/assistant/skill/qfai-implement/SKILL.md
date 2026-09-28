@@ -25,6 +25,7 @@ steps:
   - implement-regression-fix
   - implement-test-fix
   - implement-seam
+requires: [common-review-cycle]
 mode: approval-gated
 ---
 
@@ -76,11 +77,7 @@ this file adds nothing to it. The entry check is
 ### Reviewer Gate
 
 After the last step, run one review through `common-review-cycle` with the
-union of the reviewers of the steps that ran. Enforce the Drift Protocol
-(`.qfai/assistant/rule/drift-protocol.md`) and
-`.qfai/assistant/rule/test-layers.md`; test volume and planning estimates are
-signals, not gates. The author does not certify their own result. Record
-explicit PASS or REVISE for the current revision.
+union of the reviewers of the steps that ran.
 
 ## Completion
 
@@ -94,9 +91,7 @@ Under a no-question mode, list them in the report instead.
 
 - auto-decide: implementation seam, test selector, and local refactor that
   preserve the active story and contract behavior.
-- ask-user: approval-required operations, scope expansion, and critical
-  product choices. Do not answer these in a no-question mode.
-- hard-required:
+- ask-user: critical product choices.
 
 The BF, EX, and contract sources come from the invocation and configured tree.
 If they cannot be resolved, stop at preflight and report the missing source.
