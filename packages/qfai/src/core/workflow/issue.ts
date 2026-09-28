@@ -7,6 +7,8 @@ import {
   UNTARGETED_KINDS,
   type PlanStage,
 } from "./common.js";
+import { carries, modifierNames } from "./modifiers.js";
+import { releaseQuestion } from "./routeDecision.js";
 import { flowBindingOf, planNotReady } from "./stages.js";
 import {
   isReadOnlyStage,
@@ -44,9 +46,10 @@ const UPGRADED_OWNERS = ["qfai-implement", "qfai-atdd"];
 
 // The reviewers of every step the work order runs, reviewed once at the end of the stage. A run
 // that restores an authorization check reviews its implementation work harder, and asks nobody
-// first.
+// first. A run carrying `review:heavy` adds the heavy review profile's reviewers to every stage.
 function requiredReviewerRoles(
   steps: readonly string[],
+  snapshot: WorkflowSnapshot,
   plan: Plan,
   facts: WorkflowFacts,
 ): string[] | undefined {
@@ -56,7 +59,9 @@ function requiredReviewerRoles(
     const roles = upgraded ? IMPLEMENTATION_HEAVY_ROLES : facts.reviewerRoles?.[step];
     return roles ? [roles] : [];
   });
-  return perStep.length > 0 ? [...new Set(perStep.flat())] : undefined;
+  if (carries(snapshot, "review:heavy")) perStep.push(facts.heavyReviewerRoles ?? []);
+  const roles = [...new Set(perStep.flat())];
+  return roles.length > 0 ? roles : undefined;
 }
 
 // An external effect is allowed only where a project policy names it. A request that asks
@@ -198,9 +203,11 @@ function baseWorkOrder(
   const attempt = (snapshot.attempts?.[stage.stageInstanceId] ?? 0) + 1;
   const reviewerRoles = requiredReviewerRoles(
     steps.map((step) => step.name),
+    snapshot,
     plan,
     facts,
   );
+  const modifiers = modifierNames(snapshot.modifiers);
   const actorHistory = snapshot.actorHistory ?? [];
   const receiptRefs = snapshot.receiptRefs ?? [];
   return {
@@ -209,6 +216,7 @@ function baseWorkOrder(
     attempt,
     stageKind: stage.stageKind,
     ...(steps.length > 0 ? { steps: stepRefs(steps) } : {}),
+    ...(modifiers.length > 0 ? { modifiers } : {}),
     ...(plan.writeScope
       ? { scope: scopeOf(writeAreasOf(plan, steps), allowedEffects(stage, snapshot)) }
       : {}),
@@ -378,6 +386,30 @@ function stageWorkOrder(
   });
 }
 
+// Whether `gate:release` stops the run before this stage: the stage runs the route's release
+// point, or, on a route that names none, every stage is in. Once a release approval is recorded,
+// nothing stops the run.
+function releaseDue(snapshot: WorkflowSnapshot, plan: Plan, stage: PlanStage | undefined) {
+  if (!carries(snapshot, "gate:release") || snapshot.releaseApproval) return false;
+  const atPoint = (each: PlanStage) =>
+    (each.steps ?? []).some((step) => step.decisionPoint === "release");
+  return stage ? atPoint(stage) : !plan.stages.some(atPoint);
+}
+
+// The release question, opened by `next` where the route's release point is reached.
+function openRelease(run: WorkflowRun, plan: Plan): WorkflowDecision {
+  const question = releaseQuestion(`question-${run.sequence + 1}-1`, plan.goal ?? plan.route);
+  return {
+    verdict: {
+      ok: true,
+      run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
+      questions: [question],
+      workOrder: null,
+    },
+    events: [{ type: "question-opened", question }, { type: "material-decision" }],
+  };
+}
+
 // `next` on a run in `ready`: the next work order of the plan, or none once every stage is in.
 export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run } = snapshot;
@@ -388,6 +420,7 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
   const next = stageToIssue(snapshot, plan.stages);
   if (next.refused) return refusedInput(run, "The work order is not ready.");
+  if (releaseDue(snapshot, plan, next.stage)) return openRelease(run, plan);
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
   return stageWorkOrder(snapshot, plan, next.stage, facts, next.steps);
 }

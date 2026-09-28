@@ -9,6 +9,7 @@ import type {
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
 import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("Decide accept of a routing result whose checked proposal names one new story", () => {
   const snapshot = {
@@ -36,8 +37,8 @@ it("Decide accept of a routing result whose checked proposal names one new story
       reviewResults: [],
       debts: [],
       proposal: {
-        requestKind: "change",
-        candidateRoute: "add-feature",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Let each customer register up to five unique notification emails.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },

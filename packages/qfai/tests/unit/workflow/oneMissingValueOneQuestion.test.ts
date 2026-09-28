@@ -3,6 +3,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
   ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
@@ -46,8 +47,8 @@ function routeWithOneMissingValue() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "add-feature",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],

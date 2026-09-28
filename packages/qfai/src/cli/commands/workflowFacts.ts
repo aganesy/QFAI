@@ -9,6 +9,7 @@ import { changedSinceStart } from "../../core/workflow/boundary.js";
 import { flowOfRun } from "../../core/workflow/issue.js";
 import {
   completionFacts,
+  heavyReviewerRolesOf,
   identityOf,
   policyNowOf,
   receiptValidityOf,
@@ -16,7 +17,7 @@ import {
   routingFacts,
 } from "../../core/workflow/observe.js";
 import { isRecord } from "../../core/workflow/parse.js";
-import { changeRequestsOf, storyFactsOf } from "../../core/workflow/storyFacts.js";
+import { changeRequestsOf, decisionRowsOf, storyFactsOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowFacts,
   WorkflowInput,
@@ -117,18 +118,21 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
   const accepting = input.operation === "accept";
   const reproduction = snapshot.diagnosis?.reproductionRef;
   const changed = changedPathsOf(input.result);
-  const [story, reviewerRoles, changedRealPaths, fileDigests, receiptValidity] = await Promise.all([
-    storyFactsOf(root, config, flowOfRun(snapshot), snapshot.diagnosis),
-    reviewerRolesOf(config),
-    accepting ? realPathsOf(root, input.result) : undefined,
-    fileDigestsOf(root, [...changed, ...(reproduction ? [reproduction] : [])]),
-    input.operation === "resume" || input.operation === "next"
-      ? receiptValidityOf(root, snapshot)
-      : undefined,
-  ]);
+  const [story, reviewerRoles, heavyReviewerRoles, changedRealPaths, fileDigests, receiptValidity] =
+    await Promise.all([
+      storyFactsOf(root, config, flowOfRun(snapshot), snapshot.diagnosis),
+      reviewerRolesOf(config),
+      heavyReviewerRolesOf(config),
+      accepting ? realPathsOf(root, input.result) : undefined,
+      fileDigestsOf(root, [...changed, ...(reproduction ? [reproduction] : [])]),
+      input.operation === "resume" || input.operation === "next"
+        ? receiptValidityOf(root, snapshot)
+        : undefined,
+    ]);
   return {
     ...story,
     reviewerRoles,
+    heavyReviewerRoles,
     fileDigests,
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
@@ -174,6 +178,7 @@ async function boundaryFactsOf(root: string, snapshot: WorkflowSnapshot) {
   return {
     observedChangedPaths,
     changeRequests: changeRequestsOf(decisions),
+    decisionRows: decisionRowsOf(decisions),
     // A path admitted or to be admitted is held to its digest now.
     fileDigests: await fileDigestsOf(root, observedChangedPaths),
   };

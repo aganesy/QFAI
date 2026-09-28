@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
 import { JournalRun, planOf, readyWith } from "./journalRun.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const FLOW = "BF-0007";
 const obligations = {
@@ -56,8 +57,8 @@ async function reclassified() {
   const receipts = run.snapshot.receiptRefs ?? [];
   expect(run.next(facts).stageKind).toBe("route");
   const proposal = {
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Fix the notification the example describes.",
     expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
     observedRefs: [],

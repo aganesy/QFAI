@@ -3,6 +3,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
   ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
@@ -39,8 +40,8 @@ function routeNaming(record?: string) {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "add-feature",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -82,7 +83,7 @@ it("story-files-only", () => {
     code: undefined,
     reasons: undefined,
     state: "ready",
-    events: 2,
+    events: 3,
   });
 });
 

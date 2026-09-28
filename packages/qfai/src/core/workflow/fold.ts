@@ -2,6 +2,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { everyStageResult, scopeDigestOf, skillOwnerOf } from "./common.js";
+import { withModifiers } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { writeRecord } from "./persistence.js";
 import { isSeamOrder, stepNamesOf, stepServes } from "./steps.js";
@@ -81,15 +82,30 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(snapshot.acceptedStages ?? []),
     ...(snapshot.repairedStages ?? []),
   ];
+  const extraction = record.proposal?.extraction ?? snapshot.extraction;
   return {
     ...rest,
     ...(prior.length > 0 ? { priorStages: prior } : {}),
     ...(plan ? { plan } : {}),
+    ...(extraction ? { extraction } : {}),
+    ...(record.candidates ? { routeCandidates: record.candidates } : {}),
     ...(record.settled ? { settled: record.settled } : {}),
     ...(writeScope ? { scopeDigest: scopeDigestOf(writeScope) } : {}),
     ...(record.resultRef
       ? { routingReceiptRef: record.resultRef, routingDependencies: record.dependencies ?? [] }
       : {}),
+  };
+}
+
+// The route the decision rules chose, or the candidate question's answer fixed, and its plan.
+function foldRouteDecided(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const { routeCandidates: _answered, ...rest } = snapshot;
+  const extraction = record.extraction ?? snapshot.extraction;
+  return {
+    ...rest,
+    ...(record.route ? { routeDecision: { route: record.route, rule: record.rule ?? null } } : {}),
+    ...(extraction ? { extraction } : {}),
+    ...(record.plan ? { plan: record.plan } : {}),
   };
 }
 
@@ -137,6 +153,10 @@ function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot 
       chosen: chosenLabels(authorization),
     },
   ];
+  const release = snapshot.openQuestions?.find(
+    (question) => question.questionId === authorization.questionId,
+  )?.purpose;
+  const approved = release === "release" && authorization.effect === "proceed";
   const approval =
     authorization.operation === "CREATE"
       ? {
@@ -153,6 +173,7 @@ function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot 
     openQuestions,
     authorizations,
     ...(approval ? { approval } : {}),
+    ...(approved ? { releaseApproval: authorizationId } : {}),
     ...(record.settled ? { settled: record.settled } : {}),
   };
 }
@@ -303,6 +324,7 @@ const withHalt = (snapshot: Snapshot, record: JournalRecord): Snapshot =>
 const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snapshot> = {
   "work-order-issued": foldIssued,
   "plan-accepted": foldRouted,
+  "route-decided": foldRouteDecided,
   "unsettled-material-input": foldRouted,
   "question-opened": foldQuestion,
   "authorization-recorded": foldAuthorization,
@@ -350,7 +372,7 @@ export function foldRecord(snapshot: Snapshot | null, record: JournalRecord): Sn
   };
   const fold = FOLDS[record.event];
   const stepped = fold ? fold({ ...snapshot, run }, record) : { ...snapshot, run };
-  const folded = withActors(stepped, record);
+  const folded = withRecorded(withActors(stepped, record), record);
   return record.replay ? foldReplay(folded, record.replay) : folded;
 }
 
@@ -457,6 +479,18 @@ function actorOf(
   return { actor: { role, agentInstance, ...(stageInstanceId ? { stageInstanceId } : {}) } };
 }
 
+// The modifiers an event adds, which only ever grow the run's, and the decisions it records as
+// adopted.
+function withRecorded(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const modifiers = record.modifiers?.length
+    ? { modifiers: withModifiers(snapshot.modifiers, record.modifiers) }
+    : {};
+  const adopted = record.adopted?.length
+    ? { adopted: [...(snapshot.adopted ?? []), ...record.adopted] }
+    : {};
+  return { ...snapshot, ...modifiers, ...adopted };
+}
+
 // Each result's actor, and each reviewer an accepted result names, joins the run's history.
 function withActors(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const reviewers = ACCEPTED_EVENTS.includes(record.event) ? (record.reviewResults ?? []) : [];
@@ -505,6 +539,10 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
     runId: snapshot.run.id,
     qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
     route: snapshot.plan?.route ?? null,
+    modifiers: (snapshot.modifiers ?? []).map(({ modifier, source }) => ({ modifier, source })),
+    // SIMPLIFIED: a run never changes route, so it records no re-route.
+    // Lift when: a declared branch point re-routes the run.
+    reroutes: [],
     completionTarget: snapshot.completionTarget ?? "qfai_done",
     state: snapshot.run.state,
     targetBindings: records.flatMap((record) =>

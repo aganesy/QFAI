@@ -6,6 +6,7 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import type { WorkflowDecision } from "../../../src/core/workflow/decide.js";
 import { planFacts } from "../../../src/core/workflow/observe.js";
 import { CONFIG_DIGEST, TOOL_DIGEST, completion } from "./finishFixture.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -43,8 +44,8 @@ const harness = {
 };
 
 const proposal = {
-  requestKind: "change",
-  candidateRoute: "edit-text",
+  requestKind: "routed",
+  extraction: extractionFor("edit-text"),
   goal: `${REQUEST}.`,
   expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
   observedRefs: [],

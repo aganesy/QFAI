@@ -9,6 +9,7 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("unknown-path", () => {
   const missingPath = "packages/qfai/src/core/workflow/missing-observed-reference.ts";
@@ -40,8 +41,8 @@ it("unknown-path", () => {
       reviewResults: [],
       debts: [],
       proposal: {
-        requestKind: "change",
-        candidateRoute: "add-feature",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Let each customer register a notification email.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -117,8 +118,8 @@ type Proposal = NonNullable<NonNullable<AcceptInput["result"]>["proposal"]>;
 
 function checkedProposal(): Proposal {
   return {
-    requestKind: "change",
-    candidateRoute: "add-feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Let each customer register a notification email.",
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: [],
@@ -221,7 +222,7 @@ function boundedNaming(affectedFlowIds: string[]) {
   return acceptRouting(
     {
       ...checkedProposal(),
-      candidateRoute: "add-feature",
+      extraction: extractionFor("add-feature"),
       newStories: [],
       affectedFlowIds,
     },
@@ -247,8 +248,9 @@ it("one flow is bound", () => {
     run: bound.run,
     events: bound.events.map((event) => [event.type, event.flowId]),
   }).toEqual({
-    run: { id: "run-checks", state: "ready", sequence: 4 },
+    run: { id: "run-checks", state: "ready", sequence: 5 },
     events: [
+      ["route-decided", undefined],
       ["binding-recorded", "BF-0001"],
       ["plan-accepted", undefined],
     ],
@@ -311,7 +313,11 @@ const missingSpecReference: Proposal["expectedBehaviorRefs"] = [
 it("A proposal failing unknown-id with confidence", () => {
   const proposal = { ...checkedProposal(), expectedBehaviorRefs: missingSpecReference };
   const facts = { flows: [] };
-  const withConfidence = acceptRouting({ ...proposal, confidence: 1 }, facts);
+  const unsure = extractionFor("add-feature", {
+    confidence: "low",
+    alternatives: [{ intent: "feature", entryFlags: ["decision"], qualifiers: [], signals: [] }],
+  });
+  const withConfidence = acceptRouting({ ...proposal, extraction: unsure }, facts);
   expect(withConfidence).toEqual(acceptRouting(proposal, facts));
   expect(withConfidence).toEqual(refused({ reason: "unknown-id", subject: "BF-9999" }));
 });

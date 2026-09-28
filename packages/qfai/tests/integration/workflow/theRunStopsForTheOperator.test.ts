@@ -8,7 +8,7 @@
 import { afterEach, expect, it } from "vitest";
 
 import {
-  DISCOVERY_PROPOSAL,
+  ANSWER_PROPOSAL,
   START_INPUT,
   field,
   initProject,
@@ -50,7 +50,7 @@ async function decide(root: string, runId: string, answer: object) {
 
 it("A material risk opened as a question stops routing, and one opened as nothing is refused", async () => {
   const root = await initProject();
-  const risky = { ...DISCOVERY_PROPOSAL, riskSignals: ["data-loss"] };
+  const risky = { ...ANSWER_PROPOSAL, riskSignals: ["data-loss"] };
   const unasked = await routedRun(root, risky);
   await submit(root, unasked.runId, "decision", { stop: true, answeredBy: "operator" });
   const asked = await routedRun(root, { ...risky, unresolvedQuestions: [GO_AHEAD] });
@@ -104,7 +104,7 @@ const MIXED = {
 
 it("The strongest effect of the chosen options decides what the run does, within the offered set", async () => {
   const root = await initProject();
-  const { runId } = await routedRun(root, { ...DISCOVERY_PROPOSAL, unresolvedQuestions: [MIXED] });
+  const { runId } = await routedRun(root, { ...ANSWER_PROPOSAL, unresolvedQuestions: [MIXED] });
   const outside = await decide(root, runId, { optionIds: ["elsewhere"] });
   const tooMany = await decide(root, runId, { optionIds: ["keep", "halt", "keep"] });
   const both = await decide(root, runId, { optionIds: ["keep", "halt"] });
@@ -123,7 +123,7 @@ it("The strongest effect of the chosen options decides what the run does, within
 it("An unanswered question authorizes nothing: no work order, no decision recorded, and finish waits", async () => {
   const root = await initProject();
   const { runId } = await routedRun(root, {
-    ...DISCOVERY_PROPOSAL,
+    ...ANSWER_PROPOSAL,
     riskSignals: ["data-loss"],
     unresolvedQuestions: [GO_AHEAD],
   });
@@ -143,13 +143,13 @@ it("An unanswered question authorizes nothing: no work order, no decision record
 
 it("An approval inside a stage result, and an answer to no open question, are refused", async () => {
   const root = await initProject();
-  const { runId } = await routedRun(root, DISCOVERY_PROPOSAL);
-  const discussion = workflow(root, ["next", "--run", runId]);
+  const { runId } = await routedRun(root, ANSWER_PROPOSAL);
+  const answer = workflow(root, ["next", "--run", runId]);
   const approved = await submit(
     root,
     runId,
     "accept",
-    resultFor(discussion.json, "discussion-1", { approved: true }),
+    resultFor(answer.json, "answer-1", { approved: true }),
   );
   const status = workflow(root, ["status", "--run", runId]);
   const unasked = await submit(root, runId, "decision", {
@@ -173,7 +173,7 @@ it("An approval inside a stage result, and an answer to no open question, are re
 it("The same answer twice is recorded once, and a different answer to it is refused", async () => {
   const root = await initProject();
   const { runId } = await routedRun(root, {
-    ...DISCOVERY_PROPOSAL,
+    ...ANSWER_PROPOSAL,
     riskSignals: ["data-loss"],
     unresolvedQuestions: [GO_AHEAD],
   });

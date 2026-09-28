@@ -162,6 +162,8 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
       plan.route,
       {
         route: plan.route,
+        family: plan.family,
+        defaultModifiers: plan.defaultModifiers,
         stages: plan.stages.map((stage) => ({
           stageInstanceId: stage.id,
           stageKind: stage.kind,
@@ -186,6 +188,17 @@ export async function reviewerRolesOf(config: QfaiConfig): Promise<Record<string
       .map(([reviewer]) => reviewer);
   }
   return roles;
+}
+
+// The always-required reviewers of the `heavy` review profile, which a run carrying
+// `review:heavy` adds to every stage.
+export async function heavyReviewerRolesOf(config: QfaiConfig): Promise<string[]> {
+  const { profiles } = await readEffectiveRouting(config);
+  const heavy = profiles?.get("heavy");
+  if (!heavy) return [];
+  return [...heavy.reviewers]
+    .filter(([, binding]) => binding === "required")
+    .map(([reviewer]) => reviewer);
 }
 
 // Whether a path names a regular file whose real path stays under the project's real root.
