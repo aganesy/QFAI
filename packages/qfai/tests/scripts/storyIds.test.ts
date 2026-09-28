@@ -31,9 +31,9 @@ describe("scopes", () => {
     ["DEC", { kind: "DEC", parentId: undefined }],
     ["BF", { kind: "BF", parentId: undefined }],
     ["US-0001", { kind: "US", parentId: "BF-0001" }],
-    ["AC-0001-0054", { kind: "AC", parentId: "US-0001-0052" }],
-    ["EX-0001-0054", { kind: "EX", parentId: "US-0001-0052" }],
-    ["BR-0016", { kind: "BR", parentId: "CLI-0014" }],
+    ["AC-0001-0054", { kind: "AC", parentId: "US-0001-0054" }],
+    ["EX-0001-0054", { kind: "EX", parentId: "US-0001-0054" }],
+    ["BR-0016", { kind: "BR", parentId: "CLI-0016" }],
   ])("%s allocates under its parent", (scope, expected) => {
     expect(parseScope(scope)).toEqual(expected);
   });
@@ -48,21 +48,21 @@ describe("scopes", () => {
 
 describe("allocation", () => {
   const named = {
-    declarations: ["DEC-0977", "EX-0001-0052-08", "BR-0014-0100"].map((id) => ({ id, file: "" })),
-    decisions: { rows: [{ content: "Change request: x", approach: "retires DEC-0978" }] },
+    declarations: ["DEC-0989", "EX-0001-0054-08", "BR-0016-0101"].map((id) => ({ id, file: "" })),
+    decisions: { rows: [{ content: "Change request: x", approach: "retires DEC-0990" }] },
   };
 
   it("counts what a decision row names, and hands out a repeated scope twice", () => {
     const scopes = ["DEC", "EX-0001-0054", "EX-0001-0054", "BR-0016"].map(parseScope);
     expect(allocateAll(scopes, named, nextStoryTreeId)).toEqual([
-      "DEC-0979",
-      "EX-0001-0052-09",
-      "EX-0001-0052-10",
-      "BR-0014-0101",
+      "DEC-0991",
+      "EX-0001-0054-09",
+      "EX-0001-0054-10",
+      "BR-0016-0102",
     ]);
   });
 
-  it("does not read DEC-09901 as DEC-0978", () => {
+  it("does not read DEC-09901 as DEC-0990", () => {
     const rows = [{ content: "Change request: x", approach: "mentions DEC-09901" }];
     expect(
       allocateAll([parseScope("DEC")], { declarations: [], decisions: { rows } }, nextStoryTreeId),
@@ -76,17 +76,17 @@ describe("allocation", () => {
 });
 
 describe("collisions", () => {
-  const base = new Set(["DEC-0977", "BR-0014-0098"]);
+  const base = new Set(["DEC-0989", "BR-0016-0099"]);
 
   it("names an ID this branch adds that another head adds too", () => {
-    const mine = added(new Set(["DEC-0977", "DEC-0978", "BR-0014-0099"]), base);
+    const mine = added(new Set(["DEC-0989", "DEC-0990", "BR-0016-0100"]), base);
     const others = [
-      { label: "main", ids: added(new Set(["DEC-0977", "DEC-0978"]), base) },
-      { label: "#12 (feature)", ids: added(new Set(["DEC-0978", "BR-0014-0099"]), base) },
+      { label: "main", ids: added(new Set(["DEC-0989", "DEC-0990"]), base) },
+      { label: "#12 (feature)", ids: added(new Set(["DEC-0990", "BR-0016-0100"]), base) },
     ];
     expect(collisions(mine, others)).toEqual([
-      { id: "BR-0014-0099", heads: ["#12 (feature)"] },
-      { id: "DEC-0978", heads: ["main", "#12 (feature)"] },
+      { id: "BR-0016-0100", heads: ["#12 (feature)"] },
+      { id: "DEC-0990", heads: ["main", "#12 (feature)"] },
     ]);
   });
 
@@ -260,7 +260,7 @@ describe("against a repository", () => {
       expect(log.mock.calls).toEqual([
         ["DEC-0003"],
         ["BF-0002"],
-        ["EX-0001-0001-03"],
+        ["EX-0001-0001-04"],
         ["EX-0001-0001-05"],
       ]);
     } finally {
