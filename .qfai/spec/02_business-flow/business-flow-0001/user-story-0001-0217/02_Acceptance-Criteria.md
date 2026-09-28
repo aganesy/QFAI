@@ -25,13 +25,14 @@ Feature: Refuse a step tree that a run or a stage skill cannot use
     Then it reports an error for an `owner` that is neither `common` nor an installed skill
     And for a parent `steps:` entry or a plan step that names no installed step
     And for a step that is not `common-*` and that its owner's `steps:` does not list
-    And for a step that no parent lists, no plan uses and no step requires
+    And for a step that no parent lists or requires, no plan uses and no step requires
 
   # AC-0001-0217-04
   Scenario: A step requires at most one hop
-    Given a step whose `requires` is read
+    Given a step's or a parent's `requires`
     When `qfai validate` runs
-    Then it reports an error when `requires` names a step that is not `common-*`
+    Then it reports an error when `requires` is not a list
+    And when `requires` names a step that is not `common-*` or is not installed
     And when a `common-*` step's `requires` is not empty
 
   # AC-0001-0217-05

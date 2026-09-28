@@ -21,7 +21,9 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
         "an identifiable affected flow or an explicit decision to create one",
       );
       expect(skill).toContain("product brand intent when a root `DESIGN.md` is required");
-      expect(skill).toContain("In `--auto`, leave these pending without asking or self-approving");
+      // `--auto` answers no approval: the shared baseline states it for every skill.
+      const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
+      expect(baseline).toContain("`--auto` satisfies nothing");
     });
 
     it(tree + ": prototyping selects a full UI contract identity", async () => {

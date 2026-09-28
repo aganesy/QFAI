@@ -878,7 +878,7 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Same ceiling as every other skill; the trailing `project_memory:` block
-    // and the mandatory `## Default Autopilot Policy` section fit inside it.
+    // and the skill's own `## Default Autopilot Policy` section fit inside it.
     expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
   });
 
@@ -2799,7 +2799,7 @@ describe("assets guardrails", () => {
     // bucket to the entries that do have one — `brand intent` (routed to root
     // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
     //
-    // A skill may narrow this bucket, and may hard-require an input only it
+    // A skill may hard-require an input only it
     // reads — declared per skill, so adding one is a reviewed change. What it
     // may not do is carry an entry nothing declares.
     //

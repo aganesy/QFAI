@@ -160,6 +160,7 @@
     "tests/core/validators/uiScreenEntries.test.ts",
     "tests/core/validators/skillDocumentReadability.test.ts",
     "tests/core/validators/skillReferenceReachability.test.ts",
+    "tests/core/validators/reviewerGateBaseline.test.ts",
     "tests/e2e/spec0003CopilotInstructionsE2E.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",
     "tests/e2e/spec0006WorkflowsIntegrityE2E.test.ts",

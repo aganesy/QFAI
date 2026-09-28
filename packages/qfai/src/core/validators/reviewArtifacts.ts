@@ -53,9 +53,11 @@ export type ReviewArtifactsScope = {
  * `--profile sdd --fail-on error` with `QFAI-REVIEW-004/005` on a downstream
  * pack the SDD cycle has no business gating. The producer is the stable
  * attribute: one value per stage, written once when the pack is created, and
- * unrelated to what the pack points at.
+ * unrelated to what the pack points at. `qfai-atdd` has a value of its own
+ * rather than borrowing `implement`, so an acceptance-test pack can be told
+ * apart from an implementation pack of the same flow.
  */
-const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement"]);
+const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement", "atdd"]);
 
 /** The producers each stage-scoped profile is the gate for. */
 export const SDD_PACK_PRODUCERS: ReadonlySet<string> = new Set(["sdd"]);
@@ -71,6 +73,7 @@ function producerKind(producer: string): string | null {
       return "discussion";
     case "sdd":
     case "implement":
+    case "atdd":
       return "flow";
     default:
       return null;

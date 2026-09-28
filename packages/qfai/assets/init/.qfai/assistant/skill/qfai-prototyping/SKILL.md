@@ -20,6 +20,7 @@ steps:
     prototyping-recover,
     prototyping-handoff,
   ]
+requires: [common-review-cycle]
 mode: execution-focused
 ---
 
@@ -80,12 +81,8 @@ missing brand intent.
 
 After the last step, run one review through `common-review-cycle`, with the
 union of the reviewers of the steps that ran. The reviewers judge the rendered
-screenshot and HTML of each iteration, never the code alone. The Drift Protocol,
-`.qfai/assistant/rule/test-layers.md`, and the rule that reviewer findings are
-signals, not gates, unless certify, validate or verify fails, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states. Resolve blocking findings using
-`.qfai/assistant/rule/review-convergence.md`.
+screenshot and HTML of each iteration, never the code alone. Their findings are
+signals, not gates, unless certify, validate or verify fails.
 
 ## Completion
 
@@ -101,25 +98,12 @@ step says. The report ends with a question listing the actions under Next, as
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick
 - ask-user:
   - the choice a finished prototype was built to make answerable, asked again
     against it — this skill's own operation, because it is what the loop was
     run to produce
   - the cycle-0 reset a rejected choice needs, which deletes `iter-01` upward —
     a destructive operation, and one the design answer does not consent to
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage
-    operations (each with a prompt template that names the target and
-    rationale)
-  - destructive operations (rm / overwrite / force-push)
-  - version-pin changes (`package.json#version`, branch pin)
-  - scope expansions outside the active envelope
-- hard-required:
-  - brand intent
 
 project_memory:
 
