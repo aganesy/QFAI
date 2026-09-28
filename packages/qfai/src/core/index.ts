@@ -9,7 +9,7 @@ export * from "./validate.js";
 export * from "./version.js";
 export * from "./validators/contracts.js";
 
-// WS-A: Canonical surface type detection (shared truth)
+// Canonical surface type detection (shared truth)
 export {
   DISCUSSION_UI_BEARING_SURFACES,
   DISCUSSION_NON_UI_SURFACES,
@@ -18,7 +18,7 @@ export {
   isNonUiDiscussionSurface,
   requiresVisualBrowserEvidence,
 } from "./detection/surfaceType.js";
-// WS-B: Browser QA 4-phase orchestration
+// Browser QA 4-phase orchestration
 export { runBrowserQaOrchestrated, summarizeBrowserQaResult } from "./browserQa/runner.js";
 export { BROWSER_QA_PHASES } from "./browserQa/types.js";
 // Render evidence runner (capture infra for the iteration loop).

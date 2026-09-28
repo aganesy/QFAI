@@ -166,17 +166,16 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
 /**
  * `title` of every `workflows.integrity` emission.
  *
- * Extracted on the schedule its own call sites set: the drift branch's comment
- * held two literal copies with "extract both into a module constant when the
- * third copy arrives with the next emission branch", and TDD-0039's unresolved
- * skip is that branch. The four `skills.integrity` copies below are left inline —
- * different check, and this constant is not theirs to share.
+ * Shared by the three emission branches: drift, content-identical, and the
+ * skip taken when the packaged copy cannot be resolved. The four
+ * `skills.integrity` copies below are left inline — different check, and this
+ * constant is not theirs to share.
  *
- * A LITERAL, and it must stay one. `TDD-0030` pins it with `toBe` against a
- * test-owned `.github/workflows` and records why deriving it from
- * `WorkflowsIntegrityDiff.workflowsDir` was rejected: that makes the assertion
- * check production against itself under the coordinated edit that moves the title
- * and the payload together.
+ * A LITERAL, and it must stay one. A test pins it with `toBe` against a
+ * test-owned `.github/workflows`. Deriving it from
+ * `WorkflowsIntegrityDiff.workflowsDir` would make that assertion check
+ * production against itself under the coordinated edit that moves the title and
+ * the payload together.
  */
 const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
 
@@ -220,7 +219,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // Pinning every config issue to `warning` made `doctor --fail-on error`
     // exit 0 on a config the loader had rejected — a value past its sunset
     // reads as "normalized with defaults" rather than as the blocking fault
-    // `cli-0008-qfai-doctor.md` says it is. The check now carries the worst severity
+    // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
     addCheck(checks, {
@@ -389,7 +388,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // with an empty `modified`, at which point silence is no longer what that
   // status produces, while the unreachability is unaffected.
   //
-  // That moment has arrived — the skip arm below is TDD-0039's — and the two
+  // That moment has arrived — the unresolved skip arm below emits at `info` — and the two
   // halves of the sentence above landed as predicted: silence is no longer what
   // the status produces, and the conjunct is still unreachable, because `status`
   // still carries one value per run. So it is NOT this row that pays for it: the
@@ -606,8 +605,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // recorded there as an equivalent mutant; a second would be a second untestable
     // one on the same emission.
     //
-    // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
-    // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
+    // EXCLUSIVITY holds twice over, and the tests that pin one
+    // `workflows.integrity` check per run with `toHaveLength(1)` depend on it: `status` carries one value per run, so
     // no two arms' status tests can both be true, and `else if` makes that
     // structural rather than value-dependent. The chain form is the belt and not
     // the load — measured, converting this arm to a standalone `if` leaves both of
@@ -617,9 +616,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `details` carries `workflowsDir` and NOTHING else, the same width as the
     // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
     // never compared, `packagedDir` is `undefined` here by construction, and
-    // `declined` is part of the drift payload, owned by
-    // TDD-0036. This arm adds no key of its own, so it decides nothing for that
-    // row.
+    // `declined` is part of the drift payload, which the drift arm owns. This
+    // arm adds no key of its own, so it decides nothing for that payload.
     //
     // `message` is English to match the two arms above — one check id, one
     // operator — and interpolates NOTHING: the only operand this state has is the
@@ -627,8 +625,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `undefined`.
     //
     // Its WORDING is not contract-fixed, the emission table having no row for this
-    // state — but "leaves the text editable", which stood here, is wrong about what
-    // TDD-0039 leaves. FOUR pins hold this string, enumerated so an editor knows
+    // state, but it is not free to edit either. FOUR pins hold this string, enumerated so an editor knows
     // which one will redden: `/\S/` for non-emptiness (the renderer prints
     // `[severity] id: message` and nothing else); `details.modified` must stay
     // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
@@ -642,11 +639,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // widening it.
     //
     // It also carries no command token, which is measured rather than asserted:
-    // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
-    // of that row's tokens pass on this text. The unresolved-copy rule scopes
-    // the no-command rule to the DRIFT finding's body, so no oracle holds it
-    // here — but that row's
-    // sweeps do read this message under that mutation, so an edit adding a `qfai`
+    // under the mutation that makes this arm fire in the drift test's fixture, all
+    // eight of that test's command tokens pass on this text. The unresolved-copy
+    // rule scopes the no-command rule to the DRIFT finding's body, so no oracle
+    // holds it here — but that test's sweeps do read this message under that mutation, so an edit adding a `qfai`
     // subcommand to it would surface there and not here.
     addCheck(checks, {
       id: "workflows.integrity",

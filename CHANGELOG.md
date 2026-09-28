@@ -975,6 +975,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   sample band where no letter, digit, `_` or `-` precedes them. The comments
   state what they relied on in plain words instead.
 
+- **The published type declarations no longer cite this repository's own
+  documents.** Source comments named requirement, test-design and test-case
+  IDs, spec IDs, contract file names, workstream labels and a decision number
+  that a reader of the package cannot follow. They now state the fact in plain words. The
+  pre-build lint rejects a `REQ-` or `TDD-` ID of any number in a source
+  comment, so the rule holds without review.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed

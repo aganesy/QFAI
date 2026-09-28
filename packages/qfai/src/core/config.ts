@@ -214,7 +214,7 @@ export type QfaiAtddConfig = {
   /**
    * Number of consecutive un-skip + re-skip cycles tolerated before the
    * scaffold-cycle escalation fires. Default (when unset) is applied at
-   * the call-site. Pre-positioned for the spec-0008 ATDD scaffold slice.
+   * the call-site.
    */
   scaffoldEscalateCycles?: number;
 };

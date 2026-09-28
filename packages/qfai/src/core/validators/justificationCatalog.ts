@@ -42,7 +42,8 @@
  *
  * Notes:
  *   - The catalog STORES membership only, never severity. Each code's
- *     own severity belongs to the detector that emits it. The empty-`justification:` ingestion rejection in
+ *     own severity belongs to the detector that emits it. The
+ *     empty-`justification:` ingestion rejection in
  *     `reviewerJustification.ts` is ALWAYS `error` for every catalog
  *     code, because what it reports is the missing justification, not
  *     the underlying finding. Entries therefore carry no severity

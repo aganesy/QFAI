@@ -58,8 +58,9 @@ the identifier does not belong in it.
   short `DEC-NNNN` and `OQ-NNNN` patterns do not consume the leading segment of
   a legacy `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject
   those. A contract ID, and the lower-case form that starts a contract file
-  name, counts only where no letter, digit, `_` or `-` precedes it, so a `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as
-  the retired contract ID.
+  name, counts only where no letter, digit, `_` or `-` precedes it, so a
+  `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as the
+  retired contract ID.
 
 No shipped file uses a retired shape, apart from the sample-band IDs the
 migration guide shows as its input. The guards still refuse the retired shapes,
@@ -99,6 +100,9 @@ comment names the form.
   basename allowlist.
 - The three implementations hold the same pattern set. Changing one means
   changing the other two and this file in the same change.
+- The pre-build lint also rejects a `REQ-` or `TDD-` ID of any number in a
+  source comment. That rule enforces `documentation-clarity.md` § 1, not this
+  file, so the other two guards do not carry it.
 
 Where each runs:
 
