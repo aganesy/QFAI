@@ -286,6 +286,7 @@
     "tests/scripts/deriveCliMessageAllowlistCount.test.ts",
     "tests/scripts/checkDogfoodBacklog.test.ts",
     "tests/scripts/checkMarkdownlintConfig.test.ts",
+    "tests/scripts/checkMdschemaPosixPaths.test.ts",
     "tests/scripts/checkTscCompiler.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ghBudget.test.ts",

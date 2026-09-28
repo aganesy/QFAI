@@ -211,9 +211,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   entry names, or that two entries name, now fails the document lane under
   every scope that includes it, and `npx qfai validate` reports it as
   `QFAI-DOCSCHEMA-001` with the `[coverage]` rule. Before, such a file was
-  skipped. The lane reads the two directories from `qfai.config.yaml` as
-  `qfai validate` does, so `./.qfai/spec` and `.qfai\spec` name the same
-  directory as `.qfai/spec`.
+  skipped. The lane and `qfai validate` read the two directories from
+  `qfai.config.yaml` the same way on every platform, so `./.qfai/spec` and
+  `.qfai\spec` name the same directory as `.qfai/spec` for both.
 
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
@@ -913,6 +913,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger columns the removed code read.
 
 ### Fixed
+
+- **A backslash in the spec paths names one directory on every platform**
+  (#2625). `qfai validate` reads a `\` in `paths.specsDir` and
+  `paths.contractsDir` as `/`, as the document-schema lane does. On Linux and
+  macOS a value such as `.qfai\spec` sends both gates to `.qfai/spec`.
 
 - **A listed file outside the contract kind directories is reported once.**
   `QFAI-CONTRACT-034` reported a file under a directory such as `design/`
