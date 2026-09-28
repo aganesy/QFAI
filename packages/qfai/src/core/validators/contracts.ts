@@ -24,7 +24,6 @@ import {
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -106,7 +105,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...validateDependencyRefs(contractIndex));
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
-  issues.push(...(await validateDbContractExecutability(root, dbFiles)));
   issues.push(...(await validateDbContractApplyOrder(root, dbFiles)));
   // The reverse of the marker traceability: declared and rendered by nothing.
   // The forward direction cannot see it — an element nobody built is an element
@@ -302,7 +300,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
   }
 
   const id = ids[0] ?? "";
-  const expectedPrefix = `CON-${kind}-`;
+  const expectedPrefix = `${kind}-`;
   if (!id.startsWith(expectedPrefix)) {
     return [
       issue(
@@ -355,7 +353,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       "contracts.dependencyDeclaration",
       [id],
       "change",
-      "Add `-- Depends on: CON-DB-0002` to a `.sql` file, or `x-qfai-depends-on: [CON-API-0002]` " +
+      "Add `-- Depends on: DB-0002` to a `.sql` file, or `x-qfai-depends-on: [API-0002]` " +
         "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
     ),
   ];

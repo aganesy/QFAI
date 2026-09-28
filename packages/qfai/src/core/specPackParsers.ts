@@ -66,48 +66,6 @@ export function parseExamplesFeature(text: string, filePath: string): ParsedExam
 }
 
 /**
- * Extracts the allowed `layer-*` tag set from the shipped test-layer policy.
- *
- * The shipped `catalog/test-layers.md` states its layers as headings
- * (`### L3 Integration`), not as `layer-*` tokens, so a token-only scan
- * returned nothing and the caller fell back to the built-in set — silencing
- * the read without restoring enforcement. Both forms are parsed.
- *
- * Returns an EMPTY set when neither form is present, so the caller can report
- * an unparseable policy instead of silently widening the allowed set.
- */
-export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<string> {
-  const extracted = new Set<string>();
-  for (const match of policyText.matchAll(/@?(layer-[a-z0-9-]+)/gi)) {
-    const tag = match[1];
-    if (tag) {
-      extracted.add(tag.toLowerCase());
-    }
-  }
-
-  // `### L3 Integration` / `### L1 Unit` heading form.
-  for (const match of policyText.matchAll(/^#{1,6}\s*L\d\s+([A-Za-z0-9][A-Za-z0-9 -]*)$/gim)) {
-    const word = (match[1] ?? "").trim().toLowerCase().replace(/\s+/g, "-");
-    if (word.length > 0) {
-      extracted.add(`layer-${word}`);
-    }
-  }
-
-  return extracted;
-}
-
-/**
- * Outcome of locating the test-case table inside `06_Test-Cases.md`.
- *
- * `source` records how the table was found so callers can tell a
- * template-conformant spec (`section`) from an older one that only has a
- * matching header row somewhere in the document (`header-match`).
- */
-export type TestCaseTableResolution =
-  | { table: MarkdownTable; source: "section" | "header-match" }
-  | { table: null; reason: "no-table" | "no-tc-id-column" };
-
-/**
  * Matches the template heading `## Test Case Table (required)` and its bare
  * `## Test Case Table` form — and nothing else.
  *
@@ -314,11 +272,7 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
  * the named section and its example IDs are handed to the validators and the
  * report — and for a heading-less legacy document it flips a previously correct
  * resolution into a wrong one, because the hidden sample outranks the real
- * table. In `tdd/test-list.md` the same hole was worse: a schema-complete sample
- * ledger row in an indented block was collected as a real row, so a spec with no
- * ledger at all could satisfy `TDDLIST_TC_NOT_COVERED` — and owe no `Test file`
- * or `Evidence`, because a `todo` row owes neither — and pass
- * `validate --profile full --fail-on error` with no test behind it.
+ * table.
  *
  * Fence state wins over comment state: `<!--` inside a fenced sample is sample
  * text, not a comment opener, so an unclosed one cannot swallow the rest of the
@@ -443,16 +397,10 @@ const TC_ID_HEADER = "TC-ID";
 
 /**
  * Case-**sensitive**, on purpose: a `TC-Id` / `tc-id` header is a mistyped
- * column, and `resolveTestCaseTable` surfaces that as `no-tc-id-column` rather
- * than silently adopting an Appendix table instead.
- *
- * The agreement that matters is between the readers, not with the typo:
- * `atddTraceability.ts#collectTableTcLevels` reads through
- * `resolveTestCaseTables`, so both gates see the same tables. When the header
- * is mistyped neither gate resolves it — `validateTddList` reports
- * `TDDLIST_TC_TABLE_UNRESOLVED` and `QFAI-ATDD-112` sees no declared `Level`
- * and keeps the default obligation — so the TC is owed by both, not neither,
- * and fixing the header clears both.
+ * column. `atddTraceability.ts#collectTableTcLevels` reads through
+ * `resolveTestCaseTables`, so a mistyped header leaves the TC with no declared
+ * `Level` there, and `QFAI-ATDD-112` keeps the default obligation until the
+ * header is fixed.
  */
 function hasTcIdColumn(table: MarkdownTable): boolean {
   return table.headers.some((header) => header.trim() === TC_ID_HEADER);
@@ -483,82 +431,12 @@ export function extractTestCaseTableSection(text: string): string | null {
 }
 
 /**
- * Resolves the test-case table of `06_Test-Cases.md`.
- *
- * The template names the section `## Test Case Table (required)`, but the
- * previous implementation read `parseFirstMarkdownTable` — literally the first
- * table in document order — so any explanatory table placed above the heading
- * hijacked TC extraction.
- *
- * Resolution is section-first and the legacy fallback is **mutually
- * exclusive** with it:
- *
- * - The `## Test Case Table` heading exists -> only that section is searched.
- *   If its table has no `TC-ID` column, that is a typed failure, not a licence
- *   to adopt an Appendix table: a mistyped column in the real table would
- *   otherwise be masked by an explanatory table further down, silently
- *   producing unknown/coverage findings keyed on illustration IDs.
- * - The heading does not exist -> the first `TC-ID`-bearing table anywhere in
- *   the document, so specs written before the heading existed keep working.
- *
- * Either way, "no table found" is reported rather than being allowed to read
- * as "all TCs covered".
- */
-export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
-  // Illustrative headings and tables inside fenced samples or HTML comments
-  // are not the spec.
-  const text = maskNonSpecRegions(rawText);
-  const section = extractTestCaseTableSection(text);
-  if (section !== null) {
-    const sectionTables = parseAllMarkdownTables(section);
-    const sectionTable = sectionTables.find(hasTcIdColumn);
-    if (sectionTable) {
-      return { table: sectionTable, source: "section" };
-    }
-    return {
-      table: null,
-      reason: sectionTables.length === 0 ? "no-table" : "no-tc-id-column",
-    };
-  }
-
-  const allTables = parseAllMarkdownTables(text);
-  const fallback = allTables.find(hasTcIdColumn);
-  if (fallback) {
-    return { table: fallback, source: "header-match" };
-  }
-
-  return { table: null, reason: allTables.length === 0 ? "no-table" : "no-tc-id-column" };
-}
-
-/**
  * Every `TC-ID`-bearing table the spec declares, not only the first.
  *
- * A spec that splits `06_Test-Cases.md` into several tables — per BR, per AC,
- * or a migration table beside the authoritative one — was read by two different
- * rules in two different ways: `atddTraceability.ts#collectTableTcLevels`
- * iterates `parseAllMarkdownTables`, while `resolveTestCaseTable` returns the
- * first match. A `TC-*` in the second table was therefore visible to
- * `QFAI-ATDD-112` and invisible to `TDDLIST_TC_NOT_COVERED`.
- *
- * That was survivable while both rules demanded something. It stops being
- * survivable once L1/L2 is excluded from `QFAI-ATDD-112` and the ledger becomes
- * the only gate: an L1 TC in a second table would then be owed by neither.
- *
- * `resolveTestCaseTable` is unchanged — `reportTddCoverage` and `specPack`
- * describe a spec's *shape* and want the single authoritative table.
+ * A spec may split `06_Test-Cases.md` into several tables — per BR, per AC, or
+ * a migration table beside the authoritative one. A reader that stopped at the
+ * first would miss the level every `TC-*` in the later tables declares.
  */
-/**
- * True when the document has a `## Test Case Table` section at all.
- *
- * A heading-form spec legitimately has none, and its unresolved result is
- * not a fault. A document that has the section and cannot resolve a table in
- * it is broken — and if it *also* uses the heading form, the presence of one
- * readable heading was enough to discard the failure and take the broken
- * table's TCs with it.
- */
-export function hasTestCaseTableSection(rawText: string): boolean {
-  return extractTestCaseTableSection(maskNonSpecRegions(rawText)) !== null;
-}
 export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
   const text = maskNonSpecRegions(rawText);
   const section = extractTestCaseTableSection(text);

@@ -1,17 +1,16 @@
 /**
  * ATDD scaffold escalation state helpers.
  *
- * Persists per-(spec, TC) attempt counters in the existing
- * `.qfai/state.json` SSOT (alongside `discussion.currentId`).
+ * Persists per-AC or per-BF attempt counters in `.qfai/state.json`.
  *
  * Two SEPARATE counters live under `atdd`:
  *
  *   {
  *     "atdd": {
  *       // counted by `qfai atdd scaffold` — scaffold-side cycles
- *       "scaffoldAttempts": { "<specId>:<tcId>": <count> },
+ *       "scaffoldAttempts": { "<AC-or-BF-ID>": <count> },
  *       // counted by `qfai validate` — validate-side cycles
- *       "scaffoldValidateCycles": { "<specId>:<tcId>": <count> }
+ *       "scaffoldValidateCycles": { "<AC-or-BF-ID>": <count> }
  *     }
  *   }
  *
@@ -22,8 +21,7 @@
  * threshold-3 gate — that violates the spec contract. Each counter has
  * exactly one writer.
  *
- * Counters survive across runs; callers reset them when they observe
- * progress on a given TC (the placeholder shape is gone).
+ * Counters survive across runs; callers reset them when a placeholder is filled.
  *
  * Persistence goes through `core/state.ts`, the single loader/writer
  * for `.qfai/state.json`. A private copy of that logic here would mean
@@ -35,7 +33,7 @@
  *
  * Every mutation runs inside `updateState`, which holds the state-file
  * lock across the read AND the write. Incrementing through a plain
- * load-mutate-store would lose an update whenever two runs (two specs,
+ * load-mutate-store would lose an update whenever two runs (two flows,
  * or two operators) overlap: both read the same snapshot and the later
  * write erases the earlier increment, delaying an escalation.
  */
@@ -45,8 +43,8 @@ import { readStateTolerant, updateState } from "../state.js";
 /** Default escalation threshold when the config key is absent/invalid. */
 export const DEFAULT_SCAFFOLD_ESCALATE_CYCLES = 3;
 
-function attemptKey(specId: string, tcId: string): string {
-  return `${specId}:${tcId}`;
+function attemptKey(id: string): string {
+  return id;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -84,29 +82,19 @@ function readAttemptsMap(
   return out;
 }
 
-async function readMapCount(
-  root: string,
-  mapName: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
+async function readMapCount(root: string, mapName: string, id: string): Promise<number> {
   const state = await readStateTolerant(root);
   const attempts = readAttemptsMap(state, mapName);
-  return attempts[attemptKey(specId, tcId)] ?? 0;
+  return attempts[attemptKey(id)] ?? 0;
 }
 
-async function recordAttemptInMap(
-  root: string,
-  mapName: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
+async function recordAttemptInMap(root: string, mapName: string, id: string): Promise<number> {
   return updateState(root, (existing) => {
     const atddField = existing.atdd;
     const atdd = isRecord(atddField) ? { ...atddField } : {};
     const attemptsField = atdd[mapName];
     const attempts = isRecord(attemptsField) ? { ...attemptsField } : {};
-    const key = attemptKey(specId, tcId);
+    const key = attemptKey(id);
     const next = toCounter(attempts[key]) + 1;
     attempts[key] = next;
     atdd[mapName] = attempts;
@@ -114,12 +102,7 @@ async function recordAttemptInMap(
   });
 }
 
-async function resetAttemptInMap(
-  root: string,
-  mapName: string,
-  specId: string,
-  tcId: string,
-): Promise<void> {
+async function resetAttemptInMap(root: string, mapName: string, id: string): Promise<void> {
   await updateState(root, (existing) => {
     const noop = { next: null, result: undefined };
     const atddField = existing.atdd;
@@ -127,7 +110,7 @@ async function resetAttemptInMap(
     const atddRecord = { ...atddField };
     const attemptsField = atddRecord[mapName];
     if (!isRecord(attemptsField)) return noop;
-    const key = attemptKey(specId, tcId);
+    const key = attemptKey(id);
     if (!(key in attemptsField)) return noop;
     const attempts: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(attemptsField)) {
@@ -141,17 +124,13 @@ async function resetAttemptInMap(
 }
 
 /**
- * Read the current scaffold-side attempt counter for a (spec, TC) pair.
+ * Read the current scaffold-side attempt counter for an AC or BF ID.
  * Returns 0 when no counter has been recorded.
  *
  * Writer: `qfai atdd scaffold` only.
  */
-export async function readScaffoldAttempts(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
-  return readMapCount(root, "scaffoldAttempts", specId, tcId);
+export async function readScaffoldAttempts(root: string, id: string): Promise<number> {
+  return readMapCount(root, "scaffoldAttempts", id);
 }
 
 /**
@@ -159,12 +138,8 @@ export async function readScaffoldAttempts(
  *
  * Writer: `qfai atdd scaffold` only — validate MUST NOT call this.
  */
-export async function recordScaffoldAttempt(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
-  return recordAttemptInMap(root, "scaffoldAttempts", specId, tcId);
+export async function recordScaffoldAttempt(root: string, id: string): Promise<number> {
+  return recordAttemptInMap(root, "scaffoldAttempts", id);
 }
 
 /**
@@ -172,26 +147,18 @@ export async function recordScaffoldAttempt(
  *
  * Writer: `qfai atdd scaffold` only.
  */
-export async function resetScaffoldAttempt(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<void> {
-  return resetAttemptInMap(root, "scaffoldAttempts", specId, tcId);
+export async function resetScaffoldAttempt(root: string, id: string): Promise<void> {
+  return resetAttemptInMap(root, "scaffoldAttempts", id);
 }
 
 /**
- * Read the current validate-side cycle counter for a (spec, TC) pair.
+ * Read the current validate-side cycle counter for an AC or BF ID.
  * Returns 0 when no counter has been recorded.
  *
  * Writer: `qfai validate` (scaffoldPlaceholder validator) only.
  */
-export async function readValidateCycles(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
-  return readMapCount(root, "scaffoldValidateCycles", specId, tcId);
+export async function readValidateCycles(root: string, id: string): Promise<number> {
+  return readMapCount(root, "scaffoldValidateCycles", id);
 }
 
 /**
@@ -203,50 +170,36 @@ export async function readValidateCycles(
  * semantics intact (one `qfai atdd scaffold` invocation does not count
  * toward the validate cycle).
  */
-export async function recordValidateCycle(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<number> {
-  return recordAttemptInMap(root, "scaffoldValidateCycles", specId, tcId);
+export async function recordValidateCycle(root: string, id: string): Promise<number> {
+  return recordAttemptInMap(root, "scaffoldValidateCycles", id);
 }
 
 /**
  * Reset the validate-side cycle counter to 0 (or remove the entry).
  *
  * Called by the validator when it observes that a previously-tracked
- * (spec, TC) pair no longer has an unfilled placeholder, so the
+ * AC or BF ID no longer has an unfilled placeholder, so the
  * "consecutive cycles" semantics survives an interleaving where the
  * operator fills the placeholder then only re-runs `qfai validate`
  * (without `qfai atdd scaffold`).
  */
-export async function resetValidateCycle(
-  root: string,
-  specId: string,
-  tcId: string,
-): Promise<void> {
-  return resetAttemptInMap(root, "scaffoldValidateCycles", specId, tcId);
+export async function resetValidateCycle(root: string, id: string): Promise<void> {
+  return resetAttemptInMap(root, "scaffoldValidateCycles", id);
 }
 
 /**
- * Enumerate the set of (spec, TC) keys that currently have a non-zero
+ * Enumerate AC and BF IDs that currently have a non-zero
  * validate-side cycle counter, so the validator can reset stale entries
  * (placeholder filled / file deleted) without enumerating the test
- * tree twice. Returns parsed `{ specId, tcId }` pairs; entries whose
- * key does not match the canonical `spec-NNNN:TC-NNNN-NNNN` shape are
+ * tree twice. Entries whose key does not match the AC/BF grammar are
  * silently skipped.
  */
-export async function listValidateCycleKeys(
-  root: string,
-): Promise<Array<{ specId: string; tcId: string }>> {
+export async function listValidateCycleKeys(root: string): Promise<string[]> {
   const state = await readStateTolerant(root);
   const map = readAttemptsMap(state, "scaffoldValidateCycles");
-  const out: Array<{ specId: string; tcId: string }> = [];
+  const out: string[] = [];
   for (const key of Object.keys(map)) {
-    const m = /^(spec-\d{3,4}):(TC-\d{4}-\d{4})$/u.exec(key);
-    if (m !== null && typeof m[1] === "string" && typeof m[2] === "string") {
-      out.push({ specId: m[1], tcId: m[2] });
-    }
+    if (/^(?:AC-\d{4}-\d{4}-\d{2}|BF-\d{4})$/u.test(key)) out.push(key);
   }
   return out;
 }

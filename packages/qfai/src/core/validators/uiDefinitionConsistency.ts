@@ -17,16 +17,17 @@ export async function validateUiDefinitionConsistency(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // Load Design Tokens
+  // Load Design Tokens, which live only where `uiux.designTokensDir` names
   const configuredDir = config.uiux?.designTokensDir;
-  const designDir = configuredDir
-    ? path.resolve(root, configuredDir)
-    : path.join(root, config.paths.contractsDir, "design");
-  const tokenPattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
-  const tokenFiles = await fg(tokenPattern, {
-    absolute: true,
-    ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
-  });
+  const tokenFiles = configuredDir
+    ? await fg(
+        path.posix.join(
+          path.resolve(root, configuredDir).replace(/\\/g, "/"),
+          "design-tokens*.yaml",
+        ),
+        { absolute: true, ignore: ["**/*.schema.yaml", "**/*.schema.yml"] },
+      )
+    : [];
 
   const resolvedTokens = new Map<string, string>();
   for (const tokenFile of tokenFiles) {

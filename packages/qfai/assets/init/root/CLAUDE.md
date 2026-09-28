@@ -1,3 +1,5 @@
+Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.
+
 # Claude Code Instructions
 
 Persistent instructions for Claude Code in this repository. Codex loads
@@ -24,6 +26,7 @@ the master rather than this file.
 - `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
+- `.agents/rules/document-schema.md` — every spec-tree document conforms to its closed schema: start from its template, write no history, and never opt out.
 
 This section, markers included, is the only part `npx qfai init` writes, beside
 the review directive it adds when no operative copy exists. A repository that

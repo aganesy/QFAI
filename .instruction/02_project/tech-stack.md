@@ -23,6 +23,8 @@ version: 1.0.0
 
 - Gherkin 解析: `@cucumber/gherkin`, `@cucumber/messages`
 - YAML 解析: `yaml`（`qfai.config.yaml`）
+- Markdown schema check: `@jackchuka/mdschema`, a dependency of the package that
+  `qfai validate` and the shipped docs lane both run
 
 ## テスト
 

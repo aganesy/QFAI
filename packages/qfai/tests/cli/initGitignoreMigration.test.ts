@@ -7,10 +7,9 @@
  *    deliberately removed `.qfai/evidence/*` to track its own audit trail got
  *    that line resurrected by the very release meant to widen tracking, and
  *    every evidence file went back to being ignored.
- * 2. An earlier `qfai init` wrote a per-directory `.qfai/evidence/.gitignore`
- *    whose first line is `*`. Git applies the deepest matching file, so that
- *    `*` beats every root negation and the governance records stayed ignored
- *    however correct the managed block was.
+ * 2. A project ignore line below the managed block re-ignored what a
+ *    governance negation re-included, and the freshness check, reading the
+ *    block alone, called the negation effective.
  */
 
 import { spawnSync } from "node:child_process";
@@ -21,9 +20,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
 import {
-  isPathIgnoredByLayers,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
@@ -42,16 +39,79 @@ const NL = "\n";
 const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
+describe("re-init strips the evidence negations an earlier block carried", () => {
+  // QFAI:EX-0001-0033-04
+  it("leaves no line re-including the evidence directory, and ignores its records", async () => {
+    await withProject(async (root) => {
+      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
+      // The whole managed block the preceding release wrote, with the plural
+      // decision lines an older one carried.
+      const previous = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/evidence/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/review_archive/*",
+        ".qfai/state.json",
+        "*.qfai-state.tmp",
+        ".qfai/state.json.lock",
+        ".qfai/run/",
+        ".qfai/evidence/prototyping/*",
+        "/tmp/",
+        "!.qfai/",
+        "!.qfai/evidence/",
+        "!.qfai/evidence/decision/",
+        "!.qfai/evidence/decision/**",
+        "!.qfai/evidence/decisions/",
+        "!.qfai/evidence/decisions/**",
+        "!.qfai/evidence/prototyping/",
+        "!.qfai/evidence/prototyping/grilling.md",
+        "!.qfai/evidence/workflow/",
+        "!.qfai/evidence/change-request-*.md",
+        "!.qfai/evidence/decision-*.md",
+        "!.qfai/evidence/implement-*.md",
+        "!.qfai/evidence/sdd-*.md",
+        "!.qfai/evidence/atdd-*.md",
+        "!.qfai/evidence/import-lite.md",
+        "!.qfai/evidence/coverage-depth-*.md",
+        "!.qfai/evidence/skeleton.md",
+        "!.qfai/install-provenance.json",
+        "!.qfai/assistant/",
+        "!.qfai/assistant/**",
+        "!.qfai/assistant/.assets.lock.json",
+        "",
+      ].join(NL);
+      await writeFile(path.join(root, ".gitignore"), previous, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readGitignore(root)).split(NL);
+      expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
+      expect(lines.filter((line) => line === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
+      expect(lines.filter((line) => line === ".qfai/run/")).toHaveLength(1);
+      const record = ".qfai/evidence/sdd-BF-0001.md";
+      await mkdir(path.join(root, ".qfai", "evidence"), { recursive: true });
+      await writeFile(path.join(root, record), "# SDD\n", "utf-8");
+      const checked = spawnSync("git", ["check-ignore", "--quiet", "--no-index", record], {
+        cwd: root,
+      });
+      expect(checked.status, `${record} must be ignored`).toBe(0);
+    });
+  });
+});
+
 describe("re-init preserves what the project chose to track", () => {
+  // QFAI:EX-0001-0033-09
   it("does not resurrect an ignore line the project removed from the block", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // The project tracks its own audit trail: drop the evidence ignore, and
-      // drop one governance negation so the freshness check fails on re-init.
+      // The project tracks its evidence: drop the evidence ignore, and drop one
+      // governance negation so the freshness check fails on re-init.
       const pruned = (await readGitignore(root))
         .split("\n")
-        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/decisions/**")
+        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/install-provenance.json")
         .join("\n");
       await writeFile(path.join(root, ".gitignore"), pruned, "utf-8");
 
@@ -60,7 +120,7 @@ describe("re-init preserves what the project chose to track", () => {
       const after = await readGitignore(root);
       expect(after.split("\n")).not.toContain(".qfai/evidence/*");
       // …while the missing governance negation is restored.
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/install-provenance.json");
       expect(after.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
     });
   });
@@ -77,6 +137,8 @@ describe("re-init preserves what the project chose to track", () => {
           QFAI_GITIGNORE_MARKER,
           ".qfai/report/*",
           "!.qfai/report/README.md",
+          "!.qfai/decisions/",
+          "!.qfai/decisions/**",
           ".qfai/discussion/discussion-*/",
           "",
         ].join("\n"),
@@ -88,13 +150,15 @@ describe("re-init preserves what the project chose to track", () => {
       const after = (await readGitignore(root)).split("\n");
       // Retired lines go.
       expect(after).not.toContain("!.qfai/report/README.md");
+      expect(after).not.toContain("!.qfai/decisions/");
+      expect(after).not.toContain("!.qfai/decisions/**");
       expect(after).not.toContain(".qfai/discussion/discussion-*/");
       // A renamed line keeps its successor — dropping it alone would remove an
       // ignore the project never gave up.
       expect(after).toContain(".qfai/discussion/*");
       // But an ignore this block simply never had is NOT added.
       expect(after).not.toContain(".qfai/evidence/*");
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/install-provenance.json");
     });
   });
 
@@ -112,158 +176,45 @@ describe("re-init preserves what the project chose to track", () => {
   });
 });
 
-describe("a legacy per-directory evidence ignore is migrated, not ignored", () => {
-  it("re-includes the governance records inside the legacy file", async () => {
+describe("a legacy per-directory evidence ignore is left alone", () => {
+  it("does not re-include anything inside the legacy file", async () => {
+    // The evidence directory is a local work area, so a nested ignore file an
+    // earlier release wrote there hides nothing that has to reach a commit.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
       await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(legacy, "*\n!.gitignore\n!README.md\n", "utf-8");
+      await writeFile(legacy, "*\n!.gitignore\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const after = (await readFile(legacy, "utf-8")).split("\n");
-      for (const negation of [
-        "!change-request-*.md",
-        "!decision-*.md",
-        "!implement-*.md",
-        "!atdd-*.md",
-        "!coverage-depth-*.md",
-        "!skeleton.md",
-        "!decisions/",
-        "!decisions/**",
-        "!implement-*.md",
-        "!atdd-*.md",
-        "!import-lite.md",
-        `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
-      ]) {
-        expect(after).toContain(negation);
-      }
-      // The rest of the file is the project's; the `*` stays.
-      expect(after).toContain("*");
-      expect(after).toContain("!README.md");
-
-      // The root negations cannot override this deeper file. Prove the migrated
-      // legacy rules make both durable per-item evidence homes visible to Git.
-      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
-      for (const name of [
-        "implement-spec-0001.md",
-        "atdd-spec-0001.md",
-        "import-lite-20260101000000000.md",
-      ]) {
-        await writeFile(path.join(root, ".qfai", "evidence", name), "# evidence\n", "utf-8");
-        expect(
-          spawnSync("git", ["check-ignore", "--quiet", "--no-index", `.qfai/evidence/${name}`], {
-            cwd: root,
-          }).status,
-        ).toBe(1);
-      }
-    });
-  });
-
-  // Membership in the legacy file is not the claim; the VERDICT is. Every root
-  // governance negation needs its leaf counterpart, and the RED/GREEN records
-  // were the two that shipped without one: on a project carrying the legacy
-  // file, `git check-ignore -v .qfai/evidence/implement-<spec-id>.md` still
-  // named the nested `*` as the winner, so the fresh clone and CI this change
-  // exists to serve saw neither file. Ask the repository's own layered matcher
-  // the same question git would.
-  it("leaves no root governance negation inert under the legacy file", async () => {
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(legacy, "*\n!.gitignore\n!README.md\n", "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const layers = [
-        { dir: "", lines: (await readGitignore(root)).split(NL).map((l) => l.trimEnd()) },
-        {
-          dir: ".qfai/evidence",
-          lines: (await readFile(legacy, "utf-8")).split(NL).map((l) => l.trimEnd()),
-        },
-      ];
-      for (const sample of [
-        ".qfai/evidence/implement-spec-0001.md",
-        ".qfai/evidence/atdd-spec-0001.md",
-        ".qfai/evidence/coverage-depth-spec-0001.md",
-        ".qfai/evidence/change-request-0001.md",
-        ".qfai/evidence/decision-0001.md",
-        ".qfai/evidence/decisions/20260101T000000000.json",
-        ".qfai/evidence/import-lite-20260101000000000.md",
-        ".qfai/evidence/import-lite.md",
-        // The two session records. A stage that ran its grilling session and
-        // one that skipped it leave the same pack, so the record is the only
-        // difference — and a record the nested `*` hides is read on the machine
-        // that wrote it and nowhere else.
-        ".qfai/evidence/sdd-spec-0001.md",
-        ".qfai/evidence/discussion-20260101000000000.md",
-      ]) {
-        expect(
-          isPathIgnoredByLayers(layers, sample),
-          `${sample} must survive the legacy nested ignore file`,
-        ).toBe(false);
-      }
-
-      // Over-correction pin: the migration re-includes the governance records,
-      // not the regenerable stage logs the legacy file exists to hide.
-      expect(
-        isPathIgnoredByLayers(layers, ".qfai/evidence/validate-run.log"),
-        "a regenerable stage log stays ignored",
-      ).toBe(true);
-    });
-  });
-
-  it("is idempotent and leaves a project without the legacy file alone", async () => {
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(legacy, "*\n", "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const once = await readFile(legacy, "utf-8");
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      expect(await readFile(legacy, "utf-8")).toBe(once);
+      expect(await readFile(legacy, "utf-8")).toBe("*\n!.gitignore\n");
     });
   });
 });
 
 describe("--force regenerates the standard asset trees", () => {
   it("restores an edited agent definition, not the manifest and not project content", async () => {
-    // Without this, a correction to an agent body reached new projects only:
-    // `.qfai/**` is copied create-only and `--force` covered
-    // `assistant/skills` alone.
-    //
-    // `agent-catalog.yml` is **not** in the set. `qfai-configure` is the
-    // shipped entrypoint for editing the declarative manifests, so forcing the
-    // catalog would replace a taxonomy adjustment made through the supported
-    // path — and nothing migrates it back, because `--upgrade-assistant-tree`
-    // deliberately does not walk `manifest/`.
+    // The retired manifest is adopter content. Init does not create or update it.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
-      const steering = path.join(root, ".qfai", "steering", "README.md");
       await writeFile(agent, "# stale" + NL, "utf-8");
+      await mkdir(path.dirname(manifest), { recursive: true });
       await writeFile(manifest, "tuned: true" + NL, "utf-8");
-      const projectContent = await readFile(steering, "utf-8").catch(() => null);
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       expect(await readFile(agent, "utf-8")).not.toBe("# stale" + NL);
       expect(await readFile(manifest, "utf-8")).toBe("tuned: true" + NL);
-      if (projectContent !== null) {
-        expect(await readFile(steering, "utf-8")).toBe(projectContent);
-      }
     });
   });
 
   it("leaves them alone without --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       await writeFile(agent, "# ours\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -340,6 +291,7 @@ describe("a retired line inside the block does not truncate it", () => {
     });
   });
 
+  // QFAI:EX-0001-0033-08
   it("still leaves a project line written under the block outside it", async () => {
     // The protection the old walk bought, kept. Widening it to tolerate unknown lines INSIDE
     // the block must not swallow the lines a project appended directly under it with no blank
@@ -434,69 +386,31 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
   });
 });
 
-describe("a legacy evidence negation must actually win", () => {
-  it("re-appends a negation that a later ignore line overrides", async () => {
-    // Git applies the last matching pattern, so a negation above a broad `*`
-    // is inert — but `lines.includes` read it as satisfied and the migration
-    // returned "already current". `git check-ignore -v` still named the `*`,
-    // so the governance record stayed untracked with the file looking correct.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(legacy, ["!decisions/", "!decisions/**", "*", ""].join(NL), "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const lines = (await readFile(legacy, "utf-8")).split(NL).filter((l) => l.length > 0);
-      const lastStar = lines.lastIndexOf("*");
-      const lastNegation = lines.lastIndexOf("!decisions/**");
-      expect(lastNegation).toBeGreaterThan(lastStar);
-    });
-  });
-
-  it("leaves a file whose negations already win untouched", async () => {
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const migrated = await readFile(legacy, "utf-8").catch(() => null);
-      if (migrated === null) return;
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      expect(await readFile(legacy, "utf-8")).toBe(migrated);
-    });
-  });
-});
-
 describe("a project rule after the managed block does not win", () => {
   it("re-appends the block when a later ignore line re-ignores the negations", async () => {
-    // Git applies the last matching pattern, so `.qfai/evidence/*.md` appended
-    // below the managed block re-ignores the Coverage Depth Matrix. The
-    // freshness check read the block only, called the negations effective and
-    // returned early — while `git check-ignore -v` named the project's line.
+    // Git applies the last matching pattern, so `.qfai/*.json` appended below
+    // the managed block re-ignores the install-provenance record. The freshness
+    // check read the block only, called the negations effective and returned
+    // early — while `git check-ignore -v` named the project's line.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const before = await readGitignore(root);
       await writeFile(
         path.join(root, ".gitignore"),
-        `${before}${NL}# project rules${NL}.qfai/evidence/*.md${NL}`,
+        `${before}${NL}# project rules${NL}.qfai/*.json${NL}`,
         "utf-8",
       );
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
-      const projectRule = lines.lastIndexOf(".qfai/evidence/*.md");
-      const negation = lines.lastIndexOf("!.qfai/evidence/coverage-depth-*.md");
+      const projectRule = lines.lastIndexOf(".qfai/*.json");
+      const negation = lines.lastIndexOf("!.qfai/install-provenance.json");
       expect(projectRule).toBeGreaterThan(-1);
       expect(negation).toBeGreaterThan(projectRule);
       // The project's own rule is preserved, not deleted.
-      expect(lines.filter((l) => l === ".qfai/evidence/*.md")).toHaveLength(1);
+      expect(lines.filter((l) => l === ".qfai/*.json")).toHaveLength(1);
     });
   });
 
@@ -591,7 +505,7 @@ describe("a project rule after the managed block keeps its place", () => {
       const conflicted = await readGitignore(root);
       await writeFile(
         path.join(root, ".gitignore"),
-        `${conflicted.trimEnd()}${NL}.qfai/evidence/*.md${NL}`,
+        `${conflicted.trimEnd()}${NL}.qfai/*.json${NL}`,
         "utf-8",
       );
 
@@ -608,61 +522,11 @@ describe("a project rule after the managed block keeps its place", () => {
 
       const after = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
       // The block moved below the project's ignore line, as the conflict requires…
-      expect(after.lastIndexOf("!.qfai/evidence/coverage-depth-*.md")).toBeGreaterThan(
-        after.lastIndexOf(".qfai/evidence/*.md"),
+      expect(after.lastIndexOf("!.qfai/install-provenance.json")).toBeGreaterThan(
+        after.lastIndexOf(".qfai/*.json"),
       );
       // …and the negation that lost is reported, not swallowed.
       expect(lines.join("")).toContain("!.qfai/report/dashboard.md");
-    });
-  });
-});
-
-describe("a legacy evidence negation loses to a later glob too", () => {
-  it("re-appends when a later *.md re-ignores the governance records", async () => {
-    // The prefix comparison saw `*` and `.qfai/evidence/*`; it did not see
-    // `*.md`, which matches `coverage-depth-*.md`, `decision-*.md` and
-    // `change-request-*.md` exactly.
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(
-        legacy,
-        ["*", "!coverage-depth-*.md", "!decision-*.md", "*.md", ""].join(NL),
-        "utf-8",
-      );
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const lines = (await readFile(legacy, "utf-8")).split(NL).map((l) => l.trimEnd());
-      const lastMd = lines.lastIndexOf("*.md");
-      expect(lines.lastIndexOf("!coverage-depth-*.md")).toBeGreaterThan(lastMd);
-      expect(lines.lastIndexOf("!decision-*.md")).toBeGreaterThan(lastMd);
-    });
-  });
-
-  it("re-appends when a later canonical-name glob re-ignores per-item evidence", async () => {
-    await withProject(async (root) => {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
-      await mkdir(path.dirname(legacy), { recursive: true });
-      await writeFile(
-        legacy,
-        ["*", "!implement-*.md", "!atdd-*.md", "implement-spec-*.md", "atdd-spec-*.md", ""].join(
-          NL,
-        ),
-        "utf-8",
-      );
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      const lines = (await readFile(legacy, "utf-8")).split(NL).map((line) => line.trimEnd());
-      expect(lines.lastIndexOf("!implement-*.md")).toBeGreaterThan(
-        lines.lastIndexOf("implement-spec-*.md"),
-      );
-      expect(lines.lastIndexOf("!atdd-*.md")).toBeGreaterThan(lines.lastIndexOf("atdd-spec-*.md"));
     });
   });
 });
@@ -685,12 +549,7 @@ describe("nothing under a review directory reaches a commit", () => {
   /**
    * Git's verdict on a path, from a real repository at `root`.
    *
-   * Asked of git rather than of {@link isPathIgnoredByLayers}, which answers
-   * differently here: it reads a trailing-slash negation as covering everything
-   * beneath the directory, so `!.qfai/` — last in the block, and present only
-   * to keep `.qfai` itself walkable — re-includes every path below it in that
-   * function's answer, while `git check-ignore` reports each review path
-   * ignored. What ships is a `.gitignore`, so what decides is git.
+   * Asked of git: what ships is a `.gitignore`, so what decides is git.
    *
    * `--no-index` because tracking is not the question: a path already in the
    * index reports as not ignored however the patterns read, and these paths are
@@ -765,7 +624,7 @@ describe("nothing under a review directory reaches a commit", () => {
   });
 
   it("leaves the governance records the same block re-includes", async () => {
-    // Over-correction pin. `!.qfai/` is what makes every evidence negation
+    // Over-correction pin. `!.qfai/` is what makes the governance negations
     // reachable at all, and dropping two of its neighbours must not take it
     // along — which a text search for `!.qfai/` cannot distinguish from
     // dropping only the review lines.
@@ -773,13 +632,9 @@ describe("nothing under a review directory reaches a commit", () => {
       await gitProject(root);
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const hidden = [
-        ".qfai/evidence/decisions/20260101T000000000.json",
-        ".qfai/evidence/implement-spec-0001.md",
-        ".qfai/evidence/atdd-spec-0001.md",
-        ".qfai/evidence/coverage-depth-spec-0001.md",
-        ".qfai/install-provenance.json",
-      ].filter((sample) => ignoredByGit(root, sample));
+      const hidden = [".qfai/install-provenance.json", ".qfai/assistant/.assets.lock.json"].filter(
+        (sample) => ignoredByGit(root, sample),
+      );
       expect(hidden, "a governance record must stay committable").toEqual([]);
     });
   });

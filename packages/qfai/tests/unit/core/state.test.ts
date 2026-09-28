@@ -10,7 +10,7 @@
  * writers owning disjoint top-level namespaces and a merge onto `{}`
  * would erase the namespaces this writer does not own.
  */
-// QFAI:SPEC-0010:TC-0010-0012
+// QFAI:EX-0001-0093-01
 
 import {
   chmod,
@@ -102,7 +102,7 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     const truncated = JSON.stringify(
       {
         discussion: { currentId: "discussion-20260801120000000" },
-        atdd: { scaffoldValidateCycles: { "spec-0001:TC-0001-0002": 2 } },
+        atdd: { scaffoldValidateCycles: { "AC-0001-0001-02": 2 } },
       },
       null,
       2,
@@ -138,7 +138,7 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     const abs = path.join(root, ".qfai", "state.json");
     await mkdir(path.dirname(abs), { recursive: true });
     await writeFile(abs, '{ "discussion": { "currentId": "discussion-KEEP" } ', "utf-8");
-    await expect(recordValidateCycle(root, "spec-0001", "TC-0001-0002")).rejects.toBeInstanceOf(
+    await expect(recordValidateCycle(root, "AC-0001-0001-02")).rejects.toBeInstanceOf(
       StateUnreadableError,
     );
     expect(await readFile(abs, "utf-8")).toBe(
@@ -148,14 +148,14 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
 
   it("both writers merge into one document when the file is readable", async () => {
     await writeDiscussionCurrentId(root, "discussion-20260101000000000");
-    await recordValidateCycle(root, "spec-0001", "TC-0001-0002");
+    await recordValidateCycle(root, "AC-0001-0001-02");
     await writeDiscussionCurrentId(root, "discussion-20260202000000000");
     const raw = JSON.parse(await readFile(path.join(root, ".qfai", "state.json"), "utf-8")) as {
       atdd?: { scaffoldValidateCycles?: Record<string, number> };
       discussion?: { currentId?: string };
     };
     expect(raw.discussion?.currentId).toBe("discussion-20260202000000000");
-    expect(raw.atdd?.scaffoldValidateCycles?.["spec-0001:TC-0001-0002"]).toBe(1);
+    expect(raw.atdd?.scaffoldValidateCycles?.["AC-0001-0001-02"]).toBe(1);
   });
 
   it("writes atomically and leaves no temp file behind", async () => {

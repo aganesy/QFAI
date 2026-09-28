@@ -14,7 +14,7 @@
  * `shared/provenance.ts` `resolveWorkflowFileState` gives the state its meaning:
  * a name with a provenance ENTRY whose file is ABSENT on disk was deliberately
  * removed — "never recreated, never reported as stale, never pruned". The
- * shipped-workflows contract's §3 says `declined` is never reported again, so it
+ * shipped-workflows contract's BR-0020-0021 says `declined` is never reported again, so it
  * cannot become a reason to emit. It is information the operator needs while a
  * finding is being emitted for some OTHER reason: without it, an operator reading
  * a drift report cannot tell that QFAI knows the missing file is missing and is
@@ -51,8 +51,11 @@
  * The round-by-round derivation — RED output, the production change, mutations as
  * needle text — is in `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:SPEC-0006:TC-0006-0034
-// QFAI:SPEC-0006:TC-0006-0035
+// QFAI:EX-0003-0011-07
+// QFAI:EX-0003-0011-08
+
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -225,6 +228,10 @@ describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
     // EMPTY — a name the fixture forgot to delete would drift or match, and
     // either way the row would be measuring a different tree than it names.
     const recorded = Object.keys((await readInstallProvenance(dir)).workflows);
+    // The document-schema lane is kept aside: its absence is an error of its own
+    // (`workflows.docsLane`), so it is put back before the exit code is measured.
+    const docsLane = path.join(dir, ".github", "workflows", "qfai-docs.yml");
+    const docsLaneBytes = await readFile(docsLane);
     for (const name of recorded) {
       await deleteShippedWorkflow(dir, name);
     }
@@ -276,7 +283,7 @@ describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
     expect
       .soft(
         check?.severity,
-        "a declined name is never reported again — §3 — so a tree that has only declined names is `ok`",
+        "a declined name is never reported again — BR-0020-0021 — so a tree that has only declined names is `ok`",
       )
       .toBe("ok");
 
@@ -308,6 +315,7 @@ describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
       .soft(check?.message, "the two `ok` arms must not collapse into one message")
       .not.toBe(matching?.message);
 
+    await writeFile(docsLane, docsLaneBytes);
     const run = await runDoctorText(dir, "error");
 
     // CLAIM 3 — silence does not become a failure. Not in the TC's Assert list,

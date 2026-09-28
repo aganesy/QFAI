@@ -8,8 +8,8 @@
  *
  * That is worth doing rather than skipping. A rule satisfied by "somebody decided this"
  * degrades to nothing the moment the person who decided it stops reading pull requests. A
- * rule satisfied by a paragraph in `07_Decisions.md`, asserted here, fails when the
- * paragraph is deleted or reworded past the point where it still carries the reason.
+ * rule satisfied by a row in `.qfai/spec/decisions.md`, asserted here, fails when the
+ * row is deleted or reworded past the point where it still carries the reason.
  *
  * ## What this file must NOT do
  *
@@ -24,7 +24,7 @@
  * is always the same and it is not editorial taste: these records QUOTE the business rule they
  * satisfy, so the obvious word-level pattern matched the quotation instead of the record's own
  * statement. `/\bkept\b/` passed over a record saying the opposite of what it needed to say,
- * because `BR-0017-0050`'s quoted text contains "the lower setting MUST be kept". `before` and
+ * because the flakier-setting rule's quoted text contains "the lower setting MUST be kept". `before` and
  * `first` appear in the surrounding prose; `sign-off` appears in the next sentence.
  *
  * Each of those was found by an oracle round that reddened NOTHING, which is the only way this
@@ -38,19 +38,18 @@
  * ## The first two rows
  *
  * `TC-0017-0074` and `TC-0017-0075` are about retiring the repository's own duplicate of the
- * validate workflow it ships. `BR-0017-0061` allows that deletion only with a structural
+ * validate workflow it ships. `BR-0018-0060` allows that deletion only with a structural
  * contract gate over the shipped set present at or before it, and requires the recorded cost
  * to be **the loss of the manual cross-check** — explicitly not the absence of a mirror,
  * because the two files had already diverged on the profile they ran, so no mirror existed to
  * lose. Recording the absent mirror would overstate what the deletion takes away.
  */
-// QFAI:SPEC-0017:TC-0017-0074
-// QFAI:SPEC-0017:TC-0017-0075
-// QFAI:SPEC-0017:TC-0017-0025
-// QFAI:SPEC-0017:TC-0017-0026
-// QFAI:SPEC-0017:TC-0017-0052
-// QFAI:SPEC-0017:TC-0017-0066
-// QFAI:SPEC-0017:TC-0017-0067
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0014-09
+// QFAI:EX-0002-0014-10
+// QFAI:EX-0002-0018-09
+// QFAI:EX-0002-0019-05
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -62,13 +61,13 @@ import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.j
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
 
 /** The decision this pair of rows reads. */
 const RETIREMENT_DR = "DR-0017-0007";
 
 /**
- * The gate `BR-0017-0061` requires to exist at or before the deletion, as a repository path.
+ * The gate `BR-0018-0060` requires to exist at or before the deletion, as a repository path.
  *
  * A literal, and asserted to exist below. The rule is about a specific instrument being in
  * place; a path read out of the decision record would let the record name anything.
@@ -102,19 +101,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * One decision's section, from its heading to the next one.
+ * One imported decision's row in the consolidated decision register.
  *
- * Sliced rather than read whole, so a phrase present somewhere else in the register cannot
+ * Selected rather than read whole, so a phrase present somewhere else in the register cannot
  * satisfy a claim about this decision.
  */
 function decisionSection(id: string): string {
   const source = readFileSync(DECISIONS, "utf-8");
-  const start = source.indexOf(`### ${id}`);
-  if (start < 0) {
-    return "";
-  }
-  const next = source.indexOf("\n### ", start + 1);
-  return next < 0 ? source.slice(start) : source.slice(start, next);
+  return (
+    source.split(/\r?\n/).find((line) => /^\| DEC-\d+ \|/.test(line) && line.includes(`#${id}:`)) ??
+    ""
+  );
 }
 
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
@@ -129,7 +126,7 @@ describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is
       `${RETIREMENT_DR} must record the retirement of the repository's own validate workflow`,
     ).not.toBe("");
 
-    // CLAIM 2 — it names the gate. `BR-0017-0061`'s accepting shape is "the gate present in
+    // CLAIM 2 — it names the gate. `BR-0018-0060`'s accepting shape is "the gate present in
     // the same change or an earlier one", so a record that omits which gate cannot be
     // checked against anything.
     expect
@@ -149,7 +146,7 @@ describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is
       .soft(section, "the record must state that the absence of a mirror is NOT the justification")
       .toMatch(/\bnot\b[^.]{0,120}\bmirror\b/i);
 
-    // CLAIM 5 — and the rejected alternative is kept with its reason. `BR-0017-0059` rejects
+    // CLAIM 5 — and the rejected alternative is kept with its reason. `BR-0018-0058` rejects
     // repointing at the shipped file because it resolves to the published package; a
     // register that drops rejected options invites the next reader to re-propose them.
     expect
@@ -226,7 +223,7 @@ const PARALLELISM_DR = "DR-0017-0009";
 /**
  * Files that would BE a bump configuration.
  *
- * `BR-0017-0023` forbids creating one without the user, so the row asserts their absence — and
+ * `BR-0018-0023` forbids creating one without the user, so the row asserts their absence — and
  * the list is enumerated rather than pattern-matched, because "a bump configuration" is not a
  * shape a glob can recognise. These are the three a maintainer would reach for.
  */
@@ -241,12 +238,12 @@ describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin b
     const section = decisionSection(PIN_OWNER_DR);
     expect(section, `${PIN_OWNER_DR} must record the pin bump owner`).not.toBe("");
 
-    // CLAIM 1 — an owner is named. `BR-0017-0022` makes the pins unsatisfied until a durable
+    // CLAIM 1 — an owner is named. `BR-0018-0022` makes the pins unsatisfied until a durable
     // artifact says who bumps them, so the absence of a name is the failure.
     expect.soft(section, "the record must name who bumps the pins").toMatch(/owner/i);
 
     // CLAIM 2 — and the obligation is attached to a recurring moment. An owner with no cadence
-    // discharges "whenever someone remembers", which is the state `BR-0017-0022` describes as
+    // discharges "whenever someone remembers", which is the state `BR-0018-0022` describes as
     // unsatisfied rather than as informal.
     expect
       .soft(section, "the record must bind the obligation to a recurring, detectable moment")
@@ -263,7 +260,7 @@ describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin b
 
 describe("TC-0017-0026 (TDD-0026): no root bump configuration, and the owner is recorded anyway", () => {
   it("keeps the repository free of a bump configuration while the obligation stays discharged", () => {
-    // CLAIM 1 — none of the three exists. `BR-0017-0023` forbids creating one without the
+    // CLAIM 1 — none of the three exists. `BR-0018-0023` forbids creating one without the
     // user, and `OC-3` is why: it is a root-level addition.
     const present = BUMP_CONFIGS.filter((rel) => existsSync(path.join(REPO_ROOT, rel)));
     expect.soft(present, "a bump configuration may not be created without the user").toEqual([]);
@@ -303,24 +300,25 @@ describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped h
 });
 
 describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
+  // QFAI:EX-0002-0019-04
   it("records the flakiness measurement, and what happened instead of lowering the value", () => {
     const section = decisionSection(PARALLELISM_DR);
     expect(section, `${PARALLELISM_DR} must record the parallelism episode`).not.toBe("");
 
-    // CLAIM 1 — the measurement is recorded, with numbers. `BR-0017-0030` is explicit that no
+    // CLAIM 1 — the measurement is recorded, with numbers. `BR-0018-0030` is explicit that no
     // parallelism claim lands on argument, and this record exists because a claim WAS made and
     // then measured.
     expect
       .soft(section, "the record must carry the measurement rather than describing it")
       .toMatch(/\b862\b/);
 
-    // CLAIM 2 — and the outcome is stated as a THIRD outcome, not as the rule's. `BR-0017-0050`
+    // CLAIM 2 — and the outcome is stated as a THIRD outcome, not as the rule's. `BR-0018-0049`
     // says a flakier higher value means the lower one is kept; here the higher value was kept
     // and the cause removed instead. A record that let that read as compliance would be worse
     // than one that omitted it.
     expect
       .soft(section, "the record must say the declared value was KEPT, not lowered")
-      // `kept` alone is not enough: this record QUOTES BR-0017-0050, whose own text says
+      // `kept` alone is not enough: this record QUOTES the flakier-setting rule, whose own text says
       // the lower setting must be kept. Matching that word let the claim pass over a
       // record saying the opposite of what it needs to say.
       //
@@ -343,7 +341,7 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
     const section = decisionSection(PARALLELISM_DR);
 
     // The rule's negative direction, and this repository has an actual instance of it: a
-    // revision was proposed on the strength of a measurement and refused. `BR-0017-0051` says
+    // revision was proposed on the strength of a measurement and refused. `BR-0018-0050` says
     // "no agent may substitute a different starting value on the strength of its own
     // measurement", so the interesting artifact is the refusal, not a value.
     expect
@@ -365,8 +363,8 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0065
 describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
+  // QFAI:EX-0002-0019-03
   it("compares at least two settings on the largest project and places the adopted value", () => {
     // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker
     // settings ON THE LARGEST PROJECT plus the value actually adopted, and the adopted setting
@@ -377,10 +375,18 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
     // record that states a percentage is a record that can state the wrong percentage; the ten
     // percent test is computed from the artifact's own numbers, so a transcription error fails
     // this row instead of surviving it.
-    const artifact = readFileSync(
-      path.join(REPO_ROOT, ".qfai", "evidence", "timing-workers-spec-0017.md"),
+    //
+    // The artifact is the doc comment on `DECLARED_START`, with its ` * ` margin removed, so it
+    // sits beside the value it justifies and reaches every checkout.
+    const knobsSource = readFileSync(
+      path.join(REPO_ROOT, "packages", "qfai", "vitest.knobs.ts"),
       "utf-8",
     );
+    const declaration = knobsSource.indexOf("export const DECLARED_START");
+    expect(declaration, "vitest.knobs.ts must declare DECLARED_START").toBeGreaterThan(0);
+    const artifact = knobsSource
+      .slice(knobsSource.lastIndexOf("/**", declaration), declaration)
+      .replace(/^[ \t]*\* ?/gm, "");
 
     // CLAIM 1 — the largest project is NAMED, and named as a measurement rather than an
     // assumption. "Largest" is a property of the tree that changes as tests are added, so the

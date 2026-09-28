@@ -686,7 +686,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         // column, and it must not silence anything.
         const prose = DERIVED_DB.replace(
           "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
-          "-- See CON-DB-0017. Derived (not stored): status = standby from enabled",
+          "-- See DB-0017. Derived (not stored): status = standby from enabled",
         );
         const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": prose });
 

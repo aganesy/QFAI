@@ -1,0 +1,94 @@
+# Document schema: <contractsDir>/tech.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Technology$"
+      regex: true
+    description: What the project runs on, what it depends on, and the commands that check it.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Stack$"
+          regex: true
+        description: One row per component. Runtime and Platform are required.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Component, Choice]
+        required_text:
+          - pattern: '(?m)^\|[ \t]*Runtime[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^\|[ \t]*Platform[ \t]*\|'
+            regex: true
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+      - heading:
+          pattern: "^## Dependencies$"
+          regex: true
+        description: Each runtime dependency with the reason for it on a nested item, or `- None.`
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          # Prose, a table or a fence where the list belongs.
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+            regex: true
+          # A top-level item is a package in backticks, or `None.`
+          - pattern: "(?m)^- [^`N]"
+            regex: true
+          - pattern: '(?m)^- `[^`\n]*`[^\n]'
+            regex: true
+          - pattern: '(?m)^- N(?:[^o\n]|o[^n\n]|on[^e\n]|one[^.\n]|one\.[^\n]|o?n?e?$)'
+            regex: true
+          # A package with no nested reason under it.
+          - pattern: '(?m)^- `[^`\n]*`\n(?:[ \t]*\n)*(?:- |\z)'
+            regex: true
+          # `None.` beside a package.
+          - pattern: '(?ms)^- None\.$.*^- |^- `.*^- None\.$'
+            regex: true
+      - heading:
+          pattern: '^## Standard commands \(copy-paste\)$'
+          regex: true
+        description: The quality-gate commands, one labelled item each. Pack / distribution is optional.
+        allow_additional: false
+        lists:
+          - min: 1
+            max: 1
+        required_text:
+          - pattern: "(?m)^- Install: `"
+            regex: true
+          - pattern: "(?m)^- Format: `"
+            regex: true
+          - pattern: "(?m)^- Test: `"
+            regex: true
+          - pattern: "(?m)^- Lint: `"
+            regex: true
+          - pattern: "(?m)^- Typecheck: `"
+            regex: true
+          - pattern: "(?m)^- Build: `"
+            regex: true
+          - pattern: "(?m)^- Skeleton: `"
+            regex: true
+          - pattern: "(?m)^- Validate: `"
+            regex: true
+        forbidden_text:
+          # Anything but top-level items, and an item whose command is not in backticks.
+          - pattern: '(?m)^[ \t]*[^-\s#]'
+            regex: true
+          - pattern: '(?m)^[ \t]+-'
+            regex: true
+          - pattern: '(?m)^- [^:\n]*(?:$|: [^`])'
+            regex: true
