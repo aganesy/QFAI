@@ -14,7 +14,7 @@ import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
 import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
 import { DIAGNOSIS_VERDICTS } from "./payloadShapes.js";
 import { storyTreeChecks } from "./records.js";
-import { activeStages } from "./stages.js";
+import { needsDiagnosis } from "./stages.js";
 import { repairOwnerOf, servingStage, servingSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
   InputRefusal,
@@ -206,6 +206,9 @@ function passObligationOpen(
       return kind === "BF" || kind === "AC";
     case "implement-test-fix":
       return kind === "EX";
+    // A route that changes compatibility always has a migration and a breaking change to state.
+    case "verify-change-note":
+      return snapshot.plan?.route === "change-compatibility";
     default:
       return false;
   }
@@ -228,6 +231,17 @@ function passRefusals(
   });
 }
 
+// A result that runs `triage-close` and is accepted says how it closed the request, and no
+// other result does.
+function closureRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): InputRefusal[] {
+  const closes = stepNamesOf(workOrder).includes("triage-close");
+  const accepted = result.outcome === "accepted" || result.outcome === "accepted_with_debt";
+  const wanted = closes && accepted;
+  return wanted === (result.closure !== undefined)
+    ? []
+    : [{ reason: "schema", subject: "closure" }];
+}
+
 export function resultRefusals(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -241,6 +255,7 @@ export function resultRefusals(
     ...blockedRefusals(snapshot, result, workOrder, facts),
     ...scopeRefusals(result, workOrder, facts),
     ...passRefusals(snapshot, result, workOrder, facts),
+    ...closureRefusals(result, workOrder),
   ];
   const notRun = notRunRefusalOf(result.notRun, facts);
   if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
@@ -438,7 +453,7 @@ function stageResultIsBroken(
     workOrder.stageKind !== stage.stageKind ||
     stepNamesOf(workOrder).join(",") !== steps.join(",") ||
     (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
-    (stage.stageKind === "diagnose" &&
+    (needsDiagnosis(stage) &&
       (!diagnosis ||
         !DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) ||
         !diagnosis.reproductionRef ||
@@ -475,6 +490,7 @@ function acceptedEvents(
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
       ...(result.passes?.length ? { passes: result.passes } : {}),
+      ...(result.closure ? { closure: result.closure } : {}),
       ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
       ...(result.diagnosis ? { diagnosis: result.diagnosis } : {}),
       ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
@@ -490,18 +506,13 @@ function acceptedEvents(
   ];
 }
 
-// A repair needs a new plan when no step of the plan's active stages serves a finding's owner.
-function repairOutsidePlan(
-  snapshot: WorkflowSnapshot,
-  result: WorkflowResult,
-  facts: WorkflowFacts,
-): boolean {
+// A repair needs a new plan when no step of the plan's stages serves a finding's owner.
+function repairOutsidePlan(snapshot: WorkflowSnapshot, result: WorkflowResult): boolean {
   const plan = snapshot.plan;
   if (result.outcome !== "needs_repair" || !plan) return false;
-  const selected = activeStages(plan, snapshot, facts);
   return (result.debts ?? []).some((debt) => {
     const owner = skillOwnerOf(debt);
-    return owner !== undefined && !servingStage(selected, owner);
+    return owner !== undefined && !servingStage(plan.stages, owner);
   });
 }
 
@@ -525,10 +536,9 @@ function settleResult(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   result: WorkflowResult,
-  checked: { extras: Partial<WorkflowEvent>; facts: WorkflowFacts; lastOfPlan: boolean },
+  extras: Partial<WorkflowEvent>,
 ): WorkflowDecision {
-  const { extras, facts, lastOfPlan } = checked;
-  const { run, plan } = snapshot;
+  const { run } = snapshot;
   const delegated = decideDelegation(snapshot, workOrder, result);
   if (delegated) return delegated;
   // Rows a story-authoring result appended are the run's whatever the result's outcome.
@@ -547,10 +557,11 @@ function settleResult(
       currentStory(snapshot) ?? { ...story, slotId: workOrder.target.slotId },
     );
   }
+  // SIMPLIFIED: of the outcomes a branch point declares, only the diagnosis verdict
+  // `expectation-differs` leaves the route, back to routing; every other one continues it.
+  // Lift when: a declared branch point re-routes the run to the destination its outcome names.
   const needsReplan =
-    (plan?.route === "discovery" && lastOfPlan) ||
-    (workOrder.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs") ||
-    repairOutsidePlan(snapshot, result, facts);
+    result.diagnosis?.verdict === "expectation-differs" || repairOutsidePlan(snapshot, result);
   const halted = budgetHalt(snapshot, result, needsReplan);
   if (halted) return halted;
   const events = acceptedEvents(workOrder, result, needsReplan, extras);
@@ -569,7 +580,7 @@ export function acceptStageResult(
 ): WorkflowDecision {
   const { run, plan, outstandingWorkOrder: workOrder } = snapshot;
   const accepted = snapshot.acceptedStages ?? [];
-  const selected = plan ? activeStages(plan, snapshot, facts) : [];
+  const selected = plan?.stages ?? [];
   // A repair stage is one of the plan's own, issued out of order to the finding's owner.
   const repair = repairStageOf(snapshot, selected);
   const stage = repair?.stage ?? selected[accepted.length];
@@ -581,8 +592,7 @@ export function acceptStageResult(
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
   const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
   if (refusals.length > 0) return refusedWith(run, refusals);
-  const lastOfPlan = !repair && accepted.length + 1 === selected.length;
-  return settleResult(snapshot, workOrder, result, { extras: storyTree.extras, facts, lastOfPlan });
+  return settleResult(snapshot, workOrder, result, storyTree.extras);
 }
 
 // A seam-only result closes its seam request and returns the run to the acceptance stage it

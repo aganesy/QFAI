@@ -7,7 +7,7 @@ import { planStage } from "./kindSteps.js";
 
 it("next twice on a run in running, then resume twice, with no result between", () => {
   const plan = {
-    route: "direct",
+    route: "edit-text",
     stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
   };
   const flowBinding = { flowId: "BF-0007" };

@@ -67,11 +67,11 @@ const question = {
   recommendation: "apply",
 };
 
-// A bugfix run seeding an example: its first attempt asks the change question, the operator
+// A fix-defect run seeding an example: its first attempt asks the change question, the operator
 // answers, and the second attempt is issued. Returns the run and the answer's authorization.
 function answered(answeredBy: string) {
   const plan = planOf(
-    "bugfix",
+    "fix-defect",
     [stage("diagnose", "diagnose"), stage("sdd-append", "sdd_append"), stage("verify", "verify")],
     [STORY],
   );
@@ -159,8 +159,8 @@ it("Seeding that cites, instead of the new example, an example the story already
 });
 
 it("An implement result accepted while the bound flow's obligations cannot be read", () => {
-  const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta"),
+  const plan = planOf("add-feature", [
+    stage("bounded-sdd-delta", "sdd"),
     stage("bounded-implement", "implement"),
     stage("bounded-verify", "verify"),
   ]);

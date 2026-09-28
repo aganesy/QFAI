@@ -75,7 +75,7 @@ it("A material risk opened as a question stops routing, and one opened as nothin
 it("A request naming a push authorizes no external effect in any work order", async () => {
   const root = await flowProject();
   const input = { ...START_INPUT, request: { text: "Fix the typo in the README and push it." } };
-  const { runId } = await routedRun(root, proposalFor("direct"), input);
+  const { runId } = await routedRun(root, proposalFor("edit-text"), input);
   const edit = workflow(root, ["next", "--run", runId]);
   await submit(root, runId, "accept", resultFor(edit.json, "edit-1"));
   const verify = workflow(root, ["next", "--run", runId]);

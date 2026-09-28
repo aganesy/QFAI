@@ -122,14 +122,14 @@ function routeOf(events: unknown[], snapshot: unknown): string | null {
 }
 
 // Whether the run asked the operator anything a seed scores. A story-authoring stage asks for
-// every change it makes, so a question opened while an `sdd` or `sdd_delta` work order is the
-// last one issued does not count.
+// every change it makes, so a question opened while an `sdd` work order is the last one issued
+// does not count.
 function askedQuestion(events: unknown[]): boolean {
   let outstanding: unknown;
   for (const event of events) {
     const name = read(event, "event");
     if (name === "work-order-issued") outstanding = read(read(event, "workOrder"), "stageKind");
-    if (name === "question-opened" && outstanding !== "sdd" && outstanding !== "sdd_delta") {
+    if (name === "question-opened" && outstanding !== "sdd") {
       return true;
     }
   }

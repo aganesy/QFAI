@@ -1410,15 +1410,15 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
   // make each row name exactly one directory that no other row names.
   "QFAI-AGENT-015":
-    "Remove the role from the skill's `roles:`, or bind it in the package defaults (`packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Remove the role from the skill's `roles:`, or bind it in the package defaults (the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-AGENT-016":
     "Repair the `SKILL.md` frontmatter the message names: close the `---` block, and give `roles:` a list of strings and `routing-profile:` a non-empty profile name.",
   "QFAI-AGENT-017":
-    "Add a route with a dispatching phase to `packages/qfai/assets/defaults/agent-routing.yml`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
+    "Add a route with a dispatching phase to the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
   "QFAI-AGENT-018":
     "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile. Define package defaults in `packages/qfai/assets/defaults/review-profiles.yml`; use `qfai.config.yaml#routing` and `#reviewProfiles` for complete project-specific overrides.",
   "QFAI-AGENT-019":
-    "Add the agent to the skill's `roles:`, or remove its binding from `packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Add the agent to the skill's `roles:`, or remove its binding from the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or from `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-SKILLS-016":
     "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, list a common step a skill's body runs in that skill's `requires:`, and add the roles the message names to the skill's `roles:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so

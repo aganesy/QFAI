@@ -14,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -120,14 +121,12 @@ describe("agent cards are the only definitions", () => {
 describe("routing defaults are package data", () => {
   // QFAI:EX-0001-0164-01
   it("keeps routing and review profiles together outside init assets", async () => {
-    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
-      routing: Array<{ step?: string; phases: Array<{ id: string }>; review_profile: string }>;
-    };
+    const routing = await defaultRoutingEntries();
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       profiles: Record<string, unknown>;
       optional_modes: Record<string, unknown>;
     };
-    expect(routing.routing.some((entry) => entry.step === "sdd-triage")).toBe(true);
+    expect(routing.some((entry) => entry.step === "sdd-triage")).toBe(true);
     expect(Object.keys(profiles.profiles)).not.toContain("full-harness");
     expect(profiles.optional_modes).toHaveProperty("pattern-doubler");
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
@@ -147,7 +146,7 @@ describe("routing defaults are package data", () => {
   });
 
   it("routes the migration skill through the required three phases", async () => {
-    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
+    const routing = { routing: await defaultRoutingEntries() } as {
       routing: Array<{
         skill: string;
         phases: Array<{ id: string; mandatory_agents: string[]; blocking_agents: string[] }>;

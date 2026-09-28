@@ -21,7 +21,7 @@ import {
 
 afterEach(removeProjects);
 
-// A feature run in `ready` after its verify stage was accepted with this run's report.
+// An add-feature run in `ready` after its verify stage was accepted with this run's report.
 async function verifiedRun(root: string, completionTarget: string) {
   const { runId, issued } = await featureRunAt(root, "verify", {
     ...START_INPUT,

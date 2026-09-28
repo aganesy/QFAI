@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -15,7 +15,7 @@ const boundedStages = [
   operation,
 }));
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
   flows: ["BF-0007"],
 };
 
@@ -61,7 +61,7 @@ function routeWithRisk(signal: string) {
         outcome: "accepted",
         proposal: {
           requestKind: "change",
-          candidateRoute: "bounded-change",
+          candidateRoute: "add-feature",
           goal: "Change how user records are stored.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],

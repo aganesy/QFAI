@@ -40,6 +40,7 @@ import {
   writeRecord,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
+import { reportedRoute } from "../../core/workflow/routes.js";
 import { obligationFilesOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowDecision,
@@ -170,12 +171,24 @@ async function modeOf(root: string) {
   return readWorkflowMode(document);
 }
 
+// The route a run is on, a retired id shown as the route that succeeds it.
+function routeOf(snapshot: WorkflowSnapshot): string | null {
+  const plan = snapshot.plan;
+  return plan
+    ? reportedRoute(
+        plan.route,
+        plan.stages.map((stage) => stage.stageKind),
+      )
+    : null;
+}
+
 function reportStatus(snapshot: WorkflowSnapshot, mode: string | null): number {
   const { run, outstandingWorkOrder, openQuestions, halt } = snapshot;
   emit({
     ok: true,
     run,
     mode,
+    route: routeOf(snapshot),
     stage: outstandingWorkOrder?.stageInstanceId ?? null,
     workOrder: outstandingWorkOrder
       ? workOrderDocument(run.id, run.sequence, outstandingWorkOrder)

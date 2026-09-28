@@ -15,6 +15,7 @@ import {
   type MigrationContext,
 } from "../../../../src/migration/specToStory/harness.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
+import { defaultRoutingEntries } from "../../../helpers/shippedAssistant.js";
 
 const roots: string[] = [];
 
@@ -838,11 +839,7 @@ describe("migration catalog move", () => {
     // QFAI:EX-0004-0006-05
     const context = await fixture();
     const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
-    const defaults = parseYaml(
-      await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf8"),
-    ) as {
-      routing: Array<Record<string, unknown>>;
-    };
+    const defaults = { routing: await defaultRoutingEntries() };
     expect(defaults.routing.length).toBeGreaterThanOrEqual(2);
     const unchanged = defaults.routing[0];
     const changed = { ...defaults.routing[1], review_profile: "migration-test" };

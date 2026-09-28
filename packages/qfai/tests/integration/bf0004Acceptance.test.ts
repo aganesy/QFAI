@@ -25,6 +25,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
+import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(__dirname, "../..");
@@ -1251,9 +1252,7 @@ describe("BF-0004 acceptance criteria", () => {
   it("keeps only changed manifest routing entries as configuration overrides", async () => {
     const root = await project();
     const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
-    const defaults = parseYaml(
-      await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf8"),
-    ) as { routing: Array<Record<string, unknown>> };
+    const defaults = { routing: await defaultRoutingEntries() };
     const unchanged = defaults.routing[0];
     const original = defaults.routing[1];
     if (!unchanged || !original) throw new Error("Routing defaults need two entries");

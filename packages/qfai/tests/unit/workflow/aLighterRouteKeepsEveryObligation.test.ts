@@ -14,17 +14,17 @@ const obligations = {
   digest: "7".repeat(64),
 };
 
-// A bugfix run bound to BF-0007 whose append and acceptance stages had nothing to add and whose
-// RED receipt was accepted for EX-0007-0001-02, then reclassified: its verify stage found that
-// the criterion itself has to change, which story triage decides and no bugfix stage runs, and
-// routing settled bounded-change. Returns the run in `ready` under the new plan.
+// A fix-defect run bound to BF-0007 whose append and acceptance stages had nothing to add and
+// whose RED receipt was accepted for EX-0007-0001-02, then reclassified: its verify stage found
+// that the criterion itself has to change, which story triage decides and no fix-defect stage
+// runs, and routing settled add-feature. Returns the run in `ready` under the new plan.
 async function reclassified() {
   // The package's plans, as the command observes them.
   const plans = await planFacts();
-  const plan = (route: "bugfix" | "bounded-change") =>
+  const plan = (route: "fix-defect" | "add-feature") =>
     planOf(route, plans[route]?.stages ?? [], ["src/notify/**"]);
   const facts = { flows: [FLOW], obligations };
-  const run = new JournalRun(readyWith(plan("bugfix"), FLOW));
+  const run = new JournalRun(readyWith(plan("fix-defect"), FLOW));
   run.next(facts);
   const diagnosis = {
     verdict: "missing-test",
@@ -57,7 +57,7 @@ async function reclassified() {
   expect(run.next(facts).stageKind).toBe("route");
   const proposal = {
     requestKind: "change",
-    candidateRoute: "bounded-change",
+    candidateRoute: "add-feature",
     goal: "Fix the notification the example describes.",
     expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
     observedRefs: [],
@@ -68,13 +68,13 @@ async function reclassified() {
   };
   const routingFacts = {
     flows: [FLOW],
-    plans: { "bounded-change": { route: "bounded-change", stages: plan("bounded-change").stages } },
+    plans: { "add-feature": { route: "add-feature", stages: plan("add-feature").stages } },
   };
   expect(run.accept({ proposal }, routingFacts).verdict.run?.state).toBe("ready");
   return { run, receipts, routing: run.snapshot.routingReceiptRef ?? "" };
 }
 
-it("A RED receipt accepted for an example no test annotates, then a reclassification from bugfix to bounded-change, then next", async () => {
+it("A RED receipt accepted for an example no test annotates, then a reclassification from fix-defect to add-feature, then next", async () => {
   const { run, receipts, routing } = await reclassified();
   const [diagnose = "", append = "", acceptance = "", red = ""] = receipts;
   const receiptValidity = {
@@ -95,7 +95,7 @@ it("A RED receipt accepted for an example no test annotates, then a reclassifica
     prior: run.snapshot.priorStages?.map((stage) => stage.stageKind),
   }).toEqual({
     receipts: 4,
-    stageKind: "sdd_delta",
+    stageKind: "sdd",
     obligationIds: obligations.ids,
     priorStageReceiptRefs: [
       { ref: diagnose, validity: "stale" },

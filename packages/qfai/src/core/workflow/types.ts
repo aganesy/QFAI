@@ -62,6 +62,8 @@ export interface WorkflowEvent {
   notRun?: WorkflowNotRun;
   // On an accepted stage result: each pass-through step that recorded a pass.
   passes?: WorkflowPass[];
+  // On an accepted `triage-close` result: how it closed the request.
+  closure?: WorkflowClosure;
   seamRequest?: { targetTestId: string };
   repairs?: WorkflowDebt[];
   debts?: WorkflowDebt[];
@@ -350,10 +352,21 @@ export interface ProposalRefusal {
   subject: string;
 }
 
-// One step of a plan stage, and whether it may pass with evidence when it has nothing to write.
+// One step of a plan stage: whether it may pass with evidence when it has nothing to write, the
+// mode the route fixes for it, and whether the route declares it a decision, release or branch
+// point.
 export interface PlanStep {
   name: string;
   passThrough?: boolean;
+  mode?: string;
+  decisionPoint?: "user" | "release";
+  branchPoint?: boolean;
+}
+
+// How a `triage-close` result closed the request, and the further requests it found.
+export interface WorkflowClosure {
+  outcome: string;
+  followUps: { goal: string; reason: string }[];
 }
 
 export type PlanStages = {
@@ -419,8 +432,6 @@ export interface WorkflowSnapshot {
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   // The results of stages issued out of plan order to repair a finding.
   repairedStages?: WorkflowAcceptedStage[];
-  // The current plan's stages the run passed over because the diagnosis chose another branch.
-  skippedStages?: string[];
   // The current plan's stages the run has issued a work order for.
   issuedStages?: string[];
   // The stage results of every plan a replan replaced, kept for their receipts and debts.
@@ -495,6 +506,7 @@ export interface WorkflowAcceptedStage {
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
   passes?: WorkflowPass[];
+  closure?: WorkflowClosure;
 }
 
 export interface WorkflowReview {
@@ -549,6 +561,7 @@ export interface WorkflowResult {
   notRun?: WorkflowNotRun;
   passes?: WorkflowPass[];
   debts?: WorkflowDebt[];
+  closure?: WorkflowClosure;
   seamRequest?: { targetTestId: string };
   seam?: { targetTestId: string; observation: string };
   testObservation?: string;
@@ -619,11 +632,11 @@ export interface WorkflowFacts {
   // Whether a BF or AC of the bound flow still lacks its acceptance-layer test, which keeps
   // `atdd-author` from passing.
   acceptanceObligationsUnmet?: boolean;
-  // Whether a UI contract serves the bound flow, which a prototype stage needs.
-  prototypeDecisionNeeded?: boolean;
   plans?: Record<string, { route: string; stages: PlanStages }>;
   // The business flows the story tree declares.
   flows?: string[];
+  // Where the project keeps its discussion packs.
+  discussionDir?: string;
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
   fileDigests?: Record<string, string>;
   obligations?: WorkflowObligationFacts;

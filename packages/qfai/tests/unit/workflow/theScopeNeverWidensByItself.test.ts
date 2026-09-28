@@ -8,7 +8,7 @@ import { planStage } from "./kindSteps.js";
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "feature",
+  route: "add-feature",
   stages: [
     planStage("feature-sdd", "sdd"),
     planStage("feature-implement", "implement"),

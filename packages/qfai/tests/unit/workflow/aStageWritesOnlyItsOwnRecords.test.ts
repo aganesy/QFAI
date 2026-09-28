@@ -19,7 +19,6 @@ const OPEN_QUESTIONS = ".qfai/spec/open-questions.md";
 // observer derives the story's examples file and the one contract citing that criterion.
 const facts = {
   specsDir: ".qfai/spec",
-  prototypeDecisionNeeded: true,
   seeding: { exampleFile: `${STORY}/03_Example.md`, contractFiles: [CONTRACT] },
 };
 
@@ -31,13 +30,13 @@ function ofKind(stageKind: string): Middle {
   return [stageKind, KIND_STEPS[stageKind] ?? []];
 }
 
-// A bounded-change plan whose middle stage is the kind under test.
+// An add-feature plan whose middle stage is the kind under test.
 function boundedPlan(stageKind: string, steps: PlanStep[]) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/notify"],
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta"),
+      planStage("bounded-sdd-delta", "sdd"),
       { stageInstanceId: "bounded-middle", stageKind, steps },
       planStage("bounded-verify", "verify"),
     ],
@@ -51,7 +50,7 @@ function issueMiddle(stageKind: string, steps: PlanStep[]) {
     plan: boundedPlan(stageKind, steps),
     flowBinding,
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
   };
   const issued = decide(ready, { operation: "next" }, facts);
@@ -142,9 +141,8 @@ const derivations: [string, Middle, string[] | undefined][] = [
   ["acceptance", ofKind("acceptance"), atddRecords],
   ["test-fix", ofKind("test_fix"), [...atddRecords, ...implementRecords]],
   ["sdd-append", sddAppend, [`${STORY}/03_Example.md`, CONTRACT, DECISIONS, SDD_EVIDENCE]],
-  ["prototype-not-ui-bearing", ofKind("prototype"), undefined],
+  ["prototype", ofKind("prototype"), undefined],
   ["sdd", ofKind("sdd"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
-  ["sdd-delta", ofKind("sdd_delta"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
   ["discussion", ofKind("discussion"), undefined],
   ["verify", ofKind("verify"), undefined],
   ["diagnose", ofKind("diagnose"), undefined],
@@ -157,7 +155,7 @@ for (const [title, stage, recordAreas] of derivations) {
   });
 }
 
-// The checked plan a routing result becomes, for the same bounded-change stages.
+// The checked plan a routing result becomes, for the same add-feature stages.
 function checkedPlanDocument() {
   const plan = boundedPlan(...implement);
   const routed = decide(
@@ -181,7 +179,7 @@ function checkedPlanDocument() {
         outcome: "accepted",
         proposal: {
           requestKind: "change",
-          candidateRoute: "bounded-change",
+          candidateRoute: "add-feature",
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -193,7 +191,7 @@ function checkedPlanDocument() {
       },
     },
     {
-      plans: { "bounded-change": { route: "bounded-change", stages: plan.stages } },
+      plans: { "add-feature": { route: "add-feature", stages: plan.stages } },
       flows: ["BF-0001"],
     },
   );

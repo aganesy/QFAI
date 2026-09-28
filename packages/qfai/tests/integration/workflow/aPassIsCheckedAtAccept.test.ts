@@ -17,7 +17,7 @@ const EXAMPLES =
 
 const passThrough = (name: string): PlanStep => ({ name, passThrough: true });
 
-// A story-authoring stage laid out the way a feature route's lists its steps.
+// A story-authoring stage laid out the way the add-feature route lists its steps.
 const SDD_STEPS: PlanStep[] = [
   { name: "sdd-triage" },
   passThrough("sdd-flow"),
@@ -28,26 +28,36 @@ const SDD_STEPS: PlanStep[] = [
   { name: "sdd-gate" },
 ];
 
-const boundedPlan = (sddSteps: PlanStep[] = SDD_STEPS) => ({
-  route: "bounded-change",
+const addFeaturePlan = (sddSteps: PlanStep[] = SDD_STEPS) => ({
+  route: "add-feature",
   writeScope: ["src/**", ".qfai/spec/02_business-flow/business-flow-0001/**"],
   stages: [
-    { stageInstanceId: "sdd", stageKind: "sdd_delta", steps: sddSteps },
+    { stageInstanceId: "sdd", stageKind: "sdd", steps: sddSteps },
     planStage("acceptance", "acceptance"),
     planStage("implement", "implement"),
+    planStage("docs", "maintenance"),
     planStage("verify", "verify"),
   ],
 });
 
-const bugfixPlan = {
-  route: "bugfix",
+const fixDefectPlan = {
+  route: "fix-defect",
   writeScope: ["src/**", "tests/**"],
   stages: [
     planStage("diagnose", "diagnose"),
-    planStage("sdd-append", "sdd_append"),
+    planStage("spec", "sdd_append"),
     planStage("acceptance", "acceptance"),
     planStage("implement", "implement"),
-    planStage("test-fix", "test_fix"),
+    planStage("verify", "verify"),
+  ],
+};
+
+const repairTestPlan = {
+  route: "repair-test",
+  writeScope: ["src/**", "tests/**"],
+  stages: [
+    planStage("diagnose", "diagnose"),
+    planStage("fix", "test_fix"),
     planStage("verify", "verify"),
   ],
 };
@@ -128,7 +138,7 @@ function refused(state: string, reason: string, subject: string) {
 it("A story-authoring result passing three pass-through steps, each with its reason and record", () => {
   const passes = [pass("sdd-flow"), pass("common-design-md"), pass("sdd-cycle")];
   const { workOrder, decision } = acceptNext(
-    { plan: boundedPlan() },
+    { plan: addFeaturePlan() },
     { passes, reviewResults: REVIEWS },
   );
   const recorded = decision.events.find((event) => event.type === "accept-nonfinal-result");
@@ -150,17 +160,17 @@ it("A story-authoring result passing three pass-through steps, each with its rea
 it("A pass for implement-tdd, and a pass for implement-diagnose", () => {
   const diagnosis = diagnosisOf("missing-test", "EX-0001-0001-01");
   const implementing: Case = {
-    plan: bugfixPlan,
+    plan: fixDefectPlan,
     accepted: [
       ["diagnose", "diagnose"],
-      ["sdd-append", "sdd_append"],
+      ["spec", "sdd_append"],
       ["acceptance", "acceptance"],
     ],
     diagnosis,
   };
   const implement = acceptNext(implementing, { passes: [pass("implement-tdd")] });
   const diagnose = acceptNext(
-    { plan: bugfixPlan },
+    { plan: fixDefectPlan },
     { diagnosis, passes: [pass("implement-diagnose")] },
   );
 
@@ -179,7 +189,7 @@ it("A pass for implement-tdd, and a pass for implement-diagnose", () => {
 it("An append result passing sdd-story for a criterion no example states, and a story-authoring result passing it while changing an example", () => {
   const append = acceptNext(
     {
-      plan: bugfixPlan,
+      plan: fixDefectPlan,
       accepted: [["diagnose", "diagnose"]],
       diagnosis: diagnosisOf("missing-test", "AC-0001-0005-02"),
     },
@@ -189,7 +199,7 @@ it("An append result passing sdd-story for a criterion no example states, and a 
     step.name === "sdd-story" ? passThrough(step.name) : step,
   );
   const authoring = acceptNext(
-    { plan: boundedPlan(storySteps) },
+    { plan: addFeaturePlan(storySteps) },
     { passes: [pass("sdd-story")], changedFiles: [{ path: EXAMPLES, digest: "e".repeat(64) }] },
   );
 
@@ -202,7 +212,7 @@ it("An append result passing sdd-story for a criterion no example states, and a 
 // QFAI:EX-0001-0223-05
 it("A test fix passing the step that owns the diagnosed layer, then one passing the other layer's step", () => {
   const repairing: Case = {
-    plan: bugfixPlan,
+    plan: repairTestPlan,
     accepted: [["diagnose", "diagnose"]],
     diagnosis: diagnosisOf("defective-test", "AC-0001-0001-01"),
   };

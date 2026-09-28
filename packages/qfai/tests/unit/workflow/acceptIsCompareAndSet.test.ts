@@ -9,7 +9,7 @@ import { planStage } from "./kindSteps.js";
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };

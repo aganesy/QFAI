@@ -24,7 +24,7 @@ const reasonsOf = (document: unknown) =>
 
 it("A result changing a file in neither its write areas nor its record areas is refused", async () => {
   const root = await flowProject();
-  const { runId, issued } = await runAt(root, "bounded-change", "sdd_delta");
+  const { runId, issued } = await runAt(root, "add-feature", "sdd");
   await write(root, "README.md", "# Notifications\n\nYou receive one email per address.\n");
   const refused = await submit(
     root,

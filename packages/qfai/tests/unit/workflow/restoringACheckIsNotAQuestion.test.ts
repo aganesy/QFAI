@@ -13,7 +13,7 @@ const bugfixStages = [
 ];
 const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
 const facts = {
-  plans: { bugfix: { route: "bugfix", stages: bugfixStages } },
+  plans: { "fix-defect": { route: "fix-defect", stages: bugfixStages } },
   flows: ["BF-0007"],
   acceptanceObligationsUnmet: true,
   reviewerRoles: {
@@ -55,7 +55,7 @@ function routeRestoringACheck() {
         outcome: "accepted",
         proposal: {
           requestKind: "change",
-          candidateRoute: "bugfix",
+          candidateRoute: "fix-defect",
           goal: "Restore the permission check on the export endpoint.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -106,6 +106,9 @@ it("A bugfix routing result whose only risk signal is authorization-restored", (
     [["implement-diagnose"], heavy],
     [["atdd-scaffold", "atdd-credentials", "atdd-author"], heavy],
     [["implement-tdd", "implement-checkpoint"], heavy],
-    [["verify-context", "verify-qfai-gate", "verify-repo-gate"], runtimeHeavy],
+    [
+      ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
+      runtimeHeavy,
+    ],
   ]);
 });

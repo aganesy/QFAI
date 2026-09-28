@@ -10,18 +10,18 @@ type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Debt = NonNullable<Result["debts"]>[number];
 
 const stages = [
-  planStage("bounded-sdd-delta", "sdd_delta"),
+  planStage("bounded-sdd-delta", "sdd"),
   planStage("bounded-implement", "implement"),
   planStage("bounded-verify", "verify"),
 ];
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/notify/**", ".qfai/specs/BF-0001/**"],
   stages,
 };
 const facts = { flows: ["BF-0001", "BF-0002", "BF-0003"] };
 
-// A run of the bounded-change plan bound to BF-0001, with its first `accepted` stages done
+// A run of the add-feature plan bound to BF-0001, with its first `accepted` stages done
 // and the next one issued.
 function issued(accepted: number, extra: Partial<Snapshot> = {}): Snapshot {
   const ready: Snapshot = {
@@ -131,7 +131,7 @@ it("drift inside the checked scope goes to qfai-sdd", () => {
 
   expect({ state: run.state, steps: next.verdict.workOrder?.steps }).toEqual({
     state: "ready",
-    steps: servedSteps("sdd_delta", "qfai-sdd"),
+    steps: servedSteps("sdd", "qfai-sdd"),
   });
 });
 

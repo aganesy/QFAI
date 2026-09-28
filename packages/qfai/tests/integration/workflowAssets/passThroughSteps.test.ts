@@ -11,6 +11,7 @@ import { parse } from "yaml";
 import { defaultConfig } from "../../../src/core/config.js";
 import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
+  defaultRoutingEntries,
   flat,
   frontMatterOf,
   readDefault,
@@ -18,7 +19,7 @@ import {
   sectionOf,
 } from "../../helpers/shippedAssistant.js";
 
-/** The pass-through steps whose `STEP.md` this package's skills other than `qfai-implement` own. */
+/** Every step a plan may mark pass-through. */
 const PASS_THROUGH = [
   "sdd-flow",
   "sdd-contract",
@@ -29,6 +30,7 @@ const PASS_THROUGH = [
   "atdd-author",
   "discussion-uiux",
   "atdd-test-fix",
+  "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
 ];
@@ -108,8 +110,7 @@ describe("the verify steps a route adds", () => {
       "verify-advisory": "default",
       "verify-release-notes": "default",
     };
-    const manifest: unknown = parse(await readDefault("agent-routing.yml"));
-    const routing = isRecord(manifest) && Array.isArray(manifest.routing) ? manifest.routing : [];
+    const routing = await defaultRoutingEntries();
     const effective = await readEffectiveRouting(defaultConfig);
     for (const [step, profile] of Object.entries(profiles)) {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
@@ -160,8 +161,7 @@ describe("what the routes ask of sdd-triage and the review cycle", () => {
       "requirements-reviewer",
       "implementation-reviewer",
     ]);
-    const manifest: unknown = parse(await readDefault("agent-routing.yml"));
-    const routing = isRecord(manifest) && Array.isArray(manifest.routing) ? manifest.routing : [];
+    const routing = await defaultRoutingEntries();
     expect(routing.filter(isRecord).filter((entry) => entry.review_profile === "heavy")).toEqual(
       [],
     );

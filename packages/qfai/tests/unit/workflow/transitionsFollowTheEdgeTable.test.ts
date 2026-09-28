@@ -45,7 +45,7 @@ const routingWorkOrder = {
 };
 
 const routingFacts: Facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: finishPlan.stages } },
+  plans: { "add-feature": { route: "add-feature", stages: finishPlan.stages } },
   flows: ["BF-0001"],
 };
 
@@ -60,7 +60,7 @@ function routingProposal(
 ) {
   return {
     requestKind: "change",
-    candidateRoute: "bounded-change",
+    candidateRoute: "add-feature",
     goal: "Return 404 for a missing export.",
     expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
     observedRefs: [],
@@ -99,7 +99,7 @@ function readyRun(sequence = 4): Snapshot {
   return { run: { id: "run-edge", state: "ready", sequence }, plan: finishPlan, flowBinding };
 }
 
-// The bounded plan's first work order, issued, and the run that holds it.
+// The add-feature plan's first work order, issued, and the run that holds it.
 function runningRun(): Snapshot & {
   outstandingWorkOrder: NonNullable<WorkflowDecision["verdict"]["workOrder"]>;
 } {
@@ -262,11 +262,8 @@ it("accept-nonfinal-result", () => {
 
 it("material-decision", () => {
   const featurePlan = {
-    route: "feature",
-    stages: [
-      { stageInstanceId: "feature-sdd", stageKind: "sdd" },
-      { stageInstanceId: "feature-verify", stageKind: "verify" },
-    ],
+    route: "add-feature",
+    stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
   };
   const unrecordedApproval = {
     kind: "human_decision",
@@ -314,7 +311,7 @@ it("observed-session-interruption", () => {
 
 it("scope-or-obligation-revision", () => {
   const bugfixPlan = {
-    route: "bugfix",
+    route: "fix-defect",
     stages: [
       planStage("bugfix-diagnose", "diagnose"),
       planStage("bugfix-implement", "implement"),

@@ -10,14 +10,12 @@ type Decision = ReturnType<typeof decide>;
 
 const flowBinding = { flowId: "BF-0018" };
 const plan = {
-  route: "bugfix",
+  route: "fix-defect",
   stages: [
     planStage("bugfix-diagnose", "diagnose"),
     planStage("bugfix-sdd-append", "sdd_append"),
     planStage("bugfix-acceptance", "acceptance"),
     planStage("bugfix-implement", "implement"),
-    planStage("bugfix-regression-fix", "regression_fix"),
-    planStage("bugfix-test-fix", "test_fix"),
     planStage("bugfix-verify", "verify"),
   ],
 };

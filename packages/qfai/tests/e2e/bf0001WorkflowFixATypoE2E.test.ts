@@ -1,8 +1,8 @@
 // QFAI:BF-0001
 /**
- * E2E: a typo is fixed through the direct route.
+ * E2E: a typo is fixed through the edit-text route.
  *
- * On a `qfai init` project, a typo in prose routes `direct`: the maintenance stage edits the one
+ * On a `qfai init` project, a typo in prose routes `edit-text`: the maintenance stage edits the one
  * file in scope, a full verify follows, and `finish` completes the run from `ready`. A change
  * outside the checked scope is refused at `accept` and leaves the run where it was.
  */
@@ -25,9 +25,9 @@ import {
 
 afterEach(removeProjects);
 
-const DIRECT_PROPOSAL = {
+const EDIT_TEXT_PROPOSAL = {
   requestKind: "change",
-  candidateRoute: "direct",
+  candidateRoute: "edit-text",
   goal: "Fix the typo 'recieve' in the README.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [{ kind: "path", ref: "README.md" }],
@@ -49,9 +49,9 @@ async function readmeProject(): Promise<string> {
   return root;
 }
 
-it("the direct plan edits the one file, verifies in full, and finish completes the run from ready", async () => {
+it("the edit-text plan edits the one file, verifies in full, and finish completes the run from ready", async () => {
   const root = await readmeProject();
-  const { runId, routed } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId, routed } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Orders\n\nYou receive one email per order.\n");
   const edited = await submit(
@@ -90,7 +90,7 @@ it("the direct plan edits the one file, verifies in full, and finish completes t
     states: ["ready", "running", "ready", "running", "ready", "completed"],
     stages: [
       ["maintenance", ["maintain-edit"]],
-      ["verify", ["verify-context", "verify-qfai-gate", "verify-repo-gate"]],
+      ["verify", ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"]],
     ],
     target: [0, "qfai_done"],
   });
@@ -98,7 +98,7 @@ it("the direct plan edits the one file, verifies in full, and finish completes t
 
 it("a typo that turns out to change behaviour is returned for a new route before any edit", async () => {
   const root = await readmeProject();
-  const { runId } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   const semantic = {
     findingCode: "maintain-semantic-effect",
@@ -132,7 +132,7 @@ it("a typo that turns out to change behaviour is returned for a new route before
 
 it("a maintenance result changing a file outside the checked scope is refused, and the run stays running", async () => {
   const root = await readmeProject();
-  const { runId } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "src/orders.ts", "export const orders = [];\n");
   const refused = await submit(

@@ -38,7 +38,7 @@ it("finish on a worktree the operator left dirty before start", async () => {
   commitAll(root);
   // The operator's own work in progress, uncommitted before the run starts.
   await write(root, "notes/draft.md", "Half a thought.\n");
-  const { runId } = await routedRun(root, proposalFor("direct"));
+  const { runId } = await routedRun(root, proposalFor("edit-text"));
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Notifications\n\nYou receive one email per address.\n");
   await submit(

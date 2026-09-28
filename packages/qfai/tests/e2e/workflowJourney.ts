@@ -39,10 +39,13 @@ export const START_INPUT = {
   harness: { host: "claude-code", capabilities: CAPABILITIES },
 };
 
-/** A discovery proposal: its plan binds no flow and runs the discussion stage. */
+/**
+ * A decide-design proposal: its plan binds no flow, runs the discussion stage and closes the
+ * request, writing only its discussion pack.
+ */
 export const DISCOVERY_PROPOSAL = {
   requestKind: "change",
-  candidateRoute: "discovery",
+  candidateRoute: "decide-design",
   goal: "Settle what the notification export contains.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -50,7 +53,7 @@ export const DISCOVERY_PROPOSAL = {
   riskSignals: [],
   unresolvedQuestions: [],
   newStories: [],
-  proposedWriteScope: ["docs/**"],
+  proposedWriteScope: [".qfai/discussion/**"],
   protectedTargets: [],
   rationale: "What the export contains is not settled.",
 };

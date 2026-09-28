@@ -8,6 +8,7 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { planStage } from "./kindSteps.js";
 
 it("Decide accept of a routing result whose checked proposal names one new story", () => {
   const snapshot = {
@@ -36,7 +37,7 @@ it("Decide accept of a routing result whose checked proposal names one new story
       debts: [],
       proposal: {
         requestKind: "change",
-        candidateRoute: "feature",
+        candidateRoute: "add-feature",
         goal: "Let each customer register up to five unique notification emails.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -98,12 +99,12 @@ it("Decide accept of a routing result whose checked proposal names one new story
 
 it("After a proceed answer, drive the feature plan to its last stage with canned accepted results", () => {
   const plan = {
-    route: "feature",
+    route: "add-feature",
     stages: [
-      { stageInstanceId: "feature-sdd", stageKind: "sdd" },
-      { stageInstanceId: "feature-acceptance", stageKind: "acceptance" },
-      { stageInstanceId: "feature-implement", stageKind: "implement" },
-      { stageInstanceId: "feature-verify", stageKind: "verify" },
+      planStage("feature-sdd", "sdd"),
+      planStage("feature-acceptance", "acceptance"),
+      planStage("feature-implement", "implement"),
+      planStage("feature-verify", "verify"),
     ],
   };
   const approval = {
@@ -167,6 +168,7 @@ it("After a proceed answer, drive the feature plan to its last stage with canned
         stageInstanceId: candidate.stageInstanceId,
         attempt: candidate.attempt,
         stageKind: candidate.stageKind,
+        ...(candidate.steps ? { steps: candidate.steps } : {}),
       },
     };
     const resultId = `result-${stage.stageInstanceId}`;

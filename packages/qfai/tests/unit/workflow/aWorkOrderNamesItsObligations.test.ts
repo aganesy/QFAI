@@ -6,9 +6,9 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta"),
+    planStage("bounded-sdd-delta", "sdd"),
     planStage("bounded-implement", "implement"),
     planStage("bounded-verify", "verify"),
   ],
@@ -28,7 +28,7 @@ it("Issue an implement work order bound to a flow", () => {
       plan,
       flowBinding: { flowId: "BF-0001" },
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     { operation: "next" },

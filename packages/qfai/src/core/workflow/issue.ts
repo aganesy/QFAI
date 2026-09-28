@@ -7,8 +7,9 @@ import {
   UNTARGETED_KINDS,
   type PlanStage,
 } from "./common.js";
-import { activeStages, planNotReady } from "./stages.js";
+import { flowBindingOf, planNotReady } from "./stages.js";
 import {
+  isReadOnlyStage,
   ownerOfStep,
   repairOwnerOf,
   SEAM_STEP,
@@ -174,11 +175,16 @@ function recordAreasOf(
       return [...example, ...contract, `${specs}/decisions.md`, ...sddEvidence];
     }
     case "sdd":
-    case "sdd_delta":
       return [...tables, ...sddEvidence];
     default:
       return [];
   }
+}
+
+// A stage that runs only read-only steps writes nothing; every other stage may write the checked
+// scope.
+function writeAreasOf(plan: Plan, steps: readonly PlanStep[]): string[] {
+  return isReadOnlyStage(steps) ? [] : (plan.writeScope ?? []);
 }
 
 // The base of every plan stage's work order: identity, steps, scope and history.
@@ -204,7 +210,7 @@ function baseWorkOrder(
     stageKind: stage.stageKind,
     ...(steps.length > 0 ? { steps: stepRefs(steps) } : {}),
     ...(plan.writeScope
-      ? { scope: scopeOf(plan.writeScope, allowedEffects(stage, snapshot)) }
+      ? { scope: scopeOf(writeAreasOf(plan, steps), allowedEffects(stage, snapshot)) }
       : {}),
     ...(reviewerRoles ? { requiredReviewerRoles: reviewerRoles } : {}),
     ...(actorHistory.length > 0 ? { actorHistory } : {}),
@@ -241,13 +247,18 @@ function newStoryTarget(
   };
 }
 
-// The target a stage's work order binds: none for the four untargeted kinds, the slot for a
-// new story, and otherwise the run's one bound flow.
+// The target a stage's work order binds: none for the untargeted kinds or in a run that binds no
+// flow, the slot for a new story, and otherwise the run's one bound flow.
 function withTarget(
   snapshot: WorkflowSnapshot,
+  plan: Plan,
   workOrder: WorkflowWorkOrder,
 ): WorkflowWorkOrder | WorkflowDecision {
   if (UNTARGETED_KINDS.includes(workOrder.stageKind)) return workOrder;
+  if (flowBindingOf(plan.stages) !== "required") {
+    const bound = snapshot.flowBinding?.flowId;
+    return bound ? { ...workOrder, target: { kind: "flow", flowId: bound } } : workOrder;
+  }
   if (workOrder.stageKind === "sdd" && !snapshot.flowBinding) {
     return newStoryTarget(snapshot, workOrder);
   }
@@ -268,43 +279,12 @@ function obligationsOf(flowId: string | undefined, facts: WorkflowFacts) {
   };
 }
 
-// Why the run passed over a stage: a prototype stage runs only for a flow a UI contract serves,
-// and every other stage passed over belongs to a branch the diagnosis did not choose.
-function passedOverReason(stage: PlanStage): string {
-  return stage.stageKind === "prototype"
-    ? "no UI contract rule cites an example of the flow"
-    : "the diagnosis chose another branch";
-}
-
-// SIMPLIFIED: a stage the run passes over is recorded as a receipt carrying `not_applicable` and
-// the reason, when `next` issues the stage after it.
-// Lift when: the run evidence gains its own record of skipped stages.
-function skippedBefore(
-  plan: Plan,
-  selected: PlanStages,
-  lastAccepted: string | undefined,
-  issuing: string,
-): WorkflowEvent[] {
-  const ids = plan.stages.map((stage) => stage.stageInstanceId);
-  const from = lastAccepted === undefined ? 0 : ids.indexOf(lastAccepted) + 1;
-  return plan.stages
-    .slice(from, ids.indexOf(issuing))
-    .filter((stage) => !selected.includes(stage))
-    .map((stage) => ({
-      type: "receipt-recorded",
-      stageInstanceId: stage.stageInstanceId,
-      notRun: { kind: "not_applicable", reason: passedOverReason(stage) },
-    }));
-}
-
 export function issueWorkOrder(
   run: WorkflowRun,
   workOrder: WorkflowWorkOrder,
-  skipped: WorkflowEvent[] = [],
   extras: Partial<WorkflowEvent> = {},
 ): WorkflowDecision {
   const events: WorkflowEvent[] = [
-    ...skipped,
     { type: "work-order-issued", workOrder, ...extras },
     { type: "dispatch-work-order" },
   ];
@@ -352,10 +332,10 @@ function planRevision(
   return { verdict: { ok: true, run }, events: [{ type: "required-plan-revision" }] };
 }
 
-// The stage `next` issues, and the steps it runs: the first selected stage not yet accepted,
-// with every step. While a repair is open, the first active stage holding a step that serves the
-// next finding's owner, with only the steps that serve it; the stage that found it runs whole. A
-// repair owned by no active stage never reaches here: `accept` sends it back to routing.
+// The stage `next` issues, and the steps it runs: the first stage not yet accepted, with every
+// step. While a repair is open, the first stage holding a step that serves the next finding's
+// owner, with only the steps that serve it; the stage that found it runs whole. A repair owned
+// by no stage of the plan never reaches here: `accept` sends it back to routing.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
   selected: PlanStages,
@@ -376,11 +356,10 @@ function stageWorkOrder(
   snapshot: WorkflowSnapshot,
   plan: Plan,
   stage: PlanStage,
-  selected: PlanStages,
   facts: WorkflowFacts,
   steps: PlanStep[],
 ): WorkflowDecision {
-  const targeted = withTarget(snapshot, baseWorkOrder(snapshot, plan, stage, facts, steps));
+  const targeted = withTarget(snapshot, plan, baseWorkOrder(snapshot, plan, stage, facts, steps));
   if ("verdict" in targeted) return targeted;
   const flowId = targeted.target?.kind === "flow" ? targeted.target.flowId : flowOfRun(snapshot);
   const inputs = diagnosisInputs(stage.stageKind, snapshot, facts);
@@ -393,9 +372,7 @@ function stageWorkOrder(
     ...(recordAreas.length > 0 ? { recordAreas } : {}),
   };
   const records = STORY_AUTHORING_KINDS.includes(stage.stageKind) ? facts.records : undefined;
-  const lastAccepted = (snapshot.acceptedStages ?? []).at(-1)?.stageInstanceId;
-  const skipped = skippedBefore(plan, selected, lastAccepted, stage.stageInstanceId);
-  return issueWorkOrder(snapshot.run, workOrder, skipped, {
+  return issueWorkOrder(snapshot.run, workOrder, {
     ...(obligationSet ? { obligationSet } : {}),
     ...(records ? { recordsAtIssue: records } : {}),
   });
@@ -407,11 +384,10 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   const revision = planRevision(snapshot, facts);
   if (revision) return revision;
   const plan = snapshot.plan;
-  if (!plan || planNotReady(snapshot, facts)) return refusedInput(run, "The plan is not ready.");
+  if (!plan || planNotReady(snapshot)) return refusedInput(run, "The plan is not ready.");
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
-  const selected = activeStages(plan, snapshot, facts);
-  const next = stageToIssue(snapshot, selected);
+  const next = stageToIssue(snapshot, plan.stages);
   if (next.refused) return refusedInput(run, "The work order is not ready.");
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
-  return stageWorkOrder(snapshot, plan, next.stage, selected, facts, next.steps);
+  return stageWorkOrder(snapshot, plan, next.stage, facts, next.steps);
 }

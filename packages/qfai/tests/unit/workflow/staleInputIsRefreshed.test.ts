@@ -27,7 +27,7 @@ it("A result whose submitted digest of an input differs from the digest in the f
     plan: finishPlan,
     flowBinding: { flowId: "BF-0007" },
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
     outstandingWorkOrder: implementOrder,
   };

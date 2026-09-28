@@ -86,13 +86,7 @@ export async function obligationFactsOf(
   const acceptanceObligationsUnmet = validateStoryTreeObligationsModel(model, files, "atdd").some(
     (issue) => issue.code === "QFAI-STORY-006" && owed.has(issue.refs?.[0] ?? ""),
   );
-  const ui = `${contractsDirOf(root, config)}/ui/`;
-  const prototypeDecisionNeeded = model.rules.some(
-    (rule) =>
-      projectRelative(root, rule.file).startsWith(ui) &&
-      rule.examples.some((id) => inScope.has(id)),
-  );
-  return { obligations, acceptanceObligationsUnmet, prototypeDecisionNeeded };
+  return { obligations, acceptanceObligationsUnmet };
 }
 
 // The files that declare an item of the flow or a rule citing one of its examples, which a

@@ -184,6 +184,48 @@
         }
       }
     },
+    "closure": {
+      "description": "How a triage-close result closed the request, and each further request the route found.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "followUps"],
+      "properties": {
+        "outcome": {
+          "enum": [
+            "no-work",
+            "other-owner",
+            "answered",
+            "duplicate",
+            "awaiting-info",
+            "accepted",
+            "declined",
+            "deferred",
+            "decided",
+            "split",
+            "handed-off",
+            "verified"
+          ]
+        },
+        "followUps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["goal", "reason"],
+            "properties": {
+              "goal": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
     "red": {
       "type": "object",
       "additionalProperties": false,

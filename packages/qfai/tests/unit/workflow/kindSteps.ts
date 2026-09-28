@@ -14,19 +14,11 @@ export const KIND_STEPS: Record<string, PlanStep[]> = {
   regression_fix: [{ name: "implement-regression-fix" }],
   sdd: [
     { name: "sdd-triage" },
-    { name: "sdd-flow" },
-    { name: "sdd-story" },
-    { name: "sdd-contract" },
-    passThrough("common-design-md"),
-    { name: "sdd-cycle" },
-    { name: "sdd-gate" },
-  ],
-  sdd_delta: [
-    { name: "sdd-triage" },
     passThrough("sdd-flow"),
     { name: "sdd-story" },
     passThrough("sdd-contract"),
     passThrough("common-design-md"),
+    passThrough("sdd-cycle"),
     { name: "sdd-gate" },
   ],
   prototype: [
@@ -41,7 +33,13 @@ export const KIND_STEPS: Record<string, PlanStep[]> = {
     passThrough("atdd-author"),
   ],
   implement: [{ name: "implement-tdd" }, { name: "implement-checkpoint" }],
-  verify: [{ name: "verify-context" }, { name: "verify-qfai-gate" }, { name: "verify-repo-gate" }],
+  verify: [
+    passThrough("verify-change-note"),
+    { name: "verify-context" },
+    { name: "verify-qfai-gate" },
+    { name: "verify-repo-gate" },
+  ],
+  triage: [{ name: "triage-close" }],
   discussion: [
     { name: "discussion-research" },
     { name: "discussion-interview" },

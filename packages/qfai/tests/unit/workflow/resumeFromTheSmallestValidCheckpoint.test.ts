@@ -14,7 +14,7 @@ it("resume facts where one receipt's dependency cannot be read", () => {
       acceptedStages: [
         {
           stageInstanceId: "bounded-sdd-delta",
-          stageKind: "sdd_delta",
+          stageKind: "sdd",
           outcome: "accepted",
           receiptRef: "receipts/bounded-sdd-delta-1.json",
         },
@@ -54,7 +54,7 @@ it("resume of a run interrupted mid-implement whose receipts all hold", () => {
       acceptedStages: [
         {
           stageInstanceId: "bounded-sdd-delta",
-          stageKind: "sdd_delta",
+          stageKind: "sdd",
           outcome: "accepted",
           receiptRef,
         },

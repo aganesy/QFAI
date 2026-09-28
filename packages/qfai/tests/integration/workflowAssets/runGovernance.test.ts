@@ -95,7 +95,9 @@ describe("governance inside a run", () => {
   it("keeps the workflow routes apart from the Change Type", async () => {
     const workflow = flat(await readShipped("rule/workflow.md"));
     expect(workflow).toMatch(/the workflow routes are orthogonal to the Change Type/i);
-    expect(workflow).toMatch(/`direct`, `bugfix`, `bounded-change`, `feature` or\s*`discovery`/);
+    expect(workflow).toMatch(
+      /such as `fix-defect`, `add-feature` or `edit-text`, says which stages run/,
+    );
     expect(workflow).toMatch(/neither selects the other, and a run declares both/i);
   });
 

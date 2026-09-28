@@ -15,7 +15,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
-import { packagePlansDir } from "../../../src/core/workflow/plans.js";
+import { packagePlansDir, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
 import {
   ENTRY_SKILLS,
   HOST_SKILL_DIRS,
@@ -25,7 +25,7 @@ import {
   withInstall,
 } from "./upgradeStates.js";
 
-const PLANS = ["bounded-change.yml", "bugfix.yml", "direct.yml", "discovery.yml", "feature.yml"];
+const PLANS = WORKFLOW_ROUTES.map((route) => `${route}.yml`);
 
 /** The steps the packaged plans name, read from the plans themselves. */
 async function planSteps(): Promise<string[]> {

@@ -82,7 +82,6 @@
   "same_obligation_reopen": "gate",
   "sdd": "stage",
   "sdd_append": "stage",
-  "sdd_delta": "stage",
   "security_review": "gate",
   "self_certify_with_weakened_gate": "gate",
   "send_private_data_implicitly": "effect",

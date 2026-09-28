@@ -146,16 +146,16 @@ describe("lint-shipping fixture — detection rules", () => {
 
   it("scans built-in routing defaults outside the init tree", async () => {
     const root = await newTempDir();
-    await mkdir(path.join(root, "assets/defaults"), { recursive: true });
+    await mkdir(path.join(root, "assets/defaults/agent-routing"), { recursive: true });
     await writeFile(
-      path.join(root, "assets/defaults/agent-routing.yml"),
+      path.join(root, "assets/defaults/agent-routing/skills.yml"),
       "routing:\n  - skill: spec-1234\n",
     );
     const { violations, scannedFileCount } = await runLintShipping(root);
     expect(scannedFileCount).toBe(1);
     expect(violations).toEqual([
       expect.objectContaining({
-        file: "assets/defaults/agent-routing.yml",
+        file: "assets/defaults/agent-routing/skills.yml",
         pattern: "spec-id-literal",
       }),
     ]);

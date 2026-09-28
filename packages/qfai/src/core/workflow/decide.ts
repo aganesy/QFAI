@@ -5,6 +5,7 @@ import { issueNext } from "./issue.js";
 import { acceptRouting } from "./proposal.js";
 import { acceptPreamble, acceptSeamOnly, acceptStageResult, blockOnResult } from "./result.js";
 import { decideResume, foundCause } from "./resume.js";
+import { isRetiredRoute, reportedRoute } from "./routes.js";
 import { decideStart } from "./start.js";
 import { isSeamOrder } from "./steps.js";
 import type {
@@ -167,6 +168,8 @@ export function decide(
     return { verdict: { ok: false, run, error: { code: "run-terminal", message } }, events: [] };
   }
   if (input.operation === "decision" && input.stop === true) return decideStop(run, input);
+  const retired = retiredRouteRefusal(snapshot);
+  if (retired) return retired;
   if (input.operation === "resume" && snapshot.identity && facts.identity) {
     if (snapshot.identity.worktree !== facts.identity.worktree) return identityMismatch(run);
   }
@@ -190,6 +193,21 @@ export function decide(
     default:
       return notReady(run, "operation");
   }
+}
+
+// A run an earlier version left on a route the catalog no longer holds cannot go on; only a
+// `stop` ends it.
+function retiredRouteRefusal(snapshot: WorkflowSnapshot): WorkflowDecision | undefined {
+  const route = snapshot.plan?.route;
+  if (!route || !isRetiredRoute(route)) return undefined;
+  const successor = reportedRoute(route, snapshot.plan?.stages.map((each) => each.stageKind) ?? []);
+  const message = `This run is on the route ${route}, which is now ${successor}, so it cannot go on. Stop it and start a new run.`;
+  const error = {
+    code: "fail-closed",
+    message,
+    cause: "contract-undeclared",
+  } satisfies NonNullable<WorkflowDecision["verdict"]["error"]>;
+  return { verdict: { ok: false, run: snapshot.run, error }, events: [] };
 }
 
 function identityMismatch(run: WorkflowSnapshot["run"]): WorkflowDecision {

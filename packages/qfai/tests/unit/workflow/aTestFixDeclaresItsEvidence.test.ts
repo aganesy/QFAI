@@ -7,7 +7,7 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { kindSteps, planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "repair-test",
   stages: [
     planStage("bugfix-diagnose", "diagnose"),
     planStage("bugfix-test-fix", "test_fix"),

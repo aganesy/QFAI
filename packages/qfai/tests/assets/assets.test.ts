@@ -39,6 +39,7 @@ import {
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -438,7 +439,6 @@ describe("assets guardrails", () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(defaultsDir, "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -449,7 +449,7 @@ describe("assets guardrails", () => {
     const verifyPath = path.join(assistantDir, "step", "verify-context", "STEP.md");
 
     const [routing, configure, verify] = await Promise.all([
-      readFile(routingPath, "utf-8"),
+      readDefaultRoutingText(),
       readFile(configurePath, "utf-8"),
       readFile(verifyPath, "utf-8"),
     ]);
@@ -2034,7 +2034,7 @@ describe("assets guardrails", () => {
       }
     }
 
-    const routing = await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf-8");
+    const routing = await readDefaultRoutingText();
     const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
     expect(routing).toContain("routing:");
     expect(profiles).toContain("profiles:");

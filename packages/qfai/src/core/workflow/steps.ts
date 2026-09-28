@@ -18,22 +18,24 @@ export function stepPath(name: string): string {
   return `${ASSISTANT_DIR}/step/${name}/STEP.md`;
 }
 
-// The work-order entry of each step, a bare name being a step no plan marks pass-through.
-// SIMPLIFIED: no plan declares a mode, a decision point or a branch point, so each is null or
-// false.
-// Lift when: the plan format admits step modes and the decision and branch points of a route.
+// The work-order entry of each step, a bare name being a step the route marks nothing on.
 export function stepRefs(steps: readonly (string | PlanStep)[]): WorkflowStepRef[] {
   return steps.map((step) => {
-    const { name, passThrough = false } = typeof step === "string" ? { name: step } : step;
+    const entry: PlanStep = typeof step === "string" ? { name: step } : step;
     return {
-      name,
-      path: stepPath(name),
-      mode: null,
-      passThrough,
-      decisionPoint: null,
-      branchPoint: false,
+      name: entry.name,
+      path: stepPath(entry.name),
+      mode: entry.mode ?? null,
+      passThrough: entry.passThrough ?? false,
+      decisionPoint: entry.decisionPoint ?? null,
+      branchPoint: entry.branchPoint ?? false,
     };
   });
+}
+
+// Whether a stage runs only read-only steps, so that it may write nothing.
+export function isReadOnlyStage(steps: readonly PlanStep[]): boolean {
+  return steps.length > 0 && steps.every((step) => step.mode === "read-only");
 }
 
 // A step is named `<owner>-<name>`: `common-*` belongs to no skill, and every other prefix is

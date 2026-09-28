@@ -43,7 +43,7 @@ describe.each(trees)("%s project memory scope", (tree) => {
 
   it("resolves package defaults and project overrides for routing", async () => {
     const selection = await read(tree, "assistant/rule/agent-selection.md");
-    expect(selection).toContain("assets/defaults/agent-routing.yml");
+    expect(selection).toContain("assets/defaults/agent-routing/");
     expect(selection).toContain("assets/defaults/review-profiles.yml");
     expect(selection).toContain("qfai.config.yaml");
     expect(selection).toContain("replaces the matching default entry as a whole");

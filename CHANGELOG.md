@@ -204,6 +204,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The routing defaults are split into one file per owner.** The package's
+  routing defaults now live in `assets/defaults/agent-routing/`: one file per
+  skill whose steps they route, `common.yml` for the `common-*` steps and
+  `skills.yml` for the skills that are not split into steps. `_contract.yml`
+  holds what every file follows. Every reader, `qfai validate` included, reads
+  the files in file-name order as one list, and no routing entry changed. A
+  finding about a routing default names the file the entry is in.
+
 - **Breaking: a request runs one of 39 fixed routes, chosen by rules.** The
   five routes `direct`, `bugfix`, `bounded-change`, `feature` and `discovery`
   are replaced by a catalog of 39 routes with verb-object names, such as

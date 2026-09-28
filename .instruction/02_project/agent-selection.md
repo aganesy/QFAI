@@ -10,7 +10,7 @@ version: 2.0.0
 # エージェント選択ガイド（QFAI Toolkit）
 
 Agent cards under `.qfai/assistant/agent/` define each agent. Routing and
-review profiles come from `packages/qfai/assets/defaults/agent-routing.yml`
+review profiles come from the files in `packages/qfai/assets/defaults/agent-routing/`
 and `packages/qfai/assets/defaults/review-profiles.yml`, with project overrides
 in `qfai.config.yaml`. QFAI reads these source files directly: this repository
 does not install its own package. Select agents by artifact and phase.

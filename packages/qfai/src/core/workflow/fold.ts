@@ -7,6 +7,7 @@ import { writeRecord } from "./persistence.js";
 import { isSeamOrder, stepNamesOf, stepServes } from "./steps.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
 import type {
+  WorkflowAcceptedStage,
   WorkflowActor,
   WorkflowAuthorization,
   WorkflowDecision,
@@ -72,7 +73,6 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     acceptedStages: _replaced,
     repairedStages: _repaired,
     repairRequest: _left,
-    skippedStages: _skipped,
     issuedStages: _issued,
     ...rest
   } = withoutWorkOrder(snapshot);
@@ -241,6 +241,7 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
     ...(record.passes ? { passes: record.passes } : {}),
+    ...(record.closure ? { closure: record.closure } : {}),
     ...(record.reports ? { reports: record.reports } : {}),
     ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
@@ -311,11 +312,6 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     withAppendedRows(withHalt(snapshot, record), record),
   "material-decision": withAppendedRows,
-  // A stage `next` passed over stays passed over.
-  "receipt-recorded": (snapshot, record) =>
-    record.notRun?.kind === "not_applicable" && record.stageInstanceId
-      ? { ...snapshot, skippedStages: [...(snapshot.skippedStages ?? []), record.stageInstanceId] }
-      : snapshot,
   "answer-changes-scope": countReplan,
   "required-plan-revision": countReplan,
   "missing-capability": withHalt,
@@ -492,6 +488,13 @@ function recordingBegun(records: readonly JournalRecord[]): boolean {
   );
 }
 
+// How the run's `triage-close` stage closed the request, with the number of further requests it
+// found, or `null` in a run that closed none.
+function closureOf(accepted: readonly WorkflowAcceptedStage[]) {
+  const closure = [...accepted].reverse().find((stage) => stage.closure)?.closure;
+  return closure ? { outcome: closure.outcome, followUps: closure.followUps.length } : null;
+}
+
 // The run summary, from the journal: IDs, digests and outcomes, never request text, an
 // answer or anything the run settled.
 // SIMPLIFIED: a stage's receipt digests are those of its report copies.
@@ -517,6 +520,7 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
         .filter((review) => review.verdict === "PASS")
         .map((review) => review.role),
     })),
+    closure: closureOf(accepted),
     authorizationIds: (snapshot.authorizations ?? []).map((each) => each.authorizationId),
     debts: everyStageResult(snapshot).flatMap((stage) => stage.debts ?? []),
     requestDigest: snapshot.executionContext?.requestDigest ?? "",

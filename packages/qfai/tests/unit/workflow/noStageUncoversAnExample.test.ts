@@ -13,13 +13,13 @@ type Facts = Parameters<typeof decide>[2];
 const flowBinding = { flowId: "BF-0001" };
 const EXAMPLES = ["EX-0001-0001-01", "EX-0001-0001-02"];
 
-// A bounded-change plan whose middle stage is the kind under test.
+// An add-feature plan whose middle stage is the kind under test.
 function plan(stageKind: string) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/**", "tests/**", ".qfai/spec/02_business-flow/**"],
     stages: [
-      planStage("sdd-delta", "sdd_delta"),
+      planStage("sdd-delta", "sdd"),
       planStage("middle", stageKind),
       planStage("verify", "verify"),
     ],
@@ -48,7 +48,7 @@ function acceptAgainst(
     run: { id: "run-obligations", state: "ready", sequence: 8 },
     plan: plan(stageKind),
     flowBinding,
-    acceptedStages: [{ stageInstanceId: "sdd-delta", stageKind: "sdd_delta", outcome: "accepted" }],
+    acceptedStages: [{ stageInstanceId: "sdd-delta", stageKind: "sdd", outcome: "accepted" }],
   };
   const issued = decide(ready, { operation: "next" }, { obligations: atIssue });
   const workOrder = issued.verdict.workOrder;
@@ -79,7 +79,7 @@ function acceptAgainst(
 }
 
 const implement = "implement";
-const sddDelta = "sdd_delta";
+const sddDelta = "sdd";
 
 it("A result after which an annotated example has no annotating test", () => {
   expect(
@@ -111,7 +111,7 @@ it("An implement result that annotates one more example", () => {
   ).toEqual({ state: "ready", reasons: undefined, events: 1 });
 });
 
-it("An sdd_delta result that adds one example and removes another a test annotated", () => {
+it("An sdd result that adds one example and removes another a test annotated", () => {
   const after = ["EX-0001-0001-01", "EX-0001-0001-03"];
 
   expect(
