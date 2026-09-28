@@ -23,9 +23,9 @@ does an ambiguity found while implementing.
 | The question ending a turn that waits on the user | Not a clarification, and not capped; `user-questions.md` § 6       |
 | Work already specified                            | Outside this rule; the spec is the authority                       |
 
-The sixth row is what keeps the rest from being a way around a question budget.
-It also makes the class decidable when the question is asked rather than
-arguable afterwards.
+The sixth row is what keeps the rows above it from being a way around a
+question budget. It also makes the class decidable when the question is asked
+rather than arguable afterwards.
 
 Reach for a session whenever a decision is about to be made that the repository
 cannot settle by itself: a design, an approach, a scope boundary, a trade-off

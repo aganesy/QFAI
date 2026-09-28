@@ -19,7 +19,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     lists the same actions. Under a no-question mode such as `--auto` nothing
     is asked, and the report lists the next actions.
   - The question resolves no ambiguity, so the clarification budget does not
-    cap it. A stop is confirmed in one line and nothing is asked.
+    cap it. A stop is confirmed in one line, every open decision is listed as
+    open, and nothing is asked. A `qfai-run` halt ends with its halt notice.
   - The reminder shown on every prompt names the case, and the rule summaries
     `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the Copilot
     instructions cite it. A summary an earlier release wrote and nobody edited

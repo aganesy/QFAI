@@ -822,6 +822,11 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
       expect(text).toMatch(/It\s+is\s+not\s+a\s+clarification:\s+it\s+resolves\s+no\s+ambiguity/);
       expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
+      expect(text).toMatch(
+        /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
+      );
+      // A halt's form is the halt notice `qfai-run` sets out, not this question.
+      expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
       expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
       // The introduction states the same exception, or it promises a question
       // the mode forbids.

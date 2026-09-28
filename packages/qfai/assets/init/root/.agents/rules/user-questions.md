@@ -203,8 +203,11 @@ ask whether anything is happening.
 It is not a clarification: it resolves no ambiguity in the request, and the
 work it follows did not need its answer.
 
-**A user's stop is not such a turn.** The stop is confirmed in one line and
-nothing is asked.
+**A user's stop is not such a turn.** The stop is confirmed in one line, every
+open decision is listed as open, and nothing is asked.
+
+**Neither is a `qfai-run` halt.** A blocked, fail-closed or failed run ends with
+the halt notice `qfai-run` sets out, which says what clears it.
 
 **Under a no-question mode nothing is asked.** The run records the next actions
 in its report instead.

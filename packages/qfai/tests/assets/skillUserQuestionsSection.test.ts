@@ -118,6 +118,11 @@ describe("a stage skill's final report ends with the next-action question", () =
       expect(section).toMatch(
         /under a no-question mode,? (?:it )?lists? them in the report instead/i,
       );
+      // The adopted decisions are reported, not asked, so the one question the
+      // report ends with is the next-action question.
+      if (skill === "qfai-verify") {
+        expect(section).toContain("None of them is put as a question.");
+      }
     }
   });
 });
