@@ -80,6 +80,16 @@ function validateContractIndex(
   for (const file of model.contractFiles) {
     const relative = toPosixPath(path.relative(location.contractsDir, file));
     const outside = directoryOutsideContractKinds(relative);
+    const kind = contractKind(relative);
+    if (!outside && !kind) continue;
+    const spellings = [
+      relative,
+      toPosixPath(path.relative(location.root, file)),
+      toPosixPath(file),
+    ];
+    // Matched before any report, so a listed file that is not a contract is reported once.
+    const row = listed.find((entry) => spellings.includes(entry.file));
+    if (row) matched.add(row);
     if (outside) {
       const kinds = CONTRACT_KIND_DIRS.map((kind) => `${kind}/`).join(", ");
       issues.push(
@@ -91,15 +101,7 @@ function validateContractIndex(
       );
       continue;
     }
-    const kind = contractKind(relative);
     if (!kind) continue;
-    const spellings = [
-      relative,
-      toPosixPath(path.relative(location.root, file)),
-      toPosixPath(file),
-    ];
-    const row = listed.find((entry) => spellings.includes(entry.file));
-    if (row) matched.add(row);
     const directory = markdownOutsideContractForm(relative);
     if (directory) {
       issues.push(

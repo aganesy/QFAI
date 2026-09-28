@@ -85,8 +85,6 @@ describe("story-tree contract index", () => {
     expect(outside[0]?.message).toContain("api/, db/, ui/, cli/");
     expect(model.contracts).toEqual([]);
     expect(model.rules).toEqual([]);
-    expect(
-      findings.some((item) => item.message.includes("lists UI-0001 with design/ui-0001-tokens.md")),
-    ).toBe(true);
+    expect(findings.filter((item) => item.code === "QFAI-CONTRACT-034")).toEqual(outside);
   });
 });

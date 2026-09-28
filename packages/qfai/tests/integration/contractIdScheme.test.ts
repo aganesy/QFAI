@@ -10,7 +10,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { declaredContractId } from "../../src/core/contractsDecl.js";
 import { writeBusinessFlowReports } from "../../src/core/specPackReport.js";
 import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
-import { nextId } from "../../src/core/storyTree/ids.js";
+import { contractNumber, isContractId, nextId } from "../../src/core/storyTree/ids.js";
 import {
   buildStoryTreeModel,
   nextStoryTreeId,
@@ -386,6 +386,36 @@ describe("contract IDs and contract-scoped business rules", () => {
       ]),
     );
     expect(findings).toHaveLength(5);
+  });
+
+  // QFAI:AC-0001-0054-03
+  it("reads no contract ID of a kind other than CLI, API, DB and UI", async () => {
+    // QFAI:EX-0001-0054-11
+    const yaml = "# QFAI-CONTRACT-ID: DESIGN-0006\nscreens: []\n";
+    const markdown = "# DESIGN-0007: Theme\n";
+    expect(isContractId("DESIGN-0006")).toBe(false);
+    expect(contractNumber("DESIGN-0006")).toBeNull();
+    expect(declaredContractId("ui/ui-0006-tokens.yaml", yaml)).toBeNull();
+    expect(declaredContractId("cli/cli-0007-theme.md", markdown)).toBeNull();
+    const root = await contractTree(
+      [
+        indexRow("DESIGN-0006", "ui/ui-0006-tokens.yaml"),
+        indexRow("DESIGN-0007", "cli/cli-0007-theme.md"),
+      ],
+      { "ui/ui-0006-tokens.yaml": yaml, "cli/cli-0007-theme.md": markdown },
+    );
+    const findings = await indexFindings(root);
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /ui-0006-tokens\.yaml declares no contract ID, and is listed as DESIGN-0006$/,
+        ),
+        expect.stringMatching(
+          /cli-0007-theme\.md declares no contract ID, and is listed as DESIGN-0007$/,
+        ),
+      ]),
+    );
+    expect(findings).toHaveLength(2);
   });
 });
 

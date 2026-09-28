@@ -92,6 +92,7 @@ type DoctorJson = {
   checks: Array<{
     id: string;
     severity: "ok" | "info" | "warning" | "error";
+    title?: string;
     message: string;
     details?: Record<string, unknown>;
   }>;
@@ -265,5 +266,38 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     expect(skillsIdx).toBeGreaterThan(-1);
     // skills.integrity must appear AFTER the advisory header (never under errors).
     expect(skillsIdx).toBeGreaterThan(advisoryHeaderIdx);
+  });
+});
+
+describe("root DESIGN.md readiness", () => {
+  // QFAI:AC-0003-0006-05
+  it("names root DESIGN.md in the readiness check and lists its findings", async () => {
+    // QFAI:EX-0003-0006-06
+    const root = await newTempDir("design-md");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const ready = findCheck(await readDoctorJson(root), "prototyping.designMdReadiness");
+    expect(ready).toMatchObject({
+      severity: "ok",
+      title: "Root DESIGN.md readiness",
+      details: { designMd: "DESIGN.md" },
+    });
+
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-home.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
+      "utf-8",
+    );
+    await rm(path.join(root, "DESIGN.md"), { force: true });
+    const blocked = findCheck(await readDoctorJson(root), "prototyping.designMdReadiness");
+    expect(blocked).toMatchObject({
+      severity: "error",
+      title: "Root DESIGN.md readiness",
+      details: { designMd: "DESIGN.md" },
+    });
+    expect(blocked?.details?.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "QFAI-DCON-030" })]),
+    );
   });
 });

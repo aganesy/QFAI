@@ -454,7 +454,7 @@ Commands:
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
-  prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
+  prototyping preflight        Diagnose prototyping preconditions (spec/UI contracts/DESIGN.md/roles/browser/targetUrl)
   prototyping iterate          Commit one cycle of the single-thread evolution loop
   prototyping certify [--check]         Generate / verify completion-certificate.json
                                         [--scope <saas-package|full>] issue a scope-limited certificate
