@@ -59,6 +59,12 @@ one kind of content each section holds. `qfai validate` reports a violation as
 - business rule: `BR-0001` in a contract, citing its examples
 - decision and open question: `DEC-0001`, `OQ-0001`
 
+A new ID comes from `node scripts/story-ids.mjs next <scope>...`, for example
+`next DEC EX-0001-0054`. It counts the IDs on main, on every open pull
+request and in the working tree, so parallel branches do not pick the same
+number. `node scripts/story-ids.mjs check` lists each ID the branch adds that
+main or another open pull request adds too.
+
 ## Contracts
 
 - API, DB and UI contracts declare one
