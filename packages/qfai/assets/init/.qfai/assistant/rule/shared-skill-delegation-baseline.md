@@ -108,11 +108,13 @@ Every major artifact in the stage should include this table schema:
 Every skill and step inherits this gate. Its own reviewer gate names only the
 checks specific to its artifacts; the Drift Protocol, test-layer and
 signals-not-gates bullets below, and the `PASS` / `REVISE` vocabulary, are not
-restated. A stage that runs several steps is reviewed once, after its last step,
-with the union of their reviewers
+restated. A skill with no check of its own carries no reviewer gate section. A
+stage that runs several steps is reviewed once, after its last step, with the
+union of their reviewers
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
 
 - Final completion gate must be delegated to an independent reviewer.
+- Each reviewer records an explicit PASS or REVISE for the reviewed revision.
 
 ### Definition: independent reviewer (NORMATIVE)
 
@@ -183,9 +185,12 @@ inherit a spent budget and would have made the two artifacts' rounds indistingui
 
 The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing else.
 
-- Reviewers must verify Drift Protocol enforcement.
-- Reviewers must verify test-layer policy enforcement when relevant.
-- Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
+- Reviewers must verify Drift Protocol enforcement
+  (`.qfai/assistant/rule/drift-protocol.md`).
+- Reviewers must verify test-layer policy enforcement when relevant
+  (`.qfai/assistant/rule/test-layers.md`).
+- Test volume ratios, floors and planning estimates are signals, not gates,
+  unless the skill explicitly says so.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
   `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.

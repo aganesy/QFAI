@@ -126,12 +126,16 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // questions are its own operations.
     const skill = await readSkill();
     const askUser = bucket(skill, "ask-user");
-    const autoDecide = bucket(skill, "auto-decide");
 
     expect(askUser).toMatch(/frontier/i);
     expect(askUser).toMatch(/confirmation that closes the session/i);
     expect(askUser).toMatch(/what this skill\s*performs/i);
-    expect(autoDecide).toMatch(/demonstrably equivalent, which a design choice is not/i);
+    // The skill adds no auto-decide entry, so the shared prototype's rule holds.
+    expect(bucket(skill, "auto-decide")).toBe("");
+    expectPhrase(
+      await read("assistant/rule/shared-skill-operating-baseline.md"),
+      "**Equivalent-option pick means demonstrably equivalent.** A design choice is not one",
+    );
   });
 
   it("holds the pack's authoring until the session has ended", async () => {

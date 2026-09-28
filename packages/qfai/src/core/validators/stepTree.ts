@@ -22,12 +22,6 @@ export function stepFileRel(name: string): string {
 const CODE = "QFAI-SKILLS-016";
 const COMMON_OWNER = "common";
 const COMMON_PREFIX = "common-";
-/**
- * The review every parent runs after its last step, and every stage after its
- * last. The operating baseline names it for all of them, so no `steps:` list,
- * plan or `requires` does.
- */
-const REVIEW_STEP = "common-review-cycle";
 
 /** One directory under the step layer, and what its `STEP.md` declares. */
 type StepDir = {
@@ -37,8 +31,11 @@ type StepDir = {
   hasDoc: boolean;
 };
 
-/** A skill that runs steps, with the names its `steps:` lists and the roles it declares. */
-type Parent = { name: string; rel: string; steps: unknown[]; roles: unknown };
+/**
+ * A skill that runs steps: the names its `steps:` lists, the common steps its
+ * own body runs in `requires:`, and the roles it declares.
+ */
+type Parent = { name: string; rel: string; steps: unknown[]; requires: unknown; roles: unknown };
 
 type Tree = {
   steps: StepDir[];
@@ -49,10 +46,10 @@ type Tree = {
 
 /**
  * The step layer is self-consistent: every step is a `STEP.md` named after its
- * directory, owned by a parent that lists it or by `common`, reached by some
- * parent, plan or `requires`, and every name a parent or a plan uses is
- * installed. Nothing under the layer is a `SKILL.md`, which a host would load
- * as a skill of its own.
+ * directory, owned by a parent that lists it or by `common`, reached by a
+ * parent's `steps:` or `requires:`, a plan or a step's `requires`, and every
+ * name any of those uses is installed. Nothing under the layer is a
+ * `SKILL.md`, which a host would load as a skill of its own.
  */
 export async function validateStepTree(root: string, config: QfaiConfig): Promise<Issue[]> {
   const stepsDir = joinAssistantLayer(root, "step");
@@ -71,6 +68,9 @@ export async function validateStepTree(root: string, config: QfaiConfig): Promis
     ...(await skillDocsUnderSteps(stepsDir)),
     ...present.flatMap((step) => stepDocIssues(step, tree)),
     ...referenceIssues(tree),
+    ...[...parents.values()].flatMap((parent) =>
+      requiresListIssues(parent.rel, parent.requires, tree),
+    ),
     ...orphanIssues(tree),
     ...parentRolesIssues(tree),
   ];
@@ -129,7 +129,13 @@ async function readParents(
     const steps = mapping?.steps;
     if (Array.isArray(steps)) {
       const rel = path.relative(root, doc).replace(/\\/g, "/");
-      parents.set(entry.name, { name: entry.name, rel, steps, roles: mapping?.roles });
+      parents.set(entry.name, {
+        name: entry.name,
+        rel,
+        steps,
+        requires: mapping?.requires ?? [],
+        roles: mapping?.roles,
+      });
     }
   }
   return parents;
@@ -245,10 +251,7 @@ function ownerIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree): Is
 function requiresIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree): Issue[] {
   const file = stepFileRel(step.dir);
   const requires = fm.requires ?? [];
-  if (!Array.isArray(requires)) {
-    return [finding(`${file} declares requires: that is not a list.`, file, "requiresShape")];
-  }
-  if (step.dir.startsWith(COMMON_PREFIX) && requires.length > 0) {
+  if (step.dir.startsWith(COMMON_PREFIX) && Array.isArray(requires) && requires.length > 0) {
     return [
       finding(
         `${file} is a common step and requires ${JSON.stringify(requires)}; a common step requires nothing.`,
@@ -257,9 +260,20 @@ function requiresIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree):
       ),
     ];
   }
+  return requiresListIssues(file, requires, tree);
+}
+
+/**
+ * A step's `requires`, and a parent skill's, is a list of installed
+ * `common-*` steps, which keeps every chain to one hop.
+ */
+function requiresListIssues(file: string, requires: unknown, tree: Tree): Issue[] {
+  if (!Array.isArray(requires)) {
+    return [finding(`${file} declares requires: that is not a list.`, file, "requiresShape")];
+  }
   return requires.flatMap((name: unknown) => {
     if (typeof name !== "string" || !name.startsWith(COMMON_PREFIX)) {
-      const message = `${file} requires ${JSON.stringify(name)}; a step requires only ${COMMON_PREFIX}* steps.`;
+      const message = `${file} requires ${JSON.stringify(name)}; only ${COMMON_PREFIX}* steps may be required.`;
       return [finding(message, file, "requiresNonCommon")];
     }
     if (tree.installed.has(name)) return [];
@@ -294,24 +308,23 @@ function referenceIssues(tree: Tree): Issue[] {
 }
 
 /**
- * A step no parent lists, no plan uses and no other step requires is dead
- * weight. The review step is used wherever a parent is.
+ * A step no parent lists or requires, no plan uses and no other step requires
+ * is dead weight.
  */
 function orphanIssues(tree: Tree): Issue[] {
   const used = new Set<unknown>([
-    ...(tree.parents.size > 0 ? [REVIEW_STEP] : []),
     ...[...tree.parents.values()].flatMap((parent) => parent.steps),
     ...tree.planSteps.keys(),
-    ...tree.steps.flatMap((step): unknown[] => {
-      const requires: unknown = step.frontmatter?.requires;
-      return Array.isArray(requires) ? requires : [];
-    }),
+    ...[
+      ...[...tree.parents.values()].map((parent) => parent.requires),
+      ...tree.steps.map((step) => step.frontmatter?.requires),
+    ].flatMap((requires: unknown): unknown[] => (Array.isArray(requires) ? requires : [])),
   ]);
   return tree.steps
     .filter((step) => step.hasDoc && !used.has(step.dir))
     .map((step) =>
       finding(
-        `${stepFileRel(step.dir)} is used by no skill's steps:, no workflow plan and no step's requires:.`,
+        `${stepFileRel(step.dir)} is used by no skill's steps: or requires:, no workflow plan and no step's requires:.`,
         stepFileRel(step.dir),
         "orphan",
       ),
