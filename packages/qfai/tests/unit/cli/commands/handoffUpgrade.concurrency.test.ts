@@ -15,7 +15,7 @@
  * scope, so these fs-instrumented cases live apart from the other
  * handoff-upgrade files rather than mocking fs for every case in them.
  */
-// QFAI:SPEC-0015:TC-0015-0031
+// QFAI:EX-0001-0180-01
 
 import { access, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

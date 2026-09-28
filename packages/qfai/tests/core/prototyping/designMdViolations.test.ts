@@ -1131,8 +1131,7 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes", ()
 });
 
 describe("findDesignMdViolations is a pure function of its two arguments", () => {
-  // QFAI:SPEC-0012:TC-0012-0328
-  // QFAI:SPEC-0004:TC-0004-0014
+  // QFAI:EX-0001-0042-08
   it("returns the same violations in the same order on every call, reads no clock and changes neither input", () => {
     const html = '<div style="color:#abcdef"></div><p style="background:#123456"></p>';
     const designMd = sampleDesignMd();

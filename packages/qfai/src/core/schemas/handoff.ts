@@ -5,7 +5,7 @@
  * (per the spec governance handoff schema acceptance criteria). The
  * minimum field set is:
  *   - companyName?
- *   - primarySpecId?
+ *   - primaryUiContract?
  *   - startDate?
  *   - signature?
  *   - entryPattern?
@@ -21,7 +21,7 @@ import { parse as parseYaml } from "yaml";
 
 export const HANDOFF_MINIMUM_FIELDS = [
   "companyName",
-  "primarySpecId",
+  "primaryUiContract",
   "startDate",
   "signature",
   "entryPattern",
@@ -37,7 +37,7 @@ export type HandoffMinimumField = (typeof HANDOFF_MINIMUM_FIELDS)[number];
  */
 export type CanonicalHandoff = {
   companyName?: string;
-  primarySpecId?: string;
+  primaryUiContract?: string;
   startDate?: string;
   signature?: string;
   entryPattern?: string;

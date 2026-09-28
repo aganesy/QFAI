@@ -12,7 +12,7 @@
  * writer file's expected `writerToken`. Symmetric (both present or
  * both absent) → no finding. Asymmetric → fire.
  */
-// QFAI:SPEC-0015:TC-0015-0024
+// QFAI:EX-0001-0177-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -26,7 +26,7 @@ import {
   HANDOFF_WRITER_PAIRS,
 } from "../../../src/core/validators/handoffSchemaPairs.js";
 
-const SCHEMA_WITH_FIELDS = `export const HANDOFF_MINIMUM_FIELDS = ["companyName", "primarySpecId"] as const;\n`;
+const SCHEMA_WITH_FIELDS = `export const HANDOFF_MINIMUM_FIELDS = ["companyName", "primaryUiContract"] as const;\n`;
 
 const SCHEMA_WITHOUT_FIELDS = `// schema scaffold; no fields exported yet\nexport const PLACEHOLDER = 1;\n`;
 

@@ -3,8 +3,8 @@
  * (TC-0004-0067 / TDD-0047).
  *
  * - Given a temp-dir repo where the prototyping pipeline produces
- *   no error findings, the design-system attestation is present at
- *   `.qfai/contracts/design/design-system.yaml`, and a conformant
+ *   no error findings, the design-system attestation — root `DESIGN.md` —
+ *   is present and parses, and a conformant
  *   handoff exists at `.qfai/handoff.yaml`, the saas-package profile
  *   PASSes (no error severities, exit 0).
  * - The validation result emits ONE `D-SAAS-PACKAGE-VERIFY-SKIPPED`
@@ -14,7 +14,7 @@
  * Drives `runValidate` directly (no subprocess shell-out) so the
  * harness can read the in-memory validation result deterministically.
  */
-// QFAI:SPEC-0004:TC-0004-0067
+// QFAI:EX-0001-0051-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,21 +29,46 @@ let root: string;
 let savedCiEnv: string | undefined;
 let savedGhaEnv: string | undefined;
 
+const DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "visual:",
+  "  colors:",
+  '    primary: "#1F2937"',
+  '    secondary: "#6366F1"',
+  '    accent: "#D97706"',
+  '    surface: "#FFFFFF"',
+  '    surface_muted: "#F3F4F6"',
+  '    text: "#111827"',
+  '    text_muted: "#6B7280"',
+  '    danger: "#DC2626"',
+  '    warning: "#F59E0B"',
+  '    success: "#10B981"',
+  '    border: "#E5E7EB"',
+  '    overlay: "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans: "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm: "0.25rem"',
+  '    md: "0.5rem"',
+  '    lg: "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+].join("\n");
+
 async function seedDesignSystemAttestation(): Promise<void> {
-  const dir = path.join(root, ".qfai", "contracts", "design");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "design-system.yaml"),
-    [
-      "# Design-system attestation (DCON-005)",
-      "surfaces:",
-      "  - id: dashboard",
-      "    tokens-source: .qfai/contracts/design/tokens.yaml",
-      "tokens: {}",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
+  await writeFile(path.join(root, "DESIGN.md"), DESIGN_MD, "utf-8");
 }
 
 async function seedHandoff(): Promise<void> {
@@ -113,7 +138,7 @@ describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set 
     }
   });
 
-  it("FAILs (exit non-zero) when the DCON-005 attestation is removed (same repo otherwise)", async () => {
+  it("FAILs (exit non-zero) when the design-system attestation is removed (same repo otherwise)", async () => {
     // Skip seeding the attestation. Handoff present so the only
     // failure source is the missing attestation gate.
     await seedHandoff();
@@ -131,11 +156,8 @@ describe("TC-0004-0067: validate --profile saas-package PASSes + emits skip-set 
       issues: Array<{ code: string; severity: string; message: string }>;
     };
     const attestation = body.issues.find(
-      (i) => i.severity === "error" && (i.message ?? "").includes("design-system.yaml"),
+      (i) => i.severity === "error" && i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING",
     );
-    expect(
-      attestation,
-      "expected error finding naming the absent design-system.yaml attestation",
-    ).toBeDefined();
+    expect(attestation?.message).toContain("DESIGN.md is absent");
   });
 });

@@ -2,7 +2,7 @@
  * The shipped Markdown schemas and the SDD templates are one pair.
  *
  * `assets/mdschema/**` declares the shape of an SDD document;
- * `assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/**` is the
+ * `assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/**` is the
  * document an author starts from. If the two disagree, `qfai init` seeds a tree
  * that fails its own document lane on the first commit — the worst version of
  * this failure, because the adopter did nothing wrong.
@@ -13,8 +13,9 @@
  * rather than a second, independent opinion about how a spec should look.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -72,15 +73,13 @@ const MDSCHEMA_CLI = resolveMdschemaCli();
  */
 const TEMPLATE_ROOT = path.join(
   REPO_ROOT,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec",
 );
 
 interface ManifestEntry {
   id: string;
   schema: string;
   pattern: string;
-  /** The content predicate that routes one path to two schemas, if any. */
-  when?: string;
 }
 
 function readManifest(): ManifestEntry[] {
@@ -88,12 +87,7 @@ function readManifest(): ManifestEntry[] {
   let current: Partial<ManifestEntry> = {};
   const flush = (): void => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({
-        id: current.id,
-        schema: current.schema,
-        pattern: current.pattern,
-        ...(current.when !== undefined ? { when: current.when } : {}),
-      });
+      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
     }
     current = {};
   };
@@ -109,13 +103,11 @@ function readManifest(): ManifestEntry[] {
       current = { id };
       continue;
     }
-    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
     const value = field?.[2];
     if (value !== undefined && current.id !== undefined) {
       if (field?.[1] === "schema") {
         current.schema = value;
-      } else if (field?.[1] === "when") {
-        current.when = value;
       } else {
         current.pattern = value;
       }
@@ -128,16 +120,16 @@ function readManifest(): ManifestEntry[] {
 /** Every `*.mdschema.yml` under the schema root, schema-root-relative. */
 function schemaFiles(): string[] {
   const out: string[] = [];
-  for (const group of readdirSync(SCHEMA_ROOT, { withFileTypes: true })) {
-    if (!group.isDirectory()) {
-      continue;
-    }
-    for (const file of readdirSync(path.join(SCHEMA_ROOT, group.name))) {
-      if (file.endsWith(".mdschema.yml")) {
-        out.push(`${group.name}/${file}`);
+  const visit = (dir: string): void => {
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      const absolute = path.join(dir, item.name);
+      if (item.isDirectory()) visit(absolute);
+      else if (item.name.endsWith(".mdschema.yml")) {
+        out.push(path.relative(SCHEMA_ROOT, absolute).split(path.sep).join("/"));
       }
     }
-  }
+  };
+  visit(SCHEMA_ROOT);
   return out.sort();
 }
 
@@ -147,14 +139,16 @@ function schemaFiles(): string[] {
  *
  * The mapping is derived from the schema's own path rather than declared: a
  * declared second mapping is a second thing to keep true, and the file names are
- * already equal by construction (`spec/04_Business-Rules.mdschema.yml` governs
- * `spec/04_Business-Rules.md`).
+ * already equal by construction (`story/decisions.mdschema.yml` governs
+ * `decisions.md`).
  */
 function templateFor(schemaRelative: string): string | undefined {
-  const group = schemaRelative.startsWith("policies/") ? "_policies" : "spec";
-  const base = path.basename(schemaRelative).replace(/\.mdschema\.yml$/, ".md");
-  const candidate = path.join(TEMPLATE_ROOT, group, base);
-  return existsSync(candidate) ? candidate : undefined;
+  if (schemaRelative.startsWith("story/")) {
+    const relative = schemaRelative.slice("story/".length).replace(/\.mdschema\.yml$/, ".md");
+    const candidate = path.join(TEMPLATE_ROOT, relative);
+    return existsSync(candidate) ? candidate : undefined;
+  }
+  return undefined;
 }
 
 const manifest = readManifest();
@@ -189,61 +183,40 @@ describe("shipped Markdown schemas", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("leaves at most one entry per pattern without a `when` predicate", () => {
-    // The invariant is that no document is run against two contracts, with the
-    // loser invisible in the summary. Two entries on one pattern are how a path
-    // that carries two document shapes is expressed, and the predicate is what
-    // partitions them — so a second UNPREDICATED entry is the state that
-    // breaks it, not a repeated pattern.
-    const byPattern = new Map<string, string[]>();
-    for (const entry of manifest.filter((e) => e.when === undefined)) {
-      byPattern.set(entry.pattern, [...(byPattern.get(entry.pattern) ?? []), entry.id]);
-    }
-    const contested = [...byPattern].filter(([, ids]) => ids.length > 1);
-
-    expect(contested.map(([pattern, ids]) => `${pattern}: ${ids.join(", ")}`)).toEqual([]);
-  });
-
-  it("gives every predicated entry a pattern some other entry also carries", () => {
-    // A `when:` on a pattern nothing else claims is a filter, not a route: the
-    // documents it does not match are then checked by nothing at all, and the
-    // gap reads in the summary exactly like a pack nobody has written yet.
+  it("gives every pattern one entry", () => {
+    // A document matched by two entries is held to two contracts, with the
+    // loser invisible in the summary.
     const patterns = manifest.map((entry) => entry.pattern);
-    const stranded = manifest.filter(
+    const repeated = patterns.filter((pattern, index) => patterns.indexOf(pattern) !== index);
+
+    expect(repeated).toEqual([]);
+  });
+
+  it("roots every pattern at its configured directory", () => {
+    // Both roots come from adopter config. A hard-coded default would silently
+    // match nothing after either tree is moved.
+    const unrooted = manifest.filter(
       (entry) =>
-        entry.when !== undefined &&
-        patterns.filter((pattern) => pattern === entry.pattern).length < 2,
+        !entry.pattern.startsWith("{specsDir}/") && !entry.pattern.startsWith("{contractsDir}/"),
     );
-
-    expect(stranded.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
-  });
-
-  it("gives every `when` predicate a valid regular expression", () => {
-    const broken = manifest
-      .filter((entry) => entry.when !== undefined)
-      .filter((entry) => {
-        try {
-          new RegExp(entry.when ?? "", "mu");
-          return false;
-        } catch {
-          return true;
-        }
-      });
-
-    expect(broken.map((entry) => `${entry.id}: ${entry.when ?? ""}`)).toEqual([]);
-  });
-
-  it("roots every pattern at the configured specs directory", () => {
-    // `{specsDir}` is what makes an adopter who relocated their specs work
-    // without editing this file; a hard-coded `.qfai/specs` would silently match
-    // nothing there and report a green lane over zero documents.
-    const unrooted = manifest.filter((entry) => !entry.pattern.startsWith("{specsDir}/"));
 
     expect(unrooted.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
   });
 });
 
 describe("shipped schemas agree with the SDD templates", () => {
+  it("does not ship the retired spec-pack templates", () => {
+    expect(existsSync(path.join(TEMPLATE_ROOT, "..", "specs"))).toBe(false);
+  });
+
+  it("pairs every story-tree schema with a template", () => {
+    const missing = schemas
+      .filter((schema) => schema.startsWith("story/"))
+      .filter((schema) => templateFor(schema) === undefined);
+
+    expect(missing).toEqual([]);
+  });
+
   it("finds the mdschema binary", () => {
     // Every case below spawns it; without this the failures read as schema
     // violations rather than as a missing devDependency.
@@ -286,4 +259,236 @@ describe("shipped schemas agree with the SDD templates", () => {
       expect(result.status).toBe(0);
     });
   }
+});
+
+describe("a closed policy section rejects content of another kind", () => {
+  /** What is inserted, into which document, after which text, and the text itself. */
+  const variants: ReadonlyArray<readonly [string, string, string, string]> = [
+    ["prose before the first section", "objective", "# Objective\n\n", "Overview prose.\n\n"],
+    ["a list item in a table section", "objective", "## Success criteria\n\n", " - extra item\n\n"],
+    ["a table in a list section", "objective", "## Non-goals\n\n", " | a | b |\n | - | - |\n\n"],
+    [
+      "a two-space table in a list section",
+      "objective",
+      "## Non-goals\n\n",
+      "  | a | b |\n  | - | - |\n\n",
+    ],
+    ["three-space prose in a list section", "objective", "## Non-goals\n\n", "   extra prose\n\n"],
+    ["a fenced block in a prose section", "initiative", "## Initiative\n\n", "```\ncode\n```\n\n"],
+    ["a block quote in a prose section", "initiative", "## Initiative\n\n", "> quote\n\n"],
+    ["a thematic break in a prose section", "initiative", "## Initiative\n\n", "---\n\n"],
+    ["a thematic break in a list section", "objective", "## Non-goals\n\n", "- - -\n\n"],
+    [
+      "an HTML comment in a prose section",
+      "initiative",
+      "## Initiative\n\n",
+      "<!-- hidden -->\n\n",
+    ],
+    [
+      "a pipe paragraph after a table",
+      "objective",
+      "`<command or threshold that measures it>` |\n",
+      "\n| explanatory note\n",
+    ],
+    [
+      "an indented code block in a prose section",
+      "initiative",
+      "## Initiative\n\n",
+      "    indented code\n\n",
+    ],
+  ];
+
+  it.each(variants)("reports %s", (_label, name, anchor, inserted) => {
+    const template = readFileSync(path.join(TEMPLATE_ROOT, `01_policy/${name}.md`), "utf-8");
+    expect(template).toContain(anchor);
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-closed-"));
+    try {
+      const file = path.join(dir, `${name}.md`);
+      writeFileSync(file, template.replace(anchor, `${anchor}${inserted}`), "utf-8");
+      const schema = path.join(SCHEMA_ROOT, `story/01_policy/${name}.mdschema.yml`);
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf-8",
+        },
+      );
+
+      expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toContain("[forbidden-text]");
+      expect(result.status).not.toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("a table-only section holds its template's columns and nothing above the header", () => {
+  /** Every template a schema governs, named by its path below the template root. */
+  const DOCUMENTS = schemas.flatMap((schema) =>
+    templateFor(schema) === undefined
+      ? []
+      : [schema.slice("story/".length).replace(/\.mdschema\.yml$/, "")],
+  );
+  const DELIMITER = /^\|(?:\s*:?-+:?\s*\|)+$/;
+
+  /** One variant per table of each template: a label, the document and its changed text. */
+  function variants(change: (table: string[]) => string[]): [string, string, string][] {
+    return DOCUMENTS.flatMap((name) => {
+      const lines = readFileSync(path.join(TEMPLATE_ROOT, `${name}.md`), "utf-8").split(/\r?\n/);
+      const headers = lines.flatMap((line, index) =>
+        DELIMITER.test(lines[index + 1] ?? "") && line.startsWith("|") ? [index] : [],
+      );
+      return headers.map((start): [string, string, string] => {
+        let end = start;
+        while (lines[end]?.startsWith("|")) end++;
+        const text = [
+          ...lines.slice(0, start),
+          ...change(lines.slice(start, end)),
+          ...lines.slice(end),
+        ].join("\n");
+        return [`${name}.md line ${start + 1}`, name, text];
+      });
+    });
+  }
+
+  function check(name: string, text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-table-"));
+    try {
+      const file = path.join(dir, `${path.basename(name)}.md`);
+      writeFileSync(file, text, "utf-8");
+      const schema = path.join(SCHEMA_ROOT, `story/${name}.mdschema.yml`);
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const extraColumn = variants((table) =>
+    table.map((line, index) => `${line} ${index === 1 ? "---" : "Extra"} |`),
+  );
+  const noteAbove = variants((table) => ["| explanatory note", ...table]);
+
+  it("finds every table of every template", () => {
+    expect(extraColumn.length).toBe(15);
+  });
+
+  it.each(extraColumn)("reports an added column in %s", (_label, name, text) => {
+    // QFAI:EX-0001-0011-10
+    const result = check(name, text);
+    expect(result.output).toContain("[forbidden-text]");
+    expect(result.status).not.toBe(0);
+  });
+
+  it.each(noteAbove)(
+    "reports a pipe line directly above the header in %s",
+    (_label, name, text) => {
+      // QFAI:EX-0001-0011-11
+      const result = check(name, text);
+      expect(result.output).toContain("[forbidden-text]");
+      expect(result.status).not.toBe(0);
+    },
+  );
+
+  const aligned = variants((table) =>
+    table.map((line, index) => (index === 1 ? line.replace(/ (-+) /g, ":$1:") : line)),
+  );
+
+  it.each(aligned)(
+    "accepts a delimiter row carrying alignment colons in %s",
+    (_label, name, text) => {
+      // QFAI:EX-0001-0011-10
+      expect(text).toContain("|:-");
+      const result = check(name, text);
+      expect(result.output).toContain("No violations");
+      expect(result.status).toBe(0);
+    },
+  );
+});
+
+describe("the technology document holds only its three sections, each in its shape", () => {
+  const TECH_TEMPLATE = path.join(TEMPLATE_ROOT, "03_contract/tech.md");
+  const TECH_SCHEMA = path.join(SCHEMA_ROOT, "story/03_contract/tech.mdschema.yml");
+  const PACKAGE = "- `<package>`\n  - `<what the project uses it for>`";
+
+  function check(text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-tech-"));
+    try {
+      const file = path.join(dir, "tech.md");
+      writeFileSync(file, text, "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", TECH_SCHEMA, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  /** What is replaced in the template, by what, and the finding the checker reports. */
+  const rejected: ReadonlyArray<readonly [string, string, string, string]> = [
+    ["a Stack table without a Runtime row", "| Runtime ", "| Engine  ", "[required-text]"],
+    ["a Stack table without a Platform row", "| Platform ", "| Hosts    ", "[required-text]"],
+    ["prose in Stack", "## Stack\n\n", "## Stack\n\nThe stack.\n\n", "[forbidden-text]"],
+    ["a dependency with no nested reason", PACKAGE, "- `<package>`", "[forbidden-text]"],
+    [
+      "a dependency with its reason inline",
+      PACKAGE,
+      "- `<package>` for parsing",
+      "[forbidden-text]",
+    ],
+    ["`None.` beside a package", PACKAGE, `${PACKAGE}\n- None.`, "[forbidden-text]"],
+    ["a command list without Skeleton", "- Skeleton:", "- Smoke:", "[required-text]"],
+    [
+      "a command not in backticks",
+      "- Lint: `<lint command>`",
+      "- Lint: run lint",
+      "[forbidden-text]",
+    ],
+    [
+      "prose in Standard commands",
+      "## Standard commands (copy-paste)\n\n",
+      "## Standard commands (copy-paste)\n\nThe gate commands.\n\n",
+      "[forbidden-text]",
+    ],
+    [
+      "a Rules section",
+      "## Dependencies",
+      "## Rules\n\n- A rule.\n\n## Dependencies",
+      "[structure]",
+    ],
+    [
+      "a Constraints section",
+      "## Dependencies",
+      "## Constraints\n\n- A limit.\n\n## Dependencies",
+      "[structure]",
+    ],
+  ];
+
+  it.each(rejected)("reports %s", (_label, from, to, finding) => {
+    const template = readFileSync(TECH_TEMPLATE, "utf-8");
+    expect(template).toContain(from);
+    const result = check(template.replace(from, to));
+    expect(result.output).toContain(finding);
+    expect(result.status).not.toBe(0);
+  });
+
+  it("accepts `- None.` and one Skeleton item per entrypoint", () => {
+    const template = readFileSync(TECH_TEMPLATE, "utf-8")
+      .replace(PACKAGE, "- None.")
+      .replace(
+        /- Skeleton: .*\n/,
+        "- Skeleton: `api` -> `run api`\n- Skeleton: `cli` -> `run cli`\n",
+      );
+    const result = check(template);
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
 });

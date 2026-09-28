@@ -36,14 +36,14 @@ async function withContracts<T>(
     os.tmpdir(),
     `qfai-condeps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  await mkdir(path.join(root, ".qfai", "contracts", "db"), { recursive: true });
-  await mkdir(path.join(root, ".qfai", "contracts", "api"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "db"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "api"), { recursive: true });
   try {
     for (const [name, body] of Object.entries(files.db ?? {})) {
-      await writeFile(path.join(root, ".qfai", "contracts", "db", name), body, "utf-8");
+      await writeFile(path.join(root, ".qfai", "spec", "03_contract", "db", name), body, "utf-8");
     }
     for (const [name, body] of Object.entries(files.api ?? {})) {
-      await writeFile(path.join(root, ".qfai", "contracts", "api", name), body, "utf-8");
+      await writeFile(path.join(root, ".qfai", "spec", "03_contract", "api", name), body, "utf-8");
     }
     return await fn(root);
   } finally {
@@ -55,15 +55,16 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
   it("reads a SQL comment line", () => {
     expect(
       extractDeclaredDependencies(
-        "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0002, CON-DB-0003\n",
+        "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0002, DB-0003\n",
       ),
-    ).toEqual(["CON-DB-0002", "CON-DB-0003"]);
+    ).toEqual(["DB-0002", "DB-0003"]);
   });
 
   it("reads a YAML flow sequence", () => {
-    expect(extractDeclaredDependencies("x-qfai-depends-on: [CON-API-0002, CON-DB-0001]\n")).toEqual(
-      ["CON-API-0002", "CON-DB-0001"],
-    );
+    expect(extractDeclaredDependencies("x-qfai-depends-on: [API-0002, DB-0001]\n")).toEqual([
+      "API-0002",
+      "DB-0001",
+    ]);
   });
 
   it("reads a YAML flow sequence carrying a trailing comment", () => {
@@ -72,8 +73,8 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // declaration invisible, so a conforming file earned `QFAI-CONTRACT-015`
     // and its correct index row `QFAI-CONTRACT-033`.
     expect(
-      extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001] # DB を先に適用\n", "a.yaml"),
-    ).toEqual(["CON-DB-0001"]);
+      extractDeclaredDependencies("x-qfai-depends-on: [DB-0001] # DB を先に適用\n", "a.yaml"),
+    ).toEqual(["DB-0001"]);
     expect(hasDependencyDeclaration("x-qfai-depends-on: [] # 依存なし\n", "a.yaml")).toBe(true);
   });
 
@@ -83,39 +84,39 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     expect(
       extractDeclaredDependencies(
         [
-          "// QFAI-CONTRACT-ID: CON-API-0001",
+          "// QFAI-CONTRACT-ID: API-0001",
           "{",
           '  "openapi": "3.1.0",',
           '  "x-qfai-depends-on": [',
-          '    "CON-API-0002",',
-          '    "CON-DB-0001"',
+          '    "API-0002",',
+          '    "DB-0001"',
           "  ]",
           "}",
           "",
         ].join("\n"),
       ),
-    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    ).toEqual(["API-0002", "DB-0001"]);
   });
 
   it("reads a YAML block sequence", () => {
-    expect(
-      extractDeclaredDependencies("x-qfai-depends-on:\n  - CON-API-0002\n  - CON-API-0003\n"),
-    ).toEqual(["CON-API-0002", "CON-API-0003"]);
+    expect(extractDeclaredDependencies("x-qfai-depends-on:\n  - API-0002\n  - API-0003\n")).toEqual(
+      ["API-0002", "API-0003"],
+    );
   });
 
   it("reads a YAML block sequence whose items carry trailing comments", () => {
     // Same comment, block spelling. The item pattern allowed only whitespace
     // after the value, so the sequence ended at the first commented item and
-    // `CON-API-0002` was dropped — leaving a truncated apply order that
+    // `API-0002` was dropped — leaving a truncated apply order that
     // disagrees with the correct index row (`QFAI-CONTRACT-033`).
     expect(
       extractDeclaredDependencies(
-        "x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n  - CON-API-0002\n",
+        "x-qfai-depends-on:\n  - DB-0001 # schema first\n  - API-0002\n",
         "a.yaml",
       ),
-    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    ).toEqual(["API-0002", "DB-0001"]);
     expect(
-      hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n", "a.yaml"),
+      hasDependencyDeclaration("x-qfai-depends-on:\n  - DB-0001 # schema first\n", "a.yaml"),
     ).toBe(true);
   });
 
@@ -123,11 +124,8 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // The ids come from the item values, not from the matched block text: a
     // comment naming a contract says it is *not* a dependency.
     expect(
-      extractDeclaredDependencies(
-        "x-qfai-depends-on:\n  - CON-DB-0001 # replaces CON-DB-0002\n",
-        "a.yaml",
-      ),
-    ).toEqual(["CON-DB-0001"]);
+      extractDeclaredDependencies("x-qfai-depends-on:\n  - DB-0001 # replaces DB-0002\n", "a.yaml"),
+    ).toEqual(["DB-0001"]);
   });
 
   it("reads a YAML block sequence saved with CRLF line endings", () => {
@@ -137,26 +135,21 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // A contract saved on Windows declared its apply order to no effect —
     // `QFAI-CONTRACT-015` on a file that had declared, and `-033` against its
     // correct index row.
-    const crlf = "openapi: 3.0.0\r\nx-qfai-depends-on:\r\n  - CON-DB-0001\r\n  - CON-API-0002\r\n";
-    expect(extractDeclaredDependencies(crlf, "a.yaml")).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    const crlf = "openapi: 3.0.0\r\nx-qfai-depends-on:\r\n  - DB-0001\r\n  - API-0002\r\n";
+    expect(extractDeclaredDependencies(crlf, "a.yaml")).toEqual(["API-0002", "DB-0001"]);
     expect(hasDependencyDeclaration(crlf, "a.yaml")).toBe(true);
     // The trailing-comment form has to survive CRLF too.
     expect(
-      extractDeclaredDependencies(
-        "x-qfai-depends-on:\r\n  - CON-DB-0001 # schema first\r\n",
-        "a.yaml",
-      ),
-    ).toEqual(["CON-DB-0001"]);
+      extractDeclaredDependencies("x-qfai-depends-on:\r\n  - DB-0001 # schema first\r\n", "a.yaml"),
+    ).toEqual(["DB-0001"]);
   });
 
   it("reads the single-line forms saved with CRLF line endings", () => {
     // A pin, not a regression: `$` already matches before a `\r`, so these were
     // never broken and must not be disturbed by the block form's `\r?\n`.
-    expect(extractDeclaredDependencies("-- Depends on: CON-DB-0002\r\n", "a.sql")).toEqual([
-      "CON-DB-0002",
-    ]);
-    expect(extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001]\r\n", "a.yaml")).toEqual([
-      "CON-DB-0001",
+    expect(extractDeclaredDependencies("-- Depends on: DB-0002\r\n", "a.sql")).toEqual(["DB-0002"]);
+    expect(extractDeclaredDependencies("x-qfai-depends-on: [DB-0001]\r\n", "a.yaml")).toEqual([
+      "DB-0001",
     ]);
     expect(hasDependencyDeclaration("-- Depends on: -\r\n", "a.sql")).toBe(true);
   });
@@ -177,14 +170,14 @@ describe("the index records the composition", () => {
     await withContracts(
       {
         db: {
-          "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0002\n",
-          "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0002\nCREATE TABLE b (x int);\n",
+          "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0002\n",
+          "b.sql": "-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE b (x int);\n",
         },
       },
       async (root) => {
         const index = await buildContractIndex(root, defaultConfig);
-        expect([...(index.idToDependencies.get("CON-DB-0001") ?? [])]).toEqual(["CON-DB-0002"]);
-        expect(index.idToDependencies.has("CON-DB-0002")).toBe(false);
+        expect([...(index.idToDependencies.get("DB-0001") ?? [])]).toEqual(["DB-0002"]);
+        expect(index.idToDependencies.has("DB-0002")).toBe(false);
       },
     );
   });
@@ -192,10 +185,10 @@ describe("the index records the composition", () => {
   it("drops a self-reference, which is a typo and not a dependency", async () => {
     // Recording it would make every such graph trivially cyclic.
     await withContracts(
-      { db: { "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0001\n" } },
+      { db: { "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0001\n" } },
       async (root) => {
         const index = await buildContractIndex(root, defaultConfig);
-        expect(index.idToDependencies.get("CON-DB-0001")?.size ?? 0).toBe(0);
+        expect(index.idToDependencies.get("DB-0001")?.size ?? 0).toBe(0);
       },
     );
   });
@@ -204,12 +197,12 @@ describe("the index records the composition", () => {
 describe("QFAI-CONTRACT-014 — a declared dependency must resolve", () => {
   it("errors on a dependency naming no existing contract", async () => {
     await withContracts(
-      { db: { "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0099\n" } },
+      { db: { "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0099\n" } },
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-014");
         expect(found?.severity).toBe("error");
-        expect(found?.refs).toEqual(["CON-DB-0099"]);
+        expect(found?.refs).toEqual(["DB-0099"]);
       },
     );
   });
@@ -218,8 +211,8 @@ describe("QFAI-CONTRACT-014 — a declared dependency must resolve", () => {
     await withContracts(
       {
         db: {
-          "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0002\n",
-          "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0002\nCREATE TABLE b (x int);\n",
+          "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0002\n",
+          "b.sql": "-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE b (x int);\n",
         },
       },
       async (root) => {
@@ -233,10 +226,9 @@ describe("QFAI-CONTRACT-014 — a declared dependency must resolve", () => {
     // An API contract may legitimately require a table to exist first.
     await withContracts(
       {
-        db: { "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0002\nCREATE TABLE b (x int);\n" },
+        db: { "b.sql": "-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE b (x int);\n" },
         api: {
-          "a.yaml":
-            "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [CON-DB-0002]\n",
+          "a.yaml": "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [DB-0002]\n",
         },
       },
       async (root) => {
@@ -252,8 +244,8 @@ describe("QFAI-CONTRACT-014 — a declared dependency must resolve", () => {
     await withContracts(
       {
         db: {
-          "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n",
-          "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE b (x int);\n",
+          "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE a (x int);\n",
+          "b.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE b (x int);\n",
         },
       },
       async (root) => {
@@ -274,12 +266,12 @@ describe("the declaration itself is distinguishable from its absence", () => {
   });
 
   it("reads the YAML block form", () => {
-    expect(hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-API-0002\n")).toBe(true);
+    expect(hasDependencyDeclaration("x-qfai-depends-on:\n  - API-0002\n")).toBe(true);
   });
 
   it("reports a file that says nothing about apply order", () => {
     expect(
-      hasDependencyDeclaration("-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n"),
+      hasDependencyDeclaration("-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE a (x int);\n"),
     ).toBe(false);
   });
 
@@ -293,7 +285,7 @@ describe("the declaration itself is distinguishable from its absence", () => {
 
   it("reads an empty JSON array as `none`, and its absence as silence", () => {
     const json = (body: string): string =>
-      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "openapi": "3.1.0"${body}\n}\n`;
+      `// QFAI-CONTRACT-ID: API-0001\n{\n  "openapi": "3.1.0"${body}\n}\n`;
     expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": []'))).toBe(true);
     expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": "-"'))).toBe(true);
     expect(hasDependencyDeclaration(json(""))).toBe(false);
@@ -305,22 +297,22 @@ describe("the declaration itself is distinguishable from its absence", () => {
     // `QFAI-CONTRACT-015` and fed the id to the `-014` / `-033` checks as
     // though an apply order had been stated.
     const json = (value: string): string =>
-      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
-    expect(extractDeclaredDependencies(json('{ "note": "CON-API-0002" }'))).toEqual([]);
-    expect(extractDeclaredDependencies(json('"CON-API-0002"'))).toEqual([]);
-    expect(hasDependencyDeclaration(json('{ "note": "CON-API-0002" }'))).toBe(false);
-    expect(hasDependencyDeclaration(json('"CON-API-0002"'))).toBe(false);
-    expect(extractDeclaredDependencies(json('["CON-API-0002"]'))).toEqual(["CON-API-0002"]);
+      `// QFAI-CONTRACT-ID: API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
+    expect(extractDeclaredDependencies(json('{ "note": "API-0002" }'))).toEqual([]);
+    expect(extractDeclaredDependencies(json('"API-0002"'))).toEqual([]);
+    expect(hasDependencyDeclaration(json('{ "note": "API-0002" }'))).toBe(false);
+    expect(hasDependencyDeclaration(json('"API-0002"'))).toBe(false);
+    expect(extractDeclaredDependencies(json('["API-0002"]'))).toEqual(["API-0002"]);
   });
 
   it("does not accept a JSON array holding no contract id", () => {
     // `["TBD"]` states no apply order: nothing to check referentially, so
     // accepting it would leave the order undetermined and unreported.
     const json = (value: string): string =>
-      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
+      `// QFAI-CONTRACT-ID: API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
     expect(hasDependencyDeclaration(json('["TBD"]'))).toBe(false);
     expect(hasDependencyDeclaration(json("[null]"))).toBe(false);
-    expect(hasDependencyDeclaration(json('["CON-API-0002"]'))).toBe(true);
+    expect(hasDependencyDeclaration(json('["API-0002"]'))).toBe(true);
   });
 
   it("does not accept a SQL or YAML list holding an element that is not an id", () => {
@@ -330,41 +322,41 @@ describe("the declaration itself is distinguishable from its absence", () => {
     // index cell mirroring the same half — so the undetermined element left no
     // trace anywhere. `["TBD"]` was already rejected in the JSON lane; the other
     // three lanes now make the same judgement.
-    expect(extractDeclaredDependencies("-- Depends on: CON-DB-0001, TBD\n", "a.sql")).toEqual([]);
-    expect(hasDependencyDeclaration("-- Depends on: CON-DB-0001, TBD\n", "a.sql")).toBe(false);
+    expect(extractDeclaredDependencies("-- Depends on: DB-0001, TBD\n", "a.sql")).toEqual([]);
+    expect(hasDependencyDeclaration("-- Depends on: DB-0001, TBD\n", "a.sql")).toBe(false);
+    expect(extractDeclaredDependencies("x-qfai-depends-on: [DB-0001, TBD]\n", "a.yaml")).toEqual(
+      [],
+    );
+    expect(hasDependencyDeclaration("x-qfai-depends-on: [DB-0001, TBD]\n", "a.yaml")).toBe(false);
     expect(
-      extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001, TBD]\n", "a.yaml"),
+      extractDeclaredDependencies("x-qfai-depends-on:\n  - DB-0001\n  - TBD\n", "a.yaml"),
     ).toEqual([]);
-    expect(hasDependencyDeclaration("x-qfai-depends-on: [CON-DB-0001, TBD]\n", "a.yaml")).toBe(
+    expect(hasDependencyDeclaration("x-qfai-depends-on:\n  - DB-0001\n  - TBD\n", "a.yaml")).toBe(
       false,
     );
-    expect(
-      extractDeclaredDependencies("x-qfai-depends-on:\n  - CON-DB-0001\n  - TBD\n", "a.yaml"),
-    ).toEqual([]);
-    expect(
-      hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-DB-0001\n  - TBD\n", "a.yaml"),
-    ).toBe(false);
   });
 
   it("keeps reading a list whose every element is an id", () => {
     // The over-correction pin: rejecting a whole list on one bad element must
     // not touch a well-formed one, in any of the three text lanes, whichever
     // separator it uses.
+    expect(extractDeclaredDependencies("-- Depends on: DB-0002, DB-0003\n", "a.sql")).toEqual([
+      "DB-0002",
+      "DB-0003",
+    ]);
+    expect(extractDeclaredDependencies("-- Depends on: DB-0002 DB-0003\n", "a.sql")).toEqual([
+      "DB-0002",
+      "DB-0003",
+    ]);
     expect(
-      extractDeclaredDependencies("-- Depends on: CON-DB-0002, CON-DB-0003\n", "a.sql"),
-    ).toEqual(["CON-DB-0002", "CON-DB-0003"]);
-    expect(
-      extractDeclaredDependencies("-- Depends on: CON-DB-0002 CON-DB-0003\n", "a.sql"),
-    ).toEqual(["CON-DB-0002", "CON-DB-0003"]);
-    expect(
-      extractDeclaredDependencies("x-qfai-depends-on: [CON-API-0002, CON-DB-0001]\n", "a.yaml"),
-    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+      extractDeclaredDependencies("x-qfai-depends-on: [API-0002, DB-0001]\n", "a.yaml"),
+    ).toEqual(["API-0002", "DB-0001"]);
     expect(
       extractDeclaredDependencies(
-        "x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n  - CON-API-0002\n",
+        "x-qfai-depends-on:\n  - DB-0001 # schema first\n  - API-0002\n",
         "a.yaml",
       ),
-    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    ).toEqual(["API-0002", "DB-0001"]);
     // `-` / `[]` still say "none" rather than naming a malformed element.
     expect(hasDependencyDeclaration("-- Depends on: -\n", "a.sql")).toBe(true);
     expect(hasDependencyDeclaration("x-qfai-depends-on: []\n", "a.yaml")).toBe(true);
@@ -375,11 +367,11 @@ describe("the declaration itself is distinguishable from its absence", () => {
     // and an OpenAPI `description` is where a *runtime* reference gets
     // explained, which this key must never list.
     const body = [
-      "# QFAI-CONTRACT-ID: CON-API-0001",
+      "# QFAI-CONTRACT-ID: API-0001",
       "openapi: 3.0.0",
       "info:",
       "  description: |",
-      "    Depends on: CON-API-0002 at request time.",
+      "    Depends on: API-0002 at request time.",
       "",
     ].join("\n");
     expect(extractDeclaredDependencies(body, "api-0001.yaml")).toEqual([]);
@@ -397,12 +389,12 @@ describe("the declaration itself is distinguishable from its absence", () => {
 describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
   it("warns on a contract that declares none at all", async () => {
     await withContracts(
-      { db: { "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n" } },
+      { db: { "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE a (x int);\n" } },
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
         expect(found?.severity).toBe("error");
-        expect(found?.refs).toEqual(["CON-DB-0001"]);
+        expect(found?.refs).toEqual(["DB-0001"]);
       },
     );
   });
@@ -411,7 +403,7 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
     await withContracts(
       {
         db: {
-          "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: -\nCREATE TABLE a (x int);\n",
+          "a.sql": "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: -\nCREATE TABLE a (x int);\n",
         },
       },
       async (root) => {
@@ -425,9 +417,8 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
     await withContracts(
       {
         api: {
-          "a.yaml":
-            "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [CON-API-0002]\n",
-          "b.yaml": "# QFAI-CONTRACT-ID: CON-API-0002\nopenapi: 3.0.0\nx-qfai-depends-on: []\n",
+          "a.yaml": "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [API-0002]\n",
+          "b.yaml": "# QFAI-CONTRACT-ID: API-0002\nopenapi: 3.0.0\nx-qfai-depends-on: []\n",
         },
       },
       async (root) => {
@@ -442,7 +433,7 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       {
         api: {
           "a.json": [
-            "// QFAI-CONTRACT-ID: CON-API-0001",
+            "// QFAI-CONTRACT-ID: API-0001",
             "{",
             '  "openapi": "3.1.0",',
             '  "info": { "title": "Sample", "version": "0.1.0" },',
@@ -465,11 +456,11 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       {
         api: {
           "a.yaml": [
-            "# QFAI-CONTRACT-ID: CON-API-0001",
+            "# QFAI-CONTRACT-ID: API-0001",
             "openapi: 3.0.0",
             "info:",
             "  description: |",
-            "    Depends on: CON-API-0002 at request time.",
+            "    Depends on: API-0002 at request time.",
             "",
           ].join("\n"),
         },
@@ -477,7 +468,7 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
-        expect(found?.refs).toEqual(["CON-API-0001"]);
+        expect(found?.refs).toEqual(["API-0001"]);
         // The prose id must not reach the referential lane either.
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
       },
@@ -489,14 +480,14 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       {
         db: {
           "a.sql":
-            "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0002, TBD\nCREATE TABLE a (x int);\n",
-          "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0002\n-- Depends on: -\nCREATE TABLE b (x int);\n",
+            "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: DB-0002, TBD\nCREATE TABLE a (x int);\n",
+          "b.sql": "-- QFAI-CONTRACT-ID: DB-0002\n-- Depends on: -\nCREATE TABLE b (x int);\n",
         },
       },
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
-        expect(found?.refs).toEqual(["CON-DB-0001"]);
+        expect(found?.refs).toEqual(["DB-0001"]);
         // The resolvable half must not reach the referential lane either — it
         // would resolve, and reporting nothing is what made the gap invisible.
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
