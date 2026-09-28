@@ -165,6 +165,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
     declares and has a row that agrees with both. A disagreement is
     `QFAI-CONTRACT-034`.
+- **Parallel pull requests no longer pick the same new story-tree IDs** (#2623).
+  `scripts/story-ids.mjs` is a repository tool; the package does not ship it.
+  - `next <scope>` prints the next free `DEC`, `OQ`, `BF`, contract, `US`, `AC`,
+    `EX` or `BR` ID. It counts the IDs on main, on every open pull request and
+    in the working tree.
+  - `check` names each ID the branch adds that main or another open pull request
+    adds too, so two branches that picked the same number before either was
+    pushed find out before merging.
+  - Both cost one REST listing and one `git fetch`, however many pull requests
+    are open, and report the remaining allowance as `gh-budget.mjs` does.
 
 ### Changed
 

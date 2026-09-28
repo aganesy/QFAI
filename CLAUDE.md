@@ -50,6 +50,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Traceability chain (BF -> US -> AC -> EX -> Test -> Code, with each BR in the contract that enforces it) must be maintained; story-tree IDs must not collide or reference entries the tree does not declare.
   References point one way: a BR cites only EX, only code and tests cite a BR,
   and a contract never names an implementation file.
+  Take a new ID from `node scripts/story-ids.mjs next <scope>`, which reads
+  main and every open pull request. Before a pull request merges,
+  `node scripts/story-ids.mjs check` names each ID it adds that another branch
+  adds too.
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`). The
   surface, the forbidden identifier shapes and the four guards are in
   `.agents/rules/distributed-surface.local.md`.

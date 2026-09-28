@@ -297,7 +297,7 @@ function refusesToCall() {
 }
 
 /** One REST call, with the reading saved and reported. Returns the exit code. */
-function callAndReport(apiPath, handleBody) {
+export function callAndReport(apiPath, handleBody) {
   if (refusesToCall()) return 1;
   const response = ghApi(apiPath);
   if (response.text === undefined) {
