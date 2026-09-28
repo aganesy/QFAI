@@ -116,8 +116,8 @@ type DbFieldBinding = {
  * Not merged into a single bound, because the pairing is by normalized field
  * name across all DB contracts while the severity and the domain are then
  * attributed to one specific API field. Flattening the two lost that
- * distinction: `sim_lines.status` is bounded by a `CHECK` in
- * `db-0003-sim-lines.sql`, and OR-ing `enumBacked` across the eight contracts
+ * distinction: `sim_lines.status` is bounded by a `CHECK` in the DB contract
+ * that declares that table, and OR-ing `enumBacked` across the eight contracts
  * that happen to declare a column called `status` made it `error` on the
  * strength of `call_list_status` — an ENUM on a different table, which rejects
  * no insert into `sim_lines` at all. The message said so in as many words

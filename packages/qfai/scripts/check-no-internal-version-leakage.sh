@@ -22,7 +22,8 @@ fail=0
 
 # The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
-#     (pre-build, JSDoc → dist/*.d.ts path)
+#     (pre-build, JSDoc → dist/*.d.ts path), except
+#     `local-reference-id-comment`, which only that lint carries
 #   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
 #     pattern array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
