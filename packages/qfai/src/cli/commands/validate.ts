@@ -1420,7 +1420,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-AGENT-019":
     "Add the agent to the skill's `roles:`, or remove its binding from `packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-SKILLS-016":
-    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the `steps:` list the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep `requires:` to installed `common-*` steps, and add the roles the message names to the skill's `roles:`.",
+    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, list a common step a skill's body runs in that skill's `requires:`, and add the roles the message names to the skill's `roles:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an

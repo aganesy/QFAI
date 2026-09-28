@@ -18,6 +18,7 @@ roles:
     product-surface-reviewer,
   ]
 steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq, discussion-uiux]
+requires: [common-review-cycle, common-gate-run]
 mode: interactive-by-default
 ---
 
@@ -89,15 +90,12 @@ After the last step, run one review of the pack under work with
 of the reviewers of the steps that ran: `completion-reviewer` and
 `requirements-reviewer` always, `product-surface-reviewer` when
 `discussion-uiux` ran, and `architecture-reviewer` when the pack records an
-architecture-affecting decision.
+architecture-affecting decision. Roles are selected under
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ### Reviewer Gate (MUST)
 
 The reviewers check each `## Gate` section of the steps that ran.
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-planning and coverage heuristics are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
 
 ## Completion
 
@@ -122,20 +120,10 @@ You MUST close the report with a handoff sentence to `/qfai-sdd` in the active u
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick — demonstrably equivalent, which a design choice is not: moving one here is how a design nobody agreed to gets recorded as decided
 - ask-user:
   - every decision the interview puts on the frontier, over every topic in `references/discussion-coverage-checklist.md`. Running the interview is what this skill performs, so these are its own operations
   - the confirmation that closes the session
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
-  - destructive operations (rm / overwrite / force-push)
-  - version-pin changes (`package.json#version`, branch pin)
-  - scope expansions outside the active envelope
 - hard-required:
-  - brand intent
   - a usable requirement source
   - an identifiable affected BF or an explicit decision to create one
 

@@ -1,7 +1,7 @@
 /**
  * Validator: skillDocReferences (.qfai/assistant/skill/<skill>/SKILL.md).
  *
- * Covers TC-0004-0023 (project_memory enforcement) and TC-0004-0024
+ * Covers TC-0004-0023 (project_memory shape) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
 // QFAI:EX-0001-0047-02
@@ -35,30 +35,6 @@ describe("skillDocReferences validator", () => {
     try {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       expect(issues).toEqual([]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0023: project_memory required
-  // QFAI:EX-0001-0047-02
-  it("TC-0004-0023: emits warning when qfai-implement/SKILL.md is missing project_memory:", async () => {
-    const root = await newRoot("skill-projmem");
-    try {
-      await seedSkill(
-        root,
-        "qfai-implement",
-        ["## /qfai-implement", "", "body content without trailing project_memory block.", ""].join(
-          "\n",
-        ),
-      );
-      const issues = await validateSkillDocReferences(root, await getConfig(root));
-      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
-      expect(projMem.length).toBe(1);
-      expect(projMem[0]?.code).toBe("W-SKILL-PROJECT-MEMORY");
-      expect(projMem[0]?.severity).toBe("warning");
-      expect(projMem[0]?.message).toContain("qfai-implement");
-      expect(projMem[0]?.message).toContain("project_memory");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -154,8 +130,9 @@ describe("skillDocReferences validator", () => {
     }
   });
 
-  // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail still fires
-  it("TC-0004-0023 (mid-file): project_memory: block followed by another heading still fires the missing-trailing warning", async () => {
+  // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail fires
+  // QFAI:EX-0001-0047-02
+  it("TC-0004-0023 (mid-file): project_memory: block followed by another heading fires the not-trailing warning", async () => {
     const root = await newRoot("skill-projmem-midfile");
     try {
       await seedSkill(
@@ -177,6 +154,9 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
       expect(projMem.length).toBe(1);
+      expect(projMem[0]?.code).toBe("W-SKILL-PROJECT-MEMORY");
+      expect(projMem[0]?.severity).toBe("warning");
+      expect(projMem[0]?.message).toContain("qfai-implement");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

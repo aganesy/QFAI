@@ -72,7 +72,7 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
   {
     code: "R-AUTOPILOT-POLICY-MISSING",
     description:
-      "SKILL.md is missing the `## Default Autopilot Policy` section required by the skill governance contract (3 named buckets: auto-decide / ask-user / hard-required).",
+      "The shared operating baseline is missing its `## Default Autopilot Policy (Shared)` section or one of its 3 named buckets (auto-decide / ask-user / hard-required), or a SKILL.md does not name a hard-required input declared for its skill.",
   },
   {
     code: "R-HANDOFF-SCHEMA-DRIFT",

@@ -82,7 +82,7 @@ asks nothing and records explicit assumptions in its stage evidence.
 - If AskUserQuestion is unavailable, ask the same question in a normal message **in the shape its answer has**: explicit numbered choices where there are choices, and a plain request for the value where the answer has no listable set of candidates. Inventing options to make an open answer fit a numbered list is the failure the form rule names, and the fallback is not a licence for it.
 - Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
+- The three buckets of a skill's Default Autopilot Policy say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
   question an invocation can utter, the closed `ask-user` list would contradict that rule. **Two things stay classified by their subject wherever they are asked**: a mandatory approval, and a `hard-required` input the invocation consumes. A session does not reclassify either — a `hard-required` input asked inside one still stops a run that cannot get it, rather than being guessed. Where
   the interview is what the skill performs, the asking stays in `ask-user`: the bucket carries a category for a decision a declared grilling session puts to the user, open to a skill whose own operation is the interview and to no other. That skill holds a user session; a delegated session puts only its critical decisions to the user (`.agents/rules/grilling.md`). The buckets:
   - `auto-decide` — the skill settles it without asking.
@@ -108,11 +108,11 @@ asks nothing and records explicit assumptions in its stage evidence.
 
 ## Default Autopilot Policy (Shared)
 
-Every `qfai-*` `SKILL.md` carries a `## Default Autopilot Policy` section with
-three named buckets. They collapse avoidable per-session prompts to zero or one
-by classifying each decision the skill performs. The prototype below is what a
-skill's section is drawn from; the section lists the entries that skill reaches
-and restates neither this preamble nor the narrowing rule.
+Every `qfai-*` skill works under the prototype below. Its three named buckets
+collapse avoidable per-session prompts to zero or one by classifying each
+decision the skill performs. A skill whose policy adds to the prototype carries
+a `## Default Autopilot Policy` section listing only what it adds. A skill that
+adds nothing carries no section.
 
 | Bucket          | Prototype entries                                                                                                                                                                                                  |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -131,20 +131,22 @@ and restates neither this preamble nor the narrowing rule.
   session puts to the user and the confirmation that closes it. No other skill
   may.
 
-**Narrowing and widening.** A skill MAY narrow any of the three buckets (drop an
-entry the skill cannot reach), and MAY instantiate a category entry —
-`approval-required governance operations` — with the operations its own run
-cannot authorize for itself. `hard-required` also takes the undefaultable inputs
-this skill itself consumes, declared per skill and checked against that
-declaration; the bucket is what a run cannot proceed without, and no prototype
-can enumerate that for a skill it does not know. Otherwise a skill MUST NOT
-introduce an entry outside the prototype's categories. Widening triggers a
-Reviewer-Gate finding.
+**What a skill's own section adds.** An instance of the governance category,
+naming the operations its own run cannot authorize for itself. For an interview
+skill, its frontier. Under `hard-required`, the undefaultable inputs this skill
+itself consumes: they are declared per skill, and the policy check fails when a
+skill's section no longer names one. A skill MUST NOT introduce an entry outside
+the prototype's categories. Widening triggers a Reviewer-Gate finding.
+
+**An entry a skill never reaches costs nothing.** A decision the skill does not
+perform is never asked, and a `hard-required` input it does not consume is
+neither asked for nor a blocker (above). So no skill restates the prototype to
+drop an entry from it.
 
 **Steps.** An entry that only one step of a parent reaches may also be written
-in that step's `## Autopilot` section. The parent's `## Default Autopilot Policy`
-still lists every entry its steps reach, because that section is the one the
-policy check reads.
+in that step's `## Autopilot` section. The parent's section still lists every
+entry its steps add to the prototype, because that section is the one the policy
+check reads.
 
 Route every `ask-user` and `hard-required` item through
 [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol),
@@ -274,6 +276,9 @@ runs only from its parent or from a work order.
 
 - **A step's `requires` names only `common-*` steps**, and a `common-*` step
   requires nothing. The deepest chain is parent, step, common step.
+- **A parent's `requires` names the `common-*` steps its own body runs**, such
+  as `common-review-cycle` after the last step. Like a step's, it names no
+  other kind of step.
 - **A step's review profile is its `routing-profile`.** A step without one has
   no review of its own. A parent has no profile of its own.
 - **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
@@ -316,7 +321,7 @@ names, in its `steps:` list, and no other.
 
 ## Default Autopilot Policy inside a run
 
-Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
+Inside a run, each bucket of a skill's Default Autopilot Policy is
 satisfied by one kind of authorization the run records:
 
 - An `ask-user` item is satisfied only by a `human_decision` that answers it.
