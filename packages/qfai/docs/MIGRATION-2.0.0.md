@@ -193,3 +193,44 @@ complete run, rerun the steps and confirm that they change no files.
 Once step 12 exits 0 and validation passes, send the project's first
 free-text change request to `qfai-run`. The entry directive step 11 added to
 `AGENTS.md` and `CLAUDE.md` points agents there.
+
+## Workflow routes and payloads
+
+`npx qfai workflow` chooses each run's route from a catalog of 39 routes. The
+five route ids of earlier 2.0.0 builds are retired. A run record written under
+one is read under its successor, and the record itself is never rewritten.
+
+| Retired id       | Read as                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| `direct`         | `edit-text`                                                                |
+| `bugfix`         | `fix-defect`                                                               |
+| `bounded-change` | `add-feature`                                                              |
+| `feature`        | `prototype-feature` when the run has a prototype stage, else `add-feature` |
+| `discovery`      | `decide-design`                                                            |
+
+`status` and every report show the successor. An unfinished run on a retired id
+cannot continue: every write operation and `resume` refuse it `fail-closed` with
+cause `contract-undeclared`, naming the route. A `stop` still cancels it. State
+the request again to start a new run.
+
+What changed in the payloads and plans:
+
+- A route proposal carries `extraction`: the request's intent, entry flags,
+  qualifiers, signals, risks, gate, artifacts and confidence. The CLI chooses
+  the route from it. `candidateRoute`, `requiredStages` and `optionalSteps` are
+  gone, and a proposal that carries one is refused as an unknown key.
+- A plan no longer carries `when`, on a stage or on a step, and no step is
+  marked `proposed`. Every step of a plan runs.
+- A step marked `passThrough: true` still runs. When it has nothing to write, it
+  records a pass in the stage result's `passes`, and `accept` refuses the pass
+  while work it owns remains.
+- A plan carries `family`, `defaultModifiers`, `decisionPoints`, `releasePoint`
+  and `branchPoints`. A step entry is a step name or `{ step, mode, passThrough }`.
+  Plans ship in the package, and a project does not edit them.
+- A run's `summary.json` adds `modifiers`, `reroutes` and `closure`.
+- The routing defaults moved from `assets/defaults/agent-routing.yml` to one
+  file per owner under `assets/defaults/agent-routing/`, read in file-name order
+  as one list. No entry changed. A `routing:` entry in `qfai.config.yaml` still
+  replaces the default entry of the same name.
+- The new `qfai-triage` skill owns the routes that end without a change. Step 11
+  installs it with the other shipped skills.

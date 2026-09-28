@@ -99,6 +99,10 @@ describe("governance inside a run", () => {
       /such as `fix-defect`, `add-feature` or `edit-text`, says which stages run/,
     );
     expect(workflow).toMatch(/neither selects the other, and a run declares both/i);
+    expect(workflow).toMatch(
+      /a `fix-defect` run may declare `Behavior`, and an `add-feature` run `Structural`/,
+    );
+    expect(workflow).toMatch(/no route maps to a Change Type/i);
   });
 
   // QFAI:AC-0001-0004-02

@@ -1,8 +1,10 @@
 // QFAI:AC-0001-0226-01
 // QFAI:AC-0001-0226-02
+// QFAI:AC-0001-0226-03
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
@@ -11,6 +13,7 @@ import {
   readJournal,
   type JournalRecord,
 } from "../../../src/core/workflow/persistence.js";
+import { flat, rowOf, sectionOf } from "../../helpers/shippedAssistant.js";
 import {
   field,
   inbox,
@@ -134,5 +137,46 @@ it("A run left in ready on bugfix, then next, resume and a stop", async () => {
     resume: refused,
     status: "fix-defect",
     stop: "cancelled",
+  });
+});
+
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const MIGRATION_NOTES = "docs/MIGRATION-2.0.0.md";
+
+// The route ids a row of the notes' table names after the retired id it starts with.
+function successorsIn(notes: string, retired: string): string[] {
+  const row = rowOf(notes, `| \`${retired}\``);
+  return [...row.matchAll(/`([a-z-]+)`/g)].slice(1).map((match) => match[1] ?? "");
+}
+
+// QFAI:EX-0001-0226-03
+it("The migration notes of the release that retires the five route ids", async () => {
+  const manifest: unknown = JSON.parse(
+    await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf8"),
+  );
+  const guide = await readFile(path.join(PACKAGE_ROOT, MIGRATION_NOTES), "utf8");
+  const notes = sectionOf(guide.split("\r\n").join("\n"), "## Workflow routes and payloads");
+  const text = flat(notes);
+
+  expect({
+    shipped: Reflect.get(Object(manifest), "files"),
+    direct: successorsIn(notes, "direct"),
+    bugfix: successorsIn(notes, "bugfix"),
+    boundedChange: successorsIn(notes, "bounded-change"),
+    feature: successorsIn(notes, "feature"),
+    discovery: successorsIn(notes, "discovery"),
+    proposalFieldsUnnamed: ["candidateRoute", "requiredStages", "optionalSteps"].filter(
+      (name) => !text.includes(`\`${name}\``),
+    ),
+    planWhenGone: /a plan no longer carries `when`/i.test(text),
+  }).toEqual({
+    shipped: expect.arrayContaining([MIGRATION_NOTES]),
+    direct: ["edit-text"],
+    bugfix: ["fix-defect"],
+    boundedChange: ["add-feature"],
+    feature: ["prototype-feature", "add-feature"],
+    discovery: ["decide-design"],
+    proposalFieldsUnnamed: [],
+    planWhenGone: true,
   });
 });
