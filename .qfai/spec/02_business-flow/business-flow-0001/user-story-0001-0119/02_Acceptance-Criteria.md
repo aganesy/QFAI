@@ -3,10 +3,12 @@
 ## Criteria
 
 ```gherkin
-Feature: Reviewer-operated prototype navigation
+Feature: Per-cycle UI-contract review evidence
   # AC-0001-0119-01
-  Scenario: Reviewer-driven Playwright session per spec × screen
-    Given a per-cycle per-spec × screen evaluation (per UI contract × screen on the story tree),
-    When the Reviewer sub-agent is invoked,
-    Then the Reviewer itself launches Playwright (or equivalent harness), performs human-like operation (click / type / navigate / scroll) on the live prototype, and writes a single `<screen>.review.json`; no scripted interaction transcript file is produced and no AC selector / assertion is required.
+  Scenario: Per-spec iter-dir namespacing — review.json only
+    Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/`,
+    When listed,
+    Then it contains exactly files matching `<screen>.review.json` (one per declared screen). No `.png`, no `.html`, no `.interaction.json`, no other sidecar.
+    And path helpers (`iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+    And on the story tree the directory is `iter-NN/UI-NNNN/` with the same contents, and the path helpers descend into `UI-NNNN` with the same cleanup semantics.
 ```

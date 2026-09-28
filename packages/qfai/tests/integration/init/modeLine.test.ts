@@ -2,10 +2,10 @@
  * Integration: init writes no workflow mode and asks for none, and its summary names the mode in
  * force on one line, `active` when the key is absent.
  */
-// QFAI:AC-0001-0203-04
-// QFAI:EX-0001-0203-11
-// QFAI:EX-0001-0203-12
-// QFAI:EX-0001-0203-13
+// QFAI:AC-0001-0196-04
+// QFAI:EX-0001-0196-11
+// QFAI:EX-0001-0196-12
+// QFAI:EX-0001-0196-13
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 

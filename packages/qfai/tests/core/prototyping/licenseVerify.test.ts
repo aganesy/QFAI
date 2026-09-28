@@ -18,7 +18,7 @@ const catalog: LicenseCatalog = {
 };
 
 describe("licenseVerify — allow-listed sources + tier match", () => {
-  // QFAI:EX-0001-0121-01
+  // QFAI:EX-0001-0117-01
   it("returns ok when every entry has an allow-listed source and a known license tier", () => {
     const sources: ImageSource[] = [
       {
@@ -44,14 +44,14 @@ describe("licenseVerify — allow-listed sources + tier match", () => {
     expect(licenseVerify(sources, catalog)).toEqual({ ok: true });
   });
 
-  // QFAI:EX-0001-0121-01
+  // QFAI:EX-0001-0117-01
   it("returns ok on empty input (no entries to validate)", () => {
     expect(licenseVerify([], catalog)).toEqual({ ok: true });
   });
 });
 
 describe("licenseVerify — rejects non-allow-listed sources and unknown tiers", () => {
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it("emits license-not-allowlisted for sources outside the frozen allowlist", () => {
     const sources: ImageSource[] = [
       {
@@ -75,7 +75,7 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
     ]);
   });
 
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it("emits license-tier-unknown when source is allowed but license is not registered for it", () => {
     const sources: ImageSource[] = [
       {
@@ -100,7 +100,7 @@ describe("licenseVerify — rejects non-allow-listed sources and unknown tiers",
     ]);
   });
 
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it("aggregates every offending entry without short-circuiting", () => {
     const sources: ImageSource[] = [
       {
@@ -394,7 +394,7 @@ describe("licenseVerify — attribution is required", () => {
   // ideographic-space) is semantically the same class as
   // "missing"; rejecting only `undefined` / empty-string would
   // let `"   "` slip through.
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it.each([
     ["spaces", "   "],
     ["tab + newline", "\t\n"],

@@ -1,11 +1,9 @@
-# US-0001-0218: Route a request through a fixed decision table
+# US-0001-0218: Refuse a route catalog a run cannot use
 
 ## User Story
 
-As an operator, I want the route of my request chosen by fixed rules from the facts read out of it, so that the same kind of request always gets the same plan and I can see why a route was chosen.
+As a maintainer, I want a plan that names an unknown step, marks the wrong step pass-through, ends the wrong way or declares a point it lacks to be refused on load, so that no run starts on a route that cannot finish correctly.
 
 ## Non-goals
 
-- A route proposed by the agent that reads the request.
-- A plan assembled step by step for one request.
-- What the stages of a route do once it is chosen.
+- Checking what a step's procedure says.

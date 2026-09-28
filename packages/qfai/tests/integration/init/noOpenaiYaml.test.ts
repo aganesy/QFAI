@@ -1,8 +1,8 @@
 /**
  * Integration: `qfai init` writes no `agents/openai.yaml` for any skill, plain or under `--force`.
  */
-// QFAI:AC-0001-0203-02
-// QFAI:EX-0001-0203-04
+// QFAI:AC-0001-0196-02
+// QFAI:EX-0001-0196-04
 import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";

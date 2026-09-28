@@ -1,12 +1,11 @@
-# US-0001-0212: Stage 1 checks a routing-time CREATE approval instead of asking
+# US-0001-0212: Raise review and gates without changing the steps
 
 ## User Story
 
-As an operator who approved a new story or a new business flow when the run was routed, I want `/qfai-sdd` Stage 1 to check that approval rather than ask me again, and to stop rather than guess when the approval is missing, does not match or has gone stale, so that I answer the CREATE question once and nothing is created on an approval I did not give.
+As an operator, I want a risky or uncertain request to get heavier review and to stop for my decision where its route allows, without the route running different steps, so that the plan stays predictable while the checks match the risk.
 
 ## Non-goals
 
-- Asking the CREATE question a second time
-- Letting `--auto`, a mode or an agent-written value stand in for my answer
-- The check the workflow core makes when it accepts the stage's result
-- How a standalone `/qfai-sdd` triages and asks outside a run, which stays as it is
+- A modifier that lowers a review or removes a stop.
+- A modifier that adds or drops a step.
+- A modifier a project defines for itself.

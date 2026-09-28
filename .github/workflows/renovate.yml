@@ -40,7 +40,7 @@ name: Renovate
 # change** — see `.github/renovate.md`.
 #
 # `permissions:` therefore stays at the minimal `{ contents: read }` in both jobs, leaving
-# `BR-0017-0016`'s closed departure set untouched.
+# `BR-0015-0016`'s closed departure set untouched.
 #
 # ## Why it is two jobs and not more
 #

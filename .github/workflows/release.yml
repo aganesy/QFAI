@@ -75,7 +75,7 @@ env:
   # current LTS major instead, and let setup-node resolve its newest patch.
   #
   # Only the publish job runs on it, and it is the ONE workflow-level Node literal this repository
-  # allows (BR-0017-0027). It survives because it encodes npm's engine range for trusted publishing,
+  # allows (BR-0015-0027). It survives because it encodes npm's engine range for trusted publishing,
   # which no file in the repository expresses. Every other job, the release gate included, takes its
   # Node from `./.github/actions/setup`.
   NODE_PUBLISH: "24"
@@ -361,7 +361,7 @@ jobs:
       #
       # Not `uses: aganesy/QFAI/.github/actions/setup@main`: that is a moving reference, and
       # this repository pins every `uses:` to an immutable ref. Not a re-inlined preamble
-      # either — `BR-0017-0027` makes the composite action the single definition, and a copy
+      # either — `BR-0015-0027` makes the composite action the single definition, and a copy
       # here is the drift its extraction removed.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -377,7 +377,7 @@ jobs:
           # which does not match a nested copy. Measured: 376 errors, on every release rather than
           # only on the re-publish path this sidecar exists for.
           sparse-checkout-cone-mode: false
-      # The one definition of how this repository installs a toolchain (BR-0017-0027). It enables
+      # The one definition of how this repository installs a toolchain (BR-0015-0027). It enables
       # corepack, resolves Node from `package.json#engines`, re-shims pnpm against the toolcache Node
       # in that order, and installs frozen. Inlining any of it is what let the gate and `ci.yml` drift.
       #

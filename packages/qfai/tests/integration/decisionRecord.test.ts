@@ -7,7 +7,7 @@
  * `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
  * The managed .gitignore block tracks `.qfai/evidence/decision/`.
  */
-// QFAI:EX-0001-0176-01
+// QFAI:EX-0001-0170-01
 
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -106,7 +106,7 @@ describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decision/<ts>.
     }
   });
 
-  // QFAI:EX-0001-0179-02
+  // QFAI:EX-0001-0173-02
   it("reads the new store without silently including unmigrated records from the old store", async () => {
     const oldDir = path.join(root, ".qfai", "evidence", "decisions");
     await mkdir(oldDir, { recursive: true });

@@ -22,16 +22,16 @@ async function section(file: string, heading: string): Promise<string> {
 }
 
 describe("qfai-discussion in a workflow run", () => {
-  // QFAI:AC-0001-0206-01
-  // QFAI:EX-0001-0206-01
+  // QFAI:AC-0001-0199-01
+  // QFAI:EX-0001-0199-01
   it("takes what the work order settled as settled and covers only the rest", async () => {
     const text = await section(DISCUSSION_INTERVIEW_STEP, "## Procedure");
     expect(text).toMatch(/what the work order's `settled` field records is not asked again/i);
     expect(text).toMatch(/the interview covers only the product scope it leaves unresolved/i);
   });
 
-  // QFAI:AC-0001-0206-02
-  // QFAI:EX-0001-0206-02
+  // QFAI:AC-0001-0199-02
+  // QFAI:EX-0001-0199-02
   it("runs the entry check before its steps, and a work order only the steps it names", async () => {
     const skill = flat(await readShipped("skill/qfai-discussion/SKILL.md"));
     expect(skill).toContain("shared-skill-operating-baseline.md#a-parent-skill-invoked-by-name");
@@ -45,8 +45,8 @@ describe("qfai-discussion in a workflow run", () => {
 });
 
 describe("qfai-prototyping in a workflow run", () => {
-  // QFAI:AC-0001-0211-01
-  // QFAI:EX-0001-0211-01
+  // QFAI:AC-0001-0204-01
+  // QFAI:EX-0001-0204-01
   it("follows the entry check and cites it on one SKILL.md line", async () => {
     const body = await readShipped("skill/qfai-prototyping/SKILL.md");
     const citing = body
@@ -56,8 +56,8 @@ describe("qfai-prototyping in a workflow run", () => {
     expect(flat(body)).toContain(`The entry check is ${ENTRY_CHECK}.`);
   });
 
-  // QFAI:AC-0001-0211-03
-  // QFAI:EX-0001-0211-03
+  // QFAI:AC-0001-0204-03
+  // QFAI:EX-0001-0204-03
   it("works only on the UI contracts that serve the bound flow and creates none", async () => {
     const text = await section(PROTOTYPING_SCOPE_STEP, "## Scope");
     expect(text).toMatch(
@@ -72,8 +72,8 @@ describe("qfai-prototyping in a workflow run", () => {
     expect(text).toMatch(/a standalone invocation still resolves every UI-bearing UI contract/i);
   });
 
-  // QFAI:AC-0001-0211-04
-  // QFAI:EX-0001-0211-04
+  // QFAI:AC-0001-0204-04
+  // QFAI:EX-0001-0204-04
   it("writes nothing and returns blocked when no UI contract serves the bound flow", async () => {
     const text = await section(PROTOTYPING_SCOPE_STEP, "## Scope");
     expect(text).toMatch(/writes no `DESIGN\.md`, no UI contract and no surface declaration/i);

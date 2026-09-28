@@ -57,7 +57,7 @@ inputs:
       `engines.node` must move the floor lane with it, so the lane reads `engines.node`
       rather than restating it.
 
-      An input rather than a second setup definition: `BR-0017-0027` makes this action the
+      An input rather than a second setup definition: `BR-0015-0027` makes this action the
       single definition of the preamble, and a floor lane restating four steps inline is
       the drift its extraction removed. Pinning through a root-level `.node-version` was
       the other route and is not available — no agent may add a root file without

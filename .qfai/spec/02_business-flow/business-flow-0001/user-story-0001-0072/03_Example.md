@@ -2,6 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                                                       | Expected                                                                                                                                                              |
-| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0072-01 | AC-0001-0072-01 | A BF scope includes `AC-0001-0026-01` for legacy-file removal, but no integration or API test exercises it. | ATDD adds an integration test under `<testsDir>/integration/**` with `QFAI:AC-0001-0026-01`; the test runs `qfai init --force` and asserts the legacy file is absent. |
+| EX-ID           | AC-Ref          | Input                                                                                                                                                      | Expected                                               |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| EX-0001-0072-01 | AC-0001-0072-01 | An AC `AC-NNNN-NNNN-NN` with only a normal-path test case and a flow `BF-NNNN` with normal and error test cases, when the test-design-analyst reviews them | The AC is flagged incomplete and the BF is not flagged |

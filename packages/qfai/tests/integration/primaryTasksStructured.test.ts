@@ -9,8 +9,8 @@
  *   `id` / `label` / `acceptance`, or carrying extra keys, is
  *   rejected by the audit lane.
  */
-// QFAI:EX-0001-0161-02
-// QFAI:EX-0001-0161-02
+// QFAI:EX-0001-0155-02
+// QFAI:EX-0001-0155-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -226,7 +226,7 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
     });
   });
 
-  // QFAI:EX-0001-0161-03
+  // QFAI:EX-0001-0155-03
   it("rejects a structured item carrying an extra key (closed schema)", async () => {
     const ui = [
       "screens:",

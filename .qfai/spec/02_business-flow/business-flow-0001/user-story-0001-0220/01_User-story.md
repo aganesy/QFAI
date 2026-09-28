@@ -1,10 +1,10 @@
-# US-0001-0220: Stop for me when the router is unsure
+# US-0001-0220: Get one fixed plan for every kind of request
 
 ## User Story
 
-As an operator, I want a request that reads two ways to stop and show me the candidate routes, with the gates and review of the heavier reading, so that a wrong reading never runs a lighter route than the request needed.
+As an operator, I want each kind of request — to close, answer, decide, repair a declared surface, change, fix, maintain tests and tooling, or release — to run one fixed plan from a catalog of routes, so that every run of a kind does the same steps and ends the same way.
 
 ## Non-goals
 
-- A stop for a request that reads one way.
-- A candidate list longer than three routes.
+- A plan built for one request.
+- A route a project adds for itself.

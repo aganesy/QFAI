@@ -2,7 +2,7 @@
  * Integration: shipped GitHub Actions workflow-set action pinning.
  *
  * Covers the supply-chain pin half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0004 and BR-0020-0005): every `uses:`
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0004 and BR-0018-0005): every `uses:`
  * reference in the shipped set is a bare 40-hex commit SHA pin with no
  * floating major / minor / branch reference anywhere, and no test in the
  * suite retains a floating-major expectation for the shipped workflows (the
@@ -144,7 +144,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
   // match inside a leading-v string too (e.g. the "4.0" substring of
   // "v4.4.0"). The leading-v PROHIBITION is deliberately not this oracle's
   // job: it is enforced by the guard-pattern zero-match it below, per
-  // TC-0003-0031 bullet 3 / BR-0020-0005 (presence and leading-v live in
+  // TC-0003-0031 bullet 3 / BR-0018-0005 (presence and leading-v live in
   // separate oracles by the TC's own split).
   const READABLE_VERSION_RE = /\b[0-9]+\.[0-9]+(\.[0-9]+)?\b/;
 
@@ -251,7 +251,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
 });
 
 describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
-  // Realizes BR-0020-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
+  // Realizes BR-0018-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
   //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
   //     it()s. The REAL committed guard is spawned against a temp-staged
   //     package fixture — planted trailers live only on temp copies, never

@@ -54,7 +54,7 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("needs no discussion pack on a story-tree project whose seed was edited", async () => {
     await withInit(async (root) => {
       await editObjective(root);
@@ -65,7 +65,7 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("still requires a correctly named pack on a story-tree project that holds a misnamed one", async () => {
     await withInit(async (root) => {
       await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
@@ -76,7 +76,7 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("still requires a discussion pack where no story tree exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-"));
     try {
@@ -88,7 +88,7 @@ describe("fresh story seed validation", () => {
     }
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("still requires a discussion pack where only a local import-lite record stands in for one", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-import-lite-"));
     try {

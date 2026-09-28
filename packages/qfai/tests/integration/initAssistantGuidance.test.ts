@@ -51,8 +51,8 @@ describe("init assistant guidance: exploration-first alignment", () => {
     );
   });
 
-  // QFAI:EX-0001-0098-01
-  // QFAI:EX-0001-0099-01
+  // QFAI:EX-0001-0095-01
+  // QFAI:EX-0001-0096-01
   it("sends UI implementation to root DESIGN.md for tokens and prototyping.json for the handoff", async () => {
     const content = (
       await readFile(path.join(instructionsDir, "ui-definition-protocol.md"), "utf-8")

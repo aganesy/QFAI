@@ -1,14 +1,10 @@
-# US-0001-0203: Install or upgrade and get the free-text entry
+# US-0001-0203: Fix a defective example test with example coverage untouched
 
 ## User Story
 
-As an adopter maintainer, I want `qfai init` and an upgrade to install `qfai-run` and `qfai-maintain` with their host links, point `AGENTS.md` and `CLAUDE.md` at `qfai-run`, and tell me which workflow mode is in force and what my own edits leave out of step, so that my operators can use the free-text entry without further setup and my edits survive.
+As an operator whose bug report traces to a broken test that checks an example, I want `/qfai-implement` to fix that test while it keeps checking the same example, so that the tree still says what the obligation is.
 
 ## Non-goals
 
-- The workflow core and what `start` refuses.
-- The routing entries of the two skills, which the package defaults carry.
-- Writing a `workflow.mode` key or asking for one.
-- Installing the built-in plans, which the package holds.
-- Overwriting a skill the project edited without `--force`.
-- The ignore entries for run state and run evidence in the managed `.gitignore` block.
+- Fixing a test that checks a business flow or a criterion, which `/qfai-atdd` does
+- Changing what the test expects

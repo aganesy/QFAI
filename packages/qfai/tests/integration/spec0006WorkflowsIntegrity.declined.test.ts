@@ -14,7 +14,7 @@
  * `shared/provenance.ts` `resolveWorkflowFileState` gives the state its meaning:
  * a name with a provenance ENTRY whose file is ABSENT on disk was deliberately
  * removed — "never recreated, never reported as stale, never pruned". The
- * shipped-workflows contract's BR-0020-0021 says `declined` is never reported again, so it
+ * shipped-workflows contract's BR-0018-0021 says `declined` is never reported again, so it
  * cannot become a reason to emit. It is information the operator needs while a
  * finding is being emitted for some OTHER reason: without it, an operator reading
  * a drift report cannot tell that QFAI knows the missing file is missing and is
@@ -283,7 +283,7 @@ describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
     expect
       .soft(
         check?.severity,
-        "a declined name is never reported again — BR-0020-0021 — so a tree that has only declined names is `ok`",
+        "a declined name is never reported again — BR-0018-0021 — so a tree that has only declined names is `ok`",
       )
       .toBe("ok");
 

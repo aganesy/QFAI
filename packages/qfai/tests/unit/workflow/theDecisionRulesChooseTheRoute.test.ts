@@ -20,7 +20,7 @@ async function routes(...each: Facts[]) {
   return Promise.all(each.map(async (facts) => (await decided(facts))[0]));
 }
 
-// QFAI:EX-0001-0218-04
+// QFAI:EX-0001-0211-04
 it("A security claim routes to the vulnerability fix before every other rule", async () => {
   expect([
     await decided({ intent: "security", entryFlags: ["repro"], risks: ["security"] }),
@@ -36,7 +36,7 @@ it("A security claim routes to the vulnerability fix before every other rule", a
   ]);
 });
 
-// QFAI:EX-0001-0218-05
+// QFAI:EX-0001-0211-05
 it("An approved record with a task settles in the spec or in the build by its artifacts", async () => {
   const cited = {
     intent: "stale-record" as const,
@@ -51,7 +51,7 @@ it("An approved record with a task settles in the spec or in the build by its ar
   ).toEqual(["apply-settled-spec", "apply-settled-build"]);
 });
 
-// QFAI:EX-0001-0218-06
+// QFAI:EX-0001-0211-06
 it("A stated need for grilling or a change request decides the design", async () => {
   expect(
     await routes(
@@ -61,7 +61,7 @@ it("A stated need for grilling or a change request decides the design", async ()
   ).toEqual(["decide-design", "decide-design"]);
 });
 
-// QFAI:EX-0001-0218-07
+// QFAI:EX-0001-0211-07
 it("A disabled test name or a flaky label quarantines the test", async () => {
   expect(
     await routes(
@@ -71,7 +71,7 @@ it("A disabled test name or a flaky label quarantines the test", async () => {
   ).toEqual(["quarantine-flaky", "quarantine-flaky"]);
 });
 
-// QFAI:EX-0001-0218-08
+// QFAI:EX-0001-0211-08
 it("The release signals route to the backport, the release notes and the manual check", async () => {
   expect(
     await routes(
@@ -82,7 +82,7 @@ it("The release signals route to the backport, the release notes and the manual 
   ).toEqual(["backport-fix", "draft-release-notes", "verify-manually"]);
 });
 
-// QFAI:EX-0001-0218-09
+// QFAI:EX-0001-0211-09
 it("No work, and a hosted-service problem, close with no change", async () => {
   expect(await routes({ intent: "no-work" }, { intent: "question-hosted" })).toEqual([
     "close-no-change",
@@ -90,7 +90,7 @@ it("No work, and a hosted-service problem, close with no change", async () => {
   ]);
 });
 
-// QFAI:EX-0001-0218-10
+// QFAI:EX-0001-0211-10
 it("A stale premise and a known duplicate close as duplicates", async () => {
   expect(
     await routes(
@@ -100,8 +100,8 @@ it("A stale premise and a known duplicate close as duplicates", async () => {
   ).toEqual(["close-duplicate", "close-duplicate"]);
 });
 
-// QFAI:EX-0001-0218-11
-// QFAI:EX-0001-0218-12
+// QFAI:EX-0001-0211-11
+// QFAI:EX-0001-0211-12
 it("Questions are answered or investigated", async () => {
   expect(
     await routes(
@@ -113,10 +113,10 @@ it("Questions are answered or investigated", async () => {
   ).toEqual(["answer-question", "answer-question", "investigate-question", "investigate-question"]);
 });
 
-// QFAI:EX-0001-0218-13
-// QFAI:EX-0001-0218-14
-// QFAI:EX-0001-0218-15
-// QFAI:EX-0001-0218-16
+// QFAI:EX-0001-0211-13
+// QFAI:EX-0001-0211-14
+// QFAI:EX-0001-0211-15
+// QFAI:EX-0001-0211-16
 it("Too little to act on, an epic, leftovers of mixed kinds and a design", async () => {
   expect(
     await routes(
@@ -135,7 +135,7 @@ it("Too little to act on, an epic, leftovers of mixed kinds and a design", async
   ]);
 });
 
-// QFAI:EX-0001-0218-17
+// QFAI:EX-0001-0211-17
 it("An operation only a person can run, and a distribution incident, are handed off", async () => {
   expect(
     await routes(
@@ -145,7 +145,7 @@ it("An operation only a person can run, and a distribution incident, are handed 
   ).toEqual(["hand-off-operation", "hand-off-operation"]);
 });
 
-// QFAI:EX-0001-0218-18
+// QFAI:EX-0001-0211-18
 it("A settled design applies, unless a later rule gives a route with default modifiers", async () => {
   expect([
     await decided({
@@ -167,8 +167,8 @@ it("A settled design applies, unless a later rule gives a route with default mod
   ]);
 });
 
-// QFAI:EX-0001-0218-19
-// QFAI:EX-0001-0218-20
+// QFAI:EX-0001-0211-19
+// QFAI:EX-0001-0211-20
 it("Tests, CI and dependencies", async () => {
   expect(
     await routes(
@@ -187,10 +187,10 @@ it("Tests, CI and dependencies", async () => {
   ]);
 });
 
-// QFAI:EX-0001-0218-21
-// QFAI:EX-0001-0218-22
-// QFAI:EX-0001-0218-23
-// QFAI:EX-0001-0218-24
+// QFAI:EX-0001-0211-21
+// QFAI:EX-0001-0211-22
+// QFAI:EX-0001-0211-23
+// QFAI:EX-0001-0211-24
 it("Consistency: a missing check, a removal, the other disagreements and stale records", async () => {
   expect(
     await routes(
@@ -211,8 +211,8 @@ it("Consistency: a missing check, a removal, the other disagreements and stale r
   ]);
 });
 
-// QFAI:EX-0001-0218-25
-// QFAI:EX-0001-0218-26
+// QFAI:EX-0001-0211-25
+// QFAI:EX-0001-0211-26
 it("Regressions, conformance and performance", async () => {
   expect([
     await decided({ intent: "defect-regression", entryFlags: ["repro", "last-good"] }),
@@ -227,7 +227,7 @@ it("Regressions, conformance and performance", async () => {
   ]);
 });
 
-// QFAI:EX-0001-0218-27
+// QFAI:EX-0001-0211-27
 it("Crashes cluster, minimize, fall through to the defect fix, or stress", async () => {
   expect([
     await decided({ intent: "defect-crash", entryFlags: ["bot"] }),
@@ -242,9 +242,9 @@ it("Crashes cluster, minimize, fall through to the defect fix, or stress", async
   ]);
 });
 
-// QFAI:EX-0001-0218-28
-// QFAI:EX-0001-0218-29
-// QFAI:EX-0001-0218-30
+// QFAI:EX-0001-0211-28
+// QFAI:EX-0001-0211-29
+// QFAI:EX-0001-0211-30
 it("Defects bound to an environment, intermittent, and every other", async () => {
   expect([
     await decided({ intent: "defect", entryFlags: ["env"] }),
@@ -261,7 +261,7 @@ it("Defects bound to an environment, intermittent, and every other", async () =>
   ]);
 });
 
-// QFAI:EX-0001-0218-31
+// QFAI:EX-0001-0211-31
 it("Features and behaviour changes decide, change compatibility, prototype or add", async () => {
   expect(
     await routes(
@@ -282,7 +282,7 @@ it("Features and behaviour changes decide, change compatibility, prototype or ad
   ]);
 });
 
-// QFAI:EX-0001-0218-32
+// QFAI:EX-0001-0211-32
 it("A refactor and a documentation change", async () => {
   expect(await routes({ intent: "refactor" }, { intent: "docs" })).toEqual([
     "refactor-code",
@@ -321,7 +321,7 @@ function routingResult(extractionFields: Record<string, unknown>, proposalFields
   return stageResultRefusals(result).map((refusal) => `${refusal.reason}:${refusal.subject}`);
 }
 
-// QFAI:EX-0001-0218-03
+// QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused as a shape, naming the field", () => {
   const reading = { intent: "feature", entryFlags: [], qualifiers: [], signals: [] };
   expect({

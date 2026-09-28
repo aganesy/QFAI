@@ -1,5 +1,5 @@
-# US-0001-0119: Reviewer-operated prototype navigation
+# US-0001-0119: Per-cycle UI-contract review evidence
 
 ## User Story
 
-As a product-surface reviewer, I want to launch Playwright myself and operate the prototype (click, type, navigate, scroll) for each UI contract and screen, so that my qualitative impressions reflect how the prototype actually behaves rather than a pre-generated script transcript.
+As a maintainer, I want per-cycle evidence laid out only as `iter-NN/UI-NNNN/<screen>.review.json`, with no `.png`, `.html` or `.interaction.json`, so that stale-directory cleanup, certify presence checks and reviewer payload writes share one namespace and each iteration stays cheap.

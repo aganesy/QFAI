@@ -1,11 +1,14 @@
-# US-0001-0196: Continue, or stop, an interrupted run
+# US-0001-0196: Install or upgrade and get the free-text entry
 
 ## User Story
 
-As an operator, I want to say "continue" in a new session and have the run pick up at the pending work without redoing story authoring or acceptance, and a run I stop to end at once and leave my own uncommitted work alone, so that an interrupted run neither repeats finished work nor touches mine.
+As an adopter maintainer, I want `qfai init` and an upgrade to install `qfai-run` and `qfai-maintain` with their host links, point `AGENTS.md` and `CLAUDE.md` at `qfai-run`, and tell me which workflow mode is in force and what my own edits leave out of step, so that my operators can use the free-text entry without further setup and my edits survive.
 
 ## Non-goals
 
-- A lock taken over because it looks old.
-- A damaged journal repaired to look like success.
-- Recovery through a reset, a stash or a branch switch.
+- The workflow core and what `start` refuses.
+- The routing entries of the two skills, which the package defaults carry.
+- Writing a `workflow.mode` key or asking for one.
+- Installing the built-in plans, which the package holds.
+- Overwriting a skill the project edited without `--force`.
+- The ignore entries for run state and run evidence in the managed `.gitignore` block.

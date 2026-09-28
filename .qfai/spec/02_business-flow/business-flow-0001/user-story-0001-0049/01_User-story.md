@@ -1,5 +1,5 @@
-# US-0001-0049: Profile-specific validation reports
+# US-0001-0049: SaaS package validation profile
 
 ## User Story
 
-As a release operator running `qfai validate` across multiple profiles in sequence, I want each run to write to a profile-suffixed output path (`.qfai/report/validate-<profile>.json`) alongside an always-latest `validate.json` that names its `profile`, and I want the legacy `.qfai/output/validate.json` path to keep working with a `D-DEPRECATED-PATH` warning until sunset, so that profile outputs cannot silently overwrite each other and downstream certify reads the intended profile.
+As a delivery lead shipping a SaaS-tenant project, I want `qfai validate --profile saas-package` to pass only when the prototyping-profile validate passes, the design-system attestation, root `DESIGN.md`, is present and parses, and the cross-skill handoff schema passes, and to name each skipped ATDD or implement-class gate in a `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding, so that a SaaS-tenant delivery gets a lightweight gate that never claims work it did not check.

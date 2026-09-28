@@ -11,8 +11,8 @@ const read = (tree: string, relative: string): Promise<string> =>
 
 describe("qfai-sdd pre-draft grilling", () => {
   for (const tree of trees) {
-    // QFAI:AC-0001-0152-15
-    // QFAI:EX-0001-0152-40
+    // QFAI:AC-0001-0147-15
+    // QFAI:EX-0001-0147-40
     it(`${tree}: requires a checkpoint before each design-writing stage`, async () => {
       const loop = await read(
         tree,

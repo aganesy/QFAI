@@ -1,12 +1,11 @@
-# US-0001-0215: Verify as the final stage of a run
+# US-0001-0215: Re-route a run when diagnosis shows it is on the wrong route
 
 ## User Story
 
-As an operator who asked for a feature once, I want `/qfai-verify` to run the final gates as a stage of the run and send each finding to the stage that owns it, so that completion rests on this run's own verdict and no stage patches what another stage owns.
+As an operator, I want a run whose diagnosis shows the request is something else — a question, a duplicate, a broken test, a feature — to move to the route that fits, only at points its route declares and keeping the evidence already gathered, so that a wrong first reading costs neither a restart nor an unplanned change.
 
 ## Non-goals
 
-- Deciding whether the run is complete, which `finish` does
-- Copying the report under the run, which the workflow core does
-- Repairing a story, a contract, a test or production code
-- Changing the path, fields or values of `verify.json`
+- A route change at a step that is not a declared branch point.
+- A route change that lowers a modifier.
+- Re-routing that never ends.

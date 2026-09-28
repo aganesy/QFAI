@@ -3,10 +3,33 @@
 ## Criteria
 
 ```gherkin
-Feature: Cross-skill `handoff.yaml` schema
+Feature: MCP Server Integration for Web Research
   # AC-0001-0177-01
-  Scenario: Cross-skill handoff schema is the single canonical writer/reader
-    Given any skill that produces or consumes handoff state,
-    When it writes a handoff file,
-    Then the file MUST conform to the canonical CLI-HANDOFF schema in `packages/qfai/src/core/schemas/handoff.ts` (documented in `references/handoff.md`) whose minimum field set is `companyName?` / `primarySpecId?` / `startDate?` / `signature?` / `entryPattern?` / `productScope?` with `additionalProperties: true`. No other handoff file, such as a per-skill `session-handoff.yaml`, is read. A non-conforming write, or an asymmetric edit of the SSOT-sync Pair IV (schema ↔ all skill writers), emits `R-HANDOFF-SCHEMA-DRIFT` at severity error with a non-empty `justification:`.
+  Scenario: Brave Search MCP integration
+    Given a QFAI MCP template for Brave Search
+    When the developer configures the template with a valid API key
+    Then the MCP server responds to search queries
+    And results flow into the research pipeline
+
+  # AC-0001-0177-02
+  Scenario: MCP server crashes mid-operation
+    Given a configured MCP server processing a request
+    When the MCP server process crashes
+    Then the agent detects the failure within 10 seconds
+    And the agent falls back to built-in search tools
+    And the agent reports MCP unavailability to the user
+
+  # AC-0001-0177-03
+  Scenario: MCP returns rate limit response
+    Given an MCP server processing search requests
+    When the server returns HTTP 429 with retry-after header
+    Then the agent respects the backoff delay
+    And the agent retries after the specified delay
+    And the rate limit event is logged
+
+  # AC-0001-0177-04
+  Scenario: MCP template works for multiple CLI agents
+    Given MCP configuration templates for search/extract/browser
+    When templates are validated against Claude Code, Codex CLI, and Copilot CLI formats
+    Then at least 2 of 3 agent formats are valid without modification
 ```

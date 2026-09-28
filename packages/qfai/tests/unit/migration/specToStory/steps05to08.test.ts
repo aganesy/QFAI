@@ -244,7 +244,7 @@ describe("migration steps 5 to 8", () => {
           [spec]: {
             "TC-0001-0001": "EX-0001-0001-02",
             "TC-0001-0002": "EX-0001-0001-03",
-            "TC-0001-0003": "EX-0001-0001-04",
+            "TC-0001-0003": "EX-0001-0001-03",
             "AC-0001-0001": "AC-0001-0001-01",
           },
         },
@@ -267,7 +267,7 @@ describe("migration steps 5 to 8", () => {
     const examples = await readFile(path.join(context.specsDir, story), "utf8");
     expect(examples).toContain("EX-0001-0001-02 | AC-0001-0001-01 | First | Accepted");
     expect(examples).toContain("EX-0001-0001-03 | AC-0001-0001-01 | Second | Accepted");
-    expect(examples).toContain("EX-0001-0001-04 | AC-0001-0001-01 | Third | Accepted");
+    expect(examples).toContain("EX-0001-0001-03 | AC-0001-0001-01 | Third | Accepted");
     expect(examples).not.toContain("Missing");
     expect(examples).not.toContain("Ambiguous");
   });

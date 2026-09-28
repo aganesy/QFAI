@@ -1,13 +1,10 @@
-# US-0001-0192: Deliver a clear new feature from one request
+# US-0001-0192: Choose how much the entry does
 
 ## User Story
 
-As an operator, I want to describe a new feature once in free text and have QFAI run story authoring, acceptance tests, implementation and verification without my typing a stage name, so that the only questions the run needs answered are whether to create each new story and whether to approve the change the story-authoring stage makes to the story tree.
+As an adopter maintainer, I want to set the mode to `off`, `shadow` or `active`, so that I can keep today's manual operation, watch proposed routes before trusting them or run fully chained, and a run that finds the project does not match what the package requires stops chaining rather than checking less.
 
 ## Non-goals
 
-- An extra confirmation of the announced plan.
-- An external effect such as a push or a merge.
-- A completion reported from an agent's own claim.
-- What `/qfai-sdd` checks when it records the approved rows.
-- What `/qfai-verify` records.
+- The core rewriting my configuration to recover.
+- The mode line `qfai init` writes, and the default it leaves on upgrade.

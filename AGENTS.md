@@ -49,9 +49,9 @@ and for the files QFAI writes into a consuming project.
 - Each declares its ID in the H1: `# CLI-NNNN: <title>`. The number is unique
   across every contract kind and is never reused.
 - Named `cli-NNNN-<slug>.md` after that ID. The slug is the command
-  (`cli-0016-qfai-validate.md`), the skill whose scripts it covers
-  (`cli-0012-qfai-migration-v1-to-v2.md`), or the subject several commands share
-  (`cli-0020-shipped-workflows.md`).
+  (`cli-0014-qfai-validate.md`), the skill whose scripts it covers
+  (`cli-0010-qfai-migration-v1-to-v2.md`), or the subject several commands share
+  (`cli-0018-shipped-workflows.md`).
 - Indexed by ID in `.qfai/spec/03_contract/contracts.md`, one row per contract.
 
 `qfai validate` reports a contract whose ID, file name and index row disagree.

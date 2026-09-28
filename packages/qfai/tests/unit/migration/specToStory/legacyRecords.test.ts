@@ -10,13 +10,13 @@ import {
 describe("legacy migration records", () => {
   it("reads heading examples, cases and rules without losing their source text", () => {
     const example = parseLegacyRecords(
-      "# Examples\n\n## EX-0011-0001: Normal cycle\n\n- BR-Ref: BR-0011-0003\n- Given an item\n- When it runs\n- Then it passes\n",
+      "# Examples\n\n## EX-0011-0001: Normal cycle\n\n- BR-Ref: BR-0009-0003\n- Given an item\n- When it runs\n- Then it passes\n",
       "EX",
       "05_Examples.md",
     )[0];
     expect(example?.cells).toMatchObject({
       "EX-ID": "EX-0011-0001",
-      "BR-Ref": "BR-0011-0003",
+      "BR-Ref": "BR-0009-0003",
       Input: "Given an item\nWhen it runs",
       Expected: "Then it passes",
     });
@@ -35,7 +35,7 @@ describe("legacy migration records", () => {
     });
 
     const rule = parseLegacyRecords(
-      "# Rules\n\n## BR-0011-0003: Test first\n\n- AC-Refs: AC-0011-0001\n- A failing test MUST be written first.\n",
+      "# Rules\n\n## BR-0009-0003: Test first\n\n- AC-Refs: AC-0011-0001\n- A failing test MUST be written first.\n",
       "BR",
       "04_Business-Rules.md",
     )[0];
@@ -64,7 +64,7 @@ describe("legacy migration records", () => {
 
   it("retains a heading record's retirement status", () => {
     const records = parseLegacyRecords(
-      "## EX-0012-0002: Old screenshot\n\n- Status: superseded by EX-0012-0030\n- BR-Ref: BR-0012-0002\n- Given a screen\n- Then a screenshot exists\n",
+      "## EX-0012-0002: Old screenshot\n\n- Status: superseded by EX-0012-0030\n- BR-Ref: BR-0010-0002\n- Given a screen\n- Then a screenshot exists\n",
       "EX",
       "spec-0012/05_Examples.md",
     );

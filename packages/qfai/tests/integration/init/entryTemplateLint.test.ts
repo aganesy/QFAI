@@ -2,8 +2,8 @@
  * Integration: the entry directive above the shipped templates' first heading passes the shipped
  * Markdown lint configuration, which still requires that first heading to be level 1.
  */
-// QFAI:AC-0001-0203-03
-// QFAI:EX-0001-0203-10
+// QFAI:AC-0001-0196-03
+// QFAI:EX-0001-0196-10
 import { spawnSync } from "node:child_process";
 import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

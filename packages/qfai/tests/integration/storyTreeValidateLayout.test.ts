@@ -35,7 +35,7 @@ function configured() {
 }
 
 describe("story-tree layout dispatch", () => {
-  // QFAI:EX-0001-0053-01
+  // QFAI:EX-0001-0051-01
   it("runs story findings only when the configured spec root has no legacy pack", async () => {
     await put(
       `${specs}/02_business-flow/business-flow-0001/business-flow.md`,
@@ -56,7 +56,7 @@ describe("story-tree layout dispatch", () => {
     expect(legacyResult.issues.some((item) => item.code.startsWith("QFAI-STORY-"))).toBe(false);
   });
 
-  // QFAI:EX-0001-0053-01
+  // QFAI:EX-0001-0051-01
   it("fails every profile on the old layout with one migration finding", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
     const profiles: ValidationProfile[] = [
@@ -79,7 +79,7 @@ describe("story-tree layout dispatch", () => {
     }
   });
 
-  // QFAI:EX-0001-0053-01
+  // QFAI:EX-0001-0051-01
   it("detects the former default spec root when the new root is configured", async () => {
     await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
 
@@ -90,8 +90,8 @@ describe("story-tree layout dispatch", () => {
     expect(result.issues[0]?.file).toBe(path.join(root, ".qfai", "specs"));
   });
 
-  // QFAI:AC-0001-0053-06
-  // QFAI:EX-0001-0053-07
+  // QFAI:AC-0001-0051-06
+  // QFAI:EX-0001-0051-07
   it("reports a constraint row whose ID is not its place in its section", async () => {
     const table = "| ID | Constraint | Rationale |\n| --- | --- | --- |\n";
     const constraints = (technical: string): string =>
@@ -126,7 +126,7 @@ describe("story-tree layout dispatch", () => {
   });
 
   it("keeps only the named flow's finding under --flow", async () => {
-    // QFAI:EX-0001-0155-02
+    // QFAI:EX-0001-0150-02
     for (const number of ["0001", "0002"]) {
       await put(
         `${specs}/02_business-flow/business-flow-${number}/business-flow.md`,

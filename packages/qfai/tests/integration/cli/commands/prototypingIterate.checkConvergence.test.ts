@@ -15,7 +15,7 @@
  * other on-disk file, and MUST NOT invoke the iterate loop, capture,
  * serve, license-verify, or validate paths.
  */
-// QFAI:AC-0001-0191-01
+// QFAI:AC-0001-0184-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile, stat } from "node:fs/promises";
 import os from "node:os";
@@ -64,7 +64,7 @@ async function seedPrototypingJson(root: string, body: Record<string, unknown>):
 }
 
 describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 1: cycle 9 + converged loop (converged + accepted) -> exit 0 + report", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -88,7 +88,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("converged with a negative acceptedIterationIndex is NOT converged", async () => {
     // The peek and the sealed-loop guard must agree on what counts as an
     // accepted iteration. `refuseWhenLoopConverged` treats a negative index as
@@ -115,7 +115,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 2: max-iterations + acceptedIterationIndex null -> exit 2 + Not converged", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -139,7 +139,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 3: license-verify-fail -> exit 2 + Not converged + reason", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -163,7 +163,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 4: prototyping.json missing -> exit 2 + diagnostic", async () => {
     const root = await newTempDir();
     // Do NOT seed prototyping.json.
@@ -183,7 +183,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 5: --cycle 5 --check-convergence reports the requested cycle (not 9)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -214,7 +214,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 6a: --check-convergence WITHOUT --cycle parses as a known flag", () => {
     // argparse must recognise --check-convergence as a known boolean
     // flag (not an unknown-flag error).
@@ -224,7 +224,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     expect(parsed.options.prototypingAction).toBe("iterate");
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 6b: --check-convergence WITHOUT --cycle defaults the peek to cycle 9", async () => {
     // Run through the CLI entry point, which supplies the default: without
     // --cycle the peek reads cycle 9 (the hint's recommendation) and does
@@ -253,7 +253,7 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
-  // QFAI:EX-0001-0191-01
+  // QFAI:EX-0001-0184-01
   it("Test 7: --check-convergence does NOT invoke iterate (no iter-NN/iterate-plan.json written)", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {

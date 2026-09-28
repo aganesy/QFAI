@@ -1,13 +1,13 @@
-// QFAI:AC-0001-0219-01
-// QFAI:AC-0001-0219-02
-// QFAI:AC-0001-0219-03
-// QFAI:AC-0001-0219-04
-// QFAI:AC-0001-0219-05
-// QFAI:AC-0001-0219-06
-// QFAI:AC-0001-0219-07
-// QFAI:AC-0001-0219-08
-// QFAI:AC-0001-0219-09
-// QFAI:AC-0001-0219-10
+// QFAI:AC-0001-0212-01
+// QFAI:AC-0001-0212-02
+// QFAI:AC-0001-0212-03
+// QFAI:AC-0001-0212-04
+// QFAI:AC-0001-0212-05
+// QFAI:AC-0001-0212-06
+// QFAI:AC-0001-0212-07
+// QFAI:AC-0001-0212-08
+// QFAI:AC-0001-0212-09
+// QFAI:AC-0001-0212-10
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -83,7 +83,7 @@ async function runUntil(run: JournalRun, step: string): Promise<WorkOrder> {
 const names = (decision: { events: { type: string }[] }) =>
   decision.events.map((event) => event.type);
 
-// QFAI:EX-0001-0219-01
+// QFAI:EX-0001-0212-01
 it("Heavy review adds the heavy reviewers to every stage and changes nothing else", async () => {
   const { run } = await routedBy({ intent: "defect", risks: ["data-loss"] });
   const facts = await runFacts();
@@ -105,7 +105,7 @@ it("Heavy review adds the heavy reviewers to every stage and changes nothing els
   });
 });
 
-// QFAI:EX-0001-0219-02
+// QFAI:EX-0001-0212-02
 it("A user gate stops at the declared decision point; without it the decision is adopted", async () => {
   const gated = await routedBy({ intent: "surface-contradiction", gate: "decide" });
   answerOpen(gated.run, "plan", "proceed");
@@ -147,7 +147,7 @@ it("A user gate stops at the declared decision point; without it the decision is
   });
 });
 
-// QFAI:EX-0001-0219-03
+// QFAI:EX-0001-0212-03
 it("A breaking change without an upstream record asks to confirm the plan, then nothing stops", async () => {
   const { run, decision } = await routedBy({ intent: "defect", risks: ["breaking"] });
   const confirmed = answerOpen(run, "plan", "proceed");
@@ -168,8 +168,8 @@ it("A breaking change without an upstream record asks to confirm the plan, then 
   });
 });
 
-// QFAI:EX-0001-0219-04
-// QFAI:EX-0001-0219-11
+// QFAI:EX-0001-0212-04
+// QFAI:EX-0001-0212-11
 it("A release gate asks at the end of a fix-regression run, and finish waits for the approval", async () => {
   const facts = {
     intent: "defect-regression" as const,
@@ -232,7 +232,7 @@ async function driveUntilDone(run: JournalRun) {
   }
 }
 
-// QFAI:EX-0001-0219-05
+// QFAI:EX-0001-0212-05
 it("A hand-off puts the release question before the hand-off step runs", async () => {
   const { run } = await routedBy(
     { intent: "order", qualifiers: ["human-run"] },
@@ -290,7 +290,7 @@ function issuedUnder(stages: Stages, route: string, modifiers: WorkflowModifier[
   return issued;
 }
 
-// QFAI:EX-0001-0219-06
+// QFAI:EX-0001-0212-06
 it("No set of modifiers changes the stages or steps of any catalog route", async () => {
   const plans = await planFacts();
   const differing: string[] = [];
@@ -306,7 +306,7 @@ it("No set of modifiers changes the stages or steps of any catalog route", async
   expect(differing).toEqual([]);
 });
 
-// QFAI:EX-0001-0219-07
+// QFAI:EX-0001-0212-07
 it("A raised modifier stays for the rest of the run and the summary says where it came from", async () => {
   const { run } = await routedBy({ intent: "defect" });
   const facts = await runFacts();
@@ -341,8 +341,8 @@ it("A raised modifier stays for the rest of the run and the summary says where i
   }
 });
 
-// QFAI:EX-0001-0219-09
-// QFAI:EX-0001-0219-10
+// QFAI:EX-0001-0212-09
+// QFAI:EX-0001-0212-10
 it("Each modifier attaches when any one of its signals holds, and not otherwise", () => {
   const heavy = (fields: Parameters<typeof extraction>[0]) =>
     extractionModifiers(extraction(fields)).includes("review:heavy");
@@ -378,7 +378,7 @@ it("Each modifier attaches when any one of its signals holds, and not otherwise"
   });
 });
 
-// QFAI:EX-0001-0219-12
+// QFAI:EX-0001-0212-12
 it("A route's default modifiers apply whatever its extraction says", async () => {
   const modifiersOf = async (facts: Parameters<typeof routedBy>[0], fields: object = {}) => {
     const { run } = await routedBy(facts, fields);
@@ -397,7 +397,7 @@ it("A route's default modifiers apply whatever its extraction says", async () =>
   ]);
 });
 
-// QFAI:EX-0001-0219-13
+// QFAI:EX-0001-0212-13
 it("A cited decision row in force answers the decision it settled; a missing one stops the run", async () => {
   const facts = {
     intent: "order" as const,
@@ -431,7 +431,7 @@ it("A cited decision row in force answers the decision it settled; a missing one
   });
 });
 
-// QFAI:EX-0001-0219-14
+// QFAI:EX-0001-0212-14
 it("A modifier outside the three is refused in a plan and in a result", () => {
   const plan = [
     "route: edit-text",
@@ -470,7 +470,7 @@ it("A modifier outside the three is refused in a plan and in a result", () => {
   });
 });
 
-// QFAI:EX-0001-0219-15
+// QFAI:EX-0001-0212-15
 it("A critical decision reaches the operator without the user gate, which then holds", async () => {
   const { run } = await routedBy({ intent: "surface-contradiction" });
   await runUntil(run, "sdd-triage");

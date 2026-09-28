@@ -275,7 +275,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
 });
 
 describe("the screen reader under an absolute contracts directory", () => {
-  // QFAI:EX-0001-0124-03
+  // QFAI:EX-0001-0120-01
   it("returns every screen of a contract outside the project root", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-root-"));
     const contractsDir = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-abs-"));

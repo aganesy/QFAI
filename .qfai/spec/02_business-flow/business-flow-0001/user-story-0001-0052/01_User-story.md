@@ -1,5 +1,5 @@
-# US-0001-0052: Audit profile task forms
+# US-0001-0052: Contract index and contract-layer validation
 
 ## User Story
 
-As a UI-contract author, I want `auditProfile.ts` to accept `primary_tasks` only in the structured `{id, label, acceptance}` form and reject a plain string item, and `QFAI-AUD-020` to name the recommended ceiling in its warning, so that every task I declare carries an acceptance condition.
+As a maintainer of a project on the story tree, I want `qfai validate` to report a contract file that `contracts.md` does not list, and to read the project's steering files from the contract layer, so that the contract index is complete and the quality-gate commands have one home.

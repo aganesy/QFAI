@@ -417,10 +417,10 @@ describe("migration step 10: the evidence directory stays local", () => {
 });
 
 describe("migration steps 11 and 12: the free-text entry", () => {
-  // QFAI:AC-0004-0041-01
+  // QFAI:AC-0004-0013-01
   it("installs the skills, host links, entry directive and ignore lines", async () => {
-    // QFAI:EX-0004-0041-01
-    // QFAI:EX-0004-0041-11
+    // QFAI:EX-0004-0013-01
+    // QFAI:EX-0004-0013-11
     const root = await clone(migrated10);
     const before = await entries(root);
     const preview = await stepIn(root, 11, ["--dry-run"]);
@@ -469,9 +469,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(outside).toEqual([]);
   });
 
-  // QFAI:AC-0004-0041-01
+  // QFAI:AC-0004-0013-01
   it("leaves an occupied link path or a linked entry point for a person", async () => {
-    // QFAI:EX-0004-0041-02
+    // QFAI:EX-0004-0013-02
     const occupied = await clone(migrated10);
     await mkdir(path.join(occupied, ".claude/skills/qfai-run"), { recursive: true });
     await writeFile(path.join(occupied, ".claude/skills/qfai-run/notes.md"), "ours\n");
@@ -504,10 +504,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     ).toBe(true);
   });
 
-  // QFAI:AC-0004-0041-02
+  // QFAI:AC-0004-0013-02
   it("archives a customised shipped skill whole and never overwrites the archive", async () => {
-    // QFAI:EX-0004-0041-03
-    // QFAI:EX-0004-0041-04
+    // QFAI:EX-0004-0013-03
+    // QFAI:EX-0004-0013-04
     const root = await clone(migrated10);
     const skill = path.join(root, ".qfai/assistant/skill/qfai-sdd/SKILL.md");
     await appendFile(skill, "\nA line the project added.\n");
@@ -534,9 +534,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
-  // QFAI:AC-0004-0041-03
+  // QFAI:AC-0004-0013-03
   it("passes on a migrated project without writing, and workflow start is not refused", async () => {
-    // QFAI:EX-0004-0041-05
+    // QFAI:EX-0004-0013-05
     const root = await clone(migrated11);
     const before = await fingerprint(root);
     const result = await stepIn(root, 12);
@@ -549,9 +549,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect((await checkPlans(root, loaded.config)).cause).toBeUndefined();
   });
 
-  // QFAI:AC-0004-0041-04
+  // QFAI:AC-0004-0013-04
   it("names a routing override that drops a required reviewer", async () => {
-    // QFAI:EX-0004-0041-06
+    // QFAI:EX-0004-0013-06
     const root = await clone(migrated11);
     const override = await routingWithoutCompletionReviewer();
     await writeConfig(root, (config) => {
@@ -566,10 +566,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
-  // QFAI:AC-0004-0041-04
+  // QFAI:AC-0004-0013-04
   it("names an invalid workflow mode and a plan step that is not installed", async () => {
-    // QFAI:EX-0004-0041-07
-    // QFAI:EX-0004-0041-08
+    // QFAI:EX-0004-0013-07
+    // QFAI:EX-0004-0013-08
     const paused = await clone(migrated11);
     await writeConfig(paused, (config) => {
       config.workflow = { mode: "paused" };
@@ -593,9 +593,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(missing)).toBe(before12);
   });
 
-  // QFAI:AC-0004-0041-04
+  // QFAI:AC-0004-0013-04
   it("names a lost entry directive, ignore line or qfai-run link", async () => {
-    // QFAI:EX-0004-0041-09
+    // QFAI:EX-0004-0013-09
     const cases: Array<[string, (root: string) => Promise<void>, string]> = [
       [
         "entry-directive",
@@ -632,9 +632,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     }
   });
 
-  // QFAI:AC-0004-0041-05
+  // QFAI:AC-0004-0013-05
   it("changes nothing on a rerun and reports the same in a dry run", async () => {
-    // QFAI:EX-0004-0041-10
+    // QFAI:EX-0004-0013-10
     const root = await clone(migrated11);
     const before = await fingerprint(root);
     const again = await stepIn(root, 11);
@@ -648,9 +648,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
-  // QFAI:AC-0004-0041-05
+  // QFAI:AC-0004-0013-05
   it("refuses only before step 1", async () => {
-    // QFAI:EX-0004-0041-12
+    // QFAI:EX-0004-0013-12
     const old = await oldProject();
     const before = await fingerprint(old);
     for (const step of [11, 12]) {
@@ -668,9 +668,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     }
   });
 
-  // QFAI:AC-0004-0041-06
+  // QFAI:AC-0004-0013-06
   it("ends the skill procedure by handing over to qfai-run", async () => {
-    // QFAI:EX-0004-0041-13
+    // QFAI:EX-0004-0013-13
     const skill = await readFile(
       path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
@@ -687,9 +687,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  // QFAI:AC-0004-0041-07
+  // QFAI:AC-0004-0013-07
   it("retires the old skill name on init --force", async () => {
-    // QFAI:EX-0004-0041-14
+    // QFAI:EX-0004-0013-14
     const root = await scratch("qfai-migrate-retired-");
     await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
     const old = "qfai-migration-spec-to-story";
@@ -720,9 +720,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(naming).toEqual([]);
   });
 
-  // QFAI:AC-0004-0041-04
+  // QFAI:AC-0004-0013-04
   it("names an evidence re-include line and leaves the managed negations alone", async () => {
-    // QFAI:EX-0004-0041-16
+    // QFAI:EX-0004-0013-15
     const root = await clone(migrated11);
     await appendFile(path.join(root, ".gitignore"), "!.qfai/evidence/workflow/\n");
     const before = await fingerprint(root);
@@ -734,9 +734,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
-  // QFAI:AC-0004-0041-04
+  // QFAI:AC-0004-0013-04
   it("names every evidence path git still tracks", async () => {
-    // QFAI:EX-0004-0041-17
+    // QFAI:EX-0004-0013-16
     const root = await clone(migrated11);
     git(root, ["init", "-q"]);
     const tracked = [".qfai/evidence/sdd-BF-0001.md", ".qfai/evidence/workflow/r1/summary.json"];
@@ -753,9 +753,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await fingerprint(root)).toBe(before);
   });
 
-  // QFAI:AC-0004-0041-03
+  // QFAI:AC-0004-0013-03
   it("passes with local evidence inside and outside a repository", async () => {
-    // QFAI:EX-0004-0041-18
+    // QFAI:EX-0004-0013-17
     const ignore = await readFile(path.join(migrated11, ".gitignore"), "utf8");
     expect(ignore).toContain("\n!.qfai/\n");
     expect(ignore).toContain("\n!.qfai/assistant/**\n");

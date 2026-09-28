@@ -1,5 +1,5 @@
-# US-0001-0055: Decision and open-question table validation
+# US-0001-0055: Example, criterion, and rule links
 
 ## User Story
 
-As a maintainer of a project on the story tree, I want `qfai validate` to hold `decisions.md` and `open-questions.md` to their four columns and their status vocabularies, and to decide whether a keyword row holds from its Status alone, so that both tables stay machine-readable and an unanswered question cannot pass as decided.
+As a maintainer of a project on the story tree, I want `qfai validate` to report a broken link between examples, acceptance criteria and business rules, so that every acceptance criterion is illustrated and every rule rests on examples that exist.

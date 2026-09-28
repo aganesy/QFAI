@@ -56,8 +56,8 @@ async function stepText(name: string): Promise<string> {
 }
 
 describe("the steps the routes add to qfai-implement", () => {
-  // QFAI:AC-0001-0207-02
-  // QFAI:EX-0001-0207-02
+  // QFAI:AC-0001-0200-02
+  // QFAI:EX-0001-0200-02
   it("lists each one, owned by qfai-implement, with its review profile routed", async () => {
     const owned = await skillSteps("qfai-implement");
     const skill = await readShipped("skill/qfai-implement/SKILL.md");
@@ -75,8 +75,8 @@ describe("the steps the routes add to qfai-implement", () => {
     }
   });
 
-  // QFAI:AC-0001-0207-02
-  // QFAI:EX-0001-0207-02
+  // QFAI:AC-0001-0200-02
+  // QFAI:EX-0001-0200-02
   it("changes no tracked file in the steps that only observe", async () => {
     for (const name of ["implement-bisect", "implement-minimize", "implement-benchmark"]) {
       const written = flat(sectionOf(await stepText(name), "## What it writes"));
@@ -88,8 +88,8 @@ describe("the steps the routes add to qfai-implement", () => {
     }
   });
 
-  // QFAI:AC-0001-0207-02
-  // QFAI:EX-0001-0207-02
+  // QFAI:AC-0001-0200-02
+  // QFAI:EX-0001-0200-02
   it("states each step's own obligation", async () => {
     const bisect = flat(await stepText("implement-bisect"));
     expect(bisect).toMatch(/report `branch: \{ outcome: "revert" \}` when all three hold/i);
@@ -128,8 +128,8 @@ describe("the steps the routes add to qfai-implement", () => {
 });
 
 describe("implement-diagnose", () => {
-  // QFAI:AC-0001-0222-01
-  // QFAI:EX-0001-0222-01
+  // QFAI:AC-0001-0215-01
+  // QFAI:EX-0001-0215-01
   it("gives exactly one verdict from the eleven", async () => {
     const text = await stepText("implement-diagnose");
     for (const verdict of VERDICTS) {
@@ -141,7 +141,7 @@ describe("implement-diagnose", () => {
     );
   });
 
-  // QFAI:AC-0001-0222-01
+  // QFAI:AC-0001-0215-01
   it("changes no tracked file in read-only mode", async () => {
     const text = await stepText("implement-diagnose");
     const readOnly = flat(sectionOf(text, "## Read-only mode"));

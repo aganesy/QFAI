@@ -9,7 +9,7 @@
  * The pure-function bucket parser is the unit-level surface; the
  * integration-level Reviewer-Gate emission is tested separately.
  */
-// QFAI:EX-0001-0175-01
+// QFAI:EX-0001-0169-01
 
 import { describe, expect, it } from "vitest";
 
@@ -148,7 +148,7 @@ describe("hard-required names with hyphens", () => {
   });
 
   it("does not read a longer name that ends in a declared one as that name", () => {
-    // QFAI:EX-0001-0175-05
+    // QFAI:EX-0001-0169-05
     for (const entry of ["a full `CON-UI-NNNN`", "a full CON_UI-NNNN", "a full `UI-NNNN-X`"]) {
       expect(classifyHardRequiredEntries([entry], "qfai-verify").unknown).toEqual([entry]);
     }

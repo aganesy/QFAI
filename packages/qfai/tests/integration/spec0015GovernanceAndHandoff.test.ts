@@ -11,19 +11,19 @@
  * the earlier `execFile`-against-dist-binary approach with an
  * isolation-safe variant.
  */
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0176-01
-// QFAI:EX-0001-0176-01
-// QFAI:EX-0001-0177-01
-// QFAI:EX-0001-0177-01
-// QFAI:EX-0001-0178-01
-// QFAI:EX-0001-0178-01
-// QFAI:EX-0001-0179-01
-// QFAI:EX-0001-0179-01
-// QFAI:EX-0001-0181-01
-// QFAI:EX-0001-0181-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0170-01
+// QFAI:EX-0001-0170-01
+// QFAI:EX-0001-0171-01
+// QFAI:EX-0001-0171-01
+// QFAI:EX-0001-0172-01
+// QFAI:EX-0001-0172-01
+// QFAI:EX-0001-0173-01
+// QFAI:EX-0001-0173-01
+// QFAI:EX-0001-0174-01
+// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -93,7 +93,7 @@ const SKILL_OWN_POLICY = `# qfai-fixture
 `;
 
 describe("spec-0015 autopilot policy CHG-006", () => {
-  it("QFAI:EX-0001-0175-01 — error: a baseline without the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a baseline without the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
     await writeBaseline("# Shared Skill Operating Baseline\n");
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
@@ -103,7 +103,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0175-01 — error: a shared section missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a shared section missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
     // Heading present, buckets gone: every skill loses the prototype at once,
     // so the finding names each missing bucket against the baseline.
     await writeBaseline(
@@ -118,7 +118,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toMatch(/hard-required/);
   });
 
-  it("QFAI:EX-0001-0175-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
     await writeBaseline(BASELINE_3_BUCKET);
     await writeSkillMd(
       "qfai-sdd",
@@ -130,8 +130,8 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toContain("requirement source");
   });
 
-  // QFAI:EX-0001-0175-04
-  it("QFAI:EX-0001-0175-01 — normal: the baseline and a skill adding only its own entries pass; widened auto-decide flagged as warning", async () => {
+  // QFAI:EX-0001-0169-04
+  it("QFAI:EX-0001-0169-01 — normal: the baseline and a skill adding only its own entries pass; widened auto-decide flagged as warning", async () => {
     await writeBaseline(BASELINE_3_BUCKET);
     await writeSkillMd("qfai-x", SKILL_OWN_POLICY);
     await writeSkillMd("qfai-z", "# qfai-z\nNo policy of its own.\n");
@@ -151,7 +151,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
 });
 
 describe("spec-0015 envelope audit-log CHG-006", () => {
-  it("QFAI:EX-0001-0176-01 — normal: an envelope AskUserQuestion writes a shaped JSON record", async () => {
+  it("QFAI:EX-0001-0170-01 — normal: an envelope AskUserQuestion writes a shaped JSON record", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "Adopt option X?",
@@ -171,7 +171,7 @@ describe("spec-0015 envelope audit-log CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0176-01 — boundary: non-envelope question writes no record", async () => {
+  it("QFAI:EX-0001-0170-01 — boundary: non-envelope question writes no record", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "format pick?",
@@ -185,7 +185,7 @@ describe("spec-0015 envelope audit-log CHG-006", () => {
 });
 
 describe("spec-0015 handoff schema CHG-006", () => {
-  it("QFAI:EX-0001-0177-01 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:EX-0001-0171-01 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
       path.join(root, HANDOFF_SCHEMA_REL),
@@ -207,7 +207,7 @@ describe("spec-0015 handoff schema CHG-006", () => {
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0177-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
+  it("QFAI:EX-0001-0171-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
     const issues = validateHandoff({
       companyName: "Acme",
       primarySpecId: "spec-0012",
@@ -218,7 +218,7 @@ describe("spec-0015 handoff schema CHG-006", () => {
 });
 
 describe("spec-0015 finding-code catalog CHG-006", () => {
-  it("QFAI:EX-0001-0178-01 — normal: 7 catalog codes registered; the catalog declares membership only, no severity", () => {
+  it("QFAI:EX-0001-0172-01 — normal: 7 catalog codes registered; the catalog declares membership only, no severity", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
     expect(codes.length).toBe(7);
     for (const entry of JUSTIFICATION_CATALOG) {
@@ -226,7 +226,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0178-01 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
+  it("QFAI:EX-0001-0172-01 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
     const dir = path.join(root, ".qfai", "review");
     await mkdir(dir, { recursive: true });
     // Empty justification → rejected for every catalog code.
@@ -275,7 +275,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
    * live contract and must not be rewritten to match.
    */
   const repoRoot = path.resolve(__dirname, "../../../..");
-  it("QFAI:EX-0001-0178-01 — the active routing contract keeps membership and severity separate", async () => {
+  it("QFAI:EX-0001-0172-01 — the active routing contract keeps membership and severity separate", async () => {
     const text = await readFile(
       path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "cli-0001-assistant-routing.md"),
       "utf-8",
@@ -291,7 +291,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
 });
 
 describe("spec-0015 audit log CLI CHG-006", () => {
-  it("QFAI:EX-0001-0179-01 — normal: audit log lists newest-first + --scope/--operator/--clause filter; --format json works", async () => {
+  it("QFAI:EX-0001-0173-01 — normal: audit log lists newest-first + --scope/--operator/--clause filter; --format json works", async () => {
     await writeDecisionRecord({
       root,
       question: "Q1",
@@ -324,7 +324,7 @@ describe("spec-0015 audit log CLI CHG-006", () => {
     expect(parsed[0]?.scope).toBe("scope-expansion");
   });
 
-  it("QFAI:EX-0001-0179-01 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
+  it("QFAI:EX-0001-0173-01 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
     const written: string[] = [];
     const errs: string[] = [];
     const exit = await runAuditLog({
@@ -340,7 +340,7 @@ describe("spec-0015 audit log CLI CHG-006", () => {
 });
 
 describe("spec-0015 stale-ref report CHG-006", () => {
-  it("QFAI:EX-0001-0181-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
+  it("QFAI:EX-0001-0174-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
@@ -348,7 +348,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
-  it("QFAI:EX-0001-0181-01 — error: a stale ref at HEAD reports warning", async () => {
+  it("QFAI:EX-0001-0174-01 — error: a stale ref at HEAD reports warning", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(

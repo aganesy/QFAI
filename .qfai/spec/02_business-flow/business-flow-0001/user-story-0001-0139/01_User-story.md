@@ -1,5 +1,5 @@
-# US-0001-0139: Accepted screen capture mirror
+# US-0001-0139: Duplicate capture and missing-route findings
 
 ## User Story
 
-As a maintainer, I want accepted-iteration content mirrored to `.qfai/evidence/prototyping/screenshots/<screen-id>.png` and `.qfai/evidence/prototyping/html/<screen-id>.html` on convergence, with screen IDs normalised to underscore casing throughout, so that the aggregate directory and the per-UI-contract directory use the same form.
+As a reviewer, I want md5-based duplicate-capture detection (`lap-009`) and missing-route detection (`lap-010`) reported as advisory-failing layout anti-patterns that need a written justification to override, so that silent screen collisions and unreachable routes block convergence by default.

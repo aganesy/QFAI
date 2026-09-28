@@ -36,8 +36,8 @@ function step(name: string): Promise<string> {
 }
 
 describe("qfai-triage as a stage skill", () => {
-  // QFAI:AC-0001-0221-04
-  // QFAI:EX-0001-0221-05
+  // QFAI:AC-0001-0214-04
+  // QFAI:EX-0001-0214-05
   it("lists the nine triage steps, closing last, and opens its description with its trigger", async () => {
     const steps = await skillSteps("qfai-triage");
     expect([...steps].sort()).toEqual([...TRIAGE_STEPS].sort());
@@ -65,8 +65,8 @@ describe("qfai-triage as a stage skill", () => {
     );
   });
 
-  // QFAI:AC-0001-0221-04
-  // QFAI:EX-0001-0221-05
+  // QFAI:AC-0001-0214-04
+  // QFAI:EX-0001-0214-05
   it("routes each step by name on its own profile and gives the skill no entry", async () => {
     const effective = await readEffectiveRouting(defaultConfig);
     expect(effective.routing?.has("qfai-triage")).toBe(false);
@@ -83,8 +83,8 @@ describe("qfai-triage as a stage skill", () => {
 });
 
 describe("qfai-triage invoked by name", () => {
-  // QFAI:AC-0001-0221-04
-  // QFAI:EX-0001-0221-06
+  // QFAI:AC-0001-0214-04
+  // QFAI:EX-0001-0214-06
   it("runs the duplicate check and the close for a duplicate question, and ends at its stage", async () => {
     const skill = await readShipped(SKILL);
     const steps = sectionOf(skill, "## Steps");
@@ -120,8 +120,8 @@ describe("qfai-triage invoked by name", () => {
 });
 
 describe("a split request", () => {
-  // QFAI:AC-0001-0221-06
-  // QFAI:EX-0001-0221-08
+  // QFAI:AC-0001-0214-06
+  // QFAI:EX-0001-0214-08
   it("records each child as a follow-up with its dependencies and routes none of them", async () => {
     const decompose = flat(await step("triage-decompose"));
     expect(decompose).toMatch(

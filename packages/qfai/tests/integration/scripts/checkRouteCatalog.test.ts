@@ -1,6 +1,6 @@
-// QFAI:AC-0001-0224-01
-// QFAI:AC-0001-0224-02
-// QFAI:AC-0001-0224-03
+// QFAI:AC-0001-0217-01
+// QFAI:AC-0001-0217-02
+// QFAI:AC-0001-0217-03
 /**
  * The route catalog lane: the contract's route rows, the change requests they cite and the plans
  * the package ships, held together on the tree and against the base of a change.
@@ -39,7 +39,7 @@ function approvedBy(route: string): string {
   return /Approved by (DEC-\d{4})/.exec(row ?? "")?.[1] ?? "";
 }
 
-// QFAI:EX-0001-0224-01
+// QFAI:EX-0001-0217-01
 it("The shipped catalog, a row citing an unknown decision, and one citing a row that is no change request", () => {
   const unknown = withRow("edit-text", (row) =>
     row.replace(`Approved by ${approvedBy("edit-text")}.`, "Approved by DEC-9999."),
@@ -59,7 +59,7 @@ it("The shipped catalog, a row citing an unknown decision, and one citing a row 
   });
 });
 
-// QFAI:EX-0001-0224-02
+// QFAI:EX-0001-0217-02
 it("The shipped plans, an extra plan, a missing plan, and a plan its row no longer states", () => {
   const plans = readPlans(REPO_ROOT);
   const extra = new Map([...plans, ["triage-everything", plans.get("close-no-change") ?? ""]]);
@@ -87,7 +87,7 @@ it("The shipped plans, an extra plan, a missing plan, and a plan its row no long
 });
 
 const TRIAGE_STALE = (cited: string) =>
-  `| BR-0017-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Default modifiers: none. Decision points: none. Branch points: none. Approved by ${cited}. | EX-0001-0227-01 |`;
+  `| BR-0017-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Default modifiers: none. Decision points: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
 
 // The lines with `added` inserted after the last line `matches` holds.
 function insertedAfterLast(lines: string[], matches: (line: string) => boolean, added: string) {
@@ -110,7 +110,7 @@ function withNewRequest(): string {
   return insertedAfterLast(decisions.split("\n"), (line) => line.startsWith("| DEC-"), row);
 }
 
-// QFAI:EX-0001-0224-03
+// QFAI:EX-0001-0217-03
 it("A new route row citing the catalog's first approval, and one citing a new change request", () => {
   const base = { contract, decisions };
   const reused = { contract: withTriageStale(approvedBy("edit-text")), decisions };

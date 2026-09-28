@@ -1,11 +1,10 @@
-# US-0001-0219: Raise review and gates without changing the steps
+# US-0001-0219: Read a run recorded under a retired route id
 
 ## User Story
 
-As an operator, I want a risky or uncertain request to get heavier review and to stop for my decision where its route allows, without the route running different steps, so that the plan stays predictable while the checks match the risk.
+As an operator who upgraded QFAI, I want my earlier run records to show the route that replaced their old one, and an unfinished old run to stop safely, so that no record is misread and no run continues on a plan that no longer exists.
 
 ## Non-goals
 
-- A modifier that lowers a review or removes a stop.
-- A modifier that adds or drops a step.
-- A modifier a project defines for itself.
+- Rewriting a stored run record.
+- Continuing an old run on its successor's plan.

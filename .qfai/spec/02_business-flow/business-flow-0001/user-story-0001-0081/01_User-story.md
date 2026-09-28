@@ -1,5 +1,5 @@
-# US-0001-0081: Tool Selection Documentation
+# US-0001-0081: Reference Pool Authoring
 
 ## User Story
 
-As a QFAI user, I want the chosen test tools per layer documented with rationale and a minimum runnable path, so that CI and local development are actionable.
+As a designer, I want adopted and rejected reference signals separated in `04_Sources.md`, framed as inputs to deviate from, so that downstream remixing does not blindly follow a single template.

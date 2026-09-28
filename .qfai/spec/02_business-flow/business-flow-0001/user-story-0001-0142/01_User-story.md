@@ -1,5 +1,5 @@
-# US-0001-0142: Canonical primary UI-contract pin
+# US-0001-0142: Out-of-range cycle guidance
 
 ## User Story
 
-As an operator, I want the `primaryUiContract` pin to accept only the full `UI-NNNN` form and to fail with one deterministic error naming that shape, so that the input-validation surface is unambiguous.
+As an operator, I want `iterate --cycle N` with N outside `0..9` to fail with a deterministic error that names the supported range and recommends the peek-mode equivalent, so that off-by-one CLI mistakes are self-diagnosable.

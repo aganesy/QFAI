@@ -1,7 +1,7 @@
-// QFAI:AC-0001-0227-08
-// QFAI:AC-0001-0221-01
-// QFAI:AC-0001-0221-02
-// QFAI:AC-0001-0222-01
+// QFAI:AC-0001-0220-08
+// QFAI:AC-0001-0214-01
+// QFAI:AC-0001-0214-02
+// QFAI:AC-0001-0215-01
 
 import { expect, it } from "vitest";
 
@@ -120,7 +120,7 @@ function accepted(running: Snapshot, workOrder: WorkOrder, extra: Partial<Result
   return error ? (error.code === "invalid-input" ? error.reasons : error.code) : "accepted";
 }
 
-// QFAI:EX-0001-0227-40
+// QFAI:EX-0001-0220-40
 it("Checked proposals with no new story bind the flow their route takes", async () => {
   const answer = await routed("answer-question", ["BF-0001"]);
   const plan = answer.verdict.plan;
@@ -147,7 +147,7 @@ it("Checked proposals with no new story bind the flow their route takes", async 
   });
 });
 
-// QFAI:EX-0001-0192-40
+// QFAI:EX-0001-0185-40
 it("A route that ends at triage-close admits the discussion records, not DESIGN.md", async () => {
   expect({
     records: bound(await routed("decide-acceptance", [], [".qfai/discussion/**"])),
@@ -158,7 +158,7 @@ it("A route that ends at triage-close admits the discussion records, not DESIGN.
   });
 });
 
-// QFAI:EX-0001-0221-02
+// QFAI:EX-0001-0214-02
 it("An answer-question proposal naming a source file, and an answer that changed a file", async () => {
   const { running, workOrder } = issued(await readyOn("answer-question", 0));
 
@@ -175,7 +175,7 @@ it("An answer-question proposal naming a source file, and an answer that changed
   });
 });
 
-// QFAI:EX-0001-0222-02
+// QFAI:EX-0001-0215-02
 it("The read-only recheck of a retriage-bundle run", async () => {
   const snapshot = await readyOn("retriage-bundle", 0, {
     plan: { route: "retriage-bundle", stages: [], writeScope: ["src/**"] },
@@ -216,7 +216,7 @@ const CLOSURE = {
   ],
 };
 
-// QFAI:EX-0001-0221-03
+// QFAI:EX-0001-0214-03
 it("An answer-question run whose answer shows the documentation lacks the option", async () => {
   const { running, workOrder } = issued(await readyOn("answer-question", 1));
   const result = resultFor(running, workOrder, { closure: CLOSURE });
@@ -235,7 +235,7 @@ it("An answer-question run whose answer shows the documentation lacks the option
   });
 });
 
-// QFAI:EX-0001-0221-01
+// QFAI:EX-0001-0214-01
 it("finish on an answer-question run that ran no verify stage", async () => {
   const snapshot: Snapshot = {
     ...(await readyOn("answer-question", 2)),
@@ -268,7 +268,7 @@ const CHANGE_NOTE_PASS = {
   ],
 };
 
-// QFAI:EX-0001-0223-06
+// QFAI:EX-0001-0216-06
 it("A change-compatibility verify passing the change note, and an edit-text one", async () => {
   const compatibility = issued(
     await readyOn("change-compatibility", 3, { flowBinding: { flowId: "BF-0001" } }),

@@ -3,16 +3,22 @@
 ## Criteria
 
 ```gherkin
-Feature: UI contract `primary_tasks` slot per screen
+Feature: Removed compatibility namespaces
   # AC-0001-0159-01
-  Scenario: UI contract template carries a `primary_tasks` list
-    Given the shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
-    When the template is read at `qfai init` time or by `/qfai-sdd` during contract authoring,
-    Then every entry in `screens[]` carries a `primary_tasks` list AND the requirements-analyst agent guide (under `.qfai/assistant/agent/requirements-analyst.md` or equivalent) instructs authoring ≥ 1 primary_task per screen.
+  Scenario: Full-Harness Block Drop on Cycle 0
+    Given a `prototyping.json` that carries a legacy `fullHarness` block from a prior pre-1.8.9 run,
+    When `prototyping iterate` runs cycle 0,
+    Then the cycle-0 hard reset removes the `fullHarness` block from the live `prototyping.json` so the post-1.8.9 evolution loop never re-reads stale `full-harness` / `perfect-100` / `weighted-total` runtime state.
 
   # AC-0001-0159-02
-  Scenario: validate lane blocks `/qfai-prototyping` when `primary_tasks` empty
-    Given a UI contract under `<paths.contractsDir>/ui/` in which a `screens[]` entry has an empty `primary_tasks` list, only plain string entries, or no `primary_tasks` key,
-    When the new validate lane (QFAI-AUD-001 aligned) runs as part of `qfai validate --fail-on error`,
-    Then the lane FAILS at severity error naming the offending screen ID and the violation, and a missing key's message names the legacy form, AND `/qfai-prototyping` MUST NOT proceed past its preflight gate until each `screens[]` entry has ≥ 1 primary_task; non-empty `primary_tasks` passes the lane silently.
+  Scenario: Verify Articles Restate Article V Without TC
+    Given a project on the story tree,
+    When `/qfai-verify` reads `references/articles.md`,
+    Then the file restates the constitution's Article V chain with no TC hop and no `tdd/test-list.md`, and its Tests hop answers a BF from E2E tests, an AC from integration or API tests, and an EX from any test.
+
+  # AC-0001-0159-03
+  Scenario: Verify Loads Constitution and Settings From the Recut Assistant Tree
+    Given a project with the `rule/ skill/ agent/ prompt/` assistant tree,
+    When `/qfai-verify` loads its constitution, routing and review profiles,
+    Then it reads the constitution from `.qfai/assistant/rule/`, takes routing and review profiles from the built-in defaults with the `qfai.config.yaml` overrides applied, and reads an agent's entry from its card frontmatter.
 ```

@@ -1,5 +1,5 @@
-# US-0001-0122: Unattended prototyping execution
+# US-0001-0122: Frozen stock-photo license catalog
 
 ## User Story
 
-As a CI operator, I want `/qfai-prototyping` to run from cycle 0 through cycle 9 with no per-cycle prompt and to exit non-zero with a deterministic code on lock drift, reviewer Playwright-session failure, license-verify failure (exit 66) or a mid-run change to the UI contract set, so that pipelines never block on stdin.
+As a legal and compliance reviewer, I want the stock-photo license catalog (allowed sources, license tiers and attribution format) frozen at cycle 0 and used as the single source for every `imageSources[]` row in the run, so that license verification is reproducible.

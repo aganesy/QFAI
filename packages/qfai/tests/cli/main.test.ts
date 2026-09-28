@@ -100,7 +100,7 @@ describe("cli root discovery", () => {
   });
 
   // CLI-arg errors exit 2 on every command
-  // (BR-0011-0045 of `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`).
+  // (BR-0009-0045 of `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md`).
   it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
@@ -267,7 +267,7 @@ describe("cli usage errors", () => {
     }
   }
 
-  // QFAI:EX-0001-0179-03
+  // QFAI:EX-0001-0173-03
   it("exits 2 on an audit argument error and names the reason on stderr", async () => {
     const missing = await captureRun(["audit"]);
     expect(missing.exitCode).toBe(2);

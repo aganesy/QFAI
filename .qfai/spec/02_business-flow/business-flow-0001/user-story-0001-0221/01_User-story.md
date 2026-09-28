@@ -1,10 +1,10 @@
-# US-0001-0221: Close, answer or hand back a request without a change
+# US-0001-0221: Judge the router against labelled requests before a release
 
 ## User Story
 
-As an operator, I want a request that needs no change to be answered, closed, split or handed back through a route that writes nothing to the project, so that questions, duplicates and hand-offs end cleanly instead of running a change they do not need.
+As a maintainer, I want the extraction and the decision rules scored against labelled requests for every route before a release, with the safety cases required to pass, so that a release never ships a router that misses a security report or a data-loss risk.
 
 ## Non-goals
 
-- A follow-up request routed inside the run that found it.
-- Merging, tagging or publishing anything.
+- Running the scored evaluation on every pull request.
+- Copying another project's issue text into the repository.

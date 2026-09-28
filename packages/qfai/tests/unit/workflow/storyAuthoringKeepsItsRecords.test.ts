@@ -1,8 +1,8 @@
-// QFAI:EX-0001-0192-46
-// QFAI:EX-0001-0192-47
-// QFAI:EX-0001-0192-50
-// QFAI:EX-0001-0195-13
-// QFAI:EX-0001-0195-14
+// QFAI:EX-0001-0185-46
+// QFAI:EX-0001-0185-47
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0188-13
+// QFAI:EX-0001-0188-14
 
 import { expect, it } from "vitest";
 
@@ -226,7 +226,7 @@ it("An sdd result deleting an open-questions row present at issue", () => {
   );
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP citing this run's human_decision with another answeredBy", () => {
   expect(
     accept({
@@ -239,7 +239,7 @@ it("An appended CREATE row at WIP citing this run's human_decision with another 
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP citing another run's human_decision", () => {
   expect(
     accept({
@@ -252,7 +252,7 @@ it("An appended CREATE row at WIP citing another run's human_decision", () => {
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that does not say when the answer was recorded", () => {
   const withoutTime = `Answered ${RUN}/${CREATE.authorizationId} by operator-1: Create it`;
   expect(
@@ -263,7 +263,7 @@ it("An appended CREATE row at WIP that does not say when the answer was recorded
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that does not name the option the operator chose", () => {
   const withoutChoice = `Answered ${RUN}/${CREATE.authorizationId} by operator-1 at ${CREATE.recordedAt}`;
   expect(
@@ -274,7 +274,7 @@ it("An appended CREATE row at WIP that does not name the option the operator cho
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that states another recordedAt", () => {
   const otherTime = cites(CREATE, { at: "2026-09-26T09:00:00.000Z" });
   expect(
@@ -285,7 +285,7 @@ it("An appended CREATE row at WIP that states another recordedAt", () => {
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that states an option the answer did not choose", () => {
   const otherOption = cites(CREATE, { chosen: ["Leave it"] });
   expect(
@@ -317,12 +317,12 @@ const changeRequestRefused = {
   ],
 };
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("A change request at WIP whose two-option answer it states with one label", () => {
   expect(changeRequestStating({ chosen: ["Apply it"] })).toEqual(changeRequestRefused);
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("A change request at WIP that states another recordedAt", () => {
   expect(changeRequestStating({ at: "2026-09-26T09:00:00.000Z" })).toEqual(changeRequestRefused);
 });

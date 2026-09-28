@@ -3,46 +3,36 @@
 ## Criteria
 
 ```gherkin
-Feature: Contract index and contract-layer validation
+Feature: Append-only drift and change-request authorization
   # AC-0001-0054-01
-  Scenario: A contract file missing from contracts.md raises QFAI-CONTRACT-034
-    Given the story tree, and a contract file under `paths.contractsDir` that has no row in `contracts.md`
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised at error naming the file, keyed by the contract ID the file declares, or by the file's path for a file under `cli/` that declares none
-    And a contract file that `contracts.md` lists raises no such finding
+  Scenario: A removed or rewritten row is reported
+    Given the story tree, a base `qfai validate` can resolve, and a row of `decisions.md` or `open-questions.md` that the base holds
+    When the row is removed, or its ID, Content or Approach cell changes, and `qfai validate --profile drift` runs
+    Then an error names the file, the row ID and the changed cell
+    And a change to the Status cell alone raises no such error
 
   # AC-0001-0054-02
-  Scenario: Placeholders are read from the contract-layer steering files
-    Given the story tree, and `tech.md` under `paths.contractsDir` with a section still holding a shipped placeholder, its Standard commands section included
-    When `qfai validate` runs with a profile that runs `QFAI-ASSETS-*`
-    Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder
-    And the catalog copy of `tech.md` is not read for this finding on the story tree
+  Scenario: An unresolvable base turns both drift checks off
+    Given the story tree, and a base git cannot resolve, because the base ref is missing or the project is not a git repository
+    When `qfai validate --profile drift` runs
+    Then neither the row-rewritten check nor the upstream-edit check reports anything
 
   # AC-0001-0054-03
-  Scenario: A contract file declares its ID, is named after it and has a matching index row
-    Given the story tree, and a `contracts.md` whose index has the columns ID, Title, File, Depends On, Reconciled With and Purpose
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised at error for each contract file under a kind directory that declares no contract ID of its directory's kind, is not named `<kind>-NNNN-<slug>.<ext>` after that ID, or has no row whose ID and File agree with it
-    And it is also raised for a row that names no contract file, and for a contract number that more than one contract declares
+  Scenario: A protected file changed without a change request is reported
+    Given the story tree, and a protected file changed since the base: a file under `01_policy/` or `02_business-flow/` of `paths.specsDir`, a file under `paths.contractsDir`, `decisions.md` or `open-questions.md`
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then an error names the path unless a `decisions.md` row opening `Change request:` names that path with Status WIP or DONE
+    And a `Change request:` row at TODO authorises nothing
 
   # AC-0001-0054-04
-  Scenario: A Markdown file under api/, db/ or ui/ is not a contract
-    Given the story tree, and a Markdown file under `api/`, `db/` or `ui/` of `paths.contractsDir` whose H1 declares an ID of that kind
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised once at error naming the file and the form a contract of that directory takes
-    And no check counts the file as a contract: `QFAI-CONTRACT-000` is still raised for a directory with no other contract, and ATDD coverage does not list its ID
+  Scenario: Appending or moving a change-request row is not an upstream edit
+    Given the story tree, and a change to `decisions.md` confined to rows opening `Change request:`: a row appended at any Status, or a Status changed on such a row
+    When `qfai validate --profile drift` runs
+    Then no upstream-edit error is raised for `decisions.md`
 
   # AC-0001-0054-05
-  Scenario: Only a db contract that declares one DB ID takes part in the apply-order check
-    Given the story tree, and `db/` contracts whose DDL points a foreign key at a table another contract creates
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-036` takes a `db/` file as the owner of the tables it creates only when the file declares exactly one contract ID and that ID is a `DB-NNNN` ID
-    And a `db/` file that declares an ID of another kind, or more than one ID, neither owns a table nor receives that finding
-
-  # AC-0001-0054-06
-  Scenario: A file outside the contract kind directories is not a contract
-    Given the story tree, and a file in a directory under `paths.contractsDir` other than `api/`, `cli/`, `db/` and `ui/`, such as `design/`
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised once at error naming the file, its directory and the contract kind directories
-    And the story tree reads no contract ID and no rule from the file
+  Scenario: A base without decisions.md turns both drift checks off
+    Given the story tree, and a merge base of `baseBranch` and HEAD that holds no `decisions.md` at the configured `paths.specsDir`
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then neither the row-rewritten check nor the upstream-edit check reports anything
 ```

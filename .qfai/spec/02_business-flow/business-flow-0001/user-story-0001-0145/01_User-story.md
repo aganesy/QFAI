@@ -1,5 +1,5 @@
-# US-0001-0145: Structured prior-cycle context
+# US-0001-0145: Explicit critique evidence keywords
 
 ## User Story
 
-As a subagent author, I want `iter-NN/iterate-context.json` to summarise the prior cycle, so that the next subagent invocation has structured context without re-reading `prototyping.json`.
+As a reviewer authoring `taskFidelity` evidence, I want the `QFAI-CRIT-009` error text to name every required keyword (`cta_visibility`, `four_state_check` and any others the implementation requires), `references/evidence-requirements.md` to list them with an example Markdown structure, and `qfai prototyping iterate --capture` to emit an evidence template with the keywords as placeholders, so that no required keyword can be silently forgotten.

@@ -464,7 +464,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Their metadata lists and prose sections are gone. Each obligation those
     sections stated is now a business rule that cites the examples showing it.
   - Their rules are numbered within each contract, from `BR-0001-0001` to
-    `BR-0022-0024`, and every reference to an old rule number names the new
+    `BR-0020-0021`, and every reference to an old rule number names the new
     one.
   - The two repository CI constraints on where a gate runs and on evidence for
     a parallelism change are now rules of the repository CI contract.
@@ -474,7 +474,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   scripts and the shipped workflow set are in the CLI contract form.** Each
   holds an ownership boundary and one business-rules table, and every
   obligation its other sections stated is now a rule citing the examples
-  that show it. The rules are numbered by contract, as `BR-0012-0001`.
+  that show it. The rules are numbered by contract, as `BR-0010-0001`.
 
 - **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
   contracts are written as business rules.** This repository's contracts for
@@ -1163,8 +1163,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The leak guards reject a contract file name, not only a contract ID.**
   Source comments named this repository's own contract files, such as
-  `cli-0011-qfai-init.md`, and the guards matched only the upper-case
-  `CLI-0011`. The pre-build lint, the post-build guard and the smoke test now
+  `cli-0009-qfai-init.md`, and the guards matched only the upper-case
+  `CLI-0009`. The pre-build lint, the post-build guard and the smoke test now
   also reject `cli-NNNN`, `api-NNNN`, `db-NNNN` and `ui-NNNN` outside the
   sample band where no letter, digit, `_` or `-` precedes them. The comments
   state what they relied on in plain words instead.

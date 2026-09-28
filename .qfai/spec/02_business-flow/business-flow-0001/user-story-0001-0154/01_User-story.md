@@ -1,5 +1,5 @@
-# US-0001-0154: Required Edge Enforcement
+# US-0001-0154: Resolve active discussion pack via single helper
 
 ## User Story
 
-As a QA engineer, I want US -> AC -> BR -> EX -> TC edge completeness enforced in the spec-pack layout, and BF -> US -> AC -> EX <- BR edge completeness on the story tree, so that traceability gaps are caught during SDD.
+As a `/qfai-sdd` downstream skill, I want to resolve the active discussion pack through one helper that reads `.qfai/state.json#discussion.currentId`, which `/qfai-discussion` writes, so that I never guess the active pack from filesystem timestamps and I report an error naming the candidate directories and the recovery command `qfai discussion use <id>` when the pointer is missing or ambiguous.

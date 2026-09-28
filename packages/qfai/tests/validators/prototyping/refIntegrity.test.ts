@@ -152,7 +152,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     ]);
   });
 
-  // QFAI:EX-0001-0042-11
+  // QFAI:EX-0001-0042-09
   it("checks the handoff's finalArtifact in prototyping.json", async () => {
     const root = await newTempDir();
     const dir = path.join(root, ".qfai", "evidence", "prototyping");

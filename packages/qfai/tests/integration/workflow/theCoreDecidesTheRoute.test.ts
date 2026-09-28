@@ -1,8 +1,8 @@
-// QFAI:AC-0001-0218-01
-// QFAI:AC-0001-0218-02
-// QFAI:AC-0001-0218-03
-// QFAI:AC-0001-0218-04
-// QFAI:AC-0001-0218-06
+// QFAI:AC-0001-0211-01
+// QFAI:AC-0001-0211-02
+// QFAI:AC-0001-0211-03
+// QFAI:AC-0001-0211-04
+// QFAI:AC-0001-0211-06
 
 import { expect, it } from "vitest";
 
@@ -28,7 +28,7 @@ import {
   routedBy,
 } from "./decisionRuns.js";
 
-// QFAI:EX-0001-0218-01
+// QFAI:EX-0001-0211-01
 it("A routing result carrying facts, and no route, is routed by the rule that holds", async () => {
   const { run, decision } = await routedBy({ intent: "defect", entryFlags: ["repro", "expect"] });
   const decided = decision.events.find((event) => event.type === "route-decided");
@@ -46,7 +46,7 @@ it("A routing result carrying facts, and no route, is routed by the rule that ho
   });
 });
 
-// QFAI:EX-0001-0218-02
+// QFAI:EX-0001-0211-02
 it("A proposal that names a route, a stage list or a step list is refused, naming the field", () => {
   const refused = (field: string, value: unknown) =>
     stageResultRefusals({
@@ -100,7 +100,7 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
 
 const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
 
-// QFAI:EX-0001-0218-33
+// QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
 it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", async () => {
@@ -141,7 +141,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
   });
 });
 
-// QFAI:EX-0001-0218-34
+// QFAI:EX-0001-0211-34
 it("A request no intent was read from is investigated, and finishing it changes no file", async () => {
   const { run, decision } = await routedBy(
     { intent: null },
@@ -166,7 +166,7 @@ it("A request no intent was read from is investigated, and finishing it changes 
   });
 });
 
-// QFAI:EX-0001-0218-36
+// QFAI:EX-0001-0211-36
 it("Two fix-defect requests issue the same stages and steps; only their reviewers differ", async () => {
   const drive = async (risks: ("data-loss" | "silent")[]) => {
     const { run } = await routedBy({ intent: "defect", risks }, { affectedFlowIds: [FLOW] });
