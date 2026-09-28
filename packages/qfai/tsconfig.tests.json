@@ -208,6 +208,7 @@
     "tests/integration/cliStartupCost.test.ts",
     "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/contractIdScheme.test.ts",
+    "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
     "tests/integration/explorationRelaxationAudit.test.ts",
