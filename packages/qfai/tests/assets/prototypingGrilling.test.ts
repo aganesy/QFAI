@@ -53,7 +53,7 @@ function boundaryTable(skill: string): string[][] {
 /** The `ask-user` bucket's entries, unwrapped. */
 function askUserBucket(skill: string): string {
   const block = new RegExp(
-    "- ask-user:" + "\\n" + "([" + "\\s\\S" + "]*?)" + "\\n" + "- hard-required:",
+    "- ask-user:" + "\\n" + "([" + "\\s\\S" + "]*?)" + "\\n" + "(?:- |\\n)",
   ).exec(skill);
   expect(block, "the ask-user bucket is gone").not.toBeNull();
   return unwrap(block?.[1] ?? "");

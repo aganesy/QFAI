@@ -65,43 +65,54 @@ async function writeSkillMd(skillId: string, body: string): Promise<void> {
   await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }
 
-const POLICY_3_BUCKET = `# qfai-fixture
+/** The shared prototype every qfai-* skill works under, as `qfai init` ships it. */
+const BASELINE_3_BUCKET = `# Shared Skill Operating Baseline
+
+## Default Autopilot Policy (Shared)
+
+| Bucket          | Prototype entries                                                                   |
+| --------------- | ----------------------------------------------------------------------------------- |
+| \`auto-decide\`   | output formatting; ID / sequence numbering; equivalent-option pick                  |
+| \`ask-user\`      | approval-required governance operations; destructive operations; scope expansions |
+| \`hard-required\` | brand intent                                                                        |
+`;
+
+async function writeBaseline(body: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "assistant", "rule");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "shared-skill-operating-baseline.md"), body, "utf-8");
+}
+
+/** A skill's own section: only what it adds to the prototype. */
+const SKILL_OWN_POLICY = `# qfai-fixture
 
 ## Default Autopilot Policy
 
 - auto-decide:
   - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
   - equivalent-option pick
-- ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage ops
-  - destructive operations
-  - version-pin changes
-  - scope expansions
 - hard-required:
-  - companyName
   - brand intent
-  - primarySpecId
 `;
 
 describe("spec-0015 autopilot policy CHG-006", () => {
-  it("QFAI:EX-0001-0175-01 — error: SKILL.md without ## Default Autopilot Policy emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:EX-0001-0175-01 — error: a baseline without the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+    await writeBaseline("# Shared Skill Operating Baseline\n");
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
+    expect(f?.file).toBe(".qfai/assistant/rule/shared-skill-operating-baseline.md");
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0175-01 — error: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
-    // Section heading present but body lacks all required buckets.
-    // The validator must fire R-AUTOPILOT-POLICY-MISSING (error) and
-    // name the missing buckets in the justification per the
-    // BR-0001-0011 two-condition trigger
-    // (present-but-incomplete case).
-    const headingOnly = "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
-    await writeSkillMd("qfai-x", headingOnly);
+  it("QFAI:EX-0001-0175-01 — error: a shared section missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
+    // Heading present, buckets gone: every skill loses the prototype at once,
+    // so the finding names each missing bucket against the baseline.
+    await writeBaseline(
+      "# Shared Skill Operating Baseline\n\n## Default Autopilot Policy (Shared)\n\nbody without buckets.\n",
+    );
+    await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
@@ -110,20 +121,34 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toMatch(/hard-required/);
   });
 
-  // QFAI:EX-0001-0175-04
-  it("QFAI:EX-0001-0175-01 — normal: 3-bucket SKILL.md passes; widened auto-decide flagged as warning", async () => {
-    await writeSkillMd("qfai-x", POLICY_3_BUCKET);
+  it("QFAI:EX-0001-0175-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
+    await writeBaseline(BASELINE_3_BUCKET);
+    await writeSkillMd(
+      "qfai-sdd",
+      SKILL_OWN_POLICY.replace("  - brand intent", "  - an identifiable affected flow"),
+    );
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
+    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(f?.file).toBe(".qfai/assistant/skill/qfai-sdd/SKILL.md");
+    expect(f?.message).toContain("requirement source");
+  });
+
+  // QFAI:EX-0001-0175-04
+  it("QFAI:EX-0001-0175-01 — normal: the baseline and a skill adding only its own entries pass; widened auto-decide flagged as warning", async () => {
+    await writeBaseline(BASELINE_3_BUCKET);
+    await writeSkillMd("qfai-x", SKILL_OWN_POLICY);
+    await writeSkillMd("qfai-z", "# qfai-z\nNo policy of its own.\n");
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues).toEqual([]);
 
     // Widening: add an extra non-canonical entry to auto-decide.
-    const widened = POLICY_3_BUCKET.replace(
+    const widened = SKILL_OWN_POLICY.replace(
       "  - equivalent-option pick",
       "  - equivalent-option pick\n  - destructive operations",
     );
     await writeSkillMd("qfai-y", widened);
     const issues2 = await validateAutopilotPolicy(root);
-    expect(issues2.some((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")).toBe(true);
+    expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
     expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")?.severity).toBe("warning");
   });
 });

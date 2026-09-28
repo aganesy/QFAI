@@ -32,10 +32,15 @@ async function writeDoc(rel: string, content: string): Promise<void> {
   await writeFile(target, content, "utf-8");
 }
 
-async function writeParent(name: string, steps: string, roles = "[orchestrator]"): Promise<void> {
+async function writeParent(
+  name: string,
+  steps: string,
+  roles = "[orchestrator]",
+  extra: Record<string, string> = {},
+): Promise<void> {
   await writeDoc(
     `.qfai/assistant/skill/${name}/SKILL.md`,
-    frontmatter({ name, description: '"Use when testing."', steps, roles }),
+    frontmatter({ name, description: '"Use when testing."', steps, roles, ...extra }),
   );
 }
 
@@ -142,9 +147,16 @@ describe("validateStepTree", () => {
     expect(found[0]?.file).toBe(".qfai/assistant/step/common-idle/STEP.md");
   });
 
-  it("counts the review cycle as used once a parent runs steps", async () => {
+  // QFAI:EX-0001-0217-06
+  it("counts a common step a parent requires as used, and no step as used without a reference", async () => {
     await seedCleanTree();
     await writeStep("common-review-cycle", { owner: "common", requires: "[]" });
+    const orphaned = await run();
+    expect(rules(orphaned)).toEqual(["stepTree.orphan"]);
+    expect(orphaned[0]?.file).toBe(".qfai/assistant/step/common-review-cycle/STEP.md");
+    await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", {
+      requires: "[common-review-cycle]",
+    });
     expect(await run()).toEqual([]);
   });
 
@@ -168,6 +180,23 @@ describe("validateStepTree", () => {
     await seedCleanTree();
     await writeStep("common-share", { owner: "common", requires: "[common-share]" });
     expect(rules(await run())).toEqual(["stepTree.commonRequires"]);
+  });
+
+  // QFAI:EX-0001-0217-09
+  it("refuses a parent requires: that is not a list, names a step that is not common, or names no installed step", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["common-share", "stepTree.requiresShape", "not a list"],
+      ["[demo-one]", "stepTree.requiresNonCommon", '"demo-one"'],
+      ["[common-absent]", "stepTree.unknownStep", '"common-absent"'],
+    ];
+    for (const [requires, rule, named] of cases) {
+      await seedCleanTree();
+      await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", { requires });
+      const found = await run();
+      expect(rules(found), requires).toEqual([rule]);
+      expect(found[0]?.file, requires).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
+      expect(found[0]?.message, requires).toContain(named);
+    }
   });
 
   // QFAI:EX-0001-0217-06

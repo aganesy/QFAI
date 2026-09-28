@@ -607,6 +607,56 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
     expect(sddCodes).not.toContain("QFAI-REVIEW-005");
   });
 
+  it("files an acceptance-test pack under its own producer", async () => {
+    // QFAI:EX-0001-0155-04
+    const flowPath = ".qfai/specs/02_business-flow/business-flow-0001";
+
+    const complete = await newTempDir();
+    await scaffoldRoot(complete);
+    await writeReviewPack(
+      complete,
+      "review-20260401000000000",
+      makeV2Summary({ producer: "atdd", target: { kind: "flow", path: flowPath } }),
+    );
+    const completeIssues = await validateReviewArtifacts(complete, {
+      specScope: undefined,
+      specsRoot: path.join(complete, ".qfai", "specs"),
+      discussionRoot: path.join(complete, ".qfai", "discussion"),
+    });
+    expect(completeIssues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+
+    const unanswered = await newTempDir();
+    await seedIncompletePack(unanswered, {
+      version: "2.0",
+      producer: "atdd",
+      target: { kind: "flow", path: flowPath },
+    });
+    for (const producer of ["sdd", "discussion"]) {
+      const codes = (
+        await validateReviewArtifacts(unanswered, stageScope(unanswered, producer))
+      ).map((entry) => entry.code);
+      expect(codes).not.toContain("QFAI-REVIEW-005");
+      expect(codes).not.toContain("QFAI-REVIEW-007");
+    }
+    const full = (await validateReviewArtifacts(unanswered)).map((entry) => entry.code);
+    expect(full).toContain("QFAI-REVIEW-005");
+
+    const inFlight = await newTempDir();
+    await scaffoldRoot(inFlight);
+    const packDir = path.join(inFlight, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "review_request.md"),
+      `# Review Request\n\n- Producer: \`atdd\`\n- target: \`${flowPath}\`\n`,
+      "utf-8",
+    );
+    const sddCodes = (await validateReviewArtifacts(inFlight, stageScope(inFlight, "sdd"))).map(
+      (entry) => entry.code,
+    );
+    expect(sddCodes).not.toContain("QFAI-REVIEW-004");
+    expect(sddCodes).not.toContain("QFAI-REVIEW-005");
+  });
+
   // Over-correction pin: the packs the SDD gate is FOR must keep failing it,
   // whether they name their producer or predate the field.
   it("still gates the sdd cycle's own packs, declared or legacy", async () => {

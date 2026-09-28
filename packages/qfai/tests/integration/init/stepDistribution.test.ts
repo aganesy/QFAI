@@ -9,6 +9,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runInit, SKILL_INTEGRATION_DIRS } from "../../../src/cli/commands/init.js";
+import { skillFrontmatterMapping } from "../../../src/core/agentFrontmatter.js";
 import { loadConfig } from "../../../src/core/config.js";
 import { validateStepTree } from "../../../src/core/validators/stepTree.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
@@ -87,6 +88,16 @@ describe("qfai init distributes the step layer", () => {
       await initQuietly(root);
       const { config } = await loadConfig(root);
       expect(await validateStepTree(root, config)).toEqual([]);
+      const skills = path.join(root, ".qfai", "assistant", "skill");
+      const parents: string[] = [];
+      for (const skill of await readdir(skills)) {
+        const doc = await readFile(path.join(skills, skill, "SKILL.md"), "utf-8").catch(() => "");
+        const front = skillFrontmatterMapping(doc);
+        if (!Array.isArray(front?.steps)) continue;
+        parents.push(skill);
+        expect(front?.requires, skill).toContain("common-review-cycle");
+      }
+      expect(parents.length).toBeGreaterThan(0);
     } finally {
       await removeTempTree(root);
     }
