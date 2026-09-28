@@ -154,9 +154,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Contracts can carry their own IDs, and number their rules after them.**
   `qfai validate` reads them.
-  - A contract under `cli/`, `api/`, `db/` or `ui/` declares a contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
-    contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
-    otherwise. The number is unique across kinds.
+  - A contract under `cli/`, `api/`, `db/` or `ui/` declares a contract ID
+    such as `CLI-0001` or `API-0002`: in its H1 for a Markdown contract
+    (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line otherwise. The number is unique across kinds.
   - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
     another number is a BR-to-EX error (`QFAI-STORY-005`).
   - A Markdown contract holds its rules under `## Business rules`.
@@ -412,7 +412,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     or YAML.
   - No file under `design/` is numbered. The directory moves whole, and each
     file is listed with where its content now belongs: the brand in the root
-    `DESIGN.md`, a screen in a `ui/` contract.
+    `DESIGN.md`, a screen in a `ui/` contract. A dot-prefixed file such as
+    `.tokens.json` is listed too, and so is an empty `.gitkeep`.
   - Each original is kept under
     `.qfai/evidence/migration-spec-to-story/retired/contract/`, and step 3
     exits 3. A plan that places a rule in one of these files stops step 4.

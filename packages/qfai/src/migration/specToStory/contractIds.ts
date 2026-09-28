@@ -72,17 +72,26 @@ function kindOf(relative: string): string {
   return Object.entries(CONTRACT_KIND_BY_DIR).find(([name]) => name === directory)?.[1] ?? "";
 }
 
-/** Every file under a kind directory or `design/`, relative to the contracts directory. */
+/**
+ * Every file under a kind directory or `design/`, relative to the contracts
+ * directory. A dot-prefixed path counts only under `design/`: that directory
+ * moves whole, so every file the move carries is named for a person.
+ */
 async function contractDirectoryFiles(context: MigrationContext): Promise<string[]> {
+  const relativeOf = (file: string) =>
+    path.relative(context.contractsDir, file).split(path.sep).join("/");
   const selected = await collectFilesByGlobs(context.contractsDir, {
     globs: [...new Set([...KIND_DIRS, DESIGN])].map((directory) => `${directory}/**/*`),
     limit: FILE_LIMIT,
+    dot: true,
+    filter: (file) => {
+      const segments = relativeOf(file).split("/");
+      return segments[0] === DESIGN || !segments.some((segment) => segment.startsWith("."));
+    },
   });
   if (selected.truncated)
     throw new MigrationInputError(`Contract selection exceeds ${FILE_LIMIT} files`);
-  return selected.files
-    .map((file) => path.relative(context.contractsDir, file).split(path.sep).join("/"))
-    .sort();
+  return selected.files.map(relativeOf).sort();
 }
 
 async function contractFiles(context: MigrationContext): Promise<string[]> {
