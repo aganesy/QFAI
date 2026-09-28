@@ -168,6 +168,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The doctor check of root `DESIGN.md` is named after it.** Under
+  `qfai doctor --profile prototyping` the readiness check of root `DESIGN.md`
+  is `prototyping.designMdReadiness`, titled `Root DESIGN.md readiness`; it
+  was `prototyping.designContracts`, titled after design contracts that no
+  longer exist. The `qfai prototyping preflight` help line names UI contracts
+  and `DESIGN.md` instead.
+
 - **Every Markdown file of the spec tree needs a schema.** A Markdown file
   under `paths.specsDir` or `paths.contractsDir` that no mdschema manifest
   entry names, or that two entries name, now fails the document lane under
@@ -875,6 +882,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger columns the removed code read.
 
 ### Fixed
+
+- **A listed file outside the contract kind directories is reported once.**
+  `QFAI-CONTRACT-034` reported a file under a directory such as `design/`
+  that `contracts.md` lists twice: once for the file, and once for the row
+  as naming no contract file. The row is no longer reported separately.
 
 - **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
   - A business-flow `traceability-graph.json` names a Markdown or CLI contract

@@ -43,9 +43,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
 - **A contract's ID comes from its directory.** `cli/` holds `CLI`
-  contracts, `api/` `API`, `db/` `DB` and `ui/` `UI`. The ID is `<KIND>-NNNN`. Its number is one more than the highest contract number
-  of any kind, so `API-0002` and `DB-0002` cannot both exist. A number is never
-  reused, even after its contract is removed.
+  contracts, `api/` `API`, `db/` `DB` and `ui/` `UI`. The ID is `<KIND>-NNNN`.
+  Its number is one more than the highest contract number of any kind, so
+  `API-0002` and `DB-0002` cannot both exist. A number is never reused, even
+  after its contract is removed.
 - **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
   `api/api-0002-orders.yaml` or `cli/cli-0001-checkout.md`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in

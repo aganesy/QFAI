@@ -1452,22 +1452,28 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const [primarySpec, uiContracts, designContracts, requiredRoles, launcherChecks, targetUrlCheck] =
-    await Promise.all([
-      buildPrototypingPrimarySpecCheck(root, config),
-      buildPrototypingUiContractsCheck(root, config),
-      buildPrototypingDesignContractsCheck(root, config),
-      buildPrototypingRolesCheck(root),
-      buildPlaywrightLauncherChecks(root),
-      buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
-    ]);
+  const [
+    primarySpec,
+    uiContracts,
+    designMdReadiness,
+    requiredRoles,
+    launcherChecks,
+    targetUrlCheck,
+  ] = await Promise.all([
+    buildPrototypingPrimarySpecCheck(root, config),
+    buildPrototypingUiContractsCheck(root, config),
+    buildPrototypingDesignMdReadinessCheck(root, config),
+    buildPrototypingRolesCheck(root),
+    buildPlaywrightLauncherChecks(root),
+    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
+  ]);
   const designMdChecks = await buildPrototypingDesignMdChecks(root);
   // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
   // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
   return [
     primarySpec,
     uiContracts,
-    designContracts,
+    designMdReadiness,
     requiredRoles,
     ...launcherChecks,
     targetUrlCheck,
@@ -1613,17 +1619,17 @@ async function buildPrototypingUiContractsCheck(
   };
 }
 
-async function buildPrototypingDesignContractsCheck(
+async function buildPrototypingDesignMdReadinessCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
   const issues = await validateSddDesignContractReadiness(root, config);
   if (issues.length === 0) {
     return {
-      id: "prototyping.designContracts",
+      id: "prototyping.designMdReadiness",
       severity: "ok",
-      title: "Pre-prototyping design contracts",
-      message: "pre-prototyping design contracts satisfy readiness checks",
+      title: "Root DESIGN.md readiness",
+      message: "root DESIGN.md satisfies the readiness checks",
       details: {
         designMd: "DESIGN.md",
       },
@@ -1636,10 +1642,10 @@ async function buildPrototypingDesignContractsCheck(
   }
 
   return {
-    id: "prototyping.designContracts",
+    id: "prototyping.designMdReadiness",
     severity: issues.some((item) => item.severity === "error") ? "error" : "warning",
-    title: "Pre-prototyping design contracts",
-    message: `pre-prototyping design contracts have blocking issue(s) (count=${issues.length})`,
+    title: "Root DESIGN.md readiness",
+    message: `root DESIGN.md has blocking issue(s) (count=${issues.length})`,
     details: {
       designMd: "DESIGN.md",
       issues: issues.map((item) => ({

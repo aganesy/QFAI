@@ -40,9 +40,10 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   `Reconciled With` and `Purpose`.
 
 A new contract takes its kind from its directory (`cli/`, `api/`, `db/` or
-`ui/`) and the next contract number, one more than the highest of any kind. A number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it
-declares its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`),
-or on a `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
+`ui/`) and the next contract number, one more than the highest of any kind. A
+number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
+its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
+`QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
 Inside a workflow run, write only in the attempt the operator's answer
 authorizes, as

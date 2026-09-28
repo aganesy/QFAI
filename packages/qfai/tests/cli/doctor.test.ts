@@ -446,7 +446,7 @@ describe("doctor", () => {
       expect(parsed.profile).toBe("prototyping");
       expect(findCheck(parsed.checks, "prototyping.primaryUiContract")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.uiContracts")?.severity).toBe("ok");
-      expect(findCheck(parsed.checks, "prototyping.designContracts")?.severity).toBe("ok");
+      expect(findCheck(parsed.checks, "prototyping.designMdReadiness")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.targetUrl")?.severity).toBe("ok");
@@ -645,7 +645,7 @@ describe("doctor", () => {
     }
   });
 
-  it("reports prototyping design-contract blockers before runtime execution", async () => {
+  it("reports root DESIGN.md readiness blockers before runtime execution", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
@@ -657,7 +657,7 @@ describe("doctor", () => {
       await rm(path.join(root, "DESIGN.md"), { force: true });
 
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designContracts")?.severity).toBe("error");
+      expect(findCheck(parsed.checks, "prototyping.designMdReadiness")?.severity).toBe("error");
     } finally {
       await stopTestServer(server.server);
       await rm(root, { recursive: true, force: true });
@@ -721,7 +721,7 @@ describe("doctor", () => {
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.primaryUiContract")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.uiContracts")).toBeDefined();
-      expect(findCheck(parsed.checks, "prototyping.designContracts")).toBeDefined();
+      expect(findCheck(parsed.checks, "prototyping.designMdReadiness")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.playwrightCli")).toBeDefined();
       expect(findCheck(parsed.checks, "prototyping.targetUrl")).toBeDefined();
