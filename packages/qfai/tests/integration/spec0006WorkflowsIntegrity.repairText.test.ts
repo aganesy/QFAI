@@ -93,7 +93,6 @@ const CLI_SUBCOMMANDS = [
   "audit",
   "sdd",
   "atdd",
-  "handoff",
   "discussion",
   "prototyping",
   "workflow",

@@ -1076,11 +1076,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       default:
-        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
-        // parse error として markInvalid() する。位置引数
-        // (`discussion use <id>` など) は
-        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
-        // はなく `--` プレフィックスで判定する。
+        // Only a token starting with `--` is read as an unknown flag and
+        // marked invalid. A positional such as the `<id>` of
+        // `discussion use` must stay out of it, so the test is the `--`
+        // prefix rather than "matched no case above".
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);

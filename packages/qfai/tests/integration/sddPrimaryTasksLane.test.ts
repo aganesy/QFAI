@@ -231,6 +231,23 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
     expect(empty.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
     expect(empty.errors[0]?.message).toContain(".qfai/spec/03_contract/ui/ui-0001.yaml#home");
   });
+
+  // QFAI:EX-0001-0159-04
+  it("names the entry shape when a screen lists only plain string primary tasks", async () => {
+    const strings = await prototypingPreflight(
+      PASSING_UI_CONTRACT.replace(
+        "      - { id: browse, label: Browse the surface, acceptance: done }",
+        "      - Browse the surface",
+      ),
+    );
+    expect(strings.exitCode).toBe(1);
+    expect(strings.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
+    const message = strings.errors[0]?.message ?? "";
+    expect(message).toContain(
+      "primary_tasks entries are not {id, label, acceptance} mappings: .qfai/spec/03_contract/ui/ui-0001.yaml#home",
+    );
+    expect(message).not.toContain("with no primary_tasks");
+  });
 });
 
 describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is non-empty", () => {

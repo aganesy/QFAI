@@ -713,15 +713,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - A `screens[].primary_tasks` item in a UI contract must be a mapping with
     exactly `id`, `label` and `acceptance`. A plain string item is reported
     as `QFAI-AUD-021` and does not count as a task, so a screen listing only
-    strings also reports `QFAI-AUD-001`.
+    strings also reports `QFAI-AUD-001`. `qfai prototyping preflight` names
+    the entry shape for such a screen instead of saying it has no task.
 - **`qfai prototyping certify` no longer reads `fullHarness.runId`.** A
   `prototyping.json` without a top-level `runId` is refused with exit 2
   instead of being sealed after a `D-DEPRECATED-SCHEMA` message. Run
   `qfai prototyping iterate --cycle 0` to write the current shape.
-- **Review text for the retired breakthrough loop.** The UIX review template
-  and `scoring-review.md` no longer ask about plateau, breakthrough or
-  best-of-history handling. The review-bundle history check now asks for the
-  one-lineage rule: the latest iteration is the accepted one.
+- **Review text for the retired breakthrough loop.** `scoring-review.md` no
+  longer asks about plateau, breakthrough or best-of-history handling.
 
 - **A spec document can no longer opt out of its schema.**
   `<!-- mdschema:ignore -->` is now reported as a violation, under every
