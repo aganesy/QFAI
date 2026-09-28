@@ -212,6 +212,7 @@ A routing or stage result carries a question as:
     "allowedEffects": [],
     "nonGoals": []
   },
+  "modifiers": [],
   "recordAreas": [".qfai/evidence/implement-BF-0002.md"],
   "inputs": [],
   "requiredGates": [],

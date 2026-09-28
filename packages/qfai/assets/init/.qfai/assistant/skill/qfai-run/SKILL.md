@@ -74,6 +74,7 @@ Classify the request before any write call. Only `routed` calls `start`.
      A `retry` names the delay before the same work order is handed over again.
    - `awaiting_input`: put each open question as `references/operator-screens.md`
      says, and relay each answer with `decision`.
+     Under `--auto` the route question is not put: answer it with `decision` and its first option, the reading the decision rules reach first, which need not be the recommended one. The completion report lists that choice as an assumption.
    - `blocked`: give the halt notice and stop.
    - `ready` with every stage accepted: go to step 6.
 6. **Finish.** For `qfai_done`, commit the run's changes first. Then call

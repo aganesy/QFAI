@@ -146,7 +146,9 @@ function candidateRouting(routed: Routed, outcome: RoutingOutcome): WorkflowDeci
     candidates.push({ ...choice, plan, modifiers: defaults, ...(flowId ? { flowId } : {}) });
   }
   const familyOf = (route: string) => facts.plans?.[route]?.family;
-  const questions = routingQuestions(routed, (id) => candidateQuestion(id, candidates, familyOf));
+  const questions = routingQuestions(routed, (id) =>
+    candidateQuestion(id, candidates, familyOf, outcome.recommended),
+  );
   const after: WorkflowEvent = {
     type: "unsettled-material-input",
     proposal,

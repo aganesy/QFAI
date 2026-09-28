@@ -31,6 +31,8 @@ export interface RoutingOutcome {
   candidates: RouteChoice[];
   // The route routing fixes now; absent while the candidate question decides it.
   taken?: RouteChoice;
+  // The main reading's route, which the candidate question recommends.
+  recommended?: string;
   modifiers: WorkflowModifierEntry[];
 }
 
@@ -83,7 +85,9 @@ export function routingOutcome(
     withModifiers(own, entriesOf(defaultsOf(main.route), ask ? "candidate" : "default")),
     others.flatMap((each) => entriesOf(defaultsOf(each.route), "candidate")),
   );
-  if (ask) return { candidates: [...candidates].sort(reachedFirst), modifiers };
+  if (ask) {
+    return { candidates: [...candidates].sort(reachedFirst), recommended: main.route, modifiers };
+  }
   return { candidates, taken: main, modifiers };
 }
 
@@ -102,12 +106,13 @@ function stagesOf(plan: WorkflowPlan): string {
 }
 
 // One single-select question naming each candidate route by what it does, in the order the
-// decision rules reach them, the first recommended: a harness that may put no question answers
-// it with the recommendation. An option's ID is the route it takes.
+// decision rules reach them, with the main reading's route recommended. A harness that may put
+// no question answers it with the first option. An option's ID is the route it takes.
 export function candidateQuestion(
   questionId: string,
   candidates: readonly WorkflowRouteCandidate[],
   familyOf: (route: string) => string | undefined,
+  recommended: string | undefined,
 ): WorkflowQuestion {
   return {
     questionId,
@@ -121,7 +126,7 @@ export function candidateQuestion(
       effect: "proceed",
     })),
     selection: { min: 1, max: 1 },
-    ...(candidates[0] ? { recommendation: candidates[0].route } : {}),
+    ...(recommended ? { recommendation: recommended } : {}),
   };
 }
 

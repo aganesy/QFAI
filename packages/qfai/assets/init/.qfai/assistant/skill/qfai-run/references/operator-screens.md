@@ -38,8 +38,9 @@ carrying who answered.
 | The route question  | One option per reading of the request, two or three. Each option is a short label and one sentence on what that route will change and check, with no route identifier. The recommendation stands on a line of its own, and the question says one may be chosen |
 
 - Routing opens the route question when the request reads more than one way.
-  Relay it as the CLI returns it; `qfai-run` chooses nothing between the
-  readings.
+  Its options come in the order the decision rules reach them, and it
+  recommends the main reading. Relay it as the CLI returns it; `qfai-run`
+  chooses nothing between the readings while a question can be put.
 - The announcement follows the answer to a question routing opened and does not
   repeat it.
 - A refused answer is put again with the reason in one sentence.
@@ -47,9 +48,11 @@ carrying who answered.
   is open.
 - Under a no-question mode, put no question. The run stays `awaiting_input`,
   and the halt notice names what is open.
-- Under a no-question mode routing opens no route question. The CLI takes the
-  reading its decision rules reach first, gives the run the gates and review of
-  every reading, and the completion report lists that choice as an assumption.
+- The route question is the exception. Under a no-question mode `qfai-run`
+  answers it itself with `decision` and the first option, the reading the
+  decision rules reach first, even where another is recommended. The run
+  already carries the gates and review of every reading, and the completion
+  report lists that choice as an assumption.
 
 ## Halt notice
 

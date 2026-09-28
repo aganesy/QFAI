@@ -298,7 +298,7 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0220-06
   // QFAI:EX-0001-0220-06
-  it("relays the route question with plain options, the recommendation apart, and asks nothing under a no-question mode", async () => {
+  it("relays the route question with plain options, the recommendation apart, and answers it with the first option under a no-question mode", async () => {
     const questions = sectionOf(await readShipped(SCREENS), "## Questions");
     const row = rowOf(questions, "The route question");
     expect(row).toMatch(/one option per reading of the request, two or three/i);
@@ -308,9 +308,19 @@ describe("qfai-run", () => {
     expect(row).toMatch(/the recommendation stands on a line of its own/i);
     expect(row).toMatch(/the question says one may be chosen/i);
     const text = flat(questions);
-    expect(text).toMatch(/`qfai-run` chooses nothing between the readings/i);
-    expect(text).toMatch(/under a no-question mode routing opens no route question/i);
+    expect(text).toMatch(
+      /its options come in the order the decision rules reach them, and it recommends the main reading/i,
+    );
+    expect(text).toMatch(
+      /`qfai-run` chooses nothing between the readings while a question can be put/i,
+    );
+    expect(text).toMatch(
+      /under a no-question mode `qfai-run` answers it itself with `decision` and the first option/i,
+    );
     expect(text).toMatch(/the completion report lists that choice as an assumption/i);
+    expect(flat(sectionOf(await readShipped(RUN), "## The run"))).toMatch(
+      /under `--auto` the route question is not put: answer it with `decision` and its first option/i,
+    );
     expect(
       flat(sectionOf(await readShipped(EXTRACTION), "## Confidence and alternatives")),
     ).toMatch(

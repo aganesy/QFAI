@@ -105,19 +105,16 @@ async function jsonFiles(dir: string): Promise<unknown[]> {
 const read = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 
-// The route the run's journal names: the checked plan's, or, for a run still waiting on an
-// answer at routing, the proposal's. The runtime snapshot answers when the journal names none.
+// The route the run's journal last decided: the decision rules' choice, or the answer to the
+// candidate question. The snapshot's route decision answers when the journal names none. A run
+// still waiting on the candidate question has no route yet.
 function routeOf(events: unknown[], snapshot: unknown): string | null {
-  const candidates = events.map((event) =>
-    read(event, "event") === "plan-accepted"
-      ? read(read(event, "plan"), "route")
-      : read(event, "event") === "unsettled-material-input"
-        ? read(read(event, "proposal"), "candidateRoute")
-        : undefined,
+  const decided = events.map((event) =>
+    read(event, "event") === "route-decided" ? read(event, "route") : undefined,
   );
   const route =
-    candidates.reverse().find((each) => typeof each === "string") ??
-    read(read(snapshot, "plan"), "route");
+    decided.reverse().find((each) => typeof each === "string") ??
+    read(read(snapshot, "routeDecision"), "route");
   return typeof route === "string" ? route : null;
 }
 

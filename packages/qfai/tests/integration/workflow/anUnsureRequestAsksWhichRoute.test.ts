@@ -50,7 +50,7 @@ it("A low-confidence request asks one single-select question naming each candida
     selection: { min: 1, max: 1 },
     options: ["repair-consistency", "fix-defect"],
     labelled: true,
-    recommendation: "repair-consistency",
+    recommendation: "fix-defect",
     modifiers: ["gate:user", "review:heavy"],
     answered: ["ready", { route: "fix-defect", rule: 27 }, "fix-defect"],
   });
@@ -98,15 +98,17 @@ it("A request that reads one way takes its route with no question and no added m
 });
 
 // QFAI:EX-0001-0220-04
-it("Answered with its recommendation, as a harness that may ask nothing does, the earliest candidate is taken", async () => {
+it("Answered with its first option, as a harness that may ask nothing does, the earliest candidate is taken", async () => {
   const { run, decision } = await routedBy(UNSURE);
-  const recommended = decision.verdict.questions?.[0]?.recommendation ?? "";
-  answerOpen(run, "route", recommended);
+  const [question] = decision.verdict.questions ?? [];
+  answerOpen(run, "route", question?.options[0]?.optionId ?? "");
 
   expect({
+    recommendation: question?.recommendation,
     route: run.snapshot.routeDecision,
     modifiers: modifiersOf(run),
   }).toEqual({
+    recommendation: "fix-defect",
     route: { route: "repair-consistency", rule: 20 },
     modifiers: ["gate:user", "review:heavy"],
   });
@@ -128,7 +130,7 @@ it("The route taken is never lighter than any candidate", async () => {
     modifiers: modifiersOf(run),
   }).toEqual({
     options: ["change-compatibility", "add-feature"],
-    recommendation: "change-compatibility",
+    recommendation: "add-feature",
     lighter: ["ready", "add-feature"],
     modifiers: ["gate:user", "review:heavy"],
   });
