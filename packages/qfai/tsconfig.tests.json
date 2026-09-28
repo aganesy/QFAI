@@ -272,6 +272,7 @@
     "tests/integration/workflowAssets/runGovernance.test.ts",
     "tests/integration/workflowAssets/stepSurface.test.ts",
     "tests/integration/workflowAssets/storyAuthoringInRun.test.ts",
+    "tests/integration/workflowAssets/triageSkill.test.ts",
     "tests/scripts/conflictMarkers.test.ts",
     "tests/scripts/pinnedFileConflictMarkers.test.ts",
     "tests/scripts/trackedScratch.test.ts",
