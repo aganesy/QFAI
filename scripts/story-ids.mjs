@@ -417,7 +417,7 @@ export async function run(argv, options = {}) {
     tree = await (options.loadTree ?? loadStoryTree)();
   } catch (cause) {
     console.error(`The story-tree parser did not load: ${String(cause?.message ?? cause)}`);
-    console.error("This tool needs Node.js 22.18 or later.");
+    console.error("This tool needs Node.js 22.18 or later and the installed dependencies.");
     return 2;
   }
   const { buildStoryTreeModel, nextStoryTreeId } = tree;
