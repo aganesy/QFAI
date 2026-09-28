@@ -429,6 +429,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-004",
     "QFAI-STORY-005",
     "QFAI-STORY-011",
+    "QFAI-STORY-012",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -1164,6 +1165,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011":
     "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1396,6 +1399,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected row or record an in-force change request for the named file change.",
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

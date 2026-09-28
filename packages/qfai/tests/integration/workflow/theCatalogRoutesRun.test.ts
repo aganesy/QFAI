@@ -147,6 +147,17 @@ it("Checked proposals with no new story bind the flow their route takes", async 
   });
 });
 
+// QFAI:EX-0001-0192-40
+it("A route that ends at triage-close admits the discussion records, not DESIGN.md", async () => {
+  expect({
+    records: bound(await routed("decide-acceptance", [], [".qfai/discussion/**"])),
+    design: bound(await routed("decide-acceptance", [], [".qfai/discussion/**", "DESIGN.md"])),
+  }).toEqual({
+    records: [],
+    design: [{ reason: "scope-escape", subject: "DESIGN.md" }],
+  });
+});
+
 // QFAI:EX-0001-0221-02
 it("An answer-question proposal naming a source file, and an answer that changed a file", async () => {
   const { running, workOrder } = issued(await readyOn("answer-question", 0));

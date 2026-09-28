@@ -15,6 +15,12 @@
 | CSS framework       | `<CSS framework, or none>`                 |
 | Component catalogue | `<primary component catalogue, or none>`   |
 
+## Architecture
+
+| Layer        | Responsibility                      | Depends on                                  |
+| ------------ | ----------------------------------- | ------------------------------------------- |
+| <layer name> | <what the layer is responsible for> | <the layers it imports from, or - for none> |
+
 ## Dependencies
 
 - `<package>`

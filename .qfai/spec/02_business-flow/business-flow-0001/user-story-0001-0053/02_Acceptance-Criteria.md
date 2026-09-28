@@ -35,4 +35,11 @@ Feature: Story-tree layout and ID validation
     Given the story tree, and a story ID that does not start with its flow's number, an AC or EX ID that does not start with its story's ID, or a `business-flow-NNNN/` or `user-story-NNNN-NNNN/` directory whose name does not match the ID it holds
     When `qfai validate --profile sdd` runs
     Then an error names the ID and the file that defines it
+
+  # AC-0001-0053-06
+  Scenario: A constraint ID out of sequence is reported
+    Given the story tree, and a row of `01_policy/constraint.md` whose ID is not its section's prefix followed by its place in the table, counted from 01
+    When `qfai validate --profile sdd` runs
+    Then an error names the ID and the ID its place gives
+    And a constraint document whose IDs run from 01 in each section raises no such error
 ```

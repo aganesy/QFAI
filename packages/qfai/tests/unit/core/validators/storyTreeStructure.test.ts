@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import {
+  validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
@@ -75,6 +76,52 @@ describe("story-tree structure", () => {
         const findings = await validateStoryTreeStructure(root, defaultConfig, tree);
         expect(findings.some((item) => item.code === "QFAI-STORY-011")).toBe(missing);
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0053-07
+  it("reports a constraint ID that is not its row's place in its section", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
+    try {
+      const specsDir = path.join(root, ".qfai", "spec");
+      const file = path.join(specsDir, "01_policy", "constraint.md");
+      await mkdir(path.dirname(file), { recursive: true });
+      const table = (rows: string[]): string =>
+        ["| ID | Constraint | Rationale |", "| --- | --- | --- |", ...rows].join("\n");
+      const document = (technical: string[], business: string[]): string =>
+        `# Constraints\n\n## Technical Constraints\n\n${table(technical)}\n\n## Operational Constraints\n\n${table([])}\n\n## Business Constraints\n\n${table(business)}\n`;
+
+      await writeFile(
+        file,
+        document(["| TC-01 | A | B |", "| TC-03 | C | D |"], ["| TC-01 | E | F |"]),
+      );
+      const reported = await validateConstraintIds(specsDir);
+      expect(reported.map((item) => [item.code, item.refs])).toEqual([
+        ["QFAI-STORY-012", ["TC-03"]],
+        ["QFAI-STORY-012", ["TC-01"]],
+      ]);
+      expect(reported[0]?.message).toContain("so it is TC-02");
+      expect(reported[1]?.message).toContain("so it is BC-01");
+
+      await writeFile(file, document(["| TC-01 | A | B |", "| TC-02 | C | D |"], []));
+      expect(await validateConstraintIds(specsDir)).toEqual([]);
+      const tree = buildStoryTreeModel(new Map(), {
+        specsDir,
+        contractsDir: path.join(specsDir, "03_contract"),
+      });
+      const findings = await validateStoryTreeStructure(root, defaultConfig, tree);
+      expect(findings.some((item) => item.code === "QFAI-STORY-012")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads no constraint IDs when the tree has no constraint document", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
+    try {
+      expect(await validateConstraintIds(path.join(root, ".qfai", "spec"))).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

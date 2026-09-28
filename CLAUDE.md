@@ -10,6 +10,10 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
   § 2 governs consuming callers, kept failures and callback boundaries.
 - Keep functions focused; extract when a function exceeds ~50 lines.
+- Build a file path with `node:path`, never by joining strings: CI runs the
+  suite on Linux and on Windows.
+- A branch catches up by merging the default branch into it, never by rebase.
+  Never force-push a branch other work builds on.
 - Try solutions in the order `.claude/rules/minimal-implementation.md`
   (master: `.agents/rules/minimal-implementation.md`) sets out, and mark a
   deliberate shortcut with its ceiling and the condition that lifts it.

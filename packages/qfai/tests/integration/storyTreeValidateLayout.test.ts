@@ -90,6 +90,29 @@ describe("story-tree layout dispatch", () => {
     expect(result.issues[0]?.file).toBe(path.join(root, ".qfai", "specs"));
   });
 
+  // QFAI:AC-0001-0053-06
+  // QFAI:EX-0001-0053-07
+  it("reports a constraint row whose ID is not its place in its section", async () => {
+    const table = "| ID | Constraint | Rationale |\n| --- | --- | --- |\n";
+    const constraints = (technical: string): string =>
+      `# Constraints\n\n## Technical Constraints\n\n${table}${technical}\n## Operational Constraints\n\n${table}\n## Business Constraints\n\n${table}`;
+    await put(
+      `${specs}/01_policy/constraint.md`,
+      constraints("| TC-01 | Runs on Linux | Adopters |\n| TC-04 | Runs on Windows | Adopters |\n"),
+    );
+
+    const gap = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = gap.issues.filter((item) => item.code === "QFAI-STORY-012");
+    expect(reported.map((item) => [item.severity, item.refs])).toEqual([["error", ["TC-04"]]]);
+
+    await put(
+      `${specs}/01_policy/constraint.md`,
+      constraints("| TC-01 | Runs on Linux | Adopters |\n| TC-02 | Runs on Windows | Adopters |\n"),
+    );
+    const closed = await validateProject(root, configured(), { profile: "sdd" });
+    expect(closed.issues.some((item) => item.code === "QFAI-STORY-012")).toBe(false);
+  });
+
   it("writes only the migration finding to validate.json for an old layout", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
 

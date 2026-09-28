@@ -143,6 +143,12 @@ step exits 3:
   the content once a person rewrites it.
 - Step 3 also leaves as it is a policy file or `tech.md` that already exists
   and differs from what it would write.
+- A constraint row keeps only its ID, Constraint and Rationale. Step 3 lists
+  an Impact column, whose content belongs to the contract or `tech.md` that
+  owns it, and a row that names a file, a command or a rule ID, to be rewritten
+  in plain words.
+- Step 3 numbers each constraint section from 01 in table order, and lists
+  every ID that changed with the ID that replaces it.
 - Steps 4 and 5 write a story sentence or an example cell of another form as it
   stands, for a person to rewrite.
 - Step 4 lists every business flow, so that a person writes its alternate and
@@ -161,12 +167,12 @@ moves to `.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`:
 Step 3 writes no structure document. It routes the old `catalog/structure.md`
 section by section:
 
-| Old content                                          | New home                                              |
-| ---------------------------------------------------- | ----------------------------------------------------- |
-| An entrypoint with a smoke or skeleton command       | A `- Skeleton:` line in `tech.md`'s Standard commands |
-| An `## Architecture constraints` row with a `TC-` ID | The Technical Constraints section of `constraint.md`  |
-| The `ui_paths:` globs of `## UI surface paths`       | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
-| Anything else                                        | `## For a person`, with the archived copy             |
+| Old content                                                                                                                                | New home                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| An entrypoint with a smoke or skeleton command                                                                                             | A `- Skeleton:` line in `tech.md`'s Standard commands |
+| A layer row of an `## Architecture` or `## Architecture constraints` table of Layer, Responsibility and Depends on columns, naming no path | The `## Architecture` table of `tech.md`              |
+| The `ui_paths:` globs of `## UI surface paths`                                                                                             | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
+| Anything else                                                                                                                              | `## For a person`, with the archived copy             |
 
 Step 3 writes each Markdown contract under `cli/` in the shape of the CLI
 contract template: its `# CLI-0001: <title>` heading, `## Ownership boundary`

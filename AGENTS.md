@@ -186,6 +186,10 @@ Planテンプレート:
   that lifts it.
 - TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
   § 2 governs consuming callers, kept failures and callback boundaries.
+- Build a file path with `node:path`, never by joining strings: CI runs the
+  suite on Linux and on Windows.
+- A branch catches up by merging the default branch into it, never by rebase.
+  Never force-push a branch other work builds on.
 - 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
 - 入力は型とバリデーションで検証し、失敗パスを先に書く。
 - 早期 return でネストを浅くし、読みやすさと責務を守る。

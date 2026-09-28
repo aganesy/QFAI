@@ -40,6 +40,7 @@ specialization_tags:
 - Coordinate with test and CI agents on runtime and integration implications.
 - Implement with SOLID: prefer simple contracts and explicit invariants.
 - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
+- Place new code in one layer of the `## Architecture` table of `<paths.contractsDir>/tech.md`, and import only from the layers its row lists.
 - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
 - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
   standard library, native platform features and installed dependencies. Mark

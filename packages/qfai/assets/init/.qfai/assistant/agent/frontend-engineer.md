@@ -37,6 +37,7 @@ specialization_tags:
 - Build UI components, states, interactions, and user-facing flows.
 - Respect the selected direction, finalized design system, screen contracts, optional design tokens, optional fallback HTML/CSS mock, and screen flow constraints.
 - Coordinate with backend changes without breaking surface contracts.
+- Place new code in one layer of the `## Architecture` table of `<paths.contractsDir>/tech.md`, and import only from the layers its row lists.
 - Keep UI code cohesive and readable: isolate concerns, minimize hidden coupling, avoid duplication, and use existing patterns/utilities before inventing new ones.
 - Apply fail-fast validation and least-astonishment behavior to form handling, loading states, error states, and interaction flows.
 - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the

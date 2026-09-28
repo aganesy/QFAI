@@ -258,6 +258,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: `constraint.md` is policy in plain words, and `tech.md` holds
+  the architecture.** A document written to the earlier shape fails the
+  document-schema check until it is rewritten.
+
+  - Each section of `01_policy/constraint.md` is one table of ID, Constraint
+    and Rationale. The Impact column is gone, and a row may not hold a
+    backtick or a business rule, example, acceptance-criterion or contract
+    ID. Move a file name, a command or a rule into the contract or
+    `tech.md` that owns it.
+  - Constraint IDs are positional: `TC-`, `OC-` and `BC-` from 01 in table
+    order within each section. No document cites one, so removing a row
+    renumbers the rows after it. `qfai validate` reports an ID out of place
+    as `QFAI-STORY-012`.
+  - `tech.md` has a required `## Architecture` table between Stack and
+    Dependencies: one row per layer, its responsibility, and the layers it
+    may import from. `/qfai-configure` fills it from the codebase and
+    `/qfai-sdd` from the discussion pack. Implementation places new code by
+    it, and the reviewers treat an import that crosses it as a finding. The
+    constitution routes architecture boundaries there instead of to
+    `constraint.md`.
+  - Migration step 3 moves a layer table of an old `catalog/structure.md`
+    into that section, drops the Impact column of an old constraint table,
+    numbers each constraint section from 01 and names every ID it changed,
+    and lists anything else for a person.
+
 - **Breaking: the five routes of earlier 2.0.0 builds are retired.** A run
   record written under one is read under its successor, and the record itself
   is never rewritten.
@@ -1039,6 +1064,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger columns the removed code read.
 
 ### Fixed
+
+- **A route that ends without a specification stage no longer writes
+  `DESIGN.md`.** The discussion stage writes only its own records;
+  `/qfai-sdd` writes `DESIGN.md` for a UI-bearing flow. A route proposal
+  ending at `triage-close` that names `DESIGN.md` is refused as a scope
+  escape, and the `qfai-run` routing reference lists `DESIGN.md` under the
+  `sdd` stage.
 
 - **A backslash in the spec paths names one directory on every platform**
   (#2625). `qfai validate` reads a `\` in `paths.specsDir` and

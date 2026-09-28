@@ -34,6 +34,50 @@ structure:
           - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
             regex: true
       - heading:
+          pattern: "^## Architecture$"
+          regex: true
+        description: >-
+          The layers the code is divided into, one row each: what the layer is
+          responsible for, and the other layers it may import from, comma-separated,
+          or - for none. Written from the technical decisions the discussion pack
+          records and, in an existing codebase, from its module layout and import
+          directions. Every new module belongs to one layer and imports only from
+          the layers its row lists; the implementation and review stages read this
+          table to place code and to judge a change. Layers are named, not located:
+          no path, file name or command.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Layer, Responsibility, Depends on]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          # A table with no layer row.
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*\|\s*\z'
+            regex: true
+          # A file name or a command in backticks, or a Windows path.
+          - pattern: "[`\\\\]"
+            regex: true
+          # A path: one that starts with /, ./ or ../; a slash-joined name that
+          # ends in a file extension; or three or more slash-joined lowercase
+          # segments, or one ending in a slash. A single slash between words,
+          # as in I/O or and/or, is prose.
+          - pattern: '(?:^|[\s|(])\.{0,2}/\w'
+            regex: true
+          - pattern: '\w/[\w./-]*\.[A-Za-z][A-Za-z0-9]{0,4}\b'
+            regex: true
+          - pattern: "[a-z0-9_-]+/[a-z0-9_-]+/"
+            regex: true
+          - pattern: '[a-z0-9_-]/(?:[\s|]|$)'
+            regex: true
+      - heading:
           pattern: "^## Dependencies$"
           regex: true
         description: Each runtime dependency with the reason for it on a nested item, or `- None.`

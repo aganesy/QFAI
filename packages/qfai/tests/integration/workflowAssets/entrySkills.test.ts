@@ -348,10 +348,9 @@ describe("qfai-run", () => {
     expect(rowOf(text, "`sdd`")).toMatch(
       /the story and contract files of the bound flow it changes/i,
     );
-    expect(rowOf(text, "| `sdd` ")).toMatch(/the new story's directory, or the new flow's/i);
-    expect(rowOf(text, "`discussion`")).toMatch(
-      /its tracked records, and `DESIGN\.md` for a UI-bearing target/i,
-    );
+    expect(rowOf(text, "| `sdd` ")).toMatch(/the new story's directory or the new flow's/i);
+    expect(rowOf(text, "| `sdd` ")).toMatch(/and `DESIGN\.md` for a UI-bearing flow/i);
+    expect(rowOf(text, "`discussion`")).toMatch(/\| Its tracked records +\|/);
     expect(rowOf(text, "`triage` and `diagnose`")).toMatch(/\| Nothing +\|/);
     const flatText = flat(text);
     expect(flatText).toMatch(

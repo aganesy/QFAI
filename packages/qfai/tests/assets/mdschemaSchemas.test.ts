@@ -375,7 +375,7 @@ describe("a table-only section holds its template's columns and nothing above th
   const noteAbove = variants((table) => ["| explanatory note", ...table]);
 
   it("finds every table of every template", () => {
-    expect(extraColumn.length).toBe(15);
+    expect(extraColumn.length).toBe(16);
   });
 
   it.each(extraColumn)("reports an added column in %s", (_label, name, text) => {
@@ -472,6 +472,84 @@ describe("the technology document holds only its three sections, each in its sha
     ],
   ];
 
+  /** The template's one layer row, which each Architecture case rewrites. */
+  const LAYER_ROW = /^\| <layer name> .*$/m;
+  const ARCHITECTURE = "## Architecture\n\n";
+
+  /** An Architecture table the schema refuses, and the finding it reports. */
+  const refusedArchitecture: ReadonlyArray<readonly [string, (text: string) => string, string]> = [
+    [
+      "no Architecture section",
+      (text) => text.replace(/## Architecture\n[^#]*/, ""),
+      "[structure]",
+    ],
+    [
+      "an Architecture table with no layer row",
+      (text) => text.replace(/^\| <layer name> .*\n/m, ""),
+      "[forbidden-text]",
+    ],
+    [
+      "a rooted path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in /srv/app | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a relative path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in ./src | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a file with its extension in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/index.ts | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "three slash-joined segments in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in packages/core/src | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a directory ending in a slash in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src/ today | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a Windows path in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Lives in src\\core | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "a file name in backticks in a layer row",
+      (text) => text.replace(LAYER_ROW, "| Core | Reads `config.ts` | - |"),
+      "[forbidden-text]",
+    ],
+    [
+      "prose in Architecture",
+      (text) => text.replace(ARCHITECTURE, `${ARCHITECTURE}The layers.\n\n`),
+      "[forbidden-text]",
+    ],
+  ];
+
+  it.each(refusedArchitecture)("reports %s", (_label, change, finding) => {
+    // QFAI:EX-0001-0006-07
+    const template = readFileSync(TECH_TEMPLATE, "utf-8");
+    expect(template).toMatch(LAYER_ROW);
+    const result = check(change(template));
+    expect(result.output).toContain(finding);
+    expect(result.status).not.toBe(0);
+  });
+
+  it("accepts layers that name the layers each imports from, and a slash between words", () => {
+    // QFAI:EX-0001-0006-07
+    const template = readFileSync(TECH_TEMPLATE, "utf-8").replace(
+      LAYER_ROW,
+      "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX and HTTP/gRPC helpers | - |",
+    );
+    const result = check(template);
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
+
   it.each(rejected)("reports %s", (_label, from, to, finding) => {
     const template = readFileSync(TECH_TEMPLATE, "utf-8");
     expect(template).toContain(from);
@@ -488,6 +566,59 @@ describe("the technology document holds only its three sections, each in its sha
         "- Skeleton: `api` -> `run api`\n- Skeleton: `cli` -> `run cli`\n",
       );
     const result = check(template);
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
+});
+
+describe("the constraint document states each limit in plain words", () => {
+  const CONSTRAINT_TEMPLATE = path.join(TEMPLATE_ROOT, "01_policy/constraint.md");
+  const CONSTRAINT_SCHEMA = path.join(SCHEMA_ROOT, "story/01_policy/constraint.mdschema.yml");
+  const TECHNICAL = "| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n";
+
+  /** The template with its Technical Constraints table replaced by `table`. */
+  function check(table: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-constraint-"));
+    try {
+      const template = readFileSync(CONSTRAINT_TEMPLATE, "utf-8");
+      expect(template).toContain(TECHNICAL);
+      const file = path.join(dir, "constraint.md");
+      writeFileSync(file, template.replace(TECHNICAL, table), "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", CONSTRAINT_SCHEMA, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const refused: ReadonlyArray<readonly [string, string]> = [
+    ["a file name in backticks", `${TECHNICAL}| TC-01 | Paths use \`node:path\` | Portable |\n`],
+    ["a business rule ID", `${TECHNICAL}| TC-01 | BR-0003-0001 holds | Portable |\n`],
+    ["an example ID", `${TECHNICAL}| TC-01 | Deterministic | EX-0001-0039-01 |\n`],
+    ["an acceptance-criterion ID", `${TECHNICAL}| TC-01 | Deterministic | AC-0001-0039-01 |\n`],
+    ["a contract ID", `${TECHNICAL}| TC-01 | CLI-0016 decides it | Reproducible |\n`],
+    [
+      "an Impact column",
+      "| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Runs on Linux | Adopters | CI |\n",
+    ],
+  ];
+
+  it.each(refused)("reports %s", (_label, table) => {
+    // QFAI:EX-0001-0006-06
+    const result = check(table);
+    expect(result.output).toContain("[forbidden-text]");
+    expect(result.status).not.toBe(0);
+  });
+
+  it("accepts a row in plain words", () => {
+    // QFAI:EX-0001-0006-06
+    const result = check(
+      `${TECHNICAL}| TC-01 | The package runs on the Node.js floor it declares | Adopters install it on Linux and on Windows |\n`,
+    );
     expect(result.output).toContain("No violations");
     expect(result.status).toBe(0);
   });

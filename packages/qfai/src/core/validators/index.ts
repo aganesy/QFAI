@@ -13,6 +13,7 @@ export {
   validateStoryTreeObligationsModel,
 } from "./storyTreeObligations.js";
 export {
+  validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
