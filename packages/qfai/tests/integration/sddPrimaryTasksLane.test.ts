@@ -170,7 +170,7 @@ function uiContractWithPopulatedPrimaryTasks(): string {
     "    title: Create Order",
     "    route: /orders/new",
     "    primary_tasks:",
-    "      - create_order",
+    "      - { id: create_order, label: Create an order, acceptance: done }",
     "",
   ].join("\n");
 }
@@ -220,7 +220,10 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
 
     const empty = await prototypingPreflight(
       PASSING_UI_CONTRACT.replace(
-        ["    primary_tasks:", "      - Browse the surface"].join(String.fromCharCode(10)),
+        [
+          "    primary_tasks:",
+          "      - { id: browse, label: Browse the surface, acceptance: done }",
+        ].join(String.fromCharCode(10)),
         "    primary_tasks: []",
       ),
     );

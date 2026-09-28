@@ -65,7 +65,10 @@ afterEach(async () => {
 
 describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (error/boundary)", () => {
   it("9 primary_tasks fires QFAI-AUD-020 (warning) naming the ceiling", async () => {
-    const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
+    const tasks = Array.from(
+      { length: 9 },
+      (_, i) => `      - { id: task_${i + 1}, label: task_${i + 1}, acceptance: done }`,
+    ).join("\n");
     const ui = [
       "screens:",
       "  - id: dashboard",
@@ -116,7 +119,10 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
   });
 
   it("count exactly 7 (the ceiling) does NOT trigger QFAI-AUD-020", async () => {
-    const tasks = Array.from({ length: 7 }, (_, i) => `      - task_${i + 1}`).join("\n");
+    const tasks = Array.from(
+      { length: 7 },
+      (_, i) => `      - { id: task_${i + 1}, label: task_${i + 1}, acceptance: done }`,
+    ).join("\n");
     const ui = [
       "screens:",
       "  - id: dashboard",
@@ -141,7 +147,7 @@ describe("TC-0004-0070: QFAI-AUD-020 ceiling warn + missing acceptance reject (e
       "    title: Confirm",
       "    route: /confirm",
       "    primary_tasks:",
-      "      - Confirm the pending action",
+      "      - { id: confirm, label: Confirm the pending action, acceptance: the action is applied }",
       "",
     ].join("\n");
     await writeUiContract("single-task.yaml", ui);

@@ -10,7 +10,8 @@ import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
 let root: string;
 
 const contractsDir = defaultConfig.paths.contractsDir;
-const SCREEN = "screens:\n  - id: home\n    route: /\n    primary_tasks:\n      - browse\n";
+const SCREEN =
+  "screens:\n  - id: home\n    route: /\n    primary_tasks:\n      - { id: browse, label: Browse, acceptance: done }\n";
 const MOCK = `<div style="color: #ff0000">${'<span style="color: #00ff00"></span>'.repeat(6)}</div>\n`;
 const TOKENS = "primitive:\n  color:\n    base:\n      $value: '#ffffff'\n";
 

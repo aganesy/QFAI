@@ -19,7 +19,7 @@ Feature: Convergence and iteration budget
 
   # AC-0001-0101-03
   Scenario: A time-budget overrun is a soft warning
-    Given the time-budget cap is 5 minutes per (UI contract, screen) review session in each cycle (OQ-0004)
+    Given the time-budget cap is 5 minutes per (UI contract, screen) review session in each cycle
     When a review session exceeds the cap in a cycle
     Then the reviewer payload records a `softWarnings.timeBudget` entry
     And the aggregator does not gate on it, and only the global 10-cycle budget can hard-fail the run

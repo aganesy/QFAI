@@ -103,7 +103,10 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
   }
 
   it("QFAI:EX-0001-0161-01 — normal: QFAI-AUD-020 warning text names the ceiling when count is 9", async () => {
-    const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
+    const tasks = Array.from(
+      { length: 9 },
+      (_, i) => `      - { id: task_${i + 1}, label: task_${i + 1}, acceptance: done }`,
+    ).join("\n");
     const issues = await withinBandIssues(
       [
         "screens:",
@@ -134,8 +137,8 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -152,9 +155,9 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
-          "      - t3",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
+          "      - { id: t3, label: t3, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -170,14 +173,14 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
-          "      - t3",
-          "      - t4",
-          "      - t5",
-          "      - t6",
-          "      - t7",
-          "      - t8",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
+          "      - { id: t3, label: t3, acceptance: done }",
+          "      - { id: t4, label: t4, acceptance: done }",
+          "      - { id: t5, label: t5, acceptance: done }",
+          "      - { id: t6, label: t6, acceptance: done }",
+          "      - { id: t7, label: t7, acceptance: done }",
+          "      - { id: t8, label: t8, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -185,7 +188,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0161-02 — normal: string-only AND complete structured items are accepted", async () => {
+  it("QFAI:EX-0001-0161-02 — normal: complete structured items are accepted and a string item is rejected", async () => {
     const issues = await withinBandIssues(
       [
         "screens:",
@@ -203,7 +206,12 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
         "",
       ].join("\n"),
     );
-    expect(issues.find((issue) => issue.code === "QFAI-AUD-021")).toBeUndefined();
+    const shape = issues.filter((issue) => issue.code === "QFAI-AUD-021");
+    expect(shape.map((issue) => issue.message)).toEqual([
+      expect.stringMatching(
+        /primary_task #1 must be a mapping with exactly id, label and acceptance/,
+      ),
+    ]);
     expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeUndefined();
   });
 

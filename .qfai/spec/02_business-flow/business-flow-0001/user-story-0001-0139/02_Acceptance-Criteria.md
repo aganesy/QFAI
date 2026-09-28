@@ -5,7 +5,7 @@
 ```gherkin
 Feature: Accepted screen capture mirror
   # AC-0001-0139-01
-  Scenario: Aggregate-dir mirror with underscore casing (OQ-0110 Option A)
+  Scenario: Aggregate-dir mirror with underscore casing
     Given a converged iter with N declared screens,
     When `iterate` mirrors accepted-iter content,
     Then `.qfai/evidence/prototyping/screenshots/<screen-id>.png` AND `.qfai/evidence/prototyping/html/<screen-id>.html` MUST exist for every `screens[]` entry.

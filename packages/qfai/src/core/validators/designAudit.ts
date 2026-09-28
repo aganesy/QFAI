@@ -273,7 +273,7 @@ function checkContractHierarchyFromScreens(
       const [filePath = "<unknown-file>"] = screen.sourceRef.split("#");
       // Emit QFAI-AUD-021 shape findings BEFORE the empty-primary-tasks
       // branch's `continue` — otherwise a screen whose every
-      // primary_task is a malformed structured object (extractPrimaryTasks
+      // primary_task is malformed (extractPrimaryTasks
       // recorded shape findings but the parsed list ended up empty) would
       // surface only the generic "empty primary_tasks" QFAI-AUD-001
       // diagnostic and the closed-schema detail would be hidden.
@@ -340,16 +340,16 @@ function shapeFindingFor(
       ? `missing required key(s): ${shape.missingKeys.join(", ")}`
       : shape.reason === "extra-key"
         ? `carries extra key(s) not permitted by the closed schema: ${shape.extraKeys.join(", ")}`
-        : "must be either a string (legacy) or a {id, label, acceptance} object (closed schema)";
+        : "must be a mapping with exactly id, label and acceptance (closed schema)";
   return {
     ruleId: "QFAI-AUD-021",
     dimension: "visualHierarchy",
     severityTier: 1,
     message: `[QFAI-AUD-021] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
-    why: "Structured primary_tasks entries must conform to the closed {id, label, acceptance} schema so downstream ATDD scaffolding can anchor on a stable, complete shape",
+    why: "primary_tasks entries must conform to the closed {id, label, acceptance} schema so downstream ATDD scaffolding can anchor on a stable, complete shape",
     evidence: [filePath, screenId, shape.taskRef, ...shape.missingKeys, ...shape.extraKeys],
     guidance:
-      "Author each structured primary_task entry as exactly {id, label, acceptance} (all-required). Remove any extra keys; populate any missing ones.",
+      "Author each primary_task entry as exactly {id, label, acceptance} (all-required). Remove any extra keys; populate any missing ones.",
     file: fileForFinding,
   };
 }

@@ -52,14 +52,12 @@ export const STALE_REFERENCES: readonly StaleReferenceEntry[] = [
   {
     // Pre-implementation prose pinned `session-handoff.yaml` as the
     // canonical cross-skill handoff name. After the second wave the canonical
-    // file is `.qfai/handoff.yaml`; `session-handoff.yaml` is accepted
-    // only via `qfai handoff upgrade` during the deprecation window.
+    // file is `.qfai/handoff.yaml`, and nothing reads `session-handoff.yaml`.
     // The before-token is the legacy file name, so a file that merely ends
     // in `handoff.yaml` is not flagged.
     clause: "session-handoff-legacy-name",
     beforeToken: "session-handoff.yaml",
-    replacement:
-      "use the canonical `.qfai/handoff.yaml`; legacy `session-handoff.yaml` accepted only via `qfai handoff upgrade` during the deprecation window",
+    replacement: "use the canonical `.qfai/handoff.yaml`; nothing reads `session-handoff.yaml`",
   },
 ];
 

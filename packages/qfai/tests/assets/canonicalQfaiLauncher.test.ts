@@ -32,15 +32,13 @@ const BASELINE_PATHS = [
  * First-token commands the CLI actually registers; a bare invocation of any of
  * them is not on PATH.
  *
- * These are the FIRST token only. `audit`, `handoff` and `atdd` take their
- * action as a second token (`qfai audit log`, `qfai handoff upgrade`,
- * `qfai atdd scaffold` — see `cli/main.ts` usage). Spelling them here as
- * `audit-log` / `handoff-upgrade` / `atdd-scaffold` matched nothing the CLI
- * accepts, so a doc that reintroduced a bare `qfai audit log` passed this
- * guard untouched.
+ * These are the FIRST token only. `audit` and `atdd` take their action as a
+ * second token (`qfai audit log`, `qfai atdd scaffold` — see `cli/main.ts`
+ * usage). Spelling them here as `audit-log` / `atdd-scaffold` matched nothing
+ * the CLI accepts, so a doc that reintroduced a bare `qfai audit log` passed
+ * this guard untouched.
  */
-const SUBCOMMANDS =
-  "(?:validate|init|report|doctor|prototyping|discussion|audit|handoff|atdd|workflow)";
+const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|audit|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");

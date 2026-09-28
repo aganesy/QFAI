@@ -9,7 +9,6 @@ export type ReviewItemId =
   | "anti-goal-enforcement"
   | "exploration-brief-quality"
   | "screen-contract-sufficiency"
-  | "breakthrough-readiness"
   | "accept-refine-pivot-judgement";
 
 export type ReviewItem = {
@@ -62,17 +61,6 @@ export const CANONICAL_REVIEW_ITEMS: readonly ReviewItem[] = [
       "All 11 canonical fields present per screen",
       "Routes are unique across all contracts",
       "Required states include default/loading/empty/error",
-    ],
-  },
-  {
-    id: "breakthrough-readiness",
-    name: "Breakthrough Readiness",
-    description:
-      "Evaluates whether the harness is prepared to branch when polishing stalls before completion.",
-    evaluationCriteria: [
-      "Best-of-history handling is documented",
-      "Plateau / breakthrough conditions are explicit",
-      "Breakthrough branches are compared against the incumbent instead of being ignored",
     ],
   },
   {

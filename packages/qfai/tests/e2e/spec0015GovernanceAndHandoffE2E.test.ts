@@ -9,7 +9,6 @@
  *   - US-0015-0012: seven-code Reviewer-Gate finding catalog (mandatory
  *     non-empty justification).
  *   - US-0015-0013: `qfai audit log` CLI surface.
- *   - US-0015-0014: `qfai handoff upgrade` legacy adapter.
  *   - US-0015-0015: cross-skill documentation realignment / zero stale
  *     references.
  *
@@ -35,7 +34,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAuditLog } from "../../src/cli/commands/auditLog.js";
-import { runHandoffUpgrade } from "../../src/cli/commands/handoffUpgrade.js";
 import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
 import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
@@ -246,42 +244,6 @@ describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)
     });
     expect(exit).toBe(0);
     expect(JSON.parse(written[0] ?? "null")).toEqual([]);
-  });
-});
-
-describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: qfai handoff upgrade emits .qfai/handoff.yaml with legacy: preserved", async () => {
-    await writeFile(
-      path.join(root, "session-handoff.yaml"),
-      "companyName: Acme\nprimarySpecId: spec-0012\nextra: keepme\n",
-      "utf-8",
-    );
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "session-handoff.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/legacy:/);
-    expect(body).toMatch(/extra/);
-  });
-
-  it("QFAI:BF-0001 — error: malformed legacy input fails without partial overwrite", async () => {
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: pre\n", "utf-8");
-    await writeFile(path.join(root, "malformed.yaml"), "  \n  \n", "utf-8");
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "malformed.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).not.toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toBe("companyName: pre\n");
   });
 });
 

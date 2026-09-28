@@ -3,7 +3,6 @@ import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
-import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import {
@@ -56,7 +55,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "audit",
   "sdd",
   "atdd",
-  "handoff",
   "discussion",
   "prototyping",
   "workflow",
@@ -267,29 +265,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
-    case "handoff":
-      {
-        // Only `upgrade` is supported today; parseArgs already
-        // markInvalid()s a missing / unrecognized action, so we land
-        // here with `upgrade` selected.
-        if (!options.handoffLegacyFile) {
-          error("qfai handoff upgrade: <legacy-file> is required.");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        const resolvedRoot = await resolveRoot(options);
-        process.exitCode = await runHandoffUpgrade({
-          root: resolvedRoot,
-          legacyFile: options.handoffLegacyFile,
-          // The canonical `.qfai/handoff.yaml` is a consumed SSOT:
-          // `--force` is required to overwrite an existing one, and
-          // `--dry-run` must preview instead of writing.
-          force: options.force,
-          dryRun: options.dryRun,
-        });
-      }
-      return;
     case "discussion":
       {
         // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
@@ -449,7 +424,6 @@ Commands:
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
   audit log [filters]          List the decision log under .qfai/evidence/decision/ (--scope/--operator/--clause + --format table|json)
-  handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
@@ -476,7 +450,6 @@ Options:
                   so your own command / prompt / skill files survive; a symlink has no content of
                   its own, so one you published under a retired QFAI skill name is deleted (its
                   target .qfai/assistant/skill/<id>/ stays, so you can re-link it).
-  --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
   --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
                   to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
                   refused with exit 2). A cycle 0 that resets the loop, with or without it,
@@ -485,7 +458,7 @@ Options:
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
                               (legacy .qfai/assistant/{instructions,steering}/ -> rule/ skill/ agent/ prompt/)
-  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: show what would change without writing anything
+  --dry-run       init / doctor / prototyping iterate|rescope: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
