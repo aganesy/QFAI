@@ -68,7 +68,7 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 
 Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Do not add a CLI allocator.
 
-Constraint IDs are the exception. `TC-NN`, `OC-NN` and `BC-NN` in constraint.md are positional: each section numbers its rows from 01 in table order. No other document cites one, so a removed row closes the gap and the rows after it are renumbered. `qfai validate` reports a constraint ID that is not its row's place.
+Constraint IDs are the exception. `TC-NN`, `OC-NN` and `BC-NN` in constraint.md are positional: each section numbers its rows from 01 in table order. No other document cites one, so a removed row closes the gap and the rows after it are renumbered. `npx qfai validate` reports a constraint ID that is not its row's place.
 
 Moving a story to another flow changes its US ID and every child AC and EX ID. Update all indexes, contract citations, and decision references in the same change. Record the old IDs as retired so they cannot be issued again.
 
