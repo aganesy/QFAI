@@ -1,7 +1,7 @@
 ---
 name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
-description: "Use when invoked by name or handed a QFAI work order to verify a change before it is handed off."
+description: "Use when invoked by name or handed a QFAI work order to verify a change before it is handed off: running the project's quality gates, writing its changelog and migration notes, showing a test is stable over repeated runs, confirming a fix with the reporter or a real environment, following a manual test plan, or drafting release notes or a security advisory. It is a gate with no code to write; code still to write belongs to qfai-implement. A free-text request that names no stage goes to qfai-run."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, Edit, TodoWrite, Task, Agent]
 roles:

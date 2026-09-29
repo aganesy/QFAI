@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Exploration Planner)
-description: "Use when invoked by name or handed a QFAI work order. Its subject is a product idea or problem whose scope is not settled yet."
+description: "Use when invoked by name or handed a QFAI work order for a product idea or problem whose scope is not settled yet: research, an interview with the user, and a discussion pack with its open questions and, where the product has screens, its UI sidecars. Once the scope is settled, writing the story tree belongs to qfai-sdd. A free-text request that names no stage goes to qfai-run."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:

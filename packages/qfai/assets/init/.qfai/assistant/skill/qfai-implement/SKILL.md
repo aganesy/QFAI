@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (TDD micro-cycle)
-description: "Use when invoked by name or handed a QFAI work order to implement, diagnose or repair the examples of one business flow."
+description: "Use when invoked by name or handed a QFAI work order to implement, diagnose or repair the examples of one business flow: new behaviour built test first, a reported failure or regression, a defective test tied to one example, a refactor, a dependency upgrade, a tooling change or a backport. It is for code to write; a gate on a change with no code left to write belongs to qfai-verify. A change to wording or comments alone belongs to qfai-maintain. A free-text request that names no stage goes to qfai-run."
 argument-hint: "<BF-ID> [EX-ID...]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:

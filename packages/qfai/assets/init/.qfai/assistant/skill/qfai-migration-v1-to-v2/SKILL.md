@@ -1,7 +1,7 @@
 ---
 name: qfai-migration-v1-to-v2
 title: QFAI 1.x to 2.x Migration
-description: "Move an existing QFAI 1.x spec-pack project to the 2.x story-based spec tree using the bundled steps, then install and check the free-text entry."
+description: "Move an existing QFAI 1.x spec-pack project to the 2.x story-based spec tree using the bundled steps, then install and check the free-text entry. Use when asked to migrate a project that still holds QFAI 1.x spec packs."
 allowed-tools: [Read, Glob, Write, Edit, Bash]
 roles:
   [

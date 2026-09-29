@@ -1,7 +1,7 @@
 ---
 name: qfai-configure
 title: QFAI Configure (Tune qfai.config.yaml)
-description: "Analyze the repository and tune qfai.config.yaml test globs and project overrides."
+description: "Analyze the repository and tune qfai.config.yaml test globs and project overrides. Use when asked to configure QFAI for a repository, or to fix test globs that match the wrong files or none."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent]
 roles:
