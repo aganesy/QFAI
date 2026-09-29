@@ -128,7 +128,10 @@ describe("the free-text entry reminder", () => {
         "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
         "free-text-entry",
       ]);
-      const stdout = await runReminderHook({ command: "node", args }, projectDirOf(repoRoot, rel));
+      // Both run against the shipped message file. This repository's own copy is a link to it,
+      // and a Windows checkout without symbolic links holds that link as a text file.
+      const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);
+      const stdout = await runReminderHook({ command: "node", args }, project);
       const context = contextOf(stdout);
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
