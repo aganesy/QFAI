@@ -35,6 +35,10 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 This skill answers, closes, splits or hands over a request, and changes no
 file git tracks. Work the request needs is recorded as a follow-up request,
 never done here.
@@ -73,8 +77,7 @@ Invoked by name, the skill ends at this stage. It starts no other stage and
 routes no follow-up: a request to carry a follow-up out goes to `qfai-run`.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 
 ## Review
 

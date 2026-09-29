@@ -47,6 +47,10 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Inputs
 
 - `<BF-ID>`: the business flow, `BF-NNNN`.
@@ -98,8 +102,7 @@ Each step names the common steps it runs in `requires`; read those when the
 step reaches them.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 
 ### Reviewer Gate
 

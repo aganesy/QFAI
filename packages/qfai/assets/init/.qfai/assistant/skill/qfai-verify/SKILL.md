@@ -35,6 +35,10 @@ mode: evidence-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Inputs
 
 - `[--auto]`: ask nothing and record explicit assumptions.
@@ -71,8 +75,7 @@ user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 
 ## Review
 
