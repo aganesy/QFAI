@@ -7,6 +7,7 @@
             "type": "command",
             "statusMessage": "QFAI structured-question reminder",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" structured-question",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" structured-question) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -17,6 +18,7 @@
             "type": "command",
             "statusMessage": "QFAI free-text entry reminder",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" free-text-entry",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" free-text-entry) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -30,6 +32,7 @@
             "type": "command",
             "statusMessage": "QFAI documentation-clarity reminder",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-before-post",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" documentation-clarity-before-post) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -41,6 +44,7 @@
             "type": "command",
             "statusMessage": "QFAI grilling reminder: design artifact",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" grilling-design-artifact",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" grilling-design-artifact) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -52,6 +56,7 @@
             "type": "command",
             "statusMessage": "QFAI grilling reminder: delegation",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" grilling-delegation",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" grilling-delegation) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -63,6 +68,7 @@
             "type": "command",
             "statusMessage": "QFAI api-budget reminder",
             "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/(?<![\\w.-])gh(?![\\w.-])|api\\.github\\.com/.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" api-budget",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/(?<![\\w.-])gh(?![\\w.-])|api\\.github\\.com/.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"%r/.agents/rules/reminders.json\" api-budget) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -76,12 +82,14 @@
             "type": "command",
             "statusMessage": "QFAI documentation-clarity reminder",
             "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Add File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-after-write",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Add File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"%r/.agents/rules/reminders.json\" documentation-clarity-after-write) & exit /b 0",
             "timeout": 10
           },
           {
             "type": "command",
             "statusMessage": "QFAI documentation-clarity reminder",
             "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Update File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-after-edit",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Update File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"%r/.agents/rules/reminders.json\" documentation-clarity-after-edit) & exit /b 0",
             "timeout": 10
           }
         ]
@@ -93,6 +101,7 @@
             "type": "command",
             "statusMessage": "QFAI minimal-implementation reminder",
             "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" minimal-implementation",
+            "commandWindows": "(for /f \"delims=\" %r in ('git rev-parse --show-toplevel 2^>nul') do @node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"%r/.agents/rules/reminders.json\" minimal-implementation) & exit /b 0",
             "timeout": 10
           }
         ]

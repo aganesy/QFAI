@@ -78,6 +78,7 @@ Feature: Install or upgrade and get the free-text entry
     When `qfai init` runs
     Then Claude Code and Codex each run, on every prompt, a hook that sends a request naming no skill to `qfai-run`
     And Codex also runs the structured-question reminder on every prompt
+    And on Windows each Codex hook runs through `cmd.exe` and prints what it prints through `sh`
     And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
     And a file with a shape init cannot read is left unchanged, with a warning
     And a hook file reached through a symbolic link is neither read nor written, with a warning
@@ -93,5 +94,6 @@ Feature: Install or upgrade and get the free-text entry
     And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
     And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
+    And each runs on Windows as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
 ```

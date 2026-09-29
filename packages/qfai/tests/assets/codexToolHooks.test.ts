@@ -1,6 +1,7 @@
 // QFAI:EX-0001-0196-37
 // QFAI:EX-0001-0196-38
 // QFAI:EX-0001-0196-40
+// QFAI:EX-0001-0196-41
 /**
  * The tool-time reminders in the Codex hook file.
  *
@@ -10,7 +11,8 @@
  * `mcp__<server>__<tool>` for an MCP tool. Codex hooks have no `if` condition,
  * so an entry that must stay quiet for some calls of its tool reads the call
  * from stdin itself. These tests run every such command through a real shell
- * with the input Codex sends.
+ * with the input Codex sends: `sh` for `command`, and on Windows also
+ * `cmd.exe /C` for `commandWindows`.
  */
 
 import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
@@ -28,6 +30,7 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
+import { CODEX_SHELLS, runCodexLine } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -38,6 +41,7 @@ const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders
 const SHIPPED_SETTINGS = "packages/qfai/assets/init/.claude/settings.json";
 const SHIPPED_CODEX = "packages/qfai/assets/init/.codex/hooks.json";
 const TOOL_EVENTS = ["PreToolUse", "PostToolUse"] as const;
+const ALL_EVENTS = ["UserPromptSubmit", ...TOOL_EVENTS] as const;
 const READER_END = ' "$(git rev-parse --show-toplevel)/.agents/rules/reminders.json" ';
 
 type Entry = Record<string, unknown>;
@@ -130,12 +134,24 @@ async function withProject(run: (cwd: string) => Promise<void>): Promise<void> {
   }
 }
 
-/** The event named in what the entry prints, or `null` when it prints nothing; it must exit 0. */
+/**
+ * The event named in what the entry prints, or `null` when it prints nothing.
+ *
+ * Every shell this platform has must exit 0 and print the same thing.
+ */
 async function firedEvent(entry: Entry, cwd: string, input: string): Promise<string | null> {
-  const result = await spawnCaptured("sh", ["-c", commandOf(entry)], { cwd, input });
-  expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-  if (result.stdout.trim() === "") return null;
-  const payload = asRecord(JSON.parse(result.stdout), "the output");
+  const outputs = new Set<string>();
+  for (const shell of CODEX_SHELLS) {
+    const result = await runCodexLine(entry, shell, cwd, input);
+    expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
+    // The Windows line sends git's complaint outside a repository to nul.
+    if (shell === "cmd") expect(result.stderr).toBe("");
+    outputs.add(result.stdout);
+  }
+  expect(outputs.size).toBe(1);
+  const stdout = [...outputs][0] ?? "";
+  if (stdout.trim() === "") return null;
+  const payload = asRecord(JSON.parse(stdout), "the output");
   const output = asRecord(payload.hookSpecificOutput, "hookSpecificOutput");
   expect(typeof output.additionalContext).toBe("string");
   return String(output.hookEventName);
@@ -209,12 +225,44 @@ describe("the Codex tool-time reminders", () => {
     }
   });
 
+  it("give every entry a cmd.exe line running the same reader from the git root", async () => {
+    for (const event of ALL_EVENTS) {
+      for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
+        const command = commandOf(entry);
+        const end = command.indexOf(READER_END);
+        const program = command.slice(0, end);
+        const key = command.slice(end + READER_END.length);
+        // `for /f` runs no iteration when git fails, and `exit /b 0` keeps the exit code at 0
+        // either way. `@` stops cmd.exe echoing the command it runs into the hook's stdout.
+        expect(entry.commandWindows).toBe(
+          `(for /f "delims=" %r in ('git rev-parse --show-toplevel 2^>nul') do @${program} ` +
+            `"%r/.agents/rules/reminders.json" ${key}) & exit /b 0`,
+        );
+      }
+    }
+  });
+
+  it("print nothing and exit 0 outside a repository", async () => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-tool-outside-"));
+    try {
+      for (const event of TOOL_EVENTS) {
+        for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
+          const input = codexInput(event, "Bash", "gh api repos/o/r");
+          expect(await firedEvent(entry, outside, input)).toBeNull();
+        }
+      }
+    } finally {
+      await removeTempTree(outside);
+    }
+  });
+
   it("remind about the API budget only for a command that names the forge", async () => {
     const entry = await codexEntry("PreToolUse", "api-budget");
     await withProject(async (cwd) => {
       for (const [command, fires] of [
         ["gh api repos/o/r", true],
         ["curl https://api.github.com/x", true],
+        ["gh api repos/o/r | jq .x > out & echo ^(y) <in", true],
         ["git status && echo sigh", false],
       ] as const) {
         const event = await firedEvent(entry, cwd, codexInput("PreToolUse", "Bash", command));

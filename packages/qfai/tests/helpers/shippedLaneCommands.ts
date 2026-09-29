@@ -1512,8 +1512,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the tool-time groups: four under `PreToolUse` and two under `PostToolUse`,
   // matched on Codex's tool names. Each runs the same reader over the same path and one message
   // key; the API-budget and Markdown entries first read the tool call from stdin and print only
-  // when it matches. Derived the same way; dropping those two events reproduces `fe86567a…`.
-  [".codex/hooks.json", "11889b600337528310bb16a28813f57f1db22dd75770c5ee3cdbf60653c5280d"],
+  // when it matches. Every entry also has a `commandWindows` line, which Codex runs through
+  // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
+  // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
+  // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
+  [".codex/hooks.json", "4c710d7ef8eed2214fcceb544c22205a5e836964c6751e937254e17551a8f567"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

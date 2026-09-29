@@ -18,7 +18,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   | API budget             | Before a `Bash` command that names `gh` or `api.github.com`                   |
 
   The grilling reminder before leaving plan mode stays Claude Code only: Codex
-  has no tool call that leaves plan mode.
+  has no tool call that leaves plan mode. Every Codex hook, the prompt-time
+  ones included, also runs on Windows through its `cmd.exe` line.
 
 - **Every prompt restates the free-text entry, in Claude Code and in Codex.**
   A host picks a skill from the wording of a request, and may pick another one
@@ -34,9 +35,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the missing ones; a group the project edited is kept and named; a file init
     cannot read is left unchanged with a warning.
   - Each Codex hook finds `.agents/rules/reminders.json` from the repository
-    root, so it works from a subdirectory. Outside a git repository, in a
-    project below its git root (as in a monorepo), or in a shell that does not
-    expand `$(...)`, it finds no message and prints nothing.
+    root, so it works from a subdirectory. Outside a git repository, or in a
+    project below its git root (as in a monorepo), it finds no message and
+    prints nothing.
+  - On Windows, Codex runs each hook's `commandWindows` line through
+    `cmd.exe`. That line finds the repository root with `for /f` over
+    `git rev-parse`, runs the same reader, and always exits 0.
   - `qfai init` neither reads nor writes `.claude/settings.json` or
     `.codex/hooks.json` through a symbolic link on its path; it warns and
     leaves that file alone.
