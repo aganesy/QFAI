@@ -205,4 +205,26 @@ describe("the Codex hook file", () => {
       await removeTempTree(outside);
     }
   });
+
+  it("prints nothing in a project below its git root, as in a monorepo", async () => {
+    const monorepo = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-monorepo-"));
+    try {
+      const init = await spawnCaptured("git", ["init", "-q"], { cwd: monorepo });
+      expect(init.outcome, init.stderr).toBe(EXIT_ZERO);
+      // The project, and the message file init wrote into it, sit below the git root.
+      const project = path.join(monorepo, "packages", "app");
+      await mkdir(path.join(project, ".agents", "rules"), { recursive: true });
+      await copyFile(
+        path.join(repoRoot, SHIPPED_MESSAGES),
+        path.join(project, ".agents", "rules", "reminders.json"),
+      );
+
+      const groups = await readGroups(SHIPPED_CODEX);
+      for (const entry of (groups.get("UserPromptSubmit") ?? []).flatMap((group) => group.hooks)) {
+        expect(await runThroughShell(entry, project)).toBe("");
+      }
+    } finally {
+      await removeTempTree(monorepo);
+    }
+  });
 });

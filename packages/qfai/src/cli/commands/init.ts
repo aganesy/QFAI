@@ -2817,6 +2817,17 @@ async function ensureReminderHooks(
     return { copied: [], skipped: [target] };
   }
 
+  // A symbolic link anywhere on the path, the file itself included and dangling
+  // or not, would carry this read and write out of the project: a checked-in
+  // `.codex -> ~/.codex` is enough to rewrite the user's own hook file.
+  if (await hookPathIsUnsafe(destRoot, segments)) {
+    error(
+      `  WARNING: ${shown} was left unchanged: it, or a directory above it, is a symbolic link ` +
+        `or not a directory, so the reminder hooks are not wired up.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
   const existing = await readSettingsText(target);
   if (existing.kind === "unreadable") {
     error(
@@ -2873,6 +2884,20 @@ type SettingsRead =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "absent" }
   | { readonly kind: "unreadable"; readonly reason: string };
+
+/**
+ * Whether a hook file's path must not be read or written: a directory on it is
+ * a symbolic link or not a directory, or the file itself is a symbolic link,
+ * whether its target exists or not. The answer is a boolean so the caller's
+ * message can name the relative path rather than the absolute one.
+ */
+async function hookPathIsUnsafe(destRoot: string, segments: readonly string[]): Promise<boolean> {
+  const parent = segments.slice(0, -1).join("/");
+  if (parent !== "" && (await findUnsafeWrapperComponent(destRoot, parent)) !== undefined) {
+    return true;
+  }
+  return (await safeLstat(path.join(destRoot, ...segments)))?.isSymbolicLink() === true;
+}
 
 async function readSettingsText(target: string): Promise<SettingsRead> {
   try {

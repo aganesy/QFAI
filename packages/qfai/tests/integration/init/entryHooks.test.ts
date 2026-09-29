@@ -7,7 +7,10 @@
 // QFAI:EX-0001-0196-28
 // QFAI:EX-0001-0196-29
 // QFAI:EX-0001-0196-30
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+// QFAI:EX-0001-0196-31
+// QFAI:EX-0001-0196-32
+import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -57,8 +60,11 @@ async function promptMarkers(root: string, rel: string): Promise<unknown[][]> {
   });
 }
 
-/** The `UserPromptSubmit` group an earlier release wrote into `.claude/settings.json`. */
-async function earlierStructuredQuestionGroup(): Promise<unknown> {
+/**
+ * A structured-question group as a release wrote it into `.claude/settings.json`. No release
+ * wrote a Codex hook file, so this stands for a group copied across from the Claude Code settings.
+ */
+async function claudeStructuredQuestionGroup(): Promise<unknown> {
   const fixture: unknown = JSON.parse(
     await readFile(
       path.join(
@@ -153,7 +159,7 @@ describe("the prompt-time reminder hooks", () => {
     });
   });
 
-  it("An edited Codex group is kept and named; an earlier release's group is replaced", async () => {
+  it("An edited Codex group is kept and named; one copied from Claude Code is replaced", async () => {
     await withEmptyRepo(async (root) => {
       const edited = {
         hooks: [
@@ -178,7 +184,7 @@ describe("the prompt-time reminder hooks", () => {
 
     await withEmptyRepo(async (root) => {
       await seed(root, CODEX, {
-        hooks: { UserPromptSubmit: [await earlierStructuredQuestionGroup()] },
+        hooks: { UserPromptSubmit: [await claudeStructuredQuestionGroup()] },
       });
 
       const output = await initQuietly(root);
@@ -206,5 +212,54 @@ describe("the prompt-time reminder hooks", () => {
         );
       });
     }
+  });
+
+  it("A hook file reached through a symbolic link is neither read nor written", async (ctx) => {
+    // A checked-in `.codex -> ~/.codex` would otherwise have init rewrite the user's own hook
+    // file, and a dangling `hooks.json` link would have it create one wherever the link points.
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-hooks-outside-"));
+    try {
+      await withEmptyRepo(async (root) => {
+        try {
+          await symlink(outside, path.join(root, ".codex"), "dir");
+        } catch {
+          // Symbolic links need Developer Mode or elevation on Windows.
+          ctx.skip();
+        }
+
+        const output = await initQuietly(root);
+
+        expect((await lstat(path.join(root, ".codex"))).isSymbolicLink()).toBe(true);
+        expect(await readdir(outside)).not.toContain("hooks.json");
+        expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
+        expect(trustLines(output)).toEqual([]);
+        await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
+          "qfai-run",
+        );
+      });
+
+      await withEmptyRepo(async (root) => {
+        await mkdir(path.join(root, ".codex"), { recursive: true });
+        await symlink(path.join(outside, "missing.json"), path.join(root, CODEX), "file");
+
+        const output = await initQuietly(root);
+
+        expect((await lstat(path.join(root, CODEX))).isSymbolicLink()).toBe(true);
+        expect(await readdir(outside)).not.toContain("missing.json");
+        expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
+        expect(trustLines(output)).toEqual([]);
+      });
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("A dry run writes no hook file and prints no trust line", async () => {
+    await withEmptyRepo(async (root) => {
+      const output = await initQuietly(root, false, true, true);
+
+      await expect(lstat(path.join(root, CODEX))).rejects.toThrow();
+      expect(trustLines(output)).toEqual([]);
+    });
   });
 });

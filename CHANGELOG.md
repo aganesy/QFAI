@@ -21,8 +21,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     cannot read is left unchanged with a warning. Hooks tied to a tool are not
     shipped for Codex, whose tool names differ.
   - Each Codex hook finds `.agents/rules/reminders.json` from the repository
-    root, so it works from a subdirectory. Outside a git repository, or in a
-    shell that does not expand `$(...)`, it prints nothing.
+    root, so it works from a subdirectory. Outside a git repository, in a
+    project below its git root (as in a monorepo), or in a shell that does not
+    expand `$(...)`, it finds no message and prints nothing.
+  - `qfai init` neither reads nor writes `.claude/settings.json` or
+    `.codex/hooks.json` through a symbolic link on its path; it warns and
+    leaves that file alone.
   - Codex runs a project's hooks only after you review and trust them with
     `/hooks`. `qfai init` says so in one line when it writes or adds them.
 

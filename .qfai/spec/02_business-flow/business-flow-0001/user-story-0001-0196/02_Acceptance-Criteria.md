@@ -80,6 +80,8 @@ Feature: Install or upgrade and get the free-text entry
     And Codex also runs the structured-question reminder, and no hook tied to a tool
     And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
     And a file with a shape init cannot read is left unchanged, with a warning
+    And a hook file reached through a symbolic link is neither read nor written, with a warning
     And when init writes or adds Codex hooks, the summary says in one line that Codex runs them only after they are reviewed and trusted with `/hooks`
+    And `--dry-run` writes no hook file and prints no such line
     And a hook that cannot find its message prints nothing and exits 0
 ```
