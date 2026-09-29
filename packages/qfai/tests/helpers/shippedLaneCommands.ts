@@ -1516,7 +1516,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
   // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
   // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
-  [".codex/hooks.json", "4c710d7ef8eed2214fcceb544c22205a5e836964c6751e937254e17551a8f567"],
+  //
+  // Re-pinned for one line per entry that every hook shell runs alike: `sh`, `cmd.exe /C` and
+  // PowerShell. Each entry is `node -e "<program>" <key>`; the program finds
+  // `.agents/rules/reminders.json` by looking upward from where it runs, stopping after the
+  // first directory that holds `.git`, and holds no character any of those shells expands. No
+  // entry has a `commandWindows`. Derived the same way; the file an earlier release wrote,
+  // `4c710d7e…`, is kept as a fixture the merge test upgrades.
+  [".codex/hooks.json", "d48bbc58bb372751195fb1023af42b646863eae8c4c3055c71880bcd26555d52"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

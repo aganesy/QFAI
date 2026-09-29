@@ -96,8 +96,9 @@ where the command mentions the forge's CLI or its API host. The filter is in the
 program rather than in the matcher, which is the whole of the difference.
 
 It reminds and never blocks. Claude Code runs `node` directly, with no shell and
-no network. Codex runs the same filter as one shell command, which finds the
-repository root with `git`, once the project's hooks are trusted. Either way it
+no network. Codex runs the same filter as one command line, the same under
+every shell, whose program finds the message file by looking upward from where
+it runs, once the project's hooks are trusted. Either way it
 prints one message from `.agents/rules/reminders.json`. Input it
 does not recognise prints nothing, as do a missing and an unreadable message
 file, so it cannot fail the session it is attached to.
