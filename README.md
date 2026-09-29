@@ -18,34 +18,6 @@ QFAI addresses these failure modes by taking every change through the same deliv
 A project on the 1.x spec-pack layout moves to the story tree with the bundled `/qfai-migration-v1-to-v2` skill.
 See [Keeping QFAI itself up to date](#keeping-qfai-itself-up-to-date).
 
-## Release status
-
-- Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only and runs through `qfai prototyping iterate --cycle <n>`.
-  It evaluates every UI-bearing contract and each screen that contract declares.
-  `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary
-  contract; `--primary-ui-contract UI-0001` overrides it. Cycle 0 records
-  the full UI contract set as `uiContractsCovered` and `frozenSurfaceUnion` in
-  `prototyping.json`. The loop runs through cycles 0..9 with deterministic stop
-  codes: 0 (continue), 64 (converged), 65 (cycle limit), 66 (license check),
-  and 2 (input or lock drift).
-- Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
-- Per-iteration evidence is a single
-  `iter-NN/UI-NNNN/<screen>.review.json` per UI contract and screen pair
-  (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
-  bounded to 200 words each, `layoutAntiPatternsDetected[]`,
-  `designMdViolations[]`, and `pivotDirective`). It is the only
-  reviewer-authored file, not the only per-cycle artifact: the CLI itself
-  always writes `iterate-plan.json` into the same `iter-NN/` directory, and
-  from cycle 1 onward — once the previous cycle is recorded in
-  `prototyping.json#iterations[]` — an advisory `iterate-context.json` holding
-  the prior scores and open blockers. The opt-in `--capture` and
-  `--cycle 0 --emit-skeletons` flags additionally write `<screen>.png` /
-  `<screen>.html` there. Archive the whole `iter-NN/` directory; no
-  `interaction.json` is written on any path. Certification records
-  `uiContractsCovered`, `convergedUiContracts` and `laggingUiContracts`.
-- Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
-
 ## Installation
 
 qfai is published on npm as **`qfai`**. Install it as a dev dependency:
@@ -56,18 +28,16 @@ npm i -D qfai
 ```
 
 Let the package manager write the `devDependencies` entry. Do not hand-pin a version
-here: `package.json#version` in the published package is the only version source, and a
-number copied from prose goes stale on the next release.
+here: `package.json#version` in the published package is the only version source.
 
 > **Do not install from the GitHub repository.** A git specifier such as
-> `"qfai": "github:aganesy/QFAI"` maps the dependency key `qfai` to the private monorepo
-> root — the manifest `name` is irrelevant, so it lands in `node_modules/qfai` regardless.
-> That root ships no `bin` and no built `dist`, so nothing would be runnable or
-> importable. Under npm or yarn a `preinstall` guard refuses the install with an
-> explanatory error rather than completing silently; under pnpm — or any package manager
-> that reports no user agent — it is not caught, so the mistake is yours to avoid. Use the
-> npm package. Standalone CLI inspection can use `npx qfai@latest <command>`;
-> agent skills require a local package installation for their routing defaults.
+> `"qfai": "github:aganesy/QFAI"` installs the private monorepo root as `node_modules/qfai`.
+> That root ships no `bin` and no built `dist`, so nothing is runnable or importable.
+> npm and yarn refuse it with an explanatory error through a `preinstall` guard.
+> pnpm, and any package manager that reports no user agent, do not, so avoid it yourself.
+> Use the npm package.
+> Standalone CLI inspection can use `npx qfai@latest <command>`;
+> agent skills need a local installation for their routing defaults.
 
 ## Quick start
 
@@ -92,8 +62,8 @@ It asks you only what it cannot decide for you, such as whether to create a new 
 The stages fill the seeded story tree and follow the project's Standard commands in
 `<paths.contractsDir>/tech.md` (by default `.qfai/spec/03_contract/tech.md`) for its quality gates.
 
-To drive the stages yourself instead:
-Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
+To drive the stages yourself instead, run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
+See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 ## Operating model (free-text entry)
 
@@ -142,7 +112,7 @@ See [Supported hosts](#supported-hosts).
 You can still run one stage yourself by typing its skill, for example `/qfai-sdd`.
 The stage then runs on its own and stops when it is done, and you choose the next one.
 A custom skill is a reusable task instruction set for your AI coding agent.
-The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
+The agent reads QFAI assets under `.qfai/assistant/` and writes story-tree documents, tests and code.
 
 ### Where the skills live
 
@@ -235,12 +205,12 @@ W-->>AG: Completion target confirmed by validate
 AG-->>O: Completion report
 ```
 
-Operational notes.
+Notes on the skills.
 
-- Each custom skill must output in the user’s language (absolute requirement).
-- Each custom skill must end with a completion message that enumerates all available next actions and clearly states what to do for each option.
-- Except `qfai-discussion`, each skill must analyze the project context (architecture, tech stack, test framework, repo structure) before generating artifacts or code.
-- Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
+- Every skill replies in your language.
+- A skill that leaves the next step to you ends with a question that lists the next actions, the recommended one first.
+- Except `qfai-discussion`, each skill reads the project context (architecture, tech stack, test framework, repo structure) before it writes artifacts or code.
+- Skills delegate to role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer and so on), so each change passes through separate roles.
 - Triage decisions and change requests live in `.qfai/spec/decisions.md`;
   unresolved questions live in `.qfai/spec/open-questions.md`.
 - Review pack structure — `.qfai/review/review-<YYYYMMDDhhmmssSSS>/{review_request.md,R01_*.md,summary.json}` — is the one layout enforced by validation (`QFAI-REVIEW-*`).
@@ -249,7 +219,7 @@ Operational notes.
 
 ## Specifications and contracts (SDD)
 
-QFAI keeps policy, behavior and enforcing contracts in one story tree:
+QFAI keeps policy, behavior and enforcing contracts in one story tree under `.qfai/spec/`:
 
 ```text
 .qfai/spec
@@ -352,21 +322,28 @@ flowchart LR
     Exits non-zero when the reported findings cross the gate (`validation.failOn`, default `error`); use `--fail-on never|warning|error` or `--strict` to override it.
 - `npx qfai doctor`
   - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-    Use `--profile prototyping` to add prototyping-specific preflight checks for the
-    primary UI contract, design contract readiness, active agent-wrapper
-    integrations, shipped role-input readiness, Playwright CLI launcher
-    resolution/probing, and target URL reachability.
-    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json`) is produced by the AI workflow
-    (`/qfai-prototyping`), not by a general-purpose end-user CLI flow.
-    Use `npx qfai prototyping preflight --target-url <url>` for a focused
-    prototyping preflight before the skill starts; it surfaces blocking
+    `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
+    active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
+    and target URL reachability.
+- `npx qfai prototyping`
+  - Prototyping is UI-only. The AI workflow (`/qfai-prototyping`) drives it and produces its evidence,
+    `.qfai/evidence/prototyping/prototyping.json`; it is not a general-purpose end-user flow.
+    Runtime observation is observed-only: no synthetic 200, API or DB coverage is recorded.
+  - `preflight --target-url <url>` is a focused check before the skill starts. It surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the UI contract
-    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
-    Evidence refs must resolve to concrete repository-relative artifacts;
-    absolute paths are invalid. UI coverage and per-screen reviews use full
-    `UI-NNNN` IDs.
-    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
+  - `iterate --cycle <n> --target-url <url>` runs one cycle, 0 to 9, of the UI contract evolution loop over every
+    UI-bearing contract and each screen it declares. Exit codes: 0 (continue), 64 (converged), 65 (cycle limit),
+    66 (license check), 2 (input or lock drift).
+  - `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary contract, and
+    `--primary-ui-contract UI-0001` overrides it. The pin selects; it does not limit coverage.
+    Cycle 0 records the full set as `uiContractsCovered` and `frozenSurfaceUnion` in `prototyping.json`.
+  - Each cycle writes into `iter-NN/`: the reviewer's `UI-NNNN/<screen>.review.json` per contract and screen, and the CLI's
+    own `iterate-plan.json`. From cycle 1 an advisory `iterate-context.json` adds the prior scores and open blockers.
+    `--capture` and `--cycle 0 --emit-skeletons` also write `<screen>.png` and `<screen>.html`.
+    Archive the whole `iter-NN/` directory.
+  - Certification records `uiContractsCovered`, `convergedUiContracts` and `laggingUiContracts`. Evidence refs must
+    resolve to repository-relative artifacts, and absolute paths are invalid. Coverage and reviews use full `UI-NNNN` IDs.
+  - `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 - `npx qfai workflow`
@@ -450,7 +427,6 @@ Notes.
 - `prototyping.calibration.packPath` points to the calibration pack SSOT; runtime and validator both resolve thresholds and iteration parameters from that pack.
 - `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
   Put calibration values in the referenced pack instead of `qfai.config.yaml`.
-- Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
 
 ## Minimal tutorial
 
