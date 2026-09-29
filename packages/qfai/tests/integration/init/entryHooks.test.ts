@@ -10,6 +10,7 @@
 // QFAI:EX-0001-0196-30
 // QFAI:EX-0001-0196-31
 // QFAI:EX-0001-0196-32
+// QFAI:EX-0001-0196-34
 // QFAI:EX-0001-0196-39
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -277,6 +278,34 @@ describe("the prompt-time reminder hooks", () => {
         expect(await readdir(outside)).not.toContain("missing.json");
         expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
         expect(trustLines(output)).toEqual([]);
+      });
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("A linked `.claude` gets no settings file at its target", async (ctx) => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-outside-"));
+    try {
+      await withEmptyRepo(async (root) => {
+        try {
+          await symlink(
+            outside,
+            path.join(root, ".claude"),
+            process.platform === "win32" ? "junction" : "dir",
+          );
+        } catch {
+          ctx.skip();
+        }
+
+        const output = await initQuietly(root);
+
+        // Nothing at all: not the settings file, and not the skill or agent links either.
+        expect(await readdir(outside)).toEqual([]);
+        expect(output).toContain("WARNING: .claude/settings.json was left unchanged");
+        await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
+          "qfai-run",
+        );
       });
     } finally {
       await rm(outside, { recursive: true, force: true });
