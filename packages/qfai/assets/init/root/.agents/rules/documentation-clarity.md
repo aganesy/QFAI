@@ -87,8 +87,8 @@ standard at the two moments it is easiest to forget:
 
 Each hook prints one message from `.agents/rules/reminders.json`, with no
 network, and a missing file prints nothing. Claude Code runs `node` directly,
-with no shell. Codex runs it as one shell command, once the project's hooks are
-trusted, and reminds after a patch that adds or changes a Markdown file. Delete
+with no shell. Codex runs it as one command line, the same under every shell,
+once the project's hooks are trusted, and reminds after a patch that adds or changes a Markdown file. Delete
 the entries from both files to turn the reminder off; the rule still applies.
 
 The `gh` command line is out of scope. A shell-argument condition also matches

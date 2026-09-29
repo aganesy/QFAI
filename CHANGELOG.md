@@ -14,13 +14,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Codex hooks run under any shell.** Codex runs a hook through the session's
+  shell, which on Windows is often PowerShell rather than `cmd.exe`. Every
+  Codex hook's Windows line used `cmd.exe` syntax, so under PowerShell each one
+  failed and showed no reminder.
+  - Each entry in `.codex/hooks.json` is now one `node -e` line that runs the
+    same under `sh`, `cmd.exe`, Windows PowerShell and PowerShell 7. No entry
+    has a `commandWindows` line any more.
+  - The line finds `.agents/rules/reminders.json` itself, looking upward from
+    where Codex runs it and stopping at the repository root. A project below
+    its git root, as in a monorepo, now gets the reminders from its own
+    `.agents/rules`. Outside a git repository the hook still prints nothing.
+  - `npx qfai init` replaces a `.codex/hooks.json` group that 2.0.0 wrote and
+    nobody edited. A group the project edited is kept and named, as before.
 - A project migrated with the `qfai-migration-v1-to-v2` skill now gets the
-  reminder hooks `qfai init` installs. Step 11 writes them into
-  `.claude/settings.json` and `.codex/hooks.json` through the same merge: a
-  missing file is written from the template, an existing one gains the groups
-  it lacks, and a group the project edited is kept and named under
-  `## Reminder hooks`. When it writes `.codex/hooks.json`, it says that Codex
-  runs those hooks only after they are trusted with `/hooks`.
+  reminder hooks `qfai init` installs, and the text they print.
+  - Step 11 writes the hooks into `.claude/settings.json` and
+    `.codex/hooks.json` through the same merge. A missing file is written from
+    the template, an existing one gains the groups it lacks, a group an
+    earlier release wrote is replaced, and a group the project edited is kept
+    and named under `## Reminder hooks`. When it writes `.codex/hooks.json`, it
+    says that Codex runs those hooks only after they are trusted with `/hooks`.
+  - Step 11 also brings `.agents/rules/reminders.json` to this release's text
+    the way `npx qfai init` brings a rule master: a copy nobody edited is
+    replaced, a missing one is written, and an edited one is kept and named.
 
 ## [2.0.0] - 2026-09-30
 

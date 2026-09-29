@@ -10,9 +10,9 @@
  * edit, `spawn_agent` for a sub-agent, `Bash` for a shell command and
  * `mcp__<server>__<tool>` for an MCP tool. Codex hooks have no `if` condition,
  * so an entry that must stay quiet for some calls of its tool reads the call
- * from stdin itself. These tests run every such command through a real shell
- * with the input Codex sends: `sh` for `command`, and on Windows also
- * `cmd.exe /C` for `commandWindows`.
+ * from stdin itself. These tests run every such command with the input Codex
+ * sends, through every shell this platform has: `sh`, and on Windows also
+ * `cmd.exe /C` and PowerShell.
  */
 
 import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
@@ -30,7 +30,7 @@ import {
   GRILLING_PLAN_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
-import { CODEX_SHELLS, runCodexLine } from "../helpers/codexHookShells.js";
+import { runOnEveryShell } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -42,7 +42,8 @@ const SHIPPED_SETTINGS = "packages/qfai/assets/init/.claude/settings.json";
 const SHIPPED_CODEX = "packages/qfai/assets/init/.codex/hooks.json";
 const TOOL_EVENTS = ["PreToolUse", "PostToolUse"] as const;
 const ALL_EVENTS = ["UserPromptSubmit", ...TOOL_EVENTS] as const;
-const READER_END = ' "$(git rev-parse --show-toplevel)/.agents/rules/reminders.json" ';
+/** An entry's one line: `node -e`, its program in double quotes, and one message key. */
+const LINE = /^node -e "([^"]*)" ([a-z-]+)$/;
 
 type Entry = Record<string, unknown>;
 type Group = { readonly matcher: unknown; readonly hooks: readonly Entry[] };
@@ -78,9 +79,16 @@ function commandOf(entry: Entry): string {
   return command;
 }
 
+/** The program and the message key of an entry's line. */
+function partsOf(entry: Entry): { readonly program: string; readonly key: string } {
+  const match = LINE.exec(commandOf(entry));
+  if (match === null) throw new Error(`not a one-line reader: ${commandOf(entry)}`);
+  return { program: match[1] ?? "", key: match[2] ?? "" };
+}
+
 /** The message key a Codex entry passes to its reader, and the key a Claude Code entry does. */
-function codexKey(entry: Entry): string | undefined {
-  return commandOf(entry).split(" ").at(-1);
+function codexKey(entry: Entry): string {
+  return partsOf(entry).key;
 }
 function claudeKey(entry: Entry): string | undefined {
   const args = entry.args;
@@ -141,11 +149,9 @@ async function withProject(run: (cwd: string) => Promise<void>): Promise<void> {
  */
 async function firedEvent(entry: Entry, cwd: string, input: string): Promise<string | null> {
   const outputs = new Set<string>();
-  for (const shell of CODEX_SHELLS) {
-    const result = await runCodexLine(entry, shell, cwd, input);
+  for (const { shell, result } of await runOnEveryShell(entry, cwd, input)) {
     expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
-    // The Windows line sends git's complaint outside a repository to nul.
-    if (shell === "cmd") expect(result.stderr).toBe("");
+    expect(result.stderr, shell).toBe("");
     outputs.add(result.stdout);
   }
   expect(outputs.size).toBe(1);
@@ -207,17 +213,16 @@ describe("the Codex tool-time reminders", () => {
     expect(text).not.toContain("ExitPlanMode");
   });
 
-  it("keep every reader free of what a shell would expand or cut", async () => {
-    for (const event of TOOL_EVENTS) {
+  it("keep every program free of what a shell would expand or cut", async () => {
+    for (const event of ALL_EVENTS) {
       for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
-        const command = commandOf(entry);
-        expect(command.startsWith('node -e "')).toBe(true);
-        const end = command.indexOf(READER_END);
-        expect(end).toBeGreaterThan(0);
-        const reader = command.slice('node -e "'.length, end - 1);
-        expect(reader).not.toMatch(/[$`%"]/);
-        expect(reader).not.toContain("\\\\");
-        expect(reader).not.toContain("additionalContext");
+        const { program } = partsOf(entry);
+        // `$`, a backtick and `!` expand in `sh` or PowerShell, `%` in cmd.exe, and `"` would
+        // end the quoted program in all of them. A doubled backslash is one backslash to `sh`
+        // and two to the others.
+        expect(program).not.toMatch(/[$`%!"]/);
+        expect(program).not.toContain("\\\\");
+        expect(program).not.toContain("additionalContext");
         expect(entry.type).toBe("command");
         expect(entry.timeout).toBeGreaterThan(0);
         expect(entry.timeout).toBeLessThanOrEqual(30);
@@ -225,21 +230,21 @@ describe("the Codex tool-time reminders", () => {
     }
   });
 
-  it("give every entry a cmd.exe line running the same reader from the git root", async () => {
+  it("run one line on every platform, each program finding the message file the same way", async () => {
+    const entries: Entry[] = [];
     for (const event of ALL_EVENTS) {
-      for (const entry of (await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks)) {
-        const command = commandOf(entry);
-        const end = command.indexOf(READER_END);
-        const program = command.slice(0, end);
-        const key = command.slice(end + READER_END.length);
-        // `for /f` runs no iteration when git fails, and `exit /b 0` keeps the exit code at 0
-        // either way. `@` stops cmd.exe echoing the command it runs into the hook's stdout.
-        expect(entry.commandWindows).toBe(
-          `(for /f "delims=" %r in ('git rev-parse --show-toplevel 2^>nul') do @${program} ` +
-            `"%r/.agents/rules/reminders.json" ${key}) & exit /b 0`,
-        );
-      }
+      entries.push(...(await readGroups(SHIPPED_CODEX, event)).flatMap((g) => g.hooks));
     }
+    // Codex runs `commandWindows` in place of `command` on Windows; with none, the same line runs.
+    for (const entry of entries) expect(entry.commandWindows).toBeUndefined();
+
+    const programs = entries.map((entry) => partsOf(entry).program);
+    const unfiltered = new Set(programs.filter((program) => !program.includes("readFileSync(0")));
+    expect(unfiltered.size).toBe(1);
+    const reader = [...unfiltered][0] ?? "";
+    expect(reader.startsWith("try{") && reader.endsWith("}catch{}")).toBe(true);
+    const locate = reader.slice("try{".length, -"}catch{}".length);
+    for (const program of programs) expect(program).toContain(locate);
   });
 
   it("print nothing and exit 0 outside a repository", async () => {
@@ -263,7 +268,12 @@ describe("the Codex tool-time reminders", () => {
         ["gh api repos/o/r", true],
         ["curl https://api.github.com/x", true],
         ["gh api repos/o/r | jq .x > out & echo ^(y) <in", true],
+        ["echo %PATH% $env:X `id` && gh pr list", true],
+        ["gh", true],
         ["git status && echo sigh", false],
+        ["ghost", false],
+        ["npm run gh-pages", false],
+        ["echo %PATH% $env:X | findstr x > nul & type <in", false],
       ] as const) {
         const event = await firedEvent(entry, cwd, codexInput("PreToolUse", "Bash", command));
         expect(event, command).toBe(fires ? "PreToolUse" : null);
@@ -281,6 +291,7 @@ describe("the Codex tool-time reminders", () => {
         ["*** Add File: docs/a.md", "PostToolUse", null],
         ["*** Update File: README.md", null, "PostToolUse"],
         ["*** Update File: src/a.ts", null, null],
+        ["*** Add File: docs/a.mdx", null, null],
       ] as const;
       for (const [header, writeFires, editFires] of cases) {
         const post = codexInput("PostToolUse", "apply_patch", patch(header));

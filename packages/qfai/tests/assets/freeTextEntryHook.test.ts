@@ -5,12 +5,12 @@
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
  *
- * Codex takes one command string rather than a program and its arguments, and
- * runs it from the session's directory, which may be below the project root.
- * So its entries find the message file through `git rev-parse`, and are run
- * here through a real shell from a subdirectory, from a project below its git
- * root, and from outside any repository: `sh` for `command`, and on Windows
- * also `cmd.exe /C` for `commandWindows`, which Codex runs there instead.
+ * Codex takes one command string rather than a program and its arguments, runs
+ * it through whatever shell the session uses, and runs it from the session's
+ * directory, which may be below the project root. So each entry's program finds
+ * the message file itself, looking upward from where it runs, and is run here
+ * through every shell this platform has from a subdirectory, from a project
+ * below its git root, and from outside any repository.
  */
 
 import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
@@ -25,7 +25,7 @@ import {
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
-import { CODEX_SHELLS, runCodexLine } from "../helpers/codexHookShells.js";
+import { runOnEveryShell } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -104,14 +104,12 @@ function contextOf(stdout: string): string {
   return context;
 }
 
-/** What the entry's command prints when `sh` runs it in `cwd`, which must exit 0. */
+/** What the entry's line prints when each shell runs it in `cwd`, which must exit 0. */
 async function runThroughShell(entry: Entry, cwd: string): Promise<string> {
   const outputs: string[] = [];
-  for (const shell of CODEX_SHELLS) {
-    const result = await runCodexLine(entry, shell, cwd, "{}");
+  for (const { shell, result } of await runOnEveryShell(entry, cwd, "{}")) {
     expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
-    // The Windows line sends git's complaint outside a repository to nul.
-    if (shell === "cmd") expect(result.stderr).toBe("");
+    expect(result.stderr, shell).toBe("");
     outputs.push(result.stdout);
   }
   // Each shell's line prints the same thing, so one answer stands for all of them.
@@ -130,7 +128,10 @@ describe("the free-text entry reminder", () => {
         "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
         "free-text-entry",
       ]);
-      const stdout = await runReminderHook({ command: "node", args }, projectDirOf(repoRoot, rel));
+      // Both run against the shipped message file. This repository's own copy is a link to it,
+      // and a Windows checkout without symbolic links holds that link as a text file.
+      const project = projectDirOf(repoRoot, SHIPPED_SETTINGS);
+      const stdout = await runReminderHook({ command: "node", args }, project);
       const context = contextOf(stdout);
       expect(context).toContain("names no skill, invoke the `qfai-run` skill");
       expect(context).toContain("A message that names a skill goes to that skill.");
@@ -165,9 +166,7 @@ describe("the Codex hook file", () => {
     expect(markers).toEqual([[STRUCTURED_QUESTION_HOOK_MARKER], [FREE_TEXT_ENTRY_HOOK_MARKER]]);
   });
 
-  it("runs the Claude Code reader in one command string with a short timeout", async () => {
-    const claude = promptEntry(await readGroups(SHIPPED_SETTINGS), STRUCTURED_QUESTION_HOOK_MARKER);
-    const reader = argsOf(claude)[1] ?? "";
+  it("runs one command string naming a message key, with a short timeout", async () => {
     const messages = asRecord(
       JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8")),
       "the message table",
@@ -176,11 +175,11 @@ describe("the Codex hook file", () => {
     for (const entry of (groups.get("UserPromptSubmit") ?? []).flatMap((group) => group.hooks)) {
       expect(entry.type).toBe("command");
       expect(entry.args).toBeUndefined();
+      expect(entry.commandWindows).toBeUndefined();
       const command = commandOf(entry);
-      expect(command.startsWith(`node -e "${reader}" `)).toBe(true);
-      expect(command).toContain('"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json"');
-      expect(Object.keys(messages)).toContain(command.split(" ").at(-1));
-      expect(entry.commandWindows).toContain(`do @node -e "${reader}" `);
+      const match = /^node -e "[^"]*" ([a-z-]+)$/.exec(command);
+      expect(match, command).not.toBeNull();
+      expect(Object.keys(messages)).toContain(match?.[1]);
       expect(command).not.toContain("additionalContext");
       expect(entry.timeout).toBeGreaterThan(0);
       expect(entry.timeout).toBeLessThanOrEqual(30);
@@ -218,25 +217,47 @@ describe("the Codex hook file", () => {
     }
   });
 
-  it("prints nothing in a project below its git root, as in a monorepo", async () => {
-    const monorepo = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-monorepo-"));
+  it("finds a project's own message below its git root, and none above that root", async () => {
+    // A name with a space, `&` and parentheses, which each shell would split or run unquoted.
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai codex & (x) "));
     try {
-      const init = await spawnCaptured("git", ["init", "-q"], { cwd: monorepo });
-      expect(init.outcome, init.stderr).toBe(EXIT_ZERO);
+      const seedMessages = async (dir: string): Promise<void> => {
+        await mkdir(path.join(dir, ".agents", "rules"), { recursive: true });
+        await copyFile(
+          path.join(repoRoot, SHIPPED_MESSAGES),
+          path.join(dir, ".agents", "rules", "reminders.json"),
+        );
+      };
+      const gitInit = async (dir: string): Promise<void> => {
+        await mkdir(dir, { recursive: true });
+        const init = await spawnCaptured("git", ["init", "-q"], { cwd: dir });
+        expect(init.outcome, init.stderr).toBe(EXIT_ZERO);
+      };
       // The project, and the message file init wrote into it, sit below the git root.
+      const monorepo = path.join(base, "monorepo");
+      await gitInit(monorepo);
       const project = path.join(monorepo, "packages", "app");
-      await mkdir(path.join(project, ".agents", "rules"), { recursive: true });
-      await copyFile(
-        path.join(repoRoot, SHIPPED_MESSAGES),
-        path.join(project, ".agents", "rules", "reminders.json"),
-      );
+      await seedMessages(project);
+      const inside = path.join(project, "src");
+      await mkdir(inside, { recursive: true });
+      const sibling = path.join(monorepo, "packages", "other");
+      await mkdir(sibling, { recursive: true });
+      // A repository whose parent directory holds a message file it does not own.
+      await seedMessages(base);
+      const nested = path.join(base, "nested");
+      await gitInit(nested);
 
       const groups = await readGroups(SHIPPED_CODEX);
+      const free = promptEntry(groups, FREE_TEXT_ENTRY_HOOK_MARKER);
+      for (const cwd of [project, inside]) {
+        expect(contextOf(await runThroughShell(free, cwd))).toContain("`qfai-run`");
+      }
       for (const entry of (groups.get("UserPromptSubmit") ?? []).flatMap((group) => group.hooks)) {
-        expect(await runThroughShell(entry, project)).toBe("");
+        expect(await runThroughShell(entry, sibling)).toBe("");
+        expect(await runThroughShell(entry, nested)).toBe("");
       }
     } finally {
-      await removeTempTree(monorepo);
+      await removeTempTree(base);
     }
   });
 });

@@ -132,6 +132,15 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+  // Codex: every group of the file whose Windows line ran only under `cmd.exe`
+  "dba38a95f6008a2371c7a19f965d9e5c5cfedff81b956b9fdc9a5ae60378f0f6",
+  "143a27e53eb0cace36d4079b931a48c5e057a44e8aa0c11064f018aa7bd74128",
+  "71d3ff9ff25b358ca42c4d11755b9204a9f6b7c22f57d4e37c73d6b96941b4c0",
+  "456900de1ad2c5496bab7deae388b095edcf69ce51315e7ddbbfc7c413cfa330",
+  "559a90b17f19c6cc670c512151843d28a3295149bb9c1bb07ca268bfc3f0cfae",
+  "981058fa84e7c20eb9a72815aa6d132cbd8dbfbbe7e2a99db24a209e0b034723",
+  "15d21b0c00535c6f8241a4fbefb670c9d01bbdf15e9b18337d5fc76ed09b8879",
+  "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
 ]);
 
 export type HookMergeResult =
