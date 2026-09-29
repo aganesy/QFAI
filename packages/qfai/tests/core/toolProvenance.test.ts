@@ -187,22 +187,32 @@ describe("classifyToolLocation", () => {
   it("reports a workspace link reached through a node_modules outside the project", () => {
     // QFAI:EX-0001-0039-14
     // A worktree with no `node_modules` of its own inherits the main checkout's,
-    // whose `qfai` is a workspace link to that checkout's source.
+    // whose `qfai` is a workspace link to that checkout's source. The worktree
+    // declares qfai itself, so the main checkout's link is not its choice.
     const root = at("repo", ".claude", "worktrees", "w");
     const source = at("repo", "packages", "qfai");
-    expect(classifyToolLocation(root, source, at("repo", "node_modules"))).toBe(true);
+    const inherited = { nodeModules: at("repo", "node_modules"), declaringDir: root };
+    expect(classifyToolLocation(root, source, inherited)).toBe(true);
     // A worktree whose `node_modules` is itself a link to another checkout's.
-    expect(
-      classifyToolLocation(at("wt"), at("main", "packages", "qfai"), at("main", "node_modules")),
-    ).toBe(true);
+    const junctioned = { nodeModules: at("main", "node_modules"), declaringDir: at("wt") };
+    expect(classifyToolLocation(at("wt"), at("main", "packages", "qfai"), junctioned)).toBe(true);
+    // No declaration anywhere up the chain.
+    const undeclared = { nodeModules: at("repo", "node_modules"), declaringDir: null };
+    expect(classifyToolLocation(root, source, undeclared)).toBe(true);
   });
 
   it("stays quiet for a link in the project's own node_modules", () => {
     // QFAI:EX-0001-0039-14
     // The project chose where its own `node_modules/qfai` points, as `npm link` does.
-    expect(classifyToolLocation(at("proj"), at("src", "qfai"), at("proj", "node_modules"))).toBe(
-      false,
-    );
+    const own = { nodeModules: at("proj", "node_modules"), declaringDir: at("proj") };
+    expect(classifyToolLocation(at("proj"), at("src", "qfai"), own)).toBe(false);
+  });
+
+  it("stays quiet for a link in the node_modules of the directory that declares qfai", () => {
+    // QFAI:EX-0001-0039-14
+    // A monorepo top level that links qfai chose that copy for every package below it.
+    const top = { nodeModules: at("top", "node_modules"), declaringDir: at("top") };
+    expect(classifyToolLocation(at("top", "packages", "web"), at("src", "qfai"), top)).toBe(false);
   });
 });
 
@@ -432,6 +442,42 @@ describe("locateToolAgainstProject", () => {
         JSON.stringify({ name: "p", devDependencies: { qfai: "^2.0.0" } }),
         "utf-8",
       );
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(false);
+    });
+  });
+
+  it("stays quiet for a sub-package of a monorepo whose top level links qfai", async (ctx) => {
+    // QFAI:EX-0001-0039-14
+    // `npm link qfai`, or qfai as a workspace member, at the top level that
+    // declares it: the choice holds for every package below it.
+    await withTempDir(async (dir) => {
+      const packageDir = String(await resolveToolPackageDir());
+      const root = path.join(dir, "packages", "web");
+      await mkdir(path.join(dir, "node_modules"), { recursive: true });
+      await mkdir(root, { recursive: true });
+      if (!(await tryLink(packageDir, path.join(dir, "node_modules", "qfai")))) ctx.skip();
+      await writeFile(
+        path.join(dir, "package.json"),
+        JSON.stringify({ name: "top", devDependencies: { qfai: "workspace:*" } }),
+        "utf-8",
+      );
+      await writeFile(path.join(root, "package.json"), JSON.stringify({ name: "web" }), "utf-8");
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(false);
+    });
+  });
+
+  it("stays quiet when the nearest node_modules/qfai above is another copy", async () => {
+    // QFAI:EX-0001-0039-14
+    // A real directory, not a link to the running package: the checkout was run
+    // by its path, and nothing links to it.
+    await withTempDir(async (dir) => {
+      const root = path.join(dir, "project");
+      await mkdir(path.join(dir, "node_modules", "qfai"), { recursive: true });
+      await mkdir(root, { recursive: true });
 
       const located = await locateToolAgainstProject(root);
       expect(located?.outside).toBe(false);

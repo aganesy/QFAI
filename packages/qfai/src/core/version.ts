@@ -64,8 +64,9 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * `node_modules` directory really lies outside `root`. A workspace dependency
  * is such a link to a source checkout, so a worktree that inherits an ancestor's
  * `node_modules`, or whose `node_modules` is a link to another checkout's, runs
- * another branch's build. A link in the project's own `node_modules` points
- * where the project chose, as `npm link` does, and is not reported.
+ * another branch's build. A link in the project's own `node_modules`, or in the
+ * `node_modules` of the nearest directory that declares qfai, points where the
+ * project chose, as `npm link` does, and is not reported.
  *
  * **What remains is a path question, not an intent question.** A deliberate
  * global install and a hoisted monorepo dependency both satisfy every condition
@@ -82,10 +83,18 @@ export async function locateToolAgainstProject(
     toRealPath(path.resolve(root)),
     toRealPath(packageDir),
   ]);
+  // The walks for a link run only for the one layout they can change: a package
+  // outside the root and outside every `node_modules`.
+  const needsLink = isOutside(realRoot, realPackageDir) && !isInsideNodeModules(realPackageDir);
+  const linkingNodeModules = needsLink
+    ? await findLinkingNodeModules(realRoot, realPackageDir)
+    : null;
   const outside = classifyToolLocation(
     realRoot,
     realPackageDir,
-    await findLinkingNodeModules(realRoot, realPackageDir),
+    linkingNodeModules === null
+      ? null
+      : { nodeModules: linkingNodeModules, declaringDir: await findDeclaringDir(realRoot) },
   );
   return {
     packageDir,
@@ -197,19 +206,27 @@ function declaresQfai(manifest: unknown): boolean {
  * this predicate exists to detect. Every operand must already be a real path —
  * {@link locateToolAgainstProject} is what resolves them.
  *
- * `linkingNodeModules` is the `node_modules` directory whose `qfai` entry is a
- * link to `packageDir`, from {@link findLinkingNodeModules}. It matters only for
- * a package directory outside every `node_modules`, and only when it lies
- * outside `root` itself.
+ * `link` matters only for a package directory outside every `node_modules`.
+ * `link.nodeModules` is the `node_modules` directory whose `qfai` entry is a
+ * link to `packageDir`, from {@link findLinkingNodeModules}, and
+ * `link.declaringDir` is the nearest directory at or above `root` that declares
+ * qfai, from {@link findDeclaringDir}. The link is reported only when its
+ * `node_modules` lies outside `root` and does not belong to the declaring
+ * directory: a monorepo top level that links qfai, by `npm link` or as a
+ * workspace member, chose that copy for every package below it.
  */
 export function classifyToolLocation(
   root: string,
   packageDir: string,
-  linkingNodeModules: string | null = null,
+  link: { nodeModules: string; declaringDir: string | null } | null = null,
 ): boolean {
   if (!isOutside(root, packageDir)) return false;
   if (isInsideNodeModules(packageDir)) return true;
-  return linkingNodeModules !== null && isOutside(root, linkingNodeModules);
+  return (
+    link !== null &&
+    isOutside(root, link.nodeModules) &&
+    path.dirname(link.nodeModules) !== link.declaringDir
+  );
 }
 
 /**

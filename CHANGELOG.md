@@ -1117,12 +1117,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai validate` reports a qfai reached through a link to another
   checkout** (#2674). A workspace dependency makes `node_modules/qfai` a link
   to a source checkout, so the package that runs sits outside every
-  `node_modules` directory and was not reported. It is now reported when that
-  link is in the `node_modules` of a directory above the project, or in a
-  project `node_modules` that is itself a link to another checkout's.
-  `QFAI-TOOL-002` reports it at error where the project declares qfai, and
-  `QFAI-TOOL-001` at info where it does not. A link in the project's own
-  `node_modules`, as `npm link` makes, is still not reported.
+  `node_modules` directory and was not reported. It is now reported when the
+  nearest `node_modules/qfai` above the project is that link, in one of two
+  places: a project `node_modules` that is itself a link to another checkout's,
+  or the `node_modules` of a directory above the project.
+
+  - `QFAI-TOOL-002` reports it at error where the project declares qfai, and
+    `QFAI-TOOL-001` at info where it does not.
+  - A link is not reported in the project's own `node_modules`, as
+    `npm link` makes, or in the `node_modules` of the nearest directory that
+    declares qfai, such as a monorepo top level.
+  - The fix line of both findings says to remove only a `node_modules` link
+    itself, not what it points to, before reinstalling.
 
 - **A route that ends without a specification stage no longer writes
   `DESIGN.md`.** The discussion stage writes only its own records;

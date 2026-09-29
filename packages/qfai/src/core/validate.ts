@@ -343,17 +343,18 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         `This project declares qfai as a dependency, but the copy that is running is a ` +
           `different one at ${located.packageDir}. It was resolved from outside the ` +
           `directory the declaration points to, so this project's lockfile does not decide ` +
-          `which version gated the run. It is running either the qfai of another checkout ` +
-          `(another branch or lockfile), reached through a parent directory's node_modules ` +
-          `or a node_modules that links to that checkout, or a qfai@latest that npx fetched ` +
-          `silently.`,
+          `which version gated the run. The copy is either the qfai of another checkout ` +
+          `(another branch or lockfile) or a qfai@latest that npx fetched silently. Another ` +
+          `checkout's copy is reached through a parent directory's node_modules, or through ` +
+          `a node_modules that is a link to that checkout's.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "Unlink a node_modules that is a link to another checkout, run `npm ci` / " +
-          "`pnpm install` in this working tree, then run again. " +
+        "If this working tree's node_modules is a link to another checkout's, remove the " +
+          "link itself, not what it points to. Then run `npm ci` / `pnpm install` in this " +
+          "working tree and run again. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",
@@ -364,17 +365,20 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
     issue(
       "QFAI-TOOL-001",
       `The running qfai (${located.packageDir}) was resolved from outside the project root ` +
-        `being validated (${root}). This project does not declare qfai as a dependency, ` +
-        `so a global install or an npx fetch is the only way to run it, and both are ` +
-        `intended choices. A mismatch between the declaration and the running copy is ` +
-        `reported separately as QFAI-TOOL-002.`,
+        `being validated (${root}). No qfai dependency declaration of this project was ` +
+        `answered by another copy, so the copy was reached in a way the project allows: ` +
+        `a parent directory's node_modules, a global install or an npx fetch. A mismatch ` +
+        `between the declaration and the running copy is reported separately as ` +
+        `QFAI-TOOL-002.`,
       "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",
       [located.packageDir],
       "canonical",
-      "If this resolution is intended, ignore this finding. Otherwise run " +
-        "`npm ci` / `pnpm install` in this working tree, then run again.",
+      "If this resolution is intended, ignore this finding. Otherwise, if this working " +
+        "tree's node_modules is a link to another checkout's, remove the link itself, not " +
+        "what it points to. Then run `npm ci` / `pnpm install` in this working tree and " +
+        "run again.",
     ),
   ];
 }
