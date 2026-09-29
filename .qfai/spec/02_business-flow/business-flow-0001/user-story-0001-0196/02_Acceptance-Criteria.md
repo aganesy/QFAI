@@ -13,6 +13,7 @@ Feature: Install or upgrade and get the free-text entry
     And every step a built-in plan names is under `.qfai/assistant/step/`
     And no plan file and no workflow schema file is written into the project
     And on an upgrade every other skill directory is left as it was
+    And a host directory that is, or sits under, a symbolic link or a path that is not a directory receives nothing and loses nothing, and init names it and carries on
 
   # AC-0001-0196-02
   Scenario: Init writes no `agents/openai.yaml`
