@@ -139,7 +139,7 @@ describe("describeIncompleteRun", () => {
     // `core/fs/templateCopy.ts` wraps its `stat` failure in a message naming the entry.
     // That error has neither `code` nor `syscall`, and it has already said what
     // this function would add.
-    const wrapped = new Error("テンプレートの種別を判定できません: /t/x — EPERM", {
+    const wrapped = new Error("Cannot determine the template entry's kind: /t/x — EPERM", {
       cause: libuvError("EPERM", "stat", "/t/x"),
     });
     expect(describeIncompleteRun(wrapped, "init")).toBeNull();

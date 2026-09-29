@@ -4,11 +4,11 @@
  * blocking bucket.
  *
  * The test case for BR-0008-0019, with the grouping BR-0008-0011 fixes — Setup
- * 「`workflows.integrity` が drift を返すフィクスチャ」, Action 「`runDoctor({ root,
- * format: 'text', failOn: 'error' })` 相当を呼び…」.
+ * "a fixture on which `workflows.integrity` returns drift", Action "call the equivalent of `runDoctor({ root,
+ * format: 'text', failOn: 'error' })`".
  *
- * The TC carries THREE Verify bullets. This row owns the THIRD only — 「text
- * renderer が当該 finding を "warnings advisory of drift" group に配置する」 —
+ * The TC carries THREE Verify bullets. This row owns the THIRD only — "the text
+ * renderer places that finding in the 'warnings advisory of drift' group" —
  * together with the rendered severity tag on the placed line, which the sibling
  * suite's docblock cedes here in those words ("no `[info]` tag, no group header,
  * both TDD-0040's surface"). Bullets 1 and 2 (registered severity, and

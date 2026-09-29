@@ -475,8 +475,8 @@ describe("parseArgs", () => {
       expect(parsed.options.auditScope).toBe("deviation");
     });
   });
-  // 引数拒否の理由 (invalidReason) は main.ts が stderr に出す診断文。
-  // 「どのトークンが拒否されたか」が出力に現れることを固定する。
+  // The rejection reason (invalidReason) is the diagnostic main.ts writes to
+  // stderr. Pin that the output names which token was rejected.
   describe("invalidReason", () => {
     it("names the flag when a value-taking flag has no value", () => {
       const parsed = parseArgs(["validate", "--format"], process.cwd());
@@ -1218,11 +1218,21 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
   it("collects repeatable --assume values for sdd preflight", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(
-      ["sdd", "preflight", "--assume", "OQ-0001 は次フェーズ", "--assume", "W-PENDING-PROMOTION"],
+      [
+        "sdd",
+        "preflight",
+        "--assume",
+        "OQ-0001 deferred to the next phase",
+        "--assume",
+        "W-PENDING-PROMOTION",
+      ],
       cwd,
     );
     expect(parsed.invalid).toBe(false);
-    expect(parsed.options.sddAssumptions).toEqual(["OQ-0001 は次フェーズ", "W-PENDING-PROMOTION"]);
+    expect(parsed.options.sddAssumptions).toEqual([
+      "OQ-0001 deferred to the next phase",
+      "W-PENDING-PROMOTION",
+    ]);
   });
 
   it("keeps a help flag out of the sdd subcommand slot", () => {

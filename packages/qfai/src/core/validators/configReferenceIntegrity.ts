@@ -103,7 +103,7 @@ export async function validateConfigReferenceIntegrity(
           `config.paths.${key}.reality`,
           undefined,
           "canonical",
-          `paths.${key} を実在するディレクトリに合わせるか、対応するディレクトリを作成してください。`,
+          `Point paths.${key} at an existing directory, or create the directory it names.`,
         ),
       );
     }
@@ -131,7 +131,7 @@ export async function validateConfigReferenceIntegrity(
           "config.prototyping.calibration.packPath.reality",
           undefined,
           "canonical",
-          "prototyping.calibration.packPath を実在する calibration pack (YAML ファイル または ディレクトリ) に合わせてください。",
+          "Point prototyping.calibration.packPath at an existing calibration pack (a YAML file or a directory).",
         ),
       );
     }

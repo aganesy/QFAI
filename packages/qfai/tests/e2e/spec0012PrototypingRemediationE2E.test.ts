@@ -230,7 +230,8 @@ async function seedPhase2Project(root: string, browserTool = "playwright"): Prom
 
 describe("US-0012-0123: countWords CJK 800-1500 + EN 200-500 (Intl.Segmenter + OR-fallback)", () => {
   it("accepts a 1200-char Japanese critique AND a 350-word English critique under the same band", () => {
-    const ja = "あ".repeat(1200);
+    // Hiragana "a" (U+3042) repeated: a whitespace-free Japanese critique.
+    const ja = "\u3042".repeat(1200);
     const en = Array.from({ length: 350 }, () => "lorem").join(" ");
     const r1 = validateProseCritiqueBand(ja);
     const r2 = validateProseCritiqueBand(en);

@@ -364,7 +364,7 @@ describe("cli usage text", () => {
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {
     const entry = forceEntry(await captureHelp());
 
-    expect(entry).not.toContain("それ以外は既存があればスキップ");
+    expect(entry).not.toContain("everything else is skipped if it already exists");
     expect(entry).toContain("rule/*.local.md overlays");
     expect(entry).not.toContain("assistant/catalog");
   });

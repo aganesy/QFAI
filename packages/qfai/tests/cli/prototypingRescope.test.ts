@@ -345,7 +345,7 @@ describe("prototyping rescope and the recorded review", () => {
     return abs;
   }
 
-  const PROSE = "All twelve declared screens render, including the 禁止リスト sidebar.";
+  const PROSE = "All twelve declared screens render, including the prohibited-items sidebar.";
 
   it("annotates the review WITHOUT touching the critique", async () => {
     // The issue's second point. What a reviewer saw at cycle N is a historical

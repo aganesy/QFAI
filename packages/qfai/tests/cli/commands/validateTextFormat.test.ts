@@ -210,8 +210,8 @@ function extractPrecedenceRules(guideline: string): string[] {
 }
 
 const MULTILINE_FIX = [
-  "標準資産の直編集は非推奨です。",
-  "標準状態へ戻してから validate を再実行してください。",
+  "Editing standard assets directly is deprecated.",
+  "Restore the standard state, then rerun validate.",
 ] as const;
 
 /**

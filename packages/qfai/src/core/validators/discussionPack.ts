@@ -20,14 +20,14 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-005",
-        `discussion 配下に命名不正の discussion-* ディレクトリがあります: ${readiness.dangerousPackNames.join(", ")}`,
+        `Invalid discussion-* directory names under discussion: ${readiness.dangerousPackNames.join(", ")}`,
         "error",
         discussionRoot,
         "discussionPack.naming",
         readiness.dangerousPackNames,
         "change",
         [
-          "現在の正規命名 (`discussion-YYYYMMDDhhmmssSSS/`) のみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only the current canonical naming (`discussion-YYYYMMDDhhmmssSSS/`) is supported. Delete or rename the invalid directories.",
           "Only canonical naming is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
@@ -45,7 +45,7 @@ export async function validateDiscussionPackReadiness(
         readiness.legacyPackNames,
         "change",
         [
-          "現在の正規レイアウトのみサポートされています。不正なディレクトリを削除またはリネームしてください。",
+          "Only the current canonical layout is supported. Delete or rename the invalid directories.",
           "Only canonical layout is supported. Remove or rename the non-canonical discussion directory.",
         ].join("\n"),
       ),
@@ -67,16 +67,16 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-001",
-        "discussion-pack が見つかりません。`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/` を作成してください。",
+        "No discussion-pack was found. Create `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.",
         "error",
         discussionRoot,
         "discussionPack.presence",
         undefined,
         "change",
         [
-          "次の手順を実施してください:",
-          "- `/qfai-discussion` を実行して最新の discussion-pack を生成する",
-          "- 生成後に `qfai validate` を再実行する",
+          "Do the following:",
+          "- Run `/qfai-discussion` to generate the latest discussion-pack",
+          "- Rerun `qfai validate` after it is generated",
         ].join("\n"),
       ),
     );
@@ -89,13 +89,13 @@ export async function validateDiscussionPackReadiness(
       issues.push(
         issue(
           "QFAI-DPACK-002",
-          `discussion-pack の必須ファイルが不足しています: ${allMissing.join(", ")}`,
+          `Required discussion-pack files are missing: ${allMissing.join(", ")}`,
           "error",
           readiness.latestPackDir,
           "discussionPack.requiredFiles",
           allMissing,
           "change",
-          `不足ファイルを作成してください: ${allMissing.join(", ")}。`,
+          `Create the missing files: ${allMissing.join(", ")}.`,
         ),
       );
     }
@@ -105,17 +105,17 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-003",
-        `discussion-pack の内容が不十分です: ${readiness.incompleteFiles.join(", ")}`,
+        `The discussion-pack content is insufficient: ${readiness.incompleteFiles.join(", ")}`,
         "error",
         readiness.latestPackDir,
         "discussionPack.minimumContent",
         readiness.incompleteFiles,
         "change",
         [
-          "各ファイルで最小内容を満たしてください:",
-          "- 100文字以上",
-          "- 見出しだけでなく本文を含む",
-          "- `TBD` / `TODO` / `(placeholder)` のみで終わらせない",
+          "Make each file meet the minimum content:",
+          "- At least 100 characters",
+          "- Body text, not just headings",
+          "- Do not end with only `TBD` / `TODO` / `(placeholder)`",
         ].join("\n"),
       ),
     );
@@ -126,13 +126,13 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-004",
-        `Blocking OQ が残っています（Disposition: open）: ${readiness.blockingOqIds.join(", ")}`,
+        `Blocking OQs remain (Disposition: open): ${readiness.blockingOqIds.join(", ")}`,
         "error",
         oqPath,
         "discussionPack.blockingOq",
         readiness.blockingOqIds,
         "change",
-        "11_OQ-Register.md の該当 OQ を `Disposition: deferred`・`resolved`・`rejected` のいずれかに更新してください。",
+        "Update the matching OQ in 11_OQ-Register.md to one of `Disposition: deferred`, `resolved` or `rejected`.",
       ),
     );
   }
@@ -142,13 +142,13 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-007",
-        `11_OQ-Register.md の deferred が 13_Deferred.md に存在しません: ${readiness.deferredWithoutDetails.join(", ")}`,
+        `Deferred OQs in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
         "error",
         deferredPath,
         "discussionPack.deferredCoverage",
         readiness.deferredWithoutDetails,
         "change",
-        "OQ register で deferred にした OQ は 13_Deferred.md に同じ OQ-ID で記載してください。",
+        "List each OQ that the OQ register defers in 13_Deferred.md under the same OQ ID.",
       ),
     );
   }
@@ -160,13 +160,13 @@ export async function validateDiscussionPackReadiness(
     issues.push(
       issue(
         "QFAI-DPACK-008",
-        "03_Story-Workshop.md に Mermaid diagram が見つかりません。",
+        "No Mermaid diagram was found in 03_Story-Workshop.md.",
         "error",
         storyWorkshopPath,
         "discussionPack.storyWorkshopMermaid",
         undefined,
         "change",
-        "03_Story-Workshop.md には少なくとも1つの mermaid fenced block（flowchart または sequenceDiagram）を含めてください。",
+        "Include at least one mermaid fenced block (flowchart or sequenceDiagram) in 03_Story-Workshop.md.",
       ),
     );
   }

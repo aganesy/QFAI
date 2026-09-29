@@ -319,10 +319,11 @@ export async function runInit(
   const destRoot = path.resolve(options.dir);
   const destQfai = path.join(destRoot, ".qfai");
 
-  // 出力先を作業開始前に開示する。`--dir` の既定値は cwd なので素の
-  // `qfai init` では宛先が暗黙になり、誤ったターミナルタブからの実行が
-  // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
-  // 中断・失敗した実行でも対象がスクロールバックに残る。
+  // Disclose the destination before any work starts. The default for `--dir`
+  // is the cwd, so a bare `qfai init` leaves the destination implicit and a run
+  // from the wrong terminal tab prints the same as a correct one. Printing it
+  // ahead of the report keeps the target in the scrollback even when the run
+  // is interrupted or fails.
   info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
   await refuseWritingThroughToOwnAssets(destRoot, assistantAssets);
@@ -478,18 +479,18 @@ export async function runInit(
     settled,
   );
 
-  // root/ と.qfai/ は create-only（既存は skip）
-  // STANDARD_ASSET_PATHS のみ --force で上書きする
+  // root/ and .qfai/ are create-only (existing files are skipped).
+  // Only STANDARD_ASSET_PATHS are overwritten by --force.
   //
-  // その create-only は下の `force: false` literal ひとつが一律に効いている
-  // だけで、個別ファイルを名指しで守る仕組みは存在しない。adopter が著した
-  // DESIGN.md も、`qfai-configure` で調整された qfai.config.yaml も、上の
-  // 同じく create-only な workflow copy が扱う shipped workflow も、残る理由は
-  // すべてこの一つの規則である。だから literal を `options.force` に持ち上げる
-  // ことは、adopter 所有ファイルを --force run が上書きするという意味になる
-  // ——shipped workflow の ownership contract が同じ literal を load-bearing と
-  // 呼び、source-level の oracle で持ち上げを禁じているのはこのためで、
-  // root tree の他のファイルもその一つの規則にただ乗っている。
+  // That create-only behaviour comes solely from the `force: false` literal
+  // below; nothing protects individual files by name. An adopter-authored
+  // DESIGN.md, a qfai.config.yaml tuned by `qfai-configure`, and the shipped
+  // workflow handled by the equally create-only workflow copy above all
+  // survive for this one reason. Lifting the literal to `options.force`
+  // would therefore mean a --force run overwrites adopter-owned files. That
+  // is why the shipped-workflow ownership contract calls the same literal
+  // load-bearing and forbids lifting it with a source-level oracle, and the
+  // other files in the root tree ride on that one rule as well.
   //
   // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
   // it writes were written above, and the ones it declined must not arrive by another route.
@@ -598,16 +599,17 @@ export async function runInit(
     plannedSafetyFloor,
   });
 
-  // git config core.symlinks true（symlink 生成の前提条件）
-  // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
-  // （dry-run でもプレビュー行を出す）。report() まで保留すると、後続の
-  // syncIntegrationWrappers などが throw した場合（Windows で Developer Mode
-  // が無効なときの EPERM など）に、既に永続化された設定の開示だけが失われる。
+  // git config core.symlinks true (a precondition for creating symlinks).
+  // This is the only change outside the working tree, so report it right
+  // after the write (dry-run prints the preview line too). If it were held
+  // until report(), a later throw from syncIntegrationWrappers or similar
+  // (for example EPERM on Windows without Developer Mode) would lose the
+  // disclosure of a setting that is already persisted.
   for (const note of await configureGitSymlinks(destRoot, options.dryRun)) {
     info(note);
   }
 
-  // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
+  // Symlink-based integration generation (prune old wrappers, create symlinks, generate README / copilot-instructions)
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
@@ -2909,36 +2911,40 @@ function listReportPaths(relativePaths: string[]): void {
 }
 
 /**
- * 実行レポート。詳細を出す価値があるのは `copied` の側である。
+ * The run report. The `copied` side is the one worth detailing.
  *
- * `--dry-run` は「これから何に触れるのか」に答えるための機能なので、
- * `copied` は `removed` と同じく全件列挙し、見出しも dryRun で言い分ける。
- * 逆に `skipped` は「ここは何もすることがない」ケースであり、初期化済み
- * ディレクトリへの no-op 再実行では同梱アセット全件がここに入る。既定は
- * カウントのみに畳み、一覧は `--verbose` の背後に置く。
+ * `--dry-run` exists to answer "what will this touch?", so `copied` is listed
+ * in full like `removed`, and the heading changes with dryRun. `skipped`, in
+ * contrast, is the "nothing to do here" case: a no-op rerun on an initialized
+ * directory puts every shipped asset there. By default it is folded into a
+ * count, and the list sits behind `--verbose`.
  *
- * 見出しが `written` / `would write` なのは、`copied` が新規作成だけの集合
- * ではないため。`--force` の skills/agents 再生成や `.gitignore` の managed
- * block 追記は既存ファイルの更新であり、`created` と呼ぶと dry-run の
- * プレビューが破壊的な上書きを新規作成に見せてしまう。
+ * The headings are `written` / `would write` because `copied` is not only newly
+ * created files. Regenerating skills/agents with `--force` and appending the
+ * managed block to `.gitignore` update existing files, and calling them
+ * `created` would make a dry-run preview show a destructive overwrite as a new
+ * file.
  *
- * 各リストは列挙前に重複排除し、さらにソートする (`toReportPaths`)。例えば
- * `--upgrade-assistant-tree --dry-run` では、移行処理が書き込みを抑止したまま
- * 移行先を `copied` に積み、その移行先がまだ存在しないので後続のテンプレート
- * コピーも同じパスを `copied` に積む。重複したまま出すと件数が実際の実行と
- * ずれる。順序は `readdir()` 由来でどのファイルシステムも保証しないため、
- * ソートしないと同じ書き込み集合でも一覧の並びが変わり、プレビューを別
- * チェックアウトと差分比較できない。
+ * Each list is deduplicated and then sorted before it is listed
+ * (`toReportPaths`). For example, under `--upgrade-assistant-tree --dry-run`
+ * the migration suppresses its writes but still pushes its destination onto
+ * `copied`, and because that destination does not exist yet, the following
+ * template copy pushes the same path onto `copied` too. Listing the duplicate
+ * would make the count differ from a real run. The order comes from
+ * `readdir()`, which no file system guarantees, so without sorting the same set
+ * of writes could be listed in a different order and a preview could not be
+ * diffed against one from another checkout.
  *
- * リスト内の重複排除だけではカテゴリ間の重複は残る。実行時の
- * `--upgrade-assistant-tree` では移行処理が移行先を書いて `copied` に積み、
- * 後続のテンプレートコピーがその移行先を既存とみなして `skipped` に積むため、
- * 同一パスが written と skipped の両方に出て skipped 件数も膨らむ。書き込まれた
- * パスは skip ではないので、`excludeWritten` で skipped から除外する。
+ * Deduplicating within a list does not remove duplicates across categories.
+ * In a real `--upgrade-assistant-tree` run the migration writes its destination
+ * and pushes it onto `copied`, and the following template copy treats that
+ * destination as existing and pushes it onto `skipped`, so the same path shows
+ * up under both written and skipped and inflates the skipped count. A written
+ * path is not a skip, so `excludeWritten` removes it from skipped.
  *
- * この 3 リストは `baseDir` 配下のパスだけを扱う。working tree 外への変更
- * (`configureGitSymlinks` の `core.symlinks`) はここには入らないので、その
- * 開示はその書き込み自身が行う。
+ * These three lists cover only paths under `baseDir`. A change outside the
+ * working tree (`core.symlinks` in `configureGitSymlinks`) does not belong
+ * here, so that write discloses itself.
  */
 function report(
   copied: string[],
@@ -2953,8 +2959,9 @@ function report(
   const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
   const removedPaths = toReportPaths(removed, baseDir);
 
-  // 宛先を必ず名指しする。相対パスだと素の実行で "." になり何も
-  // 開示しないため、`doctor` の root= とは違い絶対パスを出す。
+  // Always name the destination. A relative path would be "." on a bare run
+  // and disclose nothing, so unlike the root= of `doctor` this prints an
+  // absolute path.
   // Escaped like every path below it. `--dir` is operator-supplied and echoed
   // verbatim here, so a destination carrying a newline or an ANSI sequence could
   // forge report lines in the very report the escaping exists to make trustworthy.
@@ -4082,17 +4089,18 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
 // ---------------------------------------------------------------------------
 
 /**
- * `.claude/commands/` と `.github/prompts/` に qfai が実際に書いたことのある
- * wrapper の basename (拡張子を除いた stem)。
+ * Basenames (the stem, without the extension) of the wrappers qfai has
+ * actually written into `.claude/commands/` and `.github/prompts/`.
  *
- * この 2 ディレクトリへの書き込みは symlink 方式への移行時に廃止され、以降
- * init は一切書き込まない — つまりこの閉じた集合に載っていない名前は、確実に
- * プロジェクトが自分で置いたものである。`qfai-*` という開いた glob で消して
- * いたため、`.claude/commands/qfai-release.md` のようなプロジェクト固有の
- * slash command が `--force` のたびに消えていた。
+ * Writing to these two directories ended with the move to symlinks, and init
+ * never writes there now, so a name outside this closed set was certainly put
+ * there by the project. Deleting by the open glob `qfai-*` removed
+ * project-specific slash commands such as `.claude/commands/qfai-release.md`
+ * on every `--force`.
  *
- * 逆は成り立たない (集合に載っている = qfai が書いた、ではない) ので、削除の
- * 可否は {@link isInitWrittenWrapper} が本文まで見て決める。
+ * The converse does not hold (being in the set does not mean qfai wrote it),
+ * so whether to delete is decided by {@link isInitWrittenWrapper}, which also
+ * reads the body.
  */
 const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
   "qfai-atdd",
@@ -4105,8 +4113,9 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
   "qfai-require",
   "qfai-scenario-test",
   "qfai-sdd",
-  // SDD が 3 skill に分かれていた期間 (recut より前) に roster に載っていたので、
-  // 当時の generator は両方に command / prompt wrapper を書いている。
+  // These were on the roster while SDD was split into three skills (before the
+  // recut), so the generator of that time wrote both a command and a prompt
+  // wrapper for them.
   "qfai-sdd-planning",
   "qfai-sdd-refinement",
   "qfai-spec",
@@ -4118,12 +4127,12 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * その名前が「過去に qfai が書いたことのある wrapper の名前」か。
+ * Whether the name is one qfai has written a wrapper under in the past.
  *
- * 名前だけで決まるので `readdir` の snapshot に対して答えられる —
- * {@link pruneMatchingEntries} の `predicate` が見られるのはそこまでで、
- * 所有権そのものはこれでは決まらない。候補を絞るだけの前段であり、削除の
- * 可否は本文を読む {@link isInitWrittenWrapper} が決める。
+ * It depends on the name alone, so it can answer against a `readdir` snapshot,
+ * which is all the `predicate` of {@link pruneMatchingEntries} can see. It does
+ * not decide ownership: it only narrows the candidates, and whether to delete
+ * is decided by {@link isInitWrittenWrapper}, which reads the body.
  */
 function isLegacyWrapperName(name: string, suffix: string): boolean {
   if (!name.endsWith(suffix)) {
@@ -4133,33 +4142,37 @@ function isLegacyWrapperName(name: string, suffix: string): boolean {
 }
 
 /**
- * その wrapper を init が書いたと本文が証明するか。
+ * Whether the body proves that init wrote this wrapper.
  *
- * stem は「過去に qfai がその名前を使った」ことしか示さない。プロジェクトが
- * 自分で `.claude/commands/qfai-spec.md` を書いた場合も、旧 wrapper を自前の
- * 内容に差し替えた場合も、名前だけで消せばユーザのコンテンツを失う。qfai が
- * 配ってきた wrapper は例外なく「同じ stem の canonical doc」への委譲行を持ち
- * ({@link DELEGATION_LINES})、出荷された全世代の wrapper がそうなっている。
- * この行が生成物である証拠であり、これを持たないファイルは stem が一致しても
- * 触らない。
+ * A stem shows only that qfai used the name at some point. Deleting by name
+ * alone would lose user content, whether the project wrote its own
+ * `.claude/commands/qfai-spec.md` or replaced an old wrapper with its own
+ * text. Every wrapper qfai has shipped, in every generation, has a delegation
+ * line pointing to "the canonical doc with the same stem"
+ * ({@link DELEGATION_LINES}). That line is the evidence the file is generated,
+ * and a file without it is left alone even when the stem matches.
  *
- * 判定は **行単位の完全一致** で行う。canonical パスが本文のどこかに現れる
- * ことを証拠にすると、同名のプロジェクト独自 command が説明文・否定文・コード
- * 例でそのパスに言及しただけで init 生成物と誤認され、`--force` で消える。
- * 生成された wrapper では委譲行がその行の全体なので、部分一致を許す理由がない。
+ * The check is an **exact match per line**. Taking the canonical path
+ * appearing anywhere in the body as evidence would make a project's own
+ * command of the same name look generated, and `--force` would delete it,
+ * merely because its explanation, a negation or a code example mentions that
+ * path. In a generated wrapper the delegation line is the whole line, so
+ * there is no reason to allow a partial match.
  *
- * 本文は {@link WRAPPER_EVIDENCE_MAX_BYTES} までしか読まない。出荷された
- * wrapper はどの世代も 1 KB 未満だが、同名の通常ファイルが何であるかは
- * こちらの都合ではない — 巨大なログや FIFO が `qfai-spec.md` に置かれていた
- * とき、削除可否を判定するためだけに全内容を文字列へ展開すると init 全体が
- * OOM で止まる。上限を超えるものは「所有権を証明できないもの」として残す。
+ * At most {@link WRAPPER_EVIDENCE_MAX_BYTES} of the body are read. Shipped
+ * wrappers of every generation are under 1 KB, but what an ordinary file of
+ * the same name is, is not ours to choose: if a huge log or a FIFO sits at
+ * `qfai-spec.md`, expanding all of it into a string just to decide whether to
+ * delete it could stop the whole init with an out-of-memory error. Anything
+ * over the limit is kept as unable to prove ownership.
  *
- * {@link pruneMatchingEntries} の `confirm` として渡されるので、読む対象
- * (`target`) と stem を導く名前 (`name`) は別々に受け取る: 隔離のために
- * 退避されたあとの `target` は quarantine 側の名前を持っており、その basename
- * から stem を取ると元の wrapper 名ではなくなる。同じ理由で、この判定は
- * 退避の前後で二度問われる — 名前が指すファイルが入れ替わっていれば、
- * 二度目で「証明できないもの」に倒れて元へ戻される。
+ * This is passed as the `confirm` of {@link pruneMatchingEntries}, so the file
+ * to read (`target`) and the name the stem comes from (`name`) are received
+ * separately: once moved aside for quarantine, `target` carries the quarantine
+ * name, and taking the stem from its basename would not give the original
+ * wrapper name. For the same reason the check is asked twice, before and after
+ * the move aside: if the file the name points to has been swapped, the second
+ * answer falls to "cannot prove" and the file is restored.
  */
 async function isInitWrittenWrapper(
   target: string,
@@ -4181,17 +4194,20 @@ async function isInitWrittenWrapper(
 }
 
 /**
- * 本文のどれかの行が、その stem の委譲行と **バイト単位で** 一致するか。
+ * Whether any line of the body matches a delegation line for the stem
+ * **byte for byte**.
  *
- * 行を trim して比べるとインデントが無視され、自作 command が Markdown の
- * コード例として `    @.qfai/assistant/prompt/qfai-spec.md` を書いただけで
- * 生成物と誤認されてファイルごと消える。出荷された wrapper では委譲行が
- * 常に桁 0 から始まるので、前後の空白を許す理由がない。CRLF の `\r` だけは
- * split で落ちる。
+ * Comparing after trimming would ignore indentation, and a command of the
+ * project's own that merely writes `    @.qfai/assistant/prompt/qfai-spec.md`
+ * as a Markdown code example would be mistaken for a generated file and
+ * deleted. In a shipped wrapper the delegation line always starts at column 0,
+ * so there is no reason to allow surrounding whitespace. Only the CRLF `\r`
+ * is dropped by the split.
  *
- * fenced code block の中も見ない。字下げなしでも ``` で囲めば「引用」であり、
- * 旧 wrapper の中身を自分の doc に転記しただけの自作 command が生成物として
- * 消えていた。qfai が配った wrapper は委譲行を fence の中に置かない。
+ * Lines inside a fenced code block are ignored too. Even unindented, a line
+ * inside ``` is a quotation, and a project's own command that merely copied
+ * the contents of an old wrapper into its doc used to be deleted as generated.
+ * The wrappers qfai shipped never put the delegation line inside a fence.
  */
 function hasDelegationLine(body: string, forms: readonly string[]): boolean {
   const delegations = new Set(forms);
@@ -4206,11 +4222,12 @@ function hasDelegationLine(body: string, forms: readonly string[]): boolean {
         open = { marker, length: run.length };
         continue;
       }
-      // CommonMark: 閉じるのは「開いたときと同じ文字」「同じ長さ以上」で、
-      // かつ marker 列の後ろが空白だけの行。文字と長さしか見ていなかったため、
-      // 情報文字列つきの行 (```md ブロックの中に書かれた ```js など) — 本来は
-      // 中身であって閉じ fence ではない — で閉じたと誤認し、その後ろの
-      // 引用行を「本物の委譲行」として数えていた。
+      // CommonMark: a fence closes on the same character as the opener, at
+      // least as long, on a line with only whitespace after the marker run.
+      // Checking only the character and length treated a line with an info
+      // string (such as a ```js written inside a ```md block, which is content
+      // and not a closing fence) as the close, and then counted the quoted
+      // line after it as a real delegation line.
       if (marker === open.marker && run.length >= open.length && FENCE_CLOSE_TAIL_RE.test(tail)) {
         open = null;
       }
@@ -4223,27 +4240,28 @@ function hasDelegationLine(body: string, forms: readonly string[]): boolean {
   return false;
 }
 
-/** Markdown の code fence 行 (``` / ~~~、字下げ 0-3、情報文字列可)。 */
+/** A Markdown code fence line (``` or ~~~, indented 0-3 spaces, info string allowed). */
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
-/** 閉じ fence の marker 列の後ろに許される文字 — CommonMark では空白だけ。 */
+/** What may follow the marker run of a closing fence: whitespace only in CommonMark. */
 const FENCE_CLOSE_TAIL_RE = /^[ \t]*$/;
 
-/** その stem に対して、ある surface で出荷実績のある委譲行の全形。 */
+/** Every delegation-line form shipped on a surface for the given stem. */
 type DelegationForms = (stem: string) => readonly string[];
 
 /**
- * 出荷実績のある委譲行 — surface ごとに形が違う。
+ * The delegation lines that have shipped; the form differs per surface.
  *
- * Claude の slash command は `@<path>`、Copilot prompt と skill wrapper の
- * `SKILL.md` は箇条書きの `- <path>`。両方を全 surface で受理すると、qfai が
- * その場所へ一度も書いたことのない形まで所有権の証拠になり、参照一覧に
- * `-.qfai/...` を並べただけの自作 command が消える。
+ * A Claude slash command uses `@<path>`; a Copilot prompt and the `SKILL.md`
+ * of a skill wrapper use a bullet `- <path>`. Accepting both on every surface
+ * would make even a form qfai never wrote in that place evidence of
+ * ownership, and a command of the project's own that merely lists references
+ * as `-.qfai/...` would be deleted.
  *
- * canonical の置き場所は `assistant/prompts/<stem>.md` から
- * `assistant/skills/<stem>/SKILL.md` へ移っており、command / prompt には
- * どちらの世代の wrapper もまだプロジェクトに残りうる。skill wrapper が
- * 配られたのは後者になってからなので、そちらは 1 形だけ。
+ * The canonical location moved from `assistant/prompts/<stem>.md` to
+ * `assistant/skills/<stem>/SKILL.md`, and a project may still hold wrappers
+ * of either generation for commands and prompts. Skill wrappers were first
+ * shipped after the move, so they have a single form.
  */
 const CLAUDE_COMMAND_DELEGATIONS: DelegationForms = (stem) => [
   `@.qfai/assistant/prompts/${stem}.md`,
@@ -4265,21 +4283,23 @@ const SKILL_DOC_DELEGATIONS: DelegationForms = (id) => [
 ];
 
 /**
- * 所有権判定のために読む wrapper 本文の上限。
+ * The limit on how much of a wrapper body is read to decide ownership.
  *
- * 出荷実績のある wrapper は `.claude/commands/*.md` が 400 bytes 未満、
- * skill wrapper の `SKILL.md` でも 1 KB 未満で、近傍の flattened-link 判定
- * ({@link isFlattenedLink}) や修復 sidecar の復元が使う上限と同じ 4 KB あれば
- * どの世代も丸ごと収まる。
+ * Shipped `.claude/commands/*.md` wrappers are under 400 bytes and even a
+ * skill wrapper's `SKILL.md` is under 1 KB, so 4 KB, the same limit the nearby
+ * flattened-link check ({@link isFlattenedLink}) and the repair-sidecar
+ * restore use, holds every generation whole.
  */
 const WRAPPER_EVIDENCE_MAX_BYTES = 4096;
 
 /**
- * 所有権判定用に、上限つきで読んだ本文。読めない / 上限超過なら `null`。
+ * The body read with a limit for the ownership check; `null` when it cannot be
+ * read or exceeds the limit.
  *
- * `readPinnedRegularFile` と同じく、上限は lstat が見た inode ではなく実際に
- * 読む inode に効く。ここでの失敗はすべて「qfai が書いたと証明できない」に
- * 倒す — prune は削除であり、判定不能なら残すのが安全側。
+ * As with `readPinnedRegularFile`, the limit applies to the inode actually
+ * read, not the one lstat saw. Every failure here resolves to "cannot prove
+ * qfai wrote it": pruning deletes, so keeping the file is the safe side when
+ * the answer is unknown.
  */
 async function readWrapperEvidence(filePath: string): Promise<string | null> {
   try {
@@ -4290,14 +4310,14 @@ async function readWrapperEvidence(filePath: string): Promise<string | null> {
 }
 
 /**
- * かつて出荷され、いまの roster から外れた skill id。
+ * Skill ids that once shipped and have left the current roster.
  *
- * init が wrapper を置くのは出荷 roster の skill だけなので、「出荷中」でも
- * 「引退済み」でもない名前の entry は init の生成物ではない。
- * プロジェクトが自前の `.qfai/assistant/skill/my-skill/` を持つことは
- * 許可されており (`integrationSurface.ts` の `canonicalSkillIds` 参照)、
- * それを `.claude/skills/my-skill` から symlink するのは正当な運用なので、
- * リンク先が canonical tree 内であることだけを根拠に消してはいけない。
+ * init places wrappers only for skills on the shipped roster, so an entry
+ * whose name is neither shipped nor retired is not something init generated.
+ * A project is allowed to have its own `.qfai/assistant/skill/my-skill/` (see
+ * `canonicalSkillIds` in `integrationSurface.ts`), and symlinking it from
+ * `.claude/skills/my-skill` is legitimate, so an entry must not be deleted
+ * just because its link target is inside the canonical tree.
  */
 const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
   "qfai-discuss",
@@ -4316,19 +4336,20 @@ const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * その entry が init の張った skill symlink か — 名前ではなくリンク先で判定する。
+ * Whether the entry is a skill symlink init created, judged by the link
+ * target, not the name.
  *
- * 所有権の証拠は名前ではない。`qfai-` は予約された prefix ではなく、canonical
- * roster 自身が `web-research` という prefix を持たない skill を含む。名前で
- * 判定していたため、プロジェクトが自分で用意した `.claude/skills/qfai-deploy`
- * が `--force` でディレクトリごと消えていた。init が張るのは canonical tree へ
- * 解決される symlink だけなので、これは必要条件 — ただし十分条件ではないため、
- * 呼び出し側で {@link RETIRED_SKILL_IDS} と併せて判定する。
+ * A name is not evidence of ownership. `qfai-` is not a reserved prefix, and
+ * the canonical roster itself includes a skill without that prefix,
+ * `web-research`. Judging by name deleted a project's own
+ * `.claude/skills/qfai-deploy` whole on `--force`. init creates only symlinks
+ * that resolve into the canonical tree, so this is a necessary condition but
+ * not a sufficient one; the caller combines it with {@link RETIRED_SKILL_IDS}.
  *
- * リンク先は canonical tree の **同名の子** でなければならない。init が張る
- * のは常に `<id> ->.qfai/assistant/skill/<id>` であり、
- * `qfai-spec ->.../skills/my-skill` のような alias はプロジェクトが自分で
- * 作ったものなので、canonical tree 内を指すというだけで消してはいけない。
+ * The target must be the **same-named child** of the canonical tree. init
+ * always creates `<id> ->.qfai/assistant/skill/<id>`, and an alias such as
+ * `qfai-spec ->.../skills/my-skill` was made by the project itself, so it must
+ * not be deleted just because it points into the canonical tree.
  */
 async function linksIntoCanonicalSkill(
   entryPath: string,
@@ -4338,36 +4359,38 @@ async function linksIntoCanonicalSkill(
   try {
     target = await readlink(entryPath);
   } catch {
-    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
+    // Anything unreadable cannot be proven to be qfai's, so keep it.
     return false;
   }
   return path.resolve(path.dirname(entryPath), target) === path.resolve(canonicalSkill);
 }
 
 /**
- * その entry が init の置いた skill wrapper か — 形は三通りある。
+ * Whether the entry is a skill wrapper init placed. There are three forms.
  *
- * 1. **symlink** — recut 後の init が張る形。リンク先で判定する
- *    ({@link linksIntoCanonicalSkills})。
- * 2. **実ディレクトリ** — recut 前の init は `.codex/skills/<id>/SKILL.md`
- *    のようなディレクトリを配っていた。symlink だけを見ていると、recut 前の
- *    release から直接アップグレードしたプロジェクトに残る引退済み wrapper
- *    (`qfai-spec/` など) が prune を素通りする — 名前が現 roster にないので
- *    {@link ensureSymlink} の上書きにも当たらず、`--force` 後も廃止済みの
- *    指示がアシスタントからロードできる状態で残ってしまう。所有権は
- *    `.claude/commands/` の wrapper と同じ基準 ({@link isInitWrittenWrapper})
- *    で決める: 配ってきた `SKILL.md` は例外なく同じ id の canonical doc への
- *    委譲行を持つ。これを持たないディレクトリはプロジェクトが自分で作った
- *    ものなので、名前が引退済み id と衝突していても触らない。
- * 3. **flatten された symlink** — `core.symlinks = false` の checkout では
- *    symlink がリンク先文字列を内容とする通常ファイルになる。近傍の
- *    {@link isFlattenedLink} が扱うのと同じ形で、これも init の生成物である。
- *    通常ファイルを一律に非生成物としていると、その checkout では引退済み
- *    wrapper が消えないままになる。
+ * 1. **symlink**: the form init has created since the recut. Judged by the
+ *    link target ({@link linksIntoCanonicalSkills}).
+ * 2. **real directory**: before the recut, init distributed directories such
+ *    as `.codex/skills/<id>/SKILL.md`. Looking only at symlinks would let a
+ *    retired wrapper (such as `qfai-spec/`) left in a project that upgraded
+ *    straight from a pre-recut release slip past the prune: its name is not on
+ *    the current roster, so {@link ensureSymlink} does not overwrite it either,
+ *    and after `--force` the retired instructions would still be loadable by
+ *    the assistant. Ownership is decided by the same criterion as the
+ *    `.claude/commands/` wrappers ({@link isInitWrittenWrapper}): every
+ *    `SKILL.md` that was distributed has a delegation line to the canonical
+ *    doc of the same id. A directory without it was made by the project, so
+ *    it is left alone even if its name collides with a retired id.
+ * 3. **flattened symlink**: in a checkout with `core.symlinks = false` a
+ *    symlink becomes a regular file whose content is the target string. It is
+ *    the same form the nearby {@link isFlattenedLink} handles, and it is
+ *    generated by init too. Treating every regular file as not generated
+ *    would leave the retired wrapper in place in such a checkout.
  *
- * 残る通常ファイルは修復 sidecar (`qfai-atdd.qfai-repair-1234`) で、これは
- * 名前が引退済み id と一致しないためそもそもここへ来ない。prune は repair
- * より先に走るので、消すと前回の失敗した修復が残した唯一の控えを失う。
+ * The remaining regular files are repair sidecars
+ * (`qfai-atdd.qfai-repair-1234`), whose names do not match a retired id, so
+ * they never reach here. The prune runs before the repair, so deleting one
+ * would lose the only copy a previous failed repair left behind.
  */
 async function classifyInitWrittenSkillWrapper(
   entry: Dirent,
@@ -4390,11 +4413,12 @@ async function classifyInitWrittenSkillWrapper(
   if (!entry.isFile()) {
     return null;
   }
-  // flatten された link は「git が展開したリンク先そのもの」であり、それ以外
-  // ではない。近傍の {@link isFlattenedLink} と同じく byte-exact で比べる —
-  // 内容を解決してみて canonical tree の中に落ちれば十分、としてしまうと
+  // A flattened link is exactly what git expanded the link target to, and
+  // nothing else. Compare byte for byte, as the nearby {@link isFlattenedLink}
+  // does; treating "the content resolves to somewhere inside the canonical
+  // tree" as enough would also delete a hand-written file made by
   // `echo '../../.qfai/assistant/skill/qfai-spec' >.claude/skills/qfai-spec`
-  // で作られた手書きファイルや、`//` や `./` を含む別綴りまで消える。
+  // and alternate spellings containing `//` or `./`.
   try {
     for (const canonicalSkill of canonicalSkills) {
       const expected = path.relative(path.dirname(entryPath), canonicalSkill);
@@ -4402,8 +4426,8 @@ async function classifyInitWrittenSkillWrapper(
     }
     return null;
   } catch {
-    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
-    // ここで throw すると prune の途中で init 全体が落ちる。
+    // Anything unreadable cannot be proven to be qfai's, so keep it.
+    // Throwing here would abort the whole init in the middle of the prune.
     return null;
   }
 }
@@ -4479,8 +4503,8 @@ async function pruneStaleQfaiWrappers(
       if (canonical.has(entry.name)) {
         continue;
       }
-      // 出荷中でも引退済みでもない名前は init が wrapper を置いた skill では
-      // ない — プロジェクトが自前で用意したものなので残す。
+      // A name that is neither shipped nor retired is not a skill init placed
+      // a wrapper for; the project provided it, so keep it.
       if (!RETIRED_SKILL_IDS.has(entry.name)) {
         continue;
       }
@@ -4498,9 +4522,10 @@ async function pruneStaleQfaiWrappers(
         continue;
       }
 
-      // ディレクトリ形式では所有権を証明できたのは `SKILL.md` だけ。プロジェクト
-      // がそこへ自前の reference やメモを足していることがあり、ディレクトリごと
-      // 再帰削除するとそれも失う。生成物だけ消して、空になったときだけ殻を畳む。
+      // For the directory form, only `SKILL.md` was proven to be ours. The
+      // project may have added its own references or notes there, and deleting
+      // the directory recursively would lose them. Delete only the generated
+      // file, and remove the shell only when it is left empty.
       const doc = path.join(entryPath, "SKILL.md");
       removed.push(doc);
       if (!dryRun) {
@@ -4756,10 +4781,10 @@ async function agentWrapperTarget(
 }
 
 /**
- * 空ならそのディレクトリを消す。中身が残っていれば何もしない。
+ * Remove the directory if it is empty; do nothing if anything remains.
  *
- * `ENOTEMPTY` / `EEXIST` は「プロジェクトのファイルが残っている」という
- * 正常な結果であり、失敗ではない。
+ * `ENOTEMPTY` / `EEXIST` mean project files remain. That is a normal outcome,
+ * not a failure.
  */
 async function removeIfEmpty(dir: string): Promise<void> {
   try {

@@ -5,11 +5,11 @@ dependencies: none
 version: 1.0.0
 ---
 
-# 命名規約
+# Naming Conventions
 
-## 原則
+## Principles
 
-- 参照の正は ID であり、ファイル名は補助情報。
+- The ID is the authoritative reference; the file name is supplementary.
 - Business flows group user stories; examples cite their acceptance criterion,
   and contract rules cite examples.
 - Use `.qfai/spec/` as the configured `paths.specsDir`. Its policy, flow and
@@ -50,7 +50,7 @@ Every Markdown file in the tree conforms to its closed schema in
 one kind of content each section holds. `qfai validate` reports a violation as
 `QFAI-DOCSCHEMA-001`.
 
-## ID 形式
+## ID Formats
 
 - business flow: `BF-0001`
 - user story: `US-0001-0001` under `BF-0001`

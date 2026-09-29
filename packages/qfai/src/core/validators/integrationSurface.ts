@@ -1652,7 +1652,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   const describe = (entries: readonly Broken[]): string => {
     const sample = entries.slice(0, 12).map((entry) => `${entry.relative} (${entry.detail})`);
     const overflow =
-      entries.length > sample.length ? ` (他 ${String(entries.length - sample.length)} 件)` : "";
+      entries.length > sample.length ? ` (and ${String(entries.length - sample.length)} more)` : "";
     return `${sample.join(", ")}${overflow}`;
   };
 
@@ -1670,22 +1670,22 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `assistant 統合ディレクトリの symlink が壊れています（${String(unreachable.length)} 件）。skill / agent はこの経路でしか読み込まれないため、これらは現在まったく適用されていません: ${describe(unreachable)}`,
+        `${String(unreachable.length)} symlink(s) in the assistant integration directories are broken. Skills and agents load only through these paths, so none of them is currently applied: ${describe(unreachable)}`,
         "error",
         unreachable[0]?.relative,
         "integrationSurface.links",
         unreachable.map((entry) => entry.relative),
         "change",
         [
-          "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
-          "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
-          "**integration directory の祖先が symlink の場合（`an ancestor is a symlink`）も同様です。** 配下の wrapper は相対 target なので、その祖先が指す先を基準に解決されます。該当する祖先（`.claude` / `.github` など）を実ディレクトリに戻してから `qfai init` を実行してください。",
-          "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
-          "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
-          "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
-          "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agent/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agent/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skill/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agent/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
-          "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
-          "Windows では Developer Mode の有効化が必要な場合があります。",
+          "Rerun `qfai init`: the qfai-owned paths are relinked as symlinks (`--force` is not needed). A regular file whose content differs from the link target is preserved, so check its contents and move it aside first.",
+          "**A broken integration directory itself (`the integration directory is …`) is not fixed by init either.** The wrappers under an external symlink have a correct target string, so `ensureSymlink` skips them, and even `--force` only relinks them inside the same external directory. In a cycle, creating the parent directory fails with `ELOOP`. Move the affected path (for example `.claude/skills`) aside or delete it, then run `qfai init`.",
+          "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** The wrappers inside use relative targets, so they resolve against wherever that ancestor points. Restore the ancestor (`.claude`, `.github`, and so on) to a real directory, then run `qfai init`.",
+          "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
+          "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
+          "**A broken canonical side (`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`) is not fixed by init.** Canonical assets are create-only, so existing paths are skipped, and even `--force` fails in `copyFile` / `mkdir` on the type conflict. Move the affected `.qfai/assistant/**` path aside (or delete it), then run `qfai init` — the contents are lost, so check them first.",
+          "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)",
+          "If the root cause is flattening at clone time, first set `git config --global core.symlinks true`. A repo-local setting is not carried into a clone, so without this the next clone ends up in the same state.",
+          "On Windows, Developer Mode may need to be enabled.",
         ].join("\n"),
         { relatedFiles: unreachable.slice(1).map((entry) => entry.relative) },
       ),

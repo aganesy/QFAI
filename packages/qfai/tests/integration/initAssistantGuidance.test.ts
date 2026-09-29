@@ -25,12 +25,12 @@ const instructionsDir = path.join(
   "rule",
 );
 describe("init assistant guidance: exploration-first alignment", () => {
-  it("frontend-engineer.md が selected direction / screen contracts を参照する", async () => {
+  it("frontend-engineer.md references the selected direction / screen contracts", async () => {
     const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
     expect(content).toMatch(/selected direction|design system|screen contracts/i);
   });
 
-  it("product-experience-architect.md が exploration / evaluation artifact を参照する", async () => {
+  it("product-experience-architect.md references the exploration / evaluation artifacts", async () => {
     const content = await readFile(
       path.join(agentsDir, "product-experience-architect.md"),
       "utf-8",

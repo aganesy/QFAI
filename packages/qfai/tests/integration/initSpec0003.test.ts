@@ -203,19 +203,19 @@ describe("TC-0003-0015: Symlink idempotency (3 consecutive runs)", () => {
   });
 });
 
-// TC-0003-0018: gitignore 管理ブロック追記（新規）
+// TC-0003-0018: append the managed gitignore block (new file)
 // Actual assertions live in tests/cli/init.test.ts ("appends QFAI entries to root .gitignore on init").
 // This block records the TC→implementation coverage link for traceability.
-describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
+describe("TC-0003-0018: append the managed gitignore block (new file)", () => {
   it("init wires QFAI_GITIGNORE_BLOCK writer into runInit", async () => {
     expect(await readFile(INIT_CLI, "utf-8")).toContain("ensureRootGitignoreEntries");
     expect(await readFile(ROOT_GITIGNORE_WRITER, "utf-8")).toContain("QFAI_GITIGNORE_BLOCK");
   });
 });
 
-// TC-0003-0019: レガシー行除去と管理ブロック置換
+// TC-0003-0019: remove legacy lines and replace the managed block
 // Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
-describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () => {
+describe("TC-0003-0019: remove legacy lines and replace the managed block", () => {
   it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
     const content = await readFile(ROOT_GITIGNORE_WRITER, "utf-8");
     expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
@@ -223,9 +223,9 @@ describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () =>
   });
 });
 
-// TC-0003-0020: review-*/ サブディレクトリが gitignore 対象
+// TC-0003-0020: review-*/ subdirectories are gitignored
 // Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
-describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象", () => {
+describe("TC-0003-0020: review-*/ subdirectories are gitignored", () => {
   it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
     const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } =
       await import("../../src/core/gitignore.js");

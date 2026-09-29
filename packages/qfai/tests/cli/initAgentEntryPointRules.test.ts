@@ -1430,7 +1430,8 @@ describe("optional review directive detection", () => {
   });
 
   it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
-    const label = "漢".repeat(length);
+    // U+6F22, a CJK ideograph: GitHub's reference-label boundary counts these characters.
+    const label = "\u6f22".repeat(length);
     const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
     const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
     const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);

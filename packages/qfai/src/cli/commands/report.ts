@@ -129,8 +129,8 @@ function buildMissingInputGuidance(
 }
 
 /**
- * レポートを書き出し、`validate` と同じ基準で終了コードを返す。
- * 0=gate 通過 / 1=gate 不通過 / 2=usage / 入力 validate.json 欠如。
+ * Write the report and return an exit code by the same criteria as `validate`.
+ * 0 = gate passed, 1 = gate failed, 2 = usage error or missing input validate.json.
  */
 export async function runReport(options: ReportOptions): Promise<number> {
   const root = path.resolve(options.root);
@@ -234,14 +234,15 @@ export async function runReport(options: ReportOptions): Promise<number> {
       return 2;
     }
     warnOnProfileMismatch(inputPath, loaded, options.profile);
-    // --run-validate 側と同じく、CI で narrow profile を使ったことを報告する。
-    // ここでは finding を足さない: 読み込んだ validate 出力には、それを書いた
-    // validate 実行が既に QFAI-VALIDATE-017 を載せている。
+    // As on the --run-validate side, report that CI used a narrow profile.
+    // No finding is added here: the validate output that was read already
+    // carries QFAI-VALIDATE-017 from the validate run that wrote it.
     //
-    // 判定は「指定した profile」ではなく「実際にレポートへ採用した profile」で
-    // 行う。明示 `--in` は不一致でも優先されるので、`--profile sdd --in
-    // validate-prototyping.json` のような組み合わせでは成果物側の profile が
-    // 実態を表す。profile 未記録の旧形式のときだけ指定値へフォールバックする。
+    // Judge by the profile the report actually adopted, not the one requested.
+    // An explicit `--in` wins even on a mismatch, so in a combination such as
+    // `--profile sdd --in validate-prototyping.json` the profile recorded in
+    // the artifact reflects what was used. Fall back to the requested value
+    // only for the older format that records no profile.
     ranNarrowProfileInCi = buildCiProfileIssue(loaded.profile ?? options.profile) !== null;
     validation = loaded;
   }
@@ -268,9 +269,9 @@ export async function runReport(options: ReportOptions): Promise<number> {
       "report: a non-full-scan profile was run in CI. That is valid as a stage gate, but run a full scan with --profile full (or with no --profile) before declaring completion.",
     );
   }
-  // `report --run-validate` は CI の単一ステップとして使われる。gate を
-  // 持たないと validate が拒否する状態でも永続的に緑になるため、validate と
-  // 同じ failOn 解決と severity 比較で終了コードを決める。
+  // `report --run-validate` is used as a single CI step. Without a gate it
+  // would stay green even in a state validate rejects, so the exit code is
+  // decided by the same failOn resolution and severity comparison as validate.
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   info(
     `report: info=${data.summary.counts.info} warning=${data.summary.counts.warning} error=${data.summary.counts.error} failOn=${failOn}`,
@@ -328,13 +329,13 @@ function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
 }
 
 /**
- * 読み取り側 (`--run-validate` なし) の入力パスを決める。
+ * Decide the input path on the reading side (without `--run-validate`).
  *
- * `--profile` が指定されたときは、常に最新のポインタ (`validate.json`) では
- * なく profile 接尾辞付きファイルを読む。`validate.json` は「最後に走った
- * profile」の出力でしかなく、CLI コントラクトの Consumer rule も profile で
- * スコープする読み手には接尾辞付きファイルを要求している。明示された `--in`
- * は運用者の意思なので、常にそちらを優先する。
+ * When `--profile` is given, read the profile-suffixed file, never the
+ * always-latest pointer (`validate.json`). `validate.json` is only the output
+ * of "whichever profile ran last", and the Consumer rule of the CLI contract
+ * also requires a reader scoped by profile to use the suffixed file. An
+ * explicit `--in` is the operator's intent, so it always wins.
  */
 function resolveInputPath(
   root: string,
@@ -348,12 +349,14 @@ function resolveInputPath(
 }
 
 /**
- * 入力の validate 出力を読む。見つからないときは案内を出して `null` を返す
- * (呼び出し側が exit code を立てる)。それ以外の失敗はそのまま投げる。
+ * Read the input validate output. When it is not found, print guidance and
+ * return `null` (the caller sets the exit code). Any other failure is thrown
+ * as is.
  *
- * 案内文は `buildMissingInputGuidance` に委ねる: `--flow` と `--profile` は
- * どちらも読み取り先のファイル名を変えるので、片方だけを知っている文面は
- * 「その通りに実行してもまた同じ exit 2 になる」案内になる。
+ * The guidance text is delegated to `buildMissingInputGuidance`: `--flow` and
+ * `--profile` both change the name of the file that is read, so a message that
+ * knows about only one of them gives guidance that, followed exactly, ends in
+ * the same exit 2 again.
  */
 async function loadValidationResult(
   inputPath: string,
@@ -373,9 +376,10 @@ async function loadValidationResult(
 }
 
 /**
- * 読み込んだ validate 出力の profile が `--profile` と食い違うときに警告する。
- * 接尾辞付きファイルを読む経路では通常起きないが、`--in` で別 profile の
- * 出力を指した場合はここだけが唯一の検出点になる。
+ * Warn when the profile in the validate output that was read differs from
+ * `--profile`. This does not normally happen on the path that reads the
+ * suffixed file, but when `--in` points at the output of another profile,
+ * this is the only place that detects it.
  */
 function warnOnProfileMismatch(
   inputPath: string,
@@ -400,11 +404,12 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   return reconcileCounts(parsed, inputPath);
 }
 /**
- * `--in` の `counts` は外部ファイル由来で、`issues` と食い違いうる（古い
- * validate.json、手編集、部分的な書き換え）。gate も report 本文のサマリも
- * `counts` を読むため、食い違いを放置すると error を列挙したレポートが
- * exit 0 で緑になる。`issues` から（suppressed を除いて）数え直し、差異は
- * 警告した上で数え直した値を採用する。
+ * The `counts` of `--in` come from an external file and may disagree with
+ * `issues` (a stale validate.json, a hand edit, a partial rewrite). The gate
+ * and the report's summary both read `counts`, so leaving a mismatch alone
+ * would let a report that lists errors pass with exit 0. Recount from
+ * `issues` (excluding suppressed ones), warn about any difference, and use the
+ * recounted values.
  */
 function reconcileCounts(result: ValidationResult, inputPath: string): ValidationResult {
   const recounted = countIssues(result.issues);
@@ -511,14 +516,14 @@ function isValidationResult(value: unknown): value is ValidationResult {
 }
 
 /**
- * `--run-validate` の検証結果を、通常の `qfai validate` と同じ 2 か所に書く:
- * 常に最新のポインタ (`validate.json`) と profile 接尾辞付きファイル
- * (`validate-<profile>.json`)。
+ * Write the `--run-validate` result to the same two places as a plain
+ * `qfai validate`: the always-latest pointer (`validate.json`) and the
+ * profile-suffixed file (`validate-<profile>.json`).
  *
- * 読み取り側 (`resolveInputPath`) は `--profile` 指定時に必ず接尾辞付き
- * ファイルを見るので、ここで接尾辞付きを更新しないと、後続の
- * `qfai report --profile X` が「ファイルが無い」で exit 2 になるか、
- * 古い実行結果からレポートを作ってしまう。
+ * The reading side (`resolveInputPath`) always looks at the suffixed file when
+ * `--profile` is given. If the suffixed file is not updated here, a later
+ * `qfai report --profile X` either exits 2 with "file not found" or builds
+ * its report from a stale run.
  */
 async function writeValidationResults(
   root: string,

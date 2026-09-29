@@ -1032,7 +1032,10 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       // validatePrototypingDelegationMap reads it, so a stale assignment
       // must not survive the hard reset and block the fresh loop.
       executionPlan: {
-        delegationMap: { スクリーンショット: "frontend-engineer" },
+        // A legacy Japanese category label ("screenshot"), written as escapes.
+        delegationMap: {
+          "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8": "frontend-engineer",
+        },
         plannedAt: "2025-01-01T00:00:00Z",
       },
     });

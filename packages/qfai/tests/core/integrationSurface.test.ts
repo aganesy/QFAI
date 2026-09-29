@@ -305,14 +305,14 @@ describe("the integration surface is checked for links that did not survive chec
       const found = await finding(root);
       expect(found?.refs).toHaveLength(total);
       expect(found?.relatedFiles).toHaveLength(total - 1);
-      expect(found?.message).toContain(`${String(total)} 件`);
+      expect(found?.message).toContain(`${String(total)} symlink(s)`);
       // The remediation must not send the operator to `--force`: `qfai init`
       // repairs a flattened link on its own, and preserves anything else.
       // Scoped to the opening line, which is the remedy for the damage this
       // case reports — a later line covers the retired wrapper, where
       // `--force` is what prunes it, and that is a different remedy.
       const opening = found?.suggested_action?.split("\n")[0];
-      expect(opening).toContain("`qfai init` を再実行");
+      expect(opening).toContain("Rerun `qfai init`");
       expect(opening).not.toContain("qfai init --force");
       expect(found?.suggested_action).toContain("git config --global core.symlinks true");
     });
@@ -746,7 +746,7 @@ describe("a type collision is reported wherever it sits on the path", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("the integration directory is a file");
-      expect(found?.suggested_action).toContain("integration directory 自体が壊れている場合");
+      expect(found?.suggested_action).toContain("A broken integration directory itself");
     });
   });
 
@@ -835,7 +835,9 @@ describe("an ancestor of the surface can be the symlink", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("an ancestor is a symlink");
-      expect(found?.suggested_action).toContain("integration directory の祖先が symlink");
+      expect(found?.suggested_action).toContain(
+        "an ancestor of the integration directory is a symlink",
+      );
     });
   });
 });
@@ -855,7 +857,7 @@ describe("a wrapper replaced by something other than a file", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("directory, not a symlink");
-      expect(found?.suggested_action).toContain("wrapper が symlink 以外");
+      expect(found?.suggested_action).toContain("A wrapper that is not a symlink");
       expect(found?.suggested_action).toContain("--force");
     });
   });
@@ -981,7 +983,7 @@ describe("every finding this rule reports has a remedy that changes something", 
       );
 
       const found = await finding(root);
-      expect(found?.suggested_action).toContain("`unreadable` は権限の問題");
+      expect(found?.suggested_action).toContain("`unreadable` is a permissions problem");
       expect(found?.suggested_action).toContain("chmod u+r");
       expect(found?.suggested_action).toContain("icacls");
     });
@@ -1066,16 +1068,16 @@ describe("what init wrote is still checked after the roster moves on", () => {
       // the `qfai-` prefixed names. `legacy-research` is this very case, so a
       // remedy that promised `--force` would clear it would be wrong here.
       expect(found?.suggested_action).toContain("`qfai init --force`");
-      expect(found?.suggested_action).toContain("canonical 側");
-      expect(found?.suggested_action).toContain("`qfai-` で始まる skill wrapper");
-      expect(found?.suggested_action).toContain("prune 対象外なので、報告されたパスを手で削除");
+      expect(found?.suggested_action).toContain("canonical side");
+      expect(found?.suggested_action).toContain("skill wrappers whose names start with `qfai-`");
+      expect(found?.suggested_action).toContain("delete the reported paths by hand");
       // The agent half of that promise stops at a direct child of
       // `.qfai/assistant/agent/`: this rule reports anything landing under
       // `.qfai/assistant/`, so a nested or cross-kind agent target is reported
       // and never pruned, and the remedy must not send the operator to
       // `--force` for one.
       expect(found?.suggested_action).toContain(
-        "解決先が `.qfai/assistant/agent/` の直下にある agent wrapper",
+        "agent wrappers whose target is directly under `.qfai/assistant/agent/`",
       );
       expect(found?.suggested_action).toContain("`.qfai/assistant/agent/<sub>/…`");
     });

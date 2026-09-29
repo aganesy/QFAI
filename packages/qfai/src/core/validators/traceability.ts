@@ -358,7 +358,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-118",
-          `Examples の Gherkin 解析に失敗しました: ${errorMessage}`,
+          `Failed to parse the Gherkin in Examples: ${errorMessage}`,
           "error",
           entry.examplesPath,
           "traceability.layered.examplesParse",
@@ -381,7 +381,7 @@ function parseScenarioRefs(
     issues.push(
       issue(
         "QFAI-TRACE-119",
-        `04_Examples.feature の @SPEC タグは ${expectedSpecTag} を1件だけ指定してください。検出: ${
+        `04_Examples.feature must carry exactly one @SPEC tag, ${expectedSpecTag}. Found: ${
           Array.from(featureSpecTags).join(", ") || "(none)"
         }`,
         "error",
@@ -401,7 +401,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-120",
-          `Scenario の @SPEC タグが不正です: ${scenario.name} (${specTags.join(", ") || "(none)"})`,
+          `Invalid @SPEC tag on a Scenario: ${scenario.name} (${specTags.join(", ") || "(none)"})`,
           "error",
           entry.examplesPath,
           "traceability.layered.scenarioSpecTag",
@@ -412,7 +412,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-121",
-          `Scenario は @SC-XXXX-YYYY を1件だけ持つ必要があります: ${scenario.name}`,
+          `A Scenario must have exactly one @SC-XXXX-YYYY tag: ${scenario.name}`,
           "error",
           entry.examplesPath,
           "traceability.layered.scenarioScTag",
@@ -428,7 +428,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-122",
-          `Scenario の SC ID namespace が spec 番号と一致しません: ${scId} (expected: SC-${entry.specNumber}-****)`,
+          `The SC ID namespace of a Scenario does not match the spec number: ${scId} (expected: SC-${entry.specNumber}-****)`,
           "error",
           entry.examplesPath,
           "traceability.layered.scNamespace",
@@ -444,7 +444,7 @@ function parseScenarioRefs(
       issues.push(
         issue(
           "QFAI-TRACE-123",
-          `Scenario が AC を参照していません。コメントで AC を明示してください: ${scenario.name}`,
+          `A Scenario does not reference an AC. State the AC in a comment: ${scenario.name}`,
           "error",
           entry.examplesPath,
           "traceability.layered.scenarioAcReference",

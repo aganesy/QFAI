@@ -93,7 +93,7 @@ const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+
 /**
  * A trailing `#` comment is part of the line, not part of the value.
  *
- * `x-qfai-depends-on: [DB-0001] # DB を先に適用` is valid YAML and the
+ * `x-qfai-depends-on: [DB-0001] # apply DB first` is valid YAML and the
  * natural way to say *why* the order holds, but an end-of-line anchor stopped
  * matching it. The scalar fallback then read `[DB-0001] # …` as a value that
  * is not one of the "none" spellings, so a conforming declaration produced
@@ -387,7 +387,7 @@ export function hasDependencyDeclaration(text: string, file?: string): boolean {
     return statesJsonDependencies(json.value);
   }
   // `[]` is the flow spelling of "none", with or without a trailing comment; the
-  // scalar fallback below would read `[] # なし` as a value that is neither.
+  // scalar fallback below would read `[] # none` as a value that is neither.
   const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
   if (flow) {
     return (flow[1] ?? "").trim().length === 0;

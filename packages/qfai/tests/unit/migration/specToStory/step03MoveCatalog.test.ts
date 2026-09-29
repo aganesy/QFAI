@@ -798,7 +798,7 @@ describe("migration catalog move", () => {
     // QFAI:EX-0004-0003-21
     const context = await fixture();
     const original =
-      "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage オペレーション (8 種)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
+      "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage operations (8 kinds)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
     await put(context.root, ".qfai/spec/_policies/11_Slice-Policy.md", original);
     const first = await run(context);
     expect(first.code).toBe(0);

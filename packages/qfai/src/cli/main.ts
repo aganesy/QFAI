@@ -94,9 +94,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   }
 
   if (!command || options.help) {
-    // 拒否理由は stderr、usage は stdout。呼び出し側が stdout を捨てても
-    // 「どのトークンが拒否されたか」は必ず手元に残る。`--format json` の
-    // 経路でも理由は stderr なので、stdout の JSON は汚れない。
+    // The rejection reason goes to stderr and the usage to stdout. Even if a
+    // caller discards stdout, it still learns which token was rejected. The
+    // reason is on stderr on the `--format json` path too, so the JSON on
+    // stdout stays clean.
     //
     // The flag list is more specific than the stored reason when several
     // unknown flags arrived together, so it is preferred where it exists.
@@ -192,8 +193,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-          // `never` はここで捨てない: 捨てると「未指定」と区別できず、
-          // config の `validation.failOn` を下向きに上書きできなくなる。
+          // Do not drop `never` here: dropped, it cannot be told from
+          // "not given", and could no longer override the config's
+          // `validation.failOn` downward.
           ...(options.failOn ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
           ...(options.doctorSkillProfile !== undefined
@@ -223,7 +225,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "audit":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAuditLog({
           root: resolvedRoot,
@@ -242,8 +244,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           process.exitCode = options.invalidExitCode;
           return;
         }
-        // `--format json` の stdout は machine-readable として README が案内
-        // している。root 探索の警告は stderr へ送り、JSON 本体だけを流す。
+        // The README documents `--format json` stdout as machine-readable.
+        // Send root-discovery warnings to stderr so only the JSON body is
+        // written to stdout.
         const resolvedRoot = await resolveRoot(options, options.sddFormat === "json");
         process.exitCode = await runSddPreflightCommand({
           root: resolvedRoot,
@@ -255,7 +258,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "atdd":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAtddScaffold({
           root: resolvedRoot,
@@ -267,8 +270,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "discussion":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
-        // ここでは required な `action` を narrow するためだけに読む。
+        // parseArgs already rejected a missing or invalid subcommand
+        // (invalidReason). It is read here only to narrow the required
+        // `action`.
         const discussionAction = options.discussionAction;
         if (!discussionAction) {
           return;
@@ -289,7 +293,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "prototyping":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         if (options.prototypingAction === "certify") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingCertify({
@@ -322,7 +326,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
             rootExplicit: true,
             format: options.doctorFormat,
             ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            // `never` は doctor 側の明示的なオプトアウトとして渡す。
+            // Pass `never` through as doctor's explicit opt-out.
             ...(options.failOn ? { failOn: options.failOn } : {}),
             profile: "prototyping",
             ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
@@ -374,9 +378,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
 
     default:
-      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
-      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
-      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
+      // Normally unreachable: an unknown command name is rejected before the
+      // help branch. Kept as a backstop for when KNOWN_COMMANDS drifts from
+      // this switch; failing with a usage error is safer than passing through
+      // with exit 0.
       error(`Unknown command: ${command}`);
       info(usage());
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;

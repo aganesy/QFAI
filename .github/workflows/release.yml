@@ -5,7 +5,7 @@ name: Release
 #   push tag vX.Y.Z   -> verify + gate + GitHub Release + npm publish
 #   workflow_dispatch -> verify + gate + npm publish, for a tag that already exists
 #
-# `RELEASE.md` treats tag creation and `npm publish（必要な場合）` as separate
+# `RELEASE.md` treats tag creation and `npm publish` (when needed) as separate
 # steps, and the repo rules require an explicit instruction for each. That
 # separation is now enforced by the `release` **environment** rather than by
 # withholding the trigger: the publish job cannot start until a required

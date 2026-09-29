@@ -155,7 +155,7 @@ describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never r
 
     const data = await createDoctorData({ startDir: dir, rootExplicit: true });
     // The finding SET, not the first match. The TC's Assert is about the set
-    // (「finding 集合に ... 1 度も現れない」), and `addCheck` is a bare push
+    // ("no finding in the set ... appears even once"), and `addCheck` is a bare push
     // with no dedup — so a `find` would hand back only the gated emission
     // while a second, ungated registration of the same id named the
     // collision, and every assertion below would read the clean one and
@@ -277,16 +277,16 @@ const ABSENT_NAME = "qfai-tests.yml";
 
 describe("TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk yields no drift finding, while a live entry-bearing stale file is still reported", () => {
   // TC-0006-0030 leg (b), re-quoted after `CR-20260810-0001` Option A reworded it
-  // — 「`absent` の name は `workflows.integrity` finding の title / message /
-  // `details` のいずれにも現れない (不在は drift ではない)。同じ tree の対照 stale
-  // file は `details.modified` に報告され、check は severity `info` で 1 度だけ
-  // registered される」. That is this row's tree exactly — `absent` plus a
+  // — "the name of `absent` appears in none of the title / message /
+  // `details` of the `workflows.integrity` finding (absence is not drift). The control stale
+  // file in the same tree is reported in `details.modified`, and the check is registered
+  // exactly once with severity `info`". That is this row's tree exactly — `absent` plus a
   // co-located entry-bearing control — so the leg no longer DIVIDES and this row
-  // is the whole of it. The pre-CR quotation stood here (「drift finding が 0 件」,
+  // is the whole of it. The pre-CR quotation stood here ("0 drift findings",
   // split between two owners) and named nothing this row asserts.
   //
   // `declined` (entry present, file gone) is a different state, OUTSIDE this TC by
-  // its own 境界 clause, which names TC-0006-0034 / TC-0006-0035 as the owners. The
+  // its own boundary clause, which names TC-0006-0034 / TC-0006-0035 as the owners. The
   // sibling drift suite's second `it` still deletes a recorded `qfai-validate.yml`
   // and pins its silence — measured, not assumed, by the M2 mutation below, which
   // reddens that `it` and nothing else in that file — but it does so under its own
