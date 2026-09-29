@@ -28,6 +28,10 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 The loop is static-first and file-based by default. Supported surfaces: web,
 mobile, desktop, mixed. cli surface is rejected. Only UI contracts declaring a
 full `UI-NNNN` ID and a non-empty `screens[]` enter the prototyping scope;
@@ -67,8 +71,7 @@ Read `.qfai/assistant/step/<step>/STEP.md` for the current step only, run it,
 then move to the next.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 Select roles by `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 Questions to the user follow

@@ -124,6 +124,24 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
+  // A model-invocable owner the host picks for a free-text request hands it to `qfai-run` only
+  // through the entry check, and a parent reads only the baseline sections its body cites.
+  // QFAI:AC-0001-0195-01
+  // QFAI:EX-0001-0195-01
+  it("runs the entry check first in every owner", async () => {
+    const runFirst =
+      "Run the entry check of `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` first.";
+    for (const skill of PLAN_STEP_OWNERS) {
+      const body = flat(await readShipped(`skill/${skill}/SKILL.md`));
+      const at = body.indexOf(runFirst);
+      expect(at, skill).toBeGreaterThan(-1);
+      expect(
+        body.indexOf("## ", body.indexOf("[DRIFT-PROTOCOL:MANDATORY]")),
+        skill,
+      ).toBeGreaterThan(at);
+    }
+  });
+
   // QFAI:AC-0001-0197-02
   // QFAI:EX-0001-0197-02
   it("runs only qfai-atdd's own steps in the acceptance stages", async () => {
