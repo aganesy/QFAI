@@ -331,8 +331,8 @@ host skill link, the entry directive at the top of `AGENTS.md` and `CLAUDE.md`,
 and the `.qfai/run/` line of the managed `.gitignore` block. A path it cannot
 write is reported with the reason.
 
-Step 11 also installs the reminder hooks `qfai init` installs, through the same
-merge, into `.claude/settings.json` and `.codex/hooks.json`:
+Step 11 also installs the reminder hooks `npx qfai init` installs, through the
+same merge, into `.claude/settings.json` and `.codex/hooks.json`:
 
 - a missing file is written from the package's template;
 - an existing file keeps its other settings and gains the hook groups it lacks;

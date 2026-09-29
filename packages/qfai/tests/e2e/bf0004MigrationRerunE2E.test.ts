@@ -216,8 +216,10 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     expect(
       await textOrNull(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
     ).not.toBeNull();
-    expect(await textOrNull(root, ".qfai/assistant/skill/qfai-run/SKILL.md")).toBe(
-      await textOrNull(PACKAGE_ROOT, "assets/init/.qfai/assistant/skill/qfai-run/SKILL.md"),
+    const skill = ".qfai/assistant/skill/qfai-run/SKILL.md";
+    const lf = (text: string | null) => text?.replace(/\r\n/g, "\n");
+    expect(lf(await textOrNull(root, skill))).toBe(
+      lf(await textOrNull(path.join(PACKAGE_ROOT, "assets/init"), skill)),
     );
     for (const dir of HOST_SKILL_DIRS) {
       expect((await readlink(path.join(root, dir, "qfai-run"))).replace(/\\/g, "/")).toContain(
