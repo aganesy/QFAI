@@ -22,6 +22,11 @@ import {
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
 import {
+  AGENTS_RULES_DIR,
+  REMINDERS_BASENAME,
+  RULE_LOCK_BASENAME,
+} from "../../core/ruleMasterUpdates.js";
+import {
   loadConfig,
   resolvePath,
   WORKFLOW_MODE_MESSAGE,
@@ -119,6 +124,14 @@ const HOST_LINKS = [
   ".claude/agents",
   ".github/agents",
 ] as const;
+
+/** The hook files step 11 writes, and the message file and record the hooks read. */
+const REMINDER_FILES = [
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+  `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`,
+  `${AGENTS_RULES_DIR}/${RULE_LOCK_BASENAME}`,
+];
 
 const GITIGNORE_STAGE_NAME =
   /^\.gitignore-([1-9]\d*)-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.tmp$/;
@@ -521,9 +534,7 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
     case "entry-points":
       return AGENT_ENTRY_POINT_FILES.some((name) => target === path.join(root, name));
     case "reminder-hooks":
-      return [CLAUDE_SETTINGS_RELATIVE_PATH, CODEX_HOOKS_RELATIVE_PATH].some(
-        (file) => target === path.join(root, ...file.split("/")),
-      );
+      return REMINDER_FILES.some((file) => target === path.join(root, ...file.split("/")));
   }
 }
 

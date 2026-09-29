@@ -83,9 +83,12 @@ import {
 import type { RuleMasterPlan } from "../../core/ruleMasterUpdates.js";
 import {
   deletedRuleMasters,
+  keptDeletedRuleMastersNote,
+  keptRuleMasterNote,
   planRuleMasterUpdates,
   readRuleLock,
   RULE_LOCK_BASENAME,
+  UNEDITED_RULE_MASTER,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
 import {
@@ -2175,9 +2178,7 @@ async function updateUneditedRuleMasters(
     const target = path.join(projectRulesDir, plan.name);
     if (plan.verdict === "keep") {
       skipped.push(target);
-      info(
-        `  kept: ${formatReportPath(target)} (edited here, or written before this record existed)`,
-      );
+      info(`  ${keptRuleMasterNote(formatReportPath(target))}`);
       // Its hash is not recorded. Recording it would make the next release read
       // the adopter's text as this run's write and replace it.
       continue;
@@ -2197,7 +2198,7 @@ async function updateUneditedRuleMasters(
     if (dryRun) {
       copied.push(target);
       installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
-      info(`  would update: ${formatReportPath(target)} (rule master, unedited here)`);
+      info(`  would update: ${formatReportPath(target)} (${UNEDITED_RULE_MASTER})`);
       continue;
     }
     const outcome = await replaceGovernedAsset(
@@ -2484,10 +2485,9 @@ const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
  */
 function reportRemovedRuleMasters(removed: readonly string[]): void {
   if (removed.length === 0) return;
-  const named = removed.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`).join(", ");
+  const named = removed.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`);
   info(
-    `  kept deleted: ${named} (an earlier run wrote them and this project removed them; ` +
-      `delete the entry from ${AGENTS_RULES_DIR_CITATION}/${RULE_LOCK_BASENAME} to take one back)`,
+    `  ${keptDeletedRuleMastersNote(named, `${AGENTS_RULES_DIR_CITATION}/${RULE_LOCK_BASENAME}`)}`,
   );
 }
 

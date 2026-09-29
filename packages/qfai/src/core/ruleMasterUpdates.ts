@@ -27,6 +27,28 @@ import { hasErrnoCode } from "./fs/errno.js";
 /** Where the record of what `init` last wrote lives, beside the masters. */
 export const RULE_LOCK_BASENAME = ".qfai-rules.lock.json";
 
+/** The masters' directory in a project, spelled with `/`. */
+export const AGENTS_RULES_DIR = ".agents/rules";
+
+/** The file beside the masters that holds the text each reminder hook prints. */
+export const REMINDERS_BASENAME = "reminders.json";
+
+/** What an update of a master is called in a run's report. */
+export const UNEDITED_RULE_MASTER = "rule master, unedited here";
+
+/** The line naming a master kept because the project's copy is not the recorded one. */
+export function keptRuleMasterNote(shown: string): string {
+  return `kept: ${shown} (edited here, or written before this record existed)`;
+}
+
+/** The line naming masters an earlier run wrote and the project has removed. */
+export function keptDeletedRuleMastersNote(shown: readonly string[], lockShown: string): string {
+  return (
+    `kept deleted: ${shown.join(", ")} (an earlier run wrote them and this project removed them; ` +
+    `delete the entry from ${lockShown} to take one back)`
+  );
+}
+
 /**
  * What a re-init may do with one master.
  *
