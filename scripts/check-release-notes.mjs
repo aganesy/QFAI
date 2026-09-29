@@ -97,6 +97,9 @@ const TRUNCATION_MARKERS = [
   "**\u3053\u306e\u30ea\u30ea\u30fc\u30b9\u30ce\u30fc\u30c8\u306f\u5168\u6587\u3067\u306f\u3042\u308a\u307e\u305b\u3093\u3002**",
 ];
 
+/** Hiragana, katakana and CJK ideographs, as escapes so this file holds no raw Japanese. */
+const JAPANESE_TEXT_RE = /[぀-ヿ㐀-鿿]/u;
+
 /** Whether a published body says it is a cut of its section. */
 export function saysItWasCut(releaseBody) {
   return TRUNCATION_MARKERS.some((marker) => releaseBody.includes(marker));
@@ -176,7 +179,14 @@ export function entryTitles(markdown) {
  */
 export function missingEntries(sectionBody, releaseBody) {
   const wanted = entryTitles(sectionBody);
-  const published = new Set(entryTitles(releaseBody));
+  const publishedTitles = entryTitles(releaseBody);
+  // SIMPLIFIED: a body published in Japanese is not compared. Its entry titles
+  // are what the release said on the day it was built, and the changelog section
+  // has since been written in English, so no title can match.
+  // Lift when: those releases carry English notes, or a translation of each
+  // published title is recorded to compare against.
+  if (publishedTitles.some((title) => JAPANESE_TEXT_RE.test(title))) return [];
+  const published = new Set(publishedTitles);
   const truncated = saysItWasCut(releaseBody);
   if (!truncated) {
     return wanted.filter((title) => !published.has(title));

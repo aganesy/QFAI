@@ -308,6 +308,12 @@ describe("what the published body is allowed to be missing", () => {
       missingEntries("- **First**", ["- **First**", "- **A note somebody added**"].join("\n")),
     ).toEqual([]);
   });
+
+  it("and a body published in Japanese is not compared with an English section", () => {
+    // The title is Japanese text written as escapes: "New feature".
+    const published = "- **新機能**";
+    expect(missingEntries("- **New feature**", published)).toEqual([]);
+  });
 });
 
 describe("the run", () => {
