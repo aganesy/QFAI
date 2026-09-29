@@ -1114,6 +1114,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai init` no longer writes skill links, agent links or the Copilot
+  instructions through a linked host directory** (#2672). With `.codex`,
+  `.claude`, `.agents` or `.github` a symbolic link or a junction to a
+  directory outside the project, init created the skill and agent links at the
+  link's target. It now checks each directory on those paths first, and a
+  linked one, or one that is not a directory, is named and left alone while
+  the run carries on.
+  - Covered: the skill links in `.claude/skills`, `.agents/skills`,
+    `.codex/skills` and `.github/skills`; the agent links in `.claude/agents`
+    and `.github/agents`; and `.github/copilot-instructions.md`, which is also
+    left alone when it is itself a link.
+  - `--force` no longer removes a wrapper an earlier release wrote in
+    `.claude/commands`, `.github/prompts` or a skills directory when that
+    directory is reached through a link.
+  - Not covered: `.agents/rules` and `.github/instructions` are still written
+    through a linked parent.
+  - The skip message for `.codex/agents` names the directory relative to the
+    project, as the new ones do.
+
 - **`qfai validate` reports a qfai reached through a link to another
   checkout** (#2674). A workspace dependency makes `node_modules/qfai` a link
   to a source checkout, so the package that runs sits outside every

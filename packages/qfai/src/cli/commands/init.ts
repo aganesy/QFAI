@@ -2820,7 +2820,7 @@ async function ensureReminderHooks(
   // A symbolic link anywhere on the path, the file itself included and dangling
   // or not, would carry this read and write out of the project: a checked-in
   // `.codex -> ~/.codex` is enough to rewrite the user's own hook file.
-  if (await hookPathIsUnsafe(destRoot, segments)) {
+  if ((await findUnsafeHostFileComponent(destRoot, segments)) !== undefined) {
     error(
       `  WARNING: ${shown} was left unchanged: it, or a directory above it, is a symbolic link ` +
         `or not a directory, so the reminder hooks are not wired up.`,
@@ -2886,17 +2886,26 @@ type SettingsRead =
   | { readonly kind: "unreadable"; readonly reason: string };
 
 /**
- * Whether a hook file's path must not be read or written: a directory on it is
- * a symbolic link or not a directory, or the file itself is a symbolic link,
- * whether its target exists or not. The answer is a boolean so the caller's
- * message can name the relative path rather than the absolute one.
+ * The component that keeps a file init writes into a host directory, such as
+ * a hook file or `.github/copilot-instructions.md`, from being read or
+ * written: a directory on its path that is a symbolic link or not a directory,
+ * or the file itself when it is a symbolic link, whether its target exists or
+ * not. `undefined` when the path is safe.
  */
-async function hookPathIsUnsafe(destRoot: string, segments: readonly string[]): Promise<boolean> {
+async function findUnsafeHostFileComponent(
+  destRoot: string,
+  segments: readonly string[],
+): Promise<UnsafeComponent | undefined> {
   const parent = segments.slice(0, -1).join("/");
-  if (parent !== "" && (await findUnsafeWrapperComponent(destRoot, parent)) !== undefined) {
-    return true;
+  const unsafeParent =
+    parent === "" ? undefined : await findUnsafeWrapperComponent(destRoot, parent);
+  if (unsafeParent !== undefined) {
+    return unsafeParent;
   }
-  return (await safeLstat(path.join(destRoot, ...segments)))?.isSymbolicLink() === true;
+  const leaf = await safeLstat(path.join(destRoot, ...segments));
+  return leaf?.isSymbolicLink() === true
+    ? { relativePath: segments.join("/"), symlink: true }
+    : undefined;
 }
 
 async function readSettingsText(target: string): Promise<SettingsRead> {
@@ -3342,7 +3351,14 @@ async function syncIntegrationWrappers(
   // Step 2: Write copilot-instructions.md as regular file (with updated references)
   const copilotDest = path.join(destRoot, ".github", "copilot-instructions.md");
   const copilotExists = await exists(copilotDest);
-  if (copilotExists && !options.force) {
+  const keepCopilot = copilotExists && !options.force;
+  const copilotUnsafe = keepCopilot
+    ? undefined
+    : await findUnsafeHostFileComponent(destRoot, COPILOT_INSTRUCTIONS_ENTRY.split("/"));
+  if (keepCopilot) {
+    skipped.push(copilotDest);
+  } else if (copilotUnsafe !== undefined) {
+    info(describeSkippedPath(COPILOT_INSTRUCTIONS_ENTRY, copilotUnsafe));
     skipped.push(copilotDest);
   } else {
     copied.push(copilotDest);
@@ -3486,6 +3502,9 @@ async function createSkillSymlinks(
   const skipped: string[] = [];
 
   for (const integDir of SKILL_INTEGRATION_DIRS) {
+    if (await skipsLinkedHostDir(destRoot, integDir)) {
+      continue;
+    }
     for (const skillId of skills) {
       const linkPath = path.join(destRoot, integDir, skillId);
       const target = path.relative(
@@ -3517,8 +3536,9 @@ async function createAgentSymlinks(
   const skipped: string[] = [];
 
   for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
-    // Write README as regular file (already handled in syncIntegrationWrappers)
-
+    if (await skipsLinkedHostDir(destRoot, dir)) {
+      continue;
+    }
     for (const agentName of agents) {
       const linkPath = path.join(destRoot, dir, `${agentName}${suffix}`);
       const target = path.relative(
@@ -3539,6 +3559,35 @@ async function createAgentSymlinks(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Whether init writes nothing into one host directory because a directory on
+ * its path is a symlink, a junction or not a directory. `mkdir`, `symlink` and
+ * `writeFile` follow a linked parent, so a checked-in `.codex -> ~/.codex`
+ * would have init create `skills/` there. The skip is reported and the run
+ * carries on.
+ */
+async function skipsLinkedHostDir(destRoot: string, relativeDir: string): Promise<boolean> {
+  const unsafeComponent = await findUnsafeWrapperComponent(destRoot, relativeDir);
+  if (unsafeComponent === undefined) {
+    return false;
+  }
+  info(describeSkippedPath(relativeDir, unsafeComponent));
+  return true;
+}
+
+/**
+ * The report line for a path init skipped. It says only what this step left
+ * alone, because another step may still write elsewhere under the same link.
+ */
+function describeSkippedPath(skipped: string, unsafe: UnsafeComponent): string {
+  const kind = unsafe.symlink ? "a symlink" : "not a directory";
+  const where =
+    unsafe.relativePath === skipped
+      ? `${skipped} is ${kind}`
+      : `${skipped} is under ${unsafe.relativePath}, which is ${kind}`;
+  return `  skip: ${where}, so nothing is written there`;
 }
 
 /**
@@ -3568,9 +3617,7 @@ async function createCodexAgentTomls(
   }
 
   const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
-  const unsafeComponent = await findUnsafeWrapperComponent(destRoot, CODEX_AGENT_WRAPPER_DIR);
-  if (unsafeComponent !== undefined) {
-    info(`  skip: ${wrapperDir} (${unsafeComponent})`);
+  if (await skipsLinkedHostDir(destRoot, CODEX_AGENT_WRAPPER_DIR)) {
     return { copied, skipped, removed };
   }
 
@@ -3632,6 +3679,12 @@ async function createCodexAgentTomls(
 }
 
 /**
+ * A path component init must not write through, relative to the project, and
+ * whether it is a symlink (a junction included) or not a directory.
+ */
+type UnsafeComponent = { readonly relativePath: string; readonly symlink: boolean };
+
+/**
  * The first component of `relativeDir` under `destRoot` that must not be
  * written through, or `undefined` when the whole chain is safe.
  *
@@ -3648,23 +3701,27 @@ async function createCodexAgentTomls(
  *
  * A component that does not exist yet ends the walk: `mkdir` creates real
  * directories, and nothing below an absent parent can exist either.
+ *
+ * The answer names the component by its path relative to `destRoot`. An
+ * absolute path carries the destination directory's own name, which on an
+ * untrusted repository can hold a newline or an ANSI escape.
  */
 async function findUnsafeWrapperComponent(
   destRoot: string,
   relativeDir: string,
-): Promise<string | undefined> {
-  let current = destRoot;
-  for (const segment of relativeDir.split("/")) {
-    current = path.join(current, segment);
-    const stats = await safeLstat(current);
+): Promise<UnsafeComponent | undefined> {
+  const segments = relativeDir.split("/");
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const relativePath = segments.slice(0, depth).join("/");
+    const stats = await safeLstat(path.join(destRoot, ...segments.slice(0, depth)));
     if (stats === undefined) {
       return undefined;
     }
     if (stats.isSymbolicLink()) {
-      return `${current} is a symlink, so it cannot be used as an output location`;
+      return { relativePath, symlink: true };
     }
     if (!stats.isDirectory()) {
-      return `${current} is not a directory`;
+      return { relativePath, symlink: false };
     }
   }
   return undefined;
@@ -4517,22 +4574,27 @@ async function pruneStaleQfaiWrappers(
   // snapshot, so a test that reads the file belongs where it is asked again after the
   // entry has been moved aside. A project file that takes the name between the snapshot
   // and the delete carries no delegation line, so the second question refuses it.
-  await pruneMatchingEntries(
-    path.join(destRoot, ".claude", "commands"),
-    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
-    removed,
-    dryRun,
-    (target, name) => isInitWrittenWrapper(target, name, ".md", CLAUDE_COMMAND_DELEGATIONS),
-  );
+  // Neither directory is enumerated through a link, for the reason the agent prune gives.
+  if (await isSymlinkFreeDirectory(destRoot, ".claude/commands")) {
+    await pruneMatchingEntries(
+      path.join(destRoot, ".claude", "commands"),
+      (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
+      removed,
+      dryRun,
+      (target, name) => isInitWrittenWrapper(target, name, ".md", CLAUDE_COMMAND_DELEGATIONS),
+    );
+  }
 
   // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once wrote
-  await pruneMatchingEntries(
-    path.join(destRoot, ".github", "prompts"),
-    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
-    removed,
-    dryRun,
-    (target, name) => isInitWrittenWrapper(target, name, ".prompt.md", GITHUB_PROMPT_DELEGATIONS),
-  );
+  if (await isSymlinkFreeDirectory(destRoot, ".github/prompts")) {
+    await pruneMatchingEntries(
+      path.join(destRoot, ".github", "prompts"),
+      (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
+      removed,
+      dryRun,
+      (target, name) => isInitWrittenWrapper(target, name, ".prompt.md", GITHUB_PROMPT_DELEGATIONS),
+    );
+  }
 
   // 3. Remove the skill symlinks init installed for skills no longer shipped
   const canonicalSkillsDirs = [
@@ -4541,7 +4603,7 @@ async function pruneStaleQfaiWrappers(
   ];
   for (const integDir of SKILL_INTEGRATION_DIRS) {
     const fullDir = path.join(destRoot, integDir);
-    if (!(await exists(fullDir))) {
+    if (!(await isSymlinkFreeDirectory(destRoot, integDir))) {
       continue;
     }
     const entries = await readdir(fullDir, { withFileTypes: true });
