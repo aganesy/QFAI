@@ -36,7 +36,7 @@ import {
   UNEDITED_RULE_MASTER,
   writeRuleLock,
 } from "../../core/ruleMasterUpdates.js";
-import { replaceGovernedAsset } from "../../cli/commands/init.js";
+import { replaceGovernedAsset } from "../../core/init/governedWrite.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";

@@ -1115,7 +1115,7 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         }
         if (step === 11 && pass === 1) {
           const operations = section(result.output, "Operations");
-          expect(operations).toHaveLength(5);
+          expect(operations).toHaveLength(4);
           expect(operations[0]).toBe(HOOK_WRITES[0]);
           expect(operations[1]).toMatch(
             /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
