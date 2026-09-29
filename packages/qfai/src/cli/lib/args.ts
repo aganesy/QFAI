@@ -2,20 +2,20 @@ export type ParsedArgs = {
   command: string | null;
   invalid: boolean;
   /**
-   * 引数が拒否された理由 (stderr 向け診断文)。`invalid === true` の
-   * ときだけ設定され、最初に発火した拒否の理由を保持する。
+   * Why the arguments were rejected (a diagnostic for stderr). Set only
+   * when `invalid === true`, and holds the reason of the first rejection.
    */
   invalidReason?: string;
   options: {
     root: string;
     rootExplicit: boolean;
     /**
-     * `qfai init` の出力先。`--dir` 未指定で `--root` が明示された
-     * init 実行では `root` の値が入る（`--root` は init でも出力先の
-     * エイリアスとして働く）。
+     * Output directory of `qfai init`. When `--root` is given without
+     * `--dir`, it holds the `root` value (`--root` acts as an alias for the
+     * output directory in init too).
      */
     dir: string;
-    /** `--dir` が明示されたか。init の出力先解決で `--root` より優先する。 */
+    /** Whether `--dir` was given. It takes precedence over `--root` when init resolves its output directory. */
     dirExplicit: boolean;
     force: boolean;
     yes: boolean;
@@ -230,7 +230,7 @@ const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
   [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
 );
 
-/** `qfai prototyping <action>` のサブコマンド名。 */
+/** Subcommand names of `qfai prototyping <action>`. */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
 
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
@@ -276,8 +276,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   /**
-   * 拒否を記録する。`reason` は main.ts が usage の前に stderr へ
-   * 出す診断文。複数回発火しても最初の理由を保持する。
+   * Record a rejection. `reason` is the diagnostic main.ts writes to stderr
+   * before the usage text. If several rejections fire, the first reason is kept.
    */
   const markInvalid = (reason: string): void => {
     invalid = true;
@@ -296,11 +296,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     return choices ? badValue("--format", value, choices) : notValidHere("--format");
   };
 
-  // 先頭トークンが `--` で始まる場合、それはコマンド名ではなく未知
-  // オプションである。`command = args.shift()` で取り除かれるため下の
-  // フラグループには到達せず、ここで捕まえないと main.ts の
-  // unknown-command 分岐に落ちて exit 0 になってしまう
-  // (`qfai --bogus`)。`--help` / `-h` は直前の分岐で null 化済み。
+  // A first token that starts with `--` is an unknown option, not a command
+  // name. `command = args.shift()` removes it, so it never reaches the flag
+  // loop below; unless it is caught here it falls into the unknown-command
+  // branch of main.ts and exits 0 (`qfai --bogus`). `--help` / `-h` were
+  // already nulled by the preceding branch.
   if (command !== null && command.startsWith("--")) {
     options.unknownFlags.push(command);
     markInvalid(`qfai: unknown option: ${command}`);
@@ -308,9 +308,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   /**
-   * Flag-ownership guard (下の flag-handling contract rule 2 用)。
-   * `qfai prototyping <action>` のサブコマンドトークンは flag loop より
-   * 前に確定するため、ループ内のどの arm からでも安全に呼べる。
+   * Flag-ownership guard (for flag-handling contract rule 2 below).
+   * The `qfai prototyping <action>` subcommand token is fixed before the
+   * flag loop, so this is safe to call from any arm of the loop.
    */
   /**
    * Whether a flag is on one of the commands that actually reads it.
@@ -528,9 +528,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--verbose":
-        // init 専用。ヘルプでもそう公開しているので、他コマンドに付けた
-        // 場合は黙って捨てず誤指定として扱う（自動化が「詳細が出た」と
-        // 誤認したまま成功扱いになるのを防ぐ）。
+        // init only, as the help states. Passing it to another command is
+        // treated as a mistake rather than silently dropped, so automation
+        // does not assume detail was printed and still count the run as a
+        // success.
         if (command !== "init") {
           markInvalid(notValidHere("--verbose"));
           break;
@@ -540,7 +541,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--format": {
         const next = consumeOptionValue();
         if (next === null) {
-          // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
+          // `--format` requires a value. When it is missing, show the help (without consuming the next option).
           markInvalid(missingValue("--format"));
           break;
         }
@@ -578,8 +579,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--active":
-        // usage(): `discussion list --active` のみ。`discussion use <id>`
-        // は値を読まないので、そちらに付いた --active は誤指定。
+        // Per usage(): only `discussion list --active`. `discussion use <id>`
+        // reads no value, so --active given there is a mistake.
         if (command === "discussion" && options.discussionAction === "list") {
           options.discussionActive = true;
         } else {
@@ -587,9 +588,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--strict":
-        // usage(): validate と report が読む。runReport は findings を
-        // gate するようになったので strict を尊重する。doctor では
-        // runDoctor が読まないため、黙って捨てずに拒否する。
+        // Per usage(): read by validate and report. runReport now gates on
+        // findings, so it honours strict. runDoctor does not read it, so on
+        // doctor it is rejected rather than silently dropped.
         if (command === "validate" || command === "report") {
           options.strict = true;
         } else {
@@ -647,12 +648,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         // usage(): validate / report / doctor / prototyping preflight / sdd
-        // preflight のみが failOn を読む。report は findings を gate する
-        // ようになったため所有側に含める。それ以外に付けても読まれないので拒否。
-        // `sdd` は preflight しか subcommand を持たず、subcommand なしの
-        // `qfai sdd` は末尾の guard が既に markInvalid() するため、ここは
-        // command 名だけで足りる (runSddPreflightCommand が `never` を exit 0
-        // として読む)。
+        // Only preflight reads failOn. report now gates on findings, so it
+        // is on the owning side. On any other command it would not be read,
+        // so it is rejected. `sdd` has only the preflight subcommand, and a
+        // bare `qfai sdd` is already markInvalid()-ed by the trailing guard,
+        // so the command name alone is enough here (runSddPreflightCommand
+        // reads `never` as exit 0).
         if (
           command !== "validate" &&
           command !== "report" &&
@@ -663,8 +664,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(notValidHere("--fail-on"));
           break;
         }
-        // 不正値を黙って捨てると、`--fail-on neve` のような typo が
-        // 「既定の失敗閾値」として通り、利用者に説明のないまま CI が落ちる。
+        // Silently dropping a bad value would let a typo such as
+        // `--fail-on neve` pass as the default failure threshold, and CI
+        // would fail with no explanation for the user.
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
         } else {
@@ -792,10 +794,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--target-url"));
           break;
         }
-        // `doctor --profile prototyping` だけが同じ targetUrl 診断を通す
-        // (main.ts: profile !== "prototyping" の doctor には渡らない)。
-        // --profile は後続トークンにも置けるため、doctor 側の profile 検査
-        // は flag loop 後の post-loop guard で行う。
+        // Only `doctor --profile prototyping` goes through the same
+        // targetUrl diagnostic (main.ts: it is not passed to doctor when
+        // profile !== "prototyping"). --profile may also follow other tokens,
+        // so the profile check for doctor runs in the post-loop guard after
+        // the flag loop.
         if (command === "doctor" || ownedByPrototyping("preflight", "iterate")) {
           options.prototypingTargetUrl = next;
         } else {
@@ -1005,8 +1008,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         if (command === "sdd") {
-          // Repeatable: `--assume A --assume B` は preflight summary の
-          // `Open Questions (Carry-over)` にそのまま並ぶ。
+          // Repeatable: `--assume A --assume B` are listed as they are under
+          // `Open Questions (Carry-over)` in the preflight summary.
           options.sddAssumptions.push(next);
         } else {
           markInvalid(notValidHere("--assume"));
@@ -1114,17 +1117,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid(subcommandReason("sdd", null));
   }
-  // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
-  // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
-  // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
-  // して扱う。`--dir` が明示された場合は init 固有の `--dir` を優先。
+  // Every command except init reads `--root` as the target directory. init
+  // looked only at `--dir`, so passing `--root` dropped the value and
+  // initialized the cwd. init now treats `--root` as an alias for the output
+  // directory too. When `--dir` is given, init's own `--dir` wins.
   if (command === "init" && options.rootExplicit && !options.dirExplicit) {
     options.dir = options.root;
   }
   return { command, invalid, ...(invalidReason ? { invalidReason } : {}), options };
 }
 
-/** `qfai <command> <subcommand>` で受理されるサブコマンドの集合。 */
+/** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
@@ -1135,8 +1138,8 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
 ]);
 
 /**
- * サブコマンド欠落 / 不正の診断文を組み立てる。`value === null` は
- * 「そもそも指定されていない」ケース。
+ * Build the diagnostic for a missing or invalid subcommand. `value === null`
+ * means none was given at all.
  */
 function subcommandReason(command: string, value: string | null): string {
   const expected = SUBCOMMAND_EXPECTATIONS.get(command) ?? "";
@@ -1144,7 +1147,7 @@ function subcommandReason(command: string, value: string | null): string {
   return `qfai ${command}: ${what}. Expected: ${expected}`;
 }
 
-/** `--format` が当該コマンドで受理する値の集合 (空 = 非対応)。 */
+/** The set of values `--format` accepts for the command (empty = not supported). */
 function formatChoicesFor(command: string | null): string {
   if (command === "report") {
     return "md|json";

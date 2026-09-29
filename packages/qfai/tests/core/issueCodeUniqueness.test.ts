@@ -574,7 +574,7 @@ describe("issue report metadata", () => {
       code: "QFAI-SKILLS-001",
       severity: "error",
       category: "change",
-      message: "標準資産 'tools/skills/**' が改変されています（変更: 1）。",
+      message: "Standard asset 'tools/skills/**' has been modified (changes: 1).",
       rule: "skills.integrity",
     });
     expect(expected).not.toBe(UNCATALOGUED_EXPECTED);

@@ -195,7 +195,8 @@ describe("buildEvaluatorReview — prose word-count gate (TC-3.1.21..25)", () =>
   // so a Japanese critique the on-disk validator accepted threw here.
   // Both now call the same function.
   it("accepts a Japanese critique the on-disk validator accepts", () => {
-    const review = buildEvaluatorReview(baseInput({ proseCritique: "あ".repeat(800) }));
+    // Hiragana "a" (U+3042) repeated: a whitespace-free Japanese critique.
+    const review = buildEvaluatorReview(baseInput({ proseCritique: "\u3042".repeat(800) }));
     expect(review.proseCritique).toHaveLength(800);
   });
 

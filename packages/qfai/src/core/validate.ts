@@ -340,38 +340,39 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
     return [
       issue(
         "QFAI-TOOL-002",
-        `このプロジェクトは qfai を依存として宣言していますが、実行されているのは ` +
-          `${located.packageDir} の別の copy です。宣言が指すディレクトリの外から解決されて` +
-          `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
-          `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
-          `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
-          `走っています。`,
+        `This project declares qfai as a dependency, but the copy that is running is a ` +
+          `different one at ${located.packageDir}. It was resolved from outside the ` +
+          `directory the declaration points to, so this project's lockfile does not decide ` +
+          `which version gated the run. npx searched for the bare name up the parent ` +
+          `directories, and it is running either the qfai of another checkout ` +
+          `(another branch or lockfile) or a qfai@latest that npx fetched silently.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "この作業ツリーで `npm ci` / `pnpm install` を実行してから再実行してください。" +
-          "グローバルインストールを意図している場合は、そのプロジェクトから qfai の依存宣言を" +
-          "外してください — 宣言と実行の食い違いが、この finding が報告している状態です。",
+        "Run `npm ci` / `pnpm install` in this working tree, then run again. " +
+          "If a global install is intended, remove the qfai dependency declaration from " +
+          "this project — a declaration that disagrees with the running copy is the " +
+          "state this finding reports.",
       ),
     ];
   }
   return [
     issue(
       "QFAI-TOOL-001",
-      `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
-        `(${root}) の外から解決されています。このプロジェクトは qfai を依存として` +
-        `宣言していないため、グローバルインストールか npx による取得が唯一の実行経路で、` +
-        `いずれも意図した選択です。宣言と実行が食い違う場合は別に QFAI-TOOL-002 で` +
-        `報告されます。`,
+      `The running qfai (${located.packageDir}) was resolved from outside the project root ` +
+        `being validated (${root}). This project does not declare qfai as a dependency, ` +
+        `so a global install or an npx fetch is the only way to run it, and both are ` +
+        `intended choices. A mismatch between the declaration and the running copy is ` +
+        `reported separately as QFAI-TOOL-002.`,
       "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",
       [located.packageDir],
       "canonical",
-      "意図した解決であれば無視して構いません。そうでなければ、この作業ツリーで " +
-        "`npm ci` / `pnpm install` を実行してから再実行してください。",
+      "If this resolution is intended, ignore this finding. Otherwise run " +
+        "`npm ci` / `pnpm install` in this working tree, then run again.",
     ),
   ];
 }
@@ -387,13 +388,13 @@ function buildUnusedPlatformIssues(
   return [
     issue(
       "QFAI-PLATFORM-003",
-      `--platform (${platformOption}) は profile "${profile}" では参照されません。`,
+      `--platform (${platformOption}) is not used by profile "${profile}".`,
       severity,
       undefined,
       "platformDetection.unusedPlatformOption",
       [platformOption],
       "canonical",
-      "platform 依存の検証が必要な場合は --profile prototyping / verify / full / saas-package を指定してください。不要であれば --platform を外してください。",
+      "If you need platform-dependent validation, pass --profile prototyping / verify / full / saas-package. Otherwise remove --platform.",
     ),
   ];
 }

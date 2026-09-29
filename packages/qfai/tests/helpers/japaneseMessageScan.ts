@@ -1,9 +1,8 @@
 /**
  * Lexical scan for Japanese text in TypeScript sources.
  *
- * Shared by the operator-facing message-language meta-test and by the
- * allowlist it checks against, so the two cannot drift: the allowlist is
- * written in exactly the keys `japaneseSignature` produces here.
+ * Shared by the operator-facing message-language and changelog-language
+ * meta-tests.
  */
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -200,73 +199,4 @@ export function relativeToPosix(from: string, file: string): string {
 /** `path:line: text` — the form used in failure reports. */
 export function formatJapaneseLine(relPath: string, found: JapaneseLine): string {
   return `${relPath}:${found.line}: ${found.text}`;
-}
-
-/** Tab and printable ASCII — every character that is not the Japanese text. */
-const ASCII_RUN = /[\t -~]+/g;
-
-/**
- * The Japanese content of a line, with the surrounding ASCII code blanked out.
- *
- * This is the key the allowlist is written in. Keying on the message text
- * rather than on the whole line — or on a line number — keeps a rename or a
- * re-indent next to a tolerated message from forcing an allowlist edit, while
- * any *new* Japanese text still produces a key that the list does not contain.
- *
- * The equivalence class is therefore "the same Japanese wording in the same
- * file": re-wording a tolerated message counts as a new message and has to be
- * listed — which the rule forbids — but swapping the interpolated key inside
- * one leaves the operator reading the same Japanese sentence, and passes.
- */
-export function japaneseSignature(lineText: string): string {
-  return lineText.replace(ASCII_RUN, " ").trim();
-}
-
-/** What a file's Japanese lines and its allowlist entries disagree about. */
-export interface AllowlistDiff {
-  /** Japanese lines the allowlist does not account for — rule violations. */
-  readonly added: readonly string[];
-  /** Allowlist entries with no line left to cover — migrated, so drop them. */
-  readonly migrated: readonly string[];
-}
-
-/**
- * Match a file's Japanese lines against the messages it is allowed to keep.
- *
- * Entries are consumed one line each, so the allowlist is a multiset: a file
- * that legitimately repeats a message lists it once per occurrence, and an
- * extra copy of an already-tolerated message is reported like any other new
- * one. Because every line has to be covered by an entry of its own content, a
- * message that gets translated frees no room for a different Japanese message
- * — the freed entry turns up in `migrated` and has to be dropped, not reused.
- */
-export function diffAgainstAllowlist(
-  relPath: string,
-  found: readonly JapaneseLine[],
-  allowed: readonly string[],
-): AllowlistDiff {
-  const remaining = new Map<string, number>();
-  for (const entry of allowed) {
-    remaining.set(entry, (remaining.get(entry) ?? 0) + 1);
-  }
-
-  const added: string[] = [];
-  for (const line of found) {
-    const signature = japaneseSignature(line.text);
-    const left = remaining.get(signature) ?? 0;
-    if (left === 0) {
-      added.push(formatJapaneseLine(relPath, line));
-      continue;
-    }
-    remaining.set(signature, left - 1);
-  }
-
-  const migrated: string[] = [];
-  for (const [entry, count] of remaining) {
-    for (let index = 0; index < count; index += 1) {
-      migrated.push(`${relPath}: ${entry}`);
-    }
-  }
-
-  return { added, migrated };
 }

@@ -289,7 +289,7 @@ const PRIVATE_LABEL_PLANTS: readonly SelectorPlant[] = [
 // QFAI:EX-0002-0005-01
 describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is rejected", () => {
   // One it() per TC-0003-0041 verify bullet. Scope notes, disclosed:
-  // - The TC's Setup is a REPLICA of the shipped set ("配布 set の複製"), so
+  // - The TC's Setup is a REPLICA of the shipped set ("a copy of the shipped set"), so
   //   no plant ever touches the packaged tree. The predicate's operand is the
   //   file bodies, so the replica is the bodies.
   // - it1's differential baseline (the unplanted set scans clean)

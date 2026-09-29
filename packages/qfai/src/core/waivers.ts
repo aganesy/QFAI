@@ -139,7 +139,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        ".qfai/waivers.yaml は非対応です。拡張子を .yml に統一してください。",
+        ".qfai/waivers.yaml is not supported. Rename it to use the .yml extension.",
         "error",
         unsupportedPath,
         "WAIVER-001",
@@ -164,7 +164,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        `waivers.yml の読み込みに失敗しました: ${toErrorMessage(error)}`,
+        `Failed to read waivers.yml: ${toErrorMessage(error)}`,
         "error",
         waiverPath,
         "WAIVER-001",
@@ -186,7 +186,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        `waivers.yml のYAML解析に失敗しました: ${toErrorMessage(error)}`,
+        `Failed to parse the YAML of waivers.yml: ${toErrorMessage(error)}`,
         "error",
         waiverPath,
         "WAIVER-001",
@@ -205,7 +205,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml はオブジェクト形式で記述してください。",
+        "waivers.yml must be written as an object.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -225,7 +225,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml の version は 1 を指定してください。",
+        "The version in waivers.yml must be 1.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -245,7 +245,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml の waivers は配列で記述してください。",
+        "The waivers key in waivers.yml must be an array.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -271,7 +271,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: オブジェクト形式で記述してください。`,
+          `${label}: must be written as an object.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -289,7 +289,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: action は suppress または downgrade を指定してください。`,
+          `${label}: action must be suppress or downgrade.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -312,7 +312,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: id/rule/reason/expires/evidence は必須です。`,
+          `${label}: id/rule/reason/expires/evidence are required.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -342,7 +342,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: waiver id '${id}' が重複しています。`,
+          `${label}: waiver id '${id}' is duplicated.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -388,7 +388,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: scope.paths は1件以上の文字列配列で指定してください。`,
+          `${label}: scope.paths must be an array of one or more strings.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -406,7 +406,7 @@ async function loadWaivers(
         validationIssues.push(
           issue(
             "QFAI-WAIVER-001",
-            `${label}: action=downgrade の場合は downgrade_to に Info を指定してください。`,
+            `${label}: when action=downgrade, downgrade_to must be Info.`,
             "error",
             waiverPath,
             "WAIVER-001",
@@ -422,7 +422,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: severity は warning|warn|info のいずれかで指定してください。`,
+          `${label}: severity must be one of warning|warn|info.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -437,7 +437,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: expires は YYYY-MM-DD 形式の有効な日付で指定してください。`,
+          `${label}: expires must be a valid date in YYYY-MM-DD format.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -486,9 +486,9 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: rule '${ruleId}' は存在しますが waiver では抑制できません。` +
-            "この finding は waiver 処理の後に追加されるため、どの waiver とも一致しません。" +
-            "この waiver は訂正ではなく削除してください。",
+          `${label}: rule '${ruleId}' exists but cannot be suppressed by a waiver. ` +
+            "This finding is added after waiver processing, so no waiver can match it. " +
+            "Delete this waiver rather than correcting it.",
           "warning",
           waiverPath,
           "WAIVER-004",
@@ -501,7 +501,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: 未知の rule '${ruleId}' が指定されています。この実行では適用されません。`,
+          `${label}: unknown rule '${ruleId}' is specified. It is not applied in this run.`,
           "warning",
           waiverPath,
           "WAIVER-004",
@@ -520,7 +520,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-002",
-          `${label}: Error finding を対象にする waiver は禁止です（rule=${ruleId}）。`,
+          `${label}: a waiver that targets an Error finding is forbidden (rule=${ruleId}).`,
           "error",
           waiverPath,
           "WAIVER-002",
@@ -543,13 +543,13 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-003",
-          `${label}: waiver '${id}' は期限切れです（expires=${expiresOn}, today=${todayJst} JST）。`,
+          `${label}: waiver '${id}' has expired (expires=${expiresOn}, today=${todayJst} JST).`,
           "warning",
           waiverPath,
           "WAIVER-003",
           [id, ruleId],
           "change",
-          "期限を更新する前に根本原因を解消し、waiver の削除を検討してください。",
+          "Resolve the root cause before extending the expiry, and consider deleting the waiver.",
         ),
       );
     }
@@ -706,7 +706,7 @@ function parseMatch(value: unknown): {
     return {};
   }
   if (!isRecord(value)) {
-    return { error: "match はオブジェクトで記述してください。" };
+    return { error: "match must be written as an object." };
   }
   if ("dl_ids" in value) {
     return { error: "match.dl_ids is unsupported. Specify ID targets with scope.paths." };
@@ -739,13 +739,13 @@ function parseScope(
 
   if (scopeValue === undefined || scopeValue === null) {
     if (normalizedFallback.length === 0) {
-      return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+      return { error: "scope.paths must be an array of one or more strings." };
     }
     return { scope: { paths: normalizedFallback } };
   }
 
   if (!isRecord(scopeValue)) {
-    return { error: "scope はオブジェクトで記述してください。" };
+    return { error: "scope must be written as an object." };
   }
 
   const pathsResult = toStringArray(scopeValue.paths);
@@ -755,7 +755,7 @@ function parseScope(
 
   const paths = uniqueSorted(pathsResult.value.map((item) => item.trim()));
   if (paths.length === 0) {
-    return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+    return { error: "scope.paths must be an array of one or more strings." };
   }
 
   return { scope: { paths } };
@@ -776,12 +776,12 @@ function toStringArray(value: unknown): { value: string[]; error?: string } {
     return { value: [] };
   }
   if (!Array.isArray(value)) {
-    return { value: [], error: "配列で記述してください。" };
+    return { value: [], error: "must be an array." };
   }
   const out: string[] = [];
   for (const entry of value) {
     if (typeof entry !== "string") {
-      return { value: [], error: "文字列配列で記述してください。" };
+      return { value: [], error: "must be an array of strings." };
     }
     const trimmed = entry.trim();
     if (trimmed.length === 0) {

@@ -510,7 +510,9 @@ describe("uiux.competitive_refs_min", () => {
     // effectively demanded three while the finding still said "at least 2.5".
     const { config, issues } = await loadWith("2.5");
     expect(issues.map((issue) => issue.message)).toEqual([
-      expect.stringContaining("uiux.competitive_refs_min は0以上の整数である必要があります。"),
+      expect.stringContaining(
+        "uiux.competitive_refs_min must be an integer greater than or equal to 0.",
+      ),
     ]);
     expect(config.uiux?.competitive_refs_min).toBeUndefined();
   });

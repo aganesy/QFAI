@@ -21,8 +21,8 @@ export type DoctorCommandOptions = {
   format: "text" | "json";
   outPath?: string;
   /**
-   * 明示された `--fail-on` の値。未指定なら `validation.failOn`
-   * (同梱既定値 `error`) が使われる。`never` は明示的なオプトアウト。
+   * The explicit `--fail-on` value. When absent, `validation.failOn` (whose
+   * shipped default is `error`) is used. `never` is an explicit opt-out.
    */
   failOn?: FailOn;
   profile?: DoctorProfile;
@@ -205,12 +205,12 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const resolvedRoot = options.rootExplicit
     ? options.root
     : (await findConfigRoot(options.root)).root;
-  // doctor の失敗条件は validate と同じ設定キー (`validation.failOn`) で
-  // 決まる。フラグ由来の値しか見なかった頃は、`== errors blocking the
-  // active profile ==` に `[error]` を並べたうえで exit 0 を返しており、
-  // 契約 (errors バケットが空でなければ exit 1) にも validate にも
-  // 反しない読み方が存在しなかった。`--clean` 分岐の TTL 参照も
-  // この 1 回のロードを共有する。
+  // doctor's failure condition is set by the same config key as validate
+  // (`validation.failOn`). Reading only the flag value made doctor list
+  // `[error]` under `== errors blocking the active profile ==` and still exit
+  // 0, which agrees with neither the contract (exit 1 unless the errors bucket
+  // is empty) nor validate. The TTL lookup in the `--clean` branch shares this
+  // single load.
   const { config, issues: configIssues } = await loadConfig(resolvedRoot);
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.

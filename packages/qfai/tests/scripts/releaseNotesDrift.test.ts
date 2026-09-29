@@ -289,7 +289,13 @@ describe("what the published body is allowed to be missing", () => {
     // missing tail reported as drift. One release reported 77 entries that
     // way, out of a section nobody had edited.
     const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-    const body = ["- **First**", "", "**このリリースノートは全文ではありません。**"].join("\n");
+    // The escapes decode to the Japanese sentence "This release note is not the
+    // full text."
+    const body = [
+      "- **First**",
+      "",
+      "**\u3053\u306e\u30ea\u30ea\u30fc\u30b9\u30ce\u30fc\u30c8\u306f\u5168\u6587\u3067\u306f\u3042\u308a\u307e\u305b\u3093\u3002**",
+    ].join("\n");
 
     expect(saysItWasCut(body)).toBe(true);
     expect(missingEntries(section, body)).toEqual([]);

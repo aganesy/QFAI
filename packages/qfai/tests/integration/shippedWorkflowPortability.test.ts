@@ -483,7 +483,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   //   manifest field is its only source. Yarn Classic and npm ship with
   //   the runner and DO resolve without the field, so failing closed
   //   there would fail closed on a resolvable case, which AC-0003-0033
-  //   ("解決不能" = unresolvable) does not ask for.
+  //   ("unresolvable") does not ask for.
   // - Observation handed to the orchestrator rather than implemented
   //   here: a pnpm lockfile with a `packageManager` naming a DIFFERENT
   //   manager (`yarn@…`) is also unresolvable for this route and would end

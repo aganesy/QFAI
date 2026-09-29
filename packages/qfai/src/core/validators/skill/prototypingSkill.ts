@@ -263,7 +263,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-BANNED-PHRASE",
         `Prototyping skill contains banned phrases: ${bannedPhraseMatches.join(", ")}`,
         "error",
-        "runtime-heavy default wording を削除し、mode-aware obligations に置き換えてください。",
+        "Remove the runtime-heavy default wording and replace it with mode-aware obligations.",
       ),
     );
   }
@@ -274,7 +274,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-ASPIRATIONAL",
         `Prototyping skill contains aspirational claims: ${aspirationalClaims.join(", ")}`,
         "error",
-        "未実装 capability の断定表現を削除してください。",
+        "Remove the assertions about capabilities that are not implemented.",
       ),
     );
   }
@@ -285,7 +285,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-SECTION-MISSING",
         `Prototyping skill missing required sections: ${requiredSectionsMissing.join(", ")}`,
         "error",
-        `required sections を追加してください: ${requiredSectionsMissing.join(", ")}`,
+        `Add the required sections: ${requiredSectionsMissing.join(", ")}`,
       ),
     );
   }
@@ -296,7 +296,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-CANONICAL-SURFACE",
         "Prototyping skill must document supported UI prototyping surfaces: web, mobile, desktop, mixed.",
         "error",
-        "supported UI surface (web, mobile, desktop, mixed) を明記してください。",
+        "State the supported UI surfaces (web, mobile, desktop, mixed) explicitly.",
       ),
     );
   }
@@ -307,7 +307,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-CLI-SURFACE",
         "Prototyping skill must document that cli surface is rejected from prototyping execution.",
         "error",
-        "cli surface は prototyping execution 対象外であることを明記してください。",
+        "State explicitly that the cli surface is out of scope for prototyping execution.",
       ),
     );
   }
@@ -329,7 +329,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-STATIC-FIRST",
         "Prototyping skill is missing static-first wording.",
         "error",
-        "static-first / file-based default を明記してください。",
+        "State the static-first / file-based default explicitly.",
       ),
     );
   }
@@ -340,7 +340,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-DELEGATION",
         "Prototyping skill is missing the delegation scope table for evaluator/capture/build roles.",
         "error",
-        "delegation scope table を追加してください。",
+        "Add the delegation scope table.",
       ),
     );
   }
@@ -351,7 +351,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-EVIDENCE-PATHS",
         "Prototyping skill must declare canonical screenshot and HTML evidence paths.",
         "error",
-        "canonical screenshot/html evidence path を明記してください。",
+        "State the canonical screenshot/html evidence path explicitly.",
       ),
     );
   }
@@ -362,7 +362,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-ENV-PRECONDITIONS",
         "Prototyping skill must separate contract preconditions and environment preconditions.",
         "error",
-        "Step 2-A / Step 2-B で contract と environment の preconditions を分離してください。",
+        "Separate the contract and environment preconditions in Step 2-A / Step 2-B.",
       ),
     );
   }
@@ -373,7 +373,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-PREFLIGHT",
         "Prototyping skill must document qfai prototyping preflight or qfai doctor --profile prototyping guidance.",
         "error",
-        "preflight 実行導線（qfai prototyping preflight または qfai doctor --profile prototyping）を明記してください。",
+        "State the preflight entry point explicitly (qfai prototyping preflight or qfai doctor --profile prototyping).",
       ),
     );
   }
@@ -384,7 +384,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
         "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
         "Prototyping skill must document a safe Playwright invocation path such as npx --no-install playwright.",
         "error",
-        "npx --no-install playwright または node_modules/.bin/playwright の経路を明記してください。",
+        "State the npx --no-install playwright or node_modules/.bin/playwright route explicitly.",
       ),
     );
   }

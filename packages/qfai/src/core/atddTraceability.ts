@@ -457,10 +457,13 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:(API-\d{4}(?![\w-]))/g;
 /** The `DB-NNNN` annotation, the DB peer of the API form above. */
 const DB_TEST_ANNOTATION_RE = /\bQFAI:(DB-\d{4}(?![\w-]))/g;
 
-/** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
-const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
-/** `- Level: L4` meta line inside a heading-form test case block. */
-const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
+/**
+ * Heading form of a test case, e.g. `## TC-0001-0002: title`. `\uFF1A` is the
+ * full-width colon, accepted as a separator.
+ */
+const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:\uFF1A]\s*.*)?$/;
+/** `- Level: L4` meta line inside a heading-form test case block (`\uFF1A` is the full-width colon). */
+const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:\uFF1A]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
 const API_CONTRACT_ID_RE = /^API-\d{4}$/;
@@ -2040,9 +2043,10 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
  * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
  * here left those stories unable to defer at all, and in an H2/H3 document it
  * also mis-attributed an H3 story's marker to the preceding H2 story, because
- * the `###` line neither opened a block nor closed the open one.
+ * the `###` line neither opened a block nor closed the open one. `\uFF1A` is
+ * the full-width colon, accepted as a separator.
  */
-const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:\uFF1A]\s*.*)?$/;
 
 /** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
 const ANY_HEADING_RE = /^#{1,6}\s+/;
@@ -2195,7 +2199,7 @@ const ORDERED_MARKER = "\\d{1,9}[.)]";
  * width is the item's content column; group 2 is the id.
  */
 const US_LIST_ITEM_RE = new RegExp(
-  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:：]?`,
+  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:\\uFF1A]?`,
 );
 
 /**
@@ -2711,7 +2715,8 @@ const GHERKIN_STRUCTURE_PATTERNS: readonly RegExp[] = [
  * A `.feature` written in a Gherkin dialect this scan cannot read English.
  *
  * Cucumber resolves `Scenario:` through the `# language:` header, so a feature
- * declaring `ja` collects `シナリオ:` and matches no English keyword above.
+ * declaring `ja` collects the Japanese scenario keyword and matches no English
+ * keyword above.
  * Carrying a keyword table for seventy dialects is not this scan's job, so a
  * non-English feature is taken at its word and counted as declaring a test:
  * over-counting one file costs a finding that would not have been raised,

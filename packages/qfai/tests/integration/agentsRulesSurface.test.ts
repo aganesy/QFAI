@@ -305,7 +305,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
     const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
-    expect(text).toMatch(/バージョン規律/);
+    expect(text).toMatch(/Version discipline/);
     expect(text).toMatch(/\.agents\/rules\/version-discipline\.md/);
     expect(text).toMatch(/\.agents\/rules\//);
   });
@@ -439,7 +439,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "packages/qfai/assets/init/root/AGENTS.md",
         "packages/qfai/assets/init/root/CLAUDE.md",
       ];
-      const enumerates = /issue\/PR 番号|issue 番号 \/ PR 番号|issue or pull request numbers/;
+      const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
       for (const rel of entryPoints) {
         const text = await readFile(path.join(ROOT, rel), "utf-8");

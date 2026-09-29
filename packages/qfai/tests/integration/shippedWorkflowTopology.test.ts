@@ -248,7 +248,7 @@ describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed fi
   it("with the plants reverted the whole shipped set passes: clean copy and real asset tree both scan clean", async () => {
     const cleanCopy = await copyShippedGithubToTemp();
     await expect(scanShippedGithubTopology(cleanCopy)).resolves.toEqual([]);
-    // The real packaged tree is the shipped set the TC's "planted を戻すと
+    // The real packaged tree is the shipped set the TC's "restore the planted value and
     // exit 0" bullet speaks about.
     await expect(scanShippedGithubTopology(shippedGithubDir())).resolves.toEqual([]);
   });

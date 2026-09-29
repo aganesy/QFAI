@@ -73,7 +73,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
     const check = data.checks.find((entry) => entry.id === "workflows.integrity");
 
     expect(check, "qfai doctor must emit a workflows.integrity check").toBeDefined();
-    // The TC Verify says the check fires 「1 件」, which counts EMISSIONS of
+    // The TC Verify says the check fires "once", which counts EMISSIONS of
     // the check, not entries in `modified`. `addCheck` is a bare push with
     // no dedup and the lookup above is a `find`, so a second registration of
     // the same id would be invisible to every other assertion here.
@@ -94,10 +94,10 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
     expect(modified, "details.modified must name the stale file's relative path").toContain(
       `${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`,
     );
-    // Warranted by the TC's SETUP for leg (a) — 「provenance entry を持つ shipped
-    // workflow を 1 つ手編集した」, exactly one file edited, which is what this
+    // Warranted by the TC's SETUP for leg (a) — "hand-edit one shipped
+    // workflow that has a provenance entry", exactly one file edited, which is what this
     // assertion's own label already says — and NOT by its Verify. The Verify's
-    // 「1 件」 bounds EMISSIONS of the check, not the cardinality of `modified`,
+    // "once" bounds EMISSIONS of the check, not the cardinality of `modified`,
     // and the registration pin above is where that reading belongs. Without this
     // pin an implementation that reported every installed workflow would pass.
     expect(modified?.length, "exactly one installed workflow was edited").toBe(1);
@@ -249,7 +249,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
 
 describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports severity ok and emits no drift finding", () => {
   it("registers exactly one ok-severity workflows.integrity check carrying no drift payload", async () => {
-    // The TC's Setup is 「TC-0006-0027 の手編集を戻し」, so the edit is applied
+    // The TC's Setup is "revert the hand edit of TC-0006-0027", so the edit is applied
     // and then reverted rather than skipped: guard #2 below is this row's
     // anti-vacuity guard and an edit that was never made cannot be reverted.
     // The revert restores CAPTURED bytes rather than re-deriving them, which
@@ -339,8 +339,8 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     // exercised. Soft assertions make that structural instead of a comment a
     // later edit can quietly break.
     //
-    // The TC's second Verify bullet (drift finding が 1 件も emit されない —
-    // false positive なし) is measured JOINTLY by the severity, payload and
+    // The TC's second Verify bullet (no drift finding is emitted at all —
+    // no false positive) is measured JOINTLY by the severity, payload and
     // message assertions below rather than by an extra "no info finding"
     // assertion, which would have no mutation of its own: under the
     // false-positive mutation — `hasDrifted`'s final

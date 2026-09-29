@@ -1,6 +1,6 @@
 # QFAI
 
-Quality-First AI (QFAI) — specification-driven development の検証フレームワークおよび CLI。
+Quality-First AI (QFAI) — a verification framework and CLI for specification-driven development.
 
 ## Project Rules
 

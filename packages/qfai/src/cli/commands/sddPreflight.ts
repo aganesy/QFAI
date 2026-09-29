@@ -1,20 +1,23 @@
 /**
- * `qfai sdd preflight` — /qfai-sdd Stage 0 のゲートを実行する。
+ * `qfai sdd preflight`: run the /qfai-sdd Stage 0 gate.
  *
- * discussion-pack の選択・取り込み `REQ-*` 件数・blocker 解決を
- * `runSddPreflight` に委ね、その結果を `<outDir>/preflight_summary.md` へ
- * 書き出す（書き出しは `runSddPreflight` 自身が行う）。skill 側がテンプレを
- * 手で埋める運用だと `status: ready` が自己申告になり、pack を実際に
- * 見つけたことの証拠にならない。本コマンドはその判定を機械側へ戻す。
+ * Delegates the discussion-pack selection, the count of imported `REQ-*`
+ * entries and blocker resolution to `runSddPreflight`, which also writes the
+ * result to `<outDir>/preflight_summary.md`. If the skill filled the template
+ * by hand, `status: ready` would be self-reported and prove nothing about a
+ * pack having actually been found. This command moves that decision back to
+ * the tool.
  *
- * 判定対象の pack は runtime-state pointer
- * (`.qfai/state.json#discussion.currentId`) を優先する。pointer が指す pack が
- * 見つからない場合は候補と復旧コマンドを示して停止し、既存 summary を
- * 上書きしない。pointer 未設定時のみ最新 pack にフォールバックする。
+ * The pack to judge is the one the runtime-state pointer
+ * (`.qfai/state.json#discussion.currentId`) names. If that pack cannot be
+ * found, it stops, shows the candidates and the recovery command, and leaves
+ * the existing summary untouched. Only when no pointer is set does it fall
+ * back to the latest pack.
  *
- * 終了コード: `status: "blocked"` で 1、`ready` で 0。`--fail-on never` の
- * ときのみ blocked でも 0 を返す（診断だけしたいケース用）。preflight は
- * warning 段を持たないため `--fail-on warning` は `error` と同義。
+ * Exit code: 1 for `status: "blocked"`, 0 for `ready`. Only `--fail-on never`
+ * returns 0 for a blocked result (for when only the diagnosis is wanted).
+ * Preflight has no warning tier, so `--fail-on warning` means the same as
+ * `error`.
  */
 
 import { readFile } from "node:fs/promises";
@@ -193,8 +196,9 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
     return 1;
   }
 
-  // `nextCommands` は blocker の復旧手順。ready の結果に付けたままだと
-  // Stage 1 へ進むべき利用者を /qfai-discussion へ差し戻してしまう。
+  // `nextCommands` are the recovery steps for a blocker. Left on a ready
+  // result, they would send a user who should move on to Stage 1 back to
+  // /qfai-discussion.
   const emitted: SddPreflightResult =
     result.status === "blocked" ? result : { ...result, nextCommands: [] };
 

@@ -619,13 +619,13 @@ function missingTargetIssue(
   const relativeTarget = toRelative(root, target);
   return issue(
     "QFAI-LINK-002",
-    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} が assistant tree に存在しません。エージェントはこの引用をたどれず、指示は黙って何も適用しません。`,
+    `${relativeCiting}:${String(reference.line)} cites \`${citation}\`, which cannot be resolved: ${relativeTarget} does not exist in the assistant tree. Agents cannot follow this citation, so the instruction silently applies to nothing.`,
     severity,
     relativeCiting,
     "assistantAnchorReferences.missingTarget",
     [citation],
     "canonical",
-    "引用パスの綴りを確認してください。ドキュメントが移動または改名されている場合は引用を現在のパスに更新し、vendored tree が部分的にしか再同期されていない場合は `qfai init` を再実行して `.qfai/assistant/**` を揃えてください。",
+    "Check the spelling of the citation path. If the document was moved or renamed, update the citation to the current path. If the vendored tree was only partly resynced, rerun `qfai init` to bring `.qfai/assistant/**` back into line.",
     { relatedFiles: [relativeTarget], loc: { line: reference.line } },
   );
 }
@@ -641,13 +641,13 @@ function danglingIssue(
   const relativeTarget = toRelative(root, target);
   return issue(
     "QFAI-LINK-002",
-    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} に slug が \`${reference.anchor}\` と一致する見出しがありません。エージェントはこの引用をたどった先で該当節を見つけられず、指示は黙って何も適用しません。`,
+    `${relativeCiting}:${String(reference.line)} cites \`${citation}\`, which cannot be resolved: ${relativeTarget} has no heading whose slug is \`${reference.anchor}\`. An agent following this citation finds no such section, so the instruction silently applies to nothing.`,
     severity,
     relativeCiting,
     "assistantAnchorReferences.dangling",
     [citation],
     "canonical",
-    "引用元と参照先のどちらが古いかを確認してください。vendored tree が部分的にしか再同期されていない場合、新しい規則が古いドキュメントに存在しない節を引用します。`qfai init` を再実行して `.qfai/assistant/**` を揃えるか、引用を参照先の現在の見出しに合わせて更新してください。",
+    "Check whether the citing document or its target is out of date. If the vendored tree was only partly resynced, a newer rule cites a section that an older document does not have. Rerun `qfai init` to bring `.qfai/assistant/**` back into line, or update the citation to match the target's current heading.",
     { relatedFiles: [relativeTarget], loc: { line: reference.line } },
   );
 }

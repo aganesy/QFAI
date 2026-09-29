@@ -2924,8 +2924,9 @@ describe("qfai init", () => {
     }
   });
 
-  // 出力先の開示。`--dir` の既定値は cwd なので、宛先を名指ししない出力では
-  // 誤ったディレクトリへの実行が正しい実行とバイト単位で同一になる。
+  // Destination disclosure. The default for `--dir` is the cwd, so output that
+  // does not name the destination makes a run in the wrong directory
+  // byte-for-byte identical to a correct one.
   it("names the destination directory before the work starts and in the report header", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dest-"));
     try {
@@ -2937,7 +2938,7 @@ describe("qfai init", () => {
       const header = `qfai init: dry-run (dest=${dest})`;
       expect(output).toContain(opening);
       expect(output).toContain(header);
-      // 開示は処理開始前に出す — 中断・失敗した実行でも対象が残る。
+      // The disclosure comes before any work, so the target stays visible even when a run is interrupted or fails.
       expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
     } finally {
       await removeTempTree(root);
@@ -3180,7 +3181,7 @@ describe("qfai init", () => {
     // could be deleted for looking like init's after mangling.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
-      // Shift_JIS for「プロジェクト」— not a valid UTF-8 sequence.
+      // Shift_JIS for the katakana word for "project" — not a valid UTF-8 sequence.
       const shiftJis = Buffer.from([
         0x83, 0x76, 0x83, 0x8d, 0x83, 0x57, 0x83, 0x46, 0x83, 0x4e, 0x83, 0x67,
       ]);

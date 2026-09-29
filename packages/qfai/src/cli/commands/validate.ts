@@ -810,8 +810,9 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
-  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
-  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  // The effective failOn appeared only in the `--format github` summary line,
+  // so a reviewer reading the default text output could not see why the exit
+  // code is what it is.
   process.stdout.write(`fail-on: ${failOn}\n`);
   const overruns = formatTimingOverruns(result.timings);
   if (overruns) {

@@ -371,7 +371,10 @@ describe("validatePrototypingEvidence", () => {
 
   it("emits no QFAI-PROT-002 when proseCritique is a 600-character Japanese critique", async () => {
     const root = await newTempDir();
-    const japaneseCritique = "情報設計と導線は概ね良好である。".repeat(50);
+    const japaneseCritique =
+      "\u60C5\u5831\u8A2D\u8A08\u3068\u5C0E\u7DDA\u306F\u6982\u306D\u826F\u597D\u3067\u3042\u308B\u3002".repeat(
+        50,
+      );
     expect(japaneseCritique.split(/\s+/u).length).toBe(1);
     const iter = { ...validIter(0), proseCritique: japaneseCritique };
     await seedPrototypingJson(root, {
@@ -388,7 +391,7 @@ describe("validatePrototypingEvidence", () => {
   // QFAI:EX-0001-0128-01
   it("emits QFAI-PROT-002 naming the character cap when a Japanese proseCritique is over it", async () => {
     const root = await newTempDir();
-    const longJapanese = "情報設計は弱い。".repeat(400);
+    const longJapanese = "\u60C5\u5831\u8A2D\u8A08\u306F\u5F31\u3044\u3002".repeat(400);
     await seedPrototypingJson(root, {
       uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), proseCritique: longJapanese }],
@@ -413,7 +416,11 @@ describe("validatePrototypingEvidence", () => {
   // cannot do that: the word count being low is never a reason to reject.
   it("emits no QFAI-PROT-002 for a Hangul proseCritique", async () => {
     const root = await newTempDir();
-    const koreanCritique = "정보설계와동선은대체로양호하다.".repeat(50);
+    // Hangul text, written as escapes.
+    const koreanCritique =
+      "\uc815\ubcf4\uc124\uacc4\uc640\ub3d9\uc120\uc740\ub300\uccb4\ub85c\uc591\ud638\ud558\ub2e4.".repeat(
+        50,
+      );
     const iter = { ...validIter(0), proseCritique: koreanCritique };
     await seedPrototypingJson(root, {
       uiContractsCovered: ["UI-0001"],

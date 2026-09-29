@@ -151,7 +151,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
   // The leakage guard's version regex, mirrored LITERALLY from
   // packages/qfai/scripts/check-no-internal-version-leakage.sh; the
   // tree-wide it below asserts the mirror is still in sync with the guard
-  // before judging with it ("guard と同じ pattern" is the TC's requirement).
+  // before judging with it ("the same pattern as the guard" is the TC's requirement).
   const GUARD_VERSION_RE_SOURCE = String.raw`\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b`;
   const guardVersionRe = (): RegExp => new RegExp(GUARD_VERSION_RE_SOURCE);
   const GUARD_SCRIPT_PATH = path.join(
