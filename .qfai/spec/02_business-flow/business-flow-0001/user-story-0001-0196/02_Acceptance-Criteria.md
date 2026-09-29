@@ -13,6 +13,8 @@ Feature: Install or upgrade and get the free-text entry
     And every step a built-in plan names is under `.qfai/assistant/step/`
     And no plan file and no workflow schema file is written into the project
     And on an upgrade every other skill directory is left as it was
+    And no host skills or agents directory, no `.github/copilot-instructions.md` and no directory the `--force` wrapper prune reads is written or pruned when it is, or sits under, a symbolic link or a path that is not a directory, and init names the skipped path and carries on
+    And `.agents/rules` and `.github/instructions` are outside that check
 
   # AC-0001-0196-02
   Scenario: Init writes no `agents/openai.yaml`
@@ -71,4 +73,29 @@ Feature: Install or upgrade and get the free-text entry
     Then every shipped step is at `.qfai/assistant/step/<name>/STEP.md`, one directory level under `step/`
     And no step directory holds a `SKILL.md`, and no host skills directory holds an entry for a step
     And a plain upgrade leaves a step whose copy differs from the shipped one as it is, and `--force` replaces it, as for a shipped skill
+
+  # AC-0001-0196-11
+  Scenario: Every prompt restates that a request naming no skill goes to `qfai-run`
+    Given a fresh project, or a project with its own `.claude/settings.json` or `.codex/hooks.json`
+    When `qfai init` runs
+    Then Claude Code and Codex each run, on every prompt, a hook that sends a request naming no skill to `qfai-run`
+    And Codex also runs the structured-question reminder on every prompt
+    And on Windows each Codex hook runs through `cmd.exe` and prints what it prints through `sh`
+    And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
+    And a file with a shape init cannot read is left unchanged, with a warning
+    And a hook file reached through a symbolic link is neither read nor written, with a warning
+    And when init writes or adds Codex hooks, the summary says in one line that Codex runs them only after they are reviewed and trusted with `/hooks`
+    And `--dry-run` writes no hook file and prints no such line
+    And a hook that cannot find its message prints nothing and exits 0
+
+  # AC-0001-0196-12
+  Scenario: Codex runs the tool-time reminders at the tool calls it has
+    Given a fresh project, or a project whose `.codex/hooks.json` holds only the prompt-time reminders
+    When `qfai init` runs
+    Then Codex runs each tool-time reminder Claude Code runs at the Codex tool call for the same moment, with the same marker and message
+    And the documentation-clarity reminder after a write fires only for a patch that adds or changes a Markdown file
+    And the API-budget reminder fires only for a shell command that names the forge's CLI or its API host
+    And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
+    And each runs on Windows as the prompt-time reminders do
+    And an existing file gains the tool-time groups once, and a second run changes nothing
 ```

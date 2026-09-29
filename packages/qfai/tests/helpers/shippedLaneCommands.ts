@@ -1495,7 +1495,28 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reader, the `reminders.json` path and one message key, no shell and no network. Derived by
   // running `qfai init` into a temp root and hashing what it wrote; dropping that one group
   // reproduces `a7547fbe…` byte for byte.
-  [".claude/settings.json", "65be5439b8425a2bec1e68e7084263c25abb82fb0b396dd6583116764bcca665"],
+  //
+  // Re-pinned for a second `UserPromptSubmit` group, which sends a request naming no skill to
+  // `qfai-run` on every prompt. Same shape as the structured-question group: one `node -e` reader,
+  // the `reminders.json` path and the key `free-text-entry`. Derived by running `qfai init` into a
+  // temp root and hashing what it wrote; dropping that one group reproduces `65be5439…` byte for
+  // byte.
+  [".claude/settings.json", "7662f70056f52555e0c4dd5b8fdfec9461e93d5c4b876df2a61d742bd6acbef6"],
+  // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
+  // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
+  // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
+  // through the session's shell over `$(git rev-parse --show-toplevel)/.agents/rules/reminders.json`;
+  // a shell that does not expand `$(...)` names a path that does not exist, and the reader prints
+  // nothing. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  //
+  // Re-pinned for the tool-time groups: four under `PreToolUse` and two under `PostToolUse`,
+  // matched on Codex's tool names. Each runs the same reader over the same path and one message
+  // key; the API-budget and Markdown entries first read the tool call from stdin and print only
+  // when it matches. Every entry also has a `commandWindows` line, which Codex runs through
+  // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
+  // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
+  // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
+  [".codex/hooks.json", "4c710d7ef8eed2214fcceb544c22205a5e836964c6751e937254e17551a8f567"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1669,6 +1690,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/CLAUDE.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
+  ".codex/hooks.json",
   ".github/instructions/code-review.instructions.md",
   ".github/instructions/principles.instructions.md",
 ]);

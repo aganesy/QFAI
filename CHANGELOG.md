@@ -38,6 +38,47 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Codex gets the tool-time reminders too.** `.codex/hooks.json` now carries
+  the reminders Claude Code runs around a tool call, under Codex's own tool
+  names. An existing file gains them through the same merge as before.
+
+  | Reminder               | Codex moment                                                                  |
+  | ---------------------- | ----------------------------------------------------------------------------- |
+  | Documentation clarity  | Before a GitHub MCP post; after an `apply_patch` that adds or changes a `.md` |
+  | Grilling               | Before an `apply_patch`; before `spawn_agent`                                 |
+  | Minimal implementation | After an `apply_patch`                                                        |
+  | API budget             | Before a `Bash` command that names `gh` or `api.github.com`                   |
+
+  The grilling reminder before leaving plan mode stays Claude Code only: Codex
+  has no tool call that leaves plan mode. Every Codex hook, the prompt-time
+  ones included, also runs on Windows through its `cmd.exe` line.
+
+- **Every prompt restates the free-text entry, in Claude Code and in Codex.**
+  A host picks a skill from the wording of a request, and may pick another one
+  or none. `npx qfai init` now adds a prompt-time hook that says a request
+  naming no skill goes to the `qfai-run` skill, and a request naming a skill
+  goes to that skill. The line at the top of `AGENTS.md` and `CLAUDE.md` and the
+  entry check in the stage skills stay.
+
+  - Claude Code: a second `UserPromptSubmit` group in `.claude/settings.json`,
+    merged into an existing file like the other reminder groups.
+  - Codex: a new `.codex/hooks.json` with this reminder and the
+    structured-question one. An existing file keeps its own groups and gains
+    the missing ones; a group the project edited is kept and named; a file init
+    cannot read is left unchanged with a warning.
+  - Each Codex hook finds `.agents/rules/reminders.json` from the repository
+    root, so it works from a subdirectory. Outside a git repository, or in a
+    project below its git root (as in a monorepo), it finds no message and
+    prints nothing.
+  - On Windows, Codex runs each hook's `commandWindows` line through
+    `cmd.exe`. That line finds the repository root with `for /f` over
+    `git rev-parse`, runs the same reader, and always exits 0.
+  - `qfai init` neither reads nor writes `.claude/settings.json` or
+    `.codex/hooks.json` through a symbolic link on its path; it warns and
+    leaves that file alone.
+  - Codex runs a project's hooks only after you review and trust them with
+    `/hooks`. `qfai init` says so in one line when it writes or adds them.
+
 - **A turn that waits on you ends with a question.** When an agent reaches a
   point where the next step is yours — a phase approved, a plan ready, a stage
   finished — it ends the turn with a structured question listing the next
@@ -1121,6 +1162,41 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger columns the removed code read.
 
 ### Fixed
+
+- **`qfai init` no longer writes skill links, agent links or the Copilot
+  instructions through a linked host directory** (#2672). With `.codex`,
+  `.claude`, `.agents` or `.github` a symbolic link or a junction to a
+  directory outside the project, init created the skill and agent links at the
+  link's target. It now checks each directory on those paths first, and a
+  linked one, or one that is not a directory, is named and left alone while
+  the run carries on.
+  - Covered: the skill links in `.claude/skills`, `.agents/skills`,
+    `.codex/skills` and `.github/skills`; the agent links in `.claude/agents`
+    and `.github/agents`; and `.github/copilot-instructions.md`, which is also
+    left alone when it is itself a link.
+  - `--force` no longer removes a wrapper an earlier release wrote in
+    `.claude/commands`, `.github/prompts` or a skills directory when that
+    directory is reached through a link.
+  - Not covered: `.agents/rules` and `.github/instructions` are still written
+    through a linked parent.
+  - The skip message for `.codex/agents` names the directory relative to the
+    project, as the new ones do.
+
+- **`qfai validate` reports a qfai reached through a link to another
+  checkout** (#2674). A workspace dependency makes `node_modules/qfai` a link
+  to a source checkout, so the package that runs sits outside every
+  `node_modules` directory and was not reported. It is now reported when the
+  nearest `node_modules/qfai` above the project is that link, in one of two
+  places: a project `node_modules` that is itself a link to another checkout's,
+  or the `node_modules` of a directory above the project.
+
+  - `QFAI-TOOL-002` reports it at error where the project declares qfai, and
+    `QFAI-TOOL-001` at info where it does not.
+  - A link is not reported in the project's own `node_modules`, as
+    `npm link` makes, or in the `node_modules` of the nearest directory that
+    declares qfai, such as a monorepo top level.
+  - The fix line of both findings says to remove only a `node_modules` link
+    itself, not what it points to, before reinstalling.
 
 - **A route that ends without a specification stage no longer writes
   `DESIGN.md`.** The discussion stage writes only its own records;

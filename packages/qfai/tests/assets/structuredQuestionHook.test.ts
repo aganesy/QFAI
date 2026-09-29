@@ -35,12 +35,18 @@ type Settings = { readonly hooks: Record<string, readonly Group[] | undefined> }
 const readSettings = async (rel: string): Promise<Settings> =>
   JSON.parse(await readFile(path.join(repoRoot, rel), "utf-8"));
 
-/** The one `UserPromptSubmit` group; absent is the failure to report. */
+/**
+ * The `UserPromptSubmit` group carrying this reminder's marker; absent is the
+ * failure to report. Found by marker, because another prompt-time reminder
+ * shares the event.
+ */
 function promptGroup(settings: Settings): Group {
-  const groups = settings.hooks.UserPromptSubmit ?? [];
-  expect(groups, "no UserPromptSubmit reminder").toHaveLength(1);
+  const groups = (settings.hooks.UserPromptSubmit ?? []).filter((candidate) =>
+    candidate.hooks.some((hook) => hook.statusMessage === STRUCTURED_QUESTION_HOOK_MARKER),
+  );
+  expect(groups, "no structured-question reminder").toHaveLength(1);
   const group = groups[0];
-  if (group === undefined) throw new Error("no UserPromptSubmit group");
+  if (group === undefined) throw new Error("no structured-question group");
   return group;
 }
 

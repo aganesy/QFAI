@@ -1,6 +1,7 @@
 /**
  * The Claude Code hook entries `qfai init` seeds, and how they reach a project
- * that already has a `.claude/settings.json`.
+ * that already has a `.claude/settings.json`. Codex's `.codex/hooks.json` has
+ * the same table of groups and is merged by the same code.
  *
  * The root template copy is create-only, so a project with its own settings
  * file keeps it — and with it, none of the hooks the same run wrote for a fresh
@@ -67,6 +68,16 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
 /**
+ * Identity of the group that sends, on every turn, a request naming no skill
+ * to `qfai-run`.
+ *
+ * The host picks a skill from the request's wording, and may pick another one
+ * or none. The line at the top of `AGENTS.md` and `CLAUDE.md` is read once and
+ * fades as a session grows; this restates it with each message.
+ */
+export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
+
+/**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * It is the one entry whose program decides whether to print: it reads the
@@ -78,6 +89,17 @@ export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
 
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
+
+/**
+ * Where both the template and the project keep Codex's hook file.
+ *
+ * It has the same `hooks.<event>` table of groups as the Claude Code settings,
+ * so the merge below serves both. Its tool-time groups carry the Claude Code
+ * groups' markers under Codex's own tool names, so a group's identity is the
+ * same in both files. Codex has no tool call that leaves plan mode, so the plan
+ * reminder has no Codex group.
+ */
+export const CODEX_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 
 export type ClaudeSettings = Record<string, unknown>;
 

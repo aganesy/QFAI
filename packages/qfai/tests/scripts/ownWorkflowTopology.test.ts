@@ -653,8 +653,9 @@ describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shippe
 // duplicate. `BR-0016-0058` is what makes the deletion safe: the full-profile run moves
 // into the `build` job first.
 //
-// Why the fold and not a repoint at the shipped file: the root manifest declares no
-// dependency on the package and provides no local binary, so `npx qfai` from the root
+// Why the fold and not a repoint at the shipped file: the root reaches the package only
+// through a workspace link, and the shipped workflow installs without building it. pnpm
+// links no binary for a package whose `bin` target is missing, so `npx qfai` from the root
 // resolves to the PUBLISHED package. That inverts the dogfooding — CI would validate a
 // release instead of the change under review.
 
@@ -780,9 +781,9 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
     const run = stepRun(only);
 
     // CLAIM 2 — it runs through the ratchet guard, and the guard targets the repository root
-    // with the LOCAL binary. The binary is the half that matters: the root manifest declares
-    // no dependency on the package, so any resolution through the package name would reach
-    // the published release instead of the build under review.
+    // with the LOCAL binary. The binary is the half that matters: every job installs before it
+    // builds, so pnpm links no `node_modules/.bin/qfai`, and any resolution through the package
+    // name would reach the published release instead of the build under review.
     expect
       .soft(run, `the folded run must go through the ratchet: ${JSON.stringify(run)}`)
       .toContain(DOGFOOD_GUARD);
@@ -812,9 +813,11 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       .soft(published, "a resolver-based invocation would reach the published package")
       .toEqual([]);
 
-    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest really
-    // does not depend on the package. If that ever changes, CLAIM 3's rationale changes with
-    // it and this row should be revisited rather than silently kept.
+    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest reaches
+    // the package only through the workspace link, which has no binary until the package is
+    // built. A registry range would put the published copy in `node_modules/.bin` of every job
+    // instead. If that ever changes, CLAIM 3's rationale changes with it and this row should
+    // be revisited rather than silently kept.
     const rootManifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
     );
@@ -826,8 +829,10 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       : {};
     expect
       .soft(
-        Object.keys(declared).filter((name) => name === "qfai"),
-        "the root manifest declaring a dependency on qfai would change why a repoint is unsafe",
+        Object.entries(declared).filter(
+          ([name, specifier]) => name === "qfai" && specifier !== "workspace:*",
+        ),
+        "the root manifest may depend on qfai only through the workspace link",
       )
       .toEqual([]);
   });

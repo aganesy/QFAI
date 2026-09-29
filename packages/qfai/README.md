@@ -103,6 +103,11 @@ The `qfai-run` skill reads it into facts: what it asks for, its risks, and how s
 and each stage of the route runs through its own skill until `finish` confirms the completion target.
 You type no stage name.
 
+`npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
+to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
+An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
+Codex runs a project's hooks only after you review and trust them with `/hooks`.
+
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
   stop for your approval. They never change the steps, and a run never loses one.
@@ -779,6 +784,12 @@ file prints nothing. `qfai init` refreshes that file wherever the project has
 not edited it, so a new release's wording reaches an existing project without
 changing `.claude/settings.json`. Remove the entries to turn the reminder off;
 the rule still applies.
+
+Codex gets the same reminders from `.codex/hooks.json`, run as one shell command
+(`cmd.exe` on Windows) once you trust the project's hooks with `/hooks`. There,
+writing a Markdown file is a patch that adds or changes a `.md` file. The file
+also carries the other tool-time reminders Claude Code runs, except the one
+before leaving plan mode: Codex has no tool call for that.
 
 A hook group an earlier release wrote, still exactly as written, is replaced by
 this release's group on the next `qfai init`. A group the project edited is
