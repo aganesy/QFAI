@@ -1,7 +1,7 @@
 const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
 const ADJACENT_CSS_FENCE_RE = /^\s*```css\s*\r?\n([\s\S]*?)```/;
 const SCREEN_MOCK_HEADING_RE =
-  /^#{1,4}\s+(?:Screen\s+Mock(?:\s*[-\u2014]+\s*Fallback)?\s*\(HTML\+CSS\)|HTML\+CSS\s+Visual\s+Mock(?:\s*[:：].*)?)\s*$/gim;
+  /^#{1,4}\s+(?:Screen\s+Mock(?:\s*[-\u2014]+\s*Fallback)?\s*\(HTML\+CSS\)|HTML\+CSS\s+Visual\s+Mock(?:\s*[:\uFF1A].*)?)\s*$/gim;
 const SCREEN_MOCK_COMMENT_RE = /<!--\s*Screen\s+Mock:\s*([^>\r\n]+?)\s*-->/gim;
 const NEXT_HEADING_RE = /^#{1,4}\s+/m;
 
@@ -72,7 +72,8 @@ export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
 export function collectScreenMockLabels(content: string): string[] {
   const labels = new Set<string>();
 
-  const screenHeadingRe = /^#{2,4}\s+(?:Screen|画面)\s*[:：]\s*(\S+)/gm;
+  // The Japanese word for "screen" (\u753B\u9762) and the full-width colon (\uFF1A) are both accepted.
+  const screenHeadingRe = /^#{2,4}\s+(?:Screen|\u753B\u9762)\s*[:\uFF1A]\s*(\S+)/gm;
   for (const match of content.matchAll(screenHeadingRe)) {
     if (match[1]) {
       labels.add(match[1]);

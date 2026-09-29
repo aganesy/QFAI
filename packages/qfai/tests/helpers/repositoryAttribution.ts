@@ -8,7 +8,7 @@ import fg from "fast-glob";
  * Every file under `assets/init/.qfai/assistant/` is copied verbatim by
  * `qfai init`, so "this repository" resolves to the *consuming* project.
  * Pairing that phrase with a concrete `spec-NNNN` / `TC-NNNN-NNNN` /
- * `CON-API-NNNN` id therefore asserts a fact about an artifact the consumer
+ * `API-NNNN` id therefore asserts a fact about an artifact the consumer
  * does not have. The bare phrase is legitimate (`qfai-atdd`, `qfai-configure`
  * and `qfai-verify` all use it correctly), so the matcher fires only on the
  * phrase plus an id inside the same sentence.
@@ -22,19 +22,17 @@ import fg from "fast-glob";
 /**
  * Concrete artifact identifiers a consuming project will not have.
  *
- * `CON` deliberately uses the `CON-(?:API|DB|UI)-NNNN` shape defined by
- * `skills/qfai-sdd/references/contract-artifact-rules.md` ("Use prefixes
- * `CON-API-*`, `CON-DB-*`, and `CON-UI-*`"). The `CON-NNNN-NNNN` shape this
- * list used to carry does not exist anywhere in the repository, so that branch
- * could never fire and every contract misattribution walked past the guard.
+ * Contract IDs use the `<KIND>-NNNN` shape defined by
+ * `skills/qfai-sdd/references/contract-artifact-rules.md`; the API, DB and UI
+ * kinds are the ones a prose attribution names.
  *
- * The second number group is optional for the same reason. `US`, `AC`, `BR` and
+ * The second number group is optional. `US`, `AC`, `BR` and
  * `TC` items are single-numbered — `skills/qfai-sdd/references/spec-traceability-rules.md`
  * defines them as `US-0001` / `AC-0001` / `BR-0001` / `TC-0001` — so requiring
  * `NNNN-NNNN` matched only the wider spelling and let `this repository's
  * TC-0001` through. Both spellings are accepted, longer first.
  */
-const ARTIFACT_ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US)-\d{4}(?:-\d{4})?|CON-(?:API|DB|UI)-\d{4})\`?`;
+const ARTIFACT_ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US)-\d{4}(?:-\d{4})?|(?:API|DB|UI)-\d{4})\`?`;
 
 /**
  * Abbreviations whose trailing period does not end a sentence.

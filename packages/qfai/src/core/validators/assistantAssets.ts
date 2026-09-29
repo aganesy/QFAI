@@ -28,16 +28,18 @@ import { collectFiles, DEFAULT_IGNORE_DIRS } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { readBoundedRegularFile, scanBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
-import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
+import { ASSISTANT_DIR, joinAssistantLayer } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
+import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
+import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
 
 const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:MANDATORY]";
-const REVIEWER_GATE_HEADING_PATTERN = /^###\s+Reviewer Gate\b.*$/im;
+const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$/m;
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
 /**
@@ -47,7 +49,7 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
  * told to take every Test / Lint / Typecheck / Build command from
  * `tech.md#standard-commands-copy-paste` rather than inventing one — so an
  * unreplaced `<test command>` is a gate that cannot run, which the
- * constitution classes as UNRUN rather than passed.
+ * rule classes as UNRUN rather than passed.
  */
 const STEERING_CATALOG_FILES = ADOPTER_OWNED_CATALOG_FILES;
 
@@ -103,7 +105,7 @@ const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * What may follow a pointy-bracket link destination: an optional title, `)`.
  *
- * `[設計書](<docs/System Design.md>)` is a *written* link whose destination is
+ * `[Design doc](<docs/System Design.md>)` is a *written* link whose destination is
  * bracketed because it carries a space — the one CommonMark shape that needs
  * the brackets. Its inner text is neither an autolink nor a mail address, so
  * it was counted as an unfilled slot and failed a finished catalog under
@@ -132,7 +134,7 @@ const LIST_MARKER_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+/;
  * `- [ ] TBD` is an unanswered open question, but stripping only the list
  * marker left `[ ] TBD` as the candidate value, which no keyword test can
  * match. Exactly one space, `x` or `X` between the brackets, as GFM defines
- * it — so a link label (`- [設計書](...)`) is not mistaken for a checkbox.
+ * it — so a link label (`- [Design doc](...)`) is not mistaken for a checkbox.
  */
 const TASK_LIST_MARKER_PATTERN = /^\[[ xX]\]\s+/;
 
@@ -232,26 +234,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
 
-  // Post-recut: drift-protocol.md is canonically located at
-  // .qfai/assistant/constitution/drift-protocol.md. Fall back to the
-  // legacy instructions/ path during the compatibility window so
-  // projects that have not yet run `qfai init --upgrade-assistant-tree`
-  // still pass.
-  const canonicalDriftProtocolPath = path.join(assistantDir, "constitution", "drift-protocol.md");
-  const legacyDriftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
-  const driftProtocolPath = (await exists(canonicalDriftProtocolPath))
-    ? canonicalDriftProtocolPath
-    : legacyDriftProtocolPath;
-  // Post-recut: test-layers.md is canonically located at
-  // .qfai/assistant/catalog/test-layers.md. Fall back to the legacy
-  // steering/ path during the compatibility window so projects that
-  // have not yet run `qfai init --upgrade-assistant-tree` are not
-  // double-penalized (D-DEPRECATED-PATH + QFAI-ASSETS-002).
-  const canonicalTestLayersPath = path.join(assistantDir, "catalog", "test-layers.md");
-  const legacyTestLayersPath = path.join(assistantDir, "steering", "test-layers.md");
-  const testLayersPath = (await exists(canonicalTestLayersPath))
-    ? canonicalTestLayersPath
-    : legacyTestLayersPath;
+  const driftProtocolPath = path.join(assistantDir, "rule", "drift-protocol.md");
+  const testLayersPath = path.join(assistantDir, "rule", "test-layers.md");
 
   const issues: Issue[] = [];
 
@@ -259,9 +243,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-001",
-        "必須ファイル .qfai/assistant/constitution/drift-protocol.md (legacy fallback: .qfai/assistant/instructions/drift-protocol.md) が見つかりません。",
+        `Required file ${toRepoRelative(root, driftProtocolPath)} is missing.`,
         "error",
-        canonicalDriftProtocolPath,
+        driftProtocolPath,
         "assistantAssets.driftProtocol",
       ),
     );
@@ -271,9 +255,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-002",
-        "必須ファイル .qfai/assistant/catalog/test-layers.md (legacy fallback: .qfai/assistant/steering/test-layers.md) が見つかりません。",
+        `Required file ${toRepoRelative(root, testLayersPath)} is missing.`,
         "error",
-        canonicalTestLayersPath,
+        testLayersPath,
         "assistantAssets.testLayers",
       ),
     );
@@ -281,7 +265,18 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 
   issues.push(...(await validateAssistantAssetProvenance(root, assistantDir)));
   issues.push(...(await collectRegeneratedLayerIssues(root, assistantDir)));
-  issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
+  const specsDir = resolvePath(root, config, "specsDir");
+  let specsEntries: string[] = [];
+  try {
+    specsEntries = await readdir(specsDir);
+  } catch (error) {
+    if (!isEnoent(error)) throw error;
+  }
+  issues.push(
+    ...(hasLegacySpecPackEntries(specsEntries)
+      ? await collectSteeringPlaceholderIssues(root, assistantDir)
+      : await validateStorySteeringPlaceholders(root, config)),
+  );
 
   // The crawl reads the skill tree once, here, and every later check works from
   // the map it returns. A document is read a second time by nothing: the
@@ -307,7 +302,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     const content = documents.get(skillFile);
     if (content === undefined) {
       // Unreadable, and already reported as `QFAI-SKILLS-014` above. The
-      // marker and Reviewer-Gate checks have no bytes to judge.
+      // marker check has no bytes to judge.
       continue;
     }
 
@@ -315,40 +310,23 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-SKILLS-010",
-          "SKILL.md に必須 marker [DRIFT-PROTOCOL:MANDATORY] がありません。",
+          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:MANDATORY].",
           "error",
           skillFile,
           "skills.driftProtocolMarker",
         ),
       );
     }
+  }
 
-    const reviewerGateSection = extractReviewerGateSection(content);
-    if (reviewerGateSection === null) {
-      issues.push(
-        issue(
-          "QFAI-SKILLS-011",
-          "SKILL.md に `### Reviewer Gate` セクションがありません。",
-          "error",
-          skillFile,
-          "skills.reviewerGate",
-        ),
-      );
-      continue;
-    }
-
-    const missingTerms = collectMissingReviewerGateTerms(reviewerGateSection);
-    if (missingTerms.length > 0) {
-      issues.push(
-        issue(
-          "QFAI-SKILLS-012",
-          `Reviewer Gate に Drift/test-layer 観点が不足しています（不足: ${missingTerms.join(", ")}）。`,
-          "warning",
-          skillFile,
-          "skills.reviewerGatePolicy",
-        ),
-      );
-    }
+  // Every skill inherits the reviewer gate the delegation baseline states, so
+  // the obligation is checked there once rather than restated in each skill.
+  if (skillFiles.length > 0) {
+    issues.push(
+      ...(await collectReviewerGateBaselineIssues(
+        path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md"),
+      )),
+    );
   }
 
   // Registration is asked of the loader boundary, not of every file named
@@ -477,7 +455,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     ...(await collectReferenceGraphIssues(
       root,
       skillsDir,
-      new Map([...documents, ...probedEntryPoints]),
+      new Map([...documents, ...probedEntryPoints, ...(await readStepEntryPoints(root))]),
       {
         unreadable,
         unreadableFiles,
@@ -491,7 +469,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 }
 
 /**
- * Compares the vendored `constitution/` and `catalog/` layers against the
+ * Compares the vendored `rule/` and interim `catalog/` layers against the
  * release that is actually installed.
  *
  * Before this check the only coverage of qfai's own normative tree was two
@@ -520,8 +498,8 @@ async function validateAssistantAssetProvenance(
 
   let shipped: Record<string, string>;
   try {
-    // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree
-    // segments come from `assistantPaths.ts` in init and in validate alike, so
+    // The assistant-tree segments come from `assistantPaths.ts`, the one source
+    // of those paths, in init and in validate alike, so
     // a future move of `ASSISTANT_DIR` cannot leave the two reading different
     // trees.
     shipped = await buildShippedAssistantHashes(
@@ -540,7 +518,7 @@ async function validateAssistantAssetProvenance(
   // Every component from the project root down, not just the layer directory.
   // `lstat` declines to resolve only the path it is given, so a `.qfai` — or a
   // `.qfai/assistant` — that is a symlink out of the repository still reported a
-  // real `constitution/` on the far side: `validate` would walk and hash an
+  // real `rule/` on the far side: `validate` would walk and hash an
   // external tree, pass in silence whenever it matched the release, and take as
   // long as that tree was big. The same guard `init` applies before it writes.
   if (!(await hasRealGovernedAssistantParents(root, `${ASSISTANT_DIR}/probe`))) {
@@ -590,10 +568,8 @@ async function validateAssistantAssetProvenance(
   );
 
   // An absence is only reportable inside a layer the project actually has. A
-  // consumer that never ran `init` here, or one still on the pre-recut
-  // `instructions/` + `steering/` layout, is not missing files — it has no
-  // governed layer at all, and reporting every shipped rule at it would be
-  // noise, not governance.
+  // consumer that never ran `init` here has no governed layer at all, and
+  // reporting every shipped rule at it would be noise, not governance.
   const presentLayers = new Set<string>();
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     if (await isDirectory(path.join(assistantDir, layer))) {
@@ -602,15 +578,10 @@ async function validateAssistantAssetProvenance(
   }
 
   // …unless the record says the project once had it. The exclusion above is
-  // about a project that never received a layer, and it read a *deleted* one
-  // the same way: with the layer gone, every shipped file under it was skipped
-  // before `coveredByExistenceProbe` could see it, and QFAI-ASSETS-001/002 were
-  // satisfied by the legacy fallback that `runUpgradeAssistantTree` leaves
-  // behind — so on exactly the layout the upgrade path produces, deleting a
-  // whole layer of normative rules passed `validate` in silence. A lock entry
-  // under that layer is the evidence that qfai did put files there, and the
-  // disappearance is reported once, against the layer, rather than once per
-  // shipped file it used to hold.
+  // about a project that never received a layer. A deleted layer otherwise
+  // looks the same when the per-file loop skips every absent path. A lock entry
+  // under it proves qfai populated that layer, so its disappearance is reported
+  // once against the layer instead of once per shipped file.
   const recordedLayers = new Set<string>();
   for (const key of Object.keys(lock?.files ?? {})) {
     recordedLayers.add(key.split("/")[0] ?? "");
@@ -632,9 +603,8 @@ async function validateAssistantAssetProvenance(
       continue;
     }
     if (status === "missing" && (await coveredByExistenceProbe(assistantDir, relative))) {
-      // QFAI-ASSETS-001/002 already own these two: reporting the absence again
-      // here would duplicate the finding. They only cover it while the legacy
-      // fallback is *also* absent, though — see `coveredByExistenceProbe`.
+      // QFAI-ASSETS-001/002 already own these two canonical paths. Reporting
+      // the same absence here would duplicate their findings.
       continue;
     }
     if (ADOPTER_OWNED_DIVERGENCE.has(status) && ADOPTER_OWNED_ASSETS.has(relative)) {
@@ -664,7 +634,7 @@ export const NAMED_STALE_FILES = 3;
 /**
  * `QFAI-ASSETS-009` — a regenerated layer behind the installed release.
  *
- * `skills/**` and `agents/**` are copied into the project once and refreshed
+ * `skill/**` and `agent/**` are copied into the project once and refreshed
  * only by an explicit `qfai init --force`, so an upgraded project keeps running
  * the skill bodies and agent definitions it initialised with. A `SKILL.md`
  * several releases behind describes a workflow the installed validators no
@@ -709,8 +679,7 @@ async function collectRegeneratedLayerIssues(root: string, assistantDir: string)
 
   const issues: Issue[] = [];
   for (const layer of REGENERATED_ASSISTANT_LAYERS) {
-    // A project that never ran `init` here, or one still on the pre-recut
-    // layout, has no such layer — it is not behind, it has nothing. Reporting
+    // A project that never ran `init` here has no such layer. Reporting
     // every shipped file at it would be noise rather than governance.
     if (!(await isDirectory(path.join(assistantDir, layer)))) {
       continue;
@@ -809,7 +778,7 @@ async function regeneratedLayerIssue(
  * Stage 0 is outstanding, and it clears when Stage 0 is done.
  *
  * A missing file is skipped: this rule is about unfilled content, and the
- * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
+ * retired `steering/` layout is reported by `D-DEPRECATED-PATH`.
  */
 async function collectSteeringPlaceholderIssues(
   root: string,
@@ -832,18 +801,46 @@ async function collectSteeringPlaceholderIssues(
     issues.push(
       issue(
         "QFAI-ASSETS-003",
-        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
+        `Stage 0 steering file ${toRepoRelative(root, filePath)} still has ${total} unreplaced template value(s) (sections: ${detail}).`,
         severity,
         filePath,
         "assistantAssets.steeringPlaceholder",
         sections.map((entry) => entry.section),
         "canonical",
-        "`/qfai-configure` を実行し、`<...>` / `TBD` を実測値に置き換えてください。特に tech.md の Standard commands は qfai-implement Stage 0 が gate コマンドの唯一の取得元とするため、未記入のままだと gate が実行不能になります。",
+        "Run `/qfai-configure` and replace `<...>` / `TBD` with measured values. In particular, the Standard commands in tech.md are the only source qfai-implement Stage 0 takes the gate commands from, so leaving them blank makes the gate unrunnable.",
         { loc: { line: sections[0]?.firstLine ?? 1 } },
       ),
     );
   }
   return issues;
+}
+
+/** The story layout stores adopter-owned steering in the contract layer. */
+export async function validateStorySteeringPlaceholders(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  if (await isPristineStorySeed(root, config)) return [];
+  const contractsDir = resolvePath(root, config, "contractsDir");
+  const filePath = path.join(contractsDir, "tech.md");
+  const content = await readSteeringFile(filePath);
+  if (content === null) return [];
+  const sections = collectSteeringPlaceholders(content);
+  if (sections.length === 0) return [];
+  const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
+  return [
+    issue(
+      "QFAI-ASSETS-003",
+      `Steering file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
+      "error",
+      filePath,
+      "assistantAssets.steeringPlaceholder",
+      sections.map((entry) => entry.section),
+      "canonical",
+      "Fill in the contract-layer tech settings, including Standard commands.",
+      { loc: { line: sections[0]?.firstLine ?? 1 } },
+    ),
+  ];
 }
 
 /**
@@ -872,26 +869,14 @@ function missingGovernedLayerIssue(
 }
 
 /**
- * Governed paths the existence probes above also check, mapped to the legacy
- * pre-recut path each one falls back to.
+ * Governed paths the existence probes above also check.
  */
-const EXISTENCE_CHECKED_ELSEWHERE = new Map([
-  ["constitution/drift-protocol.md", path.join("instructions", "drift-protocol.md")],
-  ["catalog/test-layers.md", path.join("steering", "test-layers.md")],
-]);
+const EXISTENCE_CHECKED_ELSEWHERE = new Set(["rule/drift-protocol.md", "rule/test-layers.md"]);
 
 /**
  * True when QFAI-ASSETS-001/002 would report this absence itself.
  *
- * Those probes accept the legacy pre-recut path, so they report the canonical
- * file's absence only when the legacy one is missing too. A project part-way
- * through the recut — which `runUpgradeAssistantTree` produces deliberately,
- * since it leaves the legacy file behind — has both layouts at once, and
- * deleting the canonical rule there satisfied the probe from the legacy copy
- * while this exclusion silenced the provenance check. Removing a normative rule
- * was reportable in every layout but the one the upgrade path creates.
- *
- * The canonical path is checked for the same reason, and the two probes ask a
+ * The probes ask a
  * weaker question than this one: `access` answers "something is reachable
  * there", while provenance requires a readable **regular file**. A canonical
  * path left as a symlink, a directory or a FIFO therefore satisfies the probe
@@ -899,12 +884,11 @@ const EXISTENCE_CHECKED_ELSEWHERE = new Map([
  * the absence would go unreported by both.
  */
 async function coveredByExistenceProbe(assistantDir: string, relative: string): Promise<boolean> {
-  const legacy = EXISTENCE_CHECKED_ELSEWHERE.get(relative);
-  if (legacy === undefined) {
+  if (!EXISTENCE_CHECKED_ELSEWHERE.has(relative)) {
     return false;
   }
   const canonical = path.join(assistantDir, ...relative.split("/"));
-  return !(await exists(canonical)) && !(await exists(path.join(assistantDir, legacy)));
+  return !(await exists(canonical));
 }
 
 /**
@@ -918,7 +902,7 @@ function unverifiableProvenanceIssue(
   assetProvenanceSeverity: ProvenanceSeverity,
   // Which layers went unverified. Defaulted to the governed ones so the
   // provenance callers read as they did; the regenerated layers pass their own,
-  // because a message naming `constitution/ / catalog/` for a `skills/` failure
+  // because a message naming `rule/ / catalog/` for a `skill/` failure
   // sends the reader to the wrong directory.
   layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS,
 ): Issue {
@@ -1184,7 +1168,7 @@ function countUnfilledMarkers(line: string, isTableRow: boolean): number {
  * closes it.
  *
  * A destination that spells a placeholder keyword is not written, though:
- * `[設計書](<TBD>)` is a broken link and the very work the rule reports, so
+ * `[Design doc](<TBD>)` is a broken link and the very work the rule reports, so
  * the link context alone stopped being enough to excuse a token.
  */
 function isFilledLinkDestination(
@@ -1219,7 +1203,7 @@ function isPlaceholderToken(inner: string): boolean {
   // `<3`-style typography out of the count. Any Unicode letter counts, not
   // only `[A-Za-z]`: a steering file localised into Japanese names its slots
   // in Japanese, and demanding an ASCII letter let every one of them
-  // (`<テストコマンド>`) pass as filled.
+  // (a slot named in Japanese) pass as filled.
   return /\p{L}/u.test(trimmed);
 }
 
@@ -1463,20 +1447,56 @@ function isHiddenSkillDirectory(skillsDir: string, directory: string): boolean {
   return relative.startsWith(".") && relative !== ".." && !relative.includes(path.sep);
 }
 
-function extractReviewerGateSection(content: string): string | null {
-  const headingMatch = REVIEWER_GATE_HEADING_PATTERN.exec(content);
+/**
+ * The `## Reviewer Gate Baseline` section with its subsections, or `null` when
+ * the heading is gone.
+ */
+function extractReviewerGateBaseline(content: string): string | null {
+  const headingMatch = REVIEWER_GATE_BASELINE_HEADING_PATTERN.exec(content);
   if (!headingMatch) {
     return null;
   }
-  const headingStart = headingMatch.index;
-  const headingText = headingMatch[0];
-  const sectionStart = headingStart + headingText.length;
-  const remainder = content.slice(sectionStart);
-  const nextHeadingMatch = ANY_MARKDOWN_HEADING_PATTERN.exec(remainder);
-  if (!nextHeadingMatch) {
-    return remainder;
+  const remainder = content.slice(headingMatch.index + headingMatch[0].length);
+  const nextSectionMatch = /^#{1,2}\s+/m.exec(remainder);
+  return nextSectionMatch ? remainder.slice(0, nextSectionMatch.index) : remainder;
+}
+
+/**
+ * `QFAI-SKILLS-011` when the delegation baseline no longer carries the reviewer
+ * gate every skill inherits, and `QFAI-SKILLS-012` when that gate has lost one
+ * of the three obligations a skill no longer restates.
+ */
+async function collectReviewerGateBaselineIssues(baselinePath: string): Promise<Issue[]> {
+  let content: string;
+  try {
+    content = await readFile(baselinePath, "utf-8");
+  } catch (error) {
+    if (!isEnoent(error)) throw error;
+    content = "";
   }
-  return remainder.slice(0, nextHeadingMatch.index);
+  const section = extractReviewerGateBaseline(content);
+  if (section === null) {
+    return [
+      issue(
+        "QFAI-SKILLS-011",
+        "The shared delegation baseline has no `## Reviewer Gate Baseline` section, so no skill inherits a reviewer gate. Run `qfai init --force` to restore it.",
+        "error",
+        baselinePath,
+        "skills.reviewerGate",
+      ),
+    ];
+  }
+  const missingTerms = collectMissingReviewerGateTerms(section);
+  if (missingTerms.length === 0) return [];
+  return [
+    issue(
+      "QFAI-SKILLS-012",
+      `The Reviewer Gate Baseline no longer states every obligation a skill inherits (missing: ${missingTerms.join(", ")}).`,
+      "warning",
+      baselinePath,
+      "skills.reviewerGatePolicy",
+    ),
+  ];
 }
 
 /**
@@ -1914,13 +1934,13 @@ async function collectReferenceGraphIssues(
     .map((file) =>
       issue(
         "QFAI-SKILLS-013",
-        `references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。`,
+        `A file under references/ is not cited by any document reachable from SKILL.md, so it is never loaded. If the document is needed, cite it from the step that uses it; if it is not, delete it.`,
         severity,
         file,
         "skills.referenceReachability",
         undefined,
         "canonical",
-        "このファイルを読ませたいステップの本文からファイルへの相対パスを引用してください（SKILL.md から到達可能な文書のいずれかに書く必要があります）。読ませる必要がなくなった文書であれば削除してください。",
+        "Cite the file's relative path in the body of the step that should read it (it must be written in a document reachable from SKILL.md). If the document no longer needs to be read, delete it.",
       ),
     );
   return [...reported, ...unreachable];
@@ -2168,13 +2188,13 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
       unreadable.push(
         issue(
           "QFAI-SKILLS-014",
-          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
+          `A document under skills could not be read (${describeReadError(error)}). Reference reachability cannot be judged, so check permissions and I/O.`,
           severity,
           file,
           "skills.documentReadable",
           undefined,
           "canonical",
-          "メッセージが示す I/O エラーを解消してください（読み取り権限の付与、切れた symlink の張り直し、materialise されていないファイルの取得など）。skills 配下から外すべき文書であれば削除してください。",
+          "Resolve the I/O error the message names (grant read permission, relink a broken symlink, materialise a file that was not fetched, and so on). If the document should not be under skills, delete it.",
         ),
       );
     }
@@ -2192,7 +2212,11 @@ function collectReachableDocuments(
   documents: Map<string, string>,
 ): Set<string> {
   const files = [...documents.keys()];
-  const reachable = new Set(files.filter((file) => isSkillEntryPoint(context.skillsDir, file)));
+  const reachable = new Set(
+    files.filter(
+      (file) => isSkillEntryPoint(context.skillsDir, file) || isStepEntryPoint(context.root, file),
+    ),
+  );
   // Which targets the token scan cannot spell is a property of the target's own
   // path — it does not depend on who is citing it — so it is decided once for
   // the whole walk instead of re-tested for every (citing file, target) pair.
@@ -2273,18 +2297,53 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
 }
 
 /**
+ * `<step layer>/<step>/STEP.md`. A parent skill runs its steps by reading them,
+ * so each installed step is a root of the reference graph like a skill's entry
+ * point, and a reference only a step cites is reached.
+ */
+function isStepEntryPoint(root: string, file: string): boolean {
+  const segments = toPosixRelative(joinAssistantLayer(root, "step"), file).split("/");
+  return (
+    segments.length === 2 &&
+    segments[1] === "STEP.md" &&
+    segments[0] !== "" &&
+    segments[0] !== ".." &&
+    segments[0]?.startsWith(".") !== true
+  );
+}
+
+/** Each installed step's `STEP.md`, read as the host reads a cited document. */
+async function readStepEntryPoints(root: string): Promise<Map<string, string>> {
+  const stepsDir = joinAssistantLayer(root, "step");
+  const found = new Map<string, string>();
+  let names: string[];
+  try {
+    names = await readdir(stepsDir);
+  } catch {
+    return found;
+  }
+  for (const name of names.sort()) {
+    const file = path.join(stepsDir, name, "STEP.md");
+    if (!isStepEntryPoint(root, file)) continue;
+    const read = await readCitedDocument(file);
+    if (read.kind === "text") found.set(file, read.text);
+  }
+  return found;
+}
+
+/**
  * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
- * `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
+ * `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md`.
  *
  * The name classes are Unicode and the extension is matched case-insensitively
  * because that is how the files themselves are collected: `collectFiles`
  * lower-cases the extension before comparing and puts no constraint on the
- * stem, so `references/設計.md` and `references/Guide.MD` are documents the
+ * stem, so `references/design.md` and `references/Guide.MD` are documents the
  * reachability check has to be able to see cited.
  *
  * A segment also admits `%XX`, because that is how a Markdown link spells a
- * character it cannot carry literally — `[設計](references/%E8%A8%AD%E8%A8%88.md)`
- * names `references/設計.md`. Either separator is accepted, and a leading
+ * character it cannot carry literally — `[café](references/caf%C3%A9.md)`
+ * names `references/café.md`. Either separator is accepted, and a leading
  * separator or drive letter is kept rather than dropped, so a path typed in
  * Windows form and a path that is absolute both still name their file.
  *
@@ -2462,9 +2521,9 @@ function skillsDirPrefixPattern(root: string, skillsDir: string): RegExp | null 
  * A citation names one file, so the edge must land on one file.
  *
  * Matching a bare basename made every same-named document reachable at once:
- * `qfai-sdd/SKILL.md` citing `references/review-cycle-playbook.md` also lit up
- * `qfai-discussion/references/review-cycle-playbook.md`, which no discussion
- * document reaches. Each token is instead resolved against the citing
+ * `qfai-sdd/SKILL.md` citing `references/guide.md` also lit up a
+ * `references/guide.md` in another skill, which no document of that skill
+ * reaches. Each token is instead resolved against the citing
  * document's own directory, its skill root, the skills root and the project
  * root — so a cross-skill edge exists only where the path spells one out.
  *

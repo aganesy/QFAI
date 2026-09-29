@@ -1,0 +1,45 @@
+route: fix-intermittent
+family: fix
+stages:
+  - id: harness
+    kind: implement
+    steps: [implement-stress-harness]
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [harness]
+  - id: spec
+    kind: sdd_append
+    steps:
+      - { step: sdd-story, passThrough: true }
+      - sdd-gate
+    after: [diagnose]
+  - id: implement
+    kind: implement
+    steps: [implement-tdd, implement-checkpoint]
+    after: [spec]
+  - id: soak
+    kind: verify
+    steps: [verify-repeat-run]
+    after: [implement]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [soak]
+defaultModifiers: []
+decisionPoints: []
+branchPoints:
+  - step: implement-diagnose
+    outcomes:
+      - { outcome: as-specified, routes: [answer-question] }
+      - { outcome: not-ours, routes: [close-no-change] }
+      - { outcome: duplicate, routes: [close-duplicate] }
+      - { outcome: needs-info, routes: [request-info] }
+      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: defective-test, routes: [repair-test] }
+      - { outcome: regression, routes: [fix-red-main] }
+      - { outcome: surface-conflict, routes: [repair-consistency] }

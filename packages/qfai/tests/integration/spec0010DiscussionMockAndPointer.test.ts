@@ -7,13 +7,13 @@
  * production functions directly (no reliance on repo live state or a
  * rebuilt dist binary).
  */
-// QFAI:SPEC-0010:TC-0010-0009
-// QFAI:SPEC-0010:TC-0010-0010
-// QFAI:SPEC-0010:TC-0010-0011
-// QFAI:SPEC-0010:TC-0010-0012
-// QFAI:SPEC-0010:TC-0010-0013
+// QFAI:EX-0001-0089-01
+// QFAI:EX-0001-0089-02
+// QFAI:EX-0001-0089-03
+// QFAI:EX-0001-0090-01
+// QFAI:EX-0001-0090-02
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -26,6 +26,7 @@ import {
   MOCK_HREF_VALIDATOR_REL,
 } from "../../src/core/validators/mockHrefPairs.js";
 import { runDiscussion } from "../../src/cli/commands/discussion.js";
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 
 let root: string;
 
@@ -64,6 +65,19 @@ describe("spec-0010 mock anchor-form hrefs CHG-006", () => {
     const result = await validateProject(root, undefined, { profile: "prototyping" });
     const drift = result.issues.find((i) => i.code === "R-MOCK-HREF-DRIFT");
     expect(drift?.severity).toBe("error");
+  });
+
+  // QFAI:EX-0001-0089-04
+  it("the shipped template's mock link is anchor-form, and the template and the discussion skill both name that form", async () => {
+    const repoRoot = path.resolve(process.cwd(), "..", "..");
+    const templateAbs = path.join(repoRoot, MOCK_HREF_TEMPLATE_REL);
+    const template = await readFile(templateAbs, "utf-8");
+    const skill = await readDiscussionSkill(
+      path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant"),
+    );
+    expect(template).toContain('<a href="#orders">');
+    expect(template).toContain('<a href="#name">');
+    expect(skill).toContain('<a href="#name">');
   });
 });
 

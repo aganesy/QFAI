@@ -74,8 +74,7 @@ describe("gitignorePatternMatches", () => {
 describe("negationSamplePath", () => {
   it.each([
     ["!coverage-depth-*.md", "coverage-depth-sample.md"],
-    ["!implement-*.md", "implement-spec-0001.md"],
-    ["!atdd-*.md", "atdd-spec-0001.md"],
+    ["!implement-*.md", "implement-sample.md"],
     ["!decisions/", "decisions/sample"],
     ["!decisions/**", "decisions/sample/leaf"],
     ["!.qfai/evidence/decision-*.md", ".qfai/evidence/decision-sample.md"],
@@ -270,7 +269,7 @@ describe("glob overlap is decided from both patterns, not from one instance of o
       MANAGED,
       "",
       "# a comment mentioning .qfai/evidence/coverage-depth-anything.md",
-      "!.qfai/evidence/decisions/",
+      "!.qfai/evidence/decision/",
     ];
     expect(
       negationsOutrankLaterIgnores(lines, [MANAGED]),
@@ -289,25 +288,24 @@ describe("glob overlap is decided from both patterns, not from one instance of o
  *
  * gitignore(5) is explicit that a file whose parent directory is excluded
  * cannot be re-included, so `!.qfai/` cancels the exclusion of `.qfai` itself
- * and nothing more. Read as a subtree it sat last in the shipped block and
- * outranked every ignore above it, and the verdict came back "not ignored" for
- * paths `git check-ignore` reports as ignored.
+ * and nothing more. Read as a subtree it sat last in a block an earlier release
+ * wrote and outranked every ignore above it, and the verdict came back "not
+ * ignored" for paths `git check-ignore` reports as ignored.
  *
- * The shipped block hid it: a narrower negation for each governance record sits
- * below the directory ones and also wins, so the answer was right for the wrong
- * reason. Removing one of those narrower lines — which `qfai init` respects and
- * never re-adds — is what makes the two disagree.
+ * That block hid it: a narrower negation for each governance record sits below
+ * the directory ones and also wins, so the answer was right for the wrong
+ * reason. Removing one of those narrower lines is what makes the two disagree.
  */
 describe("a directory negation re-includes the directory, not everything under it", () => {
-  /** The shipped block, ignores first and negations last, as `qfai init` writes it. */
+  /** A block with directory negations, ignores first and negations last. */
   const BLOCK = [
     ".qfai/report/*",
     ".qfai/evidence/*",
     ".qfai/review/*",
     "!.qfai/",
     "!.qfai/evidence/",
-    "!.qfai/evidence/decisions/",
-    "!.qfai/evidence/decisions/**",
+    "!.qfai/evidence/decision/",
+    "!.qfai/evidence/decision/**",
     "!.qfai/evidence/coverage-depth-*.md",
   ];
 
@@ -336,7 +334,7 @@ describe("a directory negation re-includes the directory, not everything under i
     // the records with them: each has its own negation below, and a `**`
     // negation says descendants in its own text.
     expect(verdict(BLOCK, ".qfai/evidence/coverage-depth-0001.md")).toBe(false);
-    expect(verdict(BLOCK, ".qfai/evidence/decisions/20260101.json")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence/decision/20260101.json")).toBe(false);
     expect(verdict(BLOCK, ".qfai/evidence")).toBe(false);
     expect(verdict(BLOCK, ".qfai")).toBe(false);
   });
