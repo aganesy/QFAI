@@ -1,5 +1,5 @@
 /**
- * Render evidence types — WS-C
+ * Render evidence types
  *
  * Canonical types for the render evidence capture pipeline.
  */

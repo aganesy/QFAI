@@ -1,1 +1,0 @@
-../../../packages/qfai/assets/init/.qfai/assistant/catalog/ui-definition-protocol.md
