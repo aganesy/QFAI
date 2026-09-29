@@ -30,6 +30,10 @@ The active scope is one `BF-NNNN` business flow. Its evidence file is
 an out-of-scope discovery to `/qfai-sdd` as a change request, under
 `.qfai/assistant/rule/drift-protocol.md`.
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Steps
 
 Run the steps as

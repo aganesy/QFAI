@@ -38,6 +38,10 @@ order names its own steps, and runs them as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
 states.
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Inputs
 
 - A BF ID or name limits the work to that flow and its shared dependencies. With
