@@ -224,8 +224,8 @@ in its report instead.
 
 ## The reminder
 
-`.claude/settings.json` puts this rule in front of the agent on every turn,
-through a `UserPromptSubmit` hook.
+`.claude/settings.json` and `.codex/hooks.json` put this rule in front of the
+agent on every turn, through a `UserPromptSubmit` hook.
 
 Every turn rather than once, because the moment a question forms is
 unpredictable and a session-start reminder is gone by the time the context is
@@ -233,10 +233,11 @@ compacted — which is when a long session starts reaching for an exception.
 
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
-every turn stops the session outright. It runs `node` directly, with no shell and
-no network, and prints one message from `.agents/rules/reminders.json`. A missing
-or unreadable file prints nothing, so it cannot fail the session it is attached
-to.
+every turn stops the session outright. Claude Code runs `node` directly, with no
+shell and no network. Codex runs the same program through its shell, which finds
+the repository root with `git`. Either way it prints one message from
+`.agents/rules/reminders.json`. A missing or unreadable file prints nothing, so
+it cannot fail the session it is attached to.
 
 What it carries is where this rule lives, the line an agent reaches past when it
 would rather not ask, and the turn that waits on the user. The rest is here.

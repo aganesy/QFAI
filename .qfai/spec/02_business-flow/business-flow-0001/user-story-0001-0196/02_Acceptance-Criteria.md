@@ -71,4 +71,15 @@ Feature: Install or upgrade and get the free-text entry
     Then every shipped step is at `.qfai/assistant/step/<name>/STEP.md`, one directory level under `step/`
     And no step directory holds a `SKILL.md`, and no host skills directory holds an entry for a step
     And a plain upgrade leaves a step whose copy differs from the shipped one as it is, and `--force` replaces it, as for a shipped skill
+
+  # AC-0001-0196-11
+  Scenario: Every prompt restates that a request naming no skill goes to `qfai-run`
+    Given a fresh project, or a project with its own `.claude/settings.json` or `.codex/hooks.json`
+    When `qfai init` runs
+    Then Claude Code and Codex each run, on every prompt, a hook that sends a request naming no skill to `qfai-run`
+    And Codex also runs the structured-question reminder, and no hook tied to a tool
+    And an existing Codex hook file keeps the project's groups and gains only the ones it lacks, as the Claude Code settings file does
+    And a file with a shape init cannot read is left unchanged, with a warning
+    And when init writes or adds Codex hooks, the summary says in one line that Codex runs them only after they are reviewed and trusted with `/hooks`
+    And a hook that cannot find its message prints nothing and exits 0
 ```

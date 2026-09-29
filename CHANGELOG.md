@@ -6,6 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Every prompt restates the free-text entry, in Claude Code and in Codex.**
+  A host picks a skill from the wording of a request, and may pick another one
+  or none. `npx qfai init` now adds a prompt-time hook that says a request
+  naming no skill goes to the `qfai-run` skill, and a request naming a skill
+  goes to that skill. The line at the top of `AGENTS.md` and `CLAUDE.md` and the
+  entry check in the stage skills stay.
+
+  - Claude Code: a second `UserPromptSubmit` group in `.claude/settings.json`,
+    merged into an existing file like the other reminder groups.
+  - Codex: a new `.codex/hooks.json` with this reminder and the
+    structured-question one. An existing file keeps its own groups and gains
+    the missing ones; a group the project edited is kept and named; a file init
+    cannot read is left unchanged with a warning. Hooks tied to a tool are not
+    shipped for Codex, whose tool names differ.
+  - Each Codex hook finds `.agents/rules/reminders.json` from the repository
+    root, so it works from a subdirectory. Outside a git repository, or in a
+    shell that does not expand `$(...)`, it prints nothing.
+  - Codex runs a project's hooks only after you review and trust them with
+    `/hooks`. `qfai init` says so in one line when it writes or adds them.
+
 - **A turn that waits on you ends with a question.** When an agent reaches a
   point where the next step is yours — a phase approved, a plan ready, a stage
   finished — it ends the turn with a structured question listing the next
