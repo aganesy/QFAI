@@ -62,7 +62,8 @@ It asks you only what it cannot decide for you, such as whether to create a new 
 The stages fill the seeded story tree and follow the project's Standard commands in
 `<paths.contractsDir>/tech.md` (by default `.qfai/spec/03_contract/tech.md`) for its quality gates.
 
-To drive the stages yourself instead, run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
+To drive the stages yourself instead:
+Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
 See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 ## Operating model (free-text entry)
@@ -329,18 +330,18 @@ flowchart LR
   - Prototyping is UI-only. The AI workflow (`/qfai-prototyping`) drives it and produces its evidence,
     `.qfai/evidence/prototyping/prototyping.json`; it is not a general-purpose end-user flow.
     Runtime observation is observed-only: no synthetic 200, API or DB coverage is recorded.
-  - `preflight --target-url <url>` is a focused check before the skill starts. It surfaces blocking
+  - `npx qfai prototyping preflight --target-url <url>` is a focused check before the skill starts. It surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-  - `iterate --cycle <n> --target-url <url>` runs one cycle, 0 to 9, of the UI contract evolution loop over every
+  - `npx qfai prototyping iterate --cycle <n> --target-url <url>` runs one cycle, 0 to 9, of the UI contract evolution loop over every
     UI-bearing contract and each screen it declares. Exit codes: 0 (continue), 64 (converged), 65 (cycle limit),
-    66 (license check), 2 (input or lock drift).
+    66 (license-verify failure), 2 (input or lock drift).
   - `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary contract, and
     `--primary-ui-contract UI-0001` overrides it. The pin selects; it does not limit coverage.
     Cycle 0 records the full set as `uiContractsCovered` and `frozenSurfaceUnion` in `prototyping.json`.
-  - Each cycle writes into `iter-NN/`: the reviewer's `UI-NNNN/<screen>.review.json` per contract and screen, and the CLI's
+  - Per-iteration evidence goes into `iter-NN/`: the reviewer's `UI-NNNN/<screen>.review.json` per contract and screen, and the CLI's
     own `iterate-plan.json`. From cycle 1 an advisory `iterate-context.json` adds the prior scores and open blockers.
     `--capture` and `--cycle 0 --emit-skeletons` also write `<screen>.png` and `<screen>.html`.
-    Archive the whole `iter-NN/` directory.
+    Archive the whole `iter-NN/` directory; no `interaction.json` is written on any path.
   - Certification records `uiContractsCovered`, `convergedUiContracts` and `laggingUiContracts`. Evidence refs must
     resolve to repository-relative artifacts, and absolute paths are invalid. Coverage and reviews use full `UI-NNNN` IDs.
   - `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
