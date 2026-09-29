@@ -762,8 +762,10 @@ not edited it, so a new release's wording reaches an existing project without
 changing `.claude/settings.json`. Remove the entries to turn the reminder off;
 the rule still applies.
 
-Codex gets the same reminders from `.codex/hooks.json`, run as one shell command
-(`cmd.exe` on Windows) once you trust the project's hooks with `/hooks`. There,
+Codex gets the same reminders from `.codex/hooks.json` once you trust the
+project's hooks with `/hooks`. Each is one command line that runs the same under
+`sh`, `cmd.exe` and PowerShell, and finds `.agents/rules/reminders.json` by
+looking upward from where Codex runs it, as far as the repository root. There,
 writing a Markdown file is a patch that adds or changes a `.md` file. The file
 also carries the other tool-time reminders Claude Code runs, except the one
 before leaving plan mode: Codex has no tool call for that.
