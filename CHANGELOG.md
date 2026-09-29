@@ -20,7 +20,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `qfai init` installs the skill on an old-layout project and does not seed a
     competing story tree.
   - Install `qfai` as a project dependency first
-    (`npm install --save-dev qfai`), then open `/qfai-migration-v1-to-v2`.
+    (`npm install --save-dev qfai`), run `qfai init` without `--force`, then
+    open `/qfai-migration-v1-to-v2`.
     Its scripts move the project to the story tree, each with a `--dry-run`
     mode and a report, and two further steps install and check the
     free-text entry below. There is no `qfai migrate` command.
