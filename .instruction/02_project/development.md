@@ -20,8 +20,13 @@ pnpm build
 pnpm install
 ```
 
-The second install links `node_modules/.bin/qfai` to the build, so `npx qfai`
-runs this checkout. pnpm skips that link while `packages/qfai/dist/` is missing.
+The second install links `node_modules/.bin/qfai` to the build. pnpm skips that
+link while `packages/qfai/dist/` is missing.
+
+`npx qfai` runs the build of the checkout that owns the `node_modules` it
+resolves. A worktree that needs its own build runs these three steps with its
+own `node_modules`, never through a junction shared with another checkout: an
+install there repoints the link for every checkout that shares it.
 
 ## Build and Quality Gates
 

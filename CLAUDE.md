@@ -135,8 +135,13 @@ shipped file, which is the intent. A rule about this repository alone is a real
 file in that directory.
 
 The root depends on the package only through the pnpm workspace
-(`"qfai": "workspace:*"`), so `npx qfai` runs this checkout's build, never the
-published copy. pnpm links `node_modules/.bin/qfai` only once
-`packages/qfai/dist/` exists: on a fresh clone run `pnpm install`, `pnpm build`,
-then `pnpm install` again. `scripts/check-not-a-dependency.mjs` still refuses an
-npm or yarn install of the root manifest.
+(`"qfai": "workspace:*"`).
+
+- After `pnpm install`, `pnpm build` and a second `pnpm install`,
+  `node_modules/.bin/qfai` runs the local build. Before the second install, and
+  in CI, there is no such binary and `npx qfai` fetches the published copy.
+- `npx qfai` runs the build of the checkout that owns the `node_modules` it
+  resolves. A worktree that needs its own build runs the three steps with its
+  own `node_modules`, never through a junction shared with another checkout.
+- npm stops at the `workspace:` protocol before the install starts.
+  `scripts/check-not-a-dependency.mjs` refuses a yarn install.
