@@ -200,6 +200,11 @@ The `qfai-run` skill reads it into facts: what it asks for, its risks, and how s
 and each stage of the route runs through its own skill until `finish` confirms the completion target.
 You type no stage name.
 
+`npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
+to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
+An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
+Codex runs a project's hooks only after you review and trust them with `/hooks`.
+
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
   stop for your approval. They never change the steps, and a run never loses one.

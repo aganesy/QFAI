@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI structured-question reminder",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" structured-question",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI free-text entry reminder",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" free-text-entry",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

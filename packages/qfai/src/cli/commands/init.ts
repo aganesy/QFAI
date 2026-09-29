@@ -70,6 +70,7 @@ import {
 } from "../../core/agentEntryPoints.js";
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
 } from "../../core/claudeCodeHooks.js";
@@ -617,9 +618,20 @@ export async function runInit(
     ...symlinkRuntime,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
-  // Its template sits outside `root/`, so no earlier copy has touched the file:
-  // this owns both writing it and merging into one the project already had.
-  const claudeHooksResult = await ensureClaudeCodeHooks(assetsRoot, destRoot, options.dryRun);
+  // Their templates sit outside `root/`, so no earlier copy has touched the files:
+  // this owns both writing each and merging into one the project already had.
+  const claudeHooksResult = await ensureReminderHooks(
+    assetsRoot,
+    destRoot,
+    CLAUDE_SETTINGS_RELATIVE_PATH,
+    options.dryRun,
+  );
+  const codexHooksResult = await ensureReminderHooks(
+    assetsRoot,
+    destRoot,
+    CODEX_HOOKS_RELATIVE_PATH,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -734,6 +746,7 @@ export async function runInit(
       ...entryPointRulesResult.copied,
       ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
+      ...codexHooksResult.copied,
       ...upgradeResult.copied,
       ...governedResult.copied,
     ],
@@ -747,6 +760,7 @@ export async function runInit(
       ...entryPointRulesResult.skipped,
       ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
+      ...codexHooksResult.skipped,
       ...upgradeResult.skipped,
       ...governedResult.skipped,
     ],
@@ -764,6 +778,11 @@ export async function runInit(
   }
 
   info(await workflowModeLine(destRoot));
+  if (codexHooksResult.copied.length > 0 && !options.dryRun) {
+    info(
+      `Codex runs the hooks in ${CODEX_HOOKS_RELATIVE_PATH} only after you review and trust them with /hooks.`,
+    );
+  }
 
   for (const note of [
     ...upgradeResult.preservedNotes,
@@ -2751,16 +2770,17 @@ async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
 }
 
 /**
- * Writes the Claude Code hooks that restate the documentation-clarity rule.
+ * Writes one host's reminder hooks: Claude Code's `.claude/settings.json` or
+ * Codex's `.codex/hooks.json`, as `relativePath` names.
  *
  * The template does not sit under `root/`, and cannot: everything the root copy
- * writes into `.claude/` is a wrapper the symlink step owns, and the assets
- * guardrail keeps that directory out of the root template so the two never
- * compete for it. This is the second tree `qfai init` reads directly, beside
+ * writes into `.claude/` or `.codex/` is a wrapper another step owns, and the
+ * assets guardrail keeps both directories out of the root template so the two
+ * never compete for them. These are read directly, beside
  * `.github/instructions/`.
  *
  * So both cases are handled here rather than one here and one in the copy. A
- * project without a settings file gets the whole template. One that has its own
+ * project without the file gets the whole template. One that has its own
  * gets the hook groups it lacks, appended after whatever it already declares,
  * and each group an earlier release wrote is replaced where it stands. A group
  * the project edited is kept and named in the output.
@@ -2770,18 +2790,19 @@ async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
  * a settings file this cannot read or cannot understand is left exactly as it
  * is, the operator is told which entries to add by hand, and init carries on.
  */
-async function ensureClaudeCodeHooks(
+async function ensureReminderHooks(
   assetsRoot: string,
   destRoot: string,
+  relativePath: string,
   dryRun: boolean,
 ): Promise<{ copied: string[]; skipped: string[] }> {
-  const segments = CLAUDE_SETTINGS_RELATIVE_PATH.split("/");
+  const segments = relativePath.split("/");
   const target = path.join(destRoot, ...segments);
   // Messages below name the constant relative path, never `target`. An absolute
   // path carries the destination directory's own name, which on an untrusted
   // repository can hold a newline or an ANSI escape and forge this report's
   // headings. `report()` prints the absolute paths, through `formatReportPath`.
-  const shown = CLAUDE_SETTINGS_RELATIVE_PATH;
+  const shown = relativePath;
 
   const template = await readSettingsText(path.join(assetsRoot, ...segments));
   if (template.kind !== "text") {
@@ -2792,6 +2813,17 @@ async function ensureClaudeCodeHooks(
     error(
       `  WARNING: ${shown} was left unchanged: ${why}, so the reminder hooks are ` +
         `not wired up.`,
+    );
+    return { copied: [], skipped: [target] };
+  }
+
+  // A symbolic link anywhere on the path, the file itself included and dangling
+  // or not, would carry this read and write out of the project: a checked-in
+  // `.codex -> ~/.codex` is enough to rewrite the user's own hook file.
+  if (await hookPathIsUnsafe(destRoot, segments)) {
+    error(
+      `  WARNING: ${shown} was left unchanged: it, or a directory above it, is a symbolic link ` +
+        `or not a directory, so the reminder hooks are not wired up.`,
     );
     return { copied: [], skipped: [target] };
   }
@@ -2852,6 +2884,20 @@ type SettingsRead =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "absent" }
   | { readonly kind: "unreadable"; readonly reason: string };
+
+/**
+ * Whether a hook file's path must not be read or written: a directory on it is
+ * a symbolic link or not a directory, or the file itself is a symbolic link,
+ * whether its target exists or not. The answer is a boolean so the caller's
+ * message can name the relative path rather than the absolute one.
+ */
+async function hookPathIsUnsafe(destRoot: string, segments: readonly string[]): Promise<boolean> {
+  const parent = segments.slice(0, -1).join("/");
+  if (parent !== "" && (await findUnsafeWrapperComponent(destRoot, parent)) !== undefined) {
+    return true;
+  }
+  return (await safeLstat(path.join(destRoot, ...segments)))?.isSymbolicLink() === true;
+}
 
 async function readSettingsText(target: string): Promise<SettingsRead> {
   try {
