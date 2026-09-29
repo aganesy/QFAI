@@ -853,7 +853,7 @@ function declarationBlocks(html: string): string[] {
  * Text that fails the contrast floor the project declared.
  *
  * `accessibility.contrast_ratio_min` was parsed, type-checked and hashed
- * into the lock, and no check read it as a threshold — a project could
+ * with the rest of DESIGN.md, and no check read it as a threshold — a project could
  * declare a stricter ratio than AA and be measured against AA, or declare
  * AA and have no capture measured at all. This is the clause that reads
  * it, on the same captures the other five clauses scan.

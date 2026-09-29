@@ -5,31 +5,33 @@ dependencies: [02_project/tech-stack.md]
 version: 1.0.0
 ---
 
-# 開発手順とコマンド（QFAI Toolkit）
+# Development Steps and Commands (QFAI Toolkit)
 
-## 前提
+## Prerequisites
 
 - Node.js — the supported range is `package.json#engines`. Read it there; it moves.
 - pnpm — the pinned version is `package.json#packageManager`.
 
-## セットアップ
+## Setup
 
 ```
 pnpm install
 ```
 
-## ビルド/品質ゲート
+## Build and Quality Gates
 
 ```
 pnpm build
 pnpm format:check
 pnpm lint
+pnpm lint:mdschema
+pnpm lint:mermaid
 pnpm check-types
 pnpm -C packages/qfai test
 pnpm verify:pack
 ```
 
-## CLI スモーク（空ディレクトリで実施）
+## CLI Smoke Test (in an empty directory)
 
 ```
 npx qfai init
@@ -37,7 +39,7 @@ npx qfai validate --fail-on error --format github
 npx qfai report
 ```
 
-## リリース
+## Release
 
-- 詳細は `RELEASE.md` を参照
-- `npm publish --dry-run` は `packages/qfai` 配下で実行する
+- See `RELEASE.md` for details
+- Run `npm publish --dry-run` inside `packages/qfai`

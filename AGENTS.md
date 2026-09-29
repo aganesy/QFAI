@@ -1,21 +1,21 @@
-# AI Agent Instructions（Universal）
+# AI Agent Instructions (Universal)
 
-このファイルは全AIエージェント共通の作業ルール。  
-詳細は `.instruction/` 配下の各ドキュメントを参照し、必要に応じて読み直す。
+Working rules shared by every AI agent.  
+For details, see the documents under `.instruction/`, and reread them as needed.
 `.agents/rules/instruction-tree.md` states what that directory may say and which document
 wins when it disagrees with one.
 
-## 言語
+## Language
 
 Output language is decided by the Absolute Rule in
-`.qfai/assistant/constitution/constitution.md`: write every output in the
+`.qfai/assistant/rule/constitution.md`: write every output in the
 language the user is working in for this session. This file pins no language,
 and neither may any other.
 
 That is the rule for what an agent says. What this repository stores is a
 separate question, settled by `.agents/rules/repository-language.md`.
 
-## 本リポジトリの構造に関する重要な前提
+## Key assumptions about this repository's structure
 
 This repository builds the QFAI package and is governed by what that package
 ships, so the same document often exists in two trees. **Edit the one the
@@ -23,72 +23,76 @@ package carries.** It does not install its own package: there is no `qfai`
 dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
 would create one.
 
-| ディレクトリ     | 役割                                                                                                                                                                            | 修正してよいか                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                     | ✅ 開発対象                                                       |
-| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, evidence), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
+| Directory        | Role                                                                                                                                                                                                              | May it be edited?                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/qfai/` | **The QFAI package source** (implementation, tests, assets)                                                                                                                                                       | ✅ Development target                                             |
+| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, and local evidence that is never committed), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
 
-- skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
+- To improve skill templates, validators and the like, always edit the source under `packages/qfai/`.
 - An edit made directly to the generated assistant tree is reverted by the next
   `pnpm sync:ssot` and fails the tracked-tree diff in `pnpm ci:gate`.
 - The rule masters under `.agents/rules/` are symlinks to their shipped copies,
   so editing one there edits the file an adopter receives. A rule about this
   repository alone is a real file in that directory.
-- リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
+- Adding a new directory or file directly under the repository root requires the user's confirmation in advance (editing existing root files is exempt). Details: `.agents/rules/root-additions-policy.md`.
 
-### `.qfai/contracts/cli/`
+### `.qfai/spec/03_contract/cli/`
 
-`api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
+`api/`, `db/` and `ui/` hold a project's own contracts, and the
 shipped `qfai-sdd` skill governs them
-(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
+(`assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`).
 `cli/` is this repository's alone: the contracts for QFAI's own command surface,
 and for the files QFAI writes into a consuming project.
 
 - Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
   contract validators do not scan them.
-- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
-  short ids.
-- Named `qfai-<command>.md` for one command's surface. A subject name instead —
-  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
-  schema or an ownership boundary that more than one command shares.
+- Each declares its ID in the H1: `# CLI-NNNN: <title>`. The number is unique
+  across every contract kind and is never reused.
+- Named `cli-NNNN-<slug>.md` after that ID. The slug is the command
+  (`cli-0014-qfai-validate.md`), the skill whose scripts it covers
+  (`cli-0010-qfai-migration-v1-to-v2.md`), or the subject several commands share
+  (`cli-0018-shipped-workflows.md`).
+- Indexed by ID in `.qfai/spec/03_contract/contracts.md`, one row per contract.
 
-No check enforces the naming or the index entry. A new file that skips either is
-caught in review or not at all.
+`qfai validate` reports a contract whose ID, file name and index row disagree.
 
-## バージョン規律 (全 AI 必読)
+## Version discipline (required reading for every AI)
 
-QFAI パッケージの版番号 (`X.Y.Z`) は AI が選ばない。ユーザが決める。
-ユーザはブランチ名に `vX.Y.Z` を pin するか、対話で明示指示する。
-詳細とガードは `.agents/rules/version-discipline.md` を参照。
+An AI never chooses the QFAI package's version number (`X.Y.Z`). The user decides.
+The user either pins `vX.Y.Z` in the branch name or gives an explicit instruction in conversation.
+For details and the guard, see `.agents/rules/version-discipline.md`.
 
-- **pinned branch** (例: `feature/v1.8.8`): pin がユーザの指示。
-  PR を merge 可能な状態に整える段階で、次の 3 つを行う。
-  - `packages/qfai/package.json#version` を pin 値に同期
-  - `CHANGELOG.md` の `## [Unreleased]` を `## [X.Y.Z] - YYYY-MM-DD` に改名し、空の `## [Unreleased]` を再挿入
-  - `chore(release): qfai X.Y.Z` で commit
-  - pin と異なる版番号への変更は禁止 (要ユーザ確認)
-- **unpinned branch** (例: `main`, `chore/...`): `package.json#version` /
-  CHANGELOG の版見出し / `chore(release):` commit のいずれも、ユーザの明示指示なしに行わない。
-- どちらでも、tag (`git tag vX.Y.Z`) / `npm publish` / `git push --force` / amend /
-  `gh pr merge` はユーザの明示指示が必要。
+- **pinned branch** (e.g. `feature/v1.8.8`): the pin is the user's instruction.
+  When bringing the PR to a mergeable state, do the following three things.
+  - Sync `packages/qfai/package.json#version` to the pinned value
+  - Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, and re-insert an empty `## [Unreleased]`
+  - Commit as `chore(release): qfai X.Y.Z`
+  - Changing to a version number different from the pin is prohibited (needs user confirmation)
+- **unpinned branch** (e.g. `main`, `chore/...`): do not change `package.json#version`, a
+  CHANGELOG version heading, or make a `chore(release):` commit, without the user's explicit instruction.
+- On either kind of branch, a tag (`git tag vX.Y.Z`), `npm publish`, `git push --force`, an amend, and
+  `gh pr merge` all need the user's explicit instruction.
 
-自動ガード: `packages/qfai/scripts/check-branch-version-pin.sh` (CI の lint job)。
+Automatic guard: `packages/qfai/scripts/check-branch-version-pin.sh` (the CI lint job).
 
-## 全 AI 共通ルール一覧 (`.agents/rules/`)
+## Rules shared by every AI (`.agents/rules/`)
 
-リポジトリで作業する全 AI が守るルールは `.agents/rules/` 配下のマスタが SSOT。
+The masters under `.agents/rules/` are the single source of truth for the rules every AI working in the repository follows.
 
-- `version-discipline.md` (上記「バージョン規律」の詳細)
+- `version-discipline.md` (details of "Version discipline" above)
 - `version-discipline.local.md` (this repository has adopted the pin convention, and the guards that read it)
-- `distributed-surface.md` (npm 配布物の internal id / version leak 禁止)
+- `distributed-surface.md` (no internal ID or version leaks in the npm distribution)
 - `distributed-surface.local.md` (the surface, the forbidden identifier shapes, and the four guards)
-- `root-additions-policy.md` (repo root への新規追加は要確認)
+- `root-additions-policy.md` (adding anything new to the repo root needs confirmation)
 - `root-additions-policy.local.md` (two file shapes that turn up at this root, and where each belongs)
-- `temporary-files.md` (一時ファイルは `tmp/` 配下のみ)
+- `temporary-files.md` (temporary files go only under `tmp/`)
 - `temporary-files.local.md` (a test's `mkdtemp` sandbox is outside the rule)
-- `document-schema.md` (SDD ドキュメントの章構成・表・図の構造は
-  `packages/qfai/assets/mdschema/**` が SSOT)
-- `documentation-clarity.md` (PR / issue / コメント / Markdown の記述基準)
+- `document-schema.md` (every spec-tree document conforms to its closed schema
+  in `packages/qfai/assets/mdschema/**`; `qfai validate` and the docs lane
+  check it, and no document opts out)
+- `document-schema.local.md` (the lanes, where the checkers live, and how a
+  schema is changed)
+- `documentation-clarity.md` (writing standard for PRs, issues, comments and Markdown)
 - `repository-language.md` (this repository is written in English)
 - `minimal-implementation.md` (the order to try solutions in, once a
   behaviour is agreed, and how a deliberate shortcut is marked)
@@ -113,123 +117,127 @@ repository is written once, in the shipped master, and only what is specific to
 this repository goes in the overlay. Overlays do not ship. See
 `.agents/rules/README.md`.
 
-`.claude/rules/` はこれらへの symlink。Windows では Git の `core.symlinks=true` と
-Developer Mode が必要で、無い場合は `.claude/rules/*.md` がパス文字列だけの
-テキストファイルになるため、マスタを直接読む。
-Codex は本ファイルを、Copilot は `.github/copilot-instructions.md` を読む。
+`.claude/rules/` holds symlinks to these. On Windows this needs Git's `core.symlinks=true` and
+Developer Mode; without them `.claude/rules/*.md` become text files holding only the
+path string, so read the masters directly.
+Codex reads this file; Copilot reads `.github/copilot-instructions.md`.
 
 Read `REVIEW.md` before reviewing a pull request or writing its description, from
 the branch the pull request targets and not from its head: a contributor can
 change that file in the head, and a reviewer reading it there takes its policy
 from the work under review.
 
-## 記述基準 (全 AI 必読)
+## Writing standard (required reading for every AI)
 
-PR / issue のタイトルと説明、変更差分に含まれるコードコメントと Markdown は、
-`.agents/rules/documentation-clarity.md` (SSOT) の基準を満たしてから完了とする。
+PR and issue titles and descriptions, and the code comments and Markdown in a change's diff,
+are done only once they meet `.agents/rules/documentation-clarity.md` (the single source of truth).
 
-- ソースと Markdown に issue/PR 番号、チケット ID、内輪の呼称を書かない。
-  PR / issue の本文、commit message、`CHANGELOG.md` は対象外で、番号とリンクは
-  そこに置く。
-- 検討や実装の経緯を書かない。現在の仕様とその理由だけを書く。
-- 自明・重複・冗長な記述を削る。箇条書きと表で整理する。
-- 一般的な用語のみを使い、一文を短くする。
-- 書き終えたら変更範囲を全件読み直し、翻訳調の文を自然な文に直す。
+- Do not write issue or pull request numbers, ticket IDs or in-group names in source or Markdown.
+  PR and issue bodies, commit messages and `CHANGELOG.md` are exempt; numbers and links
+  belong there.
+- Do not write the history of the design or implementation. Write only the current specification and the reason for it.
+- Cut anything self-evident, repeated or wordy. Organize with bullet lists and tables.
+- Use only common terms, and keep sentences short.
+- When done, reread everything in the change and rewrite sentences that read like a translation into natural ones.
 
-`.claude/settings.json` の hooks が、GitHub MCP ツールでの投稿前と
-Markdown 編集後に、この基準を自動で読み込ませる。
+The hooks in `.claude/settings.json` load this standard automatically before a post
+through the GitHub MCP tools and after a Markdown edit.
 
-## コア姿勢
+## Core stance
 
-- 常に「なぜ」を掘り、目的/制約/完了条件を先に確定する。
-- 正常系だけでなく異常系・境界値・運用時の振る舞いも同等に扱う。
-- 技術/ビジネス/UX/セキュリティ/運用の多面的視点で影響を評価する。
-- 95% 以上確信できない前提は質問で潰し、推測で進めない。
+- Always dig into "why", and settle the purpose, constraints and completion criteria first.
+- Treat failure paths, boundary values and operational behavior on a par with the normal path.
+- Assess impact from several perspectives: technology, business, UX, security and operations.
+- Resolve any assumption you are less than 95% sure of by asking, and do not proceed on guesses.
 
-## 作業開始前の整理（必須）
+## Organizing before starting work (required)
 
-着手前に関連ファイル/仕様を読み、以下を短く構造化して明文化する。
+Before starting, read the related files and specs, and write down the following in a short, structured form.
 
-1. 目的と完了条件（測定可能な形で）
-2. 既存構造・パターン・制約
-3. 影響範囲とリスク（機能/性能/UX/セキュリティ/運用）
-4. 実装案の候補（標準/保守的/大胆）と比較、推奨理由
-5. 不明点・確認事項
+1. The purpose and completion criteria (in a measurable form)
+2. Existing structure, patterns and constraints
+3. Impact and risks (functionality, performance, UX, security, operations)
+4. Candidate implementations (standard, conservative, bold), compared, with the reason for the recommendation
+5. Open points and items to confirm
 
-必要ならこの時点で質問を投げ、回答を待ってから進める。
+If needed, ask questions at this point and wait for the answers before proceeding.
 
-## 計画（Plan）
+## Planning (Plan)
 
-- 3ステップ以上、複数領域に跨る、選択肢がある、高リスクの場合は Plan を作る。
-- Plan は 1-2時間程度の粒度で小さく分解し、テスト方針とリスク対策も含める。
-- 実行中に前提が変わったら Plan を更新して共有する。
+- Make a Plan when the work has three or more steps, spans several areas, has options, or is high-risk.
+- Break a Plan into small pieces of roughly 1-2 hours each, and include the test approach and risk countermeasures.
+- If the assumptions change during execution, update the Plan and share it.
 
-Planテンプレート:
+Plan template:
 
-- ゴール/完了条件
-- インプット（仕様/制約/依存）
-- スコープ（やる/やらない）
-- 手順（小さなステップ）
-- テスト方針
-- リスクと確認点
+- Goal and completion criteria
+- Inputs (specs, constraints, dependencies)
+- Scope (in and out)
+- Steps (small ones)
+- Test approach
+- Risks and points to confirm
 
-## 実装ガイド
+## Implementation guide
 
-- 既存の型/ユーティリティ/実装パターンを最優先で再利用する。
-- 変更は小さく段階的に。局所修正→検証→次の順で進める。
+- Reuse existing types, utilities and implementation patterns first.
+- Keep changes small and incremental: a local fix, then verification, then the next.
 - Try solutions in the order `.agents/rules/minimal-implementation.md` sets
   out, and mark a deliberate shortcut with its ceiling and the condition
   that lifts it.
 - TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
   § 2 governs consuming callers, kept failures and callback boundaries.
-- 型安全を徹底し `any`・型無効化（`@ts-ignore`等）を原則禁止する。
-- 入力は型とバリデーションで検証し、失敗パスを先に書く。
-- 早期 return でネストを浅くし、読みやすさと責務を守る。
-- ログ/エラーメッセージは具体的かつ最小限。秘密情報を含めない。
-- N+1 や不要な全件取得を避け、必要ならバッチ/キャッシュ/差分取得を検討する。
-- 既存パターンから逸脱する場合は、理由・代替案・影響を明記する。
+- Build a file path with `node:path`, never by joining strings: CI runs the
+  suite on Linux and on Windows.
+- A branch catches up by merging the default branch into it, never by rebase.
+  Never force-push a branch other work builds on.
+- Enforce type safety, and prohibit `any` and type suppression (`@ts-ignore` and the like) in principle.
+- Verify input with types and validation, and write the failure path first.
+- Use early returns to keep nesting shallow, and protect readability and responsibilities.
+- Keep logs and error messages specific and minimal. Never include secrets.
+- Avoid N+1 queries and needless fetching of everything; consider batching, caching or incremental fetches where needed.
+- When departing from an existing pattern, state the reason, the alternatives and the impact.
 
-## デザイン/UXの観点
+## Design and UX
 
-- ユーザー行動と必須入力、エラー時の導線が定義されているか確認する。
-- 状態は最小限にし、責務ごとに hooks/コンポーネントを分割する。
-- アクセシビリティや国際化が必要な場合は初期設計に含める。
-- 大きなリスト/重い描画は避け、必要ならメモ化やページングを設計する。
+- Check that user actions, required input and the path taken on error are defined.
+- Keep state minimal, and split hooks and components by responsibility.
+- If accessibility or internationalization is needed, include it in the initial design.
+- Avoid large lists and heavy rendering; design memoization or paging where needed.
 
-## 調査・デバッグ
+## Investigation and debugging
 
-- まず事象を再現し、期待/実際/環境を記録する。
-- 影響範囲を特定し、仮説を列挙して優先度順に検証する。
-- 再現テスト追加→修正→再実行で副作用も確認する。
-- 報告は「事象/再現/期待・実際/環境/調査結果/修正/テスト/残リスク」。
+- First reproduce the problem, and record the expected behavior, the actual behavior and the environment.
+- Identify the impact, list hypotheses, and verify them in priority order.
+- Add a reproduction test, fix, and rerun, and check for side effects too.
+- Report as "problem / reproduction / expected vs. actual / environment / findings / fix / tests / remaining risk".
 
-## テスト・検証
+## Testing and verification
 
-- 振る舞い変更・バグ修正は再現テストを先に書く。
-- 近傍の適切な層（unit/integration/e2e）でカバーする。
-- 実行コマンドと結果（成功/失敗）を必ず報告する。
-- 実行できない場合は理由と代替確認手段を書く。
-- TypeScriptファイルを変更したら、必ず  
+- For a behavior change or a bug fix, write the reproduction test first.
+- Cover it at the appropriate nearby layer (unit, integration or e2e).
+- Always report the commands run and their results (pass or fail).
+- If something cannot be run, write the reason and the alternative means of checking.
+- After changing a TypeScript file, always run  
   `pnpm format:check && pnpm lint && pnpm check-types`  
-  を実行し結果を報告する。
+  and report the result.
 
-## 品質評価/自動化
+## Quality assessment and automation
 
-- 正確性/安全性/性能/運用性/可読性の観点でリリース可否を判断する。
-- 自動チェックの優先度は Lint/Format → 型 → テスト → メトリクス監視。
-- カバレッジ、複雑度、重複度、性能劣化などの変化を意識する。
+- Judge whether to release on correctness, safety, performance, operability and readability.
+- Automatic checks are prioritized as lint/format, then types, then tests, then metrics monitoring.
+- Watch for changes in coverage, complexity, duplication, performance regressions and the like.
 
-## コミュニケーション
+## Communication
 
-- 不明点や分岐判断が必要な場合、即相談し最小限の質問で具体化する。
-- 30分以上かかりそうな作業は途中経過を短く共有する。
-- 完了時は「変更概要/影響範囲/実行テスト/残リスク」を箇条書きで報告する。
-- トーンは簡潔に（要点4行以内を目安、コード/ログ除く）。
+- When something is unclear or a fork needs a decision, consult right away and make it concrete with as few questions as possible.
+- For work that looks likely to take 30 minutes or more, share brief progress updates.
+- On completion, report "summary of changes / impact / tests run / remaining risk" as a bullet list.
+- Keep the tone concise (aim for key points within 4 lines, excluding code and logs).
 
-## レビュー運用（追加ルール）
+## Review practice (additional rules)
 
-- レビュー完了基準は DoD およびローカル CI（format/lint/型/テスト）通過とする。
-- 追加の確認サイクル数や待機時間は、作業の文脈に応じて調整する。
+- Review is complete when the DoD is met and local CI (format, lint, types, tests) passes.
+- Adjust the number of extra confirmation cycles and the waiting time to the context of the work.
 
 Question template:
 
@@ -245,84 +253,84 @@ and a question asking for a fact carries no recommendation at all:
 `.agents/rules/user-questions.md` settles both, and inventing candidates to fill
 a row is the guess it exists to prevent.
 
-## サブエージェント/分担（必要時）
+## Sub-agents and division of work (when needed)
 
-- 役割が明確なサブエージェントがいる場合は委譲を検討する。
-- Plan で担当範囲を分け、統合後に必ず全体テスト/整合確認を行う。
+- If there are sub-agents with clear roles, consider delegating to them.
+- Divide the areas of responsibility in the Plan, and always run the full tests and a consistency check after integrating.
 
 ---
 
-## `.instruction` ドキュメント参照ガイド（ユースケース）
+## `.instruction` document reference guide (use cases)
 
-### Universal（常に前提）
+### Universal (always assumed)
 
-- 思考・分析の型: `.instruction/00_universal/thinking.md`
-- 品質基準/自信度/レビュー報告: `.instruction/00_universal/quality.md`
-- 質問/確認/進捗/完了報告の型: `.instruction/00_universal/communication.md`
+- Patterns for thinking and analysis: `.instruction/00_universal/thinking.md`
+- Quality criteria, confidence and review reports: `.instruction/00_universal/quality.md`
+- Patterns for questions, confirmations, progress and completion reports: `.instruction/00_universal/communication.md`
 - How much code implements a behaviour: `.agents/rules/minimal-implementation.md`
 
-### 計画/設計系
+### Planning and design
 
-- 計画の立て方: `.instruction/01_specialties/planning.md`
-- 相談・レビューの進め方: `.instruction/01_specialties/consultation.md`
-- 設計レビュー指針（UI/UX/API）: `.instruction/01_specialties/design.md`
+- How to plan: `.instruction/01_specialties/planning.md`
+- How to consult and review: `.instruction/01_specialties/consultation.md`
+- Design review guidance (UI, UX, API): `.instruction/01_specialties/design.md`
 
-### 実装/原則
+### Implementation and principles
 
-- 実装ガイド: `.instruction/01_specialties/implementation.md`
-- 開発原則チェックリスト（詳細）: `.instruction/01_specialties/development-principles-checklist.md`
-- 品質自動化ガイド（CI/ゲート）: `.instruction/01_specialties/development-principles-automation.md`
-- 開発原則の測定指標: `.instruction/01_specialties/development-principles-metrics.md`
+- Implementation guide: `.instruction/01_specialties/implementation.md`
+- Development principles checklist (detailed): `.instruction/01_specialties/development-principles-checklist.md`
+- Quality automation guide (CI, gates): `.instruction/01_specialties/development-principles-automation.md`
+- Metrics for the development principles: `.instruction/01_specialties/development-principles-metrics.md`
 
-### テスト/品質判断
+### Testing and quality judgment
 
-- テスト指針: `.instruction/01_specialties/testing.md`
-- 品質評価の観点（リリース判断）: `.instruction/01_specialties/quality-evaluation.md`
+- Testing guidance: `.instruction/01_specialties/testing.md`
+- Perspectives for quality assessment (release judgment): `.instruction/01_specialties/quality-evaluation.md`
 
-### 調査/障害対応
+### Investigation and incident response
 
-- 調査・デバッグ手順: `.instruction/01_specialties/investigation-debug.md`
+- Investigation and debugging steps: `.instruction/01_specialties/investigation-debug.md`
 
-### プロジェクト理解（このリポジトリ限定）
+### Understanding the project (this repository only)
 
-- プロジェクト構成: `.instruction/02_project/architecture.md`
-- 採用技術一覧（言語/フレームワーク/ライブラリ等）: `.instruction/02_project/tech-stack.md`
-- 開発手順とコマンド: `.instruction/02_project/development.md`
-- ドメイン概要: `.instruction/02_project/domain.md`
-- 実装パターン: `.instruction/02_project/patterns.md`
-- SDD運用: `.instruction/02_project/spec-driven-development.md`
-- MCP運用: `.instruction/02_project/mcp.md`
-- エージェント選択: `.instruction/02_project/agent-selection.md`
-- オーケストレータ運用: `.instruction/02_project/orchestrator.md`
+- Project structure: `.instruction/02_project/architecture.md`
+- Technologies in use (languages, frameworks, libraries, etc.): `.instruction/02_project/tech-stack.md`
+- Development steps and commands: `.instruction/02_project/development.md`
+- Domain overview: `.instruction/02_project/domain.md`
+- Implementation patterns: `.instruction/02_project/patterns.md`
+- SDD practice: `.instruction/02_project/spec-driven-development.md`
+- MCP practice: `.instruction/02_project/mcp.md`
+- Agent selection: `.instruction/02_project/agent-selection.md`
+- Orchestrator practice: `.instruction/02_project/orchestrator.md`
 
-### AIツール別の癖/運用
+### Quirks and practice by AI tool
 
-- Codex ベストプラクティス: `.instruction/03_ai-agents/codex/best-practices.md`
-- Codex よく使うコマンド: `.instruction/03_ai-agents/codex/commands.md`
-- Claude Code 運用: `.instruction/03_ai-agents/claude-code/*`
-- Copilot ベストプラクティス: `.instruction/03_ai-agents/copilot/best-practices.md`
+- Codex best practices: `.instruction/03_ai-agents/codex/best-practices.md`
+- Codex frequently used commands: `.instruction/03_ai-agents/codex/commands.md`
+- Claude Code practice: `.instruction/03_ai-agents/claude-code/*`
+- Copilot best practices: `.instruction/03_ai-agents/copilot/best-practices.md`
 
 ---
 
-## 具体的な作業シナリオ
+## Concrete work scenarios
 
-※各シナリオで列挙したパスの用途は、直前の「`.instruction` ドキュメント参照ガイド（ユースケース）」を参照する。
+Note: for what each path listed in a scenario is for, see the preceding "`.instruction` document reference guide (use cases)".
 
-- 新機能追加
+- Adding a feature
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`
   4. `.instruction/01_specialties/implementation.md`
   5. `.instruction/01_specialties/testing.md`
   6. `.instruction/00_universal/quality.md`
-- バグ修正
+- Fixing a bug
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/investigation-debug.md`
   4. `.instruction/01_specialties/testing.md`
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/00_universal/quality.md`
-- リファクタリング
+- Refactoring
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`
@@ -330,7 +338,7 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- パフォーマンス改善
+- Improving performance
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`
@@ -338,7 +346,7 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/development-principles-metrics.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- セキュリティ/権限/入力検証の変更
+- Changing security, permissions or input validation
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -347,7 +355,7 @@ a row is the guess it exists to prevent.
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/01_specialties/quality-evaluation.md`
   8. `.instruction/00_universal/quality.md`
-- UI/UX改修
+- Reworking UI or UX
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -355,7 +363,7 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- 情報設計/画面遷移の変更
+- Changing information design or screen transitions
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -363,7 +371,7 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- API/スキーマ設計変更
+- Changing API or schema design
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -372,7 +380,7 @@ a row is the guess it exists to prevent.
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/01_specialties/quality-evaluation.md`
   8. `.instruction/00_universal/quality.md`
-- データモデル/DB変更の影響調査
+- Investigating the impact of a data model or DB change
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/02_project/architecture.md`
@@ -380,14 +388,14 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/investigation-debug.md`
   6. `.instruction/01_specialties/planning.md`
   7. `.instruction/00_universal/quality.md`
-- GraphQLクエリ/ミューテーション追加
+- Adding a GraphQL query or mutation
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/02_project/patterns.md`
   4. `.instruction/01_specialties/implementation.md`
   5. `.instruction/01_specialties/testing.md`
   6. `.instruction/00_universal/quality.md`
-- 既存パターンが不明/迷う
+- Existing patterns are unclear or you are unsure
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/02_project/architecture.md`
@@ -395,14 +403,14 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/consultation.md`
   6. `.instruction/01_specialties/implementation.md`
   7. `.instruction/00_universal/quality.md`
-- 仕様が曖昧/選択肢が多い相談
+- Consulting on an ambiguous spec or one with many options
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/00_universal/communication.md`
   4. `.instruction/01_specialties/consultation.md`
   5. `.instruction/01_specialties/planning.md`
   6. `.instruction/00_universal/quality.md`
-- 大規模変更/影響が広い作業
+- Large changes or work with wide impact
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`
@@ -412,7 +420,7 @@ a row is the guess it exists to prevent.
   7. `.instruction/01_specialties/testing.md`
   8. `.instruction/01_specialties/quality-evaluation.md`
   9. `.instruction/00_universal/quality.md`
-- 依存更新/新ライブラリ導入
+- Updating dependencies or introducing a new library
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`
@@ -421,7 +429,7 @@ a row is the guess it exists to prevent.
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/01_specialties/quality-evaluation.md`
   8. `.instruction/00_universal/quality.md`
-- CI/自動化/品質ゲート改善
+- Improving CI, automation or quality gates
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/development-principles-automation.md`
@@ -430,7 +438,7 @@ a row is the guess it exists to prevent.
   6. `.instruction/01_specialties/implementation.md`
   7. `.instruction/01_specialties/testing.md`
   8. `.instruction/00_universal/quality.md`
-- メトリクス悪化の原因調査
+- Investigating the cause of degraded metrics
   1. `.instruction/01_specialties/development-principles-metrics.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/investigation-debug.md`
@@ -438,37 +446,37 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- テスト追加/改善のみ
+- Adding or improving tests only
   1. `.instruction/01_specialties/testing.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/implementation.md`
   4. `.instruction/00_universal/quality.md`
-- テスト失敗の調査
+- Investigating a test failure
   1. `.instruction/01_specialties/investigation-debug.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/testing.md`
   4. `.instruction/01_specialties/implementation.md`
   5. `.instruction/00_universal/quality.md`
-- リリース前の総合チェック
+- Overall check before a release
   1. `.instruction/01_specialties/quality-evaluation.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/development-principles-metrics.md`
   4. `.instruction/01_specialties/testing.md`
   5. `.instruction/00_universal/quality.md`
-- 開発環境が動かない/セットアップ確認
+- The development environment does not work, or checking the setup
   1. `.instruction/02_project/development.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/investigation-debug.md`
   4. `.instruction/00_universal/communication.md`
   5. `.instruction/00_universal/quality.md`
-- ドメイン理解が必要な仕様相談
+- Consulting on a spec that needs domain understanding
   1. `.instruction/02_project/domain.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/00_universal/thinking.md`
   4. `.instruction/00_universal/communication.md`
   5. `.instruction/01_specialties/consultation.md`
   6. `.instruction/01_specialties/planning.md`
-- アクセシビリティ改善
+- Improving accessibility
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -476,7 +484,7 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- 国際化/多言語対応
+- Internationalization and multilingual support
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -484,13 +492,13 @@ a row is the guess it exists to prevent.
   5. `.instruction/01_specialties/implementation.md`
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/00_universal/quality.md`
-- エラーメッセージ/ログ改善
+- Improving error messages and logs
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/implementation.md`
   4. `.instruction/01_specialties/testing.md`
   5. `.instruction/00_universal/quality.md`
-- 監視/運用フックの追加
+- Adding monitoring or operational hooks
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/design.md`
@@ -499,18 +507,18 @@ a row is the guess it exists to prevent.
   6. `.instruction/01_specialties/testing.md`
   7. `.instruction/01_specialties/development-principles-metrics.md`
   8. `.instruction/00_universal/quality.md`
-- 仕様変更の影響調査のみ
+- Investigating the impact of a spec change only
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/02_project/architecture.md`
   4. `.instruction/02_project/domain.md`
   5. `.instruction/01_specialties/investigation-debug.md`
   6. `.instruction/01_specialties/planning.md`
-- ドキュメント更新
+- Updating documents
   1. `.instruction/00_universal/thinking.md`
   2. `.instruction/00_universal/communication.md`
   3. `.instruction/00_universal/quality.md`
-- サブエージェント分担が有効なタスク
+- Tasks where dividing work among sub-agents pays off
   1. `.instruction/02_project/orchestrator.md`
   2. `.instruction/02_project/tech-stack.md`
   3. `.instruction/01_specialties/planning.md`

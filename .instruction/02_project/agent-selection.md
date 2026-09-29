@@ -7,60 +7,64 @@ dependencies:
 version: 2.0.0
 ---
 
-# エージェント選択ガイド（QFAI Toolkit）
+# Agent Selection Guide (QFAI Toolkit)
 
-QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`）。  
-選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
+Agent cards under `.qfai/assistant/agent/` define each agent. Routing and
+review profiles come from the files in `packages/qfai/assets/defaults/agent-routing/`
+and `packages/qfai/assets/defaults/review-profiles.yml`, with project overrides
+in `qfai.config.yaml`. QFAI reads these source files directly: this repository
+does not install its own package. Select agents by artifact and phase.
 
-> **SSOT と本ファイルの関係**: 本ファイルは manifest SSOT の要約・ナビゲーションガイドであり、選定ルールの正本は上記 manifest ファイルである。ドリフトが疑われる場合は manifest 側を優先し、本ファイルを更新すること。本ファイルを単独で編集して manifest 側を更新しない運用は禁止。
+> This file is a navigation guide. The agent cards, resolved routing and
+> review profiles decide mandatory agents, blocking reviewers and reruns.
 
-## 中核原則
+## Core Principles
 
-- 司令塔は常に `orchestrator`
-- 計画は `delivery-planner`
-- 要件・OQ・選択肢は `requirements-analyst`
-- 技術構造と契約は `solution-architect`
-- UX / visual / IA / 遷移は `product-experience-architect`
-- 最終完了判定は `completion-reviewer`
-- validate / coverage / runtime / prototyping gate は `qa-gatekeeper`
+- The coordinator is always `orchestrator`
+- Planning goes to `delivery-planner`
+- Requirements, open questions and options go to `requirements-analyst`
+- Technical structure and contracts go to `solution-architect`
+- UX, visual design, information architecture and transitions go to `product-experience-architect`
+- The final completion decision goes to `completion-reviewer`
+- The validate, coverage, runtime and prototyping gates go to `qa-gatekeeper`
 
-## 代表シナリオ
+## Typical Scenarios
 
-| 状況                         | 主担当                         | 併用                                                  |
-| ---------------------------- | ------------------------------ | ----------------------------------------------------- |
-| 課題の初期整理・論点洗い出し | `discovery-analyst`            | `delivery-planner`                                    |
-| 要件整理・仕様化             | `requirements-analyst`         | `solution-architect`, `product-experience-architect`  |
-| 構造設計・契約設計           | `solution-architect`           | `delivery-planner`                                    |
-| UI/UX 方針や DDP 整理        | `product-experience-architect` | `requirements-analyst`                                |
-| フロント実装                 | `frontend-engineer`            | `implementation-reviewer`, `product-surface-reviewer` |
-| バックエンド実装             | `backend-engineer`             | `implementation-reviewer`                             |
-| 受入テスト実装               | `acceptance-test-engineer`     | `test-design-analyst`, `qa-strategist`                |
-| テスト設計・coverage 整理    | `test-design-analyst`          | `qa-strategist`                                       |
-| 品質ゲート実行               | `devops-ci-engineer`           | `qa-gatekeeper`, `completion-reviewer`                |
-| ドキュメント同期             | `doc-steward`                  | `delivery-planner`                                    |
+| Situation                                   | Lead                           | With                                                  |
+| ------------------------------------------- | ------------------------------ | ----------------------------------------------------- |
+| Initial problem framing and issue discovery | `discovery-analyst`            | `delivery-planner`                                    |
+| Requirements and specification              | `requirements-analyst`         | `solution-architect`, `product-experience-architect`  |
+| Structure and contract design               | `solution-architect`           | `delivery-planner`                                    |
+| UI/UX direction and DDP                     | `product-experience-architect` | `requirements-analyst`                                |
+| Frontend implementation                     | `frontend-engineer`            | `implementation-reviewer`, `product-surface-reviewer` |
+| Backend implementation                      | `backend-engineer`             | `implementation-reviewer`                             |
+| Acceptance test implementation              | `acceptance-test-engineer`     | `test-design-analyst`, `qa-strategist`                |
+| Test design and coverage                    | `test-design-analyst`          | `qa-strategist`                                       |
+| Quality gate execution                      | `devops-ci-engineer`           | `qa-gatekeeper`, `completion-reviewer`                |
+| Documentation sync                          | `doc-steward`                  | `delivery-planner`                                    |
 
-## reviewer の使い分け
+## Choosing a Reviewer
 
-- 完了契約・DoD・drift 監査: `completion-reviewer`
-- 要件・OQ・選択肢の妥当性: `requirements-reviewer`
-- 構造・契約・境界の妥当性: `architecture-reviewer`
-- 実装品質・保守性・backend 安全性: `implementation-reviewer`
-- UI 実装・UX・デザイン整合: `product-surface-reviewer`
+- Completion contract, DoD and drift audit: `completion-reviewer`
+- Validity of requirements, open questions and options: `requirements-reviewer`
+- Validity of structure, contracts and boundaries: `architecture-reviewer`
+- Implementation quality, maintainability and backend safety: `implementation-reviewer`
+- UI implementation, UX and design consistency: `product-surface-reviewer`
 - validate / coverage / runtime / prototyping gate: `qa-gatekeeper`
 
-## 原則の適用
+## Applying the Principles
 
-- 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` と `.instruction/00_universal/development-principles-checklist.md` の観点を、実装時の判断基準として適用する。
-- 設計担当 (`solution-architect`, `product-experience-architect`) は同じ原則を、構造・契約・UX 方向性の設計基準として適用する。
-- レビュー担当 (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) は `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` をレビュー観点として適用し、指摘時は原則名と改善理由を明示する。
+- Implementers (`frontend-engineer`, `backend-engineer`) apply the viewpoints in `.github/instructions/principles.instructions.md` and `.instruction/00_universal/development-principles-checklist.md` as decision criteria during implementation.
+- Designers (`solution-architect`, `product-experience-architect`) apply the same principles as design criteria for structure, contracts and UX direction.
+- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) apply `.github/instructions/code-review.instructions.md` and `.github/instructions/principles.instructions.md` as review viewpoints, and name the principle and the reason for the improvement when raising a finding.
 
-## 迷ったときの基準
+## When in Doubt
 
-- 何から着手するか曖昧 → `delivery-planner`
-- 何を作るべきか曖昧 → `requirements-analyst`
-- どう作るか曖昧 → `solution-architect`
-- 体験品質が論点 → `product-experience-architect`
-- 実装の正しさ確認 → `implementation-reviewer`
-- 完了してよいか確認 → `completion-reviewer`
+- Unclear where to start: `delivery-planner`
+- Unclear what to build: `requirements-analyst`
+- Unclear how to build it: `solution-architect`
+- Experience quality is the issue: `product-experience-architect`
+- Checking that an implementation is correct: `implementation-reviewer`
+- Checking whether the work may be closed: `completion-reviewer`
 
-MCP の使いどころは `.instruction/02_project/mcp.md` を参照する。
+For when to use MCP, see `.instruction/02_project/mcp.md`.
