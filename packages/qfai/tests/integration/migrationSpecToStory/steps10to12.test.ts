@@ -23,7 +23,10 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { runInit } from "../../../src/cli/commands/init.js";
 import { ensureRootGitignoreEntries } from "../../../src/core/init/rootGitignore.js";
 import { collectTemplateFiles } from "../../../src/core/fs/templateCopy.js";
-import { hashAssistantAssetFile } from "../../../src/core/assistantAssetProvenance.js";
+import {
+  hashAssistantAssetFile,
+  hashAssistantAssetText,
+} from "../../../src/core/assistantAssetProvenance.js";
 import { loadConfig, readWorkflowMode } from "../../../src/core/config.js";
 import { validateProject } from "../../../src/core/validate.js";
 import { checkPlans } from "../../../src/core/workflow/plans.js";
@@ -55,7 +58,25 @@ const STEP11_WRITE_SET = [
   "AGENTS.md",
   "CLAUDE.md",
   ".gitignore",
+  ".claude/settings.json",
+  ".codex/hooks.json",
+  ".agents/rules/reminders.json",
+  ".agents/rules/.qfai-rules.lock.json",
 ];
+const HOOK_FILES = [".claude/settings.json", ".codex/hooks.json"] as const;
+const REMINDERS = ".agents/rules/reminders.json";
+const RULE_LOCK = ".agents/rules/.qfai-rules.lock.json";
+const SHIPPED_REMINDERS = path.join(getInitAssetsDir(), "root", REMINDERS);
+const EARLIER_CODEX_HOOKS = path.join(
+  PACKAGE_ROOT,
+  "tests/fixtures/codex-hooks/earlier-hooks.json",
+);
+const FREE_TEXT_HOOK = "QFAI free-text entry reminder";
+const HOOK_WRITES = HOOK_FILES.map((file) => `${file}: write from the package's hook template`);
+const TRUST_CODEX_HOOKS =
+  "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
+const ALREADY_DONE =
+  "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
 const temporary: string[] = [];
 
 type Run = { code: number; output: string; errors: string };
@@ -252,8 +273,128 @@ async function writeLegacyIgnore(root: string): Promise<void> {
   );
 }
 
+/** Reads a file of `root`, or `null` when nothing is there. */
+async function textOrNull(root: string, relative: string): Promise<string | null> {
+  return readFile(path.join(root, relative), "utf8").catch(() => null);
+}
+
+/** Replaces one test annotation with another, spelled so this file declares neither. */
+async function reannotate(root: string, file: string, from: string, to: string): Promise<void> {
+  const target = path.join(root, file);
+  const text = await readFile(target, "utf8");
+  const annotation = ["QFAI", from].join(":");
+  if (!text.includes(annotation)) throw new Error(`${file} has no ${annotation}`);
+  await writeFile(target, text.replace(annotation, ["QFAI", to].join(":")));
+}
+
+type EarlierMigration = { root: string; afterStep7: string };
+
+/**
+ * The tree a migration by an earlier 2.x release leaves: all twelve steps run,
+ * each item they listed for a person settled, and no hook file, since that
+ * release's step 11 wrote none. The fixture's agent links let step 9 repoint
+ * the agent wrappers, as a project `qfai init` set up has them.
+ */
+async function migratedByEarlierRelease(): Promise<EarlierMigration> {
+  const root = await oldProject();
+  for (const [dir, name] of [
+    [".claude/agents", "orchestrator.md"],
+    [".github/agents", "orchestrator.agent.md"],
+  ] as const) {
+    await mkdir(path.join(root, dir), { recursive: true });
+    await symlink(
+      "../../.qfai/assistant/agents/orchestrator.md",
+      path.join(root, dir, name),
+      "file",
+    );
+  }
+  let afterStep7 = "";
+  for (let step = 1; step <= 12; step += 1) {
+    const result = await stepIn(root, step);
+    if (result.code === 2) throw new Error(`Step ${step} refused: ${result.errors}`);
+    if (step === 7) afterStep7 = await clone(root);
+  }
+  await rm(path.join(root, ".qfai/spec/spec-0002"), { recursive: true });
+  const test = "tests/integration/order.test.ts";
+  await reannotate(root, test, "CON-API-0001", "API-0001");
+  await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+  // What an earlier release left: no Claude Code settings, its own Codex hook
+  // file, and a recorded reminder text without the free-text entry.
+  await rm(path.join(root, ".claude/settings.json"));
+  await cp(EARLIER_CODEX_HOOKS, path.join(root, ".codex/hooks.json"));
+  await recordReminderText(root, await remindersWithout("free-text-entry"));
+  return { root, afterStep7 };
+}
+
+/** The shipped reminder text with one message taken out. */
+async function remindersWithout(key: string): Promise<string> {
+  const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
+  if (!isRecord(parsed) || !(key in parsed)) throw new Error(`no ${key} in reminders.json`);
+  const rest = Object.fromEntries(Object.entries(parsed).filter(([name]) => name !== key));
+  return `${JSON.stringify(rest, null, 2)}\n`;
+}
+
+/** Writes `text` as the project's reminder text and records it as a run's write. */
+async function recordReminderText(root: string, text: string, recorded = text): Promise<void> {
+  await put(root, REMINDERS, text);
+  const lockFile = path.join(root, RULE_LOCK);
+  const lock: unknown = JSON.parse(await readFile(lockFile, "utf8").catch(() => "{}"));
+  const entries = isRecord(lock) ? lock : {};
+  await put(
+    root,
+    RULE_LOCK,
+    `${JSON.stringify({ ...entries, "reminders.json": hashAssistantAssetText(recorded) }, null, 2)}\n`,
+  );
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+/** What the installed free-text hook prints for Claude Code and for Codex, run in `root`. */
+async function freeTextHookOutput(root: string): Promise<{ claude: string; codex: string }> {
+  const hook = async (file: string): Promise<Record<string, unknown>> => {
+    const parsed: unknown = JSON.parse(await readFile(path.join(root, file), "utf8"));
+    const groups =
+      isRecord(parsed) && isRecord(parsed.hooks) ? parsed.hooks.UserPromptSubmit : undefined;
+    const entries = isUnknownArray(groups)
+      ? groups.flatMap((group) =>
+          isRecord(group) && isUnknownArray(group.hooks) ? group.hooks : [],
+        )
+      : [];
+    const found = entries.find(
+      (entry): entry is Record<string, unknown> =>
+        isRecord(entry) && entry.statusMessage === FREE_TEXT_HOOK,
+    );
+    if (found === undefined) throw new Error(`${file} has no free-text entry hook`);
+    return found;
+  };
+  const claudeHook = await hook(".claude/settings.json");
+  const args = Array.isArray(claudeHook.args) ? claudeHook.args.map(String) : [];
+  const claude = spawnSync(
+    process.execPath,
+    args.map((arg) => arg.replace(["$", "{CLAUDE_PROJECT_DIR}"].join(""), root)),
+    { cwd: root, encoding: "utf8" },
+  );
+  const codexHook = await hook(".codex/hooks.json");
+  const codex = spawnSync(String(codexHook.command), {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+  });
+  return { claude: claude.stdout.trim(), codex: codex.stdout.trim() };
+}
+
+async function shippedFreeTextReminder(): Promise<string> {
+  const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
+  if (!isRecord(parsed)) throw new Error("reminders.json is not an object");
+  return JSON.stringify(parsed["free-text-entry"]);
+}
+
 let migrated10 = "";
 let migrated11 = "";
+let initialised = "";
+let earlierMigration: Promise<EarlierMigration> | undefined;
 
 beforeAll(async () => {
   migrated10 = await oldProject();
@@ -261,6 +402,8 @@ beforeAll(async () => {
   migrated11 = await clone(migrated10);
   const installed = await stepIn(migrated11, 11);
   if (installed.code !== 0) throw new Error(`Step 11 failed: ${installed.output}`);
+  initialised = await scratch("qfai-init-hooks-");
+  await captureStdout(() => runInit({ dir: initialised, force: false, dryRun: false, yes: true }));
 }, 300_000);
 
 afterAll(async () => {
@@ -771,4 +914,302 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       expect(await fingerprint(root)).toBe(before);
     }
   });
+
+  // QFAI:AC-0004-0013-01
+  it("writes both hook files as qfai init does, and a dry run writes neither", async () => {
+    // QFAI:EX-0004-0013-18
+    const root = await clone(migrated10);
+    for (const file of HOOK_FILES) expect(await textOrNull(root, file), file).toBeNull();
+    const preview = await stepIn(root, 11, ["--dry-run"]);
+    for (const file of HOOK_FILES) expect(await textOrNull(root, file), file).toBeNull();
+    const result = await stepIn(root, 11);
+    expect(result.code).toBe(0);
+    expect(section(preview.output, "Operations")).toEqual(expect.arrayContaining(HOOK_WRITES));
+    expect(section(result.output, "Operations")).toEqual(section(preview.output, "Operations"));
+    expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("merges into the project's settings and keeps a hook group the project edited", async () => {
+    // QFAI:EX-0004-0013-19
+    const template = await readFile(path.join(getInitAssetsDir(), ".claude/settings.json"), "utf8");
+    const settings: unknown = JSON.parse(
+      template.replace('"structured-question"', '"our-own-question"'),
+    );
+    if (!isRecord(settings) || !isRecord(settings.hooks)) throw new Error("no hooks in template");
+    const prompts: unknown = settings.hooks.UserPromptSubmit;
+    if (!Array.isArray(prompts)) throw new Error("no UserPromptSubmit groups in template");
+    settings.hooks.UserPromptSubmit = prompts.filter(
+      (group: unknown) => !JSON.stringify(group).includes("QFAI free-text entry reminder"),
+    );
+    settings.permissions = { allow: ["Bash(ls)"] };
+    const projectSettings = `${JSON.stringify(settings, null, 2)}\n`;
+
+    const root = await clone(migrated10);
+    await put(root, ".claude/settings.json", projectSettings);
+    const byInit = await scratch("qfai-init-merge-");
+    await put(byInit, ".claude/settings.json", projectSettings);
+    await captureStdout(() => runInit({ dir: byInit, force: false, dryRun: false, yes: true }));
+
+    const kept =
+      'kept: .claude/settings.json hook group UserPromptSubmit "QFAI structured-question reminder" (edited here)';
+    const first = await stepIn(root, 11);
+    expect(first.code).toBe(0);
+    expect(section(first.output, "Operations")).toContain(
+      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; existing settings kept)",
+    );
+    expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
+    const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
+    expect(merged).toBe(await readFile(path.join(byInit, ".claude/settings.json"), "utf8"));
+    expect(merged).toContain('"our-own-question"');
+    expect(merged).toContain("QFAI free-text entry reminder");
+    expect(merged).toContain('"Bash(ls)"');
+
+    const before = await fingerprint(root);
+    const again = await stepIn(root, 11);
+    expect(again.code).toBe(0);
+    expect(section(again.output, "Operations")).toEqual([]);
+    expect(section(again.output, "Reminder hooks")).toEqual([kept]);
+    expect(await fingerprint(root)).toBe(before);
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("leaves a linked hook file for a person and still writes the other", async () => {
+    // QFAI:EX-0004-0013-20
+    const root = await clone(migrated10);
+    const outside = path.join(await scratch("qfai-hooks-outside-"), "hooks.json");
+    await writeFile(outside, "{}\n");
+    await mkdir(path.join(root, ".codex"), { recursive: true });
+    await symlink(outside, path.join(root, ".codex/hooks.json"), "file");
+    const result = await stepIn(root, 11);
+    expect(result.code).toBe(3);
+    expect(section(result.output, "For a person")).toEqual([
+      ".codex/hooks.json was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder hooks are not wired up.",
+    ]);
+    expect(section(result.output, "Reminder hooks")).toEqual([]);
+    expect(await readlink(path.join(root, ".codex/hooks.json"))).toBe(outside);
+    expect(await readFile(outside, "utf8")).toBe("{}\n");
+    expect(await textOrNull(root, ".claude/settings.json")).toBe(
+      await textOrNull(initialised, ".claude/settings.json"),
+    );
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("migrates a 1.x project in one run, the reminder hooks included", async () => {
+    // QFAI:EX-0004-0013-21
+    const root = await clone(migrated11);
+    const checked = await stepIn(root, 12);
+    expect(checked.code, checked.output).toBe(0);
+    expect(await lstat(path.join(root, ".qfai/specs")).catch(() => null)).toBeNull();
+    expect(
+      await textOrNull(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
+    ).not.toBeNull();
+    expect(
+      await textOrNull(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+    ).not.toBeNull();
+    expect(await sameAsPackage(root, "qfai-run")).toBe(true);
+    for (const dir of HOST_SKILL_DIRS) {
+      const link = path.join(root, dir, "qfai-run");
+      expect(await linkReaches(link, path.join(root, ".qfai/assistant/skill/qfai-run")), dir).toBe(
+        true,
+      );
+    }
+    expect(
+      (await readFile(path.join(root, "AGENTS.md"), "utf8")).startsWith(`${DIRECTIVE}\n`),
+    ).toBe(true);
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(".qfai/run/\n");
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+    expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
+    git(root, ["init", "-q"]);
+    const printed = await freeTextHookOutput(root);
+    const reminder = await shippedFreeTextReminder();
+    expect(printed).toEqual({ claude: reminder, codex: reminder });
+  });
+});
+
+describe("migration step 11: the text the reminder hooks print", () => {
+  // QFAI:AC-0004-0013-01
+  it("refreshes an unedited reminders.json, writes a missing one, keeps an edited one and refuses a link", async () => {
+    // QFAI:EX-0004-0013-22
+    const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
+    const shippedHash = hashAssistantAssetText(shipped);
+    const lockEntry = async (root: string): Promise<unknown> => {
+      const lock: unknown = JSON.parse(await readFile(path.join(root, RULE_LOCK), "utf8"));
+      return isRecord(lock) ? lock["reminders.json"] : undefined;
+    };
+
+    const absent = await clone(migrated10);
+    const created = await stepIn(absent, 11);
+    expect(created.code, created.output).toBe(0);
+    expect(section(created.output, "Operations")).toEqual(
+      expect.arrayContaining([
+        `${REMINDERS}: write from the package`,
+        `${RULE_LOCK}: record the shipped reminder text`,
+      ]),
+    );
+    expect(await textOrNull(absent, REMINDERS)).toBe(shipped);
+    expect(await lockEntry(absent)).toBe(shippedHash);
+
+    const unedited = await clone(migrated10);
+    await recordReminderText(unedited, await remindersWithout("free-text-entry"));
+    const refreshed = await stepIn(unedited, 11);
+    expect(refreshed.code, refreshed.output).toBe(0);
+    expect(section(refreshed.output, "Operations")).toContain(
+      `${REMINDERS}: update (rule master, unedited here)`,
+    );
+    expect(await textOrNull(unedited, REMINDERS)).toBe(shipped);
+    expect(await lockEntry(unedited)).toBe(shippedHash);
+
+    const edited = await clone(migrated10);
+    const ours = await remindersWithout("free-text-entry");
+    await recordReminderText(edited, ours, await remindersWithout("api-budget"));
+    const before = await textOrNull(edited, RULE_LOCK);
+    const kept = await stepIn(edited, 11);
+    expect(kept.code, kept.output).toBe(0);
+    expect(section(kept.output, "Reminder hooks")).toContain(
+      `kept: ${REMINDERS} (edited here, or written before this record existed)`,
+    );
+    expect(await textOrNull(edited, REMINDERS)).toBe(ours);
+    expect(await textOrNull(edited, RULE_LOCK)).toBe(before);
+
+    const linked = await clone(migrated10);
+    const elsewhere = await scratch("qfai-rules-elsewhere-");
+    await writeFile(path.join(elsewhere, "reminders.json"), "{}\n");
+    await mkdir(path.join(linked, ".agents"), { recursive: true });
+    await symlink(elsewhere, path.join(linked, ".agents/rules"), "dir");
+    const refused = await stepIn(linked, 11);
+    expect(refused.code).toBe(3);
+    expect(section(refused.output, "For a person")).toContain(
+      `${REMINDERS} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
+    );
+    expect(await readFile(path.join(elsewhere, "reminders.json"), "utf8")).toBe("{}\n");
+  });
+});
+
+describe("migration steps 1 to 12 on a project an earlier 2.x release migrated", () => {
+  function earlierRelease(): Promise<EarlierMigration> {
+    earlierMigration ??= migratedByEarlierRelease();
+    return earlierMigration;
+  }
+
+  // QFAI:AC-0004-0003-04
+  it("says steps 1 to 10 are already done and brings only the hooks and their text up to date", async () => {
+    // QFAI:EX-0004-0003-30
+    const { root } = await earlierRelease();
+    for (const pass of [1, 2]) {
+      const before = await entries(root);
+      for (let step = 1; step <= 12; step += 1) {
+        const preview = await stepIn(root, step, ["--dry-run"]);
+        const result = await stepIn(root, step);
+        expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
+        expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
+        if (step <= 10) {
+          expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `step ${step}`).toBe(true);
+          const items = result.output.split("\n").filter((line) => line.startsWith("- "));
+          expect(items, `step ${step}`).toEqual([]);
+        }
+        if (step === 11 && pass === 1) {
+          const operations = section(result.output, "Operations");
+          expect(operations).toHaveLength(4);
+          expect(operations[0]).toBe(HOOK_WRITES[0]);
+          expect(operations[1]).toMatch(
+            /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
+          );
+          expect(operations.slice(2)).toEqual([
+            `${REMINDERS}: update (rule master, unedited here)`,
+            `${RULE_LOCK}: record the shipped reminder text`,
+          ]);
+          expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+        }
+        if (step === 11 && pass === 2) {
+          expect(section(result.output, "Operations")).toEqual([]);
+          expect(section(result.output, "Reminder hooks")).toEqual([]);
+        }
+      }
+      const changed = changedPaths(before, await entries(root));
+      expect(changed, `pass ${pass}`).toEqual(
+        pass === 1 ? [RULE_LOCK, REMINDERS, ...HOOK_FILES] : [],
+      );
+    }
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+    expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
+
+    git(root, ["init", "-q"]);
+    const printed = await freeTextHookOutput(root);
+    const reminder = await shippedFreeTextReminder();
+    expect(printed.claude).toBe(reminder);
+    expect(printed.codex).toBe(reminder);
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-04
+  it("never reads a 1.x project, a stopped migration or a step 5 item as finished", async () => {
+    // QFAI:EX-0004-0003-31
+    const { root: finished, afterStep7 } = await earlierRelease();
+    const stopped = await clone(afterStep7);
+    await rm(path.join(stopped, ".qfai/spec/spec-0002"), { recursive: true });
+    const unsettled = await clone(finished);
+    await appendFile(
+      path.join(
+        unsettled,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md",
+      ),
+      "| TC-0001-0009 | — | — | Cancel an order | The order is gone |\n",
+    );
+    const cases: Array<[string, string, number, number]> = [
+      ["stopped after step 7", stopped, 8, 3],
+      ["1.x", await oldProject(), 1, 0],
+      ["unsettled step 5 case", unsettled, 5, 3],
+    ];
+    for (const [name, root, step, code] of cases) {
+      const preview = await stepIn(root, step, ["--dry-run"]);
+      const result = await stepIn(root, step);
+      for (const run of [preview, result]) expect(run.output, name).not.toContain(ALREADY_DONE);
+      expect(result.code, name).toBe(code);
+      expect(section(result.output, "Operations"), name).toEqual(
+        section(preview.output, "Operations"),
+      );
+      if (name === "unsettled step 5 case") {
+        expect(section(result.output, "For a person"), name).toEqual([
+          expect.stringContaining("TC-0001-0009: no criterion"),
+        ]);
+      } else {
+        expect(section(result.output, "Operations").length, name).toBeGreaterThan(0);
+      }
+    }
+    expect(await readFile(path.join(stopped, "tests/integration/order.test.ts"), "utf8")).toContain(
+      ["QFAI", "EX-0001-0001-03"].join(":"),
+    );
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-04
+  it("reads a finished migration as finished whatever plan.yaml now says", async () => {
+    // QFAI:EX-0004-0003-32
+    const { root: finished } = await earlierRelease();
+    const plan = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+    const rewritten = await clone(finished);
+    await put(rewritten, plan, "flows: []\nrules: []\n");
+    const removed = await clone(finished);
+    await rm(path.join(removed, plan));
+    for (const [name, root] of [
+      ["rewritten", rewritten],
+      ["removed", removed],
+    ] as const) {
+      const before = await fingerprint(root);
+      for (let step = 1; step <= 10; step += 1) {
+        const preview = await stepIn(root, step, ["--dry-run"]);
+        const result = await stepIn(root, step);
+        expect(result.code, `${name} step ${step}: ${result.output}${result.errors}`).toBe(0);
+        expect(result.output, `${name} step ${step}`).toBe(preview.output);
+        expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `${name} step ${step}`).toBe(true);
+      }
+      expect(await fingerprint(root), name).toBe(before);
+    }
+  }, 300_000);
 });

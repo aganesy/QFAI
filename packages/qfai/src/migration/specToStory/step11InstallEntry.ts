@@ -12,6 +12,31 @@ import {
   SKILL_INTEGRATION_DIRS,
 } from "../../core/init/integrationDirs.js";
 import { createSkillLink } from "../../core/init/managedLink.js";
+import {
+  CODEX_HOOKS_TRUST_NOTE,
+  keptHookGroupNote,
+  planReminderHooks,
+  reminderHooksUpdateDetail,
+  writeReminderHooks,
+} from "../../core/init/reminderHooks.js";
+import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+} from "../../core/claudeCodeHooks.js";
+import { describeError, findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
+import {
+  AGENTS_RULES_DIR,
+  keptDeletedRuleMastersNote,
+  keptRuleMasterNote,
+  planRuleMasterUpdates,
+  readRuleLock,
+  REMINDERS_BASENAME,
+  RULE_LOCK_BASENAME,
+  type RuleMasterPlan,
+  UNEDITED_RULE_MASTER,
+  writeRuleLock,
+} from "../../core/ruleMasterUpdates.js";
+import { replaceGovernedAsset } from "../../core/init/governedWrite.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
@@ -276,6 +301,120 @@ async function planEntryPoints(context: MigrationContext, plan: StepPlan): Promi
   }
 }
 
+/**
+ * The reminder hooks `qfai init` installs, through the same merge: a missing
+ * hook file is written from the package's template, and one the project has
+ * gains the groups it lacks. A group the project edited is kept and named, and
+ * a file the merge refuses is left for a person.
+ */
+async function planReminderHookFiles(context: MigrationContext, plan: StepPlan): Promise<void> {
+  for (const relativePath of [CLAUDE_SETTINGS_RELATIVE_PATH, CODEX_HOOKS_RELATIVE_PATH]) {
+    const hooks = await planReminderHooks(getInitAssetsDir(), context.root, relativePath);
+    if (hooks.kind === "refused") {
+      plan.forAPerson?.push(hooks.message);
+      continue;
+    }
+    if (hooks.kind !== "create") {
+      for (const group of hooks.edited) {
+        plan.reminderHooks?.push(keptHookGroupNote(relativePath, group));
+      }
+    }
+    if (hooks.kind === "current") continue;
+    plan.operations.push({
+      kind: "delegate",
+      target: relativePath,
+      description:
+        hooks.kind === "create"
+          ? "write from the package's hook template"
+          : `update (${reminderHooksUpdateDetail(hooks.events)}; existing settings kept)`,
+      apply: () => writeReminderHooks(hooks),
+    });
+    if (relativePath === CODEX_HOOKS_RELATIVE_PATH) {
+      plan.reminderHooks?.push(CODEX_HOOKS_TRUST_NOTE);
+    }
+  }
+}
+
+async function recordReminderText(projectDir: string, hash: string): Promise<void> {
+  await writeRuleLock(projectDir, {
+    ...(await readRuleLock(projectDir)),
+    [REMINDERS_BASENAME]: hash,
+  });
+}
+
+/**
+ * The text the reminder hooks print, brought to this release the way `qfai
+ * init` brings a shipped rule master: through the record of what an earlier
+ * run wrote. A file that still holds the recorded text is replaced, an absent
+ * one is written, and one the project edited or removed is kept and named.
+ */
+async function planReminderText(context: MigrationContext, plan: StepPlan): Promise<void> {
+  const shown = `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`;
+  const lockShown = `${AGENTS_RULES_DIR}/${RULE_LOCK_BASENAME}`;
+  for (const relative of [shown, lockShown]) {
+    if ((await findUnsafeHostFileComponent(context.root, relative.split("/"))) !== undefined) {
+      plan.forAPerson?.push(
+        `${relative} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
+      );
+      return;
+    }
+  }
+  const shippedDir = path.join(getInitAssetsDir(), "root", ...AGENTS_RULES_DIR.split("/"));
+  const projectDir = path.join(context.root, ...AGENTS_RULES_DIR.split("/"));
+  let plans: RuleMasterPlan[];
+  try {
+    plans = await planRuleMasterUpdates(shippedDir, projectDir);
+  } catch (error) {
+    plan.forAPerson?.push(
+      `${shown}: rule masters were not checked for updates (${describeError(error)})`,
+    );
+    return;
+  }
+  const reminder = plans.find((entry) => entry.name === REMINDERS_BASENAME);
+  if (reminder === undefined) return;
+  switch (reminder.verdict) {
+    case "keep":
+      plan.reminderHooks?.push(keptRuleMasterNote(shown));
+      return;
+    case "removed":
+      plan.reminderHooks?.push(keptDeletedRuleMastersNote([shown], lockShown));
+      return;
+    case "current":
+      if (reminder.recordedHash === reminder.shippedHash) return;
+      plan.operations.push({
+        kind: "delegate",
+        target: lockShown,
+        description: "record the shipped reminder text",
+        apply: () => recordReminderText(projectDir, reminder.shippedHash),
+      });
+      return;
+    case "written":
+    case "update": {
+      const create = reminder.verdict === "written";
+      const description = create ? "write from the package" : `update (${UNEDITED_RULE_MASTER})`;
+      plan.operations.push({
+        kind: "delegate",
+        target: shown,
+        targets: [shown, lockShown],
+        description,
+        report: [`${shown}: ${description}`, `${lockShown}: record the shipped reminder text`],
+        apply: async () => {
+          const outcome = await replaceGovernedAsset(
+            path.join(shippedDir, REMINDERS_BASENAME),
+            path.join(projectDir, REMINDERS_BASENAME),
+            reminder.currentHash ?? undefined,
+            create ? "create-only" : "replace",
+          );
+          if (outcome === "target-changed") {
+            throw new Error(`${shown} changed while step 11 was deciding; run step 11 again`);
+          }
+          await recordReminderText(projectDir, reminder.shippedHash);
+        },
+      });
+    }
+  }
+}
+
 export const step11: MigrationStep = {
   number: 11,
   writeSet: [
@@ -287,15 +426,18 @@ export const step11: MigrationStep = {
     "entry-points",
     "gitignore",
     "gitignore-staging",
+    "reminder-hooks",
   ],
-  sections: ["For a person"],
+  sections: ["Reminder hooks", "For a person"],
   async plan(context) {
-    const plan: StepPlan = { operations: [], forAPerson: [] };
+    const plan: StepPlan = { operations: [], forAPerson: [], reminderHooks: [] };
     const ids = await shippedSkillIds();
     for (const id of ids) await planLayerEntry(context, "skill", id, plan);
     for (const id of await shippedStepIds()) await planLayerEntry(context, "step", id, plan);
     await planLinks(context, ids, plan);
     await planEntryPoints(context, plan);
+    await planReminderHookFiles(context, plan);
+    await planReminderText(context, plan);
     const gitignore = await step10.plan(context);
     plan.operations.push(...gitignore.operations);
     plan.forAPerson?.push(...(gitignore.forAPerson ?? []));

@@ -215,7 +215,7 @@ evidence. The scripts write no report file themselves.
 | 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git: the managed block, its re-include lines and the git index.           |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: shipped skills, host skill links, entry directive and `.gitignore` lines.  |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, entry directive, `.gitignore` lines and hooks.   |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project.                        |
 
 Run a row from the project root in this form:
@@ -227,6 +227,25 @@ node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories
 
 The shared `scripts/_step.mjs` loads the locally installed package for each
 script. Keep it with the twelve numbered scripts.
+
+The same steps serve two runs:
+
+| Project                                    | What the steps do                                                                                                                                     |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks                                |
+| Migrated already by an earlier 2.x release | Steps 1 to 10 each change nothing and add a line saying the migration is already done; step 11 adds only what that release lacked, the hooks among it |
+
+After upgrading a project the second row describes:
+
+1. Run `npx qfai init` without `--force`. It installs the reminder hooks and
+   `.agents/rules/reminders.json`. It leaves the skill copies the earlier
+   release installed as they are, and names them as differing.
+2. Run step 11 of the installed skill, `--dry-run` first:
+   `node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/11-install-entry.mjs`.
+   The script runs the upgraded package, so it brings every shipped skill,
+   this one included, to this release and archives a copy the project edited.
+3. Run the skill again from the start. Report that only the files step 11
+   listed changed.
 
 ## Write boundary
 
@@ -245,6 +264,8 @@ network call. The scripts write only these targets:
 | Git index entries under `.qfai/evidence/`, removed; the files stay on disk                                                                                  | 10                                   |
 | Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
 | `AGENTS.md` and `CLAUDE.md`, only to add the entry directive, with a staging file beside each                                                               | 11                                   |
+| `.claude/settings.json` and `.codex/hooks.json`, only to add the reminder hooks                                                                             | 11                                   |
+| `.agents/rules/reminders.json` and its entry in `.agents/rules/.qfai-rules.lock.json`, with a staging file beside it                                        | 11                                   |
 | Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10, 11                          |
 
 The scripts verify ownership before clearing staging left by an interrupted
@@ -255,8 +276,8 @@ Step 12 writes nothing.
 
 Every report contains `## Operations`. Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
-`## Annotations kept`; step 10 contains `## Git index`. Empty sections say
-`none`. Exit 0 means the step is
+`## Annotations kept`; step 10 contains `## Git index`; step 11 contains
+`## Reminder hooks`. Empty sections say `none`. Exit 0 means the step is
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
@@ -319,6 +340,24 @@ other, and run step 11 again. A skill the package does not ship and
 host skill link, the entry directive at the top of `AGENTS.md` and `CLAUDE.md`,
 and the `.qfai/run/` line of the managed `.gitignore` block. A path it cannot
 write is reported with the reason.
+
+Step 11 also installs the reminder hooks `npx qfai init` installs, through the
+same merge, into `.claude/settings.json` and `.codex/hooks.json`:
+
+- a missing file is written from the package's template;
+- an existing file keeps its other settings and gains the hook groups it lacks;
+- a hook group the project edited is kept, and `## Reminder hooks` names it;
+- a file behind a symbolic link, or one the merge cannot read, is left as it is
+  and reported for a person.
+
+When it writes `.codex/hooks.json`, `## Reminder hooks` says that Codex runs
+those hooks only after you review and trust them with `/hooks`.
+
+The hooks print their text from `.agents/rules/reminders.json`. Step 11 brings
+that file to this release the way `npx qfai init` brings a rule master, through
+its entry in `.agents/rules/.qfai-rules.lock.json`: a copy nobody edited is
+replaced, a missing one is written, and an edited one is kept and named under
+`## Reminder hooks`. Run the step rather than editing these files by hand.
 
 Step 12 makes the checks `npx qfai workflow start` makes on the project,
 without starting a run, and checks what step 11 installs. Each failed check is

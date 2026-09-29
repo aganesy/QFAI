@@ -10,6 +10,7 @@ Feature: Migrate a project with the skill
     When an AI follows SKILL.md on a project on the spec-pack layout
     Then it writes the plan, runs each step with --dry-run and then without it, keeps every report as evidence, and runs qfai validate after step 10
     And on a project with nothing to migrate it reports that there is nothing to migrate
+    And on a project an earlier 2.x release migrated it runs the steps again and reports that only what that release lacked changed
 
   # AC-0004-0012-02
   Scenario: The migrated fixture has no layout or chain error

@@ -401,6 +401,7 @@
     "tests/e2e/bf0003DoctorRepairFlowE2E.test.ts",
     "tests/e2e/bf0004MigrationCutoverE2E.test.ts",
     "tests/e2e/bf0004MigrationOutcomesE2E.test.ts",
+    "tests/e2e/bf0004MigrationRerunE2E.test.ts",
     "tests/e2e/workflowJourney.ts",
     "tests/e2e/workflowFeatureRun.ts",
     "tests/e2e/workflowProjectInputs.ts",

@@ -32,6 +32,7 @@ Feature: Run any migration step without risk to the project
     Then no file changes
     And given a tree that step left half migrated, running it again leaves the tree an uninterrupted run leaves
     And step 10 leaves in place, and lists under For a person, any staging file it cannot verify as its own
+    And on a project whose migration finished, steps 1 to 10 say that the migration is already done
 
   # AC-0004-0003-05
   Scenario: Nothing outside the step's write set changes
