@@ -3139,11 +3139,10 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
-  // A path inside the installed package. This repository ships that package
-  // and never installs it — `scripts/check-not-a-dependency.mjs` refuses an
-  // install that would create one — so no checkout of this tree holds the
-  // directory. Naming a file under it is how the README tells an adopter where
-  // the packaged copy of a shipped file sits in THEIR tree.
+  // A path inside the installed package. Naming a file under it is how the
+  // README tells an adopter where the packaged copy of a shipped file sits in
+  // THEIR tree. Whether it exists here depends only on whether this checkout
+  // has been installed, so the walk does not judge it.
   if (ref.startsWith("node_modules/")) {
     return true;
   }

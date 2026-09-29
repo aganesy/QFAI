@@ -16,7 +16,12 @@ version: 1.0.0
 
 ```
 pnpm install
+pnpm build
+pnpm install
 ```
+
+The second install links `node_modules/.bin/qfai` to the build, so `npx qfai`
+runs this checkout. pnpm skips that link while `packages/qfai/dist/` is missing.
 
 ## Build and Quality Gates
 

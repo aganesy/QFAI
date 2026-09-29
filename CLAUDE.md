@@ -134,6 +134,9 @@ The rule masters under `.agents/rules/` are symlinks to
 shipped file, which is the intent. A rule about this repository alone is a real
 file in that directory.
 
-This repository does not install its own package. There is no `qfai`
-dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
-would create one.
+The root depends on the package only through the pnpm workspace
+(`"qfai": "workspace:*"`), so `npx qfai` runs this checkout's build, never the
+published copy. pnpm links `node_modules/.bin/qfai` only once
+`packages/qfai/dist/` exists: on a fresh clone run `pnpm install`, `pnpm build`,
+then `pnpm install` again. `scripts/check-not-a-dependency.mjs` still refuses an
+npm or yarn install of the root manifest.
