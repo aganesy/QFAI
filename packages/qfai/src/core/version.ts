@@ -60,7 +60,7 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * construction.
  *
  * One package directory with no such segment is still reported: one reached
- * through a `node_modules/qfai` link at or above `root`, where that
+ * through the nearest `node_modules/qfai` at or above `root`, a link, where that
  * `node_modules` directory really lies outside `root`. A workspace dependency
  * is such a link to a source checkout, so a worktree that inherits an ancestor's
  * `node_modules`, or whose `node_modules` is a link to another checkout's, runs
@@ -213,14 +213,17 @@ export function classifyToolLocation(
 }
 
 /**
- * The real path of the nearest `node_modules` directory at or above `root`
- * whose `qfai` entry resolves to `packageDir`, or `null` when none does.
+ * The real path of the `node_modules` directory holding the nearest
+ * `node_modules/qfai` at or above `root`, when that entry resolves to
+ * `packageDir`; otherwise `null`.
  *
  * This is how a package directory outside every `node_modules` was reached: a
  * workspace dependency is a link from `node_modules/qfai` to a source checkout,
- * and Node reports the link's target. The `node_modules` directory's own real
- * path is returned because it can be a link as well, to another checkout's.
- * Both operands must already be real paths.
+ * and Node reports the link's target. Only the nearest entry counts, because it
+ * is the one `npx` runs; a farther link to the same checkout means the checkout
+ * was run by its path. The `node_modules` directory's own real path is returned
+ * because it can be a link as well, to another checkout's. Both operands must
+ * already be real paths.
  */
 export async function findLinkingNodeModules(
   root: string,
@@ -229,8 +232,9 @@ export async function findLinkingNodeModules(
   let dir = root;
   for (let depth = 0; depth < 16; depth += 1) {
     const nodeModules = path.join(dir, "node_modules");
-    if ((await toRealPath(path.join(nodeModules, PACKAGE_NAME))) === packageDir) {
-      return toRealPath(nodeModules);
+    const entry = await realPathOrNull(path.join(nodeModules, PACKAGE_NAME));
+    if (entry !== null) {
+      return entry === packageDir ? toRealPath(nodeModules) : null;
     }
     const parent = path.dirname(dir);
     if (parent === dir) break;
@@ -258,10 +262,15 @@ function isInsideNodeModules(target: string): boolean {
  * validator whose subject is unrelated.
  */
 async function toRealPath(target: string): Promise<string> {
+  return (await realPathOrNull(target)) ?? target;
+}
+
+/** `realpath`, or `null` when the path does not resolve. */
+async function realPathOrNull(target: string): Promise<string | null> {
   try {
     return await realpath(target);
   } catch {
-    return target;
+    return null;
   }
 }
 

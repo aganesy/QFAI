@@ -405,6 +405,22 @@ describe("locateToolAgainstProject", () => {
     });
   });
 
+  it("stays quiet when a nearer copy is what npx would run", async (ctx) => {
+    // QFAI:EX-0001-0039-14
+    // The checkout was run by its path against a project with its own install;
+    // the link farther up is not how it was reached.
+    await withTempDir(async (dir) => {
+      const packageDir = String(await resolveToolPackageDir());
+      const root = path.join(dir, "project");
+      await mkdir(path.join(dir, "node_modules"), { recursive: true });
+      await mkdir(path.join(root, "node_modules", "qfai"), { recursive: true });
+      if (!(await tryLink(packageDir, path.join(dir, "node_modules", "qfai")))) ctx.skip();
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(false);
+    });
+  });
+
   it("stays quiet for a link in the project's own node_modules", async (ctx) => {
     // QFAI:EX-0001-0039-14
     await withTempDir(async (root) => {
