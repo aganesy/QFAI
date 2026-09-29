@@ -84,7 +84,9 @@ keep authors separate from reviewers.
 6. After step 10, run steps 11 and 12 in order, each with `--dry-run` followed
    by the real run, and keep their reports as in item 2. Step 11 installs the
    free-text entry and the reminder hooks `npx qfai init` installs, through the
-   same merge. Do not edit `.claude/settings.json` or `.codex/hooks.json` by
+   same merge, and brings `.agents/rules/reminders.json`, the text the hooks
+   print, to this release unless the project edited it. Do not edit
+   `.claude/settings.json`, `.codex/hooks.json` or `reminders.json` by
    hand: relay what step 11 lists under `## Operations` and
    `## Reminder hooks`, the line about trusting the Codex hooks with `/hooks`
    included. Step 12 checks the entry and writes nothing.

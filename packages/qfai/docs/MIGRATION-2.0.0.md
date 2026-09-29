@@ -134,7 +134,8 @@ deleted. Step 12 lists under `## For a person` each check
 override that drops a reviewer the defaults require. Rerunning step 11 settles
 what it installs; a routing override is yours to change. Step 11 also installs
 the reminder hooks `qfai init` installs, in `.claude/settings.json` and
-`.codex/hooks.json`, through the same merge.
+`.codex/hooks.json`, through the same merge, and brings the text they print,
+`.agents/rules/reminders.json`, to this release unless you edited it.
 
 A project already migrated with an earlier 2.x release runs the skill again
 after upgrading. Steps 1 to 10 say the migration is already done and change

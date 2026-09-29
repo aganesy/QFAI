@@ -23,7 +23,10 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { runInit } from "../../../src/cli/commands/init.js";
 import { ensureRootGitignoreEntries } from "../../../src/core/init/rootGitignore.js";
 import { collectTemplateFiles } from "../../../src/core/fs/templateCopy.js";
-import { hashAssistantAssetFile } from "../../../src/core/assistantAssetProvenance.js";
+import {
+  hashAssistantAssetFile,
+  hashAssistantAssetText,
+} from "../../../src/core/assistantAssetProvenance.js";
 import { loadConfig, readWorkflowMode } from "../../../src/core/config.js";
 import { validateProject } from "../../../src/core/validate.js";
 import { checkPlans } from "../../../src/core/workflow/plans.js";
@@ -57,8 +60,18 @@ const STEP11_WRITE_SET = [
   ".gitignore",
   ".claude/settings.json",
   ".codex/hooks.json",
+  ".agents/rules/reminders.json",
+  ".agents/rules/.qfai-rules.lock.json",
 ];
 const HOOK_FILES = [".claude/settings.json", ".codex/hooks.json"] as const;
+const REMINDERS = ".agents/rules/reminders.json";
+const RULE_LOCK = ".agents/rules/.qfai-rules.lock.json";
+const SHIPPED_REMINDERS = path.join(getInitAssetsDir(), "root", REMINDERS);
+const EARLIER_CODEX_HOOKS = path.join(
+  PACKAGE_ROOT,
+  "tests/fixtures/codex-hooks/earlier-hooks.json",
+);
+const FREE_TEXT_HOOK = "QFAI free-text entry reminder";
 const HOOK_WRITES = HOOK_FILES.map((file) => `${file}: write from the package's hook template`);
 const TRUST_CODEX_HOOKS =
   "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
@@ -305,8 +318,77 @@ async function migratedByEarlierRelease(): Promise<EarlierMigration> {
   const test = "tests/integration/order.test.ts";
   await reannotate(root, test, "CON-API-0001", "API-0001");
   await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
-  for (const file of HOOK_FILES) await rm(path.join(root, file));
+  // What an earlier release left: no Claude Code settings, its own Codex hook
+  // file, and a recorded reminder text without the free-text entry.
+  await rm(path.join(root, ".claude/settings.json"));
+  await cp(EARLIER_CODEX_HOOKS, path.join(root, ".codex/hooks.json"));
+  await recordReminderText(root, await remindersWithout("free-text-entry"));
   return { root, afterStep7 };
+}
+
+/** The shipped reminder text with one message taken out. */
+async function remindersWithout(key: string): Promise<string> {
+  const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
+  if (!isRecord(parsed) || !(key in parsed)) throw new Error(`no ${key} in reminders.json`);
+  const rest = Object.fromEntries(Object.entries(parsed).filter(([name]) => name !== key));
+  return `${JSON.stringify(rest, null, 2)}\n`;
+}
+
+/** Writes `text` as the project's reminder text and records it as a run's write. */
+async function recordReminderText(root: string, text: string, recorded = text): Promise<void> {
+  await put(root, REMINDERS, text);
+  const lockFile = path.join(root, RULE_LOCK);
+  const lock: unknown = JSON.parse(await readFile(lockFile, "utf8").catch(() => "{}"));
+  const entries = isRecord(lock) ? lock : {};
+  await put(
+    root,
+    RULE_LOCK,
+    `${JSON.stringify({ ...entries, "reminders.json": hashAssistantAssetText(recorded) }, null, 2)}\n`,
+  );
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+/** What the installed free-text hook prints for Claude Code and for Codex, run in `root`. */
+async function freeTextHookOutput(root: string): Promise<{ claude: string; codex: string }> {
+  const hook = async (file: string): Promise<Record<string, unknown>> => {
+    const parsed: unknown = JSON.parse(await readFile(path.join(root, file), "utf8"));
+    const groups =
+      isRecord(parsed) && isRecord(parsed.hooks) ? parsed.hooks.UserPromptSubmit : undefined;
+    const entries = isUnknownArray(groups)
+      ? groups.flatMap((group) =>
+          isRecord(group) && isUnknownArray(group.hooks) ? group.hooks : [],
+        )
+      : [];
+    const found = entries.find(
+      (entry): entry is Record<string, unknown> =>
+        isRecord(entry) && entry.statusMessage === FREE_TEXT_HOOK,
+    );
+    if (found === undefined) throw new Error(`${file} has no free-text entry hook`);
+    return found;
+  };
+  const claudeHook = await hook(".claude/settings.json");
+  const args = Array.isArray(claudeHook.args) ? claudeHook.args.map(String) : [];
+  const claude = spawnSync(
+    process.execPath,
+    args.map((arg) => arg.replace(["$", "{CLAUDE_PROJECT_DIR}"].join(""), root)),
+    { cwd: root, encoding: "utf8" },
+  );
+  const codexHook = await hook(".codex/hooks.json");
+  const codex = spawnSync(String(codexHook.command), {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+  });
+  return { claude: claude.stdout.trim(), codex: codex.stdout.trim() };
+}
+
+async function shippedFreeTextReminder(): Promise<string> {
+  const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
+  if (!isRecord(parsed)) throw new Error("reminders.json is not an object");
+  return JSON.stringify(parsed["free-text-entry"]);
 }
 
 let migrated10 = "";
@@ -945,6 +1027,65 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 });
 
+describe("migration step 11: the text the reminder hooks print", () => {
+  // QFAI:AC-0004-0013-01
+  it("refreshes an unedited reminders.json, writes a missing one, keeps an edited one and refuses a link", async () => {
+    // QFAI:EX-0004-0013-22
+    const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
+    const shippedHash = hashAssistantAssetText(shipped);
+    const lockEntry = async (root: string): Promise<unknown> => {
+      const lock: unknown = JSON.parse(await readFile(path.join(root, RULE_LOCK), "utf8"));
+      return isRecord(lock) ? lock["reminders.json"] : undefined;
+    };
+
+    const absent = await clone(migrated10);
+    const created = await stepIn(absent, 11);
+    expect(created.code, created.output).toBe(0);
+    expect(section(created.output, "Operations")).toEqual(
+      expect.arrayContaining([
+        `${REMINDERS}: write from the package`,
+        `${RULE_LOCK}: record the shipped reminder text`,
+      ]),
+    );
+    expect(await textOrNull(absent, REMINDERS)).toBe(shipped);
+    expect(await lockEntry(absent)).toBe(shippedHash);
+
+    const unedited = await clone(migrated10);
+    await recordReminderText(unedited, await remindersWithout("free-text-entry"));
+    const refreshed = await stepIn(unedited, 11);
+    expect(refreshed.code, refreshed.output).toBe(0);
+    expect(section(refreshed.output, "Operations")).toContain(
+      `${REMINDERS}: update (rule master, unedited here)`,
+    );
+    expect(await textOrNull(unedited, REMINDERS)).toBe(shipped);
+    expect(await lockEntry(unedited)).toBe(shippedHash);
+
+    const edited = await clone(migrated10);
+    const ours = await remindersWithout("free-text-entry");
+    await recordReminderText(edited, ours, await remindersWithout("api-budget"));
+    const before = await textOrNull(edited, RULE_LOCK);
+    const kept = await stepIn(edited, 11);
+    expect(kept.code, kept.output).toBe(0);
+    expect(section(kept.output, "Reminder hooks")).toContain(
+      `kept: ${REMINDERS} (edited here, or written before this record existed)`,
+    );
+    expect(await textOrNull(edited, REMINDERS)).toBe(ours);
+    expect(await textOrNull(edited, RULE_LOCK)).toBe(before);
+
+    const linked = await clone(migrated10);
+    const elsewhere = await scratch("qfai-rules-elsewhere-");
+    await writeFile(path.join(elsewhere, "reminders.json"), "{}\n");
+    await mkdir(path.join(linked, ".agents"), { recursive: true });
+    await symlink(elsewhere, path.join(linked, ".agents/rules"), "dir");
+    const refused = await stepIn(linked, 11);
+    expect(refused.code).toBe(3);
+    expect(section(refused.output, "For a person")).toContain(
+      `${REMINDERS} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
+    );
+    expect(await readFile(path.join(elsewhere, "reminders.json"), "utf8")).toBe("{}\n");
+  });
+});
+
 describe("migration steps 1 to 12 on a project an earlier 2.x release migrated", () => {
   function earlierRelease(): Promise<EarlierMigration> {
     earlierMigration ??= migratedByEarlierRelease();
@@ -952,7 +1093,7 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }
 
   // QFAI:AC-0004-0003-04
-  it("says steps 1 to 10 are already done and adds only the hook files", async () => {
+  it("says steps 1 to 10 are already done and brings only the hooks and their text up to date", async () => {
     // QFAI:EX-0004-0003-30
     const { root } = await earlierRelease();
     for (const pass of [1, 2]) {
@@ -967,16 +1108,39 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
           const items = result.output.split("\n").filter((line) => line.startsWith("- "));
           expect(items, `step ${step}`).toEqual([]);
         }
-        if (step === 11) {
-          expect(section(result.output, "Operations")).toEqual(pass === 1 ? HOOK_WRITES : []);
+        if (step === 11 && pass === 1) {
+          const operations = section(result.output, "Operations");
+          expect(operations).toHaveLength(5);
+          expect(operations[0]).toBe(HOOK_WRITES[0]);
+          expect(operations[1]).toMatch(
+            /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
+          );
+          expect(operations.slice(2)).toEqual([
+            `${REMINDERS}: update (rule master, unedited here)`,
+            `${RULE_LOCK}: record the shipped reminder text`,
+          ]);
+          expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+        }
+        if (step === 11 && pass === 2) {
+          expect(section(result.output, "Operations")).toEqual([]);
+          expect(section(result.output, "Reminder hooks")).toEqual([]);
         }
       }
       const changed = changedPaths(before, await entries(root));
-      expect(changed, `pass ${pass}`).toEqual(pass === 1 ? [...HOOK_FILES] : []);
+      expect(changed, `pass ${pass}`).toEqual(
+        pass === 1 ? [RULE_LOCK, REMINDERS, ...HOOK_FILES] : [],
+      );
     }
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
     }
+    expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
+
+    git(root, ["init", "-q"]);
+    const printed = await freeTextHookOutput(root);
+    const reminder = await shippedFreeTextReminder();
+    expect(printed.claude).toBe(reminder);
+    expect(printed.codex).toBe(reminder);
   }, 300_000);
 
   // QFAI:AC-0004-0003-04

@@ -256,6 +256,7 @@ network call. The scripts write only these targets:
 | Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
 | `AGENTS.md` and `CLAUDE.md`, only to add the entry directive, with a staging file beside each                                                               | 11                                   |
 | `.claude/settings.json` and `.codex/hooks.json`, only to add the reminder hooks                                                                             | 11                                   |
+| `.agents/rules/reminders.json` and its entry in `.agents/rules/.qfai-rules.lock.json`, with a staging file beside it                                        | 11                                   |
 | Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10, 11                          |
 
 The scripts verify ownership before clearing staging left by an interrupted
@@ -341,8 +342,13 @@ same merge, into `.claude/settings.json` and `.codex/hooks.json`:
   and reported for a person.
 
 When it writes `.codex/hooks.json`, `## Reminder hooks` says that Codex runs
-those hooks only after you review and trust them with `/hooks`. Run the step
-rather than editing the hook files by hand.
+those hooks only after you review and trust them with `/hooks`.
+
+The hooks print their text from `.agents/rules/reminders.json`. Step 11 brings
+that file to this release the way `npx qfai init` brings a rule master, through
+its entry in `.agents/rules/.qfai-rules.lock.json`: a copy nobody edited is
+replaced, a missing one is written, and an edited one is kept and named under
+`## Reminder hooks`. Run the step rather than editing these files by hand.
 
 Step 12 makes the checks `npx qfai workflow start` makes on the project,
 without starting a run, and checks what step 11 installs. Each failed check is
