@@ -38,7 +38,8 @@ itself:
 - **A project an earlier 2.x release migrated.** Steps 1 to 10 each report
   that the migration is already done and change nothing. Step 11 adds only
   what that release lacked, such as the reminder hooks. Report that only the
-  files step 11 lists changed.
+  files step 11 lists changed. The guide says how to reach this copy of the
+  skill from an earlier release's.
 
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.

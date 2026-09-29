@@ -10,7 +10,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   2.x release migrated. Steps 1 to 10 then change nothing and say the migration
   is already done, and step 11 adds only what that release lacked, such as the
   reminder hooks. A 1.x project still gets every step, the hooks included, in
-  one run.
+  one run. On a project 2.0.0 migrated, first run `npx qfai init` without
+  `--force`, which installs the hooks and their text, then step 11 of the
+  installed skill, which replaces its 2.0.0 copy with this release's, and then
+  the skill. Plain `npx qfai init` leaves an older skill copy as it is.
 
 ### Fixed
 

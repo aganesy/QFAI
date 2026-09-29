@@ -1024,6 +1024,11 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
     }
+    expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
+    git(root, ["init", "-q"]);
+    const printed = await freeTextHookOutput(root);
+    const reminder = await shippedFreeTextReminder();
+    expect(printed).toEqual({ claude: reminder, codex: reminder });
   });
 });
 
@@ -1144,32 +1149,67 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }, 300_000);
 
   // QFAI:AC-0004-0003-04
-  it("never reads a 1.x project, a stopped migration or an unreadable plan as finished", async () => {
+  it("never reads a 1.x project, a stopped migration or a step 5 item as finished", async () => {
     // QFAI:EX-0004-0003-31
     const { root: finished, afterStep7 } = await earlierRelease();
     const stopped = await clone(afterStep7);
     await rm(path.join(stopped, ".qfai/spec/spec-0002"), { recursive: true });
-    const unreadable = await clone(finished);
-    await put(unreadable, ".qfai/evidence/migration-spec-to-story/plan.yaml", "flows: [unclosed\n");
-    const cases: Array<[string, string, number]> = [
-      ["stopped after step 7", stopped, 8],
-      ["1.x", await oldProject(), 1],
-      ["unreadable plan", unreadable, 1],
+    const unsettled = await clone(finished);
+    await appendFile(
+      path.join(
+        unsettled,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md",
+      ),
+      "| TC-0001-0009 | — | — | Cancel an order | The order is gone |\n",
+    );
+    const cases: Array<[string, string, number, number]> = [
+      ["stopped after step 7", stopped, 8, 3],
+      ["1.x", await oldProject(), 1, 0],
+      ["unsettled step 5 case", unsettled, 5, 3],
     ];
-    for (const [name, root, step] of cases) {
+    for (const [name, root, step, code] of cases) {
       const preview = await stepIn(root, step, ["--dry-run"]);
       const result = await stepIn(root, step);
       for (const run of [preview, result]) expect(run.output, name).not.toContain(ALREADY_DONE);
-      expect(result.code, name).not.toBe(2);
+      expect(result.code, name).toBe(code);
       expect(section(result.output, "Operations"), name).toEqual(
         section(preview.output, "Operations"),
       );
-      if (name !== "unreadable plan") {
+      if (name === "unsettled step 5 case") {
+        expect(section(result.output, "For a person"), name).toEqual([
+          expect.stringContaining("TC-0001-0009: no criterion"),
+        ]);
+      } else {
         expect(section(result.output, "Operations").length, name).toBeGreaterThan(0);
       }
     }
     expect(await readFile(path.join(stopped, "tests/integration/order.test.ts"), "utf8")).toContain(
       ["QFAI", "EX-0001-0001-03"].join(":"),
     );
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-04
+  it("reads a finished migration as finished whatever plan.yaml now says", async () => {
+    // QFAI:EX-0004-0003-32
+    const { root: finished } = await earlierRelease();
+    const plan = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+    const rewritten = await clone(finished);
+    await put(rewritten, plan, "flows: []\nrules: []\n");
+    const removed = await clone(finished);
+    await rm(path.join(removed, plan));
+    for (const [name, root] of [
+      ["rewritten", rewritten],
+      ["removed", removed],
+    ] as const) {
+      const before = await fingerprint(root);
+      for (let step = 1; step <= 10; step += 1) {
+        const preview = await stepIn(root, step, ["--dry-run"]);
+        const result = await stepIn(root, step);
+        expect(result.code, `${name} step ${step}: ${result.output}${result.errors}`).toBe(0);
+        expect(result.output, `${name} step ${step}`).toBe(preview.output);
+        expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `${name} step ${step}`).toBe(true);
+      }
+      expect(await fingerprint(root), name).toBe(before);
+    }
   }, 300_000);
 });

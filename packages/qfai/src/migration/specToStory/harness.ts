@@ -1161,10 +1161,11 @@ const ALREADY_DONE =
  * report. A 1.x project has no ID map, and a migration stopped part way has a
  * step with work or a report left, so neither reads as finished.
  *
- * Step 5's items for a person are the one exception. It reads them from the
- * archived test-case tables, which never change, so they come back after the
- * person has settled them in the story tree. They were reported when it first
- * ran, which was before step 7 retired the last spec pack.
+ * Steps 4 and 7 are not planned here. They place the spec packs' content, and
+ * with the ID map written and no pack left they have none to place. Their plans
+ * read `plan.yaml` as well, which an old copy of the skill may have written
+ * again after the migration; asking them would let that file decide whether a
+ * finished project reads as finished. Their staging is still checked.
  *
  * `current` is planned first, because a migration in progress most often
  * has work left for the step being run.
@@ -1178,6 +1179,7 @@ async function migrationFinished(
   const others = CONTENT_STEPS.filter((number) => number !== current);
   for (const number of [current, ...others]) {
     if ((await staleStageOperations(context, number)).length > 0) return false;
+    if (PACK_PLACING_STEPS.has(number)) continue;
     let prepared: { plan: StepPlan; operations: MigrationOperation[] };
     try {
       prepared = await prepareStep(await loadStep(number), context);
@@ -1188,10 +1190,13 @@ async function migrationFinished(
     const { plan, operations } = prepared;
     if (operations.length > 0 || plan.gitIndex?.kind === "untrack") return false;
     if ((plan.annotationsKept?.length ?? 0) > 0) return false;
-    if (number !== 5 && (plan.forAPerson?.length ?? 0) > 0) return false;
+    if ((plan.forAPerson?.length ?? 0) > 0) return false;
   }
   return true;
 }
+
+/** The steps that place the spec packs' content by `plan.yaml`. */
+const PACK_PLACING_STEPS: ReadonlySet<MigrationStepNumber> = new Set([4, 7]);
 
 /** The steps that move a project's content, before the free-text entry. */
 const CONTENT_STEPS: readonly MigrationStepNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

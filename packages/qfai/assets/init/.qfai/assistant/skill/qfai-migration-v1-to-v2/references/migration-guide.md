@@ -235,8 +235,17 @@ The same steps serve two runs:
 | On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks                                |
 | Migrated already by an earlier 2.x release | Steps 1 to 10 each change nothing and add a line saying the migration is already done; step 11 adds only what that release lacked, the hooks among it |
 
-After upgrading a project the second row describes, run the skill again. Report
-that only the files step 11 lists changed.
+After upgrading a project the second row describes:
+
+1. Run `npx qfai init` without `--force`. It installs the reminder hooks and
+   `.agents/rules/reminders.json`. It leaves the skill copies the earlier
+   release installed as they are, and names them as differing.
+2. Run step 11 of the installed skill, `--dry-run` first:
+   `node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/11-install-entry.mjs`.
+   The script runs the upgraded package, so it brings every shipped skill,
+   this one included, to this release and archives a copy the project edited.
+3. Run the skill again from the start. Report that only the files step 11
+   listed changed.
 
 ## Write boundary
 

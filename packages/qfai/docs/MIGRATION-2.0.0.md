@@ -139,7 +139,15 @@ the reminder hooks `qfai init` installs, in `.claude/settings.json` and
 
 A project already migrated with an earlier 2.x release runs the skill again
 after upgrading. Steps 1 to 10 say the migration is already done and change
-nothing; step 11 adds only what that release lacked, such as the hooks.
+nothing; step 11 adds only what that release lacked, such as the hooks. The
+installed skill is still the earlier release's copy, and plain `qfai init`
+leaves it as it is, so bring it up to date first:
+
+1. Run the locally installed `qfai init` without `--force`. It installs the
+   hooks and `.agents/rules/reminders.json`, and names the older skill copies.
+2. Run step 11 of the installed skill, `--dry-run` first. Its script runs the
+   upgraded package and replaces the older skill copies with this release's.
+3. Then run `/qfai-migration-v1-to-v2` again.
 
 Exit 0 completes a step. Exit 2 refuses before writing; fix the stated input
 or order. Exit 3 completes the step but leaves items in `## For a person`.
