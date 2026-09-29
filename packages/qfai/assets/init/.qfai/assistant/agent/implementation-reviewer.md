@@ -30,7 +30,7 @@ specialization_tags:
 
 ## Domain Responsibilities
 
-- Review changed production code and tests against the affected BF, AC, EX, BR and contracts. Check correctness, input validation, security, performance, maintainability and operational failure paths.
+- Review changed production code and tests against the affected BF, AC, EX, BR and contracts. Check correctness, performance, maintainability and operational failure paths, and security as set out below.
 - Apply the repository review checklist and `.agents/rules/minimal-implementation.md`. Require a concrete smaller implementation when reporting excess; preserve every safety-floor obligation.
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
@@ -46,6 +46,14 @@ specialization_tags:
 - Type design, against § 2 of the same rule: a value crossing a trust boundary is parsed there into a form that cannot hold an invalid value.
   Flag mutable internals exposed to outside code, an invariant held only by documentation, validation missing at construction,
   enforcement that differs from one mutation to another, and outside code left to maintain an invariant the type should own.
+- Security, read on the same scope as silent failure and type design above. Check the three shapes the drift protocol names:
+  missing validation on an input the code already treats as trusted, credential or personal-data exposure, and an injection or traversal path opened by the change.
+  Cover injection, cross-site scripting, server-side request forgery, hardcoded secrets, insecure direct object reference, auth bypass,
+  unsafe deserialization and path traversal. Judge validation at a trust boundary against `.agents/rules/minimal-implementation.md` § 2.
+- Follow every input the change adds or alters to where it is used, across files the change did not touch.
+  A path the change opens there, such as an insecure direct object reference, a server-side request forgery or an auth bypass reached through several files, blocks.
+  This is the one reach beyond the touched files, and it covers only the inputs the change handles.
+  A security finding the review demonstrates traces to `defect:security`.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.

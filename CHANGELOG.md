@@ -299,6 +299,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     are concrete problems, with no rating per check.
   - The `/qfai-implement` row of the reviewer remit table says the same.
 
+- **Review is the detector for a security defect** (#2252). No repository gate
+  scans for a security or data-integrity defect, and the Drift Protocol now
+  says so. It names the implementation reviewer as that class's detector: a
+  finding the reviewer demonstrates traces to `defect:security` and blocks.
+
+  - The reviewer card replaces the single word "security" with concrete
+    checks: the three shapes the protocol names, and injection, cross-site
+    scripting, server-side request forgery, hardcoded secrets, insecure direct
+    object reference, auth bypass, unsafe deserialization and path traversal.
+  - Validation at a trust boundary is judged against the minimal
+    implementation rule.
+  - The check falls under the reviewer's existing scope: the whole of every
+    touched file is read, and only a finding on what the change added or
+    altered blocks.
+  - The reviewer also follows every input the change adds or alters to where
+    it is used, across files the change did not touch. A path the change opens
+    there blocks.
+  - The `/qfai-implement` row of the reviewer remit table names the check.
+
 - **The repository is written in English throughout.** Every Japanese comment,
   message, test description, document and changelog entry is now English, and
   the two language guards hold `packages/qfai/src/**` and `CHANGELOG.md` at
