@@ -12,6 +12,7 @@
 // QFAI:EX-0001-0196-32
 // QFAI:EX-0001-0196-34
 // QFAI:EX-0001-0196-39
+// QFAI:EX-0001-0196-42
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -64,8 +65,8 @@ async function promptMarkers(root: string, rel: string): Promise<unknown[][]> {
 }
 
 /**
- * A structured-question group as a release wrote it into `.claude/settings.json`. No release
- * wrote a Codex hook file, so this stands for a group copied across from the Claude Code settings.
+ * A structured-question group as a release wrote it into `.claude/settings.json`, standing for a
+ * group copied across from the Claude Code settings into the Codex hook file.
  */
 async function claudeStructuredQuestionGroup(): Promise<unknown> {
   const fixture: unknown = JSON.parse(
@@ -180,6 +181,32 @@ describe("the prompt-time reminder hooks", () => {
       const first = await initQuietly(root);
 
       expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(trustLines(first)).toEqual([TRUST_LINE]);
+
+      const second = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(trustLines(second)).toEqual([]);
+    });
+  });
+
+  it("A Codex file an earlier release wrote is brought to this release's, once", async () => {
+    await withEmptyRepo(async (root) => {
+      const templateText = await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8");
+      await seed(
+        root,
+        CODEX,
+        await readFile(
+          path.join(packageRoot, "tests", "fixtures", "codex-hooks", "earlier-hooks.json"),
+          "utf-8",
+        ),
+      );
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toContain("commandWindows");
+
+      const first = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(first).not.toContain("(edited here)");
       expect(trustLines(first)).toEqual([TRUST_LINE]);
 
       const second = await initQuietly(root);

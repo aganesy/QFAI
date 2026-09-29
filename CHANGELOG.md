@@ -4,6 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Codex hooks run under any shell.** Codex runs a hook through the session's
+  shell, which on Windows is often PowerShell rather than `cmd.exe`. Every
+  Codex hook's Windows line used `cmd.exe` syntax, so under PowerShell each one
+  failed and showed no reminder.
+  - Each entry in `.codex/hooks.json` is now one `node -e` line that runs the
+    same under `sh`, `cmd.exe`, Windows PowerShell and PowerShell 7. No entry
+    has a `commandWindows` line any more.
+  - The line finds `.agents/rules/reminders.json` itself, looking upward from
+    where Codex runs it and stopping at the repository root. A project below
+    its git root, as in a monorepo, now gets the reminders from its own
+    `.agents/rules`. Outside a git repository the hook still prints nothing.
+  - `npx qfai init` replaces a `.codex/hooks.json` group that 2.0.0 wrote and
+    nobody edited. A group the project edited is kept and named, as before.
+
 ## [2.0.0] - 2026-09-30
 
 ### Highlights
