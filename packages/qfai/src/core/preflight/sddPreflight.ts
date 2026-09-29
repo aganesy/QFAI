@@ -283,7 +283,7 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
 
   if (!readiness.latestPackDir) {
     blockers.push(
-      "The latest discussion pack was not found (create `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`).",
+      "The latest discussion-pack was not found (create `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`).",
     );
   }
 

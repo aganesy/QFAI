@@ -5,18 +5,18 @@ excludeAgent: "coding-agent"
 
 # Software Engineering Principles Review
 
-Check whether a change is sound against the principles and established theory of software development and design.
-When you find a violation, name the principle it violates and propose an improvement.
+Check whether a change is sound against established software design principles.
+When you find a violation, name the principle and propose an improvement.
 
 ## Basic design principles
 
 ### SOLID
 
-- **SRP (Single Responsibility)**: Is a class, function or module designed so that it changes for more than one reason? Can its responsibility be read unambiguously from its name?
-- **OCP (Open-Closed)**: Can the design be extended without rewriting existing code? Can behaviour be switched through configuration values, dependency injection, the strategy pattern and the like?
-- **LSP (Liskov Substitution)**: Does a derived type or subtype break the contract of its parent? Does it strengthen preconditions or weaken postconditions?
-- **ISP (Interface Segregation)**: Are clients forced to depend on methods they do not use? Are interfaces small and split by role?
-- **DIP (Dependency Inversion)**: Does a high-level module depend directly on a concrete low-level one? Do modules depend on abstractions (interfaces) at their boundaries?
+- **SRP**: Does a class, function or module change for more than one reason? Does its name state its responsibility?
+- **OCP**: Can it be extended without rewriting existing code, through configuration, dependency injection or a strategy?
+- **LSP**: Does a subtype break its parent's contract, by strengthening preconditions or weakening postconditions?
+- **ISP**: Are clients forced to depend on methods they do not use? Are interfaces small and split by role?
+- **DIP**: Does a high-level module depend on a concrete low-level one, rather than on an abstraction at the boundary?
 
 ### How much code — KISS, YAGNI, DRY
 
@@ -36,74 +36,73 @@ Two things the ladder does not decide, which stay a finding here:
 
 ### Separation of Concerns
 
-- Are different concerns, such as business logic, UI, data access and infrastructure, mixed in one module?
+- Are business logic, UI, data access and infrastructure mixed in one module?
 
-### Law of Demeter (Principle of Least Knowledge)
+### Law of Demeter
 
-- Does the code depend on a distant object through a method chain such as `a.getB().getC().doSomething()`?
-- Does an object talk only to its direct collaborators?
+- Does the code reach a distant object through a chain such as `a.getB().getC().doSomething()`?
 
 ### Minimise Coupling / Maximise Cohesion
 
-- Is the coupling between modules unnecessarily high? Is the design one where a change is unlikely to ripple into other modules?
-- Do the elements within a module work together toward the same responsibility (high cohesion)?
+- Is coupling high enough that a change ripples into other modules?
+- Do the elements of a module serve one responsibility?
 
 ### Composition over Inheritance
 
-- Is inheritance used where there is no "is-a" relationship? Should a combination of behaviours be achieved through composition (delegation, mixins) instead?
+- Is inheritance used without an "is-a" relationship? Would composition fit better?
 
 ## Principles of robustness and safety
 
 ### Fail Fast
 
-- Are invalid input and violated preconditions detected at the start of a function, with an error returned immediately?
-- Does the design let an invalid state propagate and cause an obscure failure in later processing?
+- Are invalid input and violated preconditions rejected at the start of a function?
+- Can an invalid state propagate and fail obscurely later?
 
 ### Defensive Programming
 
-- Is there appropriate validation of external input, API responses and user input?
-- Are null/undefined handled safely, and are resources released properly (finally/using)?
+- Are external input, API responses and user input validated?
+- Are null/undefined handled and resources released (finally/using)?
 
 ### Principle of Least Privilege
 
-- Does the code run with the minimum necessary access rights and scope? Does it request excessive privileges?
+- Does the code run with only the access it needs?
 
 ### Design by Contract
 
-- Are a function's preconditions (constraints on arguments), postconditions (guarantees on return values) and invariants clear?
+- Are preconditions, postconditions and invariants clear?
 
 ## Principles of readability and maintainability
 
 ### Principle of Least Astonishment
 
-- Do the names of APIs and functions match their actual behaviour? Can side effects be predicted from the name?
-- Does the code follow the idioms of the language and framework?
+- Do names match behaviour, and can side effects be predicted from them?
+- Does the code follow the idioms of its language and framework?
 
-### Boy Scout Rule (leave it cleaner than you found it)
+### Boy Scout Rule
 
-- Where there is obvious room for improvement around the changed code (naming, type safety, unnecessary code), has it been improved along with the change?
+- Was obvious room for improvement near the change (naming, types, dead code) taken?
 
 ### Avoid Premature Optimization
 
-- Has anything been optimized without measurement? Has an optimization that sacrifices readability been applied outside the bottleneck?
+- Was anything optimized without measurement, or at the cost of readability outside the bottleneck?
 
 ## Principles of behaviour and interfaces
 
 ### Tell, Don't Ask
 
-- Does the code delegate behaviour to an object, rather than querying its internal state from outside and deciding for it?
+- Does the code tell an object what to do, rather than query its state and decide for it?
 
-### Command Query Separation (CQS)
+### Command Query Separation
 
-- Are methods that change state (commands) and methods that return values (queries) mixed?
+- Are state-changing methods and value-returning methods mixed?
 
 ### Encapsulation
 
-- Are internal implementation details exposed to the outside unnecessarily? Is the public API kept to the necessary minimum?
+- Are implementation details exposed? Is the public API the necessary minimum?
 
 ## Notes on applying these principles
 
-- Principles can trade off against each other (DRY vs YAGNI, KISS vs OCP and so on). Weigh the balance in context.
-- Give each violation you report a severity of [MAJOR] or [MINOR], and briefly explain why the principle matters.
+- Principles trade off (DRY vs YAGNI, KISS vs OCP). Weigh the balance in context.
+- Give each violation a severity of [MAJOR] or [MINOR] and briefly say why it matters.
 
 <!-- qfai:language-rules -->
