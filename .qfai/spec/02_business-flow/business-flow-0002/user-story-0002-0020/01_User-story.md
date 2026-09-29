@@ -6,6 +6,6 @@ As a maintainer, I want the repository's own duplicate of the shipped validate w
 
 ## Non-goals
 
-- Repointing the copy at the shipped file, which would resolve to the published package because the root manifest declares no dependency on it.
+- Repointing the copy at the shipped file, which would resolve to the published package because that workflow installs without building, so the workspace link has no binary.
 - Keeping both copies.
 - Deleting the copy before an automated gate covers the shipped set.
