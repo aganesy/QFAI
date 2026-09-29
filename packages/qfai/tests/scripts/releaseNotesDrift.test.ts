@@ -29,7 +29,6 @@ import {
   nextPageUrl,
   releasedSections,
   run,
-  saysItWasCut,
 } from "../../../../scripts/check-release-notes.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");

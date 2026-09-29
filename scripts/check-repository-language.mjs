@@ -24,7 +24,7 @@
  * Exit codes: 0 clean, 1 a forbidden character found, 2 the file list could not
  * be read.
  */
-/* global console, process */
+/* global console, process, TextDecoder */
 import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
