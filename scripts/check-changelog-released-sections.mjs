@@ -53,6 +53,9 @@ import { blobAt, resolveRange } from "./check-shipped-ci-parity.mjs";
 
 const CHANGELOG = "CHANGELOG.md";
 
+/** Hiragana, katakana and CJK ideographs, as escapes so this file holds no raw Japanese. */
+const JAPANESE_TEXT_RE = /[\u3040-\u30ff\u3400-\u9fff]/u;
+
 const REMEDIATION = [
   "A released section may not gain an entry: the release page was built from that",
   "section at its tag and nothing reads the file again, so the entry is in the",
@@ -81,6 +84,14 @@ export function addedEntries(baseChangelog, headChangelog) {
     // A section the base does not carry is the release commit's own, and every
     // entry in it came from `## [Unreleased]` rather than from this change.
     if (had === undefined) continue;
+    // Titles written in Japanese and since translated in place are not
+    // additions, and no title can match across the two languages. For such a
+    // section only the number of entries is compared.
+    if ([...had].some((title) => JAPANESE_TEXT_RE.test(title))) {
+      const extra = titles.size - had.size;
+      if (extra > 0) added.push({ version, gained: [...titles].slice(-extra) });
+      continue;
+    }
     const gained = [...titles].filter((title) => !had.has(title));
     if (gained.length > 0) added.push({ version, gained });
   }
