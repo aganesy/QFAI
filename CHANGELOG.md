@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-30
+
 ### Highlights
 
 - **Breaking: specifications move from spec packs to a story tree.** A project's
