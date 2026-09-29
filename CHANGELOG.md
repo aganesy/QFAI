@@ -6,6 +6,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Codex gets the tool-time reminders too.** `.codex/hooks.json` now carries
+  the reminders Claude Code runs around a tool call, under Codex's own tool
+  names. An existing file gains them through the same merge as before.
+
+  | Reminder               | Codex moment                                                                  |
+  | ---------------------- | ----------------------------------------------------------------------------- |
+  | Documentation clarity  | Before a GitHub MCP post; after an `apply_patch` that adds or changes a `.md` |
+  | Grilling               | Before an `apply_patch`; before `spawn_agent`                                 |
+  | Minimal implementation | After an `apply_patch`                                                        |
+  | API budget             | Before a `Bash` command that names `gh` or `api.github.com`                   |
+
+  The grilling reminder before leaving plan mode stays Claude Code only: Codex
+  has no tool call that leaves plan mode. Every Codex hook, the prompt-time
+  ones included, also runs on Windows through its `cmd.exe` line.
+
 - **Every prompt restates the free-text entry, in Claude Code and in Codex.**
   A host picks a skill from the wording of a request, and may pick another one
   or none. `npx qfai init` now adds a prompt-time hook that says a request
@@ -18,12 +33,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Codex: a new `.codex/hooks.json` with this reminder and the
     structured-question one. An existing file keeps its own groups and gains
     the missing ones; a group the project edited is kept and named; a file init
-    cannot read is left unchanged with a warning. Hooks tied to a tool are not
-    shipped for Codex, whose tool names differ.
+    cannot read is left unchanged with a warning.
   - Each Codex hook finds `.agents/rules/reminders.json` from the repository
-    root, so it works from a subdirectory. Outside a git repository, in a
-    project below its git root (as in a monorepo), or in a shell that does not
-    expand `$(...)`, it finds no message and prints nothing.
+    root, so it works from a subdirectory. Outside a git repository, or in a
+    project below its git root (as in a monorepo), it finds no message and
+    prints nothing.
+  - On Windows, Codex runs each hook's `commandWindows` line through
+    `cmd.exe`. That line finds the repository root with `for /f` over
+    `git rev-parse`, runs the same reader, and always exits 0.
   - `qfai init` neither reads nor writes `.claude/settings.json` or
     `.codex/hooks.json` through a symbolic link on its path; it warns and
     leaves that file alone.

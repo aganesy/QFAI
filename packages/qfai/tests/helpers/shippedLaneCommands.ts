@@ -1508,7 +1508,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // through the session's shell over `$(git rev-parse --show-toplevel)/.agents/rules/reminders.json`;
   // a shell that does not expand `$(...)` names a path that does not exist, and the reader prints
   // nothing. Derived by running `qfai init` into a temp root and hashing what it wrote.
-  [".codex/hooks.json", "fe86567accd2389e36b0de6cb957f65a3252994cc365624f170d6fe3af1f7ef5"],
+  //
+  // Re-pinned for the tool-time groups: four under `PreToolUse` and two under `PostToolUse`,
+  // matched on Codex's tool names. Each runs the same reader over the same path and one message
+  // key; the API-budget and Markdown entries first read the tool call from stdin and print only
+  // when it matches. Every entry also has a `commandWindows` line, which Codex runs through
+  // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
+  // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
+  // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
+  [".codex/hooks.json", "4c710d7ef8eed2214fcceb544c22205a5e836964c6751e937254e17551a8f567"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

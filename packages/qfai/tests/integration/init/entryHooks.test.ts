@@ -1,8 +1,9 @@
 /**
- * Integration: init seeds the prompt-time reminders for Claude Code and Codex, merges them into a
+ * Integration: init seeds the reminder hooks for Claude Code and Codex, merges them into a
  * hook file the project already has, and says once that Codex runs its hooks only once trusted.
  */
 // QFAI:AC-0001-0196-11
+// QFAI:AC-0001-0196-12
 // QFAI:EX-0001-0196-26
 // QFAI:EX-0001-0196-28
 // QFAI:EX-0001-0196-29
@@ -10,6 +11,7 @@
 // QFAI:EX-0001-0196-31
 // QFAI:EX-0001-0196-32
 // QFAI:EX-0001-0196-34
+// QFAI:EX-0001-0196-39
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -156,6 +158,33 @@ describe("the prompt-time reminder hooks", () => {
       const second = await initQuietly(root);
       const after = await Promise.all([CLAUDE, CODEX].map((rel) => readFile(path.join(root, rel))));
       expect(after).toEqual(before);
+      expect(trustLines(second)).toEqual([]);
+    });
+  });
+
+  it("A Codex file with only the prompt-time groups gains the tool-time ones, once", async () => {
+    await withEmptyRepo(async (root) => {
+      const templateText = await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8");
+      const template: unknown = JSON.parse(templateText);
+      const hooks: unknown =
+        typeof template === "object" && template !== null
+          ? Reflect.get(template, "hooks")
+          : undefined;
+      const prompt: unknown =
+        typeof hooks === "object" && hooks !== null
+          ? Reflect.get(hooks, "UserPromptSubmit")
+          : undefined;
+      if (!Array.isArray(prompt)) throw new Error("the shipped Codex file has no prompt groups");
+      await seed(root, CODEX, { hooks: { UserPromptSubmit: prompt } });
+
+      const first = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(trustLines(first)).toEqual([TRUST_LINE]);
+
+      const second = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
       expect(trustLines(second)).toEqual([]);
     });
   });

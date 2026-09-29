@@ -1,5 +1,6 @@
 // QFAI:EX-0001-0196-26
 // QFAI:EX-0001-0196-27
+// QFAI:EX-0001-0196-41
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -8,7 +9,8 @@
  * runs it from the session's directory, which may be below the project root.
  * So its entries find the message file through `git rev-parse`, and are run
  * here through a real shell from a subdirectory, from a project below its git
- * root, and from outside any repository.
+ * root, and from outside any repository: `sh` for `command`, and on Windows
+ * also `cmd.exe /C` for `commandWindows`, which Codex runs there instead.
  */
 
 import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";
@@ -23,6 +25,7 @@ import {
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
+import { CODEX_SHELLS, runCodexLine } from "../helpers/codexHookShells.js";
 import { EXIT_ZERO, spawnCaptured } from "../helpers/spawnCaptured.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -103,9 +106,17 @@ function contextOf(stdout: string): string {
 
 /** What the entry's command prints when `sh` runs it in `cwd`, which must exit 0. */
 async function runThroughShell(entry: Entry, cwd: string): Promise<string> {
-  const result = await spawnCaptured("sh", ["-c", commandOf(entry)], { cwd, input: "{}" });
-  expect(result.outcome, result.stderr).toBe(EXIT_ZERO);
-  return result.stdout;
+  const outputs: string[] = [];
+  for (const shell of CODEX_SHELLS) {
+    const result = await runCodexLine(entry, shell, cwd, "{}");
+    expect(result.outcome, `${shell}: ${result.stderr}`).toBe(EXIT_ZERO);
+    // The Windows line sends git's complaint outside a repository to nul.
+    if (shell === "cmd") expect(result.stderr).toBe("");
+    outputs.push(result.stdout);
+  }
+  // Each shell's line prints the same thing, so one answer stands for all of them.
+  expect(new Set(outputs).size).toBe(1);
+  return outputs[0] ?? "";
 }
 
 describe("the free-text entry reminder", () => {
@@ -145,9 +156,9 @@ describe("the Codex hook file", () => {
     expect(own).toBe(shipped);
   });
 
-  it("carries the two prompt-time reminders and nothing tied to a tool", async () => {
+  it("carries the two prompt-time reminders", async () => {
     const groups = await readGroups(SHIPPED_CODEX);
-    expect([...groups.keys()]).toEqual(["UserPromptSubmit"]);
+    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse"]);
     const markers = (groups.get("UserPromptSubmit") ?? []).map((group) =>
       group.hooks.map((entry) => entry.statusMessage),
     );
@@ -169,6 +180,7 @@ describe("the Codex hook file", () => {
       expect(command.startsWith(`node -e "${reader}" `)).toBe(true);
       expect(command).toContain('"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json"');
       expect(Object.keys(messages)).toContain(command.split(" ").at(-1));
+      expect(entry.commandWindows).toContain(`do @node -e "${reader}" `);
       expect(command).not.toContain("additionalContext");
       expect(entry.timeout).toBeGreaterThan(0);
       expect(entry.timeout).toBeLessThanOrEqual(30);

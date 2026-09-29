@@ -94,8 +94,10 @@ export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
  * Where both the template and the project keep Codex's hook file.
  *
  * It has the same `hooks.<event>` table of groups as the Claude Code settings,
- * so the merge below serves both. Its groups are the prompt-time reminders
- * only: a tool-time group names a tool, and Codex names its tools differently.
+ * so the merge below serves both. Its tool-time groups carry the Claude Code
+ * groups' markers under Codex's own tool names, so a group's identity is the
+ * same in both files. Codex has no tool call that leaves plan mode, so the plan
+ * reminder has no Codex group.
  */
 export const CODEX_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 

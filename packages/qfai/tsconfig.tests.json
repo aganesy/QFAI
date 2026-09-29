@@ -53,6 +53,7 @@
     "tests/assets/changeTypeRecordName.test.ts",
     "tests/assets/changeTypeTagVocabulary.test.ts",
     "tests/assets/clarificationBudget.test.ts",
+    "tests/assets/codexToolHooks.test.ts",
     "tests/assets/completionContractPlaceholderScan.test.ts",
     "tests/assets/completionContractSmokeCheck.test.ts",
     "tests/assets/constitutionFrontMatter.test.ts",
