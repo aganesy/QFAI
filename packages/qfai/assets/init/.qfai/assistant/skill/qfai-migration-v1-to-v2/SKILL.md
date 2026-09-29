@@ -29,6 +29,17 @@ Read `references/migration-guide.md` before changing the project. Run this
 skill from the project root, where `qfai.config.yaml` and a locally installed
 `qfai` package are available. The twelve scripts use the installed package.
 They do not add a `qfai` subcommand or make network calls.
+
+The skill serves two runs, and the steps tell them apart from the project
+itself:
+
+- **A 1.x project.** Every step runs: steps 1 to 10 migrate the spec packs,
+  and step 11 installs the free-text entry and the reminder hooks.
+- **A project an earlier 2.x release migrated.** Steps 1 to 10 each report
+  that the migration is already done and change nothing. Step 11 adds only
+  what that release lacked, such as the reminder hooks. Report that only the
+  files step 11 lists changed.
+
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.
 Use `rule/shared-skill-delegation-baseline.md` to route the declared roles and
@@ -39,7 +50,11 @@ keep authors separate from reviewers.
 1. Inspect the spec packs, contracts, assistant files and configured paths. If
    the project already has the story tree and no migration ID map, run steps 1
    to 10. When steps 1 to 9 list no operation, report that there is nothing to
-   migrate, and continue at item 6. Otherwise write
+   migrate, and continue at item 6. If it has the story tree and the ID map,
+   an earlier run migrated it, whole or in part: run steps 1 to 10 all the
+   same, each with `--dry-run` first. When each says the migration is already
+   done, continue at item 6; otherwise they finish that run, and items 2 to 5
+   apply to their reports. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
    each old business rule's destination contract. Name that contract by its
@@ -68,7 +83,11 @@ keep authors separate from reviewers.
    remaining content in the new tree through `/qfai-sdd`.
 6. After step 10, run steps 11 and 12 in order, each with `--dry-run` followed
    by the real run, and keep their reports as in item 2. Step 11 installs the
-   free-text entry; step 12 checks it and writes nothing.
+   free-text entry and the reminder hooks `qfai init` installs, through the
+   same merge. Do not edit `.claude/settings.json` or `.codex/hooks.json` by
+   hand: relay what step 11 lists under `## Operations` and
+   `## Reminder hooks`, the line about trusting the Codex hooks with `/hooks`
+   included. Step 12 checks the entry and writes nothing.
 7. Resolve every item step 12 lists under `## For a person`. Rerun step 11 for
    an item it installs, and step 10 for an evidence re-include line or an
    `evidence-tracked` item. A `qfai.config.yaml` routing override is the project's,
@@ -98,7 +117,7 @@ keep authors separate from reviewers.
 | 8    | `08-rewrite-annotations.mjs` | Rewrite resolvable test annotations.                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host integration links only.                           |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git.                             |
-| 11   | `11-install-entry.mjs`       | Install skills, host links, entry directive and ignore lines.  |
+| 11   | `11-install-entry.mjs`       | Install skills, links, entry directive, ignores and hooks.     |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that a free-text run can start.        |
 
 Each script is invoked as
@@ -109,9 +128,11 @@ only repairs links. Do not run `npx qfai init --force` during migration.
 
 The scripts print `## Operations` even when empty. Steps 2 through 12 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints
-`## Annotations kept`; step 10 prints `## Git index`. An empty section says `none`. Rerunning a completed step
-must change no file, and an interrupted step can be run again. The complete
-write boundary is in `references/migration-guide.md#write-boundary`.
+`## Annotations kept`; step 10 prints `## Git index`; step 11 prints
+`## Reminder hooks`. An empty section says `none`. Rerunning a completed step
+must change no file, and an interrupted step can be run again. On a project
+whose migration finished, steps 1 to 10 add one line saying it is already done.
+The complete write boundary is in `references/migration-guide.md#write-boundary`.
 
 ### Reviewer Gate
 

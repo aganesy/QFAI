@@ -112,7 +112,7 @@ exit codes. Run the next step only after the preceding one has completed.
 | 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                                       |
 | 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                                       |
 | 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`.              |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host links, entry directive and `.gitignore` block. |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, links, entry directive, `.gitignore` and the hooks. |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.                        |
 
 For example:
@@ -132,7 +132,13 @@ the project changed is moved whole to
 deleted. Step 12 lists under `## For a person` each check
 `npx qfai workflow start` would fail, such as a `qfai.config.yaml` routing
 override that drops a reviewer the defaults require. Rerunning step 11 settles
-what it installs; a routing override is yours to change.
+what it installs; a routing override is yours to change. Step 11 also installs
+the reminder hooks `qfai init` installs, in `.claude/settings.json` and
+`.codex/hooks.json`, through the same merge.
+
+A project already migrated with an earlier 2.x release runs the skill again
+after upgrading. Steps 1 to 10 say the migration is already done and change
+nothing; step 11 adds only what that release lacked, such as the hooks.
 
 Exit 0 completes a step. Exit 2 refuses before writing; fix the stated input
 or order. Exit 3 completes the step but leaves items in `## For a person`.

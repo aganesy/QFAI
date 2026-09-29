@@ -71,8 +71,6 @@ import {
 import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
-  mergeDocumentationClarityHooks,
-  serializeClaudeSettings,
 } from "../../core/claudeCodeHooks.js";
 import {
   ASSISTANT_DIR,
@@ -122,13 +120,22 @@ import {
 import {
   describeError,
   exists,
+  findUnsafeHostFileComponent,
+  findUnsafeWrapperComponent,
   firstLinkedComponent,
   readPinnedRegularFile,
   readPinnedRegularFileBytes,
   readTextFileIfPresent,
   safeLstat,
 } from "../../core/init/fsGuards.js";
-import type { PinnedFileRead } from "../../core/init/fsGuards.js";
+import type { PinnedFileRead, UnsafeComponent } from "../../core/init/fsGuards.js";
+import {
+  CODEX_HOOKS_TRUST_NOTE,
+  keptHookGroupNote,
+  planReminderHooks,
+  reminderHooksUpdateDetail,
+  writeReminderHooks,
+} from "../../core/init/reminderHooks.js";
 import {
   AGENT_INTEGRATION_CONFIGS,
   SKILL_ARCHIVE_DIR,
@@ -779,9 +786,7 @@ export async function runInit(
 
   info(await workflowModeLine(destRoot));
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
-    info(
-      `Codex runs the hooks in ${CODEX_HOOKS_RELATIVE_PATH} only after you review and trust them with /hooks.`,
-    );
+    info(CODEX_HOOKS_TRUST_NOTE);
   }
 
   for (const note of [
@@ -2777,13 +2782,8 @@ async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
  * writes into `.claude/` or `.codex/` is a wrapper another step owns, and the
  * assets guardrail keeps both directories out of the root template so the two
  * never compete for them. These are read directly, beside
- * `.github/instructions/`.
- *
- * So both cases are handled here rather than one here and one in the copy. A
- * project without the file gets the whole template. One that has its own
- * gets the hook groups it lacks, appended after whatever it already declares,
- * and each group an earlier release wrote is replaced where it stands. A group
- * the project edited is kept and named in the output.
+ * `.github/instructions/`, and `planReminderHooks` decides both cases: writing
+ * the file whole, and merging into one the project already had.
  *
  * Every refusal is reported rather than silently absorbed, and none of them ends
  * the run. A reminder is worth less than the rest of what `qfai init` writes, so
@@ -2796,128 +2796,34 @@ async function ensureReminderHooks(
   relativePath: string,
   dryRun: boolean,
 ): Promise<{ copied: string[]; skipped: string[] }> {
-  const segments = relativePath.split("/");
-  const target = path.join(destRoot, ...segments);
-  // Messages below name the constant relative path, never `target`. An absolute
-  // path carries the destination directory's own name, which on an untrusted
-  // repository can hold a newline or an ANSI escape and forge this report's
-  // headings. `report()` prints the absolute paths, through `formatReportPath`.
-  const shown = relativePath;
-
-  const template = await readSettingsText(path.join(assetsRoot, ...segments));
-  if (template.kind !== "text") {
-    const why =
-      template.kind === "absent"
-        ? "the shipped hook template is missing from this install"
-        : `the shipped hook template could not be read (${template.reason})`;
-    error(
-      `  WARNING: ${shown} was left unchanged: ${why}, so the reminder hooks are ` +
-        `not wired up.`,
-    );
+  const target = path.join(destRoot, ...relativePath.split("/"));
+  const plan = await planReminderHooks(assetsRoot, destRoot, relativePath);
+  if (plan.kind === "refused") {
+    error(`  WARNING: ${plan.message}`);
     return { copied: [], skipped: [target] };
   }
-
-  // A symbolic link anywhere on the path, the file itself included and dangling
-  // or not, would carry this read and write out of the project: a checked-in
-  // `.codex -> ~/.codex` is enough to rewrite the user's own hook file.
-  if ((await findUnsafeHostFileComponent(destRoot, segments)) !== undefined) {
-    error(
-      `  WARNING: ${shown} was left unchanged: it, or a directory above it, is a symbolic link ` +
-        `or not a directory, so the reminder hooks are not wired up.`,
-    );
-    return { copied: [], skipped: [target] };
-  }
-
-  const existing = await readSettingsText(target);
-  if (existing.kind === "unreadable") {
-    error(
-      `  WARNING: ${shown} was left unchanged (${existing.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the reminder hooks.`,
-    );
-    return { copied: [], skipped: [target] };
-  }
-  if (existing.kind === "absent") {
+  if (plan.kind === "create") {
     // Booked into `copied` and nothing more: the create-only root copy announces
     // every other seeded file the same way, through the run report alone.
-    if (!dryRun) {
-      await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, template.text, "utf-8");
-    }
+    if (!dryRun) await writeReminderHooks(plan);
     return { copied: [target], skipped: [] };
-  }
-
-  const merged = mergeDocumentationClarityHooks(existing.text, template.text);
-  if (merged.outcome === "unreadable") {
-    error(
-      `  WARNING: ${shown} was left unchanged (${merged.reason}). Copy the \`hooks\` entries from ` +
-        `the shipped template by hand to enable the reminder hooks.`,
-    );
-    return { copied: [], skipped: [target] };
   }
   // Every run, so an edited reminder is never mistaken for one this release wrote.
-  for (const group of merged.edited) {
-    info(`  kept: ${shown} hook group ${group} (edited here)`);
+  for (const group of plan.edited) {
+    info(`  ${keptHookGroupNote(relativePath, group)}`);
   }
-  if (merged.outcome === "already-present") {
+  if (plan.kind === "current") {
     return { copied: [], skipped: [target] };
   }
 
-  const events = merged.events.join(", ");
+  const detail = reminderHooksUpdateDetail(plan.events);
   if (dryRun) {
-    info(`  would update: ${shown} (reminder hooks: ${events})`);
+    info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };
   }
-  await writeFile(target, serializeClaudeSettings(merged.settings), "utf-8");
-  info(`  updated: ${shown} (reminder hooks: ${events}; existing settings kept)`);
+  await writeReminderHooks(plan);
+  info(`  updated: ${relativePath} (${detail}; existing settings kept)`);
   return { copied: [target], skipped: [] };
-}
-
-/**
- * What reading a settings file produced: its text, nothing there, or a fault.
- *
- * `readTextFileIfPresent` collapses the last two into a throw, which is right
- * for a file init must have and wrong for this one. A settings file a
- * permission or a file type keeps this from reading is a file to leave alone
- * and report — not a reason to abandon the rest of an init run.
- */
-type SettingsRead =
-  | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "absent" }
-  | { readonly kind: "unreadable"; readonly reason: string };
-
-/**
- * The component that keeps a file init writes into a host directory, such as
- * a hook file or `.github/copilot-instructions.md`, from being read or
- * written: a directory on its path that is a symbolic link or not a directory,
- * or the file itself when it is a symbolic link, whether its target exists or
- * not. `undefined` when the path is safe.
- */
-async function findUnsafeHostFileComponent(
-  destRoot: string,
-  segments: readonly string[],
-): Promise<UnsafeComponent | undefined> {
-  const parent = segments.slice(0, -1).join("/");
-  const unsafeParent =
-    parent === "" ? undefined : await findUnsafeWrapperComponent(destRoot, parent);
-  if (unsafeParent !== undefined) {
-    return unsafeParent;
-  }
-  const leaf = await safeLstat(path.join(destRoot, ...segments));
-  return leaf?.isSymbolicLink() === true
-    ? { relativePath: segments.join("/"), symlink: true }
-    : undefined;
-}
-
-async function readSettingsText(target: string): Promise<SettingsRead> {
-  try {
-    return { kind: "text", text: await readFile(target, "utf-8") };
-  } catch (err: unknown) {
-    if (isEnoent(err)) {
-      return { kind: "absent" };
-    }
-    const code = hasErrnoCode(err) ? err.code : "read failed";
-    return { kind: "unreadable", reason: code };
-  }
 }
 
 /**
@@ -3676,55 +3582,6 @@ async function createCodexAgentTomls(
   }
 
   return { copied, skipped, removed };
-}
-
-/**
- * A path component init must not write through, relative to the project, and
- * whether it is a symlink (a junction included) or not a directory.
- */
-type UnsafeComponent = { readonly relativePath: string; readonly symlink: boolean };
-
-/**
- * The first component of `relativeDir` under `destRoot` that must not be
- * written through, or `undefined` when the whole chain is safe.
- *
- * `.codex/agents` is a path an untrusted repository controls, and a directory
- * component of it can be a symlink out of the tree — a checked-in
- * `.codex/agents -> /home/user/.config` is enough. `mkdir` follows it,
- * `writeFile` follows it, and `removeSymlinkAt` cannot see it: that guard
- * looks at the leaf `<name>.toml` only. A plain `qfai init` would then write
- * every profile into that external directory and `--force` would let
- * {@link pruneOrphanCodexProfiles} delete files there. So every component is
- * `lstat`-ed before anything is written or removed, and one link anywhere in
- * the chain skips the step whole rather than writing part of it somewhere
- * unexpected.
- *
- * A component that does not exist yet ends the walk: `mkdir` creates real
- * directories, and nothing below an absent parent can exist either.
- *
- * The answer names the component by its path relative to `destRoot`. An
- * absolute path carries the destination directory's own name, which on an
- * untrusted repository can hold a newline or an ANSI escape.
- */
-async function findUnsafeWrapperComponent(
-  destRoot: string,
-  relativeDir: string,
-): Promise<UnsafeComponent | undefined> {
-  const segments = relativeDir.split("/");
-  for (let depth = 1; depth <= segments.length; depth += 1) {
-    const relativePath = segments.slice(0, depth).join("/");
-    const stats = await safeLstat(path.join(destRoot, ...segments.slice(0, depth)));
-    if (stats === undefined) {
-      return undefined;
-    }
-    if (stats.isSymbolicLink()) {
-      return { relativePath, symlink: true };
-    }
-    if (!stats.isDirectory()) {
-      return { relativePath, symlink: false };
-    }
-  }
-  return undefined;
 }
 
 /**

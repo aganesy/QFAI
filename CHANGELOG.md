@@ -4,6 +4,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- The `qfai-migration-v1-to-v2` skill can be run again on a project an earlier
+  2.x release migrated. Steps 1 to 10 then change nothing and say the migration
+  is already done, and step 11 adds only what that release lacked, such as the
+  reminder hooks. A 1.x project still gets every step, the hooks included, in
+  one run.
+
+### Fixed
+
+- A project migrated with the `qfai-migration-v1-to-v2` skill now gets the
+  reminder hooks `qfai init` installs. Step 11 writes them into
+  `.claude/settings.json` and `.codex/hooks.json` through the same merge: a
+  missing file is written from the template, an existing one gains the groups
+  it lacks, and a group the project edited is kept and named under
+  `## Reminder hooks`. When it writes `.codex/hooks.json`, it says that Codex
+  runs those hooks only after they are trusted with `/hooks`.
+
 ## [2.0.0] - 2026-09-30
 
 ### Highlights

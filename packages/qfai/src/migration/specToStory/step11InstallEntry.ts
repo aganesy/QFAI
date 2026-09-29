@@ -12,6 +12,17 @@ import {
   SKILL_INTEGRATION_DIRS,
 } from "../../core/init/integrationDirs.js";
 import { createSkillLink } from "../../core/init/managedLink.js";
+import {
+  CODEX_HOOKS_TRUST_NOTE,
+  keptHookGroupNote,
+  planReminderHooks,
+  reminderHooksUpdateDetail,
+  writeReminderHooks,
+} from "../../core/init/reminderHooks.js";
+import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+} from "../../core/claudeCodeHooks.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
@@ -276,6 +287,40 @@ async function planEntryPoints(context: MigrationContext, plan: StepPlan): Promi
   }
 }
 
+/**
+ * The reminder hooks `qfai init` installs, through the same merge: a missing
+ * hook file is written from the package's template, and one the project has
+ * gains the groups it lacks. A group the project edited is kept and named, and
+ * a file the merge refuses is left for a person.
+ */
+async function planReminderHookFiles(context: MigrationContext, plan: StepPlan): Promise<void> {
+  for (const relativePath of [CLAUDE_SETTINGS_RELATIVE_PATH, CODEX_HOOKS_RELATIVE_PATH]) {
+    const hooks = await planReminderHooks(getInitAssetsDir(), context.root, relativePath);
+    if (hooks.kind === "refused") {
+      plan.forAPerson?.push(hooks.message);
+      continue;
+    }
+    if (hooks.kind !== "create") {
+      for (const group of hooks.edited) {
+        plan.reminderHooks?.push(keptHookGroupNote(relativePath, group));
+      }
+    }
+    if (hooks.kind === "current") continue;
+    plan.operations.push({
+      kind: "delegate",
+      target: relativePath,
+      description:
+        hooks.kind === "create"
+          ? "write from the package's hook template"
+          : `update (${reminderHooksUpdateDetail(hooks.events)}; existing settings kept)`,
+      apply: () => writeReminderHooks(hooks),
+    });
+    if (relativePath === CODEX_HOOKS_RELATIVE_PATH) {
+      plan.reminderHooks?.push(CODEX_HOOKS_TRUST_NOTE);
+    }
+  }
+}
+
 export const step11: MigrationStep = {
   number: 11,
   writeSet: [
@@ -287,15 +332,17 @@ export const step11: MigrationStep = {
     "entry-points",
     "gitignore",
     "gitignore-staging",
+    "reminder-hooks",
   ],
-  sections: ["For a person"],
+  sections: ["Reminder hooks", "For a person"],
   async plan(context) {
-    const plan: StepPlan = { operations: [], forAPerson: [] };
+    const plan: StepPlan = { operations: [], forAPerson: [], reminderHooks: [] };
     const ids = await shippedSkillIds();
     for (const id of ids) await planLayerEntry(context, "skill", id, plan);
     for (const id of await shippedStepIds()) await planLayerEntry(context, "step", id, plan);
     await planLinks(context, ids, plan);
     await planEntryPoints(context, plan);
+    await planReminderHookFiles(context, plan);
     const gitignore = await step10.plan(context);
     plan.operations.push(...gitignore.operations);
     plan.forAPerson?.push(...(gitignore.forAPerson ?? []));

@@ -18,6 +18,10 @@ import path from "node:path";
 
 import { SKILL_ARCHIVE_DIR, SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
 import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+} from "../../core/claudeCodeHooks.js";
+import {
   loadConfig,
   resolvePath,
   WORKFLOW_MODE_MESSAGE,
@@ -44,8 +48,10 @@ export type WriteSetArea =
   | "steps"
   | "step-archive"
   | "skill-links"
-  | "entry-points";
-export type ReportSection = "Cases to examples" | "Git index" | "For a person" | "Annotations kept";
+  | "entry-points"
+  | "reminder-hooks";
+export type ReportSection =
+  "Cases to examples" | "Git index" | "For a person" | "Annotations kept" | "Reminder hooks";
 
 export type MigrationContext = {
   root: string;
@@ -83,6 +89,7 @@ export type StepPlan = {
   forAPerson?: string[];
   casesToExamples?: string[];
   annotationsKept?: string[];
+  reminderHooks?: string[];
   gitIndex?: GitIndexPlan;
 };
 
@@ -513,6 +520,10 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return SKILL_INTEGRATION_DIRS.some((link) => inside(path.join(root, link), target));
     case "entry-points":
       return AGENT_ENTRY_POINT_FILES.some((name) => target === path.join(root, name));
+    case "reminder-hooks":
+      return [CLAUDE_SETTINGS_RELATIVE_PATH, CODEX_HOOKS_RELATIVE_PATH].some(
+        (file) => target === path.join(root, ...file.split("/")),
+      );
   }
 }
 
@@ -1008,6 +1019,8 @@ function sectionItems(section: ReportSection, plan: StepPlan, dryRun: boolean): 
       return gitIndexLines(plan.gitIndex, dryRun);
     case "Annotations kept":
       return plan.annotationsKept ?? [];
+    case "Reminder hooks":
+      return plan.reminderHooks ?? [];
   }
 }
 
@@ -1108,15 +1121,69 @@ async function hasPendingRename(context: MigrationContext): Promise<boolean> {
   return false;
 }
 
-async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
-  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
-  if (await hasPendingRename(context)) return true;
+/** Whether the spec directory still holds a spec pack or the old policy directory. */
+async function hasSpecPackEntries(context: MigrationContext): Promise<boolean> {
   const entries = await readdir(context.specsDir).catch((error: unknown) => {
     if (isEnoent(error)) return [] as string[];
     throw error;
   });
   return entries.some((entry) => entry === "_policies" || /^spec-\d{4}$/.test(entry));
 }
+
+async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
+  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
+  if (await hasPendingRename(context)) return true;
+  return await hasSpecPackEntries(context);
+}
+
+const ALREADY_DONE =
+  "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
+
+/**
+ * Whether an earlier run finished steps 1 to 10 on this tree, so that running
+ * them again would only repeat what they already reported.
+ *
+ * The ID map cannot say so alone: it is what keeps a migration in progress on
+ * the step path once step 4 has moved the spec packs. So the tree also has to
+ * hold no old layout, and none of the ten steps may have an operation, a git
+ * index change, staging to clear, or an item for a person or an annotation to
+ * report. A 1.x project has no ID map, and a migration stopped part way has a
+ * step with work or a report left, so neither reads as finished.
+ *
+ * Step 5's items for a person are the one exception. It reads them from the
+ * archived test-case tables, which never change, so they come back after the
+ * person has settled them in the story tree. They were reported when it first
+ * ran, which was before step 7 retired the last spec pack.
+ *
+ * `current` is planned first, because a migration in progress most often
+ * has work left for the step being run.
+ */
+async function migrationFinished(
+  context: MigrationContext,
+  current: MigrationStepNumber,
+): Promise<boolean> {
+  if (!(await pathExists(path.join(context.root, ID_MAP_PATH)))) return false;
+  if ((await hasPendingRename(context)) || (await hasSpecPackEntries(context))) return false;
+  const others = CONTENT_STEPS.filter((number) => number !== current);
+  for (const number of [current, ...others]) {
+    if ((await staleStageOperations(context, number)).length > 0) return false;
+    let prepared: { plan: StepPlan; operations: MigrationOperation[] };
+    try {
+      prepared = await prepareStep(await loadStep(number), context);
+    } catch (error) {
+      if (isInputFailure(error)) return false;
+      throw error;
+    }
+    const { plan, operations } = prepared;
+    if (operations.length > 0 || plan.gitIndex?.kind === "untrack") return false;
+    if ((plan.annotationsKept?.length ?? 0) > 0) return false;
+    if (number !== 5 && (plan.forAPerson?.length ?? 0) > 0) return false;
+  }
+  return true;
+}
+
+/** The steps that move a project's content, before the free-text entry. */
+const CONTENT_STEPS: readonly MigrationStepNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Promise<0 | 2 | 3> {
   if (!isMigrationStepNumber(step)) {
@@ -1167,6 +1234,11 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
   try {
     const map = await readIdMap(root);
     staleStages = await staleStageOperations(context, step);
+    if (await migrationFinished(context, step)) {
+      const done = renderReport(await loadStep(step), { operations: [] }, [], argv.length === 1);
+      io.stdout.write(`${done}\n${ALREADY_DONE}\n`);
+      return 0;
+    }
     if (!(await hasLegacyEntries(context)) && staleStages.length === 0) {
       const selected = await loadStep(step);
       if (step === 9) {

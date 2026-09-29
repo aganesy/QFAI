@@ -733,6 +733,21 @@ describe("BF-0004 migration examples", () => {
     );
   });
 
+  it("names the run on a 1.x project and the run on a project an earlier 2.x release migrated", async () => {
+    // QFAI:EX-0004-0012-06
+    const skillDir = path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2");
+    for (const file of ["SKILL.md", "references/migration-guide.md"]) {
+      const prose = (await readFile(path.join(skillDir, file), "utf8")).replace(/\s+/g, " ");
+      expect(prose, file).toContain("1.x");
+      expect(prose, file).toContain(
+        "Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks",
+      );
+      expect(prose, file).toContain("an earlier 2.x release");
+      expect(prose, file).toContain("the migration is already done");
+      expect(prose, file).toMatch(/step 11 adds only what that release lacked[^.]*hooks/i);
+    }
+  });
+
   it("reports no operations for all ten steps in an already migrated project", async () => {
     // QFAI:EX-0004-0012-02
     const context = await fixture(

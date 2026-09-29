@@ -55,7 +55,15 @@ const STEP11_WRITE_SET = [
   "AGENTS.md",
   "CLAUDE.md",
   ".gitignore",
+  ".claude/settings.json",
+  ".codex/hooks.json",
 ];
+const HOOK_FILES = [".claude/settings.json", ".codex/hooks.json"] as const;
+const HOOK_WRITES = HOOK_FILES.map((file) => `${file}: write from the package's hook template`);
+const TRUST_CODEX_HOOKS =
+  "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
+const ALREADY_DONE =
+  "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
 const temporary: string[] = [];
 
 type Run = { code: number; output: string; errors: string };
@@ -252,8 +260,59 @@ async function writeLegacyIgnore(root: string): Promise<void> {
   );
 }
 
+/** Reads a file of `root`, or `null` when nothing is there. */
+async function textOrNull(root: string, relative: string): Promise<string | null> {
+  return readFile(path.join(root, relative), "utf8").catch(() => null);
+}
+
+/** Replaces one test annotation with another, spelled so this file declares neither. */
+async function reannotate(root: string, file: string, from: string, to: string): Promise<void> {
+  const target = path.join(root, file);
+  const text = await readFile(target, "utf8");
+  const annotation = ["QFAI", from].join(":");
+  if (!text.includes(annotation)) throw new Error(`${file} has no ${annotation}`);
+  await writeFile(target, text.replace(annotation, ["QFAI", to].join(":")));
+}
+
+type EarlierMigration = { root: string; afterStep7: string };
+
+/**
+ * The tree a migration by an earlier 2.x release leaves: all twelve steps run,
+ * each item they listed for a person settled, and no hook file, since that
+ * release's step 11 wrote none. The fixture's agent links let step 9 repoint
+ * the agent wrappers, as a project `qfai init` set up has them.
+ */
+async function migratedByEarlierRelease(): Promise<EarlierMigration> {
+  const root = await oldProject();
+  for (const [dir, name] of [
+    [".claude/agents", "orchestrator.md"],
+    [".github/agents", "orchestrator.agent.md"],
+  ] as const) {
+    await mkdir(path.join(root, dir), { recursive: true });
+    await symlink(
+      "../../.qfai/assistant/agents/orchestrator.md",
+      path.join(root, dir, name),
+      "file",
+    );
+  }
+  let afterStep7 = "";
+  for (let step = 1; step <= 12; step += 1) {
+    const result = await stepIn(root, step);
+    if (result.code === 2) throw new Error(`Step ${step} refused: ${result.errors}`);
+    if (step === 7) afterStep7 = await clone(root);
+  }
+  await rm(path.join(root, ".qfai/spec/spec-0002"), { recursive: true });
+  const test = "tests/integration/order.test.ts";
+  await reannotate(root, test, "CON-API-0001", "API-0001");
+  await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+  for (const file of HOOK_FILES) await rm(path.join(root, file));
+  return { root, afterStep7 };
+}
+
 let migrated10 = "";
 let migrated11 = "";
+let initialised = "";
+let earlierMigration: Promise<EarlierMigration> | undefined;
 
 beforeAll(async () => {
   migrated10 = await oldProject();
@@ -261,6 +320,8 @@ beforeAll(async () => {
   migrated11 = await clone(migrated10);
   const installed = await stepIn(migrated11, 11);
   if (installed.code !== 0) throw new Error(`Step 11 failed: ${installed.output}`);
+  initialised = await scratch("qfai-init-hooks-");
+  await captureStdout(() => runInit({ dir: initialised, force: false, dryRun: false, yes: true }));
 }, 300_000);
 
 afterAll(async () => {
@@ -771,4 +832,180 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       expect(await fingerprint(root)).toBe(before);
     }
   });
+
+  // QFAI:AC-0004-0013-01
+  it("writes both hook files as qfai init does, and a dry run writes neither", async () => {
+    // QFAI:EX-0004-0013-18
+    const root = await clone(migrated10);
+    for (const file of HOOK_FILES) expect(await textOrNull(root, file), file).toBeNull();
+    const preview = await stepIn(root, 11, ["--dry-run"]);
+    for (const file of HOOK_FILES) expect(await textOrNull(root, file), file).toBeNull();
+    const result = await stepIn(root, 11);
+    expect(result.code).toBe(0);
+    expect(section(preview.output, "Operations")).toEqual(expect.arrayContaining(HOOK_WRITES));
+    expect(section(result.output, "Operations")).toEqual(section(preview.output, "Operations"));
+    expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("merges into the project's settings and keeps a hook group the project edited", async () => {
+    // QFAI:EX-0004-0013-19
+    const template = await readFile(path.join(getInitAssetsDir(), ".claude/settings.json"), "utf8");
+    const settings: unknown = JSON.parse(
+      template.replace('"structured-question"', '"our-own-question"'),
+    );
+    if (!isRecord(settings) || !isRecord(settings.hooks)) throw new Error("no hooks in template");
+    const prompts: unknown = settings.hooks.UserPromptSubmit;
+    if (!Array.isArray(prompts)) throw new Error("no UserPromptSubmit groups in template");
+    settings.hooks.UserPromptSubmit = prompts.filter(
+      (group: unknown) => !JSON.stringify(group).includes("QFAI free-text entry reminder"),
+    );
+    settings.permissions = { allow: ["Bash(ls)"] };
+    const projectSettings = `${JSON.stringify(settings, null, 2)}\n`;
+
+    const root = await clone(migrated10);
+    await put(root, ".claude/settings.json", projectSettings);
+    const byInit = await scratch("qfai-init-merge-");
+    await put(byInit, ".claude/settings.json", projectSettings);
+    await captureStdout(() => runInit({ dir: byInit, force: false, dryRun: false, yes: true }));
+
+    const kept =
+      'kept: .claude/settings.json hook group UserPromptSubmit "QFAI structured-question reminder" (edited here)';
+    const first = await stepIn(root, 11);
+    expect(first.code).toBe(0);
+    expect(section(first.output, "Operations")).toContain(
+      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; existing settings kept)",
+    );
+    expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
+    const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
+    expect(merged).toBe(await readFile(path.join(byInit, ".claude/settings.json"), "utf8"));
+    expect(merged).toContain('"our-own-question"');
+    expect(merged).toContain("QFAI free-text entry reminder");
+    expect(merged).toContain('"Bash(ls)"');
+
+    const before = await fingerprint(root);
+    const again = await stepIn(root, 11);
+    expect(again.code).toBe(0);
+    expect(section(again.output, "Operations")).toEqual([]);
+    expect(section(again.output, "Reminder hooks")).toEqual([kept]);
+    expect(await fingerprint(root)).toBe(before);
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("leaves a linked hook file for a person and still writes the other", async () => {
+    // QFAI:EX-0004-0013-20
+    const root = await clone(migrated10);
+    const outside = path.join(await scratch("qfai-hooks-outside-"), "hooks.json");
+    await writeFile(outside, "{}\n");
+    await mkdir(path.join(root, ".codex"), { recursive: true });
+    await symlink(outside, path.join(root, ".codex/hooks.json"), "file");
+    const result = await stepIn(root, 11);
+    expect(result.code).toBe(3);
+    expect(section(result.output, "For a person")).toEqual([
+      ".codex/hooks.json was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder hooks are not wired up.",
+    ]);
+    expect(section(result.output, "Reminder hooks")).toEqual([]);
+    expect(await readlink(path.join(root, ".codex/hooks.json"))).toBe(outside);
+    expect(await readFile(outside, "utf8")).toBe("{}\n");
+    expect(await textOrNull(root, ".claude/settings.json")).toBe(
+      await textOrNull(initialised, ".claude/settings.json"),
+    );
+  });
+
+  // QFAI:AC-0004-0013-01
+  it("migrates a 1.x project in one run, the reminder hooks included", async () => {
+    // QFAI:EX-0004-0013-21
+    const root = await clone(migrated11);
+    const checked = await stepIn(root, 12);
+    expect(checked.code, checked.output).toBe(0);
+    expect(await lstat(path.join(root, ".qfai/specs")).catch(() => null)).toBeNull();
+    expect(
+      await textOrNull(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
+    ).not.toBeNull();
+    expect(
+      await textOrNull(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+    ).not.toBeNull();
+    expect(await sameAsPackage(root, "qfai-run")).toBe(true);
+    for (const dir of HOST_SKILL_DIRS) {
+      const link = path.join(root, dir, "qfai-run");
+      expect(await linkReaches(link, path.join(root, ".qfai/assistant/skill/qfai-run")), dir).toBe(
+        true,
+      );
+    }
+    expect(
+      (await readFile(path.join(root, "AGENTS.md"), "utf8")).startsWith(`${DIRECTIVE}\n`),
+    ).toBe(true);
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(".qfai/run/\n");
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+  });
+});
+
+describe("migration steps 1 to 12 on a project an earlier 2.x release migrated", () => {
+  function earlierRelease(): Promise<EarlierMigration> {
+    earlierMigration ??= migratedByEarlierRelease();
+    return earlierMigration;
+  }
+
+  // QFAI:AC-0004-0003-04
+  it("says steps 1 to 10 are already done and adds only the hook files", async () => {
+    // QFAI:EX-0004-0003-30
+    const { root } = await earlierRelease();
+    for (const pass of [1, 2]) {
+      const before = await entries(root);
+      for (let step = 1; step <= 12; step += 1) {
+        const preview = await stepIn(root, step, ["--dry-run"]);
+        const result = await stepIn(root, step);
+        expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
+        expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
+        if (step <= 10) {
+          expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `step ${step}`).toBe(true);
+          const items = result.output.split("\n").filter((line) => line.startsWith("- "));
+          expect(items, `step ${step}`).toEqual([]);
+        }
+        if (step === 11) {
+          expect(section(result.output, "Operations")).toEqual(pass === 1 ? HOOK_WRITES : []);
+        }
+      }
+      const changed = changedPaths(before, await entries(root));
+      expect(changed, `pass ${pass}`).toEqual(pass === 1 ? [...HOOK_FILES] : []);
+    }
+    for (const file of HOOK_FILES) {
+      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+    }
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-04
+  it("never reads a 1.x project, a stopped migration or an unreadable plan as finished", async () => {
+    // QFAI:EX-0004-0003-31
+    const { root: finished, afterStep7 } = await earlierRelease();
+    const stopped = await clone(afterStep7);
+    await rm(path.join(stopped, ".qfai/spec/spec-0002"), { recursive: true });
+    const unreadable = await clone(finished);
+    await put(unreadable, ".qfai/evidence/migration-spec-to-story/plan.yaml", "flows: [unclosed\n");
+    const cases: Array<[string, string, number]> = [
+      ["stopped after step 7", stopped, 8],
+      ["1.x", await oldProject(), 1],
+      ["unreadable plan", unreadable, 1],
+    ];
+    for (const [name, root, step] of cases) {
+      const preview = await stepIn(root, step, ["--dry-run"]);
+      const result = await stepIn(root, step);
+      for (const run of [preview, result]) expect(run.output, name).not.toContain(ALREADY_DONE);
+      expect(result.code, name).not.toBe(2);
+      expect(section(result.output, "Operations"), name).toEqual(
+        section(preview.output, "Operations"),
+      );
+      if (name !== "unreadable plan") {
+        expect(section(result.output, "Operations").length, name).toBeGreaterThan(0);
+      }
+    }
+    expect(await readFile(path.join(stopped, "tests/integration/order.test.ts"), "utf8")).toContain(
+      ["QFAI", "EX-0001-0001-03"].join(":"),
+    );
+  }, 300_000);
 });
