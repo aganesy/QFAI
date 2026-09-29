@@ -403,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "a94c35cfa34e816b",
+        "Verify the toolchain action before running it": "b03e4f6b3572f361",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e12ec93ff4a1be75",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "789e930d0d948215",
@@ -411,7 +411,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4ee4a3dec81d6bdd",
         "QFAI self-validate this repo (dogfooding — full profile)": "a27f5d778a1f4a42",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "1a94e9dd64dc07f8",
+        "Run lint gate": "ea147bf3990e853c",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
