@@ -7,8 +7,8 @@
  * Codex takes one command string rather than a program and its arguments, and
  * runs it from the session's directory, which may be below the project root.
  * So its entries find the message file through `git rev-parse`, and are run
- * here through a real shell from a subdirectory and from outside any
- * repository.
+ * here through a real shell from a subdirectory, from a project below its git
+ * root, and from outside any repository.
  */
 
 import { copyFile, mkdir, mkdtemp, readFile } from "node:fs/promises";

@@ -7,9 +7,21 @@
 // QFAI:EX-0001-0196-01
 // QFAI:EX-0001-0196-02
 // QFAI:EX-0001-0196-03
+// QFAI:EX-0001-0196-33
+// QFAI:EX-0001-0196-35
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, readdir, realpath } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -120,5 +132,114 @@ describe("the workflow entry install set", () => {
       await expectWrappersResolve(root);
       expect(await otherSkillDigests(root)).toEqual(before);
     });
+  });
+});
+
+/** Links `at` to `outside`; false where the platform cannot make the link. */
+async function linkOutside(outside: string, at: string): Promise<boolean> {
+  try {
+    await symlink(outside, at, process.platform === "win32" ? "junction" : "dir");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+describe("a host directory reached through a link", () => {
+  it("A linked `.codex` gets nothing, and the run completes", async (ctx) => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-outside-"));
+    try {
+      await withEmptyRepo(async (root) => {
+        if (!(await linkOutside(outside, path.join(root, ".codex")))) ctx.skip();
+
+        const output = await initQuietly(root);
+
+        expect(await readdir(outside)).toEqual([]);
+        expect(output).toContain(
+          "skip: .codex/skills is under .codex, which is a symlink, so nothing is written there",
+        );
+        expect(await readdir(path.join(root, ".claude", "skills"))).toEqual(
+          expect.arrayContaining(ENTRY_SKILLS),
+        );
+      });
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("A `.codex/skills` file is kept, and the run completes", async () => {
+    await withEmptyRepo(async (root) => {
+      await mkdir(path.join(root, ".codex"));
+      await writeFile(path.join(root, ".codex", "skills"), "kept\n", "utf-8");
+
+      const output = await initQuietly(root);
+
+      expect(await readFile(path.join(root, ".codex", "skills"), "utf-8")).toBe("kept\n");
+      expect(output).toContain(
+        "skip: .codex/skills is not a directory, so nothing is written there",
+      );
+      expect(await readdir(path.join(root, ".claude", "skills"))).toEqual(
+        expect.arrayContaining(ENTRY_SKILLS),
+      );
+    });
+  });
+
+  it("--force keeps the wrappers behind a linked `.claude` or `.github`", async (ctx) => {
+    const claudeOutside = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-outside-"));
+    const githubOutside = await mkdtemp(path.join(os.tmpdir(), "qfai-github-outside-"));
+    // Each carries the delegation line an earlier release wrote, so a prune that enumerated the
+    // linked directory would read all three as its own and delete them.
+    const wrappers = new Map([
+      [
+        path.join(claudeOutside, "commands", "qfai-spec.md"),
+        "@.qfai/assistant/skill/qfai-spec/SKILL.md\n",
+      ],
+      [
+        path.join(claudeOutside, "skills", "qfai-spec", "SKILL.md"),
+        "- .qfai/assistant/skill/qfai-spec/SKILL.md\n",
+      ],
+      [
+        path.join(githubOutside, "prompts", "qfai-spec.prompt.md"),
+        "- .qfai/assistant/skill/qfai-spec/SKILL.md\n",
+      ],
+    ]);
+    try {
+      await withEmptyRepo(async (root) => {
+        await initQuietly(root);
+        for (const [file, body] of wrappers) {
+          await mkdir(path.dirname(file), { recursive: true });
+          await writeFile(file, body, "utf-8");
+        }
+        const links = new Map([
+          [".claude", claudeOutside],
+          [".github", githubOutside],
+        ]);
+        for (const [dir, outside] of links) {
+          await rm(path.join(root, dir), { recursive: true, force: true });
+          if (!(await linkOutside(outside, path.join(root, dir)))) ctx.skip();
+        }
+
+        const output = await initQuietly(root, true);
+
+        for (const [file, body] of wrappers) {
+          expect(await readFile(file, "utf-8")).toBe(body);
+        }
+        expect(await readdir(path.join(claudeOutside, "skills"))).toEqual(["qfai-spec"]);
+        expect(await readdir(claudeOutside)).not.toContain("agents");
+        const github = await readdir(githubOutside);
+        for (const name of ["copilot-instructions.md", "skills", "agents"]) {
+          expect(github).not.toContain(name);
+        }
+        expect(output).toContain(
+          "skip: .github/copilot-instructions.md is under .github, which is a symlink, so nothing is written there",
+        );
+        await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
+          "qfai-run",
+        );
+      });
+    } finally {
+      await rm(claudeOutside, { recursive: true, force: true });
+      await rm(githubOutside, { recursive: true, force: true });
+    }
   });
 });
