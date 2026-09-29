@@ -17,6 +17,7 @@ export {
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
+  validateTechArchitecture,
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
