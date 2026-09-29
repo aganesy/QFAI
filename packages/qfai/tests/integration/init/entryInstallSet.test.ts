@@ -146,7 +146,7 @@ async function linkOutside(outside: string, at: string): Promise<boolean> {
 }
 
 describe("a host directory reached through a link", () => {
-  it("A linked `.codex` or a `.codex/skills` file gets nothing, and the run completes", async (ctx) => {
+  it("A linked `.codex` gets nothing, and the run completes", async (ctx) => {
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-outside-"));
     try {
       await withEmptyRepo(async (root) => {
@@ -156,7 +156,7 @@ describe("a host directory reached through a link", () => {
 
         expect(await readdir(outside)).toEqual([]);
         expect(output).toContain(
-          "skip: .codex/skills (.codex is a symlink, so it cannot be used as an output location)",
+          "skip: .codex/skills is under .codex, which is a symlink, so nothing is written there",
         );
         expect(await readdir(path.join(root, ".claude", "skills"))).toEqual(
           expect.arrayContaining(ENTRY_SKILLS),
@@ -165,7 +165,9 @@ describe("a host directory reached through a link", () => {
     } finally {
       await rm(outside, { recursive: true, force: true });
     }
+  });
 
+  it("A `.codex/skills` file is kept, and the run completes", async () => {
     await withEmptyRepo(async (root) => {
       await mkdir(path.join(root, ".codex"));
       await writeFile(path.join(root, ".codex", "skills"), "kept\n", "utf-8");
@@ -173,7 +175,9 @@ describe("a host directory reached through a link", () => {
       const output = await initQuietly(root);
 
       expect(await readFile(path.join(root, ".codex", "skills"), "utf-8")).toBe("kept\n");
-      expect(output).toContain("skip: .codex/skills (.codex/skills is not a directory)");
+      expect(output).toContain(
+        "skip: .codex/skills is not a directory, so nothing is written there",
+      );
       expect(await readdir(path.join(root, ".claude", "skills"))).toEqual(
         expect.arrayContaining(ENTRY_SKILLS),
       );
@@ -226,7 +230,9 @@ describe("a host directory reached through a link", () => {
         for (const name of ["copilot-instructions.md", "skills", "agents"]) {
           expect(github).not.toContain(name);
         }
-        expect(output).toContain("skip: .github/copilot-instructions.md");
+        expect(output).toContain(
+          "skip: .github/copilot-instructions.md is under .github, which is a symlink, so nothing is written there",
+        );
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
           "qfai-run",
         );

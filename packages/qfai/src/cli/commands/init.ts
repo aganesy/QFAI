@@ -2820,7 +2820,7 @@ async function ensureReminderHooks(
   // A symbolic link anywhere on the path, the file itself included and dangling
   // or not, would carry this read and write out of the project: a checked-in
   // `.codex -> ~/.codex` is enough to rewrite the user's own hook file.
-  if (await hostFilePathIsUnsafe(destRoot, segments)) {
+  if ((await findUnsafeHostFileComponent(destRoot, segments)) !== undefined) {
     error(
       `  WARNING: ${shown} was left unchanged: it, or a directory above it, is a symbolic link ` +
         `or not a directory, so the reminder hooks are not wired up.`,
@@ -2886,22 +2886,26 @@ type SettingsRead =
   | { readonly kind: "unreadable"; readonly reason: string };
 
 /**
- * Whether a file init writes into a host directory, such as a hook file or
- * `.github/copilot-instructions.md`, must not be read or written: a directory
- * on it is a symbolic link or not a directory, or the file itself is a
- * symbolic link, whether its target exists or not. The answer is a boolean so
- * the caller's message can name the relative path rather than the absolute
- * one.
+ * The component that keeps a file init writes into a host directory, such as
+ * a hook file or `.github/copilot-instructions.md`, from being read or
+ * written: a directory on its path that is a symbolic link or not a directory,
+ * or the file itself when it is a symbolic link, whether its target exists or
+ * not. `undefined` when the path is safe.
  */
-async function hostFilePathIsUnsafe(
+async function findUnsafeHostFileComponent(
   destRoot: string,
   segments: readonly string[],
-): Promise<boolean> {
+): Promise<UnsafeComponent | undefined> {
   const parent = segments.slice(0, -1).join("/");
-  if (parent !== "" && (await findUnsafeWrapperComponent(destRoot, parent)) !== undefined) {
-    return true;
+  const unsafeParent =
+    parent === "" ? undefined : await findUnsafeWrapperComponent(destRoot, parent);
+  if (unsafeParent !== undefined) {
+    return unsafeParent;
   }
-  return (await safeLstat(path.join(destRoot, ...segments)))?.isSymbolicLink() === true;
+  const leaf = await safeLstat(path.join(destRoot, ...segments));
+  return leaf?.isSymbolicLink() === true
+    ? { relativePath: segments.join("/"), symlink: true }
+    : undefined;
 }
 
 async function readSettingsText(target: string): Promise<SettingsRead> {
@@ -3347,10 +3351,14 @@ async function syncIntegrationWrappers(
   // Step 2: Write copilot-instructions.md as regular file (with updated references)
   const copilotDest = path.join(destRoot, ".github", "copilot-instructions.md");
   const copilotExists = await exists(copilotDest);
-  if (copilotExists && !options.force) {
+  const keepCopilot = copilotExists && !options.force;
+  const copilotUnsafe = keepCopilot
+    ? undefined
+    : await findUnsafeHostFileComponent(destRoot, COPILOT_INSTRUCTIONS_ENTRY.split("/"));
+  if (keepCopilot) {
     skipped.push(copilotDest);
-  } else if (await hostFilePathIsUnsafe(destRoot, COPILOT_INSTRUCTIONS_ENTRY.split("/"))) {
-    info(`  skip: ${COPILOT_INSTRUCTIONS_ENTRY} (it, or .github, is a symlink or not a directory)`);
+  } else if (copilotUnsafe !== undefined) {
+    info(describeSkippedPath(COPILOT_INSTRUCTIONS_ENTRY, copilotUnsafe));
     skipped.push(copilotDest);
   } else {
     copied.push(copilotDest);
@@ -3565,8 +3573,21 @@ async function skipsLinkedHostDir(destRoot: string, relativeDir: string): Promis
   if (unsafeComponent === undefined) {
     return false;
   }
-  info(`  skip: ${relativeDir} (${unsafeComponent})`);
+  info(describeSkippedPath(relativeDir, unsafeComponent));
   return true;
+}
+
+/**
+ * The report line for a path init skipped. It says only what this step left
+ * alone, because another step may still write elsewhere under the same link.
+ */
+function describeSkippedPath(skipped: string, unsafe: UnsafeComponent): string {
+  const kind = unsafe.symlink ? "a symlink" : "not a directory";
+  const where =
+    unsafe.relativePath === skipped
+      ? `${skipped} is ${kind}`
+      : `${skipped} is under ${unsafe.relativePath}, which is ${kind}`;
+  return `  skip: ${where}, so nothing is written there`;
 }
 
 /**
@@ -3658,6 +3679,12 @@ async function createCodexAgentTomls(
 }
 
 /**
+ * A path component init must not write through, relative to the project, and
+ * whether it is a symlink (a junction included) or not a directory.
+ */
+type UnsafeComponent = { readonly relativePath: string; readonly symlink: boolean };
+
+/**
  * The first component of `relativeDir` under `destRoot` that must not be
  * written through, or `undefined` when the whole chain is safe.
  *
@@ -3682,19 +3709,19 @@ async function createCodexAgentTomls(
 async function findUnsafeWrapperComponent(
   destRoot: string,
   relativeDir: string,
-): Promise<string | undefined> {
+): Promise<UnsafeComponent | undefined> {
   const segments = relativeDir.split("/");
   for (let depth = 1; depth <= segments.length; depth += 1) {
-    const shown = segments.slice(0, depth).join("/");
+    const relativePath = segments.slice(0, depth).join("/");
     const stats = await safeLstat(path.join(destRoot, ...segments.slice(0, depth)));
     if (stats === undefined) {
       return undefined;
     }
     if (stats.isSymbolicLink()) {
-      return `${shown} is a symlink, so it cannot be used as an output location`;
+      return { relativePath, symlink: true };
     }
     if (!stats.isDirectory()) {
-      return `${shown} is not a directory`;
+      return { relativePath, symlink: false };
     }
   }
   return undefined;
