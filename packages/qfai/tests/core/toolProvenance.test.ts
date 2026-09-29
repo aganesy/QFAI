@@ -32,6 +32,19 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
   }
 }
 
+/**
+ * A directory link at `at`, or `false` where this filesystem cannot make one.
+ * A junction on Windows needs no privilege; elsewhere the type is ignored.
+ */
+async function tryLink(target: string, at: string): Promise<boolean> {
+  try {
+    await symlink(target, at, "junction");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 describe("resolveToolPackageDir", () => {
   it("names the directory holding the package manifest, not the bin shim", async () => {
     // The operand the issue proposed was `process.argv[1]`, which under a real
@@ -169,6 +182,27 @@ describe("classifyToolLocation", () => {
   it("does not read a directory merely containing the word as an install", () => {
     const lookalike = at("elsewhere", "node_modules_migration", "qfai");
     expect(classifyToolLocation(at("proj"), lookalike)).toBe(false);
+  });
+
+  it("reports a workspace link reached through a node_modules outside the project", () => {
+    // QFAI:EX-0001-0039-14
+    // A worktree with no `node_modules` of its own inherits the main checkout's,
+    // whose `qfai` is a workspace link to that checkout's source.
+    const root = at("repo", ".claude", "worktrees", "w");
+    const source = at("repo", "packages", "qfai");
+    expect(classifyToolLocation(root, source, at("repo", "node_modules"))).toBe(true);
+    // A worktree whose `node_modules` is itself a link to another checkout's.
+    expect(
+      classifyToolLocation(at("wt"), at("main", "packages", "qfai"), at("main", "node_modules")),
+    ).toBe(true);
+  });
+
+  it("stays quiet for a link in the project's own node_modules", () => {
+    // QFAI:EX-0001-0039-14
+    // The project chose where its own `node_modules/qfai` points, as `npm link` does.
+    expect(classifyToolLocation(at("proj"), at("src", "qfai"), at("proj", "node_modules"))).toBe(
+      false,
+    );
   });
 });
 
@@ -327,6 +361,64 @@ describe("locateToolAgainstProject", () => {
       await symlink(packageDir, link, "junction");
       const viaLink = await locateToolAgainstProject(link);
       expect(viaLink?.outside).toBe(false);
+    });
+  });
+
+  it("reports a project whose node_modules links to another checkout's", async (ctx) => {
+    // QFAI:EX-0001-0039-14
+    // The worktree case: `other/node_modules/qfai` is the workspace link to the
+    // running package, and the project's `node_modules` is a link to it.
+    await withTempDir(async (dir) => {
+      const packageDir = String(await resolveToolPackageDir());
+      const otherModules = path.join(dir, "other", "node_modules");
+      const root = path.join(dir, "project");
+      await mkdir(otherModules, { recursive: true });
+      await mkdir(root, { recursive: true });
+      const linked =
+        (await tryLink(packageDir, path.join(otherModules, "qfai"))) &&
+        (await tryLink(otherModules, path.join(root, "node_modules")));
+      if (!linked) ctx.skip();
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "p", devDependencies: { qfai: "workspace:*" } }),
+        "utf-8",
+      );
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(true);
+      expect(located?.declaredElsewhere).toBe(true);
+    });
+  });
+
+  it("reports a project below a directory whose node_modules links to the package", async (ctx) => {
+    // QFAI:EX-0001-0039-14
+    await withTempDir(async (dir) => {
+      const packageDir = String(await resolveToolPackageDir());
+      const root = path.join(dir, "project");
+      await mkdir(path.join(dir, "node_modules"), { recursive: true });
+      await mkdir(root, { recursive: true });
+      if (!(await tryLink(packageDir, path.join(dir, "node_modules", "qfai")))) ctx.skip();
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(true);
+      expect(located?.declaredElsewhere).toBe(false);
+    });
+  });
+
+  it("stays quiet for a link in the project's own node_modules", async (ctx) => {
+    // QFAI:EX-0001-0039-14
+    await withTempDir(async (root) => {
+      const packageDir = String(await resolveToolPackageDir());
+      await mkdir(path.join(root, "node_modules"), { recursive: true });
+      if (!(await tryLink(packageDir, path.join(root, "node_modules", "qfai")))) ctx.skip();
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ name: "p", devDependencies: { qfai: "^2.0.0" } }),
+        "utf-8",
+      );
+
+      const located = await locateToolAgainstProject(root);
+      expect(located?.outside).toBe(false);
     });
   });
 

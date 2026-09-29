@@ -343,15 +343,17 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         `This project declares qfai as a dependency, but the copy that is running is a ` +
           `different one at ${located.packageDir}. It was resolved from outside the ` +
           `directory the declaration points to, so this project's lockfile does not decide ` +
-          `which version gated the run. npx searched for the bare name up the parent ` +
-          `directories, and it is running either the qfai of another checkout ` +
-          `(another branch or lockfile) or a qfai@latest that npx fetched silently.`,
+          `which version gated the run. It is running either the qfai of another checkout ` +
+          `(another branch or lockfile), reached through a parent directory's node_modules ` +
+          `or a node_modules that links to that checkout, or a qfai@latest that npx fetched ` +
+          `silently.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "Run `npm ci` / `pnpm install` in this working tree, then run again. " +
+        "Unlink a node_modules that is a link to another checkout, run `npm ci` / " +
+          "`pnpm install` in this working tree, then run again. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",

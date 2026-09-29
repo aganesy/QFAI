@@ -1114,6 +1114,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` reports a qfai reached through a link to another
+  checkout** (#2674). A workspace dependency makes `node_modules/qfai` a link
+  to a source checkout, so the package that runs sits outside every
+  `node_modules` directory and was not reported. It is now reported when that
+  link is in the `node_modules` of a directory above the project, or in a
+  project `node_modules` that is itself a link to another checkout's.
+  `QFAI-TOOL-002` reports it at error where the project declares qfai, and
+  `QFAI-TOOL-001` at info where it does not. A link in the project's own
+  `node_modules`, as `npm link` makes, is still not reported.
+
 - **A route that ends without a specification stage no longer writes
   `DESIGN.md`.** The discussion stage writes only its own records;
   `/qfai-sdd` writes `DESIGN.md` for a UI-bearing flow. A route proposal
