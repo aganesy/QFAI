@@ -145,9 +145,9 @@ describe("the Codex hook file", () => {
     expect(own).toBe(shipped);
   });
 
-  it("carries the two prompt-time reminders and nothing tied to a tool", async () => {
+  it("carries the two prompt-time reminders", async () => {
     const groups = await readGroups(SHIPPED_CODEX);
-    expect([...groups.keys()]).toEqual(["UserPromptSubmit"]);
+    expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse"]);
     const markers = (groups.get("UserPromptSubmit") ?? []).map((group) =>
       group.hooks.map((entry) => entry.statusMessage),
     );

@@ -21,6 +21,82 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__github__(create_pull_request|update_pull_request|issue_write|add_issue_comment|pull_request_review_write|add_comment_to_pending_review|add_reply_to_pull_request_comment)",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-before-post",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" grilling-design-artifact",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "spawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: delegation",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" grilling-delegation",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI api-budget reminder",
+            "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/(?<![\\w.-])gh(?![\\w.-])|api\\.github\\.com/.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" api-budget",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Add File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-after-write",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const c=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof c==='string'&&/^\\*\\*\\* Update File: .*\\.md\\r?\\n/m.test(c)){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" documentation-clarity-after-edit",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI minimal-implementation reminder",
+            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" minimal-implementation",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
