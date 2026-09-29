@@ -19,5 +19,5 @@ Feature: Policy and contract layers
     Then it holds `contracts.md`, `tech.md` and the directories `api/`, `db/`, `ui/` and `cli/`
     And `contracts.md` lists every contract file under those directories
     And the quality-gate commands appear only in the `## Standard commands (copy-paste)` section of `tech.md`
-    And `tech.md` names the layers of the code under `## Architecture`, each with the layers it may import from
+    And `tech.md` draws the layers of the code under `## Architecture` as one flowchart, then lists them from the uppermost down, each with the layers below it that it may import from
 ```

@@ -172,7 +172,9 @@ globs and the Standard commands in `03_contract/tech.md` to match the
 project's test layout. Step 3 moves the old structure catalog's entrypoints
 to Skeleton lines in `tech.md`, its layer table to the Architecture
 section of `tech.md` and its UI surface paths to `uiux.surfacePaths` in
-`qfai.config.yaml`, and lists the rest for a person.
+`qfai.config.yaml`, and lists the rest for a person. The layers are drawn as
+a diagram and their rows ordered from the uppermost layer down; a layer
+table that cannot be ordered is listed for a person instead.
 
 ## Roll back or resume
 

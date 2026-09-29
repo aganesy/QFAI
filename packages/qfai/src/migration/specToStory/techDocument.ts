@@ -1,5 +1,11 @@
 import { parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import {
+  architectureDiagram,
+  dependsOnCell,
+  orderLayers,
+  type ArchitectureLayer,
+} from "../../core/storyTree/architecture.js";
+import {
   addUnique,
   listItems,
   renderTemplate,
@@ -115,10 +121,17 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
   return person;
 }
 
+const layerOf = (row: string[]): ArchitectureLayer => ({
+  name: row[0] ?? "",
+  dependsOn: dependsOnCell(row[2] ?? ""),
+});
+
 /**
  * Moves an old architecture section into the `## Architecture` table of the `tech.md` draft
  * when it is one table of layers: a Layer, a Responsibility and a Depends on column, with no
- * path or file name in a row. Returns what a person has to do otherwise.
+ * path or file name in a row. The rows are ordered from the uppermost layer down; when they
+ * cannot be, because a layer has two rows, depends on one with no row, or depends on
+ * itself through others, none of them moves. Returns what a person has to do otherwise.
  */
 export function moveArchitectureSection(draft: PolicyDraft, section: PolicySection): string[] {
   const table = tableRows(section.body, ARCHITECTURE_COLUMNS);
@@ -135,7 +148,23 @@ export function moveArchitectureSection(draft: PolicyDraft, section: PolicySecti
       );
     else rows.push(row);
   }
-  addUnique(draft.rows, ARCHITECTURE, rows, sameRow);
+  const merged = [...(draft.rows.get(ARCHITECTURE) ?? [])];
+  for (const row of rows) if (!merged.some((entry) => sameRow(entry, row))) merged.push(row);
+  const order = orderLayers(merged.map(layerOf));
+  if (typeof order === "string") {
+    person.push(
+      `${draft.target} ## ${ARCHITECTURE}: order the layers of "## ${section.heading}" in ${section.source} from the uppermost down by hand, since ${order} (kept at ${section.archive})`,
+    );
+    return person;
+  }
+  const rowOf = new Map(merged.map((row) => [row[0] ?? "", row]));
+  draft.rows.set(
+    ARCHITECTURE,
+    order.flatMap(({ name }) => {
+      const row = rowOf.get(name);
+      return row === undefined ? [] : [row];
+    }),
+  );
   return person;
 }
 
@@ -194,8 +223,8 @@ const commandLabel = (item: string): string => /^- ([^:\n]+):/.exec(item)?.[1] ?
 
 /**
  * `tech.md` as its template gives it, with each Stack row and each command the draft
- * holds in place of the template's item of the same name, and the draft's layers and
- * dependencies in place of the template's.
+ * holds in place of the template's item of the same name, and the draft's layers, drawn
+ * and listed, and its dependencies in place of the template's.
  */
 export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
   return renderTemplate("03_contract/tech.md", (title, templateBody) => {
@@ -210,7 +239,9 @@ export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
     }
     if (title === ARCHITECTURE) {
       const rows = draft.rows.get(ARCHITECTURE) ?? [];
-      return rows.length === 0 ? templateBody : tableText(ARCHITECTURE_COLUMNS, rows);
+      if (rows.length === 0) return templateBody;
+      const diagram = architectureDiagram(rows.map(layerOf));
+      return `${diagram}\n\n${tableText(ARCHITECTURE_COLUMNS, rows)}`;
     }
     if (title === DEPENDENCIES) return draft.lists.get(DEPENDENCIES)?.join("\n") ?? templateBody;
     if (title === COMMANDS) {

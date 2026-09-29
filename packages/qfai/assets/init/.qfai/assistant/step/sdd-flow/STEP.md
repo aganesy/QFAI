@@ -52,8 +52,14 @@ states.
 
    Write `## Architecture` from the technical decisions the discussion pack
    records and, in an existing codebase, from its module layout and import
-   directions: one row per layer, what it is responsible for, and the layers
-   it may import from, or `-`. Name layers, never paths. `/qfai-implement`
+   directions. A layer is a group of modules with a dependency direction: an
+   upper layer may use the layers below it, and a lower layer never knows an
+   upper one. Draw the layers first, as one `mermaid` `flowchart TD` with a
+   node per layer and an `Upper --> Lower` edge per dependency. Then list them
+   in the table, one row per layer from the uppermost down: what it is
+   responsible for, and the layers below it that it uses, or `-`. Depends on
+   points only downward, and the diagram and the table name the same layers
+   and edges. Name layers, never paths. `/qfai-implement`
    places new code by this table and the reviewers judge a change against it:
    a new module belongs to one layer and imports only from the layers its row
    lists. Add a layer when a contract needs one; a layer boundary never goes

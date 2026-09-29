@@ -472,8 +472,11 @@ describe("the technology document holds only its three sections, each in its sha
     ],
   ];
 
-  /** The template's one layer row, which each Architecture case rewrites. */
-  const LAYER_ROW = /^\| <layer name> .*$/m;
+  /** The template's lowest layer row, which each Architecture case rewrites. */
+  const LAYER_ROW = /^\| <lower layer> .*$/m;
+  /** The template's diagram, and its table, each with the blank line after it. */
+  const DIAGRAM = /```mermaid\n[^`]*```\n\n/;
+  const TABLE = /\| Layer [^#]*\n\n/;
   const ARCHITECTURE = "## Architecture\n\n";
 
   /** An Architecture table the schema refuses, and the finding it reports. */
@@ -485,7 +488,22 @@ describe("the technology document holds only its three sections, each in its sha
     ],
     [
       "an Architecture table with no layer row",
-      (text) => text.replace(/^\| <layer name> .*\n/m, ""),
+      (text) => text.replace(/^\| <(?:upper|lower) layer> .*\n/gm, ""),
+      "[forbidden-text]",
+    ],
+    ["no diagram", (text) => text.replace(DIAGRAM, ""), "[codeblock]"],
+    [
+      "the table before the diagram",
+      (text) => {
+        const diagram = DIAGRAM.exec(text)?.[0] ?? "";
+        const table = TABLE.exec(text)?.[0] ?? "";
+        return text.replace(`${diagram}${table}`, `${table}${diagram}`);
+      },
+      "[forbidden-text]",
+    ],
+    [
+      "prose between the diagram and the table",
+      (text) => text.replace("```\n\n| Layer", "```\n\nThe layers.\n\n| Layer"),
       "[forbidden-text]",
     ],
     [
@@ -541,10 +559,16 @@ describe("the technology document holds only its three sections, each in its sha
 
   it("accepts layers that name the layers each imports from, and a slash between words", () => {
     // QFAI:EX-0001-0006-07
-    const template = readFileSync(TECH_TEMPLATE, "utf-8").replace(
-      LAYER_ROW,
-      "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX and HTTP/gRPC helpers | - |",
-    );
+    const template = readFileSync(TECH_TEMPLATE, "utf-8")
+      .replace(
+        DIAGRAM,
+        "```mermaid\nflowchart TD\n  CLI --> Core\n  CLI --> Shared\n  Core --> Shared\n```\n\n",
+      )
+      .replace(/^\| <upper layer> .*\n/m, "")
+      .replace(
+        LAYER_ROW,
+        "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX and HTTP/gRPC helpers | - |",
+      );
     const result = check(template);
     expect(result.output).toContain("No violations");
     expect(result.status).toBe(0);

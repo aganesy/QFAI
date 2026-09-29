@@ -13,6 +13,7 @@ import {
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
+  validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 
 const specs = ".qfai/spec";
@@ -125,6 +126,115 @@ describe("story-tree structure", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  describe("the architecture of tech.md", () => {
+    const LAYERS = [
+      "| Layer | Responsibility | Depends on |",
+      "| --- | --- | --- |",
+      "| CLI | Parses arguments | Core, Shared |",
+      "| Migration | Moves old trees | Core, Shared |",
+      "| Core | Validates the tree | Shared |",
+      "| Shared | Small helpers | - |",
+    ];
+    const DIAGRAM = [
+      "flowchart TD",
+      "  CLI --> Core",
+      "  CLI --> Shared",
+      '  Migration["Migration"] --> Core',
+      "  Migration --> Shared",
+      "  Core[Core] --> Shared",
+    ];
+
+    async function problems(diagram: string[], table: string[]): Promise<string[]> {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tech-architecture-"));
+      try {
+        const contractsDir = path.join(root, ".qfai", "spec", "03_contract");
+        await mkdir(contractsDir, { recursive: true });
+        await writeFile(
+          path.join(contractsDir, "tech.md"),
+          [
+            "# Technology",
+            "",
+            "## Architecture",
+            "",
+            "```mermaid",
+            ...diagram,
+            "```",
+            "",
+            ...table,
+            "",
+            "## Dependencies",
+            "",
+            "- None.",
+            "",
+          ].join("\n"),
+        );
+        const findings = await validateTechArchitecture(contractsDir);
+        expect(new Set(findings.map((item) => item.code))).toEqual(
+          new Set(findings.length === 0 ? [] : ["QFAI-STORY-013"]),
+        );
+        return findings.map((item) => item.message.replace(/^.*?tech\.md: /, ""));
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+
+    // QFAI:EX-0001-0051-08
+    it("reports a layer that depends on one not below it", async () => {
+      expect(await problems(DIAGRAM, LAYERS)).toEqual([]);
+      const reordered = [LAYERS[0], LAYERS[1], LAYERS[4], LAYERS[2], LAYERS[3], LAYERS[5]].map(
+        (line) => line ?? "",
+      );
+      expect(await problems(DIAGRAM, reordered)).toEqual([
+        "CLI depends on Core, which is not in a row below it",
+        "Migration depends on Core, which is not in a row below it",
+      ]);
+      const unknown = LAYERS.map((line) => line.replace("Core, Shared |", "Core, Domain |"));
+      expect(await problems(DIAGRAM, unknown)).toEqual(
+        expect.arrayContaining([
+          "CLI depends on Domain, which is not a layer of the table",
+          "the diagram has no edge CLI --> Domain",
+        ]),
+      );
+    });
+
+    // QFAI:EX-0001-0051-09
+    it("reports every difference between the diagram and the table", async () => {
+      expect(await problems(DIAGRAM, LAYERS)).toEqual([]);
+      const diagram = [
+        "flowchart LR",
+        "  CLI --> Core",
+        "  CLI --> Shared",
+        "  CLI --> Migration",
+        "  Core --> Shared",
+        "  Extra",
+        "  %% a comment",
+      ];
+      expect(await problems(diagram, LAYERS)).toEqual([
+        "the diagram does not open with flowchart TD",
+        'the diagram line "%% a comment" is neither a layer nor an edge',
+        "the diagram draws Extra, which is not a layer of the table",
+        "the diagram has no edge Migration --> Core",
+        "the diagram has no edge Migration --> Shared",
+        "the diagram draws CLI --> Migration, which no Depends on names",
+      ]);
+      expect(await problems(["flowchart TD", "  CLI --> Core"], LAYERS.slice(0, 3))).toEqual([
+        "CLI depends on Core, which is not a layer of the table",
+        "CLI depends on Shared, which is not a layer of the table",
+        "the diagram draws Core, which is not a layer of the table",
+        "the diagram has no edge CLI --> Shared",
+      ]);
+    });
+
+    it("reads nothing when the tree has no tech.md", async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tech-architecture-"));
+      try {
+        expect(await validateTechArchitecture(path.join(root, "03_contract"))).toEqual([]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
   });
 
   it("names missing and extra entries in a story directory", async () => {

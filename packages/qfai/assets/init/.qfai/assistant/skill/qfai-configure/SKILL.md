@@ -384,6 +384,8 @@ Fill steering templates with repo evidence.
 - Do not invent facts.
 - Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
 - Fill `## Architecture` of `03_contract/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
+  - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
+  - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `qfai validate` reports a diagram and a table that disagree.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 

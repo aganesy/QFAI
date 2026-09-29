@@ -14,7 +14,10 @@ import {
   executePlannedStep,
   type MigrationContext,
 } from "../../../../src/migration/specToStory/harness.js";
-import { validateConstraintIds } from "../../../../src/core/validators/storyTreeStructure.js";
+import {
+  validateConstraintIds,
+  validateTechArchitecture,
+} from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
 import { defaultRoutingEntries } from "../../../helpers/shippedAssistant.js";
 
@@ -290,6 +293,7 @@ describe("migration catalog move", () => {
 
   it("routes the structure catalog to Skeleton lines, architecture layers and the UI paths key", async () => {
     // QFAI:EX-0004-0006-11
+    // QFAI:EX-0004-0006-29
     const context = await fixture();
     await put(
       context.root,
@@ -312,7 +316,8 @@ describe("migration catalog move", () => {
         "",
         "| Layer | Responsibility | Depends on |",
         "| --- | --- | --- |",
-        "| CLI | Parses arguments and/or reads I/O | Core |",
+        "| Shared | Small helpers | - |",
+        "| CLI | Parses arguments and/or reads I/O | Shared |",
         "| Core | Lives in src/core/index.ts | - |",
         "",
         "## Architecture constraints",
@@ -342,8 +347,9 @@ describe("migration catalog move", () => {
     expect(tech.match(/- Skeleton: /g)).toHaveLength(1);
     expect(tech).not.toContain("worker");
     expect(tech).toContain(
-      "## Architecture\n\n| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n| CLI | Parses arguments and/or reads I/O | Core |\n\n## Dependencies",
+      '## Architecture\n\n```mermaid\nflowchart TD\n  L1["CLI"]\n  L2["Shared"]\n  L1 --> L2\n```\n\n| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n| CLI | Parses arguments and/or reads I/O | Shared |\n| Shared | Small helpers | - |\n\n## Dependencies',
     );
+    expect(await validateTechArchitecture(context.contractsDir)).toEqual([]);
     expect(tech).not.toContain("kebab-case");
     expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
       "No violations",
@@ -372,6 +378,47 @@ describe("migration catalog move", () => {
     );
     expect(result.output).toContain(
       `${source}: "## How to run locally" has no place in the story tree; carry what it states by hand, or drop it (${kept})`,
+    );
+  });
+
+  it.each([
+    [
+      "layers that depend on each other",
+      ["| CLI | Parses arguments | Core |", "| Core | Validates the tree | CLI |"],
+      "since the layers CLI, Core depend on each other",
+    ],
+    [
+      "a layer that depends on one with no row",
+      ["| CLI | Parses arguments | Core, Shared |", "| Shared | Small helpers | - |"],
+      "since the layer CLI depends on Core, which has no row",
+    ],
+  ])("leaves %s for a person to order", async (_label, rows, reason) => {
+    // QFAI:EX-0004-0006-29
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/structure.md",
+      [
+        "# Structure",
+        "",
+        "## Architecture",
+        "",
+        "| Layer | Responsibility | Depends on |",
+        "| --- | --- | --- |",
+        ...rows,
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
+    expect(tech).toContain("| <upper layer> |");
+    expect(tech).not.toContain("Parses arguments");
+    const source = ".qfai/assistant/catalog/structure.md";
+    const kept =
+      "kept at .qfai/evidence/migration-spec-to-story/retired/assistant/catalog/structure.md";
+    expect(result.output).toContain(
+      `.qfai/spec/03_contract/tech.md ## Architecture: order the layers of "## Architecture" in ${source} from the uppermost down by hand, ${reason} (${kept})`,
     );
   });
 
@@ -523,7 +570,7 @@ describe("migration catalog move", () => {
     expect(tech.indexOf("## Dependencies")).toBeLessThan(
       tech.indexOf("## Standard commands (copy-paste)"),
     );
-    expect(tech).toContain("| <layer name> |");
+    expect(tech).toContain("| <upper layer> |");
     expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
       "No violations",
     );

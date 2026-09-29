@@ -22,7 +22,8 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
    A constraint is a limit in plain words; its ID is its place in its section, so removing a row renumbers the rows after it.
-   A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the pack records and, in an existing codebase, its module layout and import directions: what each layer does and the layers it may import from.
+   A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the pack records and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.
+   A layer is a group of modules whose dependencies point one way: down. The section draws the layers as one `flowchart TD`, then lists them in the table from the uppermost down, and the two name the same layers and edges.
    Implementation places new code by that table and reviewers judge a change against it, as spec-traceability-rules.md#architecture states.
 2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
 3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
