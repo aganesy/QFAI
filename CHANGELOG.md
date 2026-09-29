@@ -4,6 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A guard holds every tracked text file to English.**
+  `scripts/check-repository-language.mjs` runs in `pnpm ci:lint` and fails on
+  Han, Hiragana, Katakana, Hangul, Cyrillic, Arabic, Hebrew, Thai or Devanagari
+  letters, and on CJK or full-width punctuation, in any tracked text file. It has
+  no allowlist: where behaviour needs such a literal, it is written as `\uXXXX`
+  escapes. The narrower checks on operator-facing strings and on this changelog
+  stay. What an adopter writes, and the language an assistant answers in, are
+  unchanged.
+- **The published notes of 1.10.1, 1.10.2 and 1.11.0 are in English,** cut from
+  the same changelog sections as before. The release-notes checks no longer
+  carry a rule for notes published in Japanese.
+
 ## [2.0.0] - 2026-09-30
 
 ### Highlights

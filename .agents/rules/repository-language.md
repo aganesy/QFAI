@@ -13,8 +13,8 @@ Everything tracked here, and everything written about it:
 - Workflow files and the comments inside them
 - Commit messages, and the title and body of every pull request and issue
 
-No Japanese text appears anywhere in the repository. Where a matcher or a
-fixture has to hold a Japanese sample to do its job, the sample is written as
+No text in another script appears anywhere in the repository. Where a matcher
+or a fixture has to hold such a sample to do its job, the sample is written as
 \uXXXX escapes and a nearby English comment says what it is.
 
 ## Not in scope
@@ -42,16 +42,23 @@ least.
 
 ## Enforcement
 
-Two surfaces are checked. Both are held at zero Japanese lines, and no
-allowlist exists: a Japanese line fails wherever it appears.
+Every tracked text file is held at zero forbidden characters, and no allowlist
+exists: a forbidden character fails wherever it appears. The forbidden set is
+the Han, Hiragana, Katakana, Hangul, Cyrillic, Arabic, Hebrew, Thai and
+Devanagari scripts, the CJK Symbols and Punctuation block, and the Halfwidth
+and Fullwidth Forms block. Latin letters with diacritics, Greek, arrows,
+box-drawing characters and dashes are allowed.
 
-| Surface                                           | Pinned by                            | Held against                                          |
-| ------------------------------------------------- | ------------------------------------ | ----------------------------------------------------- |
-| Operator-facing strings in `packages/qfai/src/**` | this rule, § Operator-facing strings | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` |
-| `CHANGELOG.md`, every section                     | this rule                            | `packages/qfai/tests/unit/changelogLanguage.test.ts`  |
+Two narrower checks hold the same rule for a single surface.
 
-Comments, other documents, tests and workflow files have no check, so on those
-surfaces the rule is held by review.
+| Surface                                           | Held by                                               |
+| ------------------------------------------------- | ----------------------------------------------------- |
+| Every tracked text file                           | `scripts/check-repository-language.mjs`               |
+| Operator-facing strings in `packages/qfai/src/**` | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` |
+| `CHANGELOG.md`, every section                     | `packages/qfai/tests/unit/changelogLanguage.test.ts`  |
+
+The repository-wide guard skips symlinks, files holding a NUL byte and files
+that are not valid UTF-8. It runs in the `ci:lint:scans` lane.
 
 ## Operator-facing strings
 
