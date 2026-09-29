@@ -174,6 +174,13 @@ section by section:
 | The `ui_paths:` globs of `## UI surface paths`                                                                                             | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
 | Anything else                                                                                                                              | `## For a person`, with the archived copy             |
 
+Step 3 writes the moved layers in the shape of the Architecture section: a
+`flowchart TD` with a node per layer and an edge per dependency, then the table
+with the rows ordered from the uppermost layer down. Where the rows cannot be
+ordered, because a layer depends on one that has no row or layers depend on each
+other, none of them moves: the section is listed under `## For a person` with
+the reason, and `tech.md` keeps the template's Architecture section.
+
 Step 3 writes each Markdown contract under `cli/` in the shape of the CLI
 contract template: its `# CLI-0001: <title>` heading, `## Ownership boundary`
 and a `## Business rules` table, and nothing else.

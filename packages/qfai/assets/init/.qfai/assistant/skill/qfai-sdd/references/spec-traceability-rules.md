@@ -31,7 +31,7 @@ A table the template shows with no rows is complete with no rows. The rules belo
 | principle.md                    | An axiom carries no key. The order in which concerns win a conflict is `## Decision priorities`, with 1 first.                                                                                                                                                                                                                                            |
 | glossary.md                     | One `## Terms` table: a term and its definition. No finding code, file name, configuration key, value set, rule text, retired term or history; the definition links the contract that defines the thing. A distinction goes in the definition.                                                                                                            |
 | constraint.md                   | All three sections stay, each one table of ID, Constraint and Rationale, which may have no rows. A row states the limit and its reason in plain words: no file name, command or configuration key, and no BR, EX, AC or contract ID. A constraint a contract enforces is written there as a BR; a layer boundary is a row of tech.md's `## Architecture`. |
-| tech.md                         | `## Architecture` names the layers the code is divided into: one row per layer, its responsibility, and the layers it may import from, or `-`. A layer is named, never located: no path, file name or command. See [Architecture](#architecture).                                                                                                         |
+| tech.md                         | `## Architecture` is one `mermaid` flowchart TD of the layers, then one table with a row per layer from the uppermost down: its responsibility, and the layers below it that it uses, or `-`. A layer is named, never located: no path, file name or command. See [Architecture](#architecture).                                                          |
 | decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended; afterwards only Status changes.                                                                                                                                                                                                                                                                    |
 | business-flows.md               | `Flow` is the title in the flow's H1, after its ID, and `Path` is `` `business-flow-NNNN/` ``. Rows are in ID order.                                                                                                                                                                                                                                      |
 | business-flow.md                | `## Purpose` is prose only. `## Flow` is one `mermaid` block, a flowchart or sequenceDiagram, and nothing else. `## Alternate and exception paths` is one list of at least one item.                                                                                                                                                                      |
@@ -42,7 +42,16 @@ A table the template shows with no rows is complete with no rows. The rules belo
 
 ## Architecture
 
-The `## Architecture` table of tech.md is the project's layer map: which layers the code is divided into, what each is responsible for, and which layers each may import from.
+The `## Architecture` section of tech.md is the project's layer map: which layers the code is divided into, what each is responsible for, and which layers each may import from.
+
+A layer is a group of modules with a dependency direction. An upper layer may use the layers below it; a lower layer never knows an upper one.
+
+The section holds two things, in this order:
+
+1. One `mermaid` block, `flowchart TD`, with one node per layer and one `Upper --> Lower` edge per dependency, and nothing else. A node is an ID, or an ID with its label in square brackets when the layer's name is not an ID.
+2. One table of Layer, Responsibility and Depends on, one row per layer, from the uppermost layer to the lowermost. Depends on names only layers in rows below its own, comma-separated, or `-` for none. Peers at the same height may come in any order.
+
+`npx qfai validate` reports a Depends on that names a layer not below its row, and any node or edge the diagram and the table do not share.
 
 | Question            | Answer                                                                                                                                                                                                     |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

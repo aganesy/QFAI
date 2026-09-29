@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { extractH2Sections } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { architectureProblems } from "../storyTree/architecture.js";
 import {
   contractNumber,
   isStoryTreeId,
@@ -337,7 +338,29 @@ export async function validateStoryTreeStructure(
     ...(await validateFlowMermaid(tree)),
     ...validateStoryTreeStructureModel(tree),
     ...(await validateConstraintIds(roots.specsDir)),
+    ...(await validateTechArchitecture(roots.contractsDir)),
   ];
+}
+
+/**
+ * The `## Architecture` section of `tech.md` draws its layers as a diagram and lists
+ * them in a table, uppermost first. The document schema holds the section to one
+ * diagram then one table; this reads whether the two agree and the rows are in order.
+ */
+export async function validateTechArchitecture(contractsDir: string): Promise<Issue[]> {
+  const file = path.join(contractsDir, "tech.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const section = extractH2Sections(content).get("Architecture");
+  if (section === undefined) return [];
+  return architectureProblems(section.body).map((problem) =>
+    finding("QFAI-STORY-013", `## Architecture of ${file}: ${problem}`, file),
+  );
 }
 
 /** Each section of `constraint.md` and the prefix its IDs carry. */

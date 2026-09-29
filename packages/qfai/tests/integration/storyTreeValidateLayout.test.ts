@@ -113,6 +113,31 @@ describe("story-tree layout dispatch", () => {
     expect(closed.issues.some((item) => item.code === "QFAI-STORY-012")).toBe(false);
   });
 
+  // QFAI:AC-0001-0051-07
+  // QFAI:EX-0001-0051-08
+  it("reports an architecture whose diagram and table disagree or whose rows are out of order", async () => {
+    const table = (rows: string): string =>
+      `| Layer | Responsibility | Depends on |\n| --- | --- | --- |\n${rows}`;
+    const tech = (diagram: string, rows: string): string =>
+      `# Technology\n\n## Architecture\n\n\`\`\`mermaid\nflowchart TD\n${diagram}\`\`\`\n\n${table(rows)}\n## Dependencies\n\n- None.\n`;
+    await put(
+      `${specs}/03_contract/tech.md`,
+      tech("  CLI --> Core\n", "| Core | Validates | - |\n| CLI | Parses | Core |\n"),
+    );
+
+    const upward = await validateProject(root, configured(), { profile: "sdd" });
+    const reported = upward.issues.filter((item) => item.code === "QFAI-STORY-013");
+    expect(reported.map((item) => item.severity)).toEqual(["error"]);
+    expect(reported[0]?.message).toContain("CLI depends on Core, which is not in a row below it");
+
+    await put(
+      `${specs}/03_contract/tech.md`,
+      tech("  CLI --> Core\n", "| CLI | Parses | Core |\n| Core | Validates | - |\n"),
+    );
+    const ordered = await validateProject(root, configured(), { profile: "sdd" });
+    expect(ordered.issues.some((item) => item.code === "QFAI-STORY-013")).toBe(false);
+  });
+
   it("writes only the migration finding to validate.json for an old layout", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
 

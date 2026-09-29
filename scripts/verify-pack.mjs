@@ -723,12 +723,19 @@ for (const steeringFile of steeringFiles) {
     );
   }
   const before = readFileSync(steeringFile, "utf-8");
-  // One value for both placeholder forms: they stand for the same thing, and a
-  // reader should not have to compare two strings to see that.
-  const fixtureValue = "verify-pack fixture value";
+  // One value for each placeholder text, so two slots that name different
+  // things, such as two architecture layers, stay different once filled. Every
+  // TODO and TBD shares one value.
+  const fixtureValues = new Map();
+  const fixtureValue = (placeholder) => {
+    if (!fixtureValues.has(placeholder)) {
+      fixtureValues.set(placeholder, `verify-pack fixture value ${fixtureValues.size + 1}`);
+    }
+    return fixtureValues.get(placeholder);
+  };
   const after = before
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
-    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+    .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
       `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +

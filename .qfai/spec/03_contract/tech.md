@@ -17,11 +17,20 @@
 
 ## Architecture
 
+```mermaid
+flowchart TD
+  CLI --> Core
+  CLI --> Shared
+  Migration --> Core
+  Migration --> Shared
+  Core --> Shared
+```
+
 | Layer     | Responsibility                                                                             | Depends on   |
 | --------- | ------------------------------------------------------------------------------------------ | ------------ |
 | CLI       | The commands: each parses its arguments and composes Core                                  | Core, Shared |
-| Core      | Reads, validates and reports on the story tree and its contracts; also the library surface | Shared       |
 | Migration | The 1.x to 2.x migration steps, which the migration skill calls as a library function      | Core, Shared |
+| Core      | Reads, validates and reports on the story tree and its contracts; also the library surface | Shared       |
 | Shared    | Small helpers: text, bundled assets and bounded reads                                      | -            |
 
 ## Dependencies

@@ -258,6 +258,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: the `## Architecture` section of `tech.md` draws the layers,
+  then lists them from the top down.** A layer is a group of modules with a
+  dependency direction: an upper layer may use the layers below it, and a
+  lower layer never knows an upper one. A section that is a table alone fails
+  the document-schema check until the diagram is added.
+
+  - The section is one `mermaid` `flowchart TD`, with a node per layer and an
+    `Upper --> Lower` edge per dependency, then the table. The rows run from
+    the uppermost layer down, and Depends on names only layers in rows below.
+  - `qfai validate` reports as `QFAI-STORY-013` a Depends on entry that is not
+    a layer below its row, and any layer or edge the diagram and the table do
+    not share.
+  - The `qfai-sdd` rules and playbook, the `sdd-flow` step and
+    `/qfai-configure` say what a layer is and how the section is written.
+  - Migration step 3 draws the layers it moves and orders their rows. A layer
+    table that cannot be ordered, because a layer depends on one with no row
+    or layers depend on each other, is listed for a person instead.
+
 - **Breaking: `constraint.md` is policy in plain words, and `tech.md` holds
   the architecture.** A document written to the earlier shape fails the
   document-schema check until it is rewritten.

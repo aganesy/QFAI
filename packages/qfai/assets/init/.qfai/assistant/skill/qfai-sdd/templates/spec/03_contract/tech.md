@@ -17,9 +17,15 @@
 
 ## Architecture
 
-| Layer        | Responsibility                      | Depends on                                  |
-| ------------ | ----------------------------------- | ------------------------------------------- |
-| <layer name> | <what the layer is responsible for> | <the layers it imports from, or - for none> |
+```mermaid
+flowchart TD
+  Upper[<upper layer>] --> Lower[<lower layer>]
+```
+
+| Layer         | Responsibility                      | Depends on    |
+| ------------- | ----------------------------------- | ------------- |
+| <upper layer> | <what the layer is responsible for> | <lower layer> |
+| <lower layer> | <what the layer is responsible for> | -             |
 
 ## Dependencies
 

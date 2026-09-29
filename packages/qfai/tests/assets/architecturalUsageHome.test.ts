@@ -67,5 +67,23 @@ describe("architectural rules have one story-tree home", () => {
         expect(await read(`agent/${card}.md`), card).toContain(LAYERS);
       }
     });
+
+    // QFAI:EX-0001-0006-09
+    it(`${tree}: the guidance draws the layers, then lists them from the top down`, async () => {
+      for (const relative of [
+        "skill/qfai-sdd/references/spec-traceability-rules.md",
+        "step/sdd-flow/STEP.md",
+        "skill/qfai-sdd/references/sdd-execution-playbook.md",
+        "skill/qfai-configure/SKILL.md",
+      ]) {
+        const text = (
+          await readFile(path.join(root, tree, "assistant", relative), "utf-8")
+        ).replace(/\s+/g, " ");
+        expect(text, relative).toContain("A layer is a group of modules");
+        expect(text, relative).toContain("`flowchart TD`");
+        expect(text, relative).toMatch(/from the uppermost (?:layer )?down|to the lowermost/);
+        expect(text, relative).toMatch(/only (?:layers in )?rows below|only downward|down\./);
+      }
+    });
   }
 });
