@@ -28,7 +28,7 @@ const TRUST_LINE =
   "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
 
 function trustLines(output: string): string[] {
-  return output.split("\n").filter((line) => line.includes("/hooks"));
+  return output.split("\n").filter((line) => line.includes("trust them with /hooks"));
 }
 
 async function seed(root: string, rel: string, content: unknown): Promise<void> {
@@ -135,8 +135,9 @@ describe("the prompt-time reminder hooks", () => {
       ]);
       const codex: unknown = JSON.parse(await readFile(path.join(root, CODEX), "utf-8"));
       expect(codex).toMatchObject({ model: "kept" });
+      // The project's own group carries no status message.
       expect(await promptMarkers(root, CODEX)).toEqual([
-        [],
+        [undefined],
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
       ]);
