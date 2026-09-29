@@ -128,11 +128,17 @@ describe("the skills a workflow run's steps belong to", () => {
   // through the entry check, and a parent reads only the baseline sections its body cites.
   // QFAI:AC-0001-0195-01
   // QFAI:EX-0001-0195-01
-  it("sends every owner to the entry check", async () => {
+  it("runs the entry check first in every owner", async () => {
+    const runFirst =
+      "Run the entry check of `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` first.";
     for (const skill of PLAN_STEP_OWNERS) {
-      expect(await readShipped(`skill/${skill}/SKILL.md`), skill).toContain(
-        "shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory",
-      );
+      const body = flat(await readShipped(`skill/${skill}/SKILL.md`));
+      const at = body.indexOf(runFirst);
+      expect(at, skill).toBeGreaterThan(-1);
+      expect(
+        body.indexOf("## ", body.indexOf("[DRIFT-PROTOCOL:MANDATORY]")),
+        skill,
+      ).toBeGreaterThan(at);
     }
   });
 

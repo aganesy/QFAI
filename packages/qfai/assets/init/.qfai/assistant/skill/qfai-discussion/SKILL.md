@@ -26,16 +26,16 @@ mode: interactive-by-default
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 Produces the unified 15-file discussion pack at
 `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`, plus the exploration-first UI
 sidecars, so `/qfai-sdd` and `/qfai-prototyping` can work without an early
 visual direction decision.
 
 Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.
-
-Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
-first.
 
 ## User Questions (AskUserQuestion Protocol)
 

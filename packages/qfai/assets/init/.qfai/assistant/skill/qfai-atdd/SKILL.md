@@ -25,14 +25,14 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 The active scope is one `BF-NNNN` business flow. Its evidence file is
 `.qfai/evidence/atdd-BF-NNNN.md`. Send a decision, a question for the user or
 an out-of-scope discovery to `/qfai-sdd` as a change request, under
 `.qfai/assistant/rule/drift-protocol.md`.
-
-Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
-first.
 
 ## Steps
 

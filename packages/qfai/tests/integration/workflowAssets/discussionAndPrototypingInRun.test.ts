@@ -53,7 +53,7 @@ describe("qfai-prototyping in a workflow run", () => {
       .split("\n")
       .filter((line) => line.includes("workflow-run-entry-check-mandatory"));
     expect(citing).toHaveLength(1);
-    expect(flat(body)).toContain(`The entry check is ${ENTRY_CHECK}.`);
+    expect(flat(body)).toContain(`Run the entry check of ${ENTRY_CHECK} first.`);
   });
 
   // QFAI:AC-0001-0204-03

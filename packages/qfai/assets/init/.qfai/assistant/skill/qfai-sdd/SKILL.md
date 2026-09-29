@@ -29,6 +29,10 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 Turn a requirement into a checkable story tree: BF → US → AC → EX, with each BR
 in the contract that enforces it.
 
@@ -37,10 +41,6 @@ request to go to the end is handed to a whole run through `qfai-run`. A work
 order names its own steps, and runs them as
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
 states.
-
-Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
-first.
 
 ## Inputs
 
