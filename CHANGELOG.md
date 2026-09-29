@@ -4,6 +4,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Highlights
+
+- **Breaking: specifications move from spec packs to a story tree.** A project's
+  specifications now live under `.qfai/spec/`: policy, business flows with their
+  stories, acceptance criteria and examples, contracts with the business rules
+  they enforce, and one register each for decisions and open questions. Tests
+  annotate story-tree IDs, `qfai report` reports per business flow, and
+  `qfai doctor` and `qfai validate` check the new layout. The `.qfai/specs/spec-*`
+  layout, and every check that read it, is gone.
+
+  - **A project on the 1.x layout must migrate before adopting this release**,
+    or stay on QFAI 1.x until it has. The package ships the
+    `qfai-migration-v1-to-v2` skill and a guide, `docs/MIGRATION-2.0.0.md`.
+    `qfai init` installs the skill on an old-layout project and does not seed a
+    competing story tree.
+  - Install `qfai` as a project dependency first
+    (`npm install --save-dev qfai`), then open `/qfai-migration-v1-to-v2`.
+    Its scripts move the project to the story tree, each with a `--dry-run`
+    mode and a report, and two further steps install and check the
+    free-text entry below. There is no `qfai migrate` command.
+  - The detail is under _Changed_ and _Removed_ below.
+
+- **Intent-driven work: ask for a change in your own words.** The new `qfai-run`
+  skill reads a request stated in free text, chooses one of 39 fixed routes
+  from what it finds, and runs each stage of that route through the skill that
+  owns it. You name no stage. It stops only for a decision the agent cannot
+  take: a new story, a change to the story tree, a material risk, or a fact
+  only you hold. Invoking a stage skill such as `/qfai-sdd` yourself remains
+  available. `qfai init` opens `AGENTS.md` and `CLAUDE.md` with the line
+  that sends the first request to `qfai-run`. The detail is under _Added_
+  below.
+
 ### Added
 
 - **A turn that waits on you ends with a question.** When an agent reaches a

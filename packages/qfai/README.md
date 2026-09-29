@@ -1,20 +1,22 @@
 # QFAI (Quality-First AI)
 
 QFAI is a quality-first development kit for AI coding agents.
-Its purpose is to improve the quality of AI-generated software outputs by enforcing a structured workflow and validating traceability.
-
-Modern AI coding agents can write code quickly, but they can also misunderstand requirements, drift from intended behavior, or “sound correct” while being wrong.
-QFAI addresses these failure modes by standardizing an end-to-end delivery loop and forcing objective checks.
-
-- SDD clarifies what to build, so the agent does not invent requirements while coding.
-- ATDD defines acceptance goals as executable scenarios, so correctness is measured rather than assumed.
-- TDD enables a self-correcting loop: implement → run tests → fix → repeat.
-- Traceability validation enforces that SDD → ATDD → TDD → implementation stays aligned, reducing hallucination-driven drift.
-- Result: higher output quality, fewer review cycles, and lower human supervision cost.
-
-You describe the change to your AI coding agent in your own words.
+You describe a change to your agent in your own words.
 QFAI works out which stages the change needs, runs them one after another, and stops only to ask what it cannot decide for you.
 Invoking a stage skill such as `/qfai-sdd` yourself remains available as the expert path.
+
+Modern AI coding agents can write code quickly, but they can also misunderstand requirements, drift from intended behavior, or “sound correct” while being wrong.
+QFAI addresses these failure modes by taking every change through the same delivery loop, against one specification tree, and forcing objective checks.
+
+- The story tree clarifies what to build, so the agent does not invent requirements while coding.
+  Policy, business flows, stories, acceptance criteria and examples sit beside the contracts that enforce them.
+- ATDD defines acceptance goals as executable scenarios, so correctness is measured rather than assumed.
+- TDD enables a self-correcting loop: implement → run tests → fix → repeat.
+- Traceability validation enforces that BF → US → AC → EX → tests → code stays aligned, reducing hallucination-driven drift.
+- Result: higher output quality, fewer review cycles, and lower human supervision cost.
+
+A project on the 1.x spec-pack layout moves to the story tree with the bundled `/qfai-migration-v1-to-v2` skill.
+See [Keeping QFAI itself up to date](#keeping-qfai-itself-up-to-date).
 
 ## Release status
 
@@ -92,105 +94,6 @@ The stages fill the seeded story tree and follow the project's Standard commands
 
 To drive the stages yourself instead:
 Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
-
-## What you can do (CLI commands)
-
-- `npx qfai --version` (alias `-V`)
-  - Prints the installed QFAI version to stdout and exits 0. It works anywhere, including outside a project
-    with no `qfai.config.yaml`. The same value is also available as the `version` field of
-    `npx qfai doctor --format json`.
-- `npx qfai init`
-  - Creates the QFAI workspace under `.qfai/` and installs the assistant tree
-    (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
-  - Options:
-
-    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                         |
-    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                     |
-    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
-    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
-    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
-    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                      |
-    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
-    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
-    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
-    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                     |
-
-  - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
-    supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
-    recognized files into the current tree without deleting their sources.
-
-- `npx qfai validate`
-  - Validates the story tree, contracts, test obligations and review artifacts
-    (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
-    and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
-    and `--format github` to emit GitHub-friendly annotations.
-    Use `--flow BF-0001` to scope a run to one business flow. `--spec` is retired.
-    Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
-- `npx qfai report`
-  - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
-    Use `--flow BF-0001` for a report scoped to that flow.
-    Exits non-zero when the reported findings cross the gate (`validation.failOn`, default `error`); use `--fail-on never|warning|error` or `--strict` to override it.
-- `npx qfai doctor`
-  - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
-    Use `--profile prototyping` to add prototyping-specific preflight checks for the
-    primary UI contract, design contract readiness, active agent-wrapper
-    integrations, shipped role-input readiness, Playwright CLI launcher
-    resolution/probing, and target URL reachability.
-    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json`) is produced by the AI workflow
-    (`/qfai-prototyping`), not by a general-purpose end-user CLI flow.
-    Use `npx qfai prototyping preflight --target-url <url>` for a focused
-    prototyping preflight before the skill starts; it surfaces blocking
-    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the UI contract
-    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
-    Evidence refs must resolve to concrete repository-relative artifacts;
-    absolute paths are invalid. UI coverage and per-screen reviews use full
-    `UI-NNNN` IDs.
-    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
-    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
-    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
-- `npx qfai workflow`
-  - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
-    (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
-    JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
-    `.qfai/run/`; its summary and the answers it recorded are written to
-    `.qfai/evidence/workflow/<runId>/`, which stays local like all evidence. Only `finish`
-    reports a run complete, after it runs `validate` itself.
-- `npx qfai sdd preflight`
-  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
-    resolves the blockers, and writes the summary run-scoped at
-    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
-    (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
-    then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
-    `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
-    result on stdout.
-  - Only a missing or misnamed pack blocks. What a present pack lacks or contradicts is listed under the
-    summary's `## Pack Gaps` (`packGaps` in the JSON result), and the result stays `ready`: the pack is
-    reference material, so the gap is recorded in the SDD artifacts rather than stopping the stage.
-  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
-    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
-    the candidate list instead of silently gating a different pack.
-  - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
-    the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
-    overwritten.
-
-## Test annotations
-
-`qfai validate` checks three independent obligations from the story tree:
-
-| Artifact             | Test annotation        | Required layer                   |
-| -------------------- | ---------------------- | -------------------------------- |
-| Business flow        | `QFAI:BF-0001`         | E2E                              |
-| Acceptance criterion | `QFAI:AC-0001-0001-01` | Integration or API               |
-| Example              | `QFAI:EX-0001-0001-01` | A selected test file outside E2E |
-
-The layer directories follow `paths.testsDir` in `qfai.config.yaml`; `tests/`
-is the default. `validation.traceability.testFileGlobs` selects test files.
-An annotation for an unknown ID or in the wrong layer is an
-error. A `Test exception:` decision row can exempt a specific BF, AC or EX;
-validation reports that exemption. The former `QFAI:SPEC-...` and contract
-annotations do not satisfy these obligations.
 
 ## Operating model (free-text entry)
 
@@ -339,6 +242,170 @@ Operational notes.
 - Agent cards under `.qfai/assistant/agent/` define each role. The installed package supplies routing and review-profile defaults in `assets/defaults/`.
 - Project `routing` and `reviewProfiles` entries in `qfai.config.yaml` replace matching defaults as complete entries.
 
+## Specifications and contracts (SDD)
+
+QFAI keeps policy, behavior and enforcing contracts in one story tree:
+
+```text
+.qfai/spec
+├── 01_policy
+│   ├── objective.md
+│   ├── initiative.md
+│   ├── principle.md
+│   ├── constraint.md
+│   └── glossary.md
+├── 02_business-flow
+│   ├── business-flows.md
+│   └── business-flow-NNNN
+│       ├── business-flow.md
+│       ├── user-stories.md
+│       └── user-story-NNNN-NNNN
+│           ├── 01_User-story.md
+│           ├── 02_Acceptance-Criteria.md
+│           └── 03_Example.md
+├── 03_contract
+│   ├── contracts.md
+│   ├── tech.md
+│   └── <api | cli | db | ui>
+│       └── <kind>-NNNN-<slug>.<ext>
+├── decisions.md
+└── open-questions.md
+```
+
+- `01_policy/` holds objectives, initiatives, principles, constraints and terms.
+- `02_business-flow/` holds the flow index, each BF and its user stories. Each
+  story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
+- `03_contract/` holds the contract index and API, DB, UI and CLI contracts.
+  The directory sets a contract's kind, and its ID is `<KIND>-NNNN`, such as
+  `API-0002`, with a number no other contract of any kind uses. The file is
+  named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in the contract that
+  enforces it, as `BR-<contract number>-NNNN`. The brand design is the
+  repository's root `DESIGN.md`, and each screen is a `ui/` contract.
+- `decisions.md` and `open-questions.md` record project decisions and open
+  questions in append-only four-column tables.
+
+The IDs are `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN` and `EX-NNNN-NNNN-NN`.
+The traceability chain is BF → US → AC → EX, with BR → EX from the contracts.
+Each EX names one AC in its story; every AC has an EX, and every EX is cited by
+a BR. A BR cites only EX, only code and tests cite a BR, and a contract never
+names an implementation file. Validation checks this chain and the independent
+BF, AC and EX test obligations.
+
+## SSOT boundaries
+
+```mermaid
+flowchart LR
+  P[".qfai/spec/01_policy/**"] --> V["qfai validate"]
+  F[".qfai/spec/02_business-flow/**"] --> V
+  C[".qfai/spec/03_contract/**"] --> V
+  T["tests/**"] --> V
+  V --> R[".qfai/report/**"]
+```
+
+- Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
+- Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
+- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
+- Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
+
+## What you can do (CLI commands)
+
+- `npx qfai --version` (alias `-V`)
+  - Prints the installed QFAI version to stdout and exits 0. It works anywhere, including outside a project
+    with no `qfai.config.yaml`. The same value is also available as the `version` field of
+    `npx qfai doctor --format json`.
+- `npx qfai init`
+  - Creates the QFAI workspace under `.qfai/` and installs the assistant tree
+    (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
+  - Options:
+
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                         |
+    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                     |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
+    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
+    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                      |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
+    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                     |
+
+  - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
+    supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
+    recognized files into the current tree without deleting their sources.
+
+- `npx qfai validate`
+  - Validates the story tree, contracts, test obligations and review artifacts
+    (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
+    and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
+    and `--format github` to emit GitHub-friendly annotations.
+    Use `--flow BF-0001` to scope a run to one business flow. `--spec` is retired.
+    Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
+- `npx qfai report`
+  - Produces a human-readable report (`report.md` by default) or an internal JSON export (`report.json`) from `validate.json`; use `--base-url` to link file paths in Markdown to your repository viewer.
+    Use `--flow BF-0001` for a report scoped to that flow.
+    Exits non-zero when the reported findings cross the gate (`validation.failOn`, default `error`); use `--fail-on never|warning|error` or `--strict` to override it.
+- `npx qfai doctor`
+  - Diagnoses configuration discovery, path resolution, glob scanning, and `validate.json` inputs before running validate/report; use `--fail-on` to enforce failures in CI.
+    Use `--profile prototyping` to add prototyping-specific preflight checks for the
+    primary UI contract, design contract readiness, active agent-wrapper
+    integrations, shipped role-input readiness, Playwright CLI launcher
+    resolution/probing, and target URL reachability.
+    Note: prototyping evidence (`.qfai/evidence/prototyping/prototyping.json`) is produced by the AI workflow
+    (`/qfai-prototyping`), not by a general-purpose end-user CLI flow.
+    Use `npx qfai prototyping preflight --target-url <url>` for a focused
+    prototyping preflight before the skill starts; it surfaces blocking
+    `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the UI contract
+    evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
+    Evidence refs must resolve to concrete repository-relative artifacts;
+    absolute paths are invalid. UI coverage and per-screen reviews use full
+    `UI-NNNN` IDs.
+    `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
+    `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
+    a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
+- `npx qfai workflow`
+  - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
+    (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
+    JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
+    `.qfai/run/`; its summary and the answers it recorded are written to
+    `.qfai/evidence/workflow/<runId>/`, which stays local like all evidence. Only `finish`
+    reports a run complete, after it runs `validate` itself.
+- `npx qfai sdd preflight`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
+    resolves the blockers, and writes the summary run-scoped at
+    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
+    (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
+    then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
+    `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
+    result on stdout.
+  - Only a missing or misnamed pack blocks. What a present pack lacks or contradicts is listed under the
+    summary's `## Pack Gaps` (`packGaps` in the JSON result), and the result stays `ready`: the pack is
+    reference material, so the gap is recorded in the SDD artifacts rather than stopping the stage.
+  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
+    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
+    the candidate list instead of silently gating a different pack.
+  - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
+    the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
+    overwritten.
+
+## Test annotations
+
+`qfai validate` checks three independent obligations from the story tree:
+
+| Artifact             | Test annotation        | Required layer                   |
+| -------------------- | ---------------------- | -------------------------------- |
+| Business flow        | `QFAI:BF-0001`         | E2E                              |
+| Acceptance criterion | `QFAI:AC-0001-0001-01` | Integration or API               |
+| Example              | `QFAI:EX-0001-0001-01` | A selected test file outside E2E |
+
+The layer directories follow `paths.testsDir` in `qfai.config.yaml`; `tests/`
+is the default. `validation.traceability.testFileGlobs` selects test files.
+An annotation for an unknown ID or in the wrong layer is an
+error. A `Test exception:` decision row can exempt a specific BF, AC or EX;
+validation reports that exemption. The former `QFAI:SPEC-...` and contract
+annotations do not satisfy these obligations.
+
 ## Configuration
 
 Configuration is stored at the repository root as `qfai.config.yaml`; you can change paths, traceability policies, and validation policy.
@@ -379,43 +446,6 @@ Notes.
 - `prototyping.calibration.thresholds`, `maxIterations`, `plateauDelta`, and `plateauLookback` are unsupported public config fields.
   Put calibration values in the referenced pack instead of `qfai.config.yaml`.
 - Observability modules (`src/core/observability/`) exist as foundation code but are **not yet integrated into blocking validation**. They are reserved for future operational instrumentation.
-
-## Specifications and contracts (SDD)
-
-QFAI keeps policy, behavior and enforcing contracts in one story tree:
-
-- `01_policy/` holds objectives, initiatives, principles, constraints and terms.
-- `02_business-flow/` holds the flow index, each BF and its user stories. Each
-  story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
-- `03_contract/` holds the contract index and API, DB, UI, CLI and design
-  contracts. The directory sets a contract's kind, and its ID is
-  `<KIND>-NNNN`, such as `API-0002`, with a number no other contract of any
-  kind uses. The file is named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in
-  the contract that enforces it, as `BR-<contract number>-NNNN`.
-- `decisions.md` and `open-questions.md` record project decisions and open
-  questions in append-only four-column tables.
-
-The traceability chain is BF → US → AC → EX, with BR → EX from the contracts.
-Each EX names one AC in its story; every AC has an EX, and every EX is cited by
-a BR. A BR cites only EX, only code and tests cite a BR, and a contract never
-names an implementation file. Validation checks this chain and the independent
-BF, AC and EX test obligations.
-
-## SSOT boundaries
-
-```mermaid
-flowchart LR
-  P[".qfai/spec/01_policy/**"] --> V["qfai validate"]
-  F[".qfai/spec/02_business-flow/**"] --> V
-  C[".qfai/spec/03_contract/**"] --> V
-  T["tests/**"] --> V
-  V --> R[".qfai/report/**"]
-```
-
-- Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
-- Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
-- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
-- Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
 ## Minimal tutorial
 
@@ -630,11 +660,14 @@ commit that bumps the package, and to keep the two from being merged separately.
 ```text
 .
 ├── .agents
+│   ├── rules
+│   │   └── <cross-AI rules>.md
 │   └── skills
 │       └── qfai-configure
 │           └── SKILL.md
 ├── .github
 │   └── workflows
+│       ├── qfai-docs.yml
 │       ├── qfai-tests.yml
 │       └── qfai-validate.yml
 ├── .qfai
@@ -650,19 +683,24 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │       │   └── SKILL.md
 │   │       └── <other QFAI skills>
 │   ├── spec
-│   │   ├── decisions.md
-│   │   ├── open-questions.md
 │   │   ├── 01_policy
 │   │   │   ├── objective.md
 │   │   │   └── <other policy files>
 │   │   ├── 02_business-flow
 │   │   │   └── business-flows.md
-│   │   └── 03_contract
-│   │       ├── contracts.md
-│   │       └── tech.md
+│   │   ├── 03_contract
+│   │   │   ├── contracts.md
+│   │   │   └── tech.md
+│   │   ├── decisions.md
+│   │   └── open-questions.md
 │   └── waivers.yml
+├── AGENTS.md
+├── CLAUDE.md
 └── qfai.config.yaml
 ```
+
+`AGENTS.md` and `CLAUDE.md` open with the line that sends your first
+free-text change request to `qfai-run`.
 
 `qfai init` writes policy templates and the flow and contract indexes with
 no item rows. It creates no `business-flow-NNNN/` or
