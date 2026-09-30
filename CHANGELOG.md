@@ -4,6 +4,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The routing eval's release verdict lists the failing cases outside the
+  safety list** (#2303). Only a failing safety case blocks the release. Every
+  other failing case is listed in the eval record beside the safety failures,
+  and the maintainer accepts or rejects that list at release.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
@@ -877,11 +884,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     contract format's own form, a `## Business rules` table in Markdown;
   - the design lock, the token mirror and `prototype-handoff.yaml` are not
     carried over, and the handoff now lives in `prototyping.json`.
-
-- **The routing eval's release verdict lists the failing cases outside the
-  safety list** (#2303). Only a failing safety case blocks the release. Every
-  other failing case is listed in the eval record beside the safety failures,
-  and the maintainer accepts or rejects that list at release.
 
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
