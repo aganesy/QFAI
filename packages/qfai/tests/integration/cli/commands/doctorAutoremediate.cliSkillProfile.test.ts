@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0021
+// QFAI:EX-0003-0009-01
 //
 // Integration: `qfai doctor --profile <skill> --autoremediate` MUST
 // thread the resolved `skillProfile` down into `runAutoremediate(...)`
@@ -31,6 +31,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-doctor-cli-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 
@@ -80,7 +83,7 @@ afterEach(async () => {
 describe("doctor CLI threads skillProfile into autoremediate", () => {
   it("invokes the install runner for the skill's runtimeDependencies via the CLI dispatch path", async () => {
     const root = await newTempDir("dispatch");
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),
@@ -177,6 +180,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   });
 
   it("omits skill when no skillProfile is set (legacy doctor flow unchanged)", async () => {
+    // QFAI:EX-0003-0009-06
     const root = await newTempDir("legacy");
 
     const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
@@ -209,6 +213,8 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // a valid skillProfile is passed. The `info()` logger writes to
   // process.stdout.write, so the capture target is stdout (not console.log).
   it("emits 'install phase skipped' on stdout when no skillProfile is set, and suppresses it when one is", async () => {
+    // QFAI:AC-0003-0009-03
+    // QFAI:EX-0003-0009-06
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async () => ({
       lines: [],
       disabledInCi: false,
@@ -257,7 +263,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
 
     // Case B: with skillProfile → note must NOT appear.
     const rootB = await newTempDir("note-present-profile");
-    const manifestDir = path.join(rootB, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(rootB, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),

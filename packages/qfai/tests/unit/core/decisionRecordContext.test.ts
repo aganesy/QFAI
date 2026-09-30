@@ -11,7 +11,7 @@
  *   - rejected-option (re-adoption)
  *   - scope-expansion
  */
-// QFAI:SPEC-0015:TC-0015-0023
+// QFAI:EX-0001-0170-01
 
 import { describe, expect, it } from "vitest";
 

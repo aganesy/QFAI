@@ -1,10 +1,10 @@
 /**
  * Schema-valid, converged `<screen>.review.json` fixture.
  *
- * `qfai prototyping certify` parses every per-(spec × screen) review
+ * `qfai prototyping certify` parses every per-(UI contract × screen) review
  * payload it finds against the shipped reviewer payload reference
- * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`),
- * checks that its `(specId, screenId, cycle)` identifies the pair and
+ * (`.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`),
+ * checks that its `(uiContractId, screenId, cycle)` identifies the pair and
  * accepted iteration it is stored under, and re-derives convergence
  * from it — so certify fixtures cannot use a placeholder object any
  * more. One definition here keeps the certify suites in lock-step with
@@ -23,12 +23,12 @@ export type ReviewPayloadOverrides = {
 };
 
 export function reviewPayload(
-  specId: string,
+  uiContractId: string,
   screenId: string,
   overrides: ReviewPayloadOverrides = {},
 ): string {
   return JSON.stringify({
-    specId,
+    uiContractId,
     screenId,
     cycle: overrides.cycle ?? 1,
     sessionStatus: overrides.sessionStatus ?? "ok",

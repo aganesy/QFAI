@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { IMPLEMENT_FLOW_STEPS, readImplementFlowSteps } from "../helpers/implementSteps.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -12,7 +13,7 @@ const templateQfaiDir = path.join(templateRoot, ".qfai");
 const implementSkillPath = path.join(
   templateQfaiDir,
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
@@ -52,7 +53,7 @@ describe("wrapper parity across all three platforms", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonicalSkill = path.join(root, ".qfai", "assistant", "skills", "qfai-implement");
+      const canonicalSkill = path.join(root, ".qfai", "assistant", "skill", "qfai-implement");
 
       for (const integration of [".claude", ".agents", ".codex"]) {
         const wrapperSkill = path.join(root, integration, "skills", "qfai-implement");
@@ -88,20 +89,23 @@ describe("wrapper parity across all three platforms", () => {
     }
   });
 
-  it("all platform wrapper SKILL.md contains required phrases and no forbidden phrases", async () => {
+  it("every wrapper reaches the installed steps that carry the required phrases", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-wrapper-parity-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      // The wrapper is the parent skill; the procedure it runs is in the steps
+      // it names, installed once under `.qfai/assistant/step/`.
+      const steps = await readImplementFlowSteps(path.join(root, ".qfai", "assistant"));
 
       const requiredPhrases = [
-        "watch it fail",
-        "watch it pass",
-        "fresh evidence",
-        "spec review",
-        "code quality review",
-        "one test at a time",
-        "parallel",
-        "independent",
+        "one EX at a time by default",
+        "Record command, selector, failure, test hash",
+        "qa-gatekeeper checks the observed RED and GREEN evidence",
+        "implementation-reviewer checks code and tests",
+        "completion-reviewer checks",
+        "RED, GREEN and Refactor result",
+        "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
+        "required user consent",
       ];
       const forbiddenPhrases = [
         "qfai-tdd-red",
@@ -116,12 +120,16 @@ describe("wrapper parity across all three platforms", () => {
       for (const integration of [".claude", ".agents", ".codex"]) {
         const wrapperSkill = path.join(root, integration, "skills", "qfai-implement", "SKILL.md");
         const content = await readFile(wrapperSkill, "utf-8");
-        const lower = content.toLowerCase();
+        for (const step of IMPLEMENT_FLOW_STEPS) {
+          expect(content, `${integration} wrapper names ${step}`).toContain(step);
+        }
+        const lower = `${content}\n${steps}`.toLowerCase();
 
         for (const phrase of requiredPhrases) {
-          expect(lower, `Required phrase "${phrase}" missing in ${integration} wrapper`).toContain(
-            phrase.toLowerCase(),
-          );
+          expect(
+            lower,
+            `Required phrase "${phrase}" missing behind ${integration} wrapper`,
+          ).toContain(phrase.toLowerCase());
         }
 
         for (const phrase of forbiddenPhrases) {

@@ -5,23 +5,23 @@ dependencies: [00_universal/thinking.md, 00_universal/communication.md]
 version: 1.0.0
 ---
 
-# 相談・レビューの進め方
+# How to Run Consultations and Reviews
 
-設計や仕様の確認を効率よく行うための型。
+A pattern for confirming designs and specifications efficiently.
 
-## 対象エージェント
+## Target Agents
 
-- architect: 技術相談・設計検証
-- quality-lead: 品質改善相談
+- architect: Technical consultation and design verification
+- quality-lead: Quality improvement consultation
 
-## 相談の進め方
+## How to Consult
 
-1. **目的と前提を共有**: なぜ相談するか、現状の制約やゴールを明確化。
-2. **選択肢を提示**: 3案程度に整理し、利点/欠点/影響を並べる。
-3. **推奨案と根拠**: どれを推すかと理由を端的に示す。
-4. **リスクと確認事項**: 不明点・残リスク・必要な意思決定を列挙。
+1. **Share the purpose and premises**: Clarify why you are consulting, and the current constraints and goals.
+2. **Present options**: Organize them into about three, and lay out the pros, cons and impact of each.
+3. **Recommendation and rationale**: State briefly which one you back and why.
+4. **Risks and items to confirm**: List the unclear points, the remaining risks and the decisions needed.
 
-## 成果物のまとめ方
+## How to Summarize Deliverables
 
-- 目的 / 現状 / 選択肢 / 推奨 / リスク / 次アクション を箇条書きで記載。
-- 決定事項と保留事項を明確に分ける。
+- Record purpose / current state / options / recommendation / risks / next actions as bullet points.
+- Separate decisions made from items on hold.

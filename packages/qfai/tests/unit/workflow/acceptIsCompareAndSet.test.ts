@@ -1,34 +1,22 @@
-// QFAI:SPEC-0018:TC-0018-0054
+// QFAI:EX-0001-0185-32
 // Fault seeds: FAULT-004
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  route: "edit-text",
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function acceptChanged(change: Partial<AcceptResult>) {
   const issued = decide(
-    { run: { id: "run-cas", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-cas", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -36,7 +24,7 @@ function acceptChanged(change: Partial<AcceptResult>) {
   const run = issued.verdict.run;
   if (!workOrder || !run) return issued;
   return decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -53,7 +41,7 @@ function acceptChanged(change: Partial<AcceptResult>) {
   );
 }
 
-it("TC-0018-0054 (TDD-0072): A result whose expectedSequence is behind the run's", () => {
+it("A result whose expectedSequence is behind the run's", () => {
   const decision = acceptChanged({ expectedSequence: 5 });
   expect({
     run: decision.verdict.run,
@@ -66,8 +54,7 @@ it("TC-0018-0054 (TDD-0072): A result whose expectedSequence is behind the run's
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0055
-it("TC-0018-0055 (TDD-0073): A result naming a work order other than the outstanding one", () => {
+it("A result naming a work order other than the outstanding one", () => {
   const decision = acceptChanged({ workOrderId: "work-order-direct-verify-1" });
   const error = decision.verdict.error;
   expect({

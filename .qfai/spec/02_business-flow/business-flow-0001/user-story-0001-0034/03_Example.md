@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                          | Expected                                                                                                                                                                     |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0034-01 | AC-0001-0034-01 | `qfai init` in a clean new project                                                                                                                                                             | `.qfai/assistant/{rule,skill,agent,prompt}/` are filled from the shipped assets, and none of `constitution/`, `manifest/`, `catalog/`, `process/` and `steering/` is created |
+| EX-0001-0034-02 | AC-0001-0034-01 | With the `rule/ skill/ agent/ prompt/` assistant tree, run `qfai init --force` on a project holding `.qfai/assistant/rule/drift-protocol.local.md` beside the shipped `rule/drift-protocol.md` | The overlay is byte-identical after the run, and init writes no other `*.local.md` file under `rule/`                                                                        |

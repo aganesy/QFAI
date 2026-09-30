@@ -151,17 +151,17 @@ const STOP_TOKENS = new Set([
  * - ASCII alphanumerics and Latin-1 supplement
  * - Hiragana, Katakana (full + half-width), CJK Unified Ideographs
  *   plus CJK Extension A/B and beyond
- * - Full-width alphanumerics (`Ａ-Ｚ`, `０-９`, etc.)
+ * - Full-width alphanumerics (U+FF21..U+FF3A, U+FF10..U+FF19, etc.)
  * - Other scripts (Greek, Cyrillic, Thai, Arabic, ...) without
  *   special-casing
  *
- * Punctuation, the prolonged sound mark `ー`, the middle dot `・`, and
- * other symbols become separators so that `"プロトタイプ・契約"` yields
- * `["プロトタイプ", "契約"]` rather than a single combined token.
+ * Punctuation, the prolonged sound mark (U+30FC), the middle dot (U+30FB), and
+ * other symbols become separators so that a katakana word, a middle dot and a
+ * kanji word yield two tokens rather than a single combined token.
  *
  * Tokens shorter than two characters are dropped to avoid noise from
  * single-character connectives; this is intentional but may strip
- * single-CJK-character lemmas (e.g., the kanji `行` from `行う`). Subject
+ * single-CJK-character lemmas (e.g., a lone kanji verb stem). Subject
  * authors are expected to use multi-character noun forms; otherwise
  * tokenization may collapse to an empty set and the classifier proposes
  * CREATE (see `STOP_TOKENS` jsdoc above).
@@ -416,7 +416,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         });
       } else {
         // No active spec absorbed the removal-shaped REQ. DELETE
-        // ("subject ごとリポジトリから消失") is a stronger statement
+        // ("the subject vanished from the repository") is a stronger statement
         // than the input justifies — the REQ may simply have a subject
         // whose tokens were stripped by the STOP_TOKEN filter, not a
         // genuine product removal. Emit DELETE with a placeholder
