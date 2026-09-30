@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
@@ -18,7 +18,7 @@ import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
-import { exists, issue } from "./validators/utils.js";
+import { issue } from "./validators/utils.js";
 import type {
   Issue,
   ValidationCounts,
@@ -733,8 +733,22 @@ async function runPrototypingValidatorsForCi(
   platformOption?: string,
 ): Promise<Issue[]> {
   const issues = await runPrototypingValidators(root, config, timings, platformOption);
-  if (await exists(path.join(root, PROTOTYPING_EVIDENCE_REL))) return issues;
+  if (await evidenceDirectoryExists(root)) return issues;
   return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
+}
+
+/**
+ * Whether the prototyping evidence directory may hold output. Only a missing
+ * path counts as absent: one that cannot be read is treated as present, so the
+ * presence gates keep running rather than hide behind a permission error.
+ */
+async function evidenceDirectoryExists(root: string): Promise<boolean> {
+  try {
+    await stat(path.join(root, PROTOTYPING_EVIDENCE_REL));
+    return true;
+  } catch (error) {
+    return !isEnoent(error);
+  }
 }
 
 /**

@@ -61,6 +61,22 @@ describe("the evidence directory is absent", () => {
     },
   );
 
+  it.each<ValidationProfile>(["full", "verify"])(
+    "still reports a screen id that cannot be a file name under the %s profile",
+    async (profile) => {
+      const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+      await writeFile(
+        path.join(uiDir, "orders.yaml"),
+        UI_CONTRACT.replace("id: orders", "id: orders/list"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root, undefined, { profile });
+
+      expect(result.issues.map((i) => i.code)).toContain("QFAI-UIE-003");
+    },
+  );
+
   // QFAI:EX-0001-0040-01
   // QFAI:EX-0001-0040-02
   // QFAI:EX-0001-0040-05

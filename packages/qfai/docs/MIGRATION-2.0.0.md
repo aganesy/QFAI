@@ -180,7 +180,8 @@ exception in `decisions.md` when a test is intentionally absent.
 Update project CI to use the new tree and annotation patterns. On pull
 requests, run full validation and the drift profile. A checkout without
 `.qfai/evidence/prototyping/` passes full validation with no prototyping
-evidence; the `prototyping` profile is the local check that needs it. Run
+evidence; the `prototyping` and `saas-package` profiles are the local checks
+that need it. Run
 document-shape and
 Mermaid checks against the configured story-tree path. Keep test jobs for
 the applicable layers. The workflows installed by `qfai init` are
