@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/implementation-reviewer.md
+../../.qfai/assistant/agent/implementation-reviewer.md

@@ -27,7 +27,7 @@ const repoRoot = path.resolve(
 );
 const SHIPPED_SOURCES_TEMPLATE = path.join(
   repoRoot,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
 );
 
 const tempDirs: string[] = [];

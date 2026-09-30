@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0021-09
 /**
  * What `qfai init` does about `.claude/settings.json`.
  *

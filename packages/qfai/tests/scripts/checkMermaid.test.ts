@@ -16,7 +16,7 @@
  * said about them — that one needs no Mermaid boot at all.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,6 +76,33 @@ const BROKEN_DIAGRAM = ["```mermaid", "flowchart TD", "  A[Start] -->--> B{{{oop
 );
 
 describe("check-mermaid lane", () => {
+  // QFAI:EX-0001-0011-05
+  it("parses the business-flow diagram in a one-flow one-story SDD sample", async () => {
+    const root = await newTempDir();
+    const source = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN",
+    );
+    const destination = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+    for (const relative of [
+      "business-flow.md",
+      "user-story-NNNN-NNNN/01_User-story.md",
+      "user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "user-story-NNNN-NNNN/03_Example.md",
+    ]) {
+      const target = path.join(
+        destination,
+        relative.replace("user-story-NNNN-NNNN", "user-story-0001-0001"),
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, await readFile(path.join(source, relative), "utf8"), "utf8");
+    }
+
+    const result = runLane([root]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+
   it("exits 0 and counts the diagrams when every block parses", async () => {
     const dir = await newTempDir();
     await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");

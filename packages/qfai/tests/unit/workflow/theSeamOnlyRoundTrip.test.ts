@@ -1,54 +1,29 @@
-// QFAI:SPEC-0018:TC-0018-0045
+// QFAI:EX-0001-0185-27
 // Fault seeds: FAULT-014
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { issuedSteps, kindSteps, planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "bounded-sdd-delta",
-      stageKind: "sdd_delta",
-      skill: "qfai-sdd",
-      operation: "delta-or-applicability-check",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-acceptance",
-      stageKind: "acceptance",
-      skill: "qfai-atdd",
-      operation: "author-acceptance-tests",
-      when: "acceptance_obligations_unmet",
-    },
-    {
-      stageInstanceId: "bounded-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-      when: "always",
-    },
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const facts = { acceptanceObligationsUnmet: true };
 const base = {
   plan,
-  specBinding: { specId: "spec-0007" },
-  acceptedStages: [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
-  ],
+  flowBinding: { flowId: "BF-0007" },
+  acceptedStages: [{ stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" }],
 };
 
 function resultFor(
@@ -78,15 +53,14 @@ function summary(workOrder: WorkOrder | null | undefined) {
     stageInstanceId: workOrder.stageInstanceId,
     stageKind: workOrder.stageKind,
     attempt: workOrder.attempt,
-    skill: workOrder.executor?.skill,
-    operation: workOrder.operation,
+    steps: workOrder.steps,
     parentWorkOrderId: workOrder.parentWorkOrderId,
   };
 }
 
 const stopped = { id: "run-seam", state: "stopped", sequence: -1 };
 
-it("TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome needs_repair", () => {
+it("An acceptance result with seamRequest and outcome needs_repair", () => {
   const targetTestId = "TC-0007-0003";
   const first = nextFrom({ ...base, run: { id: "run-seam", state: "ready", sequence: 6 } });
   const acceptance = first.workOrder;
@@ -143,8 +117,7 @@ it("TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome n
       stageInstanceId: expect.any(String),
       stageKind: "implement",
       attempt: 1,
-      skill: "qfai-implement",
-      operation: "seam-only",
+      steps: issuedSteps("implement-seam"),
       parentWorkOrderId: acceptanceId,
     },
     seamAcceptedState: "ready",
@@ -152,8 +125,7 @@ it("TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome n
       stageInstanceId: "bounded-acceptance",
       stageKind: "acceptance",
       attempt: 2,
-      skill: "qfai-atdd",
-      operation: "author-acceptance-tests",
+      steps: kindSteps("acceptance"),
       parentWorkOrderId: undefined,
     },
   });

@@ -79,7 +79,7 @@ describe("collectContractFiles", () => {
     const apiFound = await collectApiContractFiles(apiRoot);
     const dbFound = await collectDbContractFiles(dbRoot);
 
-    // thema contract専用収集は廃止し、ui配下のyaml/ymlはUI契約候補として扱う。
+    // Collection dedicated to thema contracts is retired; yaml/yml files under ui are treated as UI contract candidates.
     expect(uiFound.map((file) => path.basename(file)).sort()).toEqual(
       [
         "ui-0001-sample.yaml",
