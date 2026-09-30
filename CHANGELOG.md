@@ -4,6 +4,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The reviewer re-adoption test reports the passing case on its own**
+  (#2418). A non-empty `R-REJECTED-READOPT` justification must pass, and that
+  check sat inside the test named for the rejection. It is now a separate test,
+  so a failure of either half is reported under its own name.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
