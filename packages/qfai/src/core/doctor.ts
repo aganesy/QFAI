@@ -35,6 +35,7 @@ import { readStoryTreeModel } from "./storyTree/tree.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
@@ -938,7 +939,12 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
  * characters the same way, for the same reason.
  */
 function isControlCodePoint(code: number): boolean {
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  return (
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    LINE_SEPARATORS.has(code) ||
+    BIDIRECTIONAL_CONTROLS.has(code)
+  );
 }
 
 /**
@@ -957,7 +963,7 @@ function escapeForMessage(value: string): string {
     const code = character.codePointAt(0);
     escaped +=
       code !== undefined && isControlCodePoint(code)
-        ? `\\x${code.toString(16).padStart(2, "0")}`
+        ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
         : character;
   }
   return escaped;

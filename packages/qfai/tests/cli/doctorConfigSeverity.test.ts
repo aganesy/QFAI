@@ -62,6 +62,22 @@ describe("doctor config.load severity", () => {
     });
   });
 
+  it("escapes line separators and bidirectional controls in the listed issues", async () => {
+    // QFAI:AC-0003-0001-03
+    // The YAML key spells U+2028 and U+202E as escapes the parser decodes.
+    await withConfig(
+      ["uiux:", "  registries:", '    "a\\u2028b\\u202ec": 5', ""].join("\n"),
+      async (root) => {
+        const data = await createDoctorData({ startDir: root, rootExplicit: true });
+        const message = findCheck(data, "config.load")?.message ?? "";
+
+        expect(message).toContain("a\\u2028b\\u202ec");
+        expect(message).not.toContain(" ");
+        expect(message).not.toContain("‮");
+      },
+    );
+  });
+
   it("reports ok on a clean config", async () => {
     await withConfig(
       ["prototyping:", "  execution:", "    browserTool: playwright", ""].join("\n"),
