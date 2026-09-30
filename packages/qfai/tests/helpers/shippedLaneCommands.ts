@@ -1243,7 +1243,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "a99f171678a06ffb631714ba8441167b60f21fb18151e8cb113f9b0806e1a21a"],
+  ["qfai-docs.yml", "7566c315abc25dc1f080ad84f43779067d7b72d436dffe059d45466d12f5cc7d"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -2047,7 +2047,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body daedf54f544b5e4284478b4606699e4b7fa12e1338715f8b0f34c638c6aea1d7>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 0b04f9dd67a67089d8463f84a4359a2c58a4fccb4e1fc000f411f79a9a9606c1>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2370,7 +2370,14 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // `--prefix` is what keeps that install away from the project's own dependency tree: npm cannot
   // read a `node_modules` another package manager laid out. Its value is pinned by the test that
   // executes the delivered step, so the flag can only ever name the lane's own directory.
-  ["npm install", new Set(["--no-audit", "--no-fund", "--no-save", "--registry", "--prefix"])],
+  //
+  // `--ignore-scripts` keeps the tool install from running any package's install script. The
+  // schema checker's platform binary arrives as an optional dependency, which installs without
+  // one, so the lane does not depend on the script.
+  [
+    "npm install",
+    new Set(["--no-audit", "--no-fund", "--no-save", "--registry", "--prefix", "--ignore-scripts"]),
+  ],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],

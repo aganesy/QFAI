@@ -525,7 +525,8 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   saving nothing to your manifest. If you do depend on QFAI, the lane reports the
   rules of the version you pinned and never replaces it. The checkers it runs go
   into a directory of their own under `tmp/`, never into your `node_modules`, so
-  the lane works with whichever package manager laid that tree out.
+  the lane works with whichever package manager laid that tree out. It installs
+  them with `--ignore-scripts`.
 
 A push to `main` or `master` runs the test lanes and the document checks again by
 default, because nothing in the files can tell whether that commit passed a pull

@@ -95,6 +95,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   says that the package's install script is not needed while the platform
   package installs, and how to approve it with `npm approve-scripts` or
   `pnpm approve-builds` where it is.
+- **The shipped `qfai-docs.yml` installs its checkers with `--ignore-scripts`, and
+  its comment no longer says the install script is required.** The
+  `@jackchuka/mdschema` platform binary arrives as an optional dependency, which
+  installs without a script; the package's install script only downloads a
+  binary when that platform package is missing. The lane therefore does not
+  depend on a policy for install scripts that it does not manage.
 
 ## [2.0.1] - 2026-09-30
 

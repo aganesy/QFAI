@@ -120,6 +120,7 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(call).toContain(`--prefix=${TOOLS_DIR}`);
     expect(call).toContain("--no-save");
     expect(call).toContain("--registry=https://registry.npmjs.org/");
+    expect(call).toContain("--ignore-scripts");
     const packages = call.filter((argument) => !argument.startsWith("-") && argument !== "install");
     expect(packages).toEqual([
       "@jackchuka/mdschema@0.15.4",
@@ -130,7 +131,8 @@ describe("the delivered document lane installs its checkers outside the project'
   });
 
   // QFAI:EX-0002-0003-07
-  it("never installs into the project's own node_modules", async () => {
+  // QFAI:EX-0002-0003-09
+  it("gives every install the prefix and the no-scripts flag", async () => {
     const body = await runBody(INSTALL_STEP);
     const installs = body
       .split(/\r?\n/)
@@ -138,7 +140,20 @@ describe("the delivered document lane installs its checkers outside the project'
       .filter((line) => line.startsWith("npm install"));
 
     expect(installs.length).toBeGreaterThan(0);
-    for (const line of installs) expect(line).toContain(`--prefix=${TOOLS_DIR}`);
+    for (const line of installs) {
+      expect(line).toContain(`--prefix=${TOOLS_DIR}`);
+      expect(line).toContain("--ignore-scripts");
+    }
+  });
+
+  // QFAI:EX-0002-0003-09
+  it("says what the checker's install script is for, and does not call it required", async () => {
+    // The comment wraps, so join its lines before looking for a phrase.
+    const comment = (await runBody(INSTALL_STEP)).replace(/\s*\n\s*#\s*/g, " ");
+
+    expect(comment).toContain("platform binary as an optional dependency");
+    expect(comment).toContain("only downloads a binary when that platform package is missing");
+    expect(comment).not.toMatch(/binary never lands/i);
   });
 
   // QFAI:EX-0002-0003-08
