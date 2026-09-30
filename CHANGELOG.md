@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The artifact-reuse and tuning-scope tests fail on the cases they reject**
+  (#2217).
+  - The artifact-reuse test counted the step that calls `ci:build-verify` as
+    one pack-lifecycle build. It now resolves that script through the root
+    `package.json` and counts the two helpers that pack, so dropping either
+    one changes the count.
+  - The tuning-scope test compared each project with the shared knob, so an
+    edit to the knob moved every project at once and nothing failed. It now
+    compares with the declared value, and reads the projects with the tuning
+    overrides cleared.
+  - The run identifiers that justify a tuning move now count only in the last
+    `DEC-` row of `.qfai/spec/decisions.md` that names the project and every
+    setting it moved. Before, any row naming the project counted, so an
+    earlier change's greens could justify a later one.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
