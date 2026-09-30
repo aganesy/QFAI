@@ -58,7 +58,6 @@ describe("the evidence directory is absent", () => {
     async (profile) => {
       expect(await presenceFindings(profile)).toEqual([]);
     },
-    60_000,
   );
 
   // QFAI:EX-0001-0040-01
@@ -69,7 +68,6 @@ describe("the evidence directory is absent", () => {
     async (profile) => {
       expect(await presenceFindings(profile)).toEqual(PRESENCE_CODES);
     },
-    60_000,
   );
 });
 
@@ -86,6 +84,5 @@ describe("the evidence directory is present", () => {
         "QFAI-UIE-002",
       ]);
     },
-    60_000,
   );
 });

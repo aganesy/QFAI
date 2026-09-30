@@ -214,6 +214,7 @@
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
+    "tests/integration/evidenceGatesAbsentDirectory.test.ts",
     "tests/integration/explorationRelaxationAudit.test.ts",
     "tests/integration/initCopilotLegacyWindow.test.ts",
     "tests/integration/prototypingExplorationRelaxationScope.test.ts",
