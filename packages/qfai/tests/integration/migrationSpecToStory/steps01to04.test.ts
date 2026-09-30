@@ -1274,6 +1274,24 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("refuses a rerun whose plan no longer places an example the ID map holds", async () => {
+    // QFAI:EX-0004-0003-39
+    await withProject(async (root) => {
+      await putPlanPack(
+        root,
+        planYaml({ examples: "examples:\n  - id: EX-0001-0002\n    criterion: AC-0001-0001\n" }),
+      );
+      expect((await run(step04, await context(root))).code).toBe(3);
+      expect((await mapIds(root))["EX-0001-0002"]).toBeDefined();
+      await put(root, PLAN_FILE, planYaml({}));
+      const before = await treeHash(root);
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(2);
+      expect(result.errors).toContain("numbering changed for EX-0001-0002");
+      expect(await treeHash(root)).toBe(before);
+    });
+  });
+
   it("selects each flow's old section by its exact H2 title", async () => {
     // QFAI:EX-0004-0007-28
     const policy = (second: string): string =>

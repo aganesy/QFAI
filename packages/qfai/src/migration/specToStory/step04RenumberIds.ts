@@ -1462,6 +1462,16 @@ export const step04: MigrationStep = {
           }
         }
       }
+      // An example the map holds and this run no longer places would be dropped from the story
+      // tree while its annotations still map to it.
+      for (const pack of packs.filter((item) => !item.retired)) {
+        for (const example of pack.examples) {
+          const prior = existingMap.ids[pack.id]?.[example.id];
+          if (prior !== undefined && ids[pack.id]?.[example.id] === undefined) {
+            throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${example.id}`);
+          }
+        }
+      }
     } else {
       operations.push({ kind: "write", target: ID_MAP_PATH, content: serializeIdMap(computedMap) });
     }
