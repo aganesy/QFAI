@@ -1312,6 +1312,49 @@ describe("migration steps 1 to 4", () => {
     }
   });
 
+  it("accepts binds none only where the rule's Contract-Refs is a literal dash", async () => {
+    // QFAI:EX-0004-0003-39
+    await withProject(async (root) => {
+      await putPlanPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/04_Business-Rules.md`,
+        "# Rules\n\n| BR-ID | Rule | Contract-Refs |\n| --- | --- | --- |\n| BR-0001-0001 | Orders have an item. | CON-API-0001 |\n| BR-0001-0002 | Orders may be free. | - |\n| BR-0001-0003 | Orders may be held. | - |\n| BR-0001-0004 | Orders have a buyer. |  |\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        planYaml({ rules: `${BASE_RULES}  - id: BR-0001-0004\n    binds: none\n` }),
+      );
+      const before = await treeHash(root);
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(2);
+      expect(result.errors).toContain("BR-0001-0004");
+      expect(await treeHash(root)).toBe(before);
+    });
+  });
+
+  it("refuses an examples entry added after every pack is retired", async () => {
+    // QFAI:EX-0004-0003-39
+    await withProject(async (root) => {
+      await putPlanPack(root);
+      expect((await run(step04, await context(root))).code).toBe(3);
+      await put(
+        root,
+        `${PACK_DIR}/01_Spec.md`,
+        "# Spec\n\n- Status: superseded\n\n## Scope\n\n- In: Orders.\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        planYaml({ examples: "examples:\n  - id: EX-0001-0002\n    criterion: AC-0001-0001\n" }),
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(2);
+      expect(result.errors).toContain("EX-0001-0002");
+    });
+  });
+
   it("accepts a retire mark on a rule whose own status is retired and removes it in step 7", async () => {
     // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
@@ -1534,6 +1577,24 @@ describe("migration steps 1 to 4", () => {
         await readFile(path.join(root, FLOW_DIR, "user-story-0001-0002/01_User-story.md"), "utf8"),
       ).toBe(`# US-0001-0002: Place order again\n\n## User Story\n\n${sentence}\n`);
       expect(result.output).not.toContain("is not one");
+    });
+  });
+
+  it("drops the closing marker of a story field written entirely in bold", async () => {
+    // QFAI:EX-0004-0007-31
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/02_User-stories.md`,
+        "# Stories\n\n## US-0001-0001: Place order\n\n- **As a: buyer**\n- **I want: to place an order**\n- **So that: the cart becomes a purchase**\n",
+      );
+      await run(step04, await context(root));
+      expect(
+        await readFile(path.join(root, FLOW_DIR, "user-story-0001-0001/01_User-story.md"), "utf8"),
+      ).toBe(
+        "# US-0001-0001: Place order\n\n## User Story\n\nAs a buyer, I want to place an order, so that the cart becomes a purchase.\n",
+      );
     });
   });
 

@@ -33,7 +33,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
-import { noReference } from "./step05CasesToExamples.js";
+import { isDashReference } from "./step05CasesToExamples.js";
 
 export type NumberedPlan = {
   flows: Record<string, string>;
@@ -913,6 +913,12 @@ type BlockEntry =
 const OTHER_BLOCK =
   /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 
+/** The value of a field line whose opening `**` is closed at the end of the value, without that close. */
+function withoutClosingBold(line: string, value: string): string {
+  const unbalanced = (value.match(/\*\*/g)?.length ?? 0) % 2 === 1;
+  return /^-\s+\*\*/.test(line) && unbalanced ? value.replace(/\s*\*\*\s*$/, "") : value;
+}
+
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
   let current: BlockEntry | null = null;
@@ -925,7 +931,7 @@ function storyBlockEntries(body: string): BlockEntry[] {
       current = {
         kind: "field",
         key: (field[1] ?? "").toLowerCase().replace(/^as an$/, "as a"),
-        value: field[2] ?? "",
+        value: withoutClosingBold(line, field[2] ?? ""),
         items: [],
         ...(/^as an$/i.test(field[1] ?? "") ? { article: "an" as const } : {}),
       };
@@ -1307,6 +1313,11 @@ export const step04: MigrationStep = {
     const packs = await Promise.all(packIds.map((id) => readOldPack(context, id)));
     if (existingMap !== null && packs.every((pack) => pack.retired)) {
       assertUnchangedPlacements(plan, existingMap);
+      // An entry the map does not hold places an item outside it, whatever the packs' status.
+      const added = plan.examples.filter(
+        (entry) => existingMap.ids[packOf(entry.id)]?.[entry.id] === undefined,
+      );
+      assertExampleEntries(added, packs, existingMap);
       return { operations, forAPerson };
     }
     assertExampleEntries(plan.examples, packs, existingMap);
@@ -1428,9 +1439,9 @@ export const step04: MigrationStep = {
           `${PLAN_PATH}: ${rule.id} is ${oldRule.status} and cannot be placed`,
         );
       }
-      if ("retire" in rule && rule.retire === null && !noReference(oldRule.contractRefs)) {
+      if ("retire" in rule && rule.retire === null && !isDashReference(oldRule.contractRefs)) {
         throw new MigrationInputError(
-          `${PLAN_PATH}: ${rule.id} binds none, but its Contract-Refs names a contract`,
+          `${PLAN_PATH}: ${rule.id} binds none, but its Contract-Refs is not "-"`,
         );
       }
     }

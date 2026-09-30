@@ -19,8 +19,8 @@ import {
   type PlannedMark,
 } from "./step04RenumberIds.js";
 import {
+  isDashReference,
   legacyPackFiles,
-  noReference,
   readLegacyRows,
   readMigrationInput,
   repositoryRelative,
@@ -277,9 +277,9 @@ function assertMarkable(source: string, record: LegacyRecord, mark: PlannedMark)
   if (mark.retire === null && retiredLegacyStatus(record.cells.Status ?? "")) {
     throw new MigrationInputError(`${source}: ${record.id} is retired and cannot be marked`);
   }
-  if (mark.retire === null && !noReference(record.cells["Contract-Refs"] ?? "")) {
+  if (mark.retire === null && !isDashReference(record.cells["Contract-Refs"] ?? "")) {
     throw new MigrationInputError(
-      `${source}: ${record.id} binds none, but its Contract-Refs names a contract`,
+      `${source}: ${record.id} binds none, but its Contract-Refs is not "-"`,
     );
   }
 }

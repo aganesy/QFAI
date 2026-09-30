@@ -1336,7 +1336,14 @@ async function runConfiguredStep(
       io.stdout.write(`${done}\n${ALREADY_DONE}\n`);
       return 0;
     }
-    if (step !== 1 && !(await hasLegacyEntries(context)) && staleStages.length === 0) {
+    // Step 3 replaces a retired config key, so a project that still holds one is not done with it.
+    const retiredConfigWork = step === 3 && loaded.issues.some(holdsRetiredKey);
+    if (
+      step !== 1 &&
+      !retiredConfigWork &&
+      !(await hasLegacyEntries(context)) &&
+      staleStages.length === 0
+    ) {
       const selected = await loadStep(step);
       if (step === 9) {
         // Step 1 moved the directories the host links pointed at, so an old
