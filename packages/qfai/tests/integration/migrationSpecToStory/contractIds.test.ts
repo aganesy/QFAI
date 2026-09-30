@@ -14,6 +14,7 @@ import {
   type MigrationContext,
   type MigrationStep,
 } from "../../../src/migration/specToStory/harness.js";
+import { OLD_CONTRACT_TOKEN } from "../../../src/migration/specToStory/contractIds.js";
 import { step03 } from "../../../src/migration/specToStory/step03MoveCatalog.js";
 import { step04 } from "../../../src/migration/specToStory/step04RenumberIds.js";
 import { step07 } from "../../../src/migration/specToStory/step07RulesToContracts.js";
@@ -876,5 +877,16 @@ describe("migration step 3 groups what it lists for a person", () => {
     expect(identifiers?.items[0]).toContain("TC-02 is now TC-01");
 
     expect(personGroups(contentOnly.output).map((group) => group.heading)).toEqual(["Content"]);
+  });
+});
+
+describe("migration old contract ID matching", () => {
+  it("matches a whole old contract ID and not the start of a longer token", () => {
+    const found = (value: string): string[] => value.match(OLD_CONTRACT_TOKEN) ?? [];
+    expect(found("Depends on CON-UI-0008, and CON-API-0001.")).toEqual([
+      "CON-UI-0008",
+      "CON-API-0001",
+    ]);
+    expect(found("Refers to CON-UI-0008-01 and CON-DB-0002x.")).toEqual([]);
   });
 });

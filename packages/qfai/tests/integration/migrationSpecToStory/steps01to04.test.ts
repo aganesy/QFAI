@@ -1355,6 +1355,22 @@ describe("migration steps 1 to 4", () => {
       expect(result.code).toBe(3);
       expect((await mapIds(root))["AC-0001-0001"]).toBe("AC-0001-0001-01");
     });
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        "# Criteria\n\n## Catalog\n\n| AC-ID | US Ref |\n| --- | --- |\n| AC-0001-0001 | US-0001-0001 |\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-9999\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect((await mapIds(root))["AC-0001-0001"]).toBeUndefined();
+    });
   });
 
   it("selects each flow's old section by its exact H2 title", async () => {

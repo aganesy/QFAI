@@ -134,9 +134,8 @@ export async function validateProject(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     if (hasLegacySpecPackEntries(entries)) {
-      oldLayoutRoot = candidate;
-      oldLayoutFiles = await listLegacySpecPackFiles(root, candidate, entries);
-      break;
+      oldLayoutRoot ??= candidate;
+      oldLayoutFiles.push(...(await listLegacySpecPackFiles(root, candidate, entries)));
     }
   }
   if (oldLayoutRoot) {

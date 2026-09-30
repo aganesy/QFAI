@@ -448,12 +448,14 @@ export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): 
     .sort((left, right) => left.line - right.line)
     .map(({ criterion }) => {
       const declared = (story: string): boolean => storyIds?.has(story) ?? true;
-      return withCatalogParent(
-        criterion.parent !== null && !declared(criterion.parent)
-          ? { ...criterion, parent: null }
-          : criterion,
-        (catalog.get(criterion.id) ?? []).filter(declared),
-      );
+      if (criterion.parent !== null && !declared(criterion.parent)) {
+        return {
+          ...criterion,
+          parent: null,
+          unresolved: `names ${criterion.parent} in its Parent line, which is no story of its pack; list it under a story's criteria in plan.yaml`,
+        };
+      }
+      return withCatalogParent(criterion, (catalog.get(criterion.id) ?? []).filter(declared));
     });
 }
 
