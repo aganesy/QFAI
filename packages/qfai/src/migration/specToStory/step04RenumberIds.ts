@@ -446,12 +446,15 @@ export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): 
   const catalog = catalogStories(text);
   return [...byId.values()]
     .sort((left, right) => left.line - right.line)
-    .map(({ criterion }) =>
-      withCatalogParent(
-        criterion,
-        (catalog.get(criterion.id) ?? []).filter((story) => storyIds?.has(story) ?? true),
-      ),
-    );
+    .map(({ criterion }) => {
+      const declared = (story: string): boolean => storyIds?.has(story) ?? true;
+      return withCatalogParent(
+        criterion.parent !== null && !declared(criterion.parent)
+          ? { ...criterion, parent: null }
+          : criterion,
+        (catalog.get(criterion.id) ?? []).filter(declared),
+      );
+    });
 }
 
 const CATALOG_STORY_COLUMN = /^(?:US Ref|US-Refs|Maps To)$/i;
@@ -1417,7 +1420,8 @@ export const step04: MigrationStep = {
       if (!oldRule || pack?.retired) {
         throw new MigrationInputError(`${PLAN_PATH}: unknown active rule ${rule.id}`);
       }
-      if (retiredLegacyStatus(oldRule.status)) {
+      const retiring = "retire" in rule && rule.retire !== null;
+      if (retiredLegacyStatus(oldRule.status) && !retiring) {
         throw new MigrationInputError(
           `${PLAN_PATH}: ${rule.id} is ${oldRule.status} and cannot be placed`,
         );

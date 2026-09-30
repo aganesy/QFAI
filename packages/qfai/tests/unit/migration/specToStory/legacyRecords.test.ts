@@ -162,6 +162,17 @@ describe("legacy migration records", () => {
     expect(() => parseLegacyRecords(text("one item"), "EX", "05_Examples.md")).not.toThrow();
   });
 
+  it("refuses a rule whose table row and heading section name different contracts", () => {
+    const text = (heading: string): string =>
+      `# Rules\n\n| BR-ID | Contract-Refs |\n| --- | --- |\n| BR-0001-0001 | CON-UI-0001 |\n\n## BR-0001-0001: Orders have an item\n\n- Contract-Refs: ${heading}\n- Orders have an item.\n`;
+    expect(() => parseLegacyRecords(text("CON-UI-0002"), "BR", "04_Business-Rules.md")).toThrow(
+      /different Contract-Refs/,
+    );
+    expect(() =>
+      parseLegacyRecords(text("CON-UI-0001"), "BR", "04_Business-Rules.md"),
+    ).not.toThrow();
+  });
+
   it("reads a heading-form rule's Contract-Refs as a field, not as statement text", () => {
     const [record] = parseLegacyRecords(
       "## BR-0001-0001: Orders have an item\n\n- Contract-Refs: CON-UI-0008\n- Orders have an item.\n",

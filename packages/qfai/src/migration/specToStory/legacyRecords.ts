@@ -113,7 +113,7 @@ function headingCells(
   };
 }
 
-const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref"];
+const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref", "Contract-Refs"];
 
 function fieldKey(name: string): string {
   return name

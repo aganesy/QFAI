@@ -1292,21 +1292,68 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
-  it("refuses a step 7 rerun whose plan marks a rule the pack does not hold", async () => {
+  it("refuses a step 7 rerun whose plan marks a rule no pack holds", async () => {
+    // QFAI:EX-0004-0003-39
+    for (const missing of ["BR-0001-0099", "BR-9999-0001"]) {
+      await withProject(async (root) => {
+        await putPlanPack(root);
+        expect((await run(step04, await context(root))).code).toBe(3);
+        await put(
+          root,
+          PLAN_FILE,
+          planYaml({ rules: `${BASE_RULES}  - id: ${missing}\n    binds: none\n` }),
+        );
+        const before = await treeHash(root);
+        const result = await run(step07, await context(root));
+        expect(result.code, missing).toBe(2);
+        expect(result.errors, missing).toContain(missing);
+        expect(await treeHash(root), missing).toBe(before);
+      });
+    }
+  });
+
+  it("accepts a retire mark on a rule whose own status is retired and removes it in step 7", async () => {
     // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
       await putPlanPack(root);
-      expect((await run(step04, await context(root))).code).toBe(3);
+      await put(
+        root,
+        `${PACK_DIR}/04_Business-Rules.md`,
+        "# Rules\n\n| BR-ID | Rule | Status | Contract-Refs |\n| --- | --- | --- | --- |\n| BR-0001-0001 | Orders have an item. | active | CON-API-0001 |\n| BR-0001-0002 | Orders may be free. | superseded | - |\n| BR-0001-0003 | Orders may be held. | active | - |\n| BR-0001-0004 | Orders have a buyer. | active | - |\n",
+      );
       await put(
         root,
         PLAN_FILE,
-        planYaml({ rules: `${BASE_RULES}  - id: BR-0001-0099\n    binds: none\n` }),
+        planYaml({ rules: `${BASE_RULES}  - id: BR-0001-0002\n    retire: replaced\n` }),
       );
-      const before = await treeHash(root);
-      const result = await run(step07, await context(root));
-      expect(result.code).toBe(2);
-      expect(result.errors).toContain("BR-0001-0099");
-      expect(await treeHash(root)).toBe(before);
+      const planned = await run(step04, await context(root));
+      expect(planned.code).toBe(3);
+      expect((await mapIds(root))["BR-0001-0002"]).toBeUndefined();
+      const moved = await run(step07, await context(root));
+      expect(moved.code).toBe(3);
+      const remaining = await readFile(path.join(root, PACK_DIR, "04_Business-Rules.md"), "utf8");
+      expect(remaining).not.toContain("BR-0001-0002");
+      expect(reportSection(moved.output, "Operations")).toContain("BR-0001-0002");
+    });
+  });
+
+  it("leaves a criterion unresolved when its Parent line names a story that does not exist", async () => {
+    // QFAI:EX-0004-0007-30
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-9999\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\n        criteria:\n          - AC-0001-0001\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect((await mapIds(root))["AC-0001-0001"]).toBe("AC-0001-0001-01");
     });
   });
 
