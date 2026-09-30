@@ -141,14 +141,6 @@ minimal on its own terms. Additions take four shapes, and each stays out.
 
 A comment in the change goes where the logic is not self-evident.
 
-- **A fix nobody asked for**, such as a pre-existing bug or a performance
-  concern, is reported as a follow-up. A fix the requested behaviour cannot work
-  without stays in. The change's report names it, and it needs no expansion
-  declared under Article VII.
-- **An ambiguous request**, where the work goes ahead on an assumption, is built
-  for the reading the wording and the surrounding code most directly support.
-  State the assumption. Whether to ask instead is `grilling.md`'s to decide.
-
 § 2 puts validation at the trust boundary. Past it, a parsed value needs no
 second check. § 2 also says which failures are caught; every other one
 propagates.

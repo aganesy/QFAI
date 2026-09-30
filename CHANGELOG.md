@@ -54,19 +54,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   requires, such as traceability annotations. The section after it moves from
   § 4 to § 5.
 
-- **The shipped guidance now bounds test-suite size and unrequested fixes**
-  (#2242). The layers catalog gains a sizing section: a new test file is sized
-  like its neighbours, a process-per-case suite is a choice rather than an
-  inherited shape, and a scratch check does not become a permanent test file.
-  The minimal-implementation rule's section on what a change leaves out gains
-  two lines. A fix nobody asked for is reported as a follow-up, unless the
-  requested behaviour cannot work without it; the change's report then names
-  it. Where work goes ahead on an assumption about an ambiguous request, it is
-  built for one reading and the assumption is stated. The implementation and QA
-  reviewer cards, and the review checks the implement and ATDD skills give,
-  each gain one check for these. Test coverage for every source change is still
-  required.
-
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as
