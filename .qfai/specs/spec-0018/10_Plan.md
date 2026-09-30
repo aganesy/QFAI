@@ -259,10 +259,9 @@ the literal values and parse no contract.
 - A run is void once any input it reads changes. The record carries the digests
   of the seed file, the vocabulary and the safety list, which shows that.
 - The eval measures English routing only.
-- A failing case outside the safety list does not block. The verdict lists it,
-  and the user accepts or rejects that list at release (`OQ-0018-0013`).
-- One input is still open: the case comparing the recompute with the recorded
-  safety-relevant list (`OQ-0018-0015`). It is written once the list is
+- Two inputs are still open: the pass bar for cases that are not safety cases
+  (`OQ-0018-0013`), and the case comparing the recompute with the recorded
+  safety-relevant list (`OQ-0018-0015`). The second is written once the list is
   recorded.
 - Parser and schema must agree on every payload example and fixture. `ajv` runs
   with `validateFormats: false` as a devDependency only.
