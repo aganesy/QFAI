@@ -2,10 +2,10 @@
  * Unit: `qfai audit log` boundary (TC-0015-0029, AC-0015-0019).
  *
  * - default `--format` is `table`
- * - empty / absent `.qfai/evidence/decisions/` yields empty result,
+ * - empty / absent `.qfai/evidence/decision/` yields empty result,
  *   exit 0 (no error)
  */
-// QFAI:SPEC-0015:TC-0015-0029
+// QFAI:EX-0001-0173-01
 
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -25,6 +25,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0173-02
 describe("TC-0015-0029: runAuditLog default format + empty store", () => {
   it("returns 0 and writes a header-only TSV table when the directory is absent", async () => {
     const written: string[] = [];

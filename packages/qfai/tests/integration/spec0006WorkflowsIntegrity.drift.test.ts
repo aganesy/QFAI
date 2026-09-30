@@ -5,8 +5,8 @@
  * shipped GitHub Actions workflow whose content no longer matches the copy
  * inside the installed package is surfaced by the `workflows.integrity`
  * check at severity `info`, naming the stale file by its adopter-tree
- * relative path. See `.qfai/contracts/cli/qfai-doctor.md`
- * (`workflows.integrity`) and `.qfai/contracts/cli/shipped-workflows.md`.
+ * relative path. See `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
+ * (BR-0008-0018 to BR-0008-0022) and `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`.
  *
  * The primary observation point is `createDoctorData` rather than the reader,
  * so a finding that is produced but never registered fails here instead of
@@ -16,8 +16,8 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-// QFAI:SPEC-0006:TC-0006-0027
-// QFAI:SPEC-0006:TC-0006-0028
+// QFAI:EX-0003-0011-01
+// QFAI:EX-0003-0011-01
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -73,7 +73,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
     const check = data.checks.find((entry) => entry.id === "workflows.integrity");
 
     expect(check, "qfai doctor must emit a workflows.integrity check").toBeDefined();
-    // The TC Verify says the check fires 「1 件」, which counts EMISSIONS of
+    // The TC Verify says the check fires "once", which counts EMISSIONS of
     // the check, not entries in `modified`. `addCheck` is a bare push with
     // no dedup and the lookup above is a `find`, so a second registration of
     // the same id would be invisible to every other assertion here.
@@ -94,10 +94,10 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
     expect(modified, "details.modified must name the stale file's relative path").toContain(
       `${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`,
     );
-    // Warranted by the TC's SETUP for leg (a) — 「provenance entry を持つ shipped
-    // workflow を 1 つ手編集した」, exactly one file edited, which is what this
+    // Warranted by the TC's SETUP for leg (a) — "hand-edit one shipped
+    // workflow that has a provenance entry", exactly one file edited, which is what this
     // assertion's own label already says — and NOT by its Verify. The Verify's
-    // 「1 件」 bounds EMISSIONS of the check, not the cardinality of `modified`,
+    // "once" bounds EMISSIONS of the check, not the cardinality of `modified`,
     // and the registration pin above is where that reading belongs. Without this
     // pin an implementation that reported every installed workflow would pass.
     expect(modified?.length, "exactly one installed workflow was edited").toBe(1);
@@ -200,6 +200,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
   // next edit to them and which no gate can notice. Reached unconditionally
   // here instead.
   it("treats a recorded name absent from the packaged tree as `extra`, never as drift", async () => {
+    // QFAI:EX-0003-0011-13
     const dir = await pool.seedAdopterTree();
     const installed = await readFile(adopterWorkflowPath(dir, "qfai-tests.yml"), "utf-8");
 
@@ -248,7 +249,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
 
 describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports severity ok and emits no drift finding", () => {
   it("registers exactly one ok-severity workflows.integrity check carrying no drift payload", async () => {
-    // The TC's Setup is 「TC-0006-0027 の手編集を戻し」, so the edit is applied
+    // The TC's Setup is "revert the hand edit of TC-0006-0027", so the edit is applied
     // and then reverted rather than skipped: guard #2 below is this row's
     // anti-vacuity guard and an edit that was never made cannot be reverted.
     // The revert restores CAPTURED bytes rather than re-deriving them, which
@@ -338,8 +339,8 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     // exercised. Soft assertions make that structural instead of a comment a
     // later edit can quietly break.
     //
-    // The TC's second Verify bullet (drift finding が 1 件も emit されない —
-    // false positive なし) is measured JOINTLY by the severity, payload and
+    // The TC's second Verify bullet (no drift finding is emitted at all —
+    // no false positive) is measured JOINTLY by the severity, payload and
     // message assertions below rather than by an extra "no info finding"
     // assertion, which would have no mutation of its own: under the
     // false-positive mutation — `hasDrifted`'s final
@@ -389,7 +390,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     expect.soft(check?.severity, "a content-identical installed tree is severity `ok`").toBe("ok");
 
     // The payload is pinned as a SET rather than by the absence of one named
-    // key. The four-key drift payload of BR-0006-0022 belongs to the `info`
+    // key. The four-key drift payload of BR-0008-0022 belongs to the `info`
     // emission alone, so an `ok` check carries `workflowsDir` and nothing
     // else: `modified` leaking in here would render an empty file list as a
     // drift report, and `declined` leaking in would contradict
@@ -480,7 +481,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
       .soft(check?.title, "the JSON surface's title must name the checked directory exactly")
       .toBe(`Workflows integrity (${ADOPTER_WORKFLOWS_DIR})`);
 
-    // NOT COVERED BY THIS ROW — BR-0006-0018's 改行正規化 clause.
+    // NOT COVERED BY THIS ROW — BR-0008-0018's line-ending normalization clause.
     //
     // The rule says the comparison basis is newline-NORMALIZED content, and NO
     // TEST IN THE DOCTOR CLOSURE DISCRIMINATES THAT BASIS FROM A RAW-BYTE ONE.
@@ -518,7 +519,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
   // must NOT fire. It lives in this row because this row introduces that
   // emission, and narrowing a new emission to its own licence is part of
   // adding it — the licence is the closed state enum of
-  // `.qfai/contracts/cli/shipped-workflows.md` §3, where a name with no
+  // `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md` (BR-0018-0021), where a name with no
   // provenance entry is `adopter-owned` (present on disk) or `absent`, and
   // BOTH rows mandate silence from `qfai doctor`. The doctor contract states
   // the same thing twice: its emission table keys `ok` to `installed` alone,
@@ -528,7 +529,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
   // An empty record therefore has to produce ZERO checks, not an `ok` one:
   // with no recorded name there is no `installed` name either, so an `ok`
   // check would be claiming a match QFAI never looked for. This is also the
-  // exact tree of §3's known limitation — an adopter who installed before
+  // exact tree of BR-0018-0045's known limitation — an adopter who installed before
   // the record existed — for which the contract says the drift channel is
   // silent.
   //
@@ -566,7 +567,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     // assertion that fails instead of the run passing on an unmutated tree.
     expect(
       Object.keys((await readInstallProvenance(dir)).workflows),
-      "the record must read as empty, or this is not the state §3 reasons about",
+      "the record must read as empty, or this is not the state BR-0018-0045 reasons about",
     ).toEqual([]);
     // Precondition: the files are still ON DISK and still differ from the
     // packaged copy. That makes every shipped name `adopter-owned` (no

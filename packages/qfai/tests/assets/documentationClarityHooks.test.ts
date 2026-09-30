@@ -29,6 +29,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   API_BUDGET_HOOK_MARKER,
   DOCUMENTATION_CLARITY_HOOK_MARKER,
+  FREE_TEXT_ENTRY_HOOK_MARKER,
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
@@ -73,6 +74,8 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [GRILLING_PLAN_HOOK_MARKER, "grilling.md"],
   [STRUCTURED_QUESTION_HOOK_MARKER, "user-questions.md"],
   [API_BUDGET_HOOK_MARKER, "api-budget.md"],
+  // A skill rather than a rule master: the entry the request is sent to.
+  [FREE_TEXT_ENTRY_HOOK_MARKER, "qfai-run"],
 ]);
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root

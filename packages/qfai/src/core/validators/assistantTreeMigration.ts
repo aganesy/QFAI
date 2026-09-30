@@ -27,9 +27,7 @@ export async function validateAssistantTreeMigration(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // 1. 4-layer enum guard — any assistant-tree dir outside the 4 canonical
-  // names is flagged (except the documented exceptions: agents/, skills/,
-  // instructions/ — these are existing pre-recut surfaces).
+  // 1. Canonical assistant-layer enum guard.
   const assistantRoot = path.join(root, ".qfai", "assistant");
   if (await exists(assistantRoot)) {
     let dirEntries: Dirent[];
@@ -38,24 +36,19 @@ export async function validateAssistantTreeMigration(
     } catch {
       dirEntries = [];
     }
-    const PRE_RECUT_DIRS = new Set([
-      "agents",
-      "skills",
-      // skills.local/ is the protected user-customization surface.
-      "skills.local",
-    ]);
+    const EXTRA_DIRS = new Set(["skill.local"]);
     // instructions/ and steering/ are pre-recut layers that get their
-    // own D-DEPRECATED-PATH below (symmetric per qfai-init.md contract).
+    // own D-DEPRECATED-PATH below, symmetric with the other retired layers.
     const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
-      if (PRE_RECUT_DIRS.has(entry.name)) continue;
+      if (EXTRA_DIRS.has(entry.name)) continue;
       if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       issues.push(
         issue(
           "W-ASSISTANT-LAYOUT",
-          `.qfai/assistant/${entry.name}/ is not in the canonical 4-layer enum (${ASSISTANT_LAYERS.join(", ")}).`,
+          `.qfai/assistant/${entry.name}/ is not in the canonical layer set (${ASSISTANT_LAYERS.join(", ")}).`,
           "warning",
           `.qfai/assistant/${entry.name}/`,
           "assistantTreeMigration.enumGuard",
@@ -92,7 +85,7 @@ export async function validateAssistantTreeMigration(
     );
   }
 
-  // 3. Each of the 4 canonical layers should have at least a .gitkeep so the
+  // 3. Each canonical layer should have at least a .gitkeep so the
   // tree is visible to consumers. Missing layer = info-only (the upgrade
   // helper will seed it). We intentionally use "info" severity so this
   // can't fail validate by itself.
@@ -105,7 +98,7 @@ export async function validateAssistantTreeMigration(
       issues.push(
         issue(
           "I-ASSISTANT-LAYER-UNSEEDED",
-          `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the 4-layer tree.`,
+          `.qfai/assistant/${layer}/ is not seeded yet. Run \`qfai init\` to seed the assistant tree.`,
           "info",
           `.qfai/assistant/${layer}/`,
           "assistantTreeMigration.layerSeed",

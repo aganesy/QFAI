@@ -2,10 +2,10 @@
  * The `--fail-on warning` leg of the installed shipped-workflow drift advisory:
  * a drift-only tree exits 0, and an unrelated warning still exits 1.
  *
- * TC-0006-0032 (AC-0006-0025 / EX-0006-0025) — Setup 「`workflows.integrity` が
- * drift を返し、他の check は 1 件も warning / error を返さないフィクスチャ
- * (`summary.warning === 0` かつ `summary.error === 0` になる状態)」, Action
- * 「`runDoctor({ root, format: 'text', failOn: 'warning' })` 相当を呼ぶ」.
+ * TC-0006-0032 (AC-0006-0025 / EX-0006-0025) — Setup "a fixture on which `workflows.integrity`
+ * returns drift and no other check returns a single warning or error
+ * (a state where `summary.warning === 0` and `summary.error === 0`)", Action
+ * "call the equivalent of `runDoctor({ root, format: 'text', failOn: 'warning' })`".
  *
  * TC-0006-0033 (AC-0006-0025 / EX-0006-0026) — the same drift fixture plus exactly
  * one warning finding unrelated to `workflows.integrity`, asserting exit 1 with the
@@ -56,8 +56,8 @@
  * ## What the `summary.info` claim does NOT discriminate, measured
  *
  * `TC-0006-0032` asks for `summary.info >= 1`. On this fixture the bare install
- * already contributes four `info` checks (`paths.specsDir`, `paths.contractsDir`,
- * `paths.discussionDir`, `guardrails.present`), so the claim holds at 4 even with
+ * already contributes three `info` checks (`paths.specsDir`, `paths.contractsDir`,
+ * `paths.discussionDir`), so the claim holds at 3 even with
  * the drift advisory absent or re-severitied. It is asserted because the TC asks
  * for it, and it is recorded here as NON-DISCRIMINATING so no reader mistakes it
  * for the claim that pins the severity choice. That claim is `summary.warning`.
@@ -80,8 +80,8 @@
  * oracle: "the exit code moved AND the summary moved" is only observable while both
  * claims can fail in the same run.
  */
-// QFAI:SPEC-0006:TC-0006-0032
-// QFAI:SPEC-0006:TC-0006-0033
+// QFAI:EX-0003-0011-05
+// QFAI:EX-0003-0011-06
 
 import { describe, expect, it } from "vitest";
 
@@ -176,7 +176,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
     ).toContain("workflows.integrity");
 
-    // CLAIM 1 — 「exit code が 0 であること」.
+    // CLAIM 1 — "the exit code is 0".
     expect
       .soft(
         run.exitCode,
@@ -184,7 +184,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       )
       .toBe(0);
 
-    // CLAIM 2 — 「`summary.warning` が 0 のままであること」. This is the claim that
+    // CLAIM 2 — "`summary.warning` stays 0". This is the claim that
     // discriminates `info` from `warning`; the equivalent mutant TC-0006-0029
     // recorded dies here.
     expect
@@ -194,7 +194,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       )
       .toBe(0);
 
-    // CLAIM 3 — 「`summary.info` が 1 以上であること」. Asserted because the TC asks
+    // CLAIM 3 — "`summary.info` is 1 or more". Asserted because the TC asks
     // for it; recorded in the header as non-discriminating, because the bare
     // install already contributes four.
     expect
@@ -249,7 +249,7 @@ describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fa
       "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
     ).toContain("workflows.integrity");
 
-    // CLAIM 1 — 「exit code が 1 であること」, i.e. the flag really does catch a
+    // CLAIM 1 — "the exit code is 1", i.e. the flag really does catch a
     // warning. This is what makes TC-0006-0032's exit 0 non-vacuous.
     expect
       .soft(
@@ -258,7 +258,7 @@ describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fa
       )
       .toBe(1);
 
-    // CLAIM 2 — 「`workflows.integrity` finding は依然 `info` のままであること」. Read
+    // CLAIM 2 — "the `workflows.integrity` finding is still `info`". Read
     // at the registration site rather than in the rendered text, matching every
     // suite in this family: severity is decided at `addCheck`.
     expect
