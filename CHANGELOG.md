@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`qfai-run` runs a change to several business flows once per flow** (#2395).
+  A run works on one flow, so its route proposal narrows the goal and the write
+  scope to one. Once `finish` reports that run, `qfai-run` starts the next with
+  the same request for the next flow, without asking the operator. The
+  announcement names the part a later run makes. The completion report is
+  unchanged.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added

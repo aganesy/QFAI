@@ -109,6 +109,9 @@ The routing work order's result carries the proposal.
 - `affectedFlowIds` names exactly one business flow when `newStories` is empty
   and the plan has a stage that works on a flow. A route whose only such stage
   is a test fix takes one flow or none, and any other route binds none.
+- A change to several flows runs once per flow. Narrow the goal and the write
+  scope to one flow. Once `finish` reports that run, start the next with the
+  same request for the next flow, without asking the operator.
 - A route that ends by closing the request writes nothing but the records its
   discussion stage keeps, so its `proposedWriteScope` names nothing else.
 - `newStories` holds `{ goal, covers, excludes, evidence, flowId }` for each
