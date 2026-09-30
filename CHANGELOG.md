@@ -78,6 +78,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   presence checks while that directory does not exist. The `prototyping` and
   `saas-package` profiles still run them, and so do `full` and `verify` once
   the directory exists.
+- **The shipped `qfai-docs.yml` installs its checkers outside the project's
+  dependency tree.** It ran `npm install --no-save` into the project's own
+  `node_modules`, which npm cannot read after a pnpm install, so both document
+  checks stopped at that step in every pnpm project. The checkers
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself when the project
+  has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  and the schema and Mermaid scripts take `--tools <dir>` to find them. An
+  installed copy of the workflow is not replaced; copy the packaged file to take
+  the fix.
 
 ## [2.0.1] - 2026-09-30
 

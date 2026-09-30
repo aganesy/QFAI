@@ -535,11 +535,16 @@ jobs:
           # moment the job runs, so the same commit could be checked by a
           # different rule set from one day to the next.
           #
-          # `--no-save` because nothing here belongs in the adopter's manifest:
-          # these are the lane's tools, not the project's dependencies. They are
-          # installed rather than run through `npx` for the same reason the
-          # version is pinned — `npx` resolves and caches on its own terms, and
-          # a lane that reports a verdict should be able to say which program
+          # `--prefix` puts them in a directory of their own, and that is what
+          # keeps this step independent of the package manager above. npm cannot
+          # read a `node_modules` that pnpm laid out - it stops with an internal
+          # error - so an install into your tree fails for every project that
+          # uses pnpm, and neither check ever runs. A prefix of its own has no
+          # tree to read, and `--no-save` keeps it from writing a manifest there.
+          # The two checker scripts below are given the directory with `--tools`.
+          # They are installed rather than run through `npx` for the same reason
+          # the version is pinned - `npx` resolves and caches on its own terms,
+          # and a lane that reports a verdict should be able to say which program
           # produced it.
           #
           # `--registry` on the command line outranks both `NPM_CONFIG_REGISTRY`
@@ -547,14 +552,15 @@ jobs:
           # FROM. `--ignore-scripts` is deliberately NOT passed: the mdschema
           # package resolves its platform binary in a postinstall script, and
           # without it the binary never lands.
-          npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
-          # QFAI itself, but only when your install did not already provide it.
+          #
+          # QFAI itself joins the same install, but only when your install did
+          # not already provide it.
           #
           # The two steps below run FILES out of the package rather than its
           # `qfai` bin. A lane that invokes the bin through `npx` needs nothing
           # on disk; naming a path inside the package needs it unpacked. And
           # `qfai init` does not add QFAI to your manifest, so a repository set
-          # up with `npx qfai init` alone has no `node_modules/qfai` — these
+          # up with `npx qfai init` alone has no `node_modules/qfai` - these
           # steps would fail on a missing module rather than on your documents.
           #
           # Guarded rather than unconditional, because a repository that DOES
@@ -563,9 +569,13 @@ jobs:
           # with the newest one. Unpinned in the bootstrap case for the same
           # reason a bare `npx qfai` is: with nothing in the manifest there is no
           # version to honour, and pinning one here would freeze every adopter's
-          # docs lane at whatever release generated this file.
-          if [ ! -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ qfai
+          # docs lane at whatever release generated this file. One install for
+          # both cases, because a second `--no-save` install into the same
+          # prefix removes what the first one added.
+          if [ -d node_modules/qfai ]; then
+            npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
+          else
+            npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1 qfai
           fi
       - name: Check SDD document shape
         if: matrix.check == 'shape'
@@ -576,7 +586,15 @@ jobs:
           # document the manifest matches; the driver reads `paths.specsDir` and
           # `paths.contractsDir` from your `qfai.config.yaml`, so a relocated
           # tree is covered. A document carrying the opt-out marker fails.
-          node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary
+          #
+          # `--tools` names the directory the step above installed the checker
+          # into. With no QFAI of your own, the driver runs out of that same
+          # directory.
+          if [ -d node_modules/qfai ]; then
+            node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
+          else
+            node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
+          fi
       - name: Check Mermaid diagram syntax
         if: matrix.check == 'mermaid'
         shell: bash
@@ -584,8 +602,13 @@ jobs:
           # Every ```mermaid block in the tree, parsed with Mermaid's own
           # grammar. A block whose body is a template with `<placeholder>`
           # tokens opts out with `<!-- mermaid-lint:ignore -->` on the line
-          # directly above its opening fence.
-          node node_modules/qfai/assets/scripts/check-mermaid.mjs
+          # directly above its opening fence. `--tools` names the directory the
+          # install step put Mermaid and jsdom in.
+          if [ -d node_modules/qfai ]; then
+            node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
+          else
+            node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools
+          fi
 
   docs:
     name: qfai docs (document shape and Mermaid syntax)

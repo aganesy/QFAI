@@ -86,9 +86,12 @@
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
  *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
+ *   node scripts/check-mdschema.mjs --tools <dir> --scope all  # mdschema installed under <dir>
  *
  * The tree defaults to the working directory; the SCHEMAS always come from
  * beside this file, so `--root` moves the documents and never the contract.
+ * `--tools` names a directory whose `node_modules` holds the mdschema package,
+ * searched before the tree and the package this file sits in.
  *
  * Exit codes:
  *   0  no document in scope carries a violation this run is responsible for
@@ -154,9 +157,18 @@ const MDSCHEMA_PACKAGE = "@jackchuka/mdschema";
  * caller turns into a usage error rather than a silent pass.
  *
  * @param {string} from Directory to start the first walk from.
+ * @param {string | null} [tools] A directory whose own `node_modules` is searched first, without walking up.
  * @returns {{ command: string, args: string[] } | null}
  */
-export function findMdschemaCommand(from) {
+export function findMdschemaCommand(from, tools = null) {
+  if (tools !== null) {
+    const entry = mdschemaEntryPoint(
+      path.join(tools, "node_modules", ...MDSCHEMA_PACKAGE.split("/")),
+    );
+    if (entry !== null) {
+      return { command: process.execPath, args: [entry] };
+    }
+  }
   for (const start of [from, SCRIPT_DIR]) {
     let dir = path.resolve(start);
     for (;;) {
@@ -1004,13 +1016,14 @@ function describeRefusedMarker(file) {
 /**
  * Parses the command line into options, or returns an exit code.
  *
- * @returns {{ scope: string, base: string, summary: boolean, root: string, positional: string[] } | number}
+ * @returns {{ scope: string, base: string, summary: boolean, root: string, tools: string | null, positional: string[] } | number}
  */
 function parseArgs(argv) {
   let scope = "changed";
   let base = DEFAULT_BASE;
   let summary = false;
   let root = process.cwd();
+  let tools = null;
   const positional = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -1025,6 +1038,10 @@ function parseArgs(argv) {
     }
     if (arg === "--root") {
       root = argv[++i] ?? "";
+      continue;
+    }
+    if (arg === "--tools") {
+      tools = argv[++i] ?? "";
       continue;
     }
     if (arg === "--summary") {
@@ -1050,12 +1067,23 @@ function parseArgs(argv) {
     console.error("check-mdschema: --root needs a directory");
     return 2;
   }
+  if (tools === "") {
+    console.error("check-mdschema: --tools needs a directory");
+    return 2;
+  }
   root = path.resolve(root);
   if (!existsSync(root) || !statSync(root).isDirectory()) {
     console.error(`check-mdschema: --root is not a directory: ${root}`);
     return 2;
   }
-  return { scope, base, summary, root, positional };
+  return {
+    scope,
+    base,
+    summary,
+    root,
+    tools: tools === null ? null : path.resolve(tools),
+    positional,
+  };
 }
 
 export function main() {
@@ -1063,12 +1091,12 @@ export function main() {
   if (typeof options === "number") {
     return options;
   }
-  const { scope, base, summary, root, positional } = options;
+  const { scope, base, summary, root, tools, positional } = options;
   if (!existsSync(MANIFEST)) {
     console.error(`check-mdschema: manifest not found at ${MANIFEST}`);
     return 2;
   }
-  const mdschema = findMdschemaCommand(root);
+  const mdschema = findMdschemaCommand(root, tools);
   if (mdschema === null) {
     console.error(
       "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema, which the qfai package depends on.",
