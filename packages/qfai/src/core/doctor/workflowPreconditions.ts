@@ -2,6 +2,8 @@ import { getHashes } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import { isRecord } from "../workflow/parse.js";
 
 /**
@@ -36,6 +38,17 @@ const PNPM_FIELD = new RegExp(
     `(?:\\+([0-9A-Za-z-]+)\\.[0-9a-fA-F]+)?$`,
   "u",
 );
+
+/**
+ * A repository-controlled value as one short printable line. Findings reach a terminal and a
+ * workflow log, so control characters and line breaks in a manifest or a file name are replaced.
+ */
+function printable(text: string): string {
+  return text
+    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ")
+    .trim()
+    .slice(0, 80);
+}
 
 async function readText(target: string): Promise<string | undefined> {
   try {
@@ -86,7 +99,7 @@ function packageManagerCheck(
   if (!lockfiles.some((lockfile) => lockfile.manager === "pnpm")) return undefined;
   const declared = declaredPackageManager(manifest);
   if (namesPnpmVersion(declared)) return undefined;
-  const found = declared === "" ? "it is missing" : `it is "${declared}"`;
+  const found = declared === "" ? "it is missing" : `it is "${printable(declared)}"`;
   return {
     id: "workflows.packageManager",
     severity: "warning",
@@ -95,7 +108,7 @@ function packageManagerCheck(
       `pnpm-lock.yaml is present but the "packageManager" field of package.json does not name a pnpm version (${found}), ` +
       `so the shipped workflows stop before they install anything. ` +
       `Set "packageManager" to "pnpm@<the pnpm version you use>".`,
-    details: { path: "package.json", packageManager: declared === "" ? null : declared },
+    details: { path: "package.json", packageManager: declared === "" ? null : printable(declared) },
   };
 }
 
@@ -121,7 +134,8 @@ function engineRange(manifest: Record<string, unknown> | undefined): string | un
   const engines = manifest?.["engines"];
   if (!isRecord(engines)) return undefined;
   const node = engines["node"];
-  return typeof node === "string" && node.trim() !== "" ? node.trim() : undefined;
+  const range = typeof node === "string" ? printable(node) : "";
+  return range === "" ? undefined : range;
 }
 
 async function hasNodeVersionFile(root: string): Promise<boolean> {
@@ -155,13 +169,20 @@ function numericParts(text: string): number[] {
   return match === null ? [] : (match[1] ?? "").split(".").map(Number);
 }
 
+/** The first lower-bound comparator of a range alternative, wherever it stands; `<` and `<=` are skipped. */
+function lowerBound(alternative: string): number[] | undefined {
+  for (const match of alternative.matchAll(/(<=?|>=?|\^|~|=)?\s*v?(\d+(?:\.\d+){0,2})/gu)) {
+    if (!(match[1] ?? "").startsWith("<")) return numericParts(match[2] ?? "");
+  }
+  return undefined;
+}
+
 /** The lowest version an `engines.node` range allows, as three numbers. */
 function lowestAllowed(range: string): number[] | undefined {
   let lowest: number[] | undefined;
   for (const alternative of range.split("||")) {
-    if (alternative.trim().startsWith("<")) continue;
-    const parts = numericParts(alternative);
-    if (parts.length === 0) continue;
+    const parts = lowerBound(alternative);
+    if (parts === undefined) continue;
     const padded = [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
     if (lowest === undefined || compare(padded, lowest, 3) < 0) lowest = padded;
   }
@@ -177,26 +198,39 @@ function compare(left: number[], right: number[], length: number): number {
   return 0;
 }
 
+/** Every string under a `node-version` key, at any depth. A list yields each of its items. */
+function collectPins(node: unknown, pins: string[]): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectPins(item, pins);
+  } else if (isRecord(node)) {
+    for (const [key, value] of Object.entries(node)) {
+      if (key !== "node-version") {
+        collectPins(value, pins);
+      } else if (typeof value === "string") {
+        pins.push(value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) if (typeof item === "string") pins.push(item);
+      }
+    }
+  }
+}
+
 /**
- * The versions a workflow pins on a `node-version:` line, as written.
+ * The versions a workflow pins under `node-version`, as written. The failsafe schema keeps every
+ * scalar a string, so `20.10` is not read as the number 20.1, and a script body that mentions the
+ * key is one string, not a pin.
  *
- * SIMPLIFIED: reads the line itself, so a version reached through a matrix variable or an
- * expression is not followed.
+ * SIMPLIFIED: a version reached through a matrix variable or an expression is not followed.
  * Lift when: a project reports a pin below `engines.node` that this read missed.
  */
 function pinnedVersions(workflow: string): string[] {
   const pins: string[] = [];
-  for (const line of workflow.split(/\r?\n/u)) {
-    const match = /^\s*(?:-\s*)?node-version\s*:\s*(.*?)\s*$/u.exec(line);
-    if (match === null) continue;
-    const value = (match[1] ?? "").replace(/(?:^|\s)#.*$/u, "").trim();
-    const inner = value.startsWith("[") ? value.replace(/^\[|\].*$/gu, "") : value;
-    for (const item of inner.split(",")) {
-      const version = item.trim().replace(/^["']|["']$/gu, "");
-      if (/^v?\d/u.test(version)) pins.push(version);
-    }
+  try {
+    collectPins(parseYaml(workflow, { schema: "failsafe" }), pins);
+  } catch {
+    return [];
   }
-  return pins;
+  return pins.map((pin) => pin.trim().replace(/^v/u, "")).filter((pin) => /^\d/u.test(pin));
 }
 
 async function workflowFiles(root: string): Promise<string[]> {
@@ -220,7 +254,10 @@ async function nodePinCheck(
     for (const version of pinnedVersions(text ?? "")) {
       const parts = numericParts(version);
       if (parts.length > 0 && compare(parts, lowest, parts.length) < 0) {
-        below.push({ file: [...WORKFLOWS_DIR, name].join("/"), version });
+        below.push({
+          file: printable([...WORKFLOWS_DIR, name].join("/")),
+          version: printable(version),
+        });
       }
     }
   }

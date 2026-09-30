@@ -253,6 +253,62 @@ describe("qfai doctor reports the repository facts the shipped workflows need", 
     expect(found.every((check) => check.severity === "warning")).toBe(true);
   });
 
+  it("finds the lower bound of engines.node wherever it stands in the range", async () => {
+    // QFAI:AC-0003-0011-08
+    // QFAI:EX-0003-0011-20
+    const root = await project({
+      packageJson: { engines: { node: "<23 >=20.19.0" } },
+      files: {
+        ".nvmrc": "22\n",
+        ".github/workflows/ci.yml": "steps:\n  - with:\n      node-version: 18\n",
+      },
+    });
+
+    expect((await finding(root, "workflows.nodePin"))?.message).toContain("Node 18");
+  });
+
+  it("reads a pin from the parsed workflow, not from a script that mentions the key", async () => {
+    // QFAI:AC-0003-0011-08
+    // QFAI:EX-0003-0011-20
+    const root = await project({
+      packageJson: { engines: { node: ">=20.19.0" } },
+      files: {
+        ".nvmrc": "22\n",
+        ".github/workflows/ci.yml": [
+          "steps:",
+          "  - run: |",
+          "      cat <<EOF",
+          "        node-version: 18",
+          "      EOF",
+          "  - with:",
+          "      node-version: 20.10",
+          "",
+        ].join("\n"),
+      },
+    });
+
+    const message = (await finding(root, "workflows.nodePin"))?.message ?? "";
+
+    expect(message).toContain("Node 20.10");
+    expect(message).not.toContain("Node 18");
+  });
+
+  it("prints a repository-controlled value on one line without control characters", async () => {
+    // QFAI:AC-0003-0011-08
+    // QFAI:EX-0003-0011-16
+    const root = await project({
+      packageJson: {
+        engines: { node: ">=22\n[error] forged\u001b[31m" },
+        packageManager: "yarn@4\n[error] forged",
+      },
+      files: { "pnpm-lock.yaml": "" },
+    });
+
+    for (const check of await preconditions(root)) {
+      expect(check.message, check.id).not.toMatch(/\p{Cc}/u);
+    }
+  });
+
   it("names the same fallback Node the shipped workflows fall open to", async () => {
     // QFAI:AC-0003-0011-08
     // QFAI:EX-0003-0011-19
