@@ -478,7 +478,7 @@
       ],
       "codePathCostPin": {
         "instances": 23,
-        "timeoutMinutesSum": 310,
+        "timeoutMinutesSum": 320,
         "installInstances": 21,
         "buildJobs": ["build", "node-floor", "test", "windows-parity"]
       },
