@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 
 // Every assistant surface links the same skill set out of a master directory
-// (`.agents/skills/` for the repo-local ones, `.qfai/assistant/skills/` for the
+// (`.agents/skills/` for the repo-local ones, `.qfai/assistant/skill/` for the
 // installed ones). The links are committed as git symlinks.
 const SURFACES = [".claude/skills", ".codex/skills", ".github/skills"] as const;
 

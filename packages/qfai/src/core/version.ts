@@ -59,6 +59,15 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * whole test harness quiet, whose temp roots are outside the source tree by
  * construction.
  *
+ * One package directory with no such segment is still reported: one reached
+ * through the nearest `node_modules/qfai` at or above `root`, a link, where that
+ * `node_modules` directory really lies outside `root`. A workspace dependency
+ * is such a link to a source checkout, so a worktree that inherits an ancestor's
+ * `node_modules`, or whose `node_modules` is a link to another checkout's, runs
+ * another branch's build. A link in the project's own `node_modules`, or in the
+ * `node_modules` of the nearest directory that declares qfai, points where the
+ * project chose, as `npm link` does, and is not reported.
+ *
  * **What remains is a path question, not an intent question.** A deliberate
  * global install and a hoisted monorepo dependency both satisfy every condition
  * above and are both fine. Telling them from the ambient resolution needs the
@@ -74,7 +83,19 @@ export async function locateToolAgainstProject(
     toRealPath(path.resolve(root)),
     toRealPath(packageDir),
   ]);
-  const outside = classifyToolLocation(realRoot, realPackageDir);
+  // The walks for a link run only for the one layout they can change: a package
+  // outside the root and outside every `node_modules`.
+  const needsLink = isOutside(realRoot, realPackageDir) && !isInsideNodeModules(realPackageDir);
+  const linkingNodeModules = needsLink
+    ? await findLinkingNodeModules(realRoot, realPackageDir)
+    : null;
+  const outside = classifyToolLocation(
+    realRoot,
+    realPackageDir,
+    linkingNodeModules === null
+      ? null
+      : { nodeModules: linkingNodeModules, declaringDir: await findDeclaringDir(realRoot) },
+  );
   return {
     packageDir,
     outside,
@@ -124,7 +145,12 @@ async function resolvesAgainstDeclaration(root: string, packageDir: string): Pro
  * or pnpm's `node_modules/.pnpm/...` that Node resolves through.
  */
 export function classifyAgainstDeclaration(declaringDir: string, packageDir: string): boolean {
-  const relative = path.relative(declaringDir, packageDir);
+  return isOutside(declaringDir, packageDir);
+}
+
+/** Whether `target` lies outside `base`. */
+function isOutside(base: string, target: string): boolean {
+  const relative = path.relative(base, target);
   return relative.startsWith("..") || path.isAbsolute(relative);
 }
 
@@ -177,13 +203,61 @@ function declaresQfai(manifest: unknown): boolean {
  *
  * Pure, and exported for that reason: `resolveToolPackageDir()` reports where
  * this file really is, so a test cannot move the package to reach the state
- * this predicate exists to detect. Both operands must already be real paths —
+ * this predicate exists to detect. Every operand must already be a real path —
  * {@link locateToolAgainstProject} is what resolves them.
+ *
+ * `link` matters only for a package directory outside every `node_modules`.
+ * `link.nodeModules` is the `node_modules` directory whose `qfai` entry is a
+ * link to `packageDir`, from {@link findLinkingNodeModules}, and
+ * `link.declaringDir` is the nearest directory at or above `root` that declares
+ * qfai, from {@link findDeclaringDir}. The link is reported only when its
+ * `node_modules` lies outside `root` and does not belong to the declaring
+ * directory: a monorepo top level that links qfai, by `npm link` or as a
+ * workspace member, chose that copy for every package below it.
  */
-export function classifyToolLocation(root: string, packageDir: string): boolean {
-  const relative = path.relative(root, packageDir);
-  const escapes = relative.startsWith("..") || path.isAbsolute(relative);
-  return escapes && isInsideNodeModules(packageDir);
+export function classifyToolLocation(
+  root: string,
+  packageDir: string,
+  link: { nodeModules: string; declaringDir: string | null } | null = null,
+): boolean {
+  if (!isOutside(root, packageDir)) return false;
+  if (isInsideNodeModules(packageDir)) return true;
+  return (
+    link !== null &&
+    isOutside(root, link.nodeModules) &&
+    path.dirname(link.nodeModules) !== link.declaringDir
+  );
+}
+
+/**
+ * The real path of the `node_modules` directory holding the nearest
+ * `node_modules/qfai` at or above `root`, when that entry resolves to
+ * `packageDir`; otherwise `null`.
+ *
+ * This is how a package directory outside every `node_modules` was reached: a
+ * workspace dependency is a link from `node_modules/qfai` to a source checkout,
+ * and Node reports the link's target. Only the nearest entry counts, because it
+ * is the one `npx` runs; a farther link to the same checkout means the checkout
+ * was run by its path. The `node_modules` directory's own real path is returned
+ * because it can be a link as well, to another checkout's. Both operands must
+ * already be real paths.
+ */
+export async function findLinkingNodeModules(
+  root: string,
+  packageDir: string,
+): Promise<string | null> {
+  let dir = root;
+  for (let depth = 0; depth < 16; depth += 1) {
+    const nodeModules = path.join(dir, "node_modules");
+    const entry = await realPathOrNull(path.join(nodeModules, PACKAGE_NAME));
+    if (entry !== null) {
+      return entry === packageDir ? toRealPath(nodeModules) : null;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
 }
 
 /**
@@ -205,10 +279,15 @@ function isInsideNodeModules(target: string): boolean {
  * validator whose subject is unrelated.
  */
 async function toRealPath(target: string): Promise<string> {
+  return (await realPathOrNull(target)) ?? target;
+}
+
+/** `realpath`, or `null` when the path does not resolve. */
+async function realPathOrNull(target: string): Promise<string | null> {
   try {
     return await realpath(target);
   } catch {
-    return target;
+    return null;
   }
 }
 

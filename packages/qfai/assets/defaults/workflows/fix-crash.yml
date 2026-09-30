@@ -1,0 +1,41 @@
+route: fix-crash
+family: fix
+stages:
+  - id: minimize
+    kind: diagnose
+    steps: [implement-minimize]
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [minimize]
+  - id: spec
+    kind: sdd_append
+    steps:
+      - { step: sdd-story, passThrough: true }
+      - sdd-gate
+    after: [diagnose]
+  - id: implement
+    kind: implement
+    steps: [implement-tdd, implement-checkpoint]
+    after: [spec]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [implement]
+defaultModifiers: []
+decisionPoints: []
+branchPoints:
+  - step: implement-diagnose
+    outcomes:
+      - { outcome: as-specified, routes: [answer-question] }
+      - { outcome: not-ours, routes: [close-no-change] }
+      - { outcome: duplicate, routes: [close-duplicate] }
+      - { outcome: needs-info, routes: [request-info] }
+      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: defective-test, routes: [repair-test] }
+      - { outcome: regression, routes: [fix-red-main] }
+      - { outcome: surface-conflict, routes: [repair-consistency] }

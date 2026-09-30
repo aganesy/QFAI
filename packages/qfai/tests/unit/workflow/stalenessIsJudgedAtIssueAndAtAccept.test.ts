@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0006
+// QFAI:EX-0001-0185-05
 // Fault seeds: FAULT-007
 
 import { createHash } from "node:crypto";
@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -13,41 +14,29 @@ const approvedWriteAreas = ["src/notify/**"];
 const scopeDigestOf = (writeAreas: string[]) =>
   createHash("sha256").update(JSON.stringify({ writeAreas })).digest("hex");
 
-const capability = {
+const story = {
   goal: "Customer notification email registration",
   covers: ["Up to five unique emails per customer"],
   excludes: ["Notification delivery"],
+  flowId: "BF-0001",
 };
 
 function freshSnapshot(): Snapshot {
   return {
     run: { id: "run-feature", state: "ready", sequence: 5 },
     plan: {
-      route: "feature",
-      stages: [
-        {
-          stageInstanceId: "feature-sdd",
-          stageKind: "sdd",
-          skill: "qfai-sdd",
-          operation: "new-capability",
-        },
-        {
-          stageInstanceId: "feature-verify",
-          stageKind: "verify",
-          skill: "qfai-verify",
-          operation: "verify-full",
-        },
-      ],
+      route: "add-feature",
+      stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
     },
     scopeDigest: scopeDigestOf(approvedWriteAreas),
-    capabilities: [{ ...capability, slotId: "slot-3-1" }],
+    stories: [{ ...story, slotId: "slot-3-1" }],
     approval: {
       authorizationId: "authorization-4",
       kind: "human_decision",
       operation: "CREATE",
       effect: "proceed",
       scopeDigest: scopeDigestOf(approvedWriteAreas),
-      target: { kind: "new_capability", slotId: "slot-3-1", capability },
+      target: { kind: "new_story", slotId: "slot-3-1", story },
     },
   };
 }
@@ -58,7 +47,7 @@ function observe(decision: ReturnType<typeof decide>) {
     workOrder: decision.verdict.workOrder ?? null,
     questions: (decision.verdict.questions ?? []).map((question) => ({
       kind: question.kind,
-      slotId: question.capability?.slotId,
+      slotId: question.story?.slotId,
     })),
     eventTypes: decision.events.map((event) => event.type),
   };
@@ -94,7 +83,7 @@ function atAccept(change: (snapshot: Snapshot) => Snapshot) {
           attempt: workOrder.attempt,
           expectedSequence: run.sequence,
           outcome: "accepted",
-          bindings: [{ slotId: "slot-3-1", capabilityId: "CAP-0001", specId: "spec-0007" }],
+          bindings: [{ slotId: "slot-3-1", flowId: "BF-0001", storyIds: ["US-0001-0001"] }],
         },
       },
       {},
@@ -107,25 +96,25 @@ const changedDigest = (snapshot: Snapshot): Snapshot => ({
   scopeDigest: "b".repeat(64),
 });
 
-it("TC-0018-0006 (TDD-0006): scope-digest-at-issue", () => {
+it("scope-digest-at-issue", () => {
   expect(atIssue(changedDigest)).toEqual(reasked);
 });
 
-it("TC-0018-0006 (TDD-0007): scope-digest-at-accept", () => {
+it("scope-digest-at-accept", () => {
   expect(atAccept(changedDigest)).toEqual(reasked);
 });
 
-const changedCapabilityText = (snapshot: Snapshot): Snapshot => ({
+const changedStoryText = (snapshot: Snapshot): Snapshot => ({
   ...snapshot,
-  capabilities: [{ ...capability, covers: ["Up to ten emails per customer"], slotId: "slot-3-1" }],
+  stories: [{ ...story, covers: ["Up to ten emails per customer"], slotId: "slot-3-1" }],
 });
 
-it("TC-0018-0006 (TDD-0008): capability-text-at-issue", () => {
-  expect(atIssue(changedCapabilityText)).toEqual(reasked);
+it("story-text-at-issue", () => {
+  expect(atIssue(changedStoryText)).toEqual(reasked);
 });
 
-it("TC-0018-0006 (TDD-0009): capability-text-at-accept", () => {
-  expect(atAccept(changedCapabilityText)).toEqual(reasked);
+it("story-text-at-accept", () => {
+  expect(atAccept(changedStoryText)).toEqual(reasked);
 });
 
 const wideningReplan = (snapshot: Snapshot): Snapshot => ({
@@ -133,20 +122,26 @@ const wideningReplan = (snapshot: Snapshot): Snapshot => ({
   scopeDigest: scopeDigestOf([...approvedWriteAreas, "src/billing/**"]),
 });
 
-it("TC-0018-0006 (TDD-0010): widening-replan-at-issue", () => {
+it("widening-replan-at-issue", () => {
   expect(atIssue(wideningReplan)).toEqual(reasked);
 });
 
-it("TC-0018-0006 (TDD-0011): widening-replan-at-accept", () => {
+it("widening-replan-at-accept", () => {
   expect(atAccept(wideningReplan)).toEqual(reasked);
 });
 
-// QFAI:SPEC-0018:TC-0018-0007
-it("TC-0018-0007 (TDD-0012): Bind the created spec ID, then issue the next SDD-bound work order", () => {
+it("Bind the created flow, then issue the next flow-bound work order", () => {
+  const fresh = freshSnapshot();
+  const [sdd, verify] = fresh?.plan?.stages ?? [];
+  const implement = planStage("feature-implement", "implement");
   const bound: Snapshot = {
-    ...freshSnapshot(),
+    ...fresh,
     run: { id: "run-feature", state: "ready", sequence: 9 },
-    specBinding: { specId: "spec-0007" },
+    plan: {
+      route: "add-feature",
+      stages: [sdd, implement, verify].flatMap((stage) => stage ?? []),
+    },
+    flowBinding: { flowId: "BF-0007" },
     acceptedStages: [{ stageInstanceId: "feature-sdd", stageKind: "sdd", outcome: "accepted" }],
   };
 
@@ -159,7 +154,7 @@ it("TC-0018-0007 (TDD-0012): Bind the created spec ID, then issue the next SDD-b
     questionEvents: next.events.filter((event) => event.type === "question-opened").length,
   }).toEqual({
     state: "running",
-    target: { kind: "spec", specId: "spec-0007" },
+    target: { kind: "flow", flowId: "BF-0007" },
     questions: [],
     questionEvents: 0,
   });

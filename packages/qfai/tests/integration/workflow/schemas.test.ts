@@ -1,5 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0235
-// QFAI:SPEC-0018:TC-0018-0236
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-19
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -12,8 +12,11 @@ import {
   parseMeasurement,
   parseQuestionInput,
   parseRouteReferences,
+  stageResultRefusals,
 } from "../../../src/core/workflow/parse.js";
+import { stageResultVariants } from "./stageResultVariants.js";
 import { workOrderDocument } from "../../../src/core/workflow/decide.js";
+import { stepRefs } from "../../../src/core/workflow/steps.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -22,7 +25,7 @@ const payloadsDoc = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-run",
   "references",
   "payloads.md",
@@ -77,23 +80,27 @@ const measurement = {
   reworkCount: 0,
 };
 
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // A proposal with one reference entry replaced, for the reference shape cases.
 function withReference(proposal: unknown, field: string, entry: unknown) {
   return { ...(typeof proposal === "object" ? proposal : {}), [field]: [entry] };
 }
 
-it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the parser and with the five schemas", async () => {
+it("Validate every payload example and fixture with the parser and with the five schemas", async () => {
   const validate = await loadValidator();
   const examples = await payloadExamples();
   const { result, proposal } = routingResult(examples);
   const question = examples.find((example) => example.heading === "Question input")?.payload;
   const cases: { name: string; schema: string; payload: unknown; parser: boolean }[] = [
-    {
-      name: "routing result",
+    ...stageResultVariants(result).map(({ name, payload }) => ({
+      name,
       schema: RESULT,
-      payload: result,
-      parser: parseRouteReferences(proposal).ok,
-    },
+      payload,
+      parser: isRecordLike(payload) && stageResultRefusals(payload).length === 0,
+    })),
     {
       name: "proposal",
       schema: PROPOSAL,
@@ -114,14 +121,14 @@ it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the
     },
   ];
   const shapeCases: [string, string, unknown][] = [
-    ["legacy string", "expectedBehaviorRefs", "spec-0002"],
+    ["legacy string", "expectedBehaviorRefs", "BF-0002"],
     ["unknown kind", "expectedBehaviorRefs", { kind: "ticket", ref: "T-1" }],
     [
       "observed kind in the normative array",
       "expectedBehaviorRefs",
       { kind: "evidence", ref: "a.log" },
     ],
-    ["normative kind in the observed array", "observedRefs", { kind: "spec-id", ref: "spec-0002" }],
+    ["normative kind in the observed array", "observedRefs", { kind: "flow-id", ref: "BF-0002" }],
     ["empty ref", "observedRefs", { kind: "path", ref: "" }],
     ["missing ref", "observedRefs", { kind: "path" }],
   ];
@@ -146,13 +153,21 @@ it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the
     accepted: cases.filter((entry) => entry.parser).map((entry) => entry.name),
     disagreements,
   }).toEqual({
-    examples: ["Start input", "Routing result", "Question input", "Decision input"],
-    accepted: ["routing result", "proposal", "question", "measurement"],
+    examples: ["Start input", "Routing result", "Question input", "Decision input", "Work order"],
+    accepted: [
+      "routing result",
+      "stage result with a flowless debt",
+      "stage result measured with nulls",
+      "stage result reporting a branch",
+      "proposal",
+      "question",
+      "measurement",
+    ],
     disagreements: [],
   });
 });
 
-it("TC-0018-0236 (TDD-0453): A planted payload with an unknown key", async () => {
+it("A planted payload with an unknown key", async () => {
   const validate = await loadValidator();
   const { proposal } = routingResult(await payloadExamples());
   const reference = withReference(proposal, "observedRefs", {
@@ -168,24 +183,78 @@ it("TC-0018-0236 (TDD-0453): A planted payload with an unknown key", async () =>
   }).toEqual({ reference: [false, false], measurement: [false, false] });
 });
 
-it("A work order carries a target unless it is the routing or a discussion work order", async () => {
+// QFAI:EX-0001-0209-05
+it("A stage work order names its steps, and only the routing work order its executor", async () => {
   const validate = await loadValidator();
-  const order = (stageKind: string, target?: { kind: "spec"; specId: string }) =>
+  const example = (await payloadExamples()).find((entry) => entry.heading === "Work order");
+  const order = (fields: object) =>
+    workOrderDocument("run-20260925000000000", 3, {
+      workOrderId: "work-order-implement-1",
+      stageInstanceId: "implement",
+      attempt: 1,
+      stageKind: "implement",
+      target: { kind: "flow", flowId: "BF-0001" },
+      ...fields,
+    });
+  const steps = stepRefs(["implement-tdd", "implement-checkpoint"]);
+  const executor = { skill: "qfai-implement" };
+  const routing = { stageKind: "route", stageInstanceId: "route", target: undefined };
+
+  expect({
+    example: validate(WORK_ORDER, example?.payload),
+    steps: validate(WORK_ORDER, order({ steps })),
+    stepsAndExecutor: validate(WORK_ORDER, order({ steps, executor })),
+    stepsAndOperation: validate(WORK_ORDER, order({ steps, operation: "implement" })),
+    noSteps: validate(WORK_ORDER, order({})),
+    wrongPath: validate(WORK_ORDER, order({ steps: [{ name: "implement-tdd", path: "x.md" }] })),
+    routingWithSteps: validate(WORK_ORDER, order({ ...routing, steps, executor })),
+  }).toEqual({
+    example: true,
+    steps: true,
+    stepsAndExecutor: false,
+    stepsAndOperation: false,
+    noSteps: false,
+    wrongPath: false,
+    routingWithSteps: false,
+  });
+});
+
+it("A work order carries no target where its kind or its run binds no flow", async () => {
+  const validate = await loadValidator();
+  const order = (stageKind: string, target?: { kind: "flow"; flowId: string }) =>
     workOrderDocument("run-20260925000000000", 3, {
       workOrderId: `work-order-${stageKind}-1`,
       stageInstanceId: stageKind,
       attempt: 1,
       stageKind,
-      executor: { skill: "qfai-run" },
-      operation: stageKind,
+      ...(stageKind === "route"
+        ? { executor: { skill: "qfai-run" }, operation: "route" }
+        : { steps: stepRefs([`${stageKind}-step`]) }),
       ...(target ? { target } : {}),
     });
-  const spec = { kind: "spec" as const, specId: "spec-0001" };
+  const flow = { kind: "flow" as const, flowId: "BF-0001" };
 
   expect({
     route: validate(WORK_ORDER, order("route")),
     discussion: validate(WORK_ORDER, order("discussion")),
-    implementWithTarget: validate(WORK_ORDER, order("implement", spec)),
+    maintenance: validate(WORK_ORDER, order("maintenance")),
+    verify: validate(WORK_ORDER, order("verify")),
+    triage: validate(WORK_ORDER, order("triage")),
+    triageWithTarget: validate(WORK_ORDER, order("triage", flow)),
+    implementWithTarget: validate(WORK_ORDER, order("implement", flow)),
     implementWithout: validate(WORK_ORDER, order("implement")),
-  }).toEqual({ route: true, discussion: true, implementWithTarget: true, implementWithout: false });
+    maintenanceWithTarget: validate(WORK_ORDER, order("maintenance", flow)),
+    verifyWithTarget: validate(WORK_ORDER, order("verify", flow)),
+  }).toEqual({
+    route: true,
+    discussion: true,
+    maintenance: true,
+    verify: true,
+    triage: true,
+    triageWithTarget: false,
+    implementWithTarget: true,
+    implementWithout: true,
+    maintenanceWithTarget: false,
+    verifyWithTarget: false,
+  });
 });

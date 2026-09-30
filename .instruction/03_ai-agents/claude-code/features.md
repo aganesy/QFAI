@@ -5,23 +5,23 @@ dependencies: none
 version: 1.0.0
 ---
 
-# Claude Code 機能メモ
+# Claude Code Feature Notes
 
-## TodoWrite（タスク管理）
+## TodoWrite (task management)
 
-- 3ステップ以上の複雑タスクや、ユーザーから依頼が複数あるときに使用。
-- 状態は `pending` / `in_progress`（同時1件）/ `completed`。完了したら即クローズ。
+- Use it for complex tasks of three or more steps, or when the user makes several requests.
+- States are `pending`, `in_progress` (one at a time) and `completed`. Close an item as soon as it is done.
 
-## @import（CLAUDE.md 用）
+## @import (for CLAUDE.md)
 
-- `@path/to/file.md` で外部 Markdown を取り込みコンテキスト化できる。
-- `.instruction/00_universal/`, `01_specialties/`, `02_project/`, `03_ai-agents/claude-code/` をモジュール化して読む。
+- `@path/to/file.md` pulls an external Markdown file into the context.
+- Read `.instruction/00_universal/`, `01_specialties/`, `02_project/` and `03_ai-agents/claude-code/` as modules.
 
-## メモリ活用
+## Using Memory
 
-- 頻繁に参照する手順・パターン・エラー対応を CLAUDE.md に集約して再利用する。
+- Collect frequently used procedures, patterns and error responses in CLAUDE.md and reuse them.
 
-## ツール実行の最適化
+## Optimizing Tool Use
 
-- まとめて実行できる読み取り系コマンド（ls/read/grep）はバッチ化する。
-- テストやビルドは必要なものだけを選び、結果を簡潔に報告する。
+- Batch read-only commands (ls, read, grep) that can run together.
+- Run only the tests and builds that are needed, and report the results concisely.

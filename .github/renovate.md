@@ -210,8 +210,8 @@ somebody looks at it.
 ## The presets other repositories extend
 
 `.github/renovate-presets/` holds the policy QFAI recommends to repositories that have run
-`qfai init`. They are not used by this repository — it declares no dependency on the `qfai` package,
-so no Renovate run here will ever produce a `qfai` bump — and they are published from here because
+`qfai init`. They are not used by this repository — its `qfai` dependency is a `workspace:*` link,
+which Renovate does not update, so no Renovate run here will ever produce a `qfai` bump — and they are published from here because
 that is where Renovate resolves a `github>` preset from.
 
 | Preset                                                           | Extend it when                                     |

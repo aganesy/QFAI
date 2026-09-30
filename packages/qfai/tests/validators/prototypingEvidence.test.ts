@@ -12,10 +12,13 @@ import {
   findMissingRoutes,
 } from "../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
 import {
+  buildEvidenceRefs,
   SEED_COMMIT_SHA,
   SEED_PROSE_CRITIQUE_PLACEHOLDER,
   SEED_REVIEWER_ID,
 } from "../../src/core/prototyping/iteration.js";
+import type { EvidenceRef } from "../../src/core/prototyping/iteration.js";
+import { PROTOTYPING_EVIDENCE_REL } from "../../src/core/prototyping/paths.js";
 import type { QfaiConfig } from "../../src/core/config.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -44,18 +47,17 @@ afterEach(async () => {
 function makeConfig(): QfaiConfig {
   return {
     paths: {
-      contractsDir: ".qfai/contracts",
-      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/spec/03_contract",
+      specsDir: ".qfai/spec",
       discussionDir: ".qfai/discussion",
       outDir: ".qfai/out",
-      skillsDir: ".qfai/assistant/skills",
-      promptsDir: ".qfai/assistant/skills",
+      skillsDir: ".qfai/assistant/skill",
+      promptsDir: ".qfai/assistant/skill",
       srcDir: "src",
       testsDir: "tests",
     },
     validation: {
       failOn: "error",
-      require: { specSections: [] },
       testStrategy: {
         requireApiAtdd: false,
         requireE2eAtdd: false,
@@ -78,14 +80,17 @@ const validIter = (index: number, converged = false, lap: string[] = []) => ({
   index,
   commitSha: "a".repeat(40),
   blockingFindings: converged ? [] : ["home: the empty state is not represented"],
+  scores: {
+    informationArchitecture: converged ? "exceptional" : "strong",
+    navigationFlow: converged ? "exceptional" : "strong",
+    usability: converged ? "exceptional" : "strong",
+    functionality: converged ? "exceptional" : "strong",
+  },
   proseCritique: VALID_PROSE_CRITIQUE,
   layoutAntiPatternsDetected: lap,
   designMdViolations: [],
   pivotDirective: "continue" as const,
-  evidenceRefs: {
-    screenshot: `.qfai/evidence/prototyping/iter-${String(index).padStart(2, "0")}/home.png`,
-    html: `.qfai/evidence/prototyping/iter-${String(index).padStart(2, "0")}/home.html`,
-  },
+  evidenceRefs: buildEvidenceRefs(index, ["home"]),
 });
 
 async function seedReviewJsonRaw(root: string, index: number, raw: string): Promise<void> {
@@ -114,11 +119,17 @@ function reviewFrom(
   iter: {
     index: number;
     blockingFindings: readonly string[];
+    scores: {
+      informationArchitecture: string;
+      navigationFlow: string;
+      usability: string;
+      functionality: string;
+    };
     proseCritique: string;
     layoutAntiPatternsDetected: readonly string[];
     designMdViolations: readonly { kind: string; found: string }[];
     pivotDirective: string;
-    evidenceRefs: { screenshot: string; html: string };
+    evidenceRefs: readonly EvidenceRef[];
   },
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
@@ -126,12 +137,23 @@ function reviewFrom(
     iterIndex: iter.index,
     reviewerId: "product-surface-reviewer",
     blockingFindings: iter.blockingFindings,
+    scores: iter.scores,
     proseCritique: iter.proseCritique,
     layoutAntiPatternsDetected: iter.layoutAntiPatternsDetected,
     designMdViolations: iter.designMdViolations,
     pivotDirective: iter.pivotDirective,
-    evidenceRefs: iter.evidenceRefs,
+    evidenceRefs: reviewEvidenceRefs(iter),
     ...overrides,
+  };
+}
+
+function reviewEvidenceRefs(iter: { evidenceRefs: readonly EvidenceRef[] }): {
+  screenshot: string;
+  html: string;
+} {
+  return {
+    screenshot: `${PROTOTYPING_EVIDENCE_REL}/${iter.evidenceRefs.find((ref) => ref.kind === "screenshot")?.path ?? ""}`,
+    html: `${PROTOTYPING_EVIDENCE_REL}/${iter.evidenceRefs.find((ref) => ref.kind === "html")?.path ?? ""}`,
   };
 }
 
@@ -142,13 +164,13 @@ describe("validatePrototypingEvidence", () => {
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT-001 when prototyping.json is missing for a UI-bearing prototyping spec", async () => {
+  it("emits QFAI-PROT-001 when prototyping.json is missing for a UI contract with screens", async () => {
     const root = await newTempDir();
-    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(contractsDir, { recursive: true });
     await writeFile(
-      path.join(specDir, "01_Spec.md"),
-      "# Prototyping spec\n\nsurface_type: ui-bearing\n",
+      path.join(contractsDir, "ui-0001.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n",
       "utf-8",
     );
 
@@ -165,10 +187,20 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-001")).toBe(true);
   });
 
+  it("rejects the retired specsCovered scope field", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, { specsCovered: ["0001"], iterations: [] });
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((issue) => issue.rule === "prototypingEvidence.uiContractsCovered")).toBe(
+      true,
+    );
+  });
+
   it("emits QFAI-PROT-003 when iterations[] is empty", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [],
       acceptedIterationIndex: -1,
       stopReason: null,
@@ -180,7 +212,7 @@ describe("validatePrototypingEvidence", () => {
   it("emits QFAI-PROT-004 when iterations[i].index is non-contiguous", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0), { ...validIter(1), index: 5 }],
       acceptedIterationIndex: 1,
       stopReason: null,
@@ -192,7 +224,7 @@ describe("validatePrototypingEvidence", () => {
   it("emits QFAI-PROT-005 when stopReason=max-iterations but last index !== 14", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: "max-iterations",
@@ -204,7 +236,7 @@ describe("validatePrototypingEvidence", () => {
   it("emits QFAI-PROT-005 when stopReason=converged but last iter not all exceptional", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0, false)],
       acceptedIterationIndex: 0,
       stopReason: "converged",
@@ -213,10 +245,48 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
+  it("rejects convergence when all blockers clear but one ordinal score remains strong", async () => {
+    const root = await newTempDir();
+    const iter = {
+      ...validIter(0, true),
+      scores: { ...validIter(0, true).scores, navigationFlow: "strong" },
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: "converged",
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.stopReasonConsistency")).toBe(
+      true,
+    );
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(false);
+  });
+
+  it("accepts four exceptional scores with empty blockers on a reviewed convergence", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0, true);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: "converged",
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.filter((item) => item.code === "QFAI-PROT-002" || item.code === "QFAI-PROT-005"),
+    ).toEqual([]);
+  });
+
   it("emits structured issues instead of throwing when stopReason=converged and the last iter is malformed", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0), { index: 1, commitSha: "b".repeat(40), blockingFindings: null }],
       acceptedIterationIndex: 1,
       stopReason: "converged",
@@ -226,11 +296,11 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  // QFAI:SPEC-0004:TC-0004-0013
+  // QFAI:EX-0001-0042-07
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [
         {
           ...validIter(0),
@@ -246,10 +316,11 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
+  // QFAI:EX-0001-0128-01
   it("emits QFAI-PROT-002 when proseCritique is over the word cap", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), proseCritique: Array(501).fill("word").join(" ") }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -272,7 +343,7 @@ describe("validatePrototypingEvidence", () => {
     const root = await newTempDir();
     const iter = { ...validIter(0), proseCritique: "The empty state is missing." };
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -287,7 +358,7 @@ describe("validatePrototypingEvidence", () => {
   it("still emits QFAI-PROT-002 for an empty proseCritique", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), proseCritique: "   " }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -300,11 +371,14 @@ describe("validatePrototypingEvidence", () => {
 
   it("emits no QFAI-PROT-002 when proseCritique is a 600-character Japanese critique", async () => {
     const root = await newTempDir();
-    const japaneseCritique = "情報設計と導線は概ね良好である。".repeat(50);
+    const japaneseCritique =
+      "\u60C5\u5831\u8A2D\u8A08\u3068\u5C0E\u7DDA\u306F\u6982\u306D\u826F\u597D\u3067\u3042\u308B\u3002".repeat(
+        50,
+      );
     expect(japaneseCritique.split(/\s+/u).length).toBe(1);
     const iter = { ...validIter(0), proseCritique: japaneseCritique };
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -314,11 +388,12 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0128-01
   it("emits QFAI-PROT-002 naming the character cap when a Japanese proseCritique is over it", async () => {
     const root = await newTempDir();
-    const longJapanese = "情報設計は弱い。".repeat(400);
+    const longJapanese = "\u60C5\u5831\u8A2D\u8A08\u306F\u5F31\u3044\u3002".repeat(400);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), proseCritique: longJapanese }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -341,10 +416,14 @@ describe("validatePrototypingEvidence", () => {
   // cannot do that: the word count being low is never a reason to reject.
   it("emits no QFAI-PROT-002 for a Hangul proseCritique", async () => {
     const root = await newTempDir();
-    const koreanCritique = "정보설계와동선은대체로양호하다.".repeat(50);
+    // Hangul text, written as escapes.
+    const koreanCritique =
+      "\uc815\ubcf4\uc124\uacc4\uc640\ub3d9\uc120\uc740\ub300\uccb4\ub85c\uc591\ud638\ud558\ub2e4.".repeat(
+        50,
+      );
     const iter = { ...validIter(0), proseCritique: koreanCritique };
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -358,7 +437,7 @@ describe("validatePrototypingEvidence", () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: iters,
       acceptedIterationIndex: 15,
       stopReason: null,
@@ -370,7 +449,7 @@ describe("validatePrototypingEvidence", () => {
   it("emits QFAI-PROT-007 when acceptedIterationIndex is not iterations.length-1", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0), validIter(1)],
       acceptedIterationIndex: 0, // should be 1
       stopReason: null,
@@ -379,12 +458,13 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-007")).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-10
   it("returns no issues for a valid record", async () => {
     const root = await newTempDir();
     const first = validIter(0);
     const second = validIter(1, true);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [first, second],
       acceptedIterationIndex: 1,
       stopReason: "converged",
@@ -412,7 +492,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("emits QFAI-PROT-002 when a reviewed iteration has no review.json", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -431,7 +511,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("separates an unreadable review.json from a missing one", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -451,7 +531,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("emits QFAI-PROT-002 when review.json is unparseable", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -480,7 +560,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("exempts the untouched cycle-0 seed from the reviewer-deliverable gate", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [untouchedSeed()],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -504,7 +584,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
       reviewerId: SEED_REVIEWER_ID,
     });
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [stale(0), stale(1), stale(2)],
       acceptedIterationIndex: 2,
       stopReason: "converged",
@@ -520,7 +600,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("does not extend the exemption past index 0", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [untouchedSeed(), { ...untouchedSeed(), index: 1 }],
       acceptedIterationIndex: 1,
       stopReason: null,
@@ -536,7 +616,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("does not extend the seed exemption to another reviewerId", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), reviewerId: "product-surface-reviewer" }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -553,12 +633,12 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // The mirror accepts any string here, so this code is invisible on that
   // surface no matter how it is written. Both sides carry the same value, so
   // the only finding available is the registry check on the reviewer's file.
-  // QFAI:SPEC-0004:TC-0004-0012
+  // QFAI:EX-0001-0042-05
   it("emits QFAI-PROT-002 for a lap-* code no registry entry declares", async () => {
     const root = await newTempDir();
     const iter = validIter(0, false, ["lap-999-not-a-real-code"]);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -577,6 +657,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
   });
 
+  // QFAI:EX-0001-0042-11
   it("accepts every lap-* code the registry declares", async () => {
     // Read from the registry rather than listing codes here. A hardcoded pair
     // says nothing about an entry added later, and the claim being made is
@@ -587,7 +668,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0, false, registered);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -646,7 +727,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -668,11 +749,55 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(rules).toContain("prototypingEvidence.review.blockingFindings");
   });
 
+  // QFAI:EX-0001-0107-01
+  // QFAI:EX-0001-0105-01
+  it("requires exactly four valid ordinal scores in both summary and persisted iteration", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [{ ...iter, scores: { ...iter.scores, delight: "exceptional" } }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, { scores: { informationArchitecture: "excellent" } }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.review.scores")).toBe(true);
+  });
+
+  it("reports a score changed while transcribing the reviewer summary", async () => {
+    const root = await newTempDir();
+    const reviewed = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [{ ...reviewed, scores: { ...reviewed.scores, usability: "acceptable" } }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(reviewed));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (item) =>
+          item.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          item.message.includes("scores"),
+      ),
+    ).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.scores")).toBe(false);
+  });
+
   it("emits QFAI-PROT-002 when review.json iterIndex does not match its directory", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -693,7 +818,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const review = reviewFrom(iter);
     delete review.reviewerId;
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -714,7 +839,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, blockingFindings: ["home: a different finding"] }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -736,7 +861,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, proseCritique: `${iter.proseCritique} and-one-more` }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -761,7 +886,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const codes = ["lap-007-state-not-represented", "lap-008-no-back-affordance"];
     const iter = validIter(0, false, codes);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, layoutAntiPatternsDetected: [...codes].reverse() }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -781,12 +906,13 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
   // Key order is not evidence. A transcription that writes the same record
   // with its two declared keys the other way round mirrors it faithfully.
+  // QFAI:EX-0001-0042-13
   it("accepts a designMdViolations entry whose keys are written in the other order", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     const violations = [{ kind: "color", found: "#abcdef" }];
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, designMdViolations: [{ found: "#abcdef", kind: "color" }] }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -803,7 +929,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, proseCritique: `${iter.proseCritique} diverged-here` }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -829,7 +955,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -856,12 +982,12 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // and `.agents/rules/distributed-surface.md` forbids introducing one. It
   // means a payload carrying the pre-v3 keys and missing the v3 required ones,
   // which is what the example spells out.
-  // QFAI:SPEC-0004:TC-0004-0011
+  // QFAI:EX-0001-0042-04
   it("emits QFAI-PROT-002 listing the required keys a v1.x-shaped review.json omits", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -885,6 +1011,8 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     // single generic complaint.
     const rules = new Set(issues.map((i) => i.rule));
     for (const key of [
+      "iterIndex",
+      "reviewerId",
       "blockingFindings",
       "proseCritique",
       "pivotDirective",
@@ -915,7 +1043,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -941,7 +1069,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     // two byte-identical sides.
     const paraphrased = words.map((w, i) => (i === 150 ? "DIVERGED-HERE!!" : w)).join(" ");
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, proseCritique: paraphrased }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -964,7 +1092,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, designMdViolations: [{ kind: "color", found: "#abcdef" }] }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -995,7 +1123,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, designMdViolations: [{ found: "8px", kind: "spacing" }] }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1020,7 +1148,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...iter, reviewerId: "product-surface-reviewer" }],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1040,7 +1168,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("emits QFAI-PROT-002 when review.json parses to an array", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1055,7 +1183,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1076,7 +1204,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1097,7 +1225,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1114,7 +1242,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     const root = await newTempDir();
     const iter = validIter(0);
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [iter],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1125,12 +1253,176 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.evidenceRefs")).toBe(true);
   });
 
+  it("accepts full review paths mirrored by relative array entries across multiple screens", async () => {
+    const root = await newTempDir();
+    const iter = {
+      ...validIter(0),
+      evidenceRefs: buildEvidenceRefs(0, ["home", "settings"]),
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((item) => item.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("reports a reviewer screenshot or html missing from the persisted array", async () => {
+    const root = await newTempDir();
+    const reviewed = validIter(0);
+    const persisted = {
+      ...reviewed,
+      evidenceRefs: reviewed.evidenceRefs.filter((ref) => ref.kind !== "html"),
+    };
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [persisted],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(reviewed));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (item) =>
+          item.rule === "prototypingEvidence.review.mirrorMismatch" &&
+          item.message.includes("evidenceRefs.html"),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects an object where the persisted evidence array belongs", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [{ ...iter, evidenceRefs: reviewEvidenceRefs(iter) }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs")).toBe(true);
+  });
+
+  it("rejects duplicate kind and path entries in the persisted array", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    const screenshot = iter.evidenceRefs.find((ref) => ref.kind === "screenshot");
+    if (!screenshot) throw new Error("test fixture must include a screenshot ref");
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [{ ...iter, evidenceRefs: [...iter.evidenceRefs, screenshot] }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.duplicate")).toBe(
+      true,
+    );
+  });
+
+  it("rejects an unknown or mislabeled kind in the persisted array", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [
+        {
+          ...iter,
+          evidenceRefs: [
+            { kind: "video", path: "iter-00/home.png" },
+            { kind: "html", path: "iter-00/home.png" },
+          ],
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(root, 0, reviewFrom(iter));
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.kind")).toBe(true);
+    expect(issues.some((item) => item.rule === "prototypingEvidence.evidenceRefs.path")).toBe(true);
+  });
+
+  it("rejects escaped or wrong-iteration paths on either mirror surface", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [
+        {
+          ...iter,
+          evidenceRefs: [
+            { kind: "screenshot", path: "../outside.png" },
+            { kind: "html", path: "iter-01/home.html" },
+          ],
+        },
+      ],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, {
+        evidenceRefs: {
+          screenshot: "../outside.png",
+          html: `${PROTOTYPING_EVIDENCE_REL}/iter-01/home.html`,
+        },
+      }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.filter((item) => item.rule === "prototypingEvidence.evidenceRefs.path"),
+    ).toHaveLength(2);
+    expect(
+      issues.filter((item) => item.rule === "prototypingEvidence.review.evidenceRefs.path"),
+    ).toHaveLength(2);
+  });
+
+  it("rejects undeclared kinds in the review object", async () => {
+    const root = await newTempDir();
+    const iter = validIter(0);
+    await seedPrototypingJson(root, {
+      uiContractsCovered: ["UI-0001"],
+      iterations: [iter],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    await seedReviewJson(
+      root,
+      0,
+      reviewFrom(iter, {
+        evidenceRefs: {
+          ...reviewEvidenceRefs(iter),
+          video: `${PROTOTYPING_EVIDENCE_REL}/iter-00/home.mp4`,
+        },
+      }),
+    );
+
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some((item) => item.rule === "prototypingEvidence.review.evidenceRefs.kind"),
+    ).toBe(true);
+  });
+
   // A non-directory component on the way to `iter-NN/` means the file is not
   // there, so it classifies as absent rather than as a filesystem error to fix.
   it("classifies a non-directory iter-NN component as absent, not unreadable", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [validIter(0)],
       acceptedIterationIndex: 0,
       stopReason: null,
@@ -1149,7 +1441,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   it("does not fabricate a missing review for an index-skewed record", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
-      specsCovered: ["0001"],
+      uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(1), index: 1 }],
       acceptedIterationIndex: 0,
       stopReason: null,
