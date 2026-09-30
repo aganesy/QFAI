@@ -2,8 +2,8 @@
  * Per-skill manifest probe used by `qfai doctor --profile <skill>`.
  *
  * Reads the skill's manifest at
- * `.qfai/assistant/skills/<skill>/manifest.json` (or the equivalent
- * install-asset path under `assets/init/.qfai/assistant/skills/<skill>`)
+ * `.qfai/assistant/skill/<skill>/manifest.json` (or the equivalent
+ * install-asset path under `assets/init/.qfai/assistant/skill/<skill>`)
  * and probes each declared `runtimeDependencies` entry against the
  * consumer project's `node_modules`. A dep counts as found when either
  * `node_modules/.bin/<name>` (with Windows extension variants) OR
@@ -86,7 +86,7 @@ export type SkillManifestProbeResult = {
 export type SkillManifestProbeOptions = {
   /**
    * Optional override for the manifest location. When absent the probe
-   * looks up the consumer project's `.qfai/assistant/skills/<skill>/manifest.json`.
+   * looks up the consumer project's configured skill directory.
    */
   readonly manifestPath?: string;
 };
@@ -179,13 +179,7 @@ async function resolveManifestPath(
   }
   // Honor `config.paths.skillsDir` so a project that relocates its
   // skills tree still has its per-skill `manifest.json` resolved
-  // correctly. Pre-fix the path was hardcoded to
-  // `.qfai/assistant/skills/<skill>/manifest.json`; with a relocated
-  // skillsDir this caused `qfai doctor --profile <skill>` to see
-  // an absent manifest, report no runtimeDependencies, and let
-  // autoremediate silently skip the install phase for relocated
-  // skills. The default `config.paths.skillsDir` keeps the legacy
-  // path intact for projects that did not override it.
+  // correctly, including an absolute path outside the project root.
   const { config } = await loadConfig(root);
   const skillsDirRel = config.paths.skillsDir;
   const skillsRootPath = path.resolve(root, skillsDirRel);

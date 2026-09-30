@@ -263,6 +263,7 @@ function prependDirective(existing: string, pointer: string, blankLine: boolean)
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
+
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
     label
@@ -1135,6 +1136,12 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    ],
+  ],
+  [
+    ".agents/rules/user-questions.md",
+    [
+      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     ],
   ],
 ]);

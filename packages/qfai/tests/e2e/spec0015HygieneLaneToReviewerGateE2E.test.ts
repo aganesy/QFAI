@@ -123,7 +123,7 @@ async function gateIssues(): Promise<Issue[]> {
   return validateReviewerJustification(root, config);
 }
 
-// QFAI:SPEC-0015:US-0015-0016
+// QFAI:BF-0001
 describe(
   "E2E: a hygiene regression the lane emits reaches a reviewer with its site intact (US-0015-0016)",
   { timeout: 120000 },
@@ -171,7 +171,7 @@ describe(
       expect(
         surfaced[0]?.severity,
         "an ingested deferred-registration code keeps the error class the lane emits it with; " +
-          "`BR-0015-0017` defers rejecting it for an empty justification, not its severity",
+          "`BR-0001-0016` defers rejecting it for an empty justification, not its severity",
       ).toBe("error");
 
       const message = surfaced[0]?.message ?? "";

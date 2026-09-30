@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const BASELINE = "assistant/constitution/shared-skill-operating-baseline.md";
+const BASELINE = "assistant/rule/shared-skill-operating-baseline.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -52,7 +52,7 @@ describe("Gate Failure Autorepair Protocol routes every class it names", () => {
       const baseline = flat(await read(tree, BASELINE));
 
       expect(baseline).toContain("**upstream spec/contract findings: never repair.**");
-      expect(baseline).toContain(".qfai/assistant/constitution/drift-protocol.md");
+      expect(baseline).toContain(".qfai/assistant/rule/drift-protocol.md");
       expect(baseline).toContain("Change Request + owner-skill rerun");
     });
 

@@ -1,17 +1,15 @@
-// QFAI:SPEC-0018:TC-0018-0176
-// QFAI:SPEC-0018:TC-0018-0177
-// QFAI:SPEC-0018:TC-0018-0178
+// QFAI:AC-0001-0192-03
+// QFAI:EX-0001-0192-06
 // Fault seeds: FAULT-023
 
-import { spawnSync } from "node:child_process";
-import { appendFile, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
-import { parseDocument } from "yaml";
+import { stringify as stringifyYaml } from "yaml";
 
+import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import {
-  CLI,
   field,
   inbox,
   initProject,
@@ -23,14 +21,12 @@ import {
 
 afterEach(removeProjects);
 
-const MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
-const VERIFY_SKILL = path.join(".qfai", "assistant", "skills", "qfai-verify");
-const VERIFY_TABLE = path.join(VERIFY_SKILL, "references", "orchestrated-mode.md");
+const VERIFY_STEP = path.join(".qfai", "assistant", "step", "verify-repo-gate", "STEP.md");
 
 // `start` in `root`, and the run directories it left behind.
 async function startIn(root: string) {
   const started = workflow(root, ["start", "--in", await inbox(root, null, "start", START_INPUT)]);
-  const runs = await readdir(path.join(root, ".qfai", "runs")).catch(() => []);
+  const runs = await readdir(path.join(root, ".qfai", "run")).catch(() => []);
   return {
     code: field(started.json, "error.code"),
     cause: field(started.json, "error.cause"),
@@ -38,22 +34,29 @@ async function startIn(root: string) {
   };
 }
 
-// Drops the first blocking agent of the first phase routed to `skill`.
-async function dropBlockingAgent(root: string, skill: string): Promise<void> {
-  const file = path.join(root, MANIFEST);
-  const document = parseDocument(await readFile(file, "utf8"));
-  const routing: unknown = document.toJS();
-  const entries = field(routing, "routing");
-  const index = Array.isArray(entries)
-    ? entries.findIndex((entry) => field(entry, "skill") === skill)
-    : -1;
-  document.deleteIn(["routing", index, "phases", 0, "blocking_agents", 0]);
-  await writeFile(file, document.toString());
+// A `qfai.config.yaml` routing override for `step`: the package default with the first blocking
+// agent of its first phase dropped from every list of that phase.
+async function dropBlockingAgent(root: string, step: string): Promise<void> {
+  const entry: unknown = (await defaultRoutingEntries()).find((each) => each.step === step);
+  const phase: unknown = field(entry, "phases.0");
+  const blocking = field(phase, "blocking_agents");
+  const dropped: unknown = Array.isArray(blocking) ? blocking[0] : undefined;
+  for (const list of ["mandatory_agents", "blocking_agents"]) {
+    const agents = field(phase, list);
+    if (Array.isArray(agents) && typeof phase === "object" && phase !== null) {
+      Reflect.set(
+        phase,
+        list,
+        agents.filter((agent) => agent !== dropped),
+      );
+    }
+  }
+  await writeFile(path.join(root, "qfai.config.yaml"), stringifyYaml({ routing: [entry] }));
 }
 
-it("TC-0018-0176 (TDD-0379): A project agent-routing", async () => {
+it("A qfai.config.yaml routing override that drops a required reviewer", async () => {
   const root = await minimalProject();
-  await dropBlockingAgent(root, "qfai-implement");
+  await dropBlockingAgent(root, "implement-tdd");
 
   expect(await startIn(root)).toEqual({
     code: "fail-closed",
@@ -62,70 +65,25 @@ it("TC-0018-0176 (TDD-0379): A project agent-routing", async () => {
   });
 });
 
-const table = (header: string, cells: string[]) =>
-  ["# qfai-verify", "", "## Operations", "", `| ${header} | What |`, "| --- | --- |"]
-    .concat(cells.map((cell) => `| ${cell} | stub |`))
-    .join("\n");
+it("step-missing", async () => {
+  const root = await minimalProject();
+  await rm(path.join(root, VERIFY_STEP), { force: true });
 
-const BOUNDARIES: [string, (root: string) => Promise<void>][] = [
-  [
-    "TC-0018-0177 (TDD-0380): plan-differs",
-    (root) =>
-      appendFile(
-        path.join(root, ".qfai", "assistant", "process", "workflows", "feature.yml"),
-        "# edited\n",
-      ),
-  ],
-  [
-    "TC-0018-0177 (TDD-0381): skill-missing",
-    (root) => rm(path.join(root, VERIFY_SKILL), { recursive: true, force: true }),
-  ],
-  [
-    "TC-0018-0177 (TDD-0382): operations-table-missing",
-    (root) =>
-      writeFile(path.join(root, VERIFY_TABLE), "# qfai-verify\n\nServes the verify stage.\n"),
-  ],
-  [
-    "TC-0018-0177 (TDD-0383): operations-first-column",
-    (root) => writeFile(path.join(root, VERIFY_TABLE), table("Mode", ["`verify-full`"])),
-  ],
-  [
-    "TC-0018-0177 (TDD-0384): operations-cell-not-id",
-    (root) =>
-      writeFile(path.join(root, VERIFY_TABLE), table("Operation", ["`verify-full`, `verify`"])),
-  ],
-  [
-    "TC-0018-0177 (TDD-0385): operations-pair-omitted",
-    (root) => writeFile(path.join(root, VERIFY_TABLE), table("Operation", ["`diagnose-only`"])),
-  ],
-];
-
-for (const [title, breakIt] of BOUNDARIES) {
-  it(title, async () => {
-    const root = await minimalProject();
-    await breakIt(root);
-
-    expect(await startIn(root)).toEqual({
-      code: "fail-closed",
-      cause: "contract-undeclared",
-      runs: [],
-    });
+  expect(await startIn(root)).toEqual({
+    code: "fail-closed",
+    cause: "contract-undeclared",
+    runs: [],
   });
-}
+});
 
-it("TC-0018-0178 (TDD-0386): A temp project after a qfai init upgrade over a hand-edited manifest that drops a required", async () => {
+it("A fresh qfai init tree, and the same tree with an override dropping a required reviewer", async () => {
   const root = await initProject();
-  await dropBlockingAgent(root, "qfai-implement");
-  const upgrade = spawnSync(process.execPath, [CLI, "init", "--upgrade-assistant-tree", "--yes"], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  const started = await startIn(root);
+  const fresh = await startIn(root);
+  await rm(path.join(root, ".qfai", "run"), { recursive: true, force: true });
+  await dropBlockingAgent(root, "implement-tdd");
 
-  expect({
-    upgraded: upgrade.status,
-    code: started.code,
-    cause: ["reviewer-missing", "contract-undeclared"].includes(String(started.cause)),
-    runs: started.runs,
-  }).toEqual({ upgraded: 0, code: "fail-closed", cause: true, runs: [] });
+  expect({ fresh, dropped: await startIn(root) }).toEqual({
+    fresh: { code: undefined, cause: undefined, runs: [expect.stringMatching(/^run-\d{17}$/)] },
+    dropped: { code: "fail-closed", cause: "reviewer-missing", runs: [] },
+  });
 }, 180_000);
