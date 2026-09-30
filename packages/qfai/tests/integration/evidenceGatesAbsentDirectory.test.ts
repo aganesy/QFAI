@@ -51,6 +51,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:AC-0001-0040-04
 describe("the evidence directory is absent", () => {
   // QFAI:EX-0001-0040-04
   it.each<ValidationProfile>(["full", "verify"])(
