@@ -98,4 +98,5 @@ Feature: Install or upgrade and get the free-text entry
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
+    And in `.claude/settings.json` the reminders before and after a file write print nothing for a file under `.qfai/run/`
 ```

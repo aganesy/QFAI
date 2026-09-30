@@ -78,7 +78,7 @@ Classify the request before any write call. Only `routed` calls `start`.
    - `blocked`: give the halt notice and stop.
    - `ready` with every stage accepted: go to step 6.
 6. **Finish.** For `qfai_done`, commit the run's changes first. Then call
-   `finish` and give the completion report.
+   `finish` and give the completion report. A run ends at `finish`, or at `decision` with `stop`: an answer already given does not end it, so keep calling `next` through the last stage, and when the session must end first, stop the run and say so.
 
 ## User Questions (AskUserQuestion Protocol)
 

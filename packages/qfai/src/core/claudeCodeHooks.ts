@@ -132,6 +132,10 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+  // grilling design artifact, and documentation clarity after a write or edit,
+  // before both skipped the run's own records
+  "3d67d2654ce6fbe4cd060a55598ecd5b0198f06c7b13b8b75ea3462e0fc122ac",
+  "871cd5dc08d66d273b1ce1be9325da13b53999269b5cd72831d5cf8d501c2b72",
   // Codex: every group of the file whose Windows line ran only under `cmd.exe`
   "dba38a95f6008a2371c7a19f965d9e5c5cfedff81b956b9fdc9a5ae60378f0f6",
   "143a27e53eb0cace36d4079b931a48c5e057a44e8aa0c11064f018aa7bd74128",

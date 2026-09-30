@@ -2,6 +2,7 @@
 // QFAI:EX-0001-0196-27
 // QFAI:EX-0001-0196-41
 // QFAI:EX-0001-0196-43
+// QFAI:EX-0001-0196-44
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -158,6 +159,19 @@ describe("the free-text entry reminder", () => {
     const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
     const description = /^description: "(.*)"$/m.exec(skill)?.[1];
     expect(description).toContain(FREE_TEXT_CASES);
+  });
+
+  it("says a question one command answers needs no run", async () => {
+    const stdout = await runReminderHook(
+      {
+        command: "node",
+        args: argsOf(promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER)),
+      },
+      projectDirOf(repoRoot, SHIPPED_SETTINGS),
+    );
+    expect(contextOf(stdout)).toContain(
+      "A question that one command or one file read answers needs no run: answer it directly.",
+    );
   });
 
   it("is the same group in both Claude Code settings files", async () => {

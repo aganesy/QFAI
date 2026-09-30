@@ -8,7 +8,7 @@
   "free-text-entry": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
-      "additionalContext": "QFAI free-text entry (the `qfai-run` skill). When the user's message asks for a change, a fix, an investigation of the codebase or a question about the project and names no skill, invoke the `qfai-run` skill for it before any other work. A message that names a skill goes to that skill. `qfai-run` itself tells a reply to a run in progress from a new request. Read the skill rather than working from this line."
+      "additionalContext": "QFAI free-text entry (the `qfai-run` skill). When the user's message asks for a change, a fix, an investigation of the codebase or a question about the project and names no skill, invoke the `qfai-run` skill for it before any other work. A message that names a skill goes to that skill. A question that one command or one file read answers needs no run: answer it directly. `qfai-run` itself tells a reply to a run in progress from a new request. Read the skill rather than working from this line."
     }
   },
   "documentation-clarity-before-post": {

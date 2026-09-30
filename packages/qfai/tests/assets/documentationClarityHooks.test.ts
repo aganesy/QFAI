@@ -223,11 +223,13 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Two readers. One prints the named message; the other reads the hook's own
+    // Three readers. One prints the named message. One reads the hook's own
     // input first and prints only for a command that names the forge, which is
-    // what lets a `Bash` matcher exist at all. A third would mean a reminder had
-    // grown logic of its own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the two pinned readers").toBe(2);
+    // what lets a `Bash` matcher exist at all. One reads the input and prints
+    // unless the file written is one of the run's own records. A fourth would
+    // mean a reminder had grown logic of its own, which is the thing kept out of
+    // this file.
+    expect(readers.size, "a reminder runs one of the three pinned readers").toBe(3);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -272,6 +274,46 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     const project = projectDirOf(repoRoot, rel);
     for (const input of ["", "{ not json", "{}", JSON.stringify({ tool_name: "Bash" })]) {
       await expect(runReminderHook(entry, project, input)).resolves.toBe("");
+    }
+  });
+
+  // The run's own records are written by the run, so a reminder about how the
+  // text reads or which decision is being fixed has nothing to say about them.
+  // QFAI:EX-0001-0196-45
+  it("prints the write-time reminders for every file except the run's own records", async () => {
+    const project = projectDirOf(repoRoot, rel);
+    const writeTime = [
+      ...(hooks.get("PreToolUse") ?? []).filter((group) => group.matcher === "Write|Edit"),
+      ...(hooks.get("PostToolUse") ?? []).slice(0, 1),
+    ].flatMap((group) => group.hooks);
+    expect(writeTime.map((entry) => entry.statusMessage)).toEqual([
+      GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
+      DOCUMENTATION_CLARITY_HOOK_MARKER,
+      DOCUMENTATION_CLARITY_HOOK_MARKER,
+    ]);
+    const written = (filePath: string): string =>
+      JSON.stringify({ tool_name: "Write", tool_input: { file_path: filePath } });
+    for (const entry of writeTime) {
+      for (const filePath of [
+        path.join(project, ".qfai", "run", "inbox", "start.json"),
+        path.join(project, ".qfai", "run", "run-1", "inbox", "result.md"),
+        "C:\\work\\app\\.qfai\\run\\inbox\\start.json",
+      ]) {
+        await expect(runReminderHook(entry, project, written(filePath))).resolves.toBe("");
+      }
+      for (const filePath of [
+        path.join(project, "docs", "guide.md"),
+        path.join(project, ".qfai", "spec", "decisions.md"),
+        path.join(project, "runbook", "notes.md"),
+      ]) {
+        expect(await runReminderHook(entry, project, written(filePath))).toContain(
+          "additionalContext",
+        );
+      }
+      // Input the host did not shape as a file write still gets the reminder.
+      for (const input of ["", "{ not json", "{}"]) {
+        expect(await runReminderHook(entry, project, input)).toContain("additionalContext");
+      }
     }
   });
 
