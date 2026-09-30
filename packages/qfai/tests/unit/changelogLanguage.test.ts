@@ -1,39 +1,17 @@
 /**
- * Meta-test: what is still being written in the changelog is written in
- * English.
- *
- * The document as a whole is not, and this check does not claim it is. What it
- * holds at zero is the part that is still open to writing; what already
- * shipped is a backlog it names line by line. The split is set out below.
+ * Meta-test: `CHANGELOG.md` is written in English, in every section.
  *
  * `repository-language.md` says this repository is written in English, and
- * `cliMessageLanguage.test.ts` holds that for the strings `src/**` emits. It
- * holds it for nothing else. Documents, tests and workflows have never been
- * scanned, so on those surfaces the rule rested on review alone — and a whole
- * set of release notes was written in Japanese without anything objecting.
+ * `cliMessageLanguage.test.ts` holds that for the strings `src/**` emits.
+ * `CHANGELOG.md` is the surface an outside reader meets first, so it is held
+ * to the same rule: no Japanese line anywhere in the document, in `## [Unreleased]`
+ * or in a released section. There is no allowlist.
  *
- * `CHANGELOG.md` is the surface an outside reader meets first, so it is the
- * one that gets a check first.
+ * A failure names the section each offending line sits in, so a reader can
+ * find it without searching the whole file.
  *
- * The check is per section, not per file, because the document's two halves
- * have opposite rules:
- *
- *   - `## [Unreleased]` is open. Entries are written there before every
- *     release, so it is where new Japanese would enter. It is held at zero.
- *   - A released section is a record of what shipped. Its Japanese is the
- *     migration backlog, recorded in `changelogLanguage.allowlist.ts` by
- *     content.
- *
- * Content, not a per-section line count: a ceiling of "n Japanese lines in
- * this section" is satisfied just as well by n *different* ones, so
- * translating a line would free a slot for a brand-new Japanese line. Matching
- * content closes that, and it is the same rule — and the same
- * `diffAgainstAllowlist` — the operator-message check runs.
- *
- * Holding `## [Unreleased]` at zero is what makes the next release notes
- * English. When a release closes that section, its content moves under a new
- * heading, which is likewise absent from the allowlist and likewise held at
- * zero. So the list only ever shrinks.
+ * Japanese samples below are written as \uXXXX escapes so this file holds no
+ * Japanese text itself.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -42,9 +20,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CHANGELOG_PREAMBLE, sectionOfEachLine } from "../helpers/changelogSections.js";
-import { diffAgainstAllowlist, findJapaneseTextLines } from "../helpers/japaneseMessageScan.js";
-
-import { CHANGELOG_JAPANESE_ALLOWLIST } from "./changelogLanguage.allowlist.js";
+import { findJapaneseTextLines } from "../helpers/japaneseMessageScan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,108 +29,41 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const CHANGELOG_MD = path.join(REPO_ROOT, "CHANGELOG.md");
 
-/** The heading of the section that is open for writing. */
-const UNRELEASED = "[Unreleased]";
+/** A sample Japanese phrase: "Japanese text". */
+const JAPANESE = "\u65e5\u672c\u8a9e";
 
-/** Japanese lines of `CHANGELOG.md`, grouped by the section holding them. */
-async function japaneseBySection(): Promise<Map<string, { line: number; text: string }[]>> {
-  const text = await readFile(CHANGELOG_MD, "utf-8");
+/** `CHANGELOG.md:<line>: <text>`, prefixed with the section that holds the line. */
+function reportJapaneseLines(text: string): string[] {
   const sections = sectionOfEachLine(text);
-
-  const grouped = new Map<string, { line: number; text: string }[]>();
-  for (const found of findJapaneseTextLines(text)) {
-    // `sectionOfEachLine` is indexed from 0 and line numbers from 1.
-    const section = sections[found.line - 1] ?? CHANGELOG_PREAMBLE;
-    const bucket = grouped.get(section);
-    if (bucket === undefined) {
-      grouped.set(section, [found]);
-      continue;
-    }
-    bucket.push(found);
-  }
-  return grouped;
+  return findJapaneseTextLines(text).map(
+    (found) =>
+      // `sectionOfEachLine` is indexed from 0 and line numbers from 1.
+      `[${sections[found.line - 1] ?? CHANGELOG_PREAMBLE}] CHANGELOG.md:${found.line}: ${found.text}`,
+  );
 }
 
 describe("changelog language", () => {
-  it("keeps the section that is open for writing in English", async () => {
-    const grouped = await japaneseBySection();
+  it("keeps every section of the changelog in English", async () => {
+    const text = await readFile(CHANGELOG_MD, "utf-8");
 
     expect(
-      (grouped.get(UNRELEASED) ?? []).map((found) => `CHANGELOG.md:${found.line}: ${found.text}`),
-      `Japanese under ## ${UNRELEASED}. A changelog entry must be English ` +
+      reportJapaneseLines(text),
+      "Japanese in CHANGELOG.md. A changelog entry must be English " +
         "(.agents/rules/repository-language.md)",
-    ).toEqual([]);
-  });
-
-  it("keeps the text above the first release heading in English", async () => {
-    const grouped = await japaneseBySection();
-
-    expect(
-      (grouped.get(CHANGELOG_PREAMBLE) ?? []).map(
-        (found) => `CHANGELOG.md:${found.line}: ${found.text}`,
-      ),
     ).toEqual([]);
   });
 
   it("reads Japanese out of a changelog that has some", () => {
-    // The positive control. Every case below passes when the scan finds
-    // nothing, so a scan that always finds nothing would pass the file
-    // regardless of its content. This puts a known changelog through the same
-    // two helpers instead of asserting that the real one still has Japanese —
-    // an assertion that would turn a completed migration into a failure.
-    const sample = ["# Changelog", "", "## [1.0.0] - 2026-01-01", "", "- 日本語の記述", ""].join(
+    // The positive control. The case above passes when the scan finds nothing,
+    // so a scan that always finds nothing would pass it whatever the changelog
+    // held. This puts a known changelog through the same helpers.
+    const sample = ["# Changelog", "", "## [1.0.0] - 2026-01-01", "", `- ${JAPANESE}`, ""].join(
       "\n",
     );
 
-    const sections = sectionOfEachLine(sample);
-    const found = findJapaneseTextLines(sample);
-
-    expect(found.map((line) => line.text)).toEqual(["- 日本語の記述"]);
-    // Line numbers are 1-based and the section array is indexed from 0, the
-    // same offset `japaneseBySection` applies.
-    expect(sections[(found[0]?.line ?? 0) - 1]).toBe("[1.0.0] - 2026-01-01");
-  });
-
-  it("admits no Japanese line the allowlist does not name", async () => {
-    const grouped = await japaneseBySection();
-
-    const added: string[] = [];
-    const migrated: string[] = [];
-    for (const [section, found] of grouped) {
-      const diff = diffAgainstAllowlist(
-        section,
-        found,
-        CHANGELOG_JAPANESE_ALLOWLIST[section] ?? [],
-      );
-      added.push(...diff.added);
-      migrated.push(...diff.migrated);
-    }
-
-    const stale = Object.keys(CHANGELOG_JAPANESE_ALLOWLIST).filter(
-      (section) => !grouped.has(section),
-    );
-    expect(stale, "allowlist sections with no Japanese left — drop them").toEqual([]);
-    expect(
-      added,
-      "Japanese line the allowlist does not name. A new changelog entry must be English " +
-        "(.agents/rules/repository-language.md)",
-    ).toEqual([]);
-    expect(
-      migrated,
-      "allowlist entries whose line is gone — delete them, do not leave a reusable slot",
-    ).toEqual([]);
-  });
-
-  it("names every allowlisted section as a heading the document still has", async () => {
-    // A renamed or removed heading silently parks its entries out of reach,
-    // and the section's Japanese then reports as brand new under the new name.
-    const text = await readFile(CHANGELOG_MD, "utf-8");
-    const headings = new Set(sectionOfEachLine(text));
-
-    expect(
-      Object.keys(CHANGELOG_JAPANESE_ALLOWLIST).filter((section) => !headings.has(section)),
-      "allowlist sections the changelog no longer has",
-    ).toEqual([]);
+    expect(reportJapaneseLines(sample)).toEqual([
+      `[[1.0.0] - 2026-01-01] CHANGELOG.md:5: - ${JAPANESE}`,
+    ]);
   });
 
   it("assigns a line to the section heading above it", () => {
@@ -188,30 +97,12 @@ describe("changelog language", () => {
     ]);
   });
 
-  it("reports a new Japanese line that replaces a translated one", () => {
-    const found = findJapaneseTextLines("- 新しい日本語の項目");
-
-    const diff = diffAgainstAllowlist("[1.0.0] - 2026-01-01", found, ["古い日本語の項目"]);
-
-    expect(diff.added).toEqual(["[1.0.0] - 2026-01-01:1: - 新しい日本語の項目"]);
-    expect(diff.migrated).toEqual(["[1.0.0] - 2026-01-01: 古い日本語の項目"]);
-  });
-
-  it("reports an extra copy of a line the allowlist already names", () => {
-    const found = findJapaneseTextLines(["- 同じ項目", "- 同じ項目"].join("\n"));
-
-    const diff = diffAgainstAllowlist("[1.0.0] - 2026-01-01", found, ["同じ項目"]);
-
-    expect(diff.added).toEqual(["[1.0.0] - 2026-01-01:2: - 同じ項目"]);
-    expect(diff.migrated).toEqual([]);
-  });
-
   it("reads a document line as prose, not as code with comments", () => {
     // The operator-message scan blanks comments before looking, because a
     // `//` there opens one. In a document every line is content a reader
     // sees, so nothing may be blanked first.
     const found = findJapaneseTextLines(
-      ["- see src/a.ts // 日本語の説明", "- `/* 日本語 */`"].join("\n"),
+      [`- see src/a.ts // ${JAPANESE}`, `- \`/* ${JAPANESE} */\``].join("\n"),
     );
 
     expect(found.map((entry) => entry.line)).toEqual([1, 2]);
