@@ -256,7 +256,7 @@ export interface WorkflowDecision {
             | "identity-mismatch";
           message: string;
         }
-      | { code: "fail-closed"; message: string; cause: FailClosedCause; subjects?: string[] }
+      | { code: "fail-closed"; message: string; cause: FailClosedCause }
       | {
           code: "proposal-refused";
           message: string;
@@ -2068,24 +2068,15 @@ const REQUIRED_CAPABILITIES = [
   "resume",
 ];
 
-interface StartRefusal {
-  message: string;
-  cause: FailClosedCause;
-  subjects?: string[];
-}
-
-// The refusal for a host the core cannot run on. Its subjects are the host, or each capability
-// the host lacks; undefined when the host and every capability are supported.
-function unsupportedHarness(harness: WorkflowHarness): StartRefusal | undefined {
-  const cause = "unsupported-capability";
+// The refusal message for a host the core cannot run on, naming the host or each capability it
+// lacks; undefined when the host and every capability are supported.
+function unsupportedHarness(harness: WorkflowHarness): string | undefined {
   if (!SUPPORTED_HOSTS.includes(harness.host)) {
-    const message = `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
-    return { message, cause, subjects: [harness.host] };
+    return `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
   }
   const missing = REQUIRED_CAPABILITIES.filter((name) => harness.capabilities[name] !== true);
   if (missing.length === 0) return undefined;
-  const message = `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
-  return { message, cause, subjects: missing };
+  return `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
 }
 
 // A start input holds exactly these; the scope and everything else come from routing.
@@ -2115,15 +2106,17 @@ function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecisi
       events: [],
     };
   }
-  const refusal: StartRefusal | undefined = facts.cause
-    ? {
-        message: `No run was created: the fail-closed cause ${facts.cause} holds. Invoke a stage skill by name instead.`,
-        cause: facts.cause,
-      }
+  const unsupported = facts.cause
+    ? `No run was created: the fail-closed cause ${facts.cause} holds. Invoke a stage skill by name instead.`
     : unsupportedHarness(input.harness);
-  if (refusal) {
+  if (unsupported) {
+    const cause = facts.cause ?? "unsupported-capability";
     return {
-      verdict: { ok: false, run: null, error: { code: "fail-closed", ...refusal } },
+      verdict: {
+        ok: false,
+        run: null,
+        error: { code: "fail-closed", message: unsupported, cause },
+      },
       events: [],
     };
   }
