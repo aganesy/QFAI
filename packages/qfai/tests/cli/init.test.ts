@@ -1722,6 +1722,107 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0028-05
+  it("says the config file is shared when init runs inside a linked worktree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+      const shared = /shared by every worktree of this repository/;
+
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: true, yes: true });
+      });
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+      const mainOutput = await captureStdout(async () => {
+        await runInit({ dir: main, force: false, dryRun: true, yes: true });
+      });
+
+      expect(dryRunOutput).toMatch(shared);
+      expect(realOutput).toMatch(shared);
+      expect(mainOutput).not.toMatch(shared);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("stops before writing anything when a symlink cannot be created", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-eperm-"));
+    let attempts = 0;
+    try {
+      await expect(
+        runInit(
+          { dir: root, force: false, dryRun: false, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+              throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+            },
+          },
+        ),
+      ).rejects.toThrow(/Developer Mode has to be enabled/);
+
+      expect(attempts).toBe(1);
+      expect(await readdir(root)).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("goes ahead when the symlink probe succeeds or fails for another reason", async () => {
+    for (const failure of [undefined, Object.assign(new Error("read-only"), { code: "EROFS" })]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-probe-"));
+      try {
+        await captureStdout(async () => {
+          await runInit(
+            { dir: root, force: false, dryRun: false, yes: true },
+            {
+              platform: "win32",
+              createSymlink: async (target, linkPath, type) => {
+                if (
+                  failure !== undefined &&
+                  path.basename(linkPath).startsWith("qfai-symlink-probe")
+                ) {
+                  throw failure;
+                }
+                await symlink(target, linkPath, type);
+              },
+            },
+          );
+        });
+
+        await access(path.join(root, ".qfai"));
+      } finally {
+        await removeTempTree(root);
+      }
+    }
+  });
+
   // QFAI:EX-0001-0028-03
   it("stays silent about core.symlinks outside a git repository", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));

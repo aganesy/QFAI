@@ -1,5 +1,6 @@
 import {
   mkdir,
+  mkdtemp,
   readdir,
   readlink,
   rename,
@@ -8,7 +9,9 @@ import {
   stat,
   symlink,
   unlink,
+  writeFile,
 } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { isEnoent, isEperm } from "../fs/errno.js";
@@ -622,6 +625,33 @@ async function writeManagedLink(
   }
 
   return "created";
+}
+
+/**
+ * Creates and removes one symlink in a scratch directory, so a platform that
+ * refuses symlinks stops the run before anything is written to the project.
+ *
+ * Only the refusal Windows gives without Developer Mode stops it. Any other
+ * failure of the probe is left to the writes that follow, which report their
+ * own error for the path they were creating.
+ */
+export async function requireSymlinkCreation(
+  options: Pick<WrapperSyncOptions, "createSymlink" | "platform"> = {},
+): Promise<void> {
+  const scratch = await mkdtemp(path.join(os.tmpdir(), "qfai-symlink-probe-"));
+  try {
+    const target = path.join(scratch, "target");
+    await writeFile(target, "");
+    await (options.createSymlink ?? symlink)(
+      target,
+      path.join(scratch, "qfai-symlink-probe"),
+      "file",
+    );
+  } catch (err: unknown) {
+    if (isEpermOnWindows(err, options.platform)) throw symlinkFailure(err, options.platform);
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
 }
 
 /** What a refused `symlink` raises: Developer Mode guidance on Windows, the error elsewhere. */

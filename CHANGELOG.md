@@ -89,6 +89,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
   leaves `/tmp/` out of the block and prints one line naming what it left out.
   A block already in the file is rebuilt as before.
+- **`qfai init` checks that a symlink can be created before it writes
+  anything.** It creates and removes one in a scratch directory, and on Windows
+  without Developer Mode it stops with the Developer Mode instruction instead
+  of failing partway through the tree. `--dry-run` makes no attempt.
+- **`qfai init` says when the config file it changes is shared.** Run from a
+  linked worktree, the `core.symlinks` line names the repository's common
+  config file and adds one line saying every worktree reads it, the main
+  checkout included. The setting itself stays `--local`: scoping it to the
+  worktree needs `extensions.worktreeConfig`, which changes the same shared
+  file.
 
 ## [2.0.1] - 2026-09-30
 
