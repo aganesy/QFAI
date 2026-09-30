@@ -5,6 +5,7 @@ import type {
   WorkflowFacts,
   WorkflowHarness,
   WorkflowInput,
+  WorkflowVerdict,
 } from "./types.js";
 
 const SUPPORTED_HOSTS = ["claude-code", "codex"];
@@ -20,15 +21,21 @@ export const REQUIRED_CAPABILITIES = [
   "resume",
 ];
 
-// The refusal message for a host the core cannot run on, naming the host or each capability it
-// lacks; undefined when the host and every capability are supported.
-function unsupportedHarness(harness: WorkflowHarness): string | undefined {
+type StartRefusal = Extract<NonNullable<WorkflowVerdict["error"]>, { code: "fail-closed" }>;
+
+// The refusal for a host the core cannot run on. Its subjects are the host, or each capability the
+// host does not report as available; undefined when the host and every capability are supported.
+function unsupportedHarness(harness: WorkflowHarness): StartRefusal | undefined {
+  const code = "fail-closed";
+  const cause = "unsupported-capability";
   if (!SUPPORTED_HOSTS.includes(harness.host)) {
-    return `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
+    const message = `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
+    return { code, message, cause, subjects: [harness.host] };
   }
   const missing = REQUIRED_CAPABILITIES.filter((name) => harness.capabilities[name] !== true);
   if (missing.length === 0) return undefined;
-  return `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
+  const message = `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
+  return { code, message, cause, subjects: missing };
 }
 
 // The refusal message for a cause an observer found, naming the override a dropped reviewer
@@ -70,12 +77,12 @@ export function decideStart(input: WorkflowInput, facts: WorkflowFacts): Workflo
       events: [],
     };
   }
-  const unsupported = causeMessage(facts) ?? unsupportedHarness(input.harness);
-  if (unsupported) {
-    const cause = facts.cause ?? "unsupported-capability";
-    const error = { code: "fail-closed" as const, message: unsupported, cause };
-    return { verdict: { ok: false, run: null, error }, events: [] };
-  }
+  const causeText = causeMessage(facts);
+  const error: StartRefusal | undefined =
+    causeText && facts.cause
+      ? { code: "fail-closed", message: causeText, cause: facts.cause }
+      : unsupportedHarness(input.harness);
+  if (error) return { verdict: { ok: false, run: null, error }, events: [] };
   const { digestKey: _key, ...fixed } = start;
   const executionContext = { ...fixed, harness: input.harness, requestDigest };
   const events = [{ type: "run-created", executionContext }, { type: "capture-request" }];
