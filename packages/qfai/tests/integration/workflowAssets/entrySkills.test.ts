@@ -367,6 +367,20 @@ describe("qfai-run", () => {
     expect(text).not.toMatch(/affectedSpecIds|newCapabilities|spec-id|\.qfai\/runs\//);
   });
 
+  it("runs a change to several flows once per flow, and announces the part a later run makes", async () => {
+    const routing = flat(sectionOf(await readShipped(PAYLOADS), "## Routing result"));
+    const announcement = flat(sectionOf(await readShipped(SCREENS), "## The announcement"));
+    expect(routing).toMatch(/a change to several flows runs once per flow/i);
+    expect(routing).toMatch(/narrow the goal and the write scope to one flow/i);
+    expect(routing).toMatch(
+      /once `finish` reports that run, start the next with the same request for the next flow/i,
+    );
+    expect(routing).toMatch(/for the next flow, without asking the operator/i);
+    expect(announcement).toMatch(
+      /when the request changes more than one flow, the part a later run makes/i,
+    );
+  });
+
   // QFAI:AC-0001-0189-06
   // QFAI:EX-0001-0189-14
   it("offers recovery as a reverse diff of the run's own paths only", async () => {
