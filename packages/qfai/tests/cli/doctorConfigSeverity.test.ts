@@ -63,17 +63,23 @@ describe("doctor config.load severity", () => {
   });
 
   it("escapes line separators and bidirectional controls in the listed issues", async () => {
-    // QFAI:AC-0003-0001-03
-    // The YAML key spells U+2028 and U+202E as escapes the parser decodes.
+    // The line separator and the right-to-left override, built from their code
+    // points so no such character sits in this file.
+    const separator = String.fromCodePoint(0x2028);
+    const override = String.fromCodePoint(0x202e);
+    // The YAML key spells both as escapes its parser decodes.
+    const escapeOf = (character: string): string =>
+      `\\u${character.codePointAt(0)?.toString(16).padStart(4, "0")}`;
+    const yamlKey = `a${escapeOf(separator)}b${escapeOf(override)}c`;
     await withConfig(
-      ["uiux:", "  registries:", '    "a\\u2028b\\u202ec": 5', ""].join("\n"),
+      ["uiux:", "  registries:", `    "${yamlKey}": 5`, ""].join("\n"),
       async (root) => {
         const data = await createDoctorData({ startDir: root, rootExplicit: true });
         const message = findCheck(data, "config.load")?.message ?? "";
 
-        expect(message).toContain("a\\u2028b\\u202ec");
-        expect(message).not.toContain(" ");
-        expect(message).not.toContain("‮");
+        expect(message).toContain(yamlKey);
+        expect(message).not.toContain(separator);
+        expect(message).not.toContain(override);
       },
     );
   });
