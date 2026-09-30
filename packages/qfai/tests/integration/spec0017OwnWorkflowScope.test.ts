@@ -65,7 +65,7 @@ async function ownWorkflows(): Promise<Workflow[]> {
   return out;
 }
 
-// QFAI:SPEC-0017:TC-0017-0016
+// QFAI:EX-0002-0014-03
 //
 // Annotated as of `CR-20260818-0007`, approved 2026-08-23, **option A**: the minimal-scope default is
 // the literal `permissions: { contents: read }`, and exactly three blocks are declared exceptions.
@@ -145,7 +145,7 @@ describe("the own tree's departures from minimal permission scope are a closed s
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0030
+// QFAI:EX-0002-0015-04
 //
 // Annotated as of `CR-20260820-0001`, approved 2026-08-23, **option C**: the prohibition on a
 // workflow-level Node literal stays tree-wide, and the publishing job is exempted explicitly rather than
@@ -184,7 +184,7 @@ describe("the own tree takes its Node version from one shared definition", () =>
     // with would be unreachable for exactly the tags it exists to serve. The gate therefore
     // fetches `.github/actions` at `github.sha` into a side path and consumes it from there.
     //
-    // Both spellings name the SAME definition — the obligation `BR-0017-0027` states is
+    // Both spellings name the SAME definition — the obligation `BR-0016-0027` states is
     // single-definition, and a second path to one file is not a second definition. What would
     // violate it is an inlined preamble or a second action, and the negative half below still
     // rejects both.
@@ -254,7 +254,7 @@ describe("the own tree takes its Node version from one shared definition", () =>
     // Set A.
     expect(
       [...literals].sort(),
-      "the publishing job's Node literal is the one declared exception (BR-0017-0027): it encodes npm's " +
+      "the publishing job's Node literal is the one declared exception (BR-0016-0027): it encodes npm's " +
         "own engine range for trusted publishing, which no file in this repository expresses. A second " +
         "literal is a second answer to one question, and the stale one wins as often as not",
     ).toEqual(["release.yml#env.NODE_PUBLISH: 24"]);

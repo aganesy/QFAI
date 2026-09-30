@@ -1,0 +1,153 @@
+# Document schema: <contractsDir>/tech.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Technology$"
+      regex: true
+    description: What the project runs on, what it depends on, and the commands that check it.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Stack$"
+          regex: true
+        description: One row per component. Runtime and Platform are required.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Component, Choice]
+        required_text:
+          - pattern: '(?m)^\|[ \t]*Runtime[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^\|[ \t]*Platform[ \t]*\|'
+            regex: true
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+      - heading:
+          pattern: "^## Architecture$"
+          regex: true
+        description: >-
+          The layers the code is divided into. A layer is a group of modules with a
+          dependency direction: an upper layer may use the layers below it, and a
+          lower layer never knows an upper one. The section is one mermaid
+          flowchart TD, with a node per layer and an Upper --> Lower edge per
+          dependency, then one table with a row per layer from the uppermost down:
+          what the layer is responsible for, and the layers below it that it uses,
+          comma-separated, or - for none. Written from the technical decisions the
+          discussion pack records and, in an existing codebase, from its module
+          layout and import directions. Every new module belongs to one layer and
+          imports only from the layers its row lists; the implementation and review
+          stages read this section to place code and to judge a change. Layers are
+          named, not located: no path, file name or command.
+        allow_additional: false
+        code_blocks:
+          - lang: mermaid
+            min: 1
+            max: 1
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Layer, Responsibility, Depends on]
+        forbidden_text:
+          # Anything before the diagram.
+          - pattern: '\A\s*[^`\s]'
+            regex: true
+          # After the diagram's closing fence, a line that is not a table line.
+          - pattern: '(?s)\n```[ \t]*\n(?:.*\n)?[ \t]*[^|\s]'
+            regex: true
+          # A blank line inside the table.
+          - pattern: '(?m)^[ \t]*\|[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          # A delimiter row wider than the header, and a table whose second line
+          # is not a delimiter row.
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\n```[ \t]*\n\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          # A table with no layer row.
+          - pattern: '\n```[ \t]*\n\s*\|[^\n]*\n[ \t]*\|[^\n]*\|\s*\z'
+            regex: true
+          # A file name or a command in backticks, or a Windows path, in a table line.
+          - pattern: '(?m)^[ \t]*\|[^\n]*[`\\]'
+            regex: true
+          # A path in a table line: one that starts with /, ./ or ../; a
+          # slash-joined name that ends in a file extension; or three or more
+          # slash-joined lowercase segments, or one ending in a slash. A single
+          # slash between words, as in I/O or and/or, is prose.
+          - pattern: '(?m)^[ \t]*\|[^\n]*[\s|(]\.{0,2}/\w'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|[^\n]*\w/[\w./-]*\.[A-Za-z][A-Za-z0-9]{0,4}\b'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|[^\n]*[a-z0-9_-]/[a-z0-9_-]+/'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|[^\n]*[a-z0-9_-]/(?:[\s|]|$)'
+            regex: true
+      - heading:
+          pattern: "^## Dependencies$"
+          regex: true
+        description: Each runtime dependency with the reason for it on a nested item, or `- None.`
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          # Prose, a table or a fence where the list belongs.
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+            regex: true
+          # A top-level item is a package in backticks, or `None.`
+          - pattern: "(?m)^- [^`N]"
+            regex: true
+          - pattern: '(?m)^- `[^`\n]*`[^\n]'
+            regex: true
+          - pattern: '(?m)^- N(?:[^o\n]|o[^n\n]|on[^e\n]|one[^.\n]|one\.[^\n]|o?n?e?$)'
+            regex: true
+          # A package with no nested reason under it.
+          - pattern: '(?m)^- `[^`\n]*`\n(?:[ \t]*\n)*(?:- |\z)'
+            regex: true
+          # `None.` beside a package.
+          - pattern: '(?ms)^- None\.$.*^- |^- `.*^- None\.$'
+            regex: true
+      - heading:
+          pattern: '^## Standard commands \(copy-paste\)$'
+          regex: true
+        description: The quality-gate commands, one labelled item each. Pack / distribution is optional.
+        allow_additional: false
+        lists:
+          - min: 1
+            max: 1
+        required_text:
+          - pattern: "(?m)^- Install: `"
+            regex: true
+          - pattern: "(?m)^- Format: `"
+            regex: true
+          - pattern: "(?m)^- Test: `"
+            regex: true
+          - pattern: "(?m)^- Lint: `"
+            regex: true
+          - pattern: "(?m)^- Typecheck: `"
+            regex: true
+          - pattern: "(?m)^- Build: `"
+            regex: true
+          - pattern: "(?m)^- Skeleton: `"
+            regex: true
+          - pattern: "(?m)^- Validate: `"
+            regex: true
+        forbidden_text:
+          # Anything but top-level items, and an item whose command is not in backticks.
+          - pattern: '(?m)^[ \t]*[^-\s#]'
+            regex: true
+          - pattern: '(?m)^[ \t]+-'
+            regex: true
+          - pattern: '(?m)^- [^:\n]*(?:$|: [^`])'
+            regex: true

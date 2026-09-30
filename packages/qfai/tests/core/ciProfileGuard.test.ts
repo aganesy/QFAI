@@ -85,7 +85,7 @@ describe("buildCiProfileIssue", () => {
   it("says the stage run is valid and what completion still needs", () => {
     const found = buildCiProfileIssue("prototyping", CI_ENV);
 
-    expect(found?.message).toContain("stage gate としては有効");
+    expect(found?.message).toContain("It is valid as a stage gate");
     expect(found?.suggested_action).toContain("full-scan");
   });
 });

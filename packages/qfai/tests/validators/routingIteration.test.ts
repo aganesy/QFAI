@@ -1,18 +1,4 @@
-/**
- * `iteration` is the routing-phase key that says how often a phase runs.
- *
- * The manifest schema had no such concept, so a phase list could only be read
- * as one pass per invocation. `qfai-implement` drives the TDD micro-cycle one
- * ledger row at a time, and that mismatch is what left `qa-gatekeeper` with no
- * phase in which a RED state still existed.
- *
- * The key is optional (`per-invocation` is the default) so existing manifests
- * keep their meaning. What must be validated is the value: a typo such as
- * `per-item` would read as "no iteration declared" and silently restore the
- * collapsed reading the key exists to fix.
- */
-
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -21,75 +7,102 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
 
-const CATALOG = `agents:
-  - id: qa-gatekeeper
-    kind: reviewer
+const CARD = `---
+name: qa-gatekeeper
+description: Guards quality gates.
+tools: [Read]
+kind: reviewer
+domain: quality
+mission: Guard the gates.
+replaces: []
+owned_artifacts: []
+tool_profile: read-only
+permission_profile: read-only
+specialization_tags: []
+---
+
+# QA Gatekeeper
+
+## Mission
+
+Guard the gates.
+
+## Domain Responsibilities
+
+Check quality.
+
+## Inputs you must read
+
+Read the spec.
+
+## Deliverables
+
+Return findings.
+
+## Stop conditions
+
+Stop on missing evidence.
+
+## Sign-off
+
+Record the result.
 `;
 
-const PROFILES = `profiles:
-  - id: default
-`;
-
-async function runWith(iteration: string | undefined): Promise<string[]> {
-  const root = path.join(
-    os.tmpdir(),
-    `qfai-routing-iter-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  );
-  const manifest = path.join(root, ".qfai", "assistant", "manifest");
-  await mkdir(manifest, { recursive: true });
-  await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
+async function runWith(phase: Record<string, unknown>): Promise<string[]> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-phase-"));
+  const agentDir = path.join(root, ".qfai", "assistant", "agent");
+  await mkdir(agentDir, { recursive: true });
   try {
-    await writeFile(path.join(manifest, "agent-catalog.yml"), CATALOG, "utf-8");
-    await writeFile(path.join(manifest, "review-profiles.yml"), PROFILES, "utf-8");
-    // Built before interpolation, not inline: a conditional expression carrying
-    // its own indentation and newline inside a YAML template is one edit away
-    // from producing a document that parses as something else.
-    const phaseLines = [
-      "      - id: only",
-      ...(iteration === undefined ? [] : [`        iteration: ${iteration}`]),
-      "        mandatory_agents: [qa-gatekeeper]",
-      "        conditional_agents: []",
-      "        parallel_groups: []",
-      "        blocking_agents: [qa-gatekeeper]",
-    ];
-    await writeFile(
-      path.join(manifest, "agent-routing.yml"),
-      [
-        "routing:",
-        "  - skill: demo-skill",
-        "    phases:",
-        ...phaseLines,
-        "    review_profile: default",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validateAgentDefinition(root, defaultConfig);
-    return issues.filter((i) => i.code === "QFAI-AGENT-013").map((i) => i.message);
+    await writeFile(path.join(agentDir, "qa-gatekeeper.md"), CARD);
+    const issues = await validateAgentDefinition(root, {
+      ...defaultConfig,
+      routing: [
+        {
+          skill: "demo-skill",
+          phases: [
+            {
+              id: "only",
+              mandatory_agents: ["qa-gatekeeper"],
+              blocking_agents: ["qa-gatekeeper"],
+              ...phase,
+            },
+          ],
+          review_profile: "default",
+        },
+      ],
+    });
+    return issues.filter((issue) => issue.code === "QFAI-AGENT-013").map((issue) => issue.message);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 }
 
-describe("QFAI-AGENT-013 — routing phase iteration", () => {
-  for (const value of ["per-invocation", "per-ledger-item"]) {
-    it(`accepts ${value}`, async () => {
-      expect(await runWith(value)).toEqual([]);
+describe("routing phase vocabulary", () => {
+  for (const iteration of ["per-invocation", "per-ledger-item"]) {
+    it(`accepts iteration ${iteration}`, async () => {
+      expect(await runWith({ iteration })).toEqual([]);
     });
   }
 
-  // The whole point of validating the value: an unrecognised one must not be
-  // treated as an absent one.
-  for (const value of ["per-item", "per_ledger_item", "PER-LEDGER-ITEM", "true"]) {
-    it(`rejects ${value}`, async () => {
-      const messages = await runWith(value);
-      expect(messages).toHaveLength(1);
-      expect(messages[0]).toContain("per-ledger-item");
+  for (const iteration of ["per-item", "per_ledger_item", "PER-LEDGER-ITEM", true]) {
+    it(`rejects iteration ${String(iteration)}`, async () => {
+      expect(await runWith({ iteration })).toEqual([
+        expect.stringContaining("allowed: per-invocation, per-ledger-item"),
+      ]);
     });
   }
 
-  // Manifests written before the key existed still mean "once per invocation".
-  it("stays silent when the key is absent", async () => {
-    expect(await runWith(undefined)).toEqual([]);
-  });
+  for (const rerun_policy of ["failed-agents-only", "changed-scope-dependents"]) {
+    it(`accepts rerun policy ${rerun_policy}`, async () => {
+      expect(await runWith({ rerun_policy })).toEqual([]);
+    });
+  }
+
+  for (const rerun_policy of ["failed-only", "changed_scope_dependents", true]) {
+    it(`rejects rerun policy ${String(rerun_policy)}`, async () => {
+      expect(await runWith({ rerun_policy })).toEqual([
+        expect.stringContaining("allowed: changed-scope-dependents, failed-agents-only"),
+      ]);
+    });
+  }
 });

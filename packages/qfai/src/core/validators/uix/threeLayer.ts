@@ -22,7 +22,6 @@ const EXPLORATION_SECTIONS = [
   "functionality",
   "good critique examples",
   "good critique",
-  "best-of-history summary",
 ] as const;
 
 const LEGACY_FOUR_AXIS_SECTIONS = [

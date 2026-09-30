@@ -2,7 +2,7 @@
  * Integration: shipped orchestrator change detection and verdict.
  *
  * Covers the detection/verdict half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5): the
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0012 to BR-0018-0014): the
  * orchestrator's change-detection shell is self-contained (name-only diff
  * + JSON filtering, no third-party action), selects the minimal lane set
  * for docs-only diffs and the full one for source diffs, fails OPEN to the
@@ -40,7 +40,7 @@ import {
 /** The orchestrator file that owns detection, lanes and verdict. */
 const ORCHESTRATOR = "qfai-tests.yml";
 
-/** The full lane superset (value SSOT in the suite per CLI-WFSET §5). */
+/** The full lane superset (value SSOT in the suite per BR-0018-0023). */
 const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 
 const newTempDir = useTempDirPool("qfai-wfdetect-");
@@ -231,7 +231,7 @@ function lanesOf(run: ShellRun): unknown {
   return JSON.parse(run.outputs["lanes"] ?? "null");
 }
 
-// QFAI:SPEC-0003:TC-0003-0038
+// QFAI:EX-0002-0004-01
 describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, source diff selects the full one", () => {
   // One it() per TC-0003-0038 verify bullet. The detection shell is the
   // REAL shipped run: body, executed against real git repos; the minimal
@@ -385,7 +385,7 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0039
+// QFAI:EX-0002-0004-02
 describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail open with a warning annotation", () => {
   // One it() per TC-0003-0039 verify bullet, each judging the SAME three
   // degraded fixtures: a --depth 1 clone, an unreachable base sha, and a
@@ -464,6 +464,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     return cases;
   };
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases emit a warning annotation", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -474,6 +475,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases select the full lane superset", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -485,6 +487,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases exit 0 — fail open stays green because the superset claim holds", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -496,7 +499,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0040
+// QFAI:EX-0002-0004-03
 describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carries an empty permission map", () => {
   // One it() per TC-0003-0040 verify bullet. The verdict body is the REAL
   // shipped run: block, executed via bash with env stubs. This
@@ -578,6 +581,7 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
   });
 });
 
+// QFAI:EX-0002-0004-04
 describe("a default-branch push declared covered by its pull request runs nothing it already ran", () => {
   // `QFAI_CI_PUSH_POLICY=protected` is the adopter's statement that every merge passed these
   // checks on a pull request first. Only that exact value on a push may skip, because a skip

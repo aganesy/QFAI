@@ -40,7 +40,7 @@ export function validateSidecarFlowOrdering(skillMdContent: string): SidecarFlow
       {
         rule: "SKILL-SIDECAR-FLOW",
         message:
-          "Parallel execution detected between Step 1c and Step 1d; 並列禁止 (no parallel) — Step 1c must complete before Step 1d starts.",
+          "Parallel execution detected between Step 1c and Step 1d; Step 1c must complete before Step 1d starts.",
       },
     ];
   }

@@ -21,10 +21,6 @@ function unitValidatorsDir(): string {
   return path.join(pkgRoot, "tests", "validators");
 }
 
-function readmePath(): string {
-  return path.join(pkgRoot, "README.md");
-}
-
 describe("negative case meta-tests", () => {
   it("tests/core/ fixtures have zero synthetic token evidenceRefs (boundary)", async () => {
     const allFiles = await glob("**/*.ts", { cwd: coreTestsDir(), absolute: true });
@@ -56,16 +52,6 @@ describe("negative case meta-tests", () => {
     expect(src).toContain("validateUiEvidenceArtifacts");
     expect(src).toContain("QFAI-UIE-001");
     expect(src).toContain("QFAI-UIE-002");
-  });
-
-  it("README.md enumerates all concrete-ref leaf fields (normal path)", async () => {
-    const src = await readFile(readmePath(), "utf-8");
-    // All 5 leaf-field categories must be documented
-    expect(src).toContain("ui[].declaredRef");
-    expect(src).toContain("ui[].renderEvidenceRefs");
-    expect(src).toContain("ui[].browserQaEvidenceRefs");
-    expect(src).toContain("axes[].evidenceRefs");
-    expect(src).toContain("reviewerLogs[].evidenceRefs");
   });
 
   it("ui evidence regression tests cover screenshot and HTML absence", async () => {

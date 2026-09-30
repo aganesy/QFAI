@@ -1,5 +1,3 @@
-import type { ScCoverage, TestFileScan } from "./traceability.js";
-
 export type IssueSeverity = "info" | "warning" | "error";
 
 export type IssueCategory = "canonical" | "change";
@@ -45,7 +43,6 @@ export type Issue = {
    */
   job?: string;
   loc?: IssueLocation;
-  dl_id?: string;
 };
 
 export type ValidationCounts = {
@@ -68,13 +65,7 @@ export type ValidationProfile =
   // every completion obligation with it.
   | "drift";
 
-export type ValidationTraceability = {
-  sc: ScCoverage;
-  testFiles: TestFileScan;
-};
-
 export type ValidationWaiverMatch = {
-  dl_ids?: string[];
   paths?: string[];
 };
 
@@ -164,7 +155,6 @@ export type ValidationResult = {
   profileValidatorsRan?: boolean;
   issues: Issue[];
   counts: ValidationCounts;
-  traceability: ValidationTraceability;
   waivers?: ValidationWaivers;
   timings?: ValidationTimings;
 };
