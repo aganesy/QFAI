@@ -39,6 +39,25 @@ here: `package.json#version` in the published package is the only version source
 > Standalone CLI inspection can use `npx qfai@latest <command>`;
 > agent skills need a local installation for their routing defaults.
 
+### The install script of `@jackchuka/mdschema`
+
+`qfai` depends on `@jackchuka/mdschema`, the document-schema checker, which
+declares a `postinstall` script. Recent npm and pnpm 10 report it as unapproved
+on every install. QFAI does not need it to run: the checker's platform binary
+arrives as an optional dependency, which installs without any script. The script
+only downloads a binary when that platform package is missing, for example after
+`--omit=optional` or on a platform the package does not cover.
+
+To let the script run anyway, approve it:
+
+```bash
+npm approve-scripts          # npm: adds it to `allowScripts`
+pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
+```
+
+`npx qfai doctor` runs `mdschema --help` and reports an error, naming these
+fixes, when the binary does not start.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.

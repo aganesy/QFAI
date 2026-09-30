@@ -87,6 +87,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the schema and Mermaid scripts take `--tools <dir>` to find them. An
   installed copy of the workflow is not replaced; copy the packaged file to take
   the fix.
+- **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
+  new `workflows.mdschemaBinary` check runs `mdschema --help` from the
+  installation the document lane and `qfai validate` use, and is an error that
+  names the reason and the fix when the binary does not start. Until now
+  `workflows.docsLane` read `ok` for a project with no binary. The README now
+  says that the package's install script is not needed while the platform
+  package installs, and how to approve it with `npm approve-scripts` or
+  `pnpm approve-builds` where it is.
 
 ## [2.0.1] - 2026-09-30
 

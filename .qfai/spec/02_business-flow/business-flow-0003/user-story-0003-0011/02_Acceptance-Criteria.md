@@ -65,4 +65,11 @@ Feature: shipped workflow drift detection (detection half)
     When `qfai doctor` runs
     Then the `workflows.docsLane` check is an error naming the file and the packaged copy to restore it from
     And with the file present the check is `ok`
+
+  # AC-0003-0011-08
+  Scenario: A document-schema checker binary that does not run is reported
+    Given a project whose `@jackchuka/mdschema` installation resolves and one whose binary cannot start
+    When `qfai doctor` runs
+    Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0
+    And it is an error naming the reason and the fix when the binary cannot start
 ```
