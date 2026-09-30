@@ -17,7 +17,8 @@ import { validateStoryTreeContractReferences } from "./validators/contractRefere
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
-import { issue } from "./validators/utils.js";
+import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
+import { exists, issue } from "./validators/utils.js";
 import type {
   Issue,
   ValidationCounts,
@@ -566,7 +567,7 @@ async function runStoryProfileValidators(
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config, "all")),
           ...(await sdd(false)),
-          ...(await runPrototypingValidators(root, config, timings, platformOption)),
+          ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
           ...(await validatePrototypingSkill(root, config)),
@@ -707,6 +708,33 @@ async function runPrototypingValidators(
     // executionPlan, so bootstrap projects are unaffected.
     ...(await validatePrototypingDelegationMap(root)),
   ];
+}
+
+/** The findings that say a prototyping output is missing from the checkout. */
+const EVIDENCE_PRESENCE_CODES: ReadonlySet<string> = new Set([
+  "QFAI-PROT-001",
+  "QFAI-UIE-001",
+  "QFAI-UIE-002",
+]);
+
+/**
+ * The prototyping issue set as `full` / `verify` report it.
+ *
+ * The prototyping outputs are local and untracked, so a fresh checkout, which
+ * is where CI runs, has no `.qfai/evidence/prototyping/`. With that directory
+ * absent, prototyping was not run in this checkout and the presence gates have
+ * nothing to check. The `prototyping` and `saas-package` profiles do not go
+ * through here and keep them.
+ */
+async function runPrototypingValidatorsForCi(
+  root: string,
+  config: ConfigLoadResult["config"],
+  timings: TimingsSink,
+  platformOption?: string,
+): Promise<Issue[]> {
+  const issues = await runPrototypingValidators(root, config, timings, platformOption);
+  if (await exists(path.join(root, PROTOTYPING_EVIDENCE_REL))) return issues;
+  return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
 }
 
 /**
