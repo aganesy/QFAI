@@ -125,7 +125,7 @@ export async function validateProject(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
-  let oldLayoutFiles: string[] = [];
+  const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
     let entries: string[] = [];
     try {
