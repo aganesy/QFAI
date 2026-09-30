@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The routing eval's safety-relevant list is recorded before the eval runs**
+  (#2304). The list holds every routing seed that needs human input or forbids
+  an effect, an authorization or a skipped gate, and nothing else. A test run
+  on every pull request recomputes it from the seed file and the token
+  vocabulary and requires the result to equal the recorded list. A seed or
+  vocabulary change that moves the list fails until the list is recorded again.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
