@@ -1,0 +1,6 @@
+# Glossary
+
+## Terms
+
+| Term | Definition |
+| ---- | ---------- |
