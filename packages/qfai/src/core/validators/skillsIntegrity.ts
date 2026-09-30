@@ -24,15 +24,15 @@ export async function validateSkillsIntegrity(root: string, config: QfaiConfig):
 
   const total = diff.missing.length + diff.extra.length + diff.changed.length;
   const hints = [
-    diff.changed.length > 0 ? `変更: ${diff.changed.length}` : null,
-    diff.missing.length > 0 ? `削除: ${diff.missing.length}` : null,
-    diff.extra.length > 0 ? `追加: ${diff.extra.length}` : null,
+    diff.changed.length > 0 ? `changed: ${diff.changed.length}` : null,
+    diff.missing.length > 0 ? `deleted: ${diff.missing.length}` : null,
+    diff.extra.length > 0 ? `added: ${diff.extra.length}` : null,
   ]
     .filter(Boolean)
     .join(" / ");
 
   const sample = [...diff.changed, ...diff.missing, ...diff.extra].slice(0, 10);
-  const sampleText = sample.length > 0 ? ` 例: ${sample.join(", ")}` : "";
+  const sampleText = sample.length > 0 ? ` Examples: ${sample.join(", ")}` : "";
   const skillsDir = describeSkillsDir(root, diff.skillsDir);
 
   return [
@@ -41,10 +41,10 @@ export async function validateSkillsIntegrity(root: string, config: QfaiConfig):
       severity: "error",
       category: "change",
       file: skillsDir,
-      message: `標準資産 '${skillsDir}/**' が改変されています（${hints || `差分=${total}`}）。${sampleText}`,
+      message: `Standard asset '${skillsDir}/**' has been modified (${hints || `diff=${total}`}).${sampleText}`,
       suggested_action: [
-        "skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
-        "標準状態へ戻す場合は 'qfai init --force' を実行してください。",
+        "Editing skills directly is discouraged (an update or a re-run of init may overwrite the edits).",
+        "To restore the standard state, run 'qfai init --force'.",
       ].join("\n"),
       rule: "skills.integrity",
     },

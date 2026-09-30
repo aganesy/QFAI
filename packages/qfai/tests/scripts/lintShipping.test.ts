@@ -11,7 +11,7 @@
  *      it should, and ignores what it should via pragma / source-comment
  *      exclusions).
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,11 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { formatViolations, runLintShipping } from "../../scripts/lint-shipping.js";
+import {
+  STORY_ID_BOUNDARIES,
+  STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  scanDistributedSurface,
+} from "../helpers/distributedSurfaceScan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +63,162 @@ describe("lint-shipping invariant — actual package", () => {
 });
 
 describe("lint-shipping fixture — detection rules", () => {
+  // QFAI:EX-0002-0012-01
+  it("reports each above-sample story ID at its source-comment line", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// BF-0010\n// AC-0001-0001-10\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      {
+        file: "src/guard.ts",
+        line: 1,
+        pattern: "internal-story-bf-id-jsdoc-leak",
+        matched: "BF-0010",
+      },
+      {
+        file: "src/guard.ts",
+        line: 2,
+        pattern: "internal-story-ac-id-jsdoc-leak",
+        matched: "AC-0001-0001-10",
+      },
+    ]);
+    const scripts = JSON.parse(
+      await readFile(path.resolve(PKG_ROOT, "../../package.json"), "utf-8"),
+    ) as {
+      scripts: Record<string, string>;
+    };
+    expect(scripts.scripts["ci:lint"]).toContain("run-lint-checks.sh");
+    expect(scripts.scripts["ci:lint:structure"]).toContain("lint:shipping");
+    expect(
+      await readFile(path.resolve(PKG_ROOT, "../../scripts/run-lint-checks.sh"), "utf-8"),
+    ).toContain("pnpm ci:lint:structure");
+  });
+
+  // QFAI:EX-0002-0012-02
+  it("keeps sample story IDs and reports a composite decision once", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// US-0001-0002\n// EX-0001-0001-09\n// DEC-0001-0042\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      {
+        file: "src/guard.ts",
+        line: 3,
+        pattern: "internal-dec-id-jsdoc-leak",
+        matched: "DEC-0001-0042",
+      },
+    ]);
+  });
+
+  // QFAI:EX-0002-0012-03
+  it("reports requirement and test-design IDs in source comments at any number", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// REQ-0006\n/** TDD-0039 */\n// REQ-NNNN\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      { file: "src/guard.ts", line: 1, pattern: "local-reference-id-comment", matched: "REQ-0006" },
+      { file: "src/guard.ts", line: 2, pattern: "local-reference-id-comment", matched: "TDD-0039" },
+    ]);
+  });
+
+  it("scans built-in routing defaults outside the init tree", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/defaults/agent-routing"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/defaults/agent-routing/skills.yml"),
+      "routing:\n  - skill: spec-1234\n",
+    );
+    const { violations, scannedFileCount } = await runLintShipping(root);
+    expect(scannedFileCount).toBe(1);
+    expect(violations).toEqual([
+      expect.objectContaining({
+        file: "assets/defaults/agent-routing/skills.yml",
+        pattern: "spec-id-literal",
+      }),
+    ]);
+  });
+
+  it.each(STORY_ID_BOUNDARIES)(
+    "keeps %s but flags %s in a source comment",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await writeFile(
+        path.join(root, "src", "guard.ts"),
+        `/**\n * ${sample}\n * ${internal}\n */\nexport const guard = true;\n`,
+        "utf-8",
+      );
+
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const { violations } = await runLintShipping(root);
+      expect(violations.filter((violation) => violation.matched.includes(sample))).toEqual([]);
+      expect(
+        violations.some(
+          (violation) => violation.line === 3 && violation.matched.includes(internal),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
+    "keeps %s but flags %s at a comment line end",
+    async (sample, internal) => {
+      const root = await newTempDir();
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await writeFile(
+        path.join(root, "src", "guard.ts"),
+        `// ${sample}\n// ${internal}\nexport const guard = true;\n`,
+        "utf-8",
+      );
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+      const { violations } = await runLintShipping(root);
+      expect(violations.map((violation) => violation.line)).toEqual([2]);
+    },
+  );
+
+  it("keeps old composite decisions and questions in their existing class only", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src", "guard.ts"),
+      "/**\n * DEC-0010-0001 and OQ-0010-0001\n */\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((violation) => violation.pattern)).toEqual([
+      "internal-dec-id-jsdoc-leak",
+      "internal-oq-id-jsdoc-leak",
+    ]);
+  });
+
   it("detects spec-id-literal and spec-path-literal in shipped runtime YAML", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });
@@ -278,33 +439,35 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 
-  it("flags seed spec placeholder directories in init runtime assets", async () => {
+  it("flags an instantiated story tree in init assets", async () => {
     const root = await newTempDir();
-    await mkdir(path.join(root, "assets/init/.qfai/specs/spec-XXXX/tdd"), { recursive: true });
+    await mkdir(path.join(root, "assets/init/.qfai/spec/01_policy"), { recursive: true });
     await writeFile(
-      path.join(root, "assets/init/.qfai/specs/spec-XXXX/01_Spec.md"),
-      "# spec-XXXX\n\nReferences spec-0001 internally.\n",
+      path.join(root, "assets/init/.qfai/spec/01_policy/objective.md"),
+      "# Objective\n\nProject-owned policy.\n",
       "utf-8",
     );
 
     const { violations } = await runLintShipping(root);
-    expect(violations.map((violation) => violation.pattern)).toContain("spec-path-literal");
+    expect(violations).toContainEqual(
+      expect.objectContaining({
+        file: "assets/init/.qfai/spec/01_policy/objective.md",
+        pattern: "spec-path-literal",
+      }),
+    );
   });
 
-  it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {
-    // Composite trace IDs (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
-    // forbidden set declared by `.agents/rules/distributed-surface.md`
-    // (only spec-0010+, CAP-0010+, DEC-NNNN-NNNN, DR-NNNN, and the
-    // QFAI-PROT2-NNN trace prefix are forbidden). Composite IDs in
-    // JSDoc remain permitted so existing trace pointers like
-    // "BR-0029-0001" / "AC-0025-0005" do not need to be scrubbed.
+  it("does NOT flag two-segment AC or TC trace IDs in JSDoc", async () => {
+    // `AC-NNNN-NNNN` and `TC-NNNN-NNNN` are not in the forbidden set of
+    // `.agents/rules/distributed-surface.local.md`. `BR-NNNN-NNNN` is: it is the
+    // contract-scoped business-rule ID.
     const root = await newTempDir();
     await mkdir(path.join(root, "src/foo"), { recursive: true });
     await writeFile(
       path.join(root, "src/foo/bar.ts"),
       [
         "/**",
-        " * Implements BR-0029-0001 and references AC-0025-0005.",
+        " * Implements TC-0029-0001 and references AC-0025-0005.",
         " */",
         "export function foo(): void {}",
         "",

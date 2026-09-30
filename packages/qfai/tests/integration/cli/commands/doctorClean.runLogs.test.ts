@@ -1,3 +1,8 @@
+// QFAI:AC-0003-0008-04
+// QFAI:EX-0003-0008-06
+// QFAI:EX-0003-0008-07
+// QFAI:EX-0003-0008-08
+//
 // Integration: `qfai doctor --clean` prunes TTL-expired validate run
 // logs under `paths.outDir` in addition to archiving review packs, and
 // `qfai doctor` surfaces the run-log count so the accumulation is
@@ -21,6 +26,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-doctor-runlogs-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 
@@ -149,7 +157,11 @@ describe("doctor --clean prunes stale validate run logs", () => {
     const mono = await newTempDir("shared-outdir");
     await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
     for (const app of ["app-a", "app-b"]) {
-      await mkdir(path.join(mono, app), { recursive: true });
+      await mkdir(path.join(mono, app, ".github", "workflows"), { recursive: true });
+      await writeFile(
+        path.join(mono, app, ".github", "workflows", "qfai-docs.yml"),
+        "name: qfai-docs\n",
+      );
       await writeFile(
         path.join(mono, app, "qfai.config.yaml"),
         "paths:\n  outDir: ../shared-report\nreport:\n  keepLatestRuns: 1\n",
@@ -199,7 +211,11 @@ describe("doctor --clean prunes stale validate run logs", () => {
       ["app-a", "../shared-report"],
       ["app-b", "../linked-report"],
     ] as const) {
-      await mkdir(path.join(mono, app), { recursive: true });
+      await mkdir(path.join(mono, app, ".github", "workflows"), { recursive: true });
+      await writeFile(
+        path.join(mono, app, ".github", "workflows", "qfai-docs.yml"),
+        "name: qfai-docs\n",
+      );
       await writeFile(
         path.join(mono, app, "qfai.config.yaml"),
         `paths:\n  outDir: ${outDir}\nreport:\n  keepLatestRuns: 1\n`,

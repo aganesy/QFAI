@@ -195,7 +195,8 @@ describe("buildEvaluatorReview — prose word-count gate (TC-3.1.21..25)", () =>
   // so a Japanese critique the on-disk validator accepted threw here.
   // Both now call the same function.
   it("accepts a Japanese critique the on-disk validator accepts", () => {
-    const review = buildEvaluatorReview(baseInput({ proseCritique: "あ".repeat(800) }));
+    // Hiragana "a" (U+3042) repeated: a whitespace-free Japanese critique.
+    const review = buildEvaluatorReview(baseInput({ proseCritique: "\u3042".repeat(800) }));
     expect(review.proseCritique).toHaveLength(800);
   });
 
@@ -302,7 +303,7 @@ const BASE_IMPRESSIONS: Record<FeelField, string> = {
 };
 
 const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
-  specId: "spec-0012",
+  uiContractId: "UI-0012",
   screenId: "home",
   cycle: 0,
   sessionStatus: "ok",
@@ -316,8 +317,8 @@ const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<st
   ...overrides,
 });
 
-// QFAI:SPEC-0012:TC-0012-0364
 describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () => {
+  // QFAI:EX-0001-0116-05
   it("accepts a payload with blockingFindings, impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -327,7 +328,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.review.specId).toBe("spec-0012");
+    expect(result.review.uiContractId).toBe("UI-0012");
     expect(result.review.screenId).toBe("home");
     expect(result.review.sessionStatus).toBe("ok");
     expect(result.review.blockingFindings).toEqual(["home: the empty state is not represented"]);
@@ -342,7 +343,6 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0365
 describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365)", () => {
   it.each(FEEL_FIELDS as readonly FeelField[])(
     "rejects when impressions.'%s' is missing",
@@ -373,6 +373,7 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     expect(result.errors.some((e) => /unknown field: extraneousKey/.test(e))).toBe(true);
   });
 
+  // QFAI:EX-0001-0116-05
   it("rejects when an unknown nested key under impressions is present", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -392,19 +393,28 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     expect(parseEvaluatorReview([]).ok).toBe(false);
   });
 
-  it("rejects when specId is missing or empty", () => {
+  it("rejects when uiContractId is missing or empty", () => {
     const payload = baseReviewerPayload();
-    delete payload.specId;
+    delete payload.uiContractId;
     const missing = parseEvaluatorReview(payload);
     expect(missing.ok).toBe(false);
     if (!missing.ok) {
-      expect(missing.errors).toContain("missing field: specId");
+      expect(missing.errors).toContain("missing field: uiContractId");
     }
-    const empty = parseEvaluatorReview(baseReviewerPayload({ specId: "" }));
+    const empty = parseEvaluatorReview(baseReviewerPayload({ uiContractId: "" }));
     expect(empty.ok).toBe(false);
     if (!empty.ok) {
-      expect(empty.errors.some((e) => /specId must be a non-empty string/.test(e))).toBe(true);
+      expect(empty.errors.some((e) => /uiContractId must match UI-NNNN/.test(e))).toBe(true);
     }
+  });
+
+  it("rejects bare, noncanonical, and legacy UI contract identity", () => {
+    for (const uiContractId of ["0012", "spec-0012", "UI-12", "../UI-0012"]) {
+      const result = parseEvaluatorReview(baseReviewerPayload({ uiContractId }));
+      expect(result.ok).toBe(false);
+    }
+    const legacy = { ...baseReviewerPayload(), specId: "spec-0012" };
+    expect(parseEvaluatorReview(legacy).ok).toBe(false);
   });
 
   it("rejects when screenId is missing or empty", () => {
@@ -473,7 +483,7 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0366
+// QFAI:EX-0001-0116-01
 describe("parseEvaluatorReview — impressions.*Feel word-count bounds (TC-0012-0366)", () => {
   it.each(FEEL_FIELDS as readonly FeelField[])(
     "rejects impressions.'%s' at 201 words (boundary +1)",
@@ -512,7 +522,7 @@ describe("parseEvaluatorReview — impressions.*Feel word-count bounds (TC-0012-
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0384
+// QFAI:EX-0001-0116-04
 describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-0384)", () => {
   it("accepts a payload describing unreachable entries (no hard-fail)", () => {
     const impressions = {
@@ -527,12 +537,12 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0387 — aligns with
-// the CLI contract §Review payload SSOT (`.qfai/contracts/cli/qfai-prototyping.md`
-// L161-200). The legacy flat `timeBudgetSoftWarning?: string` field is
-// replaced by the SSOT-compliant required `softWarnings.timeBudget: boolean`
-// nested form.
+// QFAI:EX-0001-0098-03 — aligns with the review payload rule BR-0012-0008 of
+// `.qfai/spec/03_contract/cli/cli-0012-qfai-prototyping-iterate.md`. The flat
+// `timeBudgetSoftWarning?: string` field is refused; the payload carries the
+// required nested `softWarnings.timeBudget: boolean`.
 describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
+  // QFAI:EX-0001-0098-03
   it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {
     // `timeBudget` is derived from `wallTimeSec`, so the over-budget
     // wall time has to come with it.
@@ -623,6 +633,7 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#fff" }]);
   });
 
+  // QFAI:EX-0001-0098-03
   it("rejects the legacy flat timeBudgetSoftWarning key (closed-schema regression)", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -637,7 +648,7 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
 
 // The CLI contract §Review payload SSOT requires
 // 11 top-level fields. Verify the new required fields are validated.
-// QFAI:SPEC-0012:TC-0012-0417 — closed-schema validation of the new
+// QFAI:EX-0001-0116-05 — closed-schema validation of the new
 // required fields from CHG-002 (cycle / retryCount / wallTimeSec
 // / softWarnings), including the upper-bound regression
 // (`cycle > MAX_ITERATION_INDEX`) that closes the closed-schema gap.
@@ -668,6 +679,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
   // The CLI contract pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9);
   // the parser must reject `cycle > 9` so reviewer-emitted payloads cannot
   // bypass the closed-schema contract via the upper-bound gap.
+  // QFAI:EX-0001-0116-05
   it("rejects when cycle exceeds MAX_ITERATION_INDEX (10 / 99 / 100)", () => {
     for (const bad of [10, 99, 100]) {
       const result = parseEvaluatorReview(baseReviewerPayload({ cycle: bad }));
@@ -714,6 +726,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     expect(stringy.ok).toBe(false);
   });
 
+  // QFAI:EX-0001-0116-05
   it("accepts a full SSOT-compliant payload with all 11 required fields", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({

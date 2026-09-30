@@ -6,7 +6,7 @@
  * an unknown key, a value the loader can substitute — but not of an error. Once
  * `browserTool: "playwright-cli"` passed its sunset the loader started
  * reporting it at `error`, and `qfai doctor --fail-on error` still exited 0,
- * against `.qfai/contracts/cli/qfai-doctor.md`, which calls a current-minor
+ * against `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which calls a current-minor
  * invalid value blocking.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
