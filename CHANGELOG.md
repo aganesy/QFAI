@@ -78,6 +78,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   presence checks while that directory does not exist. The `prototyping` and
   `saas-package` profiles still run them, and so do `full` and `verify` once
   the directory exists.
+- **A fresh clone of a just-initialised project no longer fails
+  `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
+  `03_contract/` are not in a clone, and the check for an untouched seed
+  treated a missing one as an edited seed. It now reads the files and ignores
+  an absent empty directory, so the clone and the directory `init` ran in give
+  the same result.
 
 ## [2.0.1] - 2026-09-30
 
