@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The capture URL and response-status tests now fail on the mistakes they
+  guard against** (#2228). The `composeCaptureUrl` cases use inputs where a URL
+  join and a string concatenation give different results, so an implementation
+  that concatenated would fail. An absolute screen URL is checked on a bare
+  origin a join would rewrite. The default capture runner's status test gains
+  a case that refuses HTTP 400, the first status of the rejected range, beside
+  the existing case that accepts 399.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
