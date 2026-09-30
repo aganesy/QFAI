@@ -12,6 +12,8 @@ Feature: A migrated project runs the free-text entry
     And each host skills directory links every shipped skill
     And `AGENTS.md` and `CLAUDE.md` carry the entry directive
     And the managed `.gitignore` block equals the installed package's block
+    And `.claude/settings.json` and `.codex/hooks.json` carry the reminder hooks `qfai init` installs, merged the way it merges them
+    And `.agents/rules/reminders.json` holds the installed package's reminder text unless the project edited it
 
   # AC-0004-0013-02
   Scenario: A customised shipped skill is archived, not lost

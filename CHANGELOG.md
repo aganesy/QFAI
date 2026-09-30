@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- The `qfai-migration-v1-to-v2` skill can be run again on a project an earlier
+  2.x release migrated. Steps 1 to 10 then change nothing and say the migration
+  is already done, and step 11 adds only what that release lacked, such as the
+  reminder hooks. A 1.x project still gets every step, the hooks included, in
+  one run. On a project 2.0.0 migrated, first run `npx qfai init` without
+  `--force`, which installs the hooks and their text, then step 11 of the
+  installed skill, which replaces its 2.0.0 copy with this release's, and then
+  the skill. Plain `npx qfai init` leaves an older skill copy as it is.
+
 ### Changed
 
 - **A guard holds every tracked text file to English.**
@@ -33,6 +44,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `.agents/rules`. Outside a git repository the hook still prints nothing.
   - `npx qfai init` replaces a `.codex/hooks.json` group that 2.0.0 wrote and
     nobody edited. A group the project edited is kept and named, as before.
+- A project migrated with the `qfai-migration-v1-to-v2` skill now gets the
+  reminder hooks `qfai init` installs, and the text they print.
+  - Step 11 writes the hooks into `.claude/settings.json` and
+    `.codex/hooks.json` through the same merge. A missing file is written from
+    the template, an existing one gains the groups it lacks, a group an
+    earlier release wrote is replaced, and a group the project edited is kept
+    and named under `## Reminder hooks`. When it writes `.codex/hooks.json`, it
+    says that Codex runs those hooks only after they are trusted with `/hooks`.
+  - Step 11 also brings `.agents/rules/reminders.json` to this release's text
+    the way `npx qfai init` brings a rule master: a copy nobody edited is
+    replaced, a missing one is written, and an edited one is kept and named.
 
 ## [2.0.0] - 2026-09-30
 
