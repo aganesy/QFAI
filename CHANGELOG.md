@@ -15,6 +15,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   installed skill, which replaces its 2.0.0 copy with this release's, and then
   the skill. Plain `npx qfai init` leaves an older skill copy as it is.
 
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). A test that asserts on what the contract does not name, such as a
+  private function, an internal call order or a mock of the code's own
+  collaborators, fails on a change that keeps the behaviour. The new advisory
+  refactor survival check records such a test, and names the
+  behaviour-preserving change it would fail on; a finding without one is not
+  admitted. It never returns REVISE on its own and carries no score. It reads
+  the whole of every test file the change touches, and defers a finding on a
+  test that existed before the change. The three other questions a regression
+  review asks point at the checks that already own them: the coverage gate, and
+  the oracle strength reference with the RED and GREEN observation gate.
+
 ### Fixed
 
 - **Codex hooks run under any shell.** Codex runs a hook through the session's

@@ -78,6 +78,30 @@ required gap or weak oracle; report a gap owned by another stage with that
 owner. During SDD, assess the requirement links without demanding tests that
 the ATDD stage has not written.
 
+## Refactor survival check (advisory)
+
+Read each test on four questions. Three are already judged elsewhere; apply
+them there, not twice.
+
+| Question                                                          | Where it is judged                                                                          |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Does it cover the behaviour that matters, not just the lines run? | The coverage gate above                                                                     |
+| Are the recurring gaps covered: kept failures and boundary cases? | The coverage gate above                                                                     |
+| Would it fail on a concrete regression?                           | `skill/qfai-implement/references/oracle-strength.md` and the RED and GREEN observation gate |
+| Would it survive a refactor that keeps the behaviour?             | This check                                                                                  |
+
+A test fails the last question when it asserts on what the contract does not
+name: a private function, an internal call order, a mock of the code's own
+collaborators, or the structure of a value rather than what it means. Such a
+test breaks on a safe change and teaches authors to weaken the test instead of
+fixing the code.
+
+Read the whole of every test file the change touches, not only the tests it
+adds or alters. Record each finding with the test and a concrete
+behaviour-preserving change it would fail on. A finding with no named change is
+not admitted. A finding on a test that existed before the change is recorded
+and deferred. This check does not REVISE on its own and carries no score.
+
 ## RED and GREEN observation gate
 
 For each ATDD acceptance test or implementation EX under review, inspect
