@@ -34,6 +34,7 @@ import { parse, stringify } from "yaml";
 
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
 import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
+import { atLocation } from "../helpers/reportLocation.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -73,6 +74,10 @@ const HOST_WRAPPERS = new Set([
   ...HOST_SKILL_DIRS.map((dir) => `${dir}/qfai-sdd`),
   ...HOST_AGENT_DIRS.map((dir) => `${dir}/${agentName(dir)}`),
 ]);
+const E2E_FILE = "tests/e2e/order.test.ts";
+const OLD_STORY = "QFAI:SPEC-0001:US-0001-0001";
+const OLD_CASE = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+const FLOW_ANNOTATION = ["QFAI", "BF-0001"].join(":");
 const temporary: string[] = [];
 
 type Result = { status: number | null; stdout: string; stderr: string; error?: Error | undefined };
@@ -208,6 +213,57 @@ function forAPerson(report: string): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "" && line !== "none");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** The EX the ID map gives an old test case of the first spec pack. */
+async function mappedExample(root: string, oldId: string): Promise<string> {
+  const map: unknown = JSON.parse(
+    await textAt(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+  );
+  const ids = isRecord(map) && isRecord(map.ids) ? map.ids["spec-0001"] : undefined;
+  const example = isRecord(ids) ? ids[oldId] : undefined;
+  if (typeof example !== "string") throw new Error(`The ID map holds no ${oldId}`);
+  return example;
+}
+
+type ValidationFinding = { code: string; file: string; refs: string[] };
+
+/** The findings of `qfai validate --profile tdd` on a project, each file with forward slashes. */
+async function tddFindings(root: string): Promise<ValidationFinding[]> {
+  const validation = run(root, process.execPath, [
+    CLI,
+    "validate",
+    "--root",
+    root,
+    "--profile",
+    "tdd",
+    "--fail-on",
+    "never",
+  ]);
+  if (validation.status !== 0) {
+    throw new Error(`qfai validate did not finish: ${validation.stderr}\n${validation.stdout}`);
+  }
+  const report: unknown = JSON.parse(await textAt(root, ".qfai/report/validate.json"));
+  const issues = isRecord(report) && Array.isArray(report.issues) ? report.issues : [];
+  return issues
+    .filter((issue): issue is Record<string, unknown> => isRecord(issue))
+    .map((issue) => ({
+      code: String(issue.code),
+      file: String(issue.file ?? issue.message).replaceAll("\\", "/"),
+      refs: Array.isArray(issue.refs) ? issue.refs.map(String) : [],
+    }));
+}
+
+/** Replaces one annotation of a project's test file, spelled so this file declares none of them. */
+async function replaceAnnotation(root: string, file: string, from: string, to: string) {
+  const text = await textAt(root, file);
+  const annotation = ["QFAI", from].join(":");
+  if (!text.includes(annotation)) throw new Error(`${file} has no ${annotation}`);
+  await writeFile(path.join(root, file), text.replace(annotation, ["QFAI", to].join(":")));
 }
 
 async function applyPreparedResolution(root: string): Promise<void> {
@@ -454,16 +510,92 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(db).toContain("BR-0002-0001");
   });
 
-  it("rewrites mapped annotations while reporting an integration US and contract annotation", async () => {
-    const e2e = await textAt(journey.root, "tests/e2e/order.test.ts");
+  it("rewrites mapped annotations outside E2E, keeps a test-case annotation in E2E, and reports an integration US and contract annotation", async () => {
+    const e2e = await textAt(journey.root, E2E_FILE);
     const integration = await textAt(journey.root, "tests/integration/order.test.ts");
     const report = journey.applied[7]?.stdout ?? "";
-    expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
-    expect(e2e).toContain(["QFAI", "EX-0001-0001-01"].join(":"));
+    expect(e2e).toContain(FLOW_ANNOTATION);
+    expect(e2e).toContain(OLD_CASE);
+    expect(e2e).not.toContain(["QFAI", "EX-0001-0001-01"].join(":"));
     expect(integration).toContain(["QFAI", "EX-0001-0001-03"].join(":"));
     expect(integration).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(report).toContain("QFAI:CON-API-0001");
     expect(report).toContain("QFAI:SPEC-0001:US-0001-0001");
+  });
+
+  // QFAI:BF-0004
+  it("lists the E2E test-case annotation with its file, line, example and the two ways to settle it", async () => {
+    const fixture = await readFile(path.join(FIXTURE, E2E_FILE), "utf8");
+    const after = await textAt(journey.root, E2E_FILE);
+    // The story annotation of the same file still becomes its flow.
+    expect(after.split(/\r?\n/)[0]).toBe(`// ${FLOW_ANNOTATION}`);
+    expect(journey.applied[7]?.status).toBe(3);
+    // Every other line, the test-case annotation included, is as the project wrote it.
+    expect(after).toBe(fixture.replace(OLD_STORY, FLOW_ANNOTATION));
+    const example = await mappedExample(journey.root, "TC-0001-0001");
+    const items = forAPerson(journey.applied[7]?.stdout ?? "").filter((line) =>
+      line.includes(OLD_CASE),
+    );
+    expect(items).toHaveLength(1);
+    const item = items[0] ?? "";
+    expect(item).toMatch(atLocation(E2E_FILE, 2));
+    expect(item).toContain(example);
+    expect(item).toMatch(/outside[^.]*E2E/i);
+    expect(item).toMatch(/decisions\.md/);
+    expect(item).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
+    expect(item).toMatch(/Approach/);
+    expect(item).toMatch(/\bDONE\b/);
+    expect(item).toMatch(/delet/i);
+  });
+
+  // QFAI:BF-0004
+  it("leaves no misplaced example annotation for validation to report under the tdd profile", async () => {
+    const findings = await tddFindings(await cloneProject(journey.root));
+    // Validation reached the story rules: the example has no test outside E2E.
+    expect(
+      findings.filter((finding) => finding.code === "QFAI-STORY-006").flatMap((f) => f.refs),
+    ).toContain(await mappedExample(journey.root, "TC-0001-0001"));
+    expect(
+      findings
+        .filter((finding) => finding.code === "QFAI-STORY-007")
+        .filter((finding) => finding.file.endsWith(E2E_FILE))
+        .map((finding) => finding.file),
+    ).toEqual([]);
+  });
+
+  // QFAI:BF-0004
+  it("lists the annotation on each rerun until a person settles it, then lists nothing for it", async () => {
+    const root = await cloneProject(journey.root);
+    const example = await mappedExample(root, "TC-0001-0001");
+    const unsettled = step(root, 8);
+    expect(await textAt(root, E2E_FILE)).toContain(OLD_CASE);
+    expect(unsettled.status, unsettled.stderr).toBe(3);
+    expect(forAPerson(unsettled.stdout).filter((line) => line.includes(OLD_CASE))).toHaveLength(1);
+
+    // The person settles the test case with a recorded exception and deletes the old
+    // annotation, and settles the two other items this run listed.
+    const decisions = await textAt(root, ".qfai/spec/decisions.md");
+    const row = `| DEC-9001 | Test exception: ${example} | The flow's E2E test covers it | DONE |\n`;
+    await writeFile(
+      path.join(root, ".qfai/spec/decisions.md"),
+      `${decisions.endsWith("\n") ? decisions : `${decisions}\n`}${row}`,
+    );
+    const e2e = await textAt(root, E2E_FILE);
+    await writeFile(
+      path.join(root, E2E_FILE),
+      e2e
+        .split("\n")
+        .filter((line) => !line.includes(OLD_CASE))
+        .join("\n"),
+    );
+    const integration = "tests/integration/order.test.ts";
+    await replaceAnnotation(root, integration, "CON-API-0001", "API-0001");
+    await replaceAnnotation(root, integration, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+
+    const settled = step(root, 8);
+    expect(settled.status, `${settled.stderr}${settled.stdout}`).toBe(0);
+    expect(forAPerson(settled.stdout)).toEqual([]);
+    expect(await textAt(root, E2E_FILE)).toContain(FLOW_ANNOTATION);
   });
 
   it("repoints the six host links and keeps decision evidence out of Git", async () => {

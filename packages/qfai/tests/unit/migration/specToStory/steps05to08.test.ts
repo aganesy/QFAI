@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../../../src/core/config.js";
-import { serializeIdMap } from "../../../../src/migration/specToStory/idMap.js";
+import { validateProject } from "../../../../src/core/validate.js";
+import { readIdMap, serializeIdMap } from "../../../../src/migration/specToStory/idMap.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -17,6 +18,7 @@ import { step05 } from "../../../../src/migration/specToStory/step05CasesToExamp
 import { step06 } from "../../../../src/migration/specToStory/step06DeriveAcRefs.js";
 import { step07 } from "../../../../src/migration/specToStory/step07RulesToContracts.js";
 import { step08 } from "../../../../src/migration/specToStory/step08RewriteAnnotations.js";
+import { atLocation } from "../../../helpers/reportLocation.js";
 
 const roots: string[] = [];
 const spec = "spec-0001";
@@ -1294,5 +1296,308 @@ describe("migration steps 5 to 8", () => {
       `// ${["QFAI", "EX-0001-0002-01"].join(":")}\nit("orders", () => {});\n`,
     );
     expect(reportSection(report.output.join(""), "For a person")).toBe("none");
+  });
+});
+
+const orderRule = "An order total is never negative, and it is at most the credit limit.";
+const limitRule = "An order is refused above the limit, with no partial receipt.";
+
+/** The two rules as heading sections with a `Rule` field continued on a second line. */
+const sectionRules =
+  "# Rules\n\n## BR-0001-0001: Order total\n\n- **Rule**: An order total is never negative,\n  and it is at most the credit limit.\n- **Notes**: Totals are rounded.\n- **NFRs**: NFR-0030\n- **Contracts**: DB-0001\n\n## BR-0001-0002: Order limit\n\n- **Rule**: An order is refused above the limit,\n  with no partial receipt.\n- **Notes**: Limits are per account.\n- **NFRs**: NFR-0030\n- **Contracts**: API-0001\n";
+
+/** The same two rules as table rows. */
+const tableRules = `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | ${orderRule} |\n| BR-0001-0002 | ${limitRule} |\n`;
+
+/**
+ * A project whose plan places `BR-0001-0001` in `db/orders.sql` and `BR-0001-0002` in
+ * `api/orders.yaml`, both cited by one old example, with the rules written as `source` says.
+ */
+async function ruleProject(source: string): Promise<MigrationContext> {
+  const context = await fixture();
+  await put(
+    context.root,
+    ".qfai/evidence/migration-spec-to-story/id-map.json",
+    serializeIdMap({
+      version: 1,
+      ids: {
+        [spec]: {
+          "EX-0001-0001": "EX-0001-0001-01",
+          "BR-0001-0001": "BR-0002-0001",
+          "BR-0001-0002": "BR-0002-0002",
+        },
+      },
+      placements: { [spec]: {} },
+      retiredPacks: {},
+    }),
+  );
+  await put(
+    context.root,
+    planFile,
+    "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: db/orders.sql\n  - id: BR-0001-0002\n    contract: api/orders.yaml\n",
+  );
+  await put(context.root, `${packDir}/04_Business-Rules.md`, source);
+  await put(
+    context.root,
+    `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+    "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001, BR-0001-0002 | Input | Output |\n",
+  );
+  await put(
+    context.root,
+    ".qfai/spec/03_contract/db/orders.sql",
+    "CREATE TABLE orders (id INT);\n",
+  );
+  await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+  return context;
+}
+
+function oneLine(value: unknown): string {
+  return String(value).replace(/\s+/g, " ").trim();
+}
+
+/**
+ * The `-- Rule <id>:` line of a SQL contract, its whitespace runs collapsed, and the line under
+ * it. A rule comment that runs over several lines puts something else under the first line.
+ */
+function ruleComment(sql: string, id: string): string[] {
+  const lines = sql.split("\n");
+  const start = lines.findIndex((line) => line.startsWith(`-- Rule ${id}:`));
+  return start < 0 ? [] : [oneLine(lines[start]), oneLine(lines[start + 1])];
+}
+
+/** The IDs a YAML contract's `x-qfai-depends-on` holds as a flow list on one line, or `null`. */
+function dependsOnList(text: string): string[] | null {
+  const list = /^x-qfai-depends-on:[ \t]*\[([^\]\n]*)\][ \t]*$/m.exec(text)?.[1];
+  return list === undefined ? null : list.split(",").map((id) => id.trim());
+}
+
+function field(value: unknown, name: string): unknown {
+  return typeof value === "object" && value !== null && name in value
+    ? Reflect.get(value, name)
+    : undefined;
+}
+
+/** The `x-qfai-rules` entries of a YAML contract, each narrowed to its three fields. */
+function yamlRules(text: string): { id: unknown; statement: unknown; examples: unknown }[] {
+  const rules = field(parseYaml(text), "x-qfai-rules");
+  if (!Array.isArray(rules)) return [];
+  return rules.map((rule: unknown) => ({
+    id: field(rule, "id"),
+    statement: field(rule, "statement"),
+    examples: field(rule, "examples"),
+  }));
+}
+
+describe("migration step 7 writes the Rule value of a rule written as a section", () => {
+  it("writes a section rule as the table row of the same rule would be written", async () => {
+    // QFAI:EX-0004-0009-18
+    const sqlLine = (rule: string) => [
+      `-- Rule BR-0002-0001: ${rule}`,
+      "-- Examples: EX-0001-0001-01",
+    ];
+    const written = async (source: string) => {
+      const context = await ruleProject(source);
+      expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
+      return {
+        sql: await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8"),
+        yaml: yamlRules(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")),
+      };
+    };
+
+    const table = await written(tableRules);
+    expect(ruleComment(table.sql, "BR-0002-0001")).toEqual(sqlLine(orderRule));
+    expect(table.yaml).toHaveLength(1);
+    expect(table.yaml[0]).toMatchObject({ id: "BR-0002-0002", examples: ["EX-0001-0001-01"] });
+    expect(oneLine(table.yaml[0]?.statement)).toBe(limitRule);
+
+    const section = await written(sectionRules);
+    expect(ruleComment(section.sql, "BR-0002-0001")).toEqual(sqlLine(orderRule));
+    expect(section.sql).not.toMatch(/Notes|NFR|\*\*|Order total|DB-0001/);
+    expect(section.yaml).toHaveLength(1);
+    expect(section.yaml[0]).toMatchObject({ id: "BR-0002-0002", examples: ["EX-0001-0001-01"] });
+    expect(oneLine(section.yaml[0]?.statement)).toBe(limitRule);
+  });
+
+  it("keeps the title and the content of a section that has no Rule field", async () => {
+    const context = await ruleProject(
+      "# Rules\n\n## BR-0001-0001: Valid total\n\n- Status: active\n- The total MUST be nonnegative.\n\n## BR-0001-0002: Later rule\n\n- Status: active\n- A later rule.\n",
+    );
+    expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
+    const sql = await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8");
+    expect(sql).toContain("Valid total");
+    expect(sql).toContain("The total MUST be nonnegative.");
+    const [rule] = yamlRules(
+      await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8"),
+    );
+    expect(String(rule?.statement)).toContain("Later rule");
+    expect(String(rule?.statement)).toContain("A later rule.");
+  });
+
+  // QFAI:EX-0004-0009-18
+  it("raises no conflicting rule when a rerun meets the SQL rule it wrote", async () => {
+    const context = await ruleProject(sectionRules);
+    await put(
+      context.root,
+      planFile,
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: db/orders.sql\n  - id: BR-0001-0002\n    contract: db/later.sql\n",
+    );
+    const first = capture();
+    expect(await executePlannedStep(step07, context, false, first.io)).toBe(3);
+    expect(first.output.join("")).toContain("contract db/later.sql does not exist");
+    const written = await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8");
+    expect(ruleComment(written, "BR-0002-0001")).toEqual([
+      `-- Rule BR-0002-0001: ${orderRule}`,
+      "-- Examples: EX-0001-0001-01",
+    ]);
+
+    await put(
+      context.root,
+      ".qfai/spec/03_contract/db/later.sql",
+      "CREATE TABLE later (id INT);\n",
+    );
+    const rerun = capture();
+    expect(await executePlannedStep(step07, context, false, rerun.io)).toBe(0);
+    expect(rerun.error.join("")).not.toContain("conflicting rule");
+    expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toBe(written);
+    expect(
+      ruleComment(
+        await readFile(path.join(context.contractsDir, "db/later.sql"), "utf8"),
+        "BR-0002-0002",
+      ),
+    ).toEqual([`-- Rule BR-0002-0002: ${limitRule}`, "-- Examples: EX-0001-0001-01"]);
+  });
+});
+
+const dependencies = Array.from(
+  { length: 8 },
+  (_, index) => `DB-${String(index + 2).padStart(4, "0")}`,
+);
+const longDependsOn = `x-qfai-depends-on: [${dependencies.join(", ")}]`;
+
+describe("migration step 7 keeps the declarations of a YAML contract", () => {
+  it("keeps a list of dependencies longer than 80 columns on one line", async () => {
+    // QFAI:EX-0004-0009-19
+    const context = await ruleProject(tableRules);
+    const contract = `# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n${longDependsOn}\ninfo:\n  title: Orders API\n`;
+    expect(longDependsOn.length).toBeGreaterThan(80);
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", contract);
+    expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
+    const written = await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8");
+    expect(written).toContain("x-qfai-rules:");
+    expect(written.split("\n")[0]).toBe("# QFAI-CONTRACT-ID: API-0001");
+    expect(dependsOnList(written)).toEqual(dependencies);
+  });
+});
+
+describe("migration step 8 leaves a test-case annotation in an E2E file", () => {
+  const legacyCase = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+  const legacyStory = ["QFAI", "SPEC-0001", "US-0001-0001"].join(":");
+  const e2eFile = "tests/e2e/order.test.ts";
+  const outsideFile = "tests/integration/order.test.ts";
+
+  async function migrated() {
+    const context = await twoStoryPack(`${twoStoryFlows}rules: []\n`);
+    await put(
+      context.root,
+      e2eFile,
+      `// ${legacyStory}\n// ${legacyCase}\nit("orders", () => {});\n`,
+    );
+    await put(context.root, outsideFile, `// ${legacyCase}\nit("orders", () => {});\n`);
+    await runInOrder(context, [step04, step05, step06, step07]);
+    const example = (await readIdMap(context.root))?.ids[spec]?.["TC-0001-0001"] ?? "";
+    expect(example).toMatch(/^EX-\d{4}-\d{4}-\d{2}$/);
+    return { context, example };
+  }
+
+  /**
+   * The findings of `qfai validate --profile tdd` on the migrated tree. The cut-over step removes
+   * the old pack, and validation reports nothing else while one is left, so the pack goes first.
+   */
+  async function findings(context: MigrationContext) {
+    await rm(path.join(context.root, packDir), { recursive: true, force: true });
+    const result = await validateProject(
+      context.root,
+      {
+        config: context.config,
+        issues: [],
+        configPath: path.join(context.root, "qfai.config.yaml"),
+      },
+      { profile: "tdd" },
+    );
+    return result.issues;
+  }
+
+  async function misplacedIn(context: MigrationContext, file: string): Promise<string[]> {
+    return (await findings(context))
+      .filter(
+        (issue) =>
+          issue.code === "QFAI-STORY-007" &&
+          issue.message.replaceAll("\\", "/").includes(file.replaceAll("\\", "/")),
+      )
+      .map((issue) => issue.message);
+  }
+
+  it("rewrites the story annotation, lists the case annotation and lists it again on each run", async () => {
+    // QFAI:EX-0004-0010-08
+    const { context, example } = await migrated();
+    const first = capture();
+    const firstCode = await executePlannedStep(step08, context, false, first.io);
+
+    // Control: a case annotation outside the E2E layer and a story annotation inside it.
+    expect(await readFile(path.join(context.root, outsideFile), "utf8")).toBe(
+      `// ${["QFAI", example].join(":")}\nit("orders", () => {});\n`,
+    );
+    const afterFirst = await readFile(path.join(context.root, e2eFile), "utf8");
+    expect(afterFirst.split("\n")[0]).toBe(`// ${["QFAI", "BF-0001"].join(":")}`);
+    expect(firstCode).toBe(3);
+
+    // The case annotation of the E2E file stays as it is and is listed.
+    expect(afterFirst.split("\n")[1]).toBe(`// ${legacyCase}`);
+    expect(afterFirst).not.toContain(["QFAI", "EX-"].join(":"));
+    const listed = reportSection(first.output.join(""), "For a person");
+    expect(listed.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(1);
+    expect(listed).toMatch(atLocation(e2eFile, 2));
+    expect(listed).toContain(legacyCase);
+    expect(listed).toContain(example);
+    expect(listed).toMatch(/outside[^.]*E2E/i);
+    expect(listed).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
+    expect(listed).toContain("decisions.md");
+    expect(listed).toMatch(/Approach/);
+    expect(listed).toMatch(/DONE/);
+    expect(listed).toMatch(/delete/i);
+
+    const second = capture();
+    expect(await executePlannedStep(step08, context, false, second.io)).toBe(3);
+    expect(await readFile(path.join(context.root, e2eFile), "utf8")).toBe(afterFirst);
+    expect(reportSection(second.output.join(""), "For a person")).toBe(listed);
+  });
+
+  it("lists nothing for the annotation once its line is deleted", async () => {
+    // QFAI:EX-0004-0010-08
+    const { context } = await migrated();
+    expect(await executePlannedStep(step08, context, false, capture().io)).toBe(3);
+    const current = await readFile(path.join(context.root, e2eFile), "utf8");
+    expect(current).toContain(legacyCase);
+    await writeFile(
+      path.join(context.root, e2eFile),
+      current
+        .split("\n")
+        .filter((line) => !line.includes(legacyCase))
+        .join("\n"),
+    );
+    const report = capture();
+    expect(await executePlannedStep(step08, context, false, report.io)).toBe(0);
+    expect(reportSection(report.output.join(""), "For a person")).toBe("none");
+  });
+
+  it("leaves no EX annotation in the E2E file for validation to report", async () => {
+    // QFAI:EX-0004-0010-08
+    const { context } = await migrated();
+    // Control: validation reads the tree, and the example still lacks a test.
+    expect((await findings(context)).map((issue) => issue.code)).toContain("QFAI-STORY-006");
+    expect(await misplacedIn(context, path.join("e2e", "order.test.ts"))).toEqual([]);
+    const code = await executePlannedStep(step08, context, false, capture().io);
+    expect(await misplacedIn(context, path.join("e2e", "order.test.ts"))).toEqual([]);
+    expect(code).toBe(3);
   });
 });

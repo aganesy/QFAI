@@ -180,3 +180,108 @@ describe("legacy migration records", () => {
     expect(source).toContain("EX-0001-0001");
   });
 });
+
+describe("legacy migration records, ID headers written with a space", () => {
+  const tables = [
+    {
+      kind: "BR" as const,
+      file: "04_Business-Rules.md",
+      text: (header: string) =>
+        `# Rules\n\n| ${header} | Rule | Status |\n| --- | --- | --- |\n| BR-0001-0001 | Orders have an item. | active |\n| BR-0001-0002 | Orders may be free. | draft |\n`,
+      canonical: "BR-ID",
+      spaced: "BR ID",
+      unknown: "Rule No",
+    },
+    {
+      kind: "EX" as const,
+      file: "05_Examples.md",
+      text: (header: string) =>
+        `# Examples\n\n| ${header} | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | one item | accepted |\n`,
+      canonical: "EX-ID",
+      spaced: "EX ID",
+      unknown: "Example No",
+    },
+    {
+      kind: "TC" as const,
+      file: "06_Test-Cases.md",
+      text: (header: string) =>
+        `# Cases\n\n| ${header} | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | submit | accepted |\n`,
+      canonical: "TC-ID",
+      spaced: "TC ID",
+      unknown: "Case No",
+    },
+  ];
+
+  it("reads a spaced ID header as the hyphen header", () => {
+    // QFAI:EX-0004-0007-37
+    for (const { kind, file, text, canonical, spaced } of tables) {
+      const hyphen = parseLegacyRecords(text(canonical), kind, file);
+      expect(hyphen.length, kind).toBeGreaterThan(0);
+      const read = parseLegacyRecords(text(spaced), kind, file);
+      expect(read, kind).toEqual(hyphen);
+    }
+  });
+
+  it("reads a spaced ID header beside a heading section of the same ID as one record", () => {
+    // QFAI:EX-0004-0007-37
+    const read = (header: string) =>
+      parseLegacyRecords(
+        `# Rules\n\n| ${header} | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n\n## BR-0001-0001: Orders have an item\n\n- Status: active\n- Orders have an item.\n`,
+        "BR",
+        "04_Business-Rules.md",
+      );
+    const hyphen = read("BR-ID");
+    expect(hyphen).toHaveLength(1);
+    expect(read("BR ID")).toEqual(hyphen);
+  });
+
+  it("refuses a table holding only IDs of the file's kind under an unknown header, naming the file and the header line", () => {
+    // QFAI:EX-0004-0007-38
+    for (const { kind, file, text, canonical, unknown } of tables) {
+      expect(() => parseLegacyRecords(text(canonical), kind, file), kind).not.toThrow();
+      let error: unknown;
+      try {
+        parseLegacyRecords(text(unknown), kind, file);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error, kind).toBeInstanceOf(MigrationInputError);
+      expect(error instanceof Error ? error.message : "", kind).toContain(`${file}:3`);
+    }
+  });
+
+  it("names the line of the header when an earlier table of the file is an ordinary one", () => {
+    // QFAI:EX-0004-0007-38
+    expect(() =>
+      parseLegacyRecords(
+        "# Rules\n\n| Area | Owner |\n| --- | --- |\n| Orders | Ann |\n\n| Rule No | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n",
+        "BR",
+        "04_Business-Rules.md",
+      ),
+    ).toThrow(/04_Business-Rules\.md:7\b/);
+  });
+
+  it("refuses no table whose first column holds other text or IDs of another kind", () => {
+    expect(
+      parseLegacyRecords(
+        "# Rules\n\n| Area | Owner |\n| --- | --- |\n| Orders | Ann |\n| Payments | Bo |\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n",
+        "BR",
+        "04_Business-Rules.md",
+      ).map((record) => record.id),
+    ).toEqual(["BR-0001-0001"]);
+    expect(
+      parseLegacyRecords(
+        "# Examples\n\n| Rule | Note |\n| --- | --- |\n| BR-0001-0001 | covered below |\n",
+        "EX",
+        "05_Examples.md",
+      ),
+    ).toEqual([]);
+    expect(
+      parseLegacyRecords(
+        "# Rules\n\n| Rule | Owner |\n| --- | --- |\n| BR-0001-0001 and BR-0001-0002 | Ann |\n",
+        "BR",
+        "04_Business-Rules.md",
+      ),
+    ).toEqual([]);
+  });
+});
