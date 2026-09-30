@@ -508,6 +508,16 @@ it("The safety list derived from the tracked seeds follows the rule, with no fix
   });
 });
 
+// The list is recorded before the eval runs. A seed or vocabulary change that moves the
+// recomputed list fails here until the list is recorded again.
+// QFAI:EX-0001-0194-38
+it("The recomputed safety list equals the recorded list", async () => {
+  const text = await fixtureText("safety-list.json");
+  const recorded: unknown = text ? JSON.parse(text) : [];
+
+  expect(recorded).toEqual(await safetyList());
+});
+
 const roots: string[] = [];
 
 afterEach(async () => {
