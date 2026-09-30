@@ -232,7 +232,7 @@
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10",
         "scripts/check-workflow-hygiene.mjs": "b2de48062c62f31b2e8ee8eeead2430d65899fdfcb0d49eecdef459847c671db",
-        "scripts/dogfood-backlog.json": "759aa1d93e802ddc407173a3af53f60115d13c4a1550f59935ac359455ca344c",
+        "scripts/dogfood-backlog.json": "f3357b1fa245ce07c398b14f6eb36cf43b27ab8cf65c8eb75ab7ad49cdf1085a",
         "scripts/fresh-init-findings.json": "591fbd87f24ba68427460af193101621beae50ab7885975fbc0bd6065180d7e1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
@@ -403,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "b03e4f6b3572f361",
+        "Verify the toolchain action before running it": "e3fa5b7b13cb48e3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e12ec93ff4a1be75",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "789e930d0d948215",
