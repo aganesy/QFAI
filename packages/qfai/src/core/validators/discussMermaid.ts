@@ -21,7 +21,7 @@ export async function validateDiscussionMermaid(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-DPACK-010",
-        "legacy discussion ディレクトリ命名は deprecated です。新規成果物は discussion-YYYYMMDDhhmmssSSS を使用してください。",
+        "The legacy discussion directory naming is deprecated. Use discussion-YYYYMMDDhhmmssSSS for new artifacts.",
         "warning",
         discussionRootDir,
         "discussionMermaid.legacyNaming",
@@ -41,13 +41,13 @@ export async function validateDiscussionMermaid(root: string): Promise<Issue[]> 
       issues.push(
         issue(
           "QFAI-DPACK-009",
-          "03_Story-Workshop.md の Mermaid block に flowchart または sequenceDiagram が見つかりません。",
+          "No flowchart or sequenceDiagram was found in the Mermaid block of 03_Story-Workshop.md.",
           "error",
           file,
           "discussionMermaid.flowOrSequence",
           undefined,
           "change",
-          "Story Workshop セクションに mermaid fenced block で flowchart または sequenceDiagram を記述してください。",
+          "In the Story Workshop section, write a flowchart or sequenceDiagram in a mermaid fenced block.",
         ),
       );
     }

@@ -1,3 +1,7 @@
+// QFAI:EX-0001-0021-03
+// QFAI:EX-0001-0021-04
+// QFAI:EX-0001-0021-05
+// QFAI:EX-0001-0021-06
 /** Init adds canonical guidance without replacing project text or deleted rule citations. */
 
 import {
@@ -1426,7 +1430,8 @@ describe("optional review directive detection", () => {
   });
 
   it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
-    const label = "漢".repeat(length);
+    // U+6F22, a CJK ideograph: GitHub's reference-label boundary counts these characters.
+    const label = "\u6f22".repeat(length);
     const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
     const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
     const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
@@ -2816,6 +2821,75 @@ describe("a later init refreshes a rule summary the project never edited", () =>
         expect(result.refreshed, heading).toEqual([master]);
         expect(result.text, heading).toBe(expected.join("\n"));
       }
+    });
+  });
+});
+
+/**
+ * The question-form summary an earlier release wrote, before the rule said how a
+ * turn that waits on the user ends. An unedited copy takes the new wording in
+ * every entry point, the Copilot file included.
+ */
+describe("a later init refreshes the question-form summary an earlier release wrote", () => {
+  const master = ".agents/rules/user-questions.md";
+  const superseded =
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.";
+
+  const bulletIn = (text: string): string | undefined =>
+    text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
+
+  /**
+   * Every entry point and the Copilot file as that release left them. Returns
+   * what this release writes and what the earlier one did, per file.
+   */
+  async function seedSuperseded(
+    root: string,
+  ): Promise<Map<string, { current: string; earlier: string }>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const copilot = path.join(".github", "copilot-instructions.md");
+    const seeded = new Map<string, { current: string; earlier: string }>();
+    for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
+      const written = await readEntryPoint(root, name);
+      const bullet = bulletIn(written);
+      expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+      expect(bullet).toContain("a turn that waits on the user ends with a question");
+      const earlier = written.replace(bullet ?? "", superseded);
+      seeded.set(name, { current: written, earlier });
+      await writeFile(path.join(root, name), earlier, "utf-8");
+    }
+    return seeded;
+  }
+
+  it("replaces the unedited bullet in every entry point and changes nothing else", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { current }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(current);
+      }
+    });
+  });
+
+  it("keeps the earlier bullet where the project edited its own question rule", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The update pass keeps an edited master, so the new summary would
+      // describe a clause this project's rule does not have.
+      const rule = path.join(root, ".agents", "rules", "user-questions.md");
+      const theirs = `${await readFile(rule, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(rule, theirs, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { earlier }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(earlier);
+      }
+      expect(await readFile(rule, "utf-8")).toBe(theirs);
     });
   });
 });

@@ -1,16 +1,17 @@
 /**
- * `/qfai-prototyping` Step 2-B.1 flag-surface completeness.
+ * `/qfai-prototyping` flag-surface completeness.
  *
  * The skill has exactly one place that enumerates the flags of
- * `qfai prototyping iterate`, and operators (and agents that only read
- * `.qfai/assistant/`) treat it as the flag reference. It had drifted to
+ * `qfai prototyping iterate` — `references/iterate-flags.md` — and
+ * operators (and agents that only read `.qfai/assistant/`) treat it as the
+ * flag reference. It had drifted to
  * three entries while the parser accepted ten, leaving the mandatory
  * cycle-0 `--force` and the gate-relaxing `--mode exploration`
  * documented nowhere in the shipped tree.
  *
  * This test pins the three sites together: the `args.ts` parser case,
  * the `main.ts` forwarding into `runPrototypingIterate`, and the
- * Step 2-B.1 enumeration. Adding a flag to the CLI without documenting
+ * flag reference. Adding a flag to the CLI without documenting
  * it — or renaming one in the parser without touching the skill — fails
  * here.
  */
@@ -20,9 +21,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const SKILL_MD = path.resolve(
+import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
+
+const FLAG_REFERENCE = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping/references/iterate-flags.md",
 );
 const ARGS_TS = path.resolve(process.cwd(), "src/cli/lib/args.ts");
 const MAIN_TS = path.resolve(process.cwd(), "src/cli/main.ts");
@@ -30,7 +33,7 @@ const CONTRACT_MD = path.resolve(
   process.cwd(),
   "..",
   "..",
-  ".qfai/contracts/cli/qfai-prototyping-iterate.md",
+  ".qfai/spec/03_contract/cli/cli-0012-qfai-prototyping-iterate.md",
 );
 
 /**
@@ -44,7 +47,7 @@ const CONTRACT_MD = path.resolve(
  * call in `main.ts`, and `parserIterateOptionKeys()` reads the
  * `options.prototyping*` assignments in `args.ts`. A flag wired into
  * the CLI without being added here therefore fails a derivation test,
- * which in turn forces the SKILL.md / contract scans to cover it —
+ * which in turn forces the flag-reference / contract scans to cover it —
  * including the case where `args.ts` gains a flag whose forwarding
  * into `main.ts` was forgotten, which the `main.ts` derivation alone
  * cannot see.
@@ -54,7 +57,7 @@ const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--force", optionKey: "force" },
   { flag: "--dry-run", optionKey: "dryRun" },
   { flag: "--license-patch", optionKey: "prototypingLicensePatch" },
-  { flag: "--primary-spec-id", optionKey: "prototypingPrimarySpecId" },
+  { flag: "--primary-ui-contract", optionKey: "prototypingPrimaryUiContract" },
   { flag: "--check-convergence", optionKey: "prototypingCheckConvergence" },
   { flag: "--capture", optionKey: "prototypingCapture" },
   { flag: "--auto-serve", optionKey: "prototypingAutoServe" },
@@ -133,22 +136,6 @@ function parserIterateOptionKeys(args: string): string[] {
   return [...keys].sort();
 }
 
-/**
- * Slice SKILL.md from the Step 2-B.1 heading to the next `###`
- * heading. Throws rather than returning the whole file so a renamed
- * heading surfaces as a failure instead of a silently passing scan.
- */
-function extractStep2B1(content: string): string {
-  const lines = content.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.startsWith("### Step 2-B.1"));
-  if (start === -1) {
-    throw new Error("SKILL.md: `### Step 2-B.1` heading not found");
-  }
-  const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => line.startsWith("### "));
-  return (end === -1 ? rest : rest.slice(0, end)).join("\n");
-}
-
 describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () => {
   it("ITERATE_FLAGS matches the set main.ts actually forwards", async () => {
     // The bidirectional pin. Without it every scan below walks only the
@@ -174,7 +161,7 @@ describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () 
   });
 
   it("the help text describes `--force` for the cycle-0 re-seed, not just init", async () => {
-    // Step 2-B.1 tells the agent that `npx qfai --help` wins whenever
+    // The flag reference tells the agent that `npx qfai --help` wins whenever
     // the two disagree. If the help keeps calling `--force` an
     // init-only flag, that precedence rule makes the agent drop the
     // mandatory cycle-0 re-seed flag and hit the exit-2 refusal.
@@ -184,16 +171,16 @@ describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () 
     expect(main.slice(usageStart)).toMatch(/--force\s+prototyping iterate --cycle 0:/);
   });
 
-  it("Step 2-B.1 documents every flag the parser accepts", async () => {
-    const section = extractStep2B1(await readFile(SKILL_MD, "utf-8"));
+  it("the flag reference documents every flag the parser accepts", async () => {
+    const section = await readFile(FLAG_REFERENCE, "utf-8");
     const missing = ITERATE_FLAGS.filter(({ flag }) => !section.includes(`\`${flag}`)).map(
       ({ flag }) => flag,
     );
     expect(missing).toEqual([]);
   });
 
-  it("Step 2-B.1 does not close the set with a hard-coded count", async () => {
-    const section = extractStep2B1(await readFile(SKILL_MD, "utf-8"));
+  it("the flag reference does not close the set with a hard-coded count", async () => {
+    const section = await readFile(FLAG_REFERENCE, "utf-8");
     // "Three flags extend ..." is the exact shape that went stale. Any
     // spelled-out count in the lead-in re-creates the same trap.
     expect(section).not.toMatch(
@@ -220,14 +207,15 @@ describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () 
     expect(missing).toEqual([]);
   });
 
-  it("the CLI contract synopsis lists every flag", async () => {
-    const contract = await readFile(CONTRACT_MD, "utf-8");
-    const synopsisStart = contract.indexOf("qfai prototyping iterate --cycle");
-    expect(synopsisStart).toBeGreaterThan(-1);
-    const synopsis = contract.slice(synopsisStart, contract.indexOf("```", synopsisStart));
-    const missing = ITERATE_FLAGS.filter(({ flag }) => !synopsis.includes(flag)).map(
-      ({ flag }) => flag,
+  it("the CLI contract's flag rule names every flag", async () => {
+    const { rules } = parseContractRules(CONTRACT_MD, await readFile(CONTRACT_MD, "utf-8"));
+    const flagRule = rules.find(({ statement }) =>
+      statement.startsWith("`qfai prototyping iterate` takes `--cycle"),
     );
+    expect(flagRule).toBeDefined();
+    const missing = ITERATE_FLAGS.filter(
+      ({ flag }) => !flagRule?.statement.includes(`\`${flag}`),
+    ).map(({ flag }) => flag);
     expect(missing).toEqual([]);
   });
 });

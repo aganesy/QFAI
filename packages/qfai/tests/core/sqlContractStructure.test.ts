@@ -31,9 +31,13 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
     os.tmpdir(),
     `qfai-sql-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  await mkdir(path.join(root, ".qfai", "contracts", "db"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "db"), { recursive: true });
   try {
-    await writeFile(path.join(root, ".qfai", "contracts", "db", "schema.sql"), sql, "utf-8");
+    await writeFile(
+      path.join(root, ".qfai", "spec", "03_contract", "db", "schema.sql"),
+      sql,
+      "utf-8",
+    );
     const issues = await validateContracts(root, defaultConfig);
     return issues.map((i) => ({ code: i.code, severity: i.severity }));
   } finally {
@@ -41,7 +45,7 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
   }
 }
 
-const HEADER = "-- QFAI-CONTRACT-ID: CON-DB-0001\n";
+const HEADER = "-- QFAI-CONTRACT-ID: DB-0001\n";
 
 describe("the statement splitter knows SQL's quoting rules", () => {
   // A naive split(";") would report a valid PL/pgSQL function as a dozen
