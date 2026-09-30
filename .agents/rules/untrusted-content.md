@@ -1,1 +1,0 @@
-../../packages/qfai/assets/init/root/.agents/rules/untrusted-content.md
