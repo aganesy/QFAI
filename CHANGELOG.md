@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The shipped stage guidance says how to compute the digest of a file a
+  stage result names** (#2474). For a file the run changed,
+  `qfai workflow accept` compares the digest in the result's `changedFiles`
+  entry with its own: the SHA-256 of the file's UTF-8 text with CRLF read as
+  LF. No shipped skill said so, and a stage that hashed the raw bytes of a CRLF
+  file was refused `digest-mismatch`. The shared skill operating baseline now
+  states the computation and gives a `node` command that prints it.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
