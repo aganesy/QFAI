@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/devops-ci-engineer.md
+../../.qfai/assistant/agent/devops-ci-engineer.md

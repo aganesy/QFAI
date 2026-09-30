@@ -5,40 +5,40 @@ dependencies: [00_universal/thinking.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-# 計画の立て方
+# How to Make a Plan
 
-複雑なタスクを安全に進めるための計画手順。
+A planning procedure for carrying out complex tasks safely.
 
-## いつ計画するか
+## When to Plan
 
-- 3ステップ以上のタスク、複数領域にまたがる場合、リスクが高い場合は必ず計画を作成。
+- Always make a plan for a task of three or more steps, one that spans multiple areas, or one that is high-risk.
 
-## テンプレート
+## Template
 
 ```text
-1. ゴール: 目的と完了条件
-2. インプット: 仕様・制約・依存関係
-3. スコープ: やること/やらないこと
-4. ステップ: 小さな作業単位に分割（1〜2時間程度）
-5. テスト方針: どこで何を検証するか
-6. リスクと対策: 不明点と確認計画
+1. Goal: Purpose and completion criteria
+2. Inputs: Specifications, constraints and dependencies
+3. Scope: What will and will not be done
+4. Steps: Split into small units of work (about 1 to 2 hours each)
+5. Test policy: What is verified, and where
+6. Risks and countermeasures: Unclear points and the plan to confirm them
 ```
 
-## 運用
+## Operation
 
-- ステップが進んだら計画を更新し、進捗/変更/次のアクションを共有する。
-- ブロックされたら即座に報告し、代替案や必要な意思決定を提示する。
+- As steps progress, update the plan and share progress, changes and next actions.
+- When blocked, report immediately, and present alternatives and the decisions needed.
 
-## 計画の詳細度（サンプルコード生成可能レベル）
+## Level of Plan Detail (Enough to Generate Sample Code)
 
-- 計画は「実装エージェントが迷わず着手できる」粒度まで具体化する（対象ファイル/シンボル、入出力、成功/失敗パス、既存フローとの接点）。
-- 主要な実装ポイントは、可能な限り **サンプルコード（差分イメージ）** を計画内に含める。
-- サンプルコードは **既存コードを踏襲** する（命名、責務分割、型、エラーハンドリング、ユーティリティ、配置規約）。
-- プロジェクト内に既存パターンがあるのに、一般的なサンプルや独自設計を持ち込まない。
+- Make the plan concrete enough that the implementing agent can start without hesitation (target files and symbols, inputs and outputs, success and failure paths, and how it connects to existing flows).
+- Wherever possible, include **sample code (a diff sketch)** for the main implementation points in the plan.
+- Sample code **follows the existing code** (naming, division of responsibilities, types, error handling, utilities and placement conventions).
+- Do not bring in generic samples or an original design when the project already has an existing pattern.
 
-## 再利用・共通化（車輪の再発明回避）
+## Reuse and Sharing (Avoiding Reinventing the Wheel)
 
-- 原則は影響範囲を小さくするが、**同種処理の重複実装（車輪の再発明）を避けることを優先**する。
-- 既存の共通ユーティリティ/型/ヘルパー/フックがある場合は必ず優先利用し、似た実装を安易に新設しない。
-- 共通化が必要で、影響範囲が広がる場合は **計画段階でユーザーに相談** する。
-  - 相談時は「選択肢」「影響範囲」「品質向上の根拠」「代替案」を併記し、承認を得てから進める。
+- The default is to keep the scope of impact small, but **avoiding duplicate implementations of the same kind of processing (reinventing the wheel) takes priority**.
+- Always prefer existing shared utilities, types, helpers and hooks, and do not casually create similar implementations.
+- When sharing is needed and widens the scope of impact, **consult the user at the planning stage**.
+  - In the consultation, give the options, the scope of impact, the grounds for the quality improvement and the alternatives together, and proceed only after approval.

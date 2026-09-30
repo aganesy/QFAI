@@ -4,26 +4,22 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
-const implementSkillPath = path.join(
-  templateQfaiDir,
-  "assistant",
-  "skills",
-  "qfai-implement",
-  "SKILL.md",
-);
+const implementAssistantDir = path.join(templateQfaiDir, "assistant");
 
 const requiredPhrases = [
-  "watch it fail",
-  "watch it pass",
-  "fresh evidence",
-  "spec review",
-  "code quality review",
-  "one test at a time",
-  "parallel",
-  "independent",
+  "one EX at a time by default",
+  "Record command, selector, failure, test hash",
+  "qa-gatekeeper checks the observed RED and GREEN evidence",
+  "implementation-reviewer checks code and tests",
+  "completion-reviewer checks",
+  "RED, GREEN and Refactor result",
+  "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
+  "required user consent",
 ];
 
 const forbiddenPhrases = [
@@ -56,32 +52,32 @@ function checkForbiddenPhrases(content: string): string[] {
   return found;
 }
 
-describe("v1.6.2 required phrase guardrails", () => {
+describe("implementation contract phrase guardrails", () => {
   it("SKILL.md contains all 8 required phrases", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     const missing = checkRequiredPhrases(content);
     expect(missing, `Missing required phrases in SKILL.md: ${missing.join(", ")}`).toEqual([]);
   });
 
   it("required phrase check is idempotent (second run produces same result)", async () => {
-    const content1 = await readFile(implementSkillPath, "utf-8");
-    const content2 = await readFile(implementSkillPath, "utf-8");
+    const content1 = await readImplementFlowSteps(implementAssistantDir);
+    const content2 = await readImplementFlowSteps(implementAssistantDir);
     expect(checkRequiredPhrases(content1)).toEqual(checkRequiredPhrases(content2));
   });
 });
 
 describe("missing required phrase detection", () => {
   it("detects absence of a required phrase from mutated SKILL.md content", async () => {
-    const original = await readFile(implementSkillPath, "utf-8");
-    const mutated = original.replace(/watch it fail/gi, "REDACTED_PHRASE");
+    const original = await readImplementFlowSteps(implementAssistantDir);
+    const mutated = original.replace(/one EX at a time by default/gi, "REDACTED_PHRASE");
     const missingOriginal = checkRequiredPhrases(original);
     const missingMutated = checkRequiredPhrases(mutated);
     expect(missingOriginal).toEqual([]);
-    expect(missingMutated).toContain("watch it fail");
+    expect(missingMutated).toContain("one EX at a time by default");
   });
 
   it("detects presence of a forbidden phrase injected into content", async () => {
-    const original = await readFile(implementSkillPath, "utf-8");
+    const original = await readImplementFlowSteps(implementAssistantDir);
     const injected = original + "\nqfai-tdd-red";
     const foundOriginal = checkForbiddenPhrases(original);
     const foundInjected = checkForbiddenPhrases(injected);
@@ -90,9 +86,9 @@ describe("missing required phrase detection", () => {
   });
 });
 
-describe("v1.6.2 forbidden phrase guardrails", () => {
+describe("retired implementation phrase guardrails", () => {
   it("SKILL.md contains no forbidden phrases", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     const found = checkForbiddenPhrases(content);
     expect(found, `Forbidden phrases found in SKILL.md: ${found.join(", ")}`).toEqual([]);
   });
@@ -115,9 +111,9 @@ describe("v1.6.2 forbidden phrase guardrails", () => {
   });
 });
 
-describe("developer fixes missing phrase; asset tests pass", () => {
-  it("all 8 required phrases are present after v1.6.2 changes", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+describe("shipped implementation skill", () => {
+  it("retains all current cycle and review instructions", async () => {
+    const content = await readImplementFlowSteps(implementAssistantDir);
     const missing = checkRequiredPhrases(content);
     expect(missing).toEqual([]);
   });
@@ -125,7 +121,7 @@ describe("developer fixes missing phrase; asset tests pass", () => {
 
 describe("E2E: prototyping wording alignment", () => {
   it("SKILL.md wording matches implementation behavior with no aspirational language", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     const aspirationalPhrases = [
       "will be implemented",
       "planned for future",
@@ -143,8 +139,12 @@ describe("E2E: prototyping wording alignment", () => {
   });
 
   it("SKILL.md contains actionable implementation verbs", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
-    const actionableVerbs = ["watch it fail", "watch it pass", "fresh evidence"];
+    const content = await readImplementFlowSteps(implementAssistantDir);
+    const actionableVerbs = [
+      "Record command, selector, failure, test hash",
+      "Re-run validation before selecting the next unassigned EX",
+      "Record explicit PASS or REVISE",
+    ];
     for (const verb of actionableVerbs) {
       expect(
         content.toLowerCase().includes(verb.toLowerCase()),

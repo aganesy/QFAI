@@ -1,0 +1,17 @@
+route: decompose-epic
+family: decide
+stages:
+  - id: discussion
+    kind: discussion
+    steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq]
+  - id: split
+    kind: triage
+    steps: [triage-decompose]
+    after: [discussion]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [split]
+defaultModifiers: [gate:user, review:heavy]
+decisionPoints: [discussion-interview, triage-decompose]
+branchPoints: []

@@ -1,0 +1,9 @@
+route: close-no-change
+family: close
+stages:
+  - id: close
+    kind: triage
+    steps: [triage-close]
+defaultModifiers: []
+decisionPoints: []
+branchPoints: []

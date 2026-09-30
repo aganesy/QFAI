@@ -1,6 +1,7 @@
 /**
  * The Claude Code hook entries `qfai init` seeds, and how they reach a project
- * that already has a `.claude/settings.json`.
+ * that already has a `.claude/settings.json`. Codex's `.codex/hooks.json` has
+ * the same table of groups and is merged by the same code.
  *
  * The root template copy is create-only, so a project with its own settings
  * file keeps it — and with it, none of the hooks the same run wrote for a fresh
@@ -67,6 +68,16 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
 /**
+ * Identity of the group that sends, on every turn, a request naming no skill
+ * to `qfai-run`.
+ *
+ * The host picks a skill from the request's wording, and may pick another one
+ * or none. The line at the top of `AGENTS.md` and `CLAUDE.md` is read once and
+ * fades as a session grows; this restates it with each message.
+ */
+export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
+
+/**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * It is the one entry whose program decides whether to print: it reads the
@@ -78,6 +89,17 @@ export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
 
 /** Where both the template and the project keep the file, relative to the root. */
 export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
+
+/**
+ * Where both the template and the project keep Codex's hook file.
+ *
+ * It has the same `hooks.<event>` table of groups as the Claude Code settings,
+ * so the merge below serves both. Its tool-time groups carry the Claude Code
+ * groups' markers under Codex's own tool names, so a group's identity is the
+ * same in both files. Codex has no tool call that leaves plan mode, so the plan
+ * reminder has no Codex group.
+ */
+export const CODEX_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 
 export type ClaudeSettings = Record<string, unknown>;
 
@@ -110,6 +132,15 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+  // Codex: every group of the file whose Windows line ran only under `cmd.exe`
+  "dba38a95f6008a2371c7a19f965d9e5c5cfedff81b956b9fdc9a5ae60378f0f6",
+  "143a27e53eb0cace36d4079b931a48c5e057a44e8aa0c11064f018aa7bd74128",
+  "71d3ff9ff25b358ca42c4d11755b9204a9f6b7c22f57d4e37c73d6b96941b4c0",
+  "456900de1ad2c5496bab7deae388b095edcf69ce51315e7ddbbfc7c413cfa330",
+  "559a90b17f19c6cc670c512151843d28a3295149bb9c1bb07ca268bfc3f0cfae",
+  "981058fa84e7c20eb9a72815aa6d132cbd8dbfbbe7e2a99db24a209e0b034723",
+  "15d21b0c00535c6f8241a4fbefb670c9d01bbdf15e9b18337d5fc76ed09b8879",
+  "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
 ]);
 
 export type HookMergeResult =
