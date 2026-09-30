@@ -379,7 +379,7 @@ export interface WorkflowVerdict {
           | "identity-mismatch";
         message: string;
       }
-    | { code: "fail-closed"; message: string; cause: FailClosedCause }
+    | { code: "fail-closed"; message: string; cause: FailClosedCause; subjects?: string[] }
     | { code: "proposal-refused"; message: string; reasons: ProposalRefusal[] };
 }
 
