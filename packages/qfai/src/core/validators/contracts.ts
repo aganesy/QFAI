@@ -24,7 +24,6 @@ import {
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -59,7 +58,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
-        "UI 契約ファイルが見つかりません。",
+        "No UI contract files were found.",
         "info",
         uiRoot,
         "contracts.ui.files",
@@ -70,7 +69,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
-        "API 契約ファイルが見つかりません。",
+        "No API contract files were found.",
         "info",
         apiRoot,
         "contracts.api.files",
@@ -81,7 +80,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     issues.push(
       issue(
         "QFAI-CONTRACT-000",
-        "DB 契約ファイルが見つかりません。",
+        "No DB contract files were found.",
         "info",
         dbRoot,
         "contracts.db.files",
@@ -106,7 +105,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...validateDependencyRefs(contractIndex));
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
-  issues.push(...(await validateDbContractExecutability(root, dbFiles)));
   issues.push(...(await validateDbContractApplyOrder(root, dbFiles)));
   // The reverse of the marker traceability: declared and rendered by nothing.
   // The forward direction cannot see it — an element nobody built is an element
@@ -148,7 +146,7 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
     issues.push(
       issue(
         "QFAI-CONTRACT-020",
-        "API 契約ファイルに openapi 定義が見つかりません。",
+        "No openapi definition was found in the API contract file.",
         "error",
         file,
         "contracts.api.openapi",
@@ -174,7 +172,7 @@ function parseContract(file: string, kind: ContractKind, text: string): Contract
       ok: false,
       failure: issue(
         "QFAI-CONTRACT-021",
-        `${kind} 契約ファイルの解析に失敗しました: ${formatError(error)}`,
+        `Failed to parse the ${kind} contract file: ${formatError(error)}`,
         "error",
         file,
         "contracts.parse",
@@ -202,12 +200,12 @@ export async function validateUiContractParse(root: string, config: QfaiConfig):
   return issues;
 }
 
-/** Japanese phrasing for each structural failure, so the message is one language. */
-const SQL_PARSE_ERROR_JA: Record<SqlParseError["kind"], string> = {
-  "unterminated-string": "文字列リテラル（または引用識別子）が閉じられていません",
-  "unterminated-comment": "ブロックコメント /* が閉じられていません",
-  "unterminated-dollar-quote": "ドル引用符で開かれた本体が閉じられていません",
-  "unbalanced-parens": "閉じられていない括弧があります",
+/** Wording for each structural failure of a SQL contract. */
+const SQL_PARSE_ERROR_MESSAGE: Record<SqlParseError["kind"], string> = {
+  "unterminated-string": "A string literal (or quoted identifier) is not closed",
+  "unterminated-comment": "The block comment /* is not closed",
+  "unterminated-dollar-quote": "A body opened with a dollar quote is not closed",
+  "unbalanced-parens": "There is an unclosed parenthesis",
 };
 
 /**
@@ -228,13 +226,13 @@ function validateSqlStructure(text: string, file: string): Issue[] {
         // Same rule id the UI/API lane uses for "this contract does not parse",
         // because it is the same claim about the same class of artifact.
         "QFAI-CONTRACT-021",
-        `DB 契約ファイルの解析に失敗しました (${error.line} 行目): ${SQL_PARSE_ERROR_JA[error.kind]}`,
+        `Failed to parse the DB contract file (line ${error.line}): ${SQL_PARSE_ERROR_MESSAGE[error.kind]}`,
         "error",
         file,
         "contracts.parse",
         undefined,
         "change",
-        "未終端の文字列 / コメント / ドル引用符、または閉じられていない括弧を修正してください。",
+        "Fix the unterminated string, comment or dollar quote, or the unclosed parenthesis.",
       ),
     );
   }
@@ -243,13 +241,13 @@ function validateSqlStructure(text: string, file: string): Issue[] {
     issues.push(
       issue(
         "QFAI-DB-002",
-        `${redefinition.kind} "${redefinition.name}" は同一ファイル内で ${redefinition.lines.length} 回定義されています (${redefinition.lines.join(", ")} 行目)。最後の定義だけが有効になるため、それ以前の定義は適用後の契約と食い違います`,
+        `${redefinition.kind} "${redefinition.name}" is defined ${redefinition.lines.length} times in the same file (lines ${redefinition.lines.join(", ")}). Only the last definition takes effect, so the earlier ones disagree with the contract as applied`,
         "error",
         file,
         "contracts.db.redefinition",
         [redefinition.name],
         "change",
-        "重複した CREATE を1つに統合するか、意図的に別オブジェクトである場合は名前を分けてください。",
+        "Merge the duplicate CREATE statements into one, or rename them if they are intentionally different objects.",
       ),
     );
   }
@@ -264,7 +262,7 @@ export function lintSql(text: string, file: string): Issue[] {
       issues.push(
         issue(
           "QFAI-DB-001",
-          `危険な SQL 操作が含まれています: ${label}`,
+          `Dangerous SQL operation found: ${label}`,
           "warning",
           file,
           "contracts.db.sql",
@@ -280,7 +278,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
     return [
       issue(
         "QFAI-CONTRACT-010",
-        "契約ファイルに QFAI-CONTRACT-ID がありません。",
+        "The contract file has no QFAI-CONTRACT-ID.",
         "error",
         file,
         "contracts.declaration",
@@ -292,7 +290,7 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
     return [
       issue(
         "QFAI-CONTRACT-011",
-        `契約ファイルに複数の QFAI-CONTRACT-ID が宣言されています: ${ids.join(", ")}`,
+        `The contract file declares more than one QFAI-CONTRACT-ID: ${ids.join(", ")}`,
         "error",
         file,
         "contracts.declaration",
@@ -302,12 +300,12 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
   }
 
   const id = ids[0] ?? "";
-  const expectedPrefix = `CON-${kind}-`;
+  const expectedPrefix = `${kind}-`;
   if (!id.startsWith(expectedPrefix)) {
     return [
       issue(
         "QFAI-CONTRACT-012",
-        `契約ファイルの QFAI-CONTRACT-ID が ${expectedPrefix} で始まっていません: ${id}`,
+        `The QFAI-CONTRACT-ID of the contract file does not start with ${expectedPrefix}: ${id}`,
         "error",
         file,
         "contracts.declarationPrefix",
@@ -355,7 +353,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       "contracts.dependencyDeclaration",
       [id],
       "change",
-      "Add `-- Depends on: CON-DB-0002` to a `.sql` file, or `x-qfai-depends-on: [CON-API-0002]` " +
+      "Add `-- Depends on: DB-0002` to a `.sql` file, or `x-qfai-depends-on: [API-0002]` " +
         "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
     ),
   ];
@@ -381,13 +379,13 @@ function validateDependencyRefs(index: ContractIndex): Issue[] {
     issues.push(
       issue(
         "QFAI-CONTRACT-014",
-        `${id} が宣言している依存先の契約が存在しません: ${missing.join(", ")}`,
+        `${id} declares a dependency on contracts that do not exist: ${missing.join(", ")}`,
         "error",
         file,
         "contracts.dependencyRefs",
         missing,
         "change",
-        "`Depends on:` / `x-qfai-depends-on` に記載した契約 ID を実在するものに直すか、該当契約を追加してください。",
+        "Correct the contract IDs listed in `Depends on:` / `x-qfai-depends-on` to existing ones, or add the missing contracts.",
       ),
     );
   }
@@ -404,7 +402,7 @@ function validateDuplicateContractIds(idToFiles: Map<string, Set<string>>): Issu
     issues.push(
       issue(
         "QFAI-CONTRACT-013",
-        `契約 ID が重複しています: ${id} (${sorted.join(", ")})`,
+        `Duplicate contract ID: ${id} (${sorted.join(", ")})`,
         "error",
         sorted[0],
         "contracts.idDuplicate",

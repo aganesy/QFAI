@@ -134,24 +134,24 @@
       "minLength": 1
     },
     "operation": {
-      "enum": ["CREATE", null]
+      "enum": ["CREATE", "CHANGE_REQUEST", null]
     },
     "target": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "slotId", "capability"],
+      "required": ["kind", "slotId", "story"],
       "properties": {
         "kind": {
-          "const": "new_capability"
+          "const": "new_story"
         },
         "slotId": {
           "type": "string",
           "minLength": 1
         },
-        "capability": {
+        "story": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["goal", "covers", "excludes"],
+          "required": ["goal", "covers", "excludes", "flowId"],
           "properties": {
             "goal": {
               "type": "string",
@@ -168,6 +168,17 @@
               "items": {
                 "type": "string"
               }
+            },
+            "flowId": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^BF-\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         }

@@ -5,27 +5,27 @@ dependencies: [00_universal/quality.md]
 version: 1.0.0
 ---
 
-# テスト指針
+# Testing Guidelines
 
-テスト設計と実行の基本ルール。
+Basic rules for designing and running tests.
 
-## 追加が必要なとき
+## When a Test Must Be Added
 
-- 振る舞いが変わる修正・バグ修正時は必ず再現テストを追加。
-- 重要なバグ再発防止、仕様変更で影響範囲が広い場合。
+- Always add a reproduction test for a fix that changes behaviour and for any bug fix.
+- Also add one to prevent recurrence of an important bug, or when a specification change has a wide impact.
 
-## テスト階層
+## Test Layers
 
-- **ユニット**: 細かいロジックやバリデーション。異常系も含める。
-- **統合**: 外部サービス/DB を含む挙動。契約テストを意識。
-- **E2E**: 主要ユーザーフローを最低限カバー。認証・権限も確認。
+- **Unit**: Fine-grained logic and validation. Include error cases.
+- **Integration**: Behaviour involving external services or a database. Keep contract tests in mind.
+- **E2E**: Cover the main user flows at a minimum. Also check authentication and permissions.
 
-## 実行と報告
+## Running and Reporting
 
-- 実行コマンドと結果を記録（成功/失敗、失敗時ログの要約）。
-- 実行できない場合は理由と代替手段を記載。
+- Record the command and the result (passed or failed, and a summary of the log on failure).
+- If a test cannot be run, state the reason and an alternative.
 
-## カバレッジの考え方
+## Thinking About Coverage
 
-- 重要ロジックや失敗しやすい箇所から優先してテストを書く。
-- テストの重複を避け、上位レイヤーではユーザーフローに集中する。
+- Write tests first for the important logic and the places most likely to fail.
+- Avoid duplicated tests, and keep the upper layers focused on user flows.

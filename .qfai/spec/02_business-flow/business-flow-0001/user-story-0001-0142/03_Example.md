@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                  | Expected                                                                                                                                                                                                                              |
+| --------------- | --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0142-01 | AC-0001-0142-01 | `qfai prototyping iterate --cycle 10`, when iterate validates the arg. | Stderr reads `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and recommends `--cycle 9 --check-convergence`. A second invocation with `--cycle -1` surfaces the same error class. |
