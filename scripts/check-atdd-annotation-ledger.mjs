@@ -574,8 +574,9 @@ function isMissing(error) {
  * scoped invocation could quietly widen to every spec — or a typo could look like a pass. Every
  * argument is accounted for, and anything unrecognized is a usage error.
  *
- * Kept apart from `main` because parsing is a job of its own and the clearest boundary there: the
- * other two concerns (collecting, reporting) both need the result of this one.
+ * Extracted from `main` because that function was 83 lines against the ~50 the project rules set, and
+ * this is the clearest boundary in it: the other two concerns (collecting, reporting) both need the
+ * result of this one.
  *
  * @param {readonly string[]} args
  * @returns {{ spec?: string } | { error: string }} the parsed scope, or the message to print
