@@ -84,6 +84,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   treated a missing one as an edited seed. It now reads the files and ignores
   an absent empty directory, so the clone and the directory `init` ran in give
   the same result.
+- **The managed `.gitignore` block no longer repeats a line the project
+  already has.** When the file has no block yet and its own lines already
+  ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
+  leaves `/tmp/` out of the block and prints one line naming what it left out.
+  A block already in the file is rebuilt as before.
 
 ## [2.0.1] - 2026-09-30
 
