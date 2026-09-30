@@ -107,7 +107,11 @@ this file adds nothing to it.
 ### Reviewer Gate
 
 After the last step, run one review through `common-review-cycle` with the
-union of the reviewers of the steps that ran.
+union of the reviewers of the steps that ran. The review also checks that the
+change adds test files sized like their neighbours, commits no scratch checks,
+fixes nothing it was not asked to fix, and states any assumption it built on
+(`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
+`.agents/rules/minimal-implementation.md` § 4).
 
 ## Completion
 

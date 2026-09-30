@@ -82,6 +82,24 @@ EX may need an additional focused test even when its parent AC or BF is
 covered. Keep independently observable cases in separate tests so a failure
 points to the behavior that changed.
 
+## Test-suite sizing
+
+Every source change still carries test coverage, and every obligation still
+has its test. This section sizes that coverage. It never removes any.
+
+- **Size a new test file like the ones next to it.** Aim for roughly one
+  focused test per stated behaviour.
+- **Choose a process-per-case suite, never inherit one.** A suite that spawns a
+  process for every case is the shape that makes a CI lane expensive. Pick it
+  for the suite in hand, not because the file beside it has it.
+- **A scratch check is not a deliverable.** Verify the work in progress any way
+  you like. Do not turn a scratch check into a permanent test file. Scratch
+  files go where `.agents/rules/temporary-files.md` puts them.
+
+Like the volume signals in
+`.qfai/assistant/skill/qfai-atdd/references/volume-signals.md`, these are
+review signals. No validator reads them.
+
 ## Test stub detection
 
 A test is incomplete if its body contains a placeholder, skips the

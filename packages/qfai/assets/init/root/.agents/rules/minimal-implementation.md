@@ -153,6 +153,14 @@ a case that cannot happen.
 An addition someone does want is its own change, or an expansion declared under
 Article VII of `.qfai/assistant/rule/constitution.md`.
 
+- **A fix nobody asked for**, such as a pre-existing bug or a performance
+  concern, is reported as a follow-up. A fix the requested behaviour cannot work
+  without stays in. The change's report names it, and it needs no expansion
+  declared under Article VII.
+- **An ambiguous request**, where the work goes ahead on an assumption, is built
+  for the reading the wording and the surrounding code most directly support.
+  State the assumption. Whether to ask instead is `grilling.md`'s to decide.
+
 ## 5. What this rule is not
 
 - Not a licence to skip a requirement. The spec is the authority.

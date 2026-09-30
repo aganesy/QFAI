@@ -60,6 +60,8 @@ scope.
   code, control, setting or copy to remove or simplify and what replaces it.
   Do not weaken an active obligation to reduce code.
 - Treat test volume and density as review signals, not independent hard gates.
+- Check that the change adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on
+  (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4).
 
 ## Coverage gate
 

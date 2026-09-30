@@ -61,7 +61,11 @@ Questions to the user follow
 ### Reviewer Gate
 
 The one review after the last step checks what the `Review` section of each
-step that ran names.
+step that ran names. It also checks that the change adds test files sized like
+their neighbours, commits no scratch checks, fixes nothing it was not asked to
+fix, and states any assumption it built on
+(`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
+`.agents/rules/minimal-implementation.md` § 4).
 
 ## Completion
 

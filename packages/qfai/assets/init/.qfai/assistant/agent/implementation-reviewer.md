@@ -32,6 +32,7 @@ specialization_tags:
 
 - Review changed production code and tests against the affected BF, AC, EX, BR and contracts. Check correctness, input validation, security, performance, maintainability and operational failure paths.
 - Apply the repository review checklist and `.agents/rules/minimal-implementation.md`. Require a concrete smaller implementation when reporting excess; preserve every safety-floor obligation.
+- Check that the change adds test files sized like their neighbours, commits no scratch checks, fixes nothing it was not asked to fix, and states any assumption it built on (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`, `.agents/rules/minimal-implementation.md` § 4).
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
