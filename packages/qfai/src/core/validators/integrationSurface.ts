@@ -14,7 +14,7 @@ import { isEperm } from "../fs/errno.js";
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
  * wrapper directories with the filename suffix each one uses.
  *
- * Kept in step with `cli/commands/init.ts#SKILL_INTEGRATION_DIRS` /
+ * Kept in step with `core/init/integrationDirs.ts#SKILL_INTEGRATION_DIRS` /
  * `#AGENT_INTEGRATION_CONFIGS`. `tests/core/integrationSurface.test.ts` asserts
  * the lists agree, so a new integration target cannot ship unprobed.
  */
@@ -196,7 +196,7 @@ function unwalkablePaths(broken: readonly Broken[]): string[] {
  *
  * **The shipped roster alone**, read from `assets/init` — what init actually
  * wraps. The project's own canonical tree is not the question: a user-defined
- * `.qfai/assistant/skills/my-skill/` is explicitly allowed there —
+ * `.qfai/assistant/skill/my-skill/` is explicitly allowed there —
  * `skillDocReferences` permits it — and init never creates a wrapper for it, so
  * publishing it by hand as a real directory would be reported as a broken qfai
  * link in every profile.
@@ -214,7 +214,7 @@ function unwalkablePaths(broken: readonly Broken[]): string[] {
  * the check while the assistant could not load it.
  */
 async function canonicalSkillIds(): Promise<string[]> {
-  const shipped = await skillIdsIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "skills"));
+  const shipped = await skillIdsIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "skill"));
   return Array.from(shipped).sort();
 }
 
@@ -291,7 +291,7 @@ async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined):
       if (isMissing(error)) return null;
       throw error;
     });
-    return actual !== null && path.normalize(actual) === path.normalize(wrapper.target);
+    return actual !== null && linkNamesTarget(actual, wrapper.target);
   }
   // The flattened form is a small text file, and the ceiling has to bind the
   // entry that is read rather than the one `lstat` saw — the same reason the
@@ -305,6 +305,25 @@ async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined):
   // The only difference tolerated is the separator, and only where
   // `path.relative` produces the other one.
   return body !== null && comparableTarget(body) === comparableTarget(wrapper.target);
+}
+
+/**
+ * Whether a symlink's target is the one `qfai init` writes for the wrapper.
+ *
+ * The one rule for a wrapper link: this gate reports a link it rejects, and
+ * `qfai init` rewrites exactly the links this rejects, so a finding is always
+ * one the printed remedy clears. The strings are compared after the
+ * platform's own normalisation and nothing more. A target that reaches the
+ * same place by another spelling — absolute, or in another letter case on a
+ * case-insensitive disk — is not the link init writes, and init replaces it.
+ */
+export function linkNamesTarget(
+  actual: string,
+  expected: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const flavour = platform === "win32" ? path.win32 : path.posix;
+  return flavour.normalize(actual) === flavour.normalize(expected);
 }
 
 /** Separator-insensitive on Windows, byte-exact everywhere else. */
@@ -354,7 +373,7 @@ async function canonicalState(filePath: string): Promise<PathState> {
     if (isMissing(error)) return { kind: "absent" };
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ELOOP") return { kind: "cycle" };
-    // A path component exists and is not a directory — `.qfai/assistant/skills`
+    // A path component exists and is not a directory — `.qfai/assistant/skill`
     // written as a regular file, say. It is the same class of damage as a cycle
     // and it was the same failure: re-thrown, it ended `qfai validate` with a
     // stack trace instead of a finding naming a path to repair.
@@ -468,7 +487,7 @@ async function brokenAncestor(
  * Why a symlink at `filePath` is damage, or `null` when it is not one.
  *
  * `init` writes the canonical tree as real files, but a project may vendor it
- * by link — pointing `.qfai/assistant/skills` at the assets a package ships is
+ * by link — pointing `.qfai/assistant/skill` at the assets a package ships is
  * a layout, not a fault, and the file an agent then reads is one the project
  * owns and a reviewer can open.
  *
@@ -558,7 +577,7 @@ async function canonicalLinkProblem(
  * assistant goes on loading retired instructions while every profile reports a
  * clean surface. `pruneStaleQfaiWrappers` reaches only part of it: the agent
  * dirs are pruned under `--force` by resolved target, and only when that target
- * is a **direct child** of `.qfai/assistant/agents/`, while the skill dirs are
+ * is a **direct child** of `.qfai/assistant/agent/`, while the skill dirs are
  * still matched by a `qfai-` prefix — and `web-research` is the standing proof
  * that a shipped name need not have one. This rule reports a target landing
  * anywhere under `.qfai/assistant/`, so a nested or cross-kind agent target is
@@ -964,7 +983,7 @@ async function statOrNull(
     return await stat(filePath);
   } catch (error) {
     if (isMissing(error)) return null;
-    // `.qfai/assistant/skills` replaced by a regular file: every path under it
+    // `.qfai/assistant/skill` replaced by a regular file: every path under it
     // raises this, and the wrapper naming it is as broken as one whose target
     // is missing. Propagated, it ended the run instead of reporting.
     if ((error as NodeJS.ErrnoException | null)?.code === "ENOTDIR") return "not-a-directory";
@@ -1016,7 +1035,7 @@ async function fileExists(filePath: string): Promise<boolean> {
  * — the opposite of the rule's stated scope.
  */
 async function canonicalAgentNames(): Promise<string[]> {
-  const shipped = await agentNamesIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "agents"));
+  const shipped = await agentNamesIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "agent"));
   return Array.from(shipped).sort();
 }
 
@@ -1064,12 +1083,12 @@ function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[]
 
   for (const dir of SKILL_WRAPPER_DIRS) {
     for (const id of skills) {
-      push(dir, id, "skill", [".qfai", "assistant", "skills", id]);
+      push(dir, id, "skill", [".qfai", "assistant", "skill", id]);
     }
   }
   for (const { dir, suffix } of AGENT_WRAPPER_DIRS) {
     for (const name of agents) {
-      push(dir, `${name}${suffix}`, "agent", [".qfai", "assistant", "agents", `${name}.md`]);
+      push(dir, `${name}${suffix}`, "agent", [".qfai", "assistant", "agent", `${name}.md`]);
     }
   }
   return wrappers;
@@ -1339,7 +1358,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       if (isMissing(error)) return null;
       throw error;
     });
-    if (actual === null || path.normalize(actual) !== path.normalize(wrapper.target)) {
+    if (actual === null || !linkNamesTarget(actual, wrapper.target)) {
       // A link that resolves to the wrong canonical document is worse than a
       // dangling one: the assistant loads real instructions, just not these.
       broken.push({
@@ -1372,7 +1391,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // symlink cycle, which is structural damage to the very thing this rule
       // inspects. Re-thrown, `qfai validate` exited with a stack trace instead
       // of a `QFAI-LINK-001` naming the path to repair.
-      // `ENOTDIR` joins it: `.qfai/assistant/skills` replaced by a regular file
+      // `ENOTDIR` joins it: `.qfai/assistant/skill` replaced by a regular file
       // raises it for every wrapper naming a document under that path, and the
       // wrapper is as broken as one whose target is missing.
       // `EPERM` joins them, and is the one a Windows `git worktree` produces
@@ -1393,7 +1412,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         throw error;
       }
       // The link failing to resolve does not mean the canonical path is
-      // otherwise sound. Point `.qfai/assistant/skills` at an existing empty
+      // otherwise sound. Point `.qfai/assistant/skill` at an existing empty
       // directory and every wrapper under it is `ENOENT` — plain "dangling",
       // reported and `continue`d before anything looked at the ancestor. The
       // remedy printed for it is "re-run `qfai init`", which recreates the
@@ -1456,7 +1475,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     // Where it *lands*, not what it spells. The target is relative, so it
     // resolves against the wrapper directory's physical location — and that
     // directory can itself be a symlink. Point `.claude/skills` at an outside
-    // tree holding a `.qfai/assistant/skills/<name>/SKILL.md` at the same
+    // tree holding a `.qfai/assistant/skill/<name>/SKILL.md` at the same
     // relative offset and every check above passes, while the assistant loads
     // instructions that are not this project's. Comparing the resolved paths
     // is what makes "this wrapper names the project canonical" true, rather
@@ -1633,7 +1652,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   const describe = (entries: readonly Broken[]): string => {
     const sample = entries.slice(0, 12).map((entry) => `${entry.relative} (${entry.detail})`);
     const overflow =
-      entries.length > sample.length ? ` (他 ${String(entries.length - sample.length)} 件)` : "";
+      entries.length > sample.length ? ` (and ${String(entries.length - sample.length)} more)` : "";
     return `${sample.join(", ")}${overflow}`;
   };
 
@@ -1651,22 +1670,22 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `assistant 統合ディレクトリの symlink が壊れています（${String(unreachable.length)} 件）。skill / agent はこの経路でしか読み込まれないため、これらは現在まったく適用されていません: ${describe(unreachable)}`,
+        `${String(unreachable.length)} symlink(s) in the assistant integration directories are broken. Skills and agents load only through these paths, so none of them is currently applied: ${describe(unreachable)}`,
         "error",
         unreachable[0]?.relative,
         "integrationSurface.links",
         unreachable.map((entry) => entry.relative),
         "change",
         [
-          "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
-          "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
-          "**integration directory の祖先が symlink の場合（`an ancestor is a symlink`）も同様です。** 配下の wrapper は相対 target なので、その祖先が指す先を基準に解決されます。該当する祖先（`.claude` / `.github` など）を実ディレクトリに戻してから `qfai init` を実行してください。",
-          "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
-          "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
-          "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
-          "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agents/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agents/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skills/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skills/…` / `.qfai/assistant/agents/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agents/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
-          "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
-          "Windows では Developer Mode の有効化が必要な場合があります。",
+          "Rerun `qfai init`: the qfai-owned paths are relinked as symlinks (`--force` is not needed). A regular file whose content differs from the link target is preserved, so check its contents and move it aside first.",
+          "**A broken integration directory itself (`the integration directory is …`) is not fixed by init either.** The wrappers under an external symlink have a correct target string, so `ensureSymlink` skips them, and even `--force` only relinks them inside the same external directory. In a cycle, creating the parent directory fails with `ELOOP`. Move the affected path (for example `.claude/skills`) aside or delete it, then run `qfai init`.",
+          "**The same applies when an ancestor of the integration directory is a symlink (`an ancestor is a symlink`).** The wrappers inside use relative targets, so they resolve against wherever that ancestor points. Restore the ancestor (`.claude`, `.github`, and so on) to a real directory, then run `qfai init`.",
+          "**A wrapper that is not a symlink (`directory, not a symlink` / `FIFO` / `socket` / `device`) is not fixed by init either.** `ensureSymlink` leaves these as `skipped`. Move a directory aside after checking its contents, then run `qfai init`; delete a special file, then run `qfai init`. `--force` deletes without confirmation, so do not use it until you know whether the contents are needed.",
+          "**`unreadable` is a permissions problem, and init does not fix it.** The wrapper's target string is correct, so `ensureSymlink` skips it, and canonical assets are create-only, so they are not overwritten either. Restore read permission on the file (POSIX: `chmod u+r <path>`, Windows: `icacls <path> /grant <user>:R`). If this appears in CI, check the umask / ACL settings of the job that created the file.",
+          "**A broken canonical side (`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`) is not fixed by init.** Canonical assets are create-only, so existing paths are skipped, and even `--force` fails in `copyFile` / `mkdir` on the type conflict. Move the affected `.qfai/assistant/**` path aside (or delete it), then run `qfai init` — the contents are lost, so check them first.",
+          "**`which this version does not ship` marks a retired wrapper.** The wrapper of a skill or agent that an upgrade deleted or renamed is still there and still resolves, so the assistant keeps loading the old instructions. `qfai init --force` deletes only **agent wrappers whose target is directly under `.qfai/assistant/agent/` (`.claude/agents/` / `.github/agents/`) and skill wrappers whose names start with `qfai-`** (a rerun without `--force` does not remove them). Wrappers of skills with no such prefix, such as `web-research`, and agent wrappers that point into a subdirectory such as `.qfai/assistant/agent/<sub>/…` or at `.qfai/assistant/skill/…`, are outside the prune, so delete the reported paths by hand. **init never deletes the canonical side (`.qfai/assistant/skill/…` / `.qfai/assistant/agent/…`):** it cannot tell a retired canonical from one the project added itself, so delete a retired canonical by hand. A wrapper linked by hand to a project's own canonical has the same shape; it is outside qfai's management too, so decide whether to keep it on purpose. (`--force` deletes an agent wrapper only when its target is directly under `.qfai/assistant/agent/` and is not in the current roster.)",
+          "If the root cause is flattening at clone time, first set `git config --global core.symlinks true`. A repo-local setting is not carried into a clone, so without this the next clone ends up in the same state.",
+          "On Windows, Developer Mode may need to be enabled.",
         ].join("\n"),
         { relatedFiles: unreachable.slice(1).map((entry) => entry.relative) },
       ),

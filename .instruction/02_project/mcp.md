@@ -9,55 +9,55 @@ dependencies:
 version: 1.0.0
 ---
 
-# MCP（Model Context Protocol）運用ガイド
+# MCP (Model Context Protocol) Operations Guide
 
-QFAI のドキュメント整備・実装・検証を効率化するための MCP 活用ポイントを整理する。
+This guide lists where MCP helps speed up QFAI documentation, implementation and verification.
 
-## 基本方針
+## Basic Policy
 
-- まず MCP で **既存の資料/コードを正確に読む**
-- 解析や仕様化に使う入力には **機密情報を含めない**
-- サーバの導入状況は環境依存のため `list/get` で確認する
+- First use MCP to **read existing material and code accurately**
+- **Do not include confidential information** in inputs used for analysis or specification
+- Which servers are installed depends on the environment, so check with `list/get`
 
-## MCP サーバ一覧（代表例）
+## MCP Servers (Representative Examples)
 
-### `serena`（セマンティック検索/安全編集）
+### `serena` (semantic search and safe editing)
 
-- 目的: 既存コード/ドキュメントの構造的検索と編集支援
-- 典型ユースケース: `core/validators` の既存パターン探索、影響範囲の把握
+- Purpose: structural search of existing code and documents, and editing support
+- Typical use: finding existing patterns in `core/validators` and understanding the impact of a change
 
-### `context7`（公式ドキュメント参照）
+### `context7` (official documentation lookup)
 
-- 目的: 依存ライブラリの公式 API を確認し、推測実装を避ける
-- 典型ユースケース: `vitest` や `tsup` の設定/挙動確認
+- Purpose: check the official API of a dependency and avoid implementing from guesses
+- Typical use: checking the configuration and behavior of `vitest` or `tsup`
 
-### `markitdown`（PDF/Office → Markdown）
+### `markitdown` (PDF/Office to Markdown)
 
-- 目的: 要件資料の取り込み（discussion pack の入力準備）
-- 典型ユースケース: 仕様化の前段として要件を Markdown 化
+- Purpose: importing requirements material (preparing input for a discussion pack)
+- Typical use: converting requirements to Markdown before specifying them
 
-### `vibe-pdf-read`（PDF → 画像） + `ocr`（画像 → 文字）
+### `vibe-pdf-read` (PDF to image) + `ocr` (image to text)
 
-- 目的: スキャン PDF の読み取り
-- 典型ユースケース: `markitdown` が効かない要件資料の OCR
+- Purpose: reading scanned PDFs
+- Typical use: OCR of requirements material that `markitdown` cannot handle
 
-### `chrome-devtools`（ブラウザ実行時情報）
+### `chrome-devtools` (browser runtime information)
 
-- 目的: UI/ドキュメントの表示確認（必要時のみ）
+- Purpose: checking how a UI or document renders (only when needed)
 
-## 代表レシピ
+## Typical Recipes
 
-### レシピA: 要件資料 → discussion pack へ取り込み
+### Recipe A: requirements material to a discussion pack
 
-1. テキスト PDF なら `markitdown` で Markdown 化
-2. スキャン PDF なら `vibe-pdf-read` → `ocr` で文字起こし
+1. For a text PDF, convert it to Markdown with `markitdown`
+2. For a scanned PDF, transcribe it with `vibe-pdf-read` then `ocr`
 3. Save it under `.qfai/discussion/` as a source of the pack, and use the pack
    as the input to the spec.
 
-### レシピB: 影響範囲調査は Serena を起点にする
+### Recipe B: start an impact investigation with Serena
 
-- 既存 validator / parser の参照関係を把握し、変更範囲を限定する
+- Understand how existing validators and parsers reference each other, and limit the scope of the change
 
-### レシピC: 依存ライブラリの仕様確認は Context7 を使う
+### Recipe C: use Context7 to check a dependency's behavior
 
-- tsup/vitest/yaml などの挙動は公式ドキュメントで確認する
+- Check the behavior of tsup, vitest, yaml and similar libraries in their official documentation

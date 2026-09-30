@@ -5,29 +5,29 @@ dependencies: [00_universal/thinking.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-# 実装ガイド
+# Implementation Guide
 
-安全にコードを書くための共通ルール。
+Common rules for writing code safely.
 
-## 基本
+## Basics
 
-- 目的と完了条件を冒頭で確認し、テスト戦略をセットで決める。
-- 既存の型・ユーティリティ・パターンを最優先で再利用する。
-- 変更は小さく分割し、段階ごとにテストする。
+- Confirm the purpose and completion criteria at the start, and decide the test strategy along with them.
+- Reuse existing types, utilities and patterns first.
+- Split changes into small pieces, and test at each stage.
 
-## コードスタイル
+## Code Style
 
-- 型安全を徹底し、`any` は避ける。入力はスキーマで検証。
-- 正常系と異常系のフローを分け、早期 return でネストを浅くする。
-- ログは具体的かつ必要最小限。秘密情報を含めない。
+- Enforce type safety and avoid `any`. Validate inputs with a schema.
+- Separate the normal and error flows, and keep nesting shallow with early returns.
+- Keep logs specific and minimal. Include no secrets.
 
-## テスト
+## Testing
 
-- 振る舞いが変わる箇所に近いテストを追加/更新する。
-- 再現テストを書いてから修正し、パスすることを確認する。
-- 実行できない場合は理由と代替の確認方法を記載する。
+- Add or update tests close to the places where behaviour changes.
+- Write a reproduction test before fixing, and confirm that it passes afterwards.
+- If a test cannot be run, state the reason and an alternative way to confirm.
 
-## ドキュメント
+## Documentation
 
-- 変更理由・影響範囲・テスト結果を PR/報告に含める。
-- 既存の README/設計資料に追記が必要なら忘れずに更新する。
+- Include the reason for the change, its impact and the test results in the PR or report.
+- If the existing README or design documents need additions, remember to update them.

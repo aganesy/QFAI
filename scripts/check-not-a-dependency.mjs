@@ -8,17 +8,16 @@
  *
  * Renaming it to `qfai-monorepo` stops it answering to the *package name*
  * `qfai`, but not to a dependency *key*. `"qfai": "github:aganesy/QFAI"` is a
- * key-to-git-URL mapping, so npm installs this manifest to `node_modules/qfai`
- * whatever its `name` says. Measured with npm 11.16.0: the install completes
- * ("added 1 package"), `node_modules/qfai` exists, `node_modules/.bin/qfai`
- * does not — and the root `prepack` guard never fires, because git-dependency
- * preparation packs the clone without running `prepack`. The missing CLI then
- * surfaces only at the first `qfai <command>`.
+ * key-to-git-URL mapping that points at this manifest whatever its `name`
+ * says. The manifest ships no CLI, so such an install would leave the consumer
+ * with no `qfai` command.
  *
- * This guard makes that install fail where the mistake was made. It runs during
- * git-dependency preparation (npm runs the cloned package's `preinstall` before
- * building it), so a non-zero exit aborts the consumer's install with this
- * message attached.
+ * npm does not reach this guard. The root declares `"qfai": "workspace:*"`, and
+ * npm stops at that protocol (`EUNSUPPORTEDPROTOCOL`) before the install starts
+ * — for a git dependency too, because npm installs the clone's devDependencies
+ * when it prepares it. The guard is the refusal for yarn, and for npm if the
+ * root stops declaring a `workspace:` dependency. It runs as `preinstall`, so a
+ * non-zero exit aborts the install with this message attached.
  *
  * Detection is by package manager, not by path or by any cache-layout
  * heuristic. This repository is a pnpm workspace — `packageManager` pins

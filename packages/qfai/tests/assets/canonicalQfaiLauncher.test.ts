@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-08
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -9,8 +10,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /**
  * The distributed assistant surface. Skills do not only read `skills/**`: every
- * skill loads `constitution/**` and `catalog/**` too (for example
- * `qfai-verify/SKILL.md` always reads `constitution/workflow.md`), so a launcher
+ * skill loads `rule/**` too (for example
+ * `qfai-verify/SKILL.md` always reads `rule/workflow.md`), so a launcher
  * prescribed there is a launcher a skill run will actually execute.
  */
 const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
@@ -23,23 +24,21 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";
 
 const BASELINE_PATHS = [
-  `${SHIPPED_ASSISTANT_ROOT}/constitution/shared-skill-operating-baseline.md`,
-  `${ROOT_ASSISTANT_MIRROR}/constitution/shared-skill-operating-baseline.md`,
+  `${SHIPPED_ASSISTANT_ROOT}/rule/shared-skill-operating-baseline.md`,
+  `${ROOT_ASSISTANT_MIRROR}/rule/shared-skill-operating-baseline.md`,
 ];
 
 /**
  * First-token commands the CLI actually registers; a bare invocation of any of
  * them is not on PATH.
  *
- * These are the FIRST token only. `audit`, `handoff` and `atdd` take their
- * action as a second token (`qfai audit log`, `qfai handoff upgrade`,
- * `qfai atdd scaffold` — see `cli/main.ts` usage). Spelling them here as
- * `audit-log` / `handoff-upgrade` / `atdd-scaffold` matched nothing the CLI
- * accepts, so a doc that reintroduced a bare `qfai audit log` passed this
- * guard untouched.
+ * These are the FIRST token only. `audit` and `atdd` take their action as a
+ * second token (`qfai audit log`, `qfai atdd scaffold` — see `cli/main.ts`
+ * usage). Spelling them here as `audit-log` / `atdd-scaffold` matched nothing
+ * the CLI accepts, so a doc that reintroduced a bare `qfai audit log` passed
+ * this guard untouched.
  */
-const SUBCOMMANDS =
-  "(?:validate|init|report|doctor|prototyping|discussion|guardrails|audit|handoff|atdd|workflow)";
+const SUBCOMMANDS = "(?:validate|init|report|doctor|prototyping|discussion|audit|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");
@@ -103,13 +102,13 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
     ).toEqual([]);
   });
 
-  it("covers the constitution and catalog docs every skill loads", async () => {
+  it("covers the shared rule docs every skill loads", async () => {
     const files = await collectAssistantDocs();
     for (const required of [
-      `${SHIPPED_ASSISTANT_ROOT}/constitution/workflow.md`,
-      `${SHIPPED_ASSISTANT_ROOT}/catalog/test-layers.md`,
-      `${ROOT_ASSISTANT_MIRROR}/constitution/workflow.md`,
-      `${ROOT_ASSISTANT_MIRROR}/catalog/test-layers.md`,
+      `${SHIPPED_ASSISTANT_ROOT}/rule/workflow.md`,
+      `${SHIPPED_ASSISTANT_ROOT}/rule/test-layers.md`,
+      `${ROOT_ASSISTANT_MIRROR}/rule/workflow.md`,
+      `${ROOT_ASSISTANT_MIRROR}/rule/test-layers.md`,
     ]) {
       expect(files).toContain(required);
     }
