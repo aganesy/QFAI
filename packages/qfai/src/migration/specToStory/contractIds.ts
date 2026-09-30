@@ -46,7 +46,7 @@ const EXTENSIONS = /\.(?:md|ya?ml|json|sql)$/i;
 /** A 1.x directory under the contracts directory that 2.x does not have. */
 const DESIGN = "design";
 const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
-export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+\b/g;
+export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+(?!-?\w)/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
 const FILE_LIMIT = 200_000;
 /** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */

@@ -73,7 +73,7 @@ function headingCells(
     .split("\n")
     .filter(
       (line) =>
-        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Status)\s*:/i.test(
+        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Status)\s*:/i.test(
           line
             .replace(/\*\*/g, "")
             .replace(/^\s*-\s*/, "")
@@ -86,6 +86,7 @@ function headingCells(
     return {
       "BR-ID": id,
       Status: field(body, "Status"),
+      "Contract-Refs": field(body, "Contract-Refs") || field(body, "Contract-Ref"),
       Rule: [title, content].filter(Boolean).join("\n\n"),
     };
   }
@@ -112,7 +113,7 @@ function headingCells(
   };
 }
 
-const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref"];
+const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref", "Contract-Refs"];
 
 function fieldKey(name: string): string {
   return name
@@ -130,12 +131,38 @@ function sameFieldValue(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+/** The wording of a step, without its Gherkin keyword, bullet, case or punctuation. */
+function stepWording(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(?:given|when|then|and|but)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * The fields whose text both forms hold. A TC heading's `Expected` falls back to its whole body
+ * when no `Expected` or `Verify` line is written, so it is compared only where one is.
+ */
+function wordingFields(heading: LegacyRecord): string[] {
+  if (heading.cells["EX-ID"] !== undefined) return ["Input", "Expected"];
+  const written = /^\s*(?:-\s*)?\**(?:Expected|Verify)\**\s*:/im.test(heading.source.raw);
+  return written ? ["Expected"] : [];
+}
+
 function mergeRecords(table: LegacyRecord, heading: LegacyRecord, file: string): LegacyRecord {
+  const wording = wordingFields(heading);
   for (const [column, fromHeading] of Object.entries(heading.cells)) {
-    if (!COMPARED_FIELDS.some((name) => fieldKey(name) === fieldKey(column))) continue;
+    const byWording = wording.includes(column);
+    if (!byWording && !COMPARED_FIELDS.some((name) => fieldKey(name) === fieldKey(column)))
+      continue;
     if (!fromHeading.trim()) continue;
     const match = Object.entries(table.cells).find(([name]) => fieldKey(name) === fieldKey(column));
-    if (!match?.[1].trim() || sameFieldValue(match[1], fromHeading)) continue;
+    if (!match?.[1].trim()) continue;
+    const same = byWording
+      ? stepWording(match[1]) === stepWording(fromHeading)
+      : sameFieldValue(match[1], fromHeading);
+    if (same) continue;
     throw new MigrationInputError(
       `${file}:${table.source.startLine} and ${file}:${heading.source.startLine}: ${heading.id} holds a different ${column} in its table row and in its heading section; an ID may be written as an index table row, a heading section or both, with equal values`,
     );

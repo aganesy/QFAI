@@ -33,7 +33,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
-import { noReference } from "./step05CasesToExamples.js";
+import { isDashReference } from "./step05CasesToExamples.js";
 
 export type NumberedPlan = {
   flows: Record<string, string>;
@@ -389,7 +389,7 @@ export function parseOldStories(text: string): OldStory[] {
   });
 }
 
-export function parseOldCriteria(text: string): OldCriterion[] {
+export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): OldCriterion[] {
   const headed = sectionBlocks(text, "AC");
   const byId = new Map<string, { line: number; criterion: OldCriterion }>();
   for (const entry of headed) {
@@ -446,7 +446,17 @@ export function parseOldCriteria(text: string): OldCriterion[] {
   const catalog = catalogStories(text);
   return [...byId.values()]
     .sort((left, right) => left.line - right.line)
-    .map(({ criterion }) => withCatalogParent(criterion, catalog.get(criterion.id) ?? []));
+    .map(({ criterion }) => {
+      const declared = (story: string): boolean => storyIds?.has(story) ?? true;
+      if (criterion.parent !== null && !declared(criterion.parent)) {
+        return {
+          ...criterion,
+          parent: null,
+          unresolved: `names ${criterion.parent} in its Parent line, which is no story of its pack; list it under a story's criteria in plan.yaml`,
+        };
+      }
+      return withCatalogParent(criterion, (catalog.get(criterion.id) ?? []).filter(declared));
+    });
 }
 
 const CATALOG_STORY_COLUMN = /^(?:US Ref|US-Refs|Maps To)$/i;
@@ -604,7 +614,10 @@ async function readOldPack(context: MigrationContext, id: string): Promise<OldPa
   );
   const raw = Object.fromEntries(entries) as OldPack["raw"];
   const stories = parseOldStories(raw["02_User-stories.md"]);
-  const criteria = parseOldCriteria(raw["03_Acceptance-Criteria.md"]);
+  const criteria = parseOldCriteria(
+    raw["03_Acceptance-Criteria.md"],
+    new Set(stories.map((story) => story.id)),
+  );
   const examples = parseLegacyRecords(raw["05_Examples.md"], "EX", `${id}/05_Examples.md`).map(
     (record) => ({
       id: record.id,
@@ -892,13 +905,19 @@ const STORY_FIELDS = ["as a", "i want", "so that"] as const;
 const STORY_FIELD_LINE =
   /^-\s+(?:\*\*)?(As an?|I want|So that)(?:\*\*)?(?:\s*:|\s)(?:\*\*)?\s*(.*)$/i;
 type BlockEntry =
-  | { kind: "field"; key: string; value: string; items: string[] }
+  | { kind: "field"; key: string; value: string; items: string[]; article?: "an" }
   | { kind: "paragraph"; text: string }
   | { kind: "other" };
 
 /** A line that opens a list item, a quote, a table or a fence at the top of a block. */
 const OTHER_BLOCK =
   /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
+/** The value of a field line whose opening `**` is closed at the end of the value, without that close. */
+function withoutClosingBold(line: string, value: string): string {
+  const unbalanced = (value.match(/\*\*/g)?.length ?? 0) % 2 === 1;
+  return /^-\s+\*\*/.test(line) && unbalanced ? value.replace(/\s*\*\*\s*$/, "") : value;
+}
 
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
@@ -912,8 +931,9 @@ function storyBlockEntries(body: string): BlockEntry[] {
       current = {
         kind: "field",
         key: (field[1] ?? "").toLowerCase().replace(/^as an$/, "as a"),
-        value: field[2] ?? "",
+        value: withoutClosingBold(line, field[2] ?? ""),
         items: [],
+        ...(/^as an$/i.test(field[1] ?? "") ? { article: "an" as const } : {}),
       };
       entries.push(current);
     } else if (current?.kind === "field" && item) {
@@ -961,6 +981,7 @@ function storyParts(body: string): StoryParts | PartialStory | null {
     } else if (STORY_FIELDS.some((key) => key === entry.key)) {
       if (fields.has(entry.key)) return null;
       fields.set(entry.key, entry.value.trim());
+      if (entry.article) fields.set("article", entry.article);
     } else if (entry.key === "goal") {
       sentences.push(entry.value);
     } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
@@ -983,7 +1004,8 @@ function storyFromFields(
   );
   if (missing.length > 0) return { missing };
   const part = (key: string): string => (fields.get(key) ?? "").replace(/\.$/, "");
-  const sentence = `As a ${part("as a")}, I want ${part("i want")}, so that ${part("so that")}.`;
+  const article = fields.get("article") ?? "a";
+  const sentence = `As ${article} ${part("as a")}, I want ${part("i want")}, so that ${part("so that")}.`;
   return STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
 }
 
@@ -1291,6 +1313,11 @@ export const step04: MigrationStep = {
     const packs = await Promise.all(packIds.map((id) => readOldPack(context, id)));
     if (existingMap !== null && packs.every((pack) => pack.retired)) {
       assertUnchangedPlacements(plan, existingMap);
+      // An entry the map does not hold places an item outside it, whatever the packs' status.
+      const added = plan.examples.filter(
+        (entry) => existingMap.ids[packOf(entry.id)]?.[entry.id] === undefined,
+      );
+      assertExampleEntries(added, packs, existingMap);
       return { operations, forAPerson };
     }
     assertExampleEntries(plan.examples, packs, existingMap);
@@ -1406,14 +1433,15 @@ export const step04: MigrationStep = {
       if (!oldRule || pack?.retired) {
         throw new MigrationInputError(`${PLAN_PATH}: unknown active rule ${rule.id}`);
       }
-      if (retiredLegacyStatus(oldRule.status)) {
+      const retiring = "retire" in rule && rule.retire !== null;
+      if (retiredLegacyStatus(oldRule.status) && !retiring) {
         throw new MigrationInputError(
           `${PLAN_PATH}: ${rule.id} is ${oldRule.status} and cannot be placed`,
         );
       }
-      if ("retire" in rule && rule.retire === null && !noReference(oldRule.contractRefs)) {
+      if ("retire" in rule && rule.retire === null && !isDashReference(oldRule.contractRefs)) {
         throw new MigrationInputError(
-          `${PLAN_PATH}: ${rule.id} binds none, but its Contract-Refs names a contract`,
+          `${PLAN_PATH}: ${rule.id} binds none, but its Contract-Refs is not "-"`,
         );
       }
     }
@@ -1459,6 +1487,16 @@ export const step04: MigrationStep = {
           const prior = existingMap.ids[pack]?.[oldId];
           if (prior !== newId) {
             throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${oldId}`);
+          }
+        }
+      }
+      // An example the map holds and this run no longer places would be dropped from the story
+      // tree while its annotations still map to it.
+      for (const pack of packs.filter((item) => !item.retired)) {
+        for (const example of pack.examples) {
+          const prior = existingMap.ids[pack.id]?.[example.id];
+          if (prior !== undefined && ids[pack.id]?.[example.id] === undefined) {
+            throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${example.id}`);
           }
         }
       }

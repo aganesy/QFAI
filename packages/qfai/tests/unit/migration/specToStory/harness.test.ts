@@ -963,6 +963,38 @@ describe("migration step report files", () => {
     }
   });
 
+  it("runs step 3 on a story-tree project that still holds a retired config key", async () => {
+    // QFAI:EX-0004-0003-36
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-retired-key-"));
+    roots.push(root);
+    await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\nprototyping:\n  primarySpecId: spec-0001\n  primaryUiContract: UI-0001\n",
+    );
+
+    const result = await stepIn(root, 3);
+
+    expect(result.code, result.errors).not.toBe(2);
+    expect(await readFile(path.join(root, "qfai.config.yaml"), "utf8")).not.toContain(
+      "primarySpecId",
+    );
+  });
+
+  it("writes no report through a symbolic link below the project root", async () => {
+    // QFAI:EX-0004-0003-36
+    const root = await oldLayout();
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-report-outside-"));
+    roots.push(outside);
+    await mkdir(path.join(root, ...MIGRATION_REPORT_DIR.split("/")), { recursive: true });
+    await symlink(outside, path.join(root, ...MIGRATION_REPORT_DIR.split("/"), "run"), "junction");
+
+    const result = await stepIn(root, 1);
+
+    expect(result.errors).toContain("The report was not written");
+    expect(await readdir(outside)).toEqual([]);
+  });
+
   it("keeps the report of a refusal once the arguments and the config are found, and of nothing before", async () => {
     // QFAI:EX-0004-0003-37
     const root = await oldLayout();

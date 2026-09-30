@@ -19,8 +19,8 @@ import {
   type PlannedMark,
 } from "./step04RenumberIds.js";
 import {
+  isDashReference,
   legacyPackFiles,
-  noReference,
   readLegacyRows,
   readMigrationInput,
   repositoryRelative,
@@ -269,14 +269,17 @@ function assertArchiveRemainder(
   );
 }
 
-/** Refuses a mark on a rule that carries a retired status, or `binds: none` on one that binds a contract. */
+/**
+ * Refuses `binds: none` on a rule that carries a retired status, and on one that binds a contract.
+ * A `retire` mark is how a rule with a retired status is disposed of.
+ */
 function assertMarkable(source: string, record: LegacyRecord, mark: PlannedMark): void {
-  if (retiredLegacyStatus(record.cells.Status ?? "")) {
+  if (mark.retire === null && retiredLegacyStatus(record.cells.Status ?? "")) {
     throw new MigrationInputError(`${source}: ${record.id} is retired and cannot be marked`);
   }
-  if (mark.retire === null && !noReference(record.cells["Contract-Refs"] ?? "")) {
+  if (mark.retire === null && !isDashReference(record.cells["Contract-Refs"] ?? "")) {
     throw new MigrationInputError(
-      `${source}: ${record.id} binds none, but its Contract-Refs names a contract`,
+      `${source}: ${record.id} binds none, but its Contract-Refs is not "-"`,
     );
   }
 }
@@ -371,6 +374,7 @@ export const step07: MigrationStep = {
     const groups = new Map<string, Rule[]>();
     const sourceChanges: MigrationOperation[] = [];
     const routedByPack = new Map<string, Set<string>>();
+    const seenRules = new Set<string>();
     for (const source of sourceFiles) {
       const current = await readMigrationInput(source);
       if (current === null) continue;
@@ -379,6 +383,7 @@ export const step07: MigrationStep = {
       const archived = await readMigrationInput(retired);
       const original = archived ?? current;
       const rows = parseLegacyRecords(original, "BR", source);
+      for (const row of rows) seenRules.add(row.id);
       const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
       const moved = new Set<string>();
       const notes: string[] = [];
@@ -442,6 +447,16 @@ export const step07: MigrationStep = {
           notes,
         }),
       );
+    }
+    // A pack whose rule file is already archived still holds the rules its marks name.
+    for (const archived of await legacyPackFiles(context, "04_Business-Rules.md")) {
+      const text = await readMigrationInput(archived);
+      if (text === null) continue;
+      for (const row of parseLegacyRecords(text, "BR", archived)) seenRules.add(row.id);
+    }
+    const unmatched = plan.marks.find((mark) => !seenRules.has(mark.id));
+    if (unmatched) {
+      throw new MigrationInputError(`plan.yaml: ${unmatched.id} names no rule of its pack`);
     }
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {

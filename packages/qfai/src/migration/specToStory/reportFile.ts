@@ -1,4 +1,4 @@
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../../core/fs/errno.js";
@@ -52,10 +52,26 @@ async function nextNumber(directory: string, prefix: string): Promise<number> {
   return highest + 1;
 }
 
+/** The first directory below the root on the way to `directory` that is a symbolic link, if any. */
+async function firstSymlink(root: string, directory: string): Promise<string | null> {
+  let current = root;
+  for (const part of path.relative(root, directory).split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    const stats = await lstat(current).catch((error: unknown) => {
+      if (isEnoent(error)) return null;
+      throw error;
+    });
+    if (stats === null) return null;
+    if (stats.isSymbolicLink()) return current;
+  }
+  return null;
+}
+
 /**
  * Keeps one run's report: what it printed on standard output, then on standard
  * error, then its exit code. The file is new and numbered after the step's
- * earlier ones, so no report is overwritten.
+ * earlier ones, so no report is overwritten. A report directory reached through
+ * a symbolic link is refused, and the refusal is returned as text.
  */
 export async function writeReportFile(
   root: string,
@@ -63,9 +79,11 @@ export async function writeReportFile(
   dryRun: boolean,
   printed: { stdout: string; stderr: string },
   code: number,
-): Promise<void> {
+): Promise<string | null> {
   const directory = path.join(root, ...REPORT_DIR.split("/"), dryRun ? "dry-run" : "run");
   const prefix = `step-${String(step).padStart(2, "0")}-`;
+  const link = await firstSymlink(root, directory);
+  if (link !== null) return `The report was not written: ${link} is a symbolic link.\n`;
   await mkdir(directory, { recursive: true });
   const number = String(await nextNumber(directory, prefix)).padStart(3, "0");
   const text = `${printed.stdout}${printed.stderr}`;
@@ -75,4 +93,5 @@ export async function writeReportFile(
     `${text}${separator}\nExit code: ${code}\n`,
     { flag: "wx" },
   );
+  return null;
 }

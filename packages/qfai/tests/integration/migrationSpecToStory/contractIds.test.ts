@@ -15,6 +15,7 @@ import {
   type MigrationContext,
   type MigrationStep,
 } from "../../../src/migration/specToStory/harness.js";
+import { OLD_CONTRACT_TOKEN } from "../../../src/migration/specToStory/contractIds.js";
 import { step03 } from "../../../src/migration/specToStory/step03MoveCatalog.js";
 import { step04 } from "../../../src/migration/specToStory/step04RenumberIds.js";
 import { step05 } from "../../../src/migration/specToStory/step05CasesToExamples.js";
@@ -1019,5 +1020,16 @@ describe("migration step 7 writes contracts that validate", () => {
     await expectTreeRead(root);
     expect(await findings(root, "QFAI-CONTRACT-015", "api/api-0002-orders.yaml")).toEqual([]);
     expect(dependsOnList(await text(root, contract))).toEqual(renumbered);
+  });
+});
+
+describe("migration old contract ID matching", () => {
+  it("matches a whole old contract ID and not the start of a longer token", () => {
+    const found = (value: string): string[] => value.match(OLD_CONTRACT_TOKEN) ?? [];
+    expect(found("Depends on CON-UI-0008, and CON-API-0001.")).toEqual([
+      "CON-UI-0008",
+      "CON-API-0001",
+    ]);
+    expect(found("Refers to CON-UI-0008-01 and CON-DB-0002x.")).toEqual([]);
   });
 });

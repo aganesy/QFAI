@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
@@ -21,6 +21,7 @@ import { validateStoryTreeContractReferences } from "./validators/contractRefere
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
+import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
 import { issue } from "./validators/utils.js";
 import type {
   Issue,
@@ -125,7 +126,7 @@ export async function validateProject(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
-  let oldLayoutFiles: string[] = [];
+  const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
     let entries: string[] = [];
     try {
@@ -134,9 +135,8 @@ export async function validateProject(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     if (hasLegacySpecPackEntries(entries)) {
-      oldLayoutRoot = candidate;
-      oldLayoutFiles = await listLegacySpecPackFiles(root, candidate, entries);
-      break;
+      oldLayoutRoot ??= candidate;
+      oldLayoutFiles.push(...(await listLegacySpecPackFiles(root, candidate, entries)));
     }
   }
   if (oldLayoutRoot) {
@@ -572,7 +572,7 @@ async function runStoryProfileValidators(
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config, "all")),
           ...(await sdd(false)),
-          ...(await runPrototypingValidators(root, config, timings, platformOption)),
+          ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
           ...(await validatePrototypingSkill(root, config)),
@@ -713,6 +713,47 @@ async function runPrototypingValidators(
     // executionPlan, so bootstrap projects are unaffected.
     ...(await validatePrototypingDelegationMap(root)),
   ];
+}
+
+/** The findings that say a prototyping output is missing from the checkout. */
+const EVIDENCE_PRESENCE_CODES: ReadonlySet<string> = new Set([
+  "QFAI-PROT-001",
+  "QFAI-UIE-001",
+  "QFAI-UIE-002",
+]);
+
+/**
+ * The prototyping issue set as `full` / `verify` report it.
+ *
+ * The prototyping outputs are local and untracked, so a fresh checkout, which
+ * is where CI runs, has no `.qfai/evidence/prototyping/`. With that directory
+ * absent, prototyping was not run in this checkout and the presence gates have
+ * nothing to check. The `prototyping` and `saas-package` profiles do not go
+ * through here and keep them.
+ */
+async function runPrototypingValidatorsForCi(
+  root: string,
+  config: ConfigLoadResult["config"],
+  timings: TimingsSink,
+  platformOption?: string,
+): Promise<Issue[]> {
+  const issues = await runPrototypingValidators(root, config, timings, platformOption);
+  if (await evidenceDirectoryExists(root)) return issues;
+  return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
+}
+
+/**
+ * Whether the prototyping evidence directory may hold output. Only a missing
+ * path counts as absent: one that cannot be read is treated as present, so the
+ * presence gates keep running rather than hide behind a permission error.
+ */
+async function evidenceDirectoryExists(root: string): Promise<boolean> {
+  try {
+    await stat(path.join(root, PROTOTYPING_EVIDENCE_REL));
+    return true;
+  } catch (error) {
+    return !isEnoent(error);
+  }
 }
 
 /**
