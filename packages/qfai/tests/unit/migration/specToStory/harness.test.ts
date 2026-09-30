@@ -1,10 +1,26 @@
-import { chmod, lstat, mkdtemp, readFile, writeFile, mkdir, rm, symlink } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import {
+  chmod,
+  cp,
+  lstat,
+  mkdtemp,
+  readFile,
+  readdir,
+  readlink,
+  rename,
+  writeFile,
+  mkdir,
+  rm,
+  symlink,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { defaultConfig } from "../../../../src/core/config.js";
+import { defaultConfig, loadConfig } from "../../../../src/core/config.js";
+import { isRecord } from "../../../../src/core/workflow/parse.js";
 import {
   executePlannedStep,
   moveAcrossDevices,
@@ -17,6 +33,18 @@ import {
 } from "../../../../src/migration/specToStory/harness.js";
 import { ID_MAP_PATH } from "../../../../src/migration/specToStory/idMap.js";
 import { step08 } from "../../../../src/migration/specToStory/step08RewriteAnnotations.js";
+import {
+  MIGRATION_REPORT_DIR,
+  isMigrationReportPath,
+  migrationReportFiles,
+  readMigrationReport,
+} from "../../../helpers/migrationReport.js";
+
+const FIXTURE = path.resolve(__dirname, "../../../fixtures/migration-spec-to-story/old-layout");
+const CRITERIA = path.resolve(
+  __dirname,
+  "../../../fixtures/bf0004MigrationCutover/legacy-criteria.md",
+);
 
 const roots: string[] = [];
 
@@ -723,5 +751,242 @@ describe("migration harness", () => {
     expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(3);
     expect(captured.output.join("")).toContain("## Cases to examples\nnone");
     expect(captured.output.join("")).toContain("## For a person\n- spec-0001/06_Test-Cases.md");
+  });
+});
+
+type Run = { code: number; output: string; errors: string };
+
+async function stepIn(root: string, step: number, args: string[] = []): Promise<Run> {
+  const captured = capture();
+  const code = await runStep(step, args, { cwd: root, ...captured.io });
+  return { code, output: captured.output.join(""), errors: captured.error.join("") };
+}
+
+function section(report: string, name: string): string[] {
+  const body = report.split(`## ${name}\n`)[1]?.split("\n## ")[0] ?? "";
+  return body
+    .split("\n")
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2));
+}
+
+/** What every file and link under `root` holds, the report directory and `.git` left out. */
+async function tree(root: string): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
+    if (entry.isDirectory()) continue;
+    const file = path.join(entry.parentPath, entry.name);
+    const relative = path.relative(root, file).split(path.sep).join("/");
+    if (relative === ".git" || relative.startsWith(".git/") || isMigrationReportPath(relative)) {
+      continue;
+    }
+    found.set(
+      relative,
+      entry.isSymbolicLink()
+        ? `link:${await readlink(file)}`
+        : createHash("sha256")
+            .update(await readFile(file))
+            .digest("hex"),
+    );
+  }
+  return found;
+}
+
+/** A copy of the old-layout fixture, prepared as a 1.x project the steps start from. */
+async function oldLayout(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-report-"));
+  roots.push(root);
+  await cp(FIXTURE, root, { recursive: true });
+  await cp(CRITERIA, path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"));
+  await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
+  await rename(
+    path.join(root, ".qfai/assistant/skill-local.input"),
+    path.join(root, ".qfai/assistant/skills.local"),
+  );
+  await writeFile(path.join(root, "AGENTS.md"), "# Our agents\n\nProject text.\n");
+  await writeFile(path.join(root, "CLAUDE.md"), "# Our Claude\n\nProject text.\n");
+  return root;
+}
+
+async function editConfig(root: string, edit: (config: Record<string, unknown>) => void) {
+  const file = path.join(root, "qfai.config.yaml");
+  const parsed: unknown = parseYaml(await readFile(file, "utf8"));
+  const config = isRecord(parsed) ? parsed : {};
+  edit(config);
+  await writeFile(file, stringifyYaml(config));
+}
+
+function retiredKeys(config: Record<string, unknown>): void {
+  const validation = isRecord(config.validation) ? config.validation : {};
+  const traceability = isRecord(validation.traceability) ? validation.traceability : {};
+  traceability.scMustHaveTest = true;
+  traceability.unknownContractIdSeverity = "warning";
+  validation.traceability = traceability;
+  config.validation = validation;
+}
+
+function lastLine(report: string): string | undefined {
+  return report.trimEnd().split("\n").at(-1);
+}
+
+describe("migration step: an invalid qfai.config.yaml", () => {
+  it("prints the sentence naming the file and then each loader issue, and writes nothing", async () => {
+    // QFAI:EX-0004-0003-33
+    const root = await oldLayout();
+    expect((await loadConfig(root)).issues).toEqual([]);
+    await editConfig(root, (config) => {
+      retiredKeys(config);
+      const paths = isRecord(config.paths) ? config.paths : {};
+      paths.testsDir = 5;
+      config.paths = paths;
+    });
+    const issues = (await loadConfig(root)).issues.map((issue) => issue.message);
+    expect(issues).toContain("paths.testsDir must be a string.");
+    expect(
+      issues.some((message) => message.includes("validation.traceability.scMustHaveTest")),
+    ).toBe(true);
+    const before = await tree(root);
+
+    const result = await stepIn(root, 1);
+
+    expect(result.code).toBe(2);
+    expect(result.errors.trimEnd().split("\n")).toEqual([
+      "Cannot read or parse qfai.config.yaml.",
+      ...issues,
+    ]);
+    expect(result.output).toBe("");
+    expect(await tree(root)).toEqual(before);
+  });
+});
+
+describe("migration step 1: the retired traceability keys", () => {
+  it("removes both keys, lists each, and leaves the other keys and a rerun alone", async () => {
+    // QFAI:EX-0004-0004-06
+    const root = await oldLayout();
+    await editConfig(root, (config) => {
+      retiredKeys(config);
+      config.prototyping = { primarySpecId: "spec-0001" };
+    });
+    const messages = (await loadConfig(root)).issues.map((issue) => issue.message);
+    expect(messages.filter((message) => message.includes("is retired"))).toHaveLength(3);
+    const before = await tree(root);
+
+    const dry = await stepIn(root, 1, ["--dry-run"]);
+    expect(dry.code, dry.errors).toBe(0);
+    expect(await tree(root)).toEqual(before);
+    const operations = section(dry.output, "Operations");
+    for (const key of ["scMustHaveTest", "unknownContractIdSeverity"]) {
+      expect(
+        operations.some((line) => line.includes(key)),
+        `${key} in ${operations.join("|")}`,
+      ).toBe(true);
+    }
+
+    const real = await stepIn(root, 1);
+    expect(real.code, real.errors).toBe(0);
+    expect(section(real.output, "Operations")).toEqual(operations);
+    const config: unknown = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8"));
+    expect(config).not.toHaveProperty(["validation", "traceability", "scMustHaveTest"]);
+    expect(config).not.toHaveProperty(["validation", "traceability", "unknownContractIdSeverity"]);
+    expect(config).toHaveProperty(["validation", "traceability", "testFileGlobs"]);
+    expect(config).toHaveProperty(["prototyping", "primarySpecId"], "spec-0001");
+
+    const again = await stepIn(root, 1);
+    expect(again.code, again.errors).toBe(0);
+    expect(again.output).toContain("## Operations\nnone\n");
+  });
+
+  it("removes a validation mapping the removal leaves empty, so the file raises no issue for either key", async () => {
+    // QFAI:EX-0004-0004-06
+    const { root } = await context();
+    await put(
+      root,
+      "qfai.config.yaml",
+      [
+        "paths:",
+        "  specsDir: .qfai/spec",
+        "  contractsDir: .qfai/spec/03_contract",
+        "validation:",
+        "  traceability:",
+        "    scMustHaveTest: true",
+        "    unknownContractIdSeverity: warning",
+        "",
+      ].join("\n"),
+    );
+    expect((await loadConfig(root)).issues).toHaveLength(2);
+
+    const result = await stepIn(root, 1);
+    expect(result.code, result.errors).toBe(0);
+    const config: unknown = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8"));
+    expect(config).not.toHaveProperty("validation");
+    expect((await loadConfig(root)).issues).toEqual([]);
+  });
+});
+
+describe("migration step report files", () => {
+  it("keeps each run's report in the dry-run or run directory, numbered and never reused", async () => {
+    // QFAI:EX-0004-0003-36
+    const root = await oldLayout();
+    for (const step of [1, 2]) expect((await stepIn(root, step)).code).not.toBe(2);
+    const dryFile = `${MIGRATION_REPORT_DIR}/dry-run/step-03-001.md`;
+    const runFile = `${MIGRATION_REPORT_DIR}/run/step-03-001.md`;
+    const secondFile = `${MIGRATION_REPORT_DIR}/run/step-03-002.md`;
+
+    const dry = await stepIn(root, 3, ["--dry-run"]);
+    expect(dry.code).not.toBe(2);
+    expect(await migrationReportFiles(root, "dry-run", 3)).toEqual([dryFile]);
+    expect(await migrationReportFiles(root, "run", 3)).toEqual([]);
+    const dryReport = await readMigrationReport(root, dryFile);
+    expect(dryReport).toContain(dry.output);
+    expect(lastLine(dryReport)).toBe(`Exit code: ${dry.code}`);
+
+    const real = await stepIn(root, 3);
+    expect(real.code).not.toBe(2);
+    expect(await migrationReportFiles(root, "run", 3)).toEqual([runFile]);
+    const runReport = await readMigrationReport(root, runFile);
+    expect(runReport).toContain(real.output);
+    expect(lastLine(runReport)).toBe(`Exit code: ${real.code}`);
+
+    const third = await stepIn(root, 3);
+    expect(await migrationReportFiles(root, "run", 3)).toEqual([runFile, secondFile]);
+    expect(await readMigrationReport(root, runFile)).toBe(runReport);
+    const secondReport = await readMigrationReport(root, secondFile);
+    expect(secondReport).toContain(third.output);
+    expect(lastLine(secondReport)).toBe(`Exit code: ${third.code}`);
+    expect(await migrationReportFiles(root, "dry-run", 3)).toEqual([dryFile]);
+
+    for (const run of [dry, real, third]) {
+      for (const line of section(run.output, "Operations")) {
+        expect(line).not.toContain("report/");
+        expect(line).not.toContain("step-03-");
+      }
+    }
+  });
+
+  it("keeps the report of a refusal once the arguments and the config are found, and of nothing before", async () => {
+    // QFAI:EX-0004-0003-37
+    const root = await oldLayout();
+    const refused = await stepIn(root, 2);
+    expect(refused.code).toBe(2);
+    expect(refused.errors).toContain("Run step 1 before step 2.");
+    const file = `${MIGRATION_REPORT_DIR}/run/step-02-001.md`;
+    expect(await migrationReportFiles(root, "run")).toEqual([file]);
+    const report = await readMigrationReport(root, file);
+    expect(report).toContain(refused.errors);
+    expect(lastLine(report)).toBe("Exit code: 2");
+    expect(await migrationReportFiles(root, "dry-run")).toEqual([]);
+
+    const forced = await stepIn(root, 1, ["--force"]);
+    expect(forced.code).toBe(2);
+    expect(forced.errors).toContain("--force");
+    expect(await migrationReportFiles(root, "run")).toEqual([file]);
+    expect(await migrationReportFiles(root, "dry-run")).toEqual([]);
+
+    const empty = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-no-config-"));
+    roots.push(empty);
+    const missing = await stepIn(empty, 1);
+    expect(missing.code).toBe(2);
+    expect(missing.errors).toContain("qfai.config.yaml");
+    expect(await readdir(empty)).toEqual([]);
   });
 });

@@ -96,6 +96,80 @@ describe("legacy migration records", () => {
     ).toThrow(/invalid BR ID/);
   });
 
+  it("reads an index table row and a heading section of one ID as one record, for every kind", () => {
+    const example =
+      "# Examples\n\n| EX-ID | BR-Ref |\n| --- | --- |\n| EX-0001-0001 | BR-0001-0003 |\n\n## EX-0001-0001: Order accepted\n\n- Given one item\n- Then the order is accepted\n";
+    const readExample = () => parseLegacyRecords(example, "EX", "05_Examples.md");
+    expect(readExample).not.toThrow();
+    const [record, ...others] = readExample();
+    expect(others).toEqual([]);
+    expect(record?.cells).toMatchObject({
+      "EX-ID": "EX-0001-0001",
+      "BR-Ref": "BR-0001-0003",
+      Input: "Given one item",
+      Expected: "Then the order is accepted",
+    });
+
+    const rule =
+      "# Rules\n\n| BR-ID | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n\n## BR-0001-0001: Orders have an item\n\n- Status: active\n- Orders have an item.\n";
+    const readRule = () => parseLegacyRecords(rule, "BR", "04_Business-Rules.md");
+    expect(readRule).not.toThrow();
+    const [ruleRecord, ...otherRules] = readRule();
+    expect(otherRules).toEqual([]);
+    expect(ruleRecord?.cells.Status).toBe("active");
+    expect(ruleRecord?.cells.Rule).toContain("Orders have an item");
+  });
+
+  it("names both locations when the two forms of one ID disagree on a field", () => {
+    const cases = [
+      {
+        kind: "EX" as const,
+        file: "05_Examples.md",
+        text: "# Examples\n\n| EX-ID | AC-Ref |\n| --- | --- |\n| EX-0001-0001 | AC-0001-0001 |\n\n## EX-0001-0001: Order accepted\n\n- AC-Ref: AC-0001-0002\n- Given one item\n- Then accepted\n",
+      },
+      {
+        kind: "BR" as const,
+        file: "04_Business-Rules.md",
+        text: "# Rules\n\n| BR-ID | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n\n## BR-0001-0001: Orders have an item\n\n- Status: draft\n- Orders have an item.\n",
+      },
+      {
+        kind: "TC" as const,
+        file: "06_Test-Cases.md",
+        text: "# Cases\n\n| TC-ID | AC-Refs |\n| --- | --- |\n| TC-0001-0001 | AC-0001-0001 |\n\n## TC-0001-0001: Submit\n\n- AC-Refs: AC-0001-0002\n- Verify submission.\n",
+      },
+    ];
+    for (const { kind, file, text } of cases) {
+      let message = "";
+      try {
+        parseLegacyRecords(text, kind, file);
+      } catch (error) {
+        expect(error).toBeInstanceOf(MigrationInputError);
+        message = error instanceof Error ? error.message : "";
+      }
+      expect(message, kind).toContain(`${file}:5`);
+      expect(message, kind).toMatch(new RegExp(`${file.replace(".", "\\.")}:(?:7|8|9|10)\\b`));
+      expect(message, kind).toContain("index table row, a heading section or both");
+      expect(message, kind).toContain("equal values");
+    }
+  });
+
+  it("removes a record's own table row and heading section and keeps the lines between them", () => {
+    const source =
+      "# Rules\n\n| BR-ID | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n| BR-0001-0002 | active |\n\n## BR-0001-0001: First\n\n- Status: active\n- First.\n\n## BR-0001-0002: Second\n\n- Status: active\n- Second.\n";
+    const records = () => parseLegacyRecords(source, "BR", "04_Business-Rules.md");
+    expect(records).not.toThrow();
+    const remaining = withoutLegacyRecords(source, records(), new Set(["BR-0001-0001"]));
+    expect(remaining.split("\n").filter((line) => line.trim() !== "")).toEqual([
+      "# Rules",
+      "| BR-ID | Status |",
+      "| --- | --- |",
+      "| BR-0001-0002 | active |",
+      "## BR-0001-0002: Second",
+      "- Status: active",
+      "- Second.",
+    ]);
+  });
+
   it("removes only placed heading and table records while leaving the unresolved source intact", () => {
     const source =
       "# Examples\n\n## EX-0001-0001\n\n- Given first\n- Then done\n\n## EX-0001-0002\n\n- Given unresolved\n- Then review\n";

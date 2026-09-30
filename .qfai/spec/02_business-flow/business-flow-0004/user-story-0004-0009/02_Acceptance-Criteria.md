@@ -25,4 +25,11 @@ Feature: Write the business rules into their contracts
     When step 7 runs
     Then the rule is written as a row of the contract's Business rules table
     And the rule and the rule its statement names are listed under For a person
+
+  # AC-0004-0009-04
+  Scenario: A rule written as an index table row and as a heading is one rule
+    Given an old business-rules file that holds a rule both in an index table row and in a heading section, with another rule's lines between them
+    When step 7 runs
+    Then the rule is written once, and only its own row and section leave the file
+    And two values of one field that disagree stop the run with exit 2, naming both locations
 ```

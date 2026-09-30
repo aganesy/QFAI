@@ -21,6 +21,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -149,12 +150,14 @@ async function hashTree(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const item = path.join(directory, name);
       const relative = path.relative(root, item).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stat = await lstat(item);
-      hash.update(`${relative}\0${stat.mode}\0`);
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(`${relative}\0${stat.mode}\0`);
       if (stat.isSymbolicLink()) {
         hash.update(`link\0${await readlink(item)}\0`);
       } else if (stat.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(item);
       } else {
         hash.update("file\0");

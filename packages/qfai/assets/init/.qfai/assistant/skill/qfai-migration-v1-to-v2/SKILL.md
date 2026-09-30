@@ -61,12 +61,24 @@ keep authors separate from reviewers.
    each old business rule's destination contract. Name that contract by its
    current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
    contracts directory: step 3 gives every contract a new ID and file name,
-   and later steps find it from that path. Use the format in the guide.
-2. Run steps 1 to 3 in order. For **each** step, run `--dry-run` first, inspect
-   its operations and write targets, then run it without `--dry-run`. Keep the
-   complete Markdown report and exit code from **every** invocation as
-   migration evidence. Exit 2 stops before that step writes. Exit 3 means the
-   step completed with items in `## For a person`; keep them for resolution.
+   and later steps find it from that path. Use the format in the guide. The plan
+   may be written before step 1, from the old contract paths.
+2. Before step 1, have the person copy `.qfai/`, git-ignored files included:
+   step 1 is the first write. Run steps 1 to 3 in order. A dry run of a step
+   refuses until the earlier steps ran, so each step's dry run follows the real
+   run of the step before it. For **each** step, run `--dry-run` first, inspect
+   its operations and write targets, then run it without `--dry-run`. Every
+   invocation keeps its report and exit code in a file, so read every report
+   from `.qfai/evidence/migration-spec-to-story/report/`, where each run keeps
+   it: `dry-run/step-NN-NNN.md` for a dry run and `run/step-NN-NNN.md` for a
+   real run, ending with the line `Exit code: N`. Exit 2 stops before that step
+   writes. Exit 3 means the step completed with items in `## For a person`;
+   keep them for resolution. Step 1 removes the retired configuration keys
+   `validation.traceability.scMustHaveTest` and
+   `validation.traceability.unknownContractIdSeverity`, and step 3 replaces
+   `prototyping.primarySpecId` where exactly one UI contract is tied to it.
+   Steps 4 to 12 refuse, naming the key, while one of the three remains in
+   `qfai.config.yaml`.
 3. After step 3, confirm the complete old `_policies/11_Slice-Policy.md` is
    archived and none of its sections was copied into `principle.md`. Current
    triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the four files assembled from multiple
@@ -77,13 +89,16 @@ keep authors separate from reviewers.
    person. In `tech.md`, replace each `<...>` placeholder its old files did not
    supply.
 4. Run steps 4 to 10 in order, each with `--dry-run` followed by the real run.
-   Inspect and keep every report and exit code as in step 2.
+   Read every report as in item 2.
 5. Resolve every reported item with the person responsible for the content.
-   Preserve any item the scripts could not place. After step 4 writes
-   `id-map.json`, do not change `plan.yaml` to move a mapped item. Resolve
-   remaining content in the new tree through `/qfai-sdd`.
+   Preserve any item the scripts could not place. Before step 4 writes
+   `id-map.json`, settle an example that cites several criteria and a rule that
+   binds no contract through the plan keys the guide names. After it, do not
+   change `plan.yaml` to move a mapped item. Place remaining content in the new
+   tree through `/qfai-sdd`, and finish each listed item as the guide's
+   "Resolve the reports" section says.
 6. After step 10, run steps 11 and 12 in order, each with `--dry-run` followed
-   by the real run, and keep their reports as in item 2. Step 11 installs the
+   by the real run, and read their reports as in item 2. Step 11 installs the
    free-text entry and the reminder hooks `npx qfai init` installs, through the
    same merge, and brings `.agents/rules/reminders.json`, the text the hooks
    print, to this release unless the project edited it. Do not edit
@@ -133,7 +148,7 @@ The scripts print `## Operations` even when empty. Steps 2 through 12 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints
 `## Annotations kept`; step 10 prints `## Git index`; step 11 prints
 `## Reminder hooks`. An empty section says `none`. Rerunning a completed step
-must change no file, and an interrupted step can be run again. On a project
+changes no file but its own report file, and an interrupted step can be run again. On a project
 whose migration finished, steps 1 to 10 add one line saying it is already done.
 The complete write boundary is in `references/migration-guide.md#write-boundary`.
 
@@ -161,4 +176,4 @@ user-supplied input that every invocation must provide.
 
 project_memory:
 
-- After step 4, resolve unplaced content through `/qfai-sdd` without changing the plan.
+- After step 4, place unplaced content through `/qfai-sdd`, and finish each item as the guide says.

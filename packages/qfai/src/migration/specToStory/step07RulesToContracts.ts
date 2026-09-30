@@ -13,9 +13,14 @@ import {
   type LegacyRecord,
 } from "./legacyRecords.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
-import { assertUnchangedPlacements, readMigrationPlan } from "./step04RenumberIds.js";
+import {
+  assertUnchangedPlacements,
+  readMigrationPlan,
+  type PlannedMark,
+} from "./step04RenumberIds.js";
 import {
   legacyPackFiles,
+  noReference,
   readLegacyRows,
   readMigrationInput,
   repositoryRelative,
@@ -264,6 +269,72 @@ function assertArchiveRemainder(
   );
 }
 
+/** Refuses a mark on a rule that carries a retired status, or `binds: none` on one that binds a contract. */
+function assertMarkable(source: string, record: LegacyRecord, mark: PlannedMark): void {
+  if (retiredLegacyStatus(record.cells.Status ?? "")) {
+    throw new MigrationInputError(`${source}: ${record.id} is retired and cannot be marked`);
+  }
+  if (mark.retire === null && !noReference(record.cells["Contract-Refs"] ?? "")) {
+    throw new MigrationInputError(
+      `${source}: ${record.id} binds none, but its Contract-Refs names a contract`,
+    );
+  }
+}
+
+/** The report line for a rule the plan removes from its source without placing it in a contract. */
+function markNote(oldId: string, mark: PlannedMark): string {
+  return mark.retire === null
+    ? `${oldId}: removed from its rule source; it binds no contract`
+    : `${oldId}: removed from its rule source; retired: ${mark.retire}`;
+}
+
+type SourceFile = {
+  sourcePath: string;
+  retiredPath: string;
+  original: string;
+  current: string;
+  archivedBefore: boolean;
+  rows: readonly LegacyRecord[];
+  moved: ReadonlySet<string>;
+  /** One line for each marked rule this run removes from the file. */
+  notes: readonly string[];
+};
+
+/** What happens to a pack's rule file: its archival, and the removal of the rules moved out of it. */
+function sourceFileChanges(file: SourceFile): MigrationOperation[] {
+  const { sourcePath, retiredPath, original, current, rows, moved, notes } = file;
+  if (rows.length === moved.size) {
+    const description =
+      rows.length === 0
+        ? "archive complete; remove empty rule source"
+        : "archive complete; remove migrated rule source";
+    if (file.archivedBefore) {
+      return [
+        { kind: "remove", target: sourcePath, description: [description, ...notes].join("; ") },
+      ];
+    }
+    if (notes.length === 0) return [{ kind: "move", source: sourcePath, target: retiredPath }];
+    return [
+      { kind: "write", target: retiredPath, content: original, notes },
+      { kind: "remove", target: sourcePath, description },
+    ];
+  }
+  const operations: MigrationOperation[] = [];
+  if (!file.archivedBefore) {
+    operations.push({ kind: "write", target: retiredPath, content: original, notes });
+  }
+  const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
+  if (current !== remaining) {
+    operations.push({
+      kind: "write",
+      target: sourcePath,
+      content: remaining,
+      ...(file.archivedBefore ? { notes } : {}),
+    });
+  }
+  return operations;
+}
+
 export const step07: MigrationStep = {
   number: 7,
   writeSet: ["qfai", "specs", "contracts"],
@@ -271,9 +342,13 @@ export const step07: MigrationStep = {
   async plan(context) {
     const map = await readIdMap(context.root);
     if (!map) return { operations: [] };
+    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md", false);
+    // With no spec pack left there is nothing to move, so no plan is read.
+    if (sourceFiles.length === 0) return { operations: [] };
     const plan = await readMigrationPlan(context);
-    if (!plan) throw new MigrationInputError("Migration plan is missing before step 7");
+    if (!plan) throw new MigrationInputError("plan.yaml is missing before step 7");
     assertUnchangedPlacements(plan, map);
+    const marks = new Map(plan.marks.map((mark) => [mark.id, mark]));
     // The plan names a contract by its path before step 3 renamed it.
     const placements = new Map(
       plan.rules.map((entry) => [
@@ -292,7 +367,6 @@ export const step07: MigrationStep = {
         citing.set(key, [...new Set([...(citing.get(key) ?? []), newExample])]);
       }
     }
-    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md", false);
     const forAPerson: string[] = [];
     const groups = new Map<string, Rule[]>();
     const sourceChanges: MigrationOperation[] = [];
@@ -307,8 +381,16 @@ export const step07: MigrationStep = {
       const rows = parseLegacyRecords(original, "BR", source);
       const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
       const moved = new Set<string>();
+      const notes: string[] = [];
       for (const record of rows) {
         const oldId = record.id;
+        const mark = marks.get(oldId);
+        if (mark) {
+          assertMarkable(repositoryRelative(context.root, source), record, mark);
+          if (present.has(oldId)) notes.push(markNote(oldId, mark));
+          moved.add(oldId);
+          continue;
+        }
         const contract = placements.get(oldId);
         if (contract && retiredLegacyStatus(record.cells.Status ?? "")) {
           throw new MigrationInputError(
@@ -348,28 +430,18 @@ export const step07: MigrationStep = {
       assertArchiveRemainder(context.root, source, current, original, rows, present, moved);
       const sourcePath = repositoryRelative(context.root, source);
       const retiredPath = repositoryRelative(context.root, retired);
-      if (rows.length === moved.size) {
-        sourceChanges.push(
-          archived === null
-            ? { kind: "move", source: sourcePath, target: retiredPath }
-            : {
-                kind: "remove",
-                target: sourcePath,
-                description:
-                  rows.length === 0
-                    ? "archive complete; remove empty rule source"
-                    : "archive complete; remove migrated rule source",
-              },
-        );
-        continue;
-      }
-      if (archived === null) {
-        sourceChanges.push({ kind: "write", target: retiredPath, content: original });
-      }
-      const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
-      if (current !== remaining) {
-        sourceChanges.push({ kind: "write", target: sourcePath, content: remaining });
-      }
+      sourceChanges.push(
+        ...sourceFileChanges({
+          sourcePath,
+          retiredPath,
+          original,
+          current,
+          archivedBefore: archived !== null,
+          rows,
+          moved,
+          notes,
+        }),
+      );
     }
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {

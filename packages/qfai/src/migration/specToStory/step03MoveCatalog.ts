@@ -2,13 +2,13 @@ import { isDeepStrictEqual } from "node:util";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { parseDocument, parse as parseYaml } from "yaml";
+import { parseDocument, parse as parseYaml, type Document } from "yaml";
 
 import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { readRoutingDefaultsFiles } from "../../core/routingDefaults.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { planContracts, type ContractPlan } from "./contractIds.js";
+import { OLD_CONTRACT_TOKEN, planContracts, type ContractPlan } from "./contractIds.js";
 import { renderContractIndex } from "./contractIndex.js";
 import {
   MigrationInputError,
@@ -16,7 +16,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
-import { oldContractIds } from "./idMap.js";
+import { oldContractIds, type ContractMap } from "./idMap.js";
 import {
   isPolicyDocument,
   movePolicySection,
@@ -25,6 +25,7 @@ import {
   renumberConstraints,
   type PolicyDraft,
 } from "./policyDocuments.js";
+import { readLegacyRows } from "./step05CasesToExamples.js";
 import { addTechCommands, moveTechSection, renderTechDocument } from "./techDocument.js";
 import { entrypointCommands, routeStructureCatalog } from "./structureCatalog.js";
 
@@ -205,23 +206,101 @@ async function defaultRoutingEntries(): Promise<unknown[]> {
   return entries;
 }
 
+type PrimaryReplacement = { notes: string[]; forAPerson: string[] };
+
+/**
+ * The UI contracts a spec pack is tied to: the new IDs the `CON-UI-*` IDs in its
+ * rules' `Contract-Refs` translate to. The rules come from the pack, or from the
+ * archive step 7 moved them to.
+ */
+async function tiedUiContracts(
+  context: MigrationContext,
+  contractMap: ContractMap,
+  specId: string,
+): Promise<string[]> {
+  const translated = oldContractIds(contractMap);
+  const rows = [
+    ...(await readLegacyRows(context, "04_Business-Rules.md", false)),
+    ...(await readLegacyRows(context, "04_Business-Rules.md", true)),
+  ];
+  const tied = new Set<string>();
+  for (const row of rows) {
+    if (row.specId !== specId) continue;
+    const refs = Object.entries(row.cells).find(([name]) => /^contract-refs$/i.test(name))?.[1];
+    for (const token of refs?.match(OLD_CONTRACT_TOKEN) ?? []) {
+      const id = translated[token];
+      if (id?.startsWith("UI-")) tied.add(id);
+    }
+  }
+  return [...tied].sort();
+}
+
+/**
+ * Replaces `prototyping.primarySpecId` in the configuration by
+ * `prototyping.primaryUiContract` where exactly one UI contract is tied to that
+ * spec. Where the new key is already set, the old key is removed. In every
+ * other case the key stays and a person decides.
+ */
+async function replacePrimarySpec(
+  config: Document,
+  context: MigrationContext,
+  contractMap: ContractMap,
+): Promise<PrimaryReplacement> {
+  const key = ["prototyping", "primarySpecId"];
+  const replacement: PrimaryReplacement = { notes: [], forAPerson: [] };
+  if (!config.hasIn(key)) return replacement;
+  const specId = String(config.getIn(key));
+  const name = "qfai.config.yaml";
+  if (config.hasIn(["prototyping", "primaryUiContract"])) {
+    config.deleteIn(key);
+    replacement.notes.push(
+      `${name}: prototyping.primarySpecId removed; prototyping.primaryUiContract is already set`,
+    );
+    return replacement;
+  }
+  const tied = await tiedUiContracts(context, contractMap, specId);
+  const [only] = tied;
+  if (tied.length === 1 && only !== undefined) {
+    config.deleteIn(key);
+    config.setIn(["prototyping", "primaryUiContract"], only);
+    replacement.notes.push(
+      `${name}: prototyping.primarySpecId ${specId} replaced by prototyping.primaryUiContract ${only}`,
+    );
+    return replacement;
+  }
+  replacement.forAPerson.push(
+    `${name}: prototyping.primarySpecId is ${specId}, ${
+      tied.length === 0
+        ? "which no UI contract is tied to"
+        : `which ${tied.length} UI contracts are tied to (${tied.join(", ")})`
+    }; set prototyping.primaryUiContract to the UI contract ID and remove prototyping.primarySpecId`,
+  );
+  return replacement;
+}
+
 async function planOverrides(
-  root: string,
+  context: MigrationContext,
+  contractMap: ContractMap,
   surfacePaths: string[] | undefined,
-): Promise<MigrationOperation | null> {
+): Promise<{ operation: MigrationOperation | null; forAPerson: string[] }> {
+  const root = context.root;
   const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
   const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
   const hasRouting = await exists(routingPath);
   const hasReview = await exists(reviewPath);
-  if (!hasRouting && !hasReview && surfacePaths === undefined) return null;
   const configPath = path.join(root, "qfai.config.yaml");
+  if (!hasRouting && !hasReview && surfacePaths === undefined && !(await exists(configPath)))
+    return { operation: null, forAPerson: [] };
   const config = parseDocument(await readInput(configPath), { keepSourceTokens: true });
   if (config.errors.length > 0)
     throw new MigrationInputError(`Cannot parse ${configPath}: ${config.errors[0]?.message}`);
   // A 1.x configuration has no `uiux.surfacePaths`, so a value already there was set
   // by the project on purpose and is kept.
-  let changed = surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"]);
-  if (changed) config.setIn(["uiux", "surfacePaths"], surfacePaths);
+  const primary = await replacePrimarySpec(config, context, contractMap);
+  let changed = primary.notes.length > 0;
+  if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"])) changed = true;
+  if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"]))
+    config.setIn(["uiux", "surfacePaths"], surfacePaths);
   if (hasRouting) {
     const project = asRecord(
       parseYamlInput(await readInput(routingPath), routingPath),
@@ -265,7 +344,12 @@ async function planOverrides(
       changed = true;
     }
   }
-  return changed ? { kind: "write", target: "qfai.config.yaml", content: String(config) } : null;
+  return {
+    operation: changed
+      ? { kind: "write", target: "qfai.config.yaml", content: String(config), notes: primary.notes }
+      : null,
+    forAPerson: primary.forAPerson,
+  };
 }
 
 /**
@@ -355,10 +439,12 @@ export const step03: MigrationStep = {
   sections: ["For a person"],
   async plan(context) {
     const contested = await contestedOverlays(context.root);
-    if (contested.length > 0) return { operations: [], forAPerson: contested };
+    if (contested.length > 0)
+      return { operations: [], forAPerson: contested, forAPersonIdentifiers: [] };
     const operations: MigrationOperation[] = [];
     const contracts = await planContracts(context);
     const forAPerson: string[] = [...contracts.forAPerson];
+    const identifiers: string[] = [];
     const reserved = new Set<string>();
     const documents = new Map<string, string>();
     let surfacePaths: string[] | undefined;
@@ -453,7 +539,7 @@ export const step03: MigrationStep = {
     }
     for (const [target, draft] of drafts) {
       if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
-        forAPerson.push(...renumberConstraints(draft));
+        identifiers.push(...renumberConstraints(draft));
       const content =
         target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);
@@ -475,8 +561,9 @@ export const step03: MigrationStep = {
       operations.push({ kind: "move", source: sliceSource, target: archive });
     }
 
-    const override = await planOverrides(context.root, surfacePaths);
-    if (override) operations.push(override);
+    const overrides = await planOverrides(context, contracts.map, surfacePaths);
+    if (overrides.operation) operations.push(overrides.operation);
+    forAPerson.push(...overrides.forAPerson);
 
     for (const directory of ASSISTANT_DIRS) {
       const dir = `.qfai/assistant/${directory}`;
@@ -530,6 +617,10 @@ export const step03: MigrationStep = {
     for (const [target, content] of documents)
       operations.unshift({ kind: "write", target, content });
     operations.unshift(...contracts.operations);
-    return { operations, forAPerson };
+    return {
+      operations,
+      forAPerson: [...forAPerson, ...identifiers],
+      forAPersonIdentifiers: identifiers,
+    };
   },
 };

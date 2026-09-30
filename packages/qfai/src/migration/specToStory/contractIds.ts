@@ -48,8 +48,6 @@ const DESIGN = "design";
 const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
 export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+\b/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
-const DEPENDS_COMMENT = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:/i;
-const DEPENDS_KEY = /^\s*"?x-qfai-depends-on"?\s*:(.*)$/i;
 const FILE_LIMIT = 200_000;
 /** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired/contract";
@@ -199,8 +197,9 @@ function contractRepoPath(context: MigrationContext, relative: string): string {
   return repositoryRelative(context.root, path.join(context.contractsDir, relative));
 }
 
-function replaceTokens(line: string, oldIds: Record<string, string>): string {
-  return line.replace(OLD_CONTRACT_TOKEN, (token) => oldIds[token] ?? token);
+/** Every old `CON-*` ID the contract map translates, replaced as a whole ID. */
+function replaceTokens(text: string, oldIds: Record<string, string>): string {
+  return text.replace(OLD_CONTRACT_TOKEN, (token) => oldIds[token] ?? token);
 }
 
 function declarationLine(relative: string, id: string): string {
@@ -210,38 +209,17 @@ function declarationLine(relative: string, id: string): string {
   return `# QFAI-CONTRACT-ID: ${id}`;
 }
 
-/**
- * The contract with its new ID declared, and the old IDs its dependency
- * declaration names replaced. Any other old ID is left for a person.
- */
-function rewriteStructured(
-  text: string,
-  relative: string,
-  id: string,
-  oldIds: Record<string, string>,
-): string {
+/** The contract with its new ID declared. */
+function rewriteStructured(text: string, relative: string, id: string): string {
   const lines = text.split("\n");
   if (!lines.some((line) => DECLARATION.test(line)))
-    return rewriteStructured(`${declarationLine(relative, id)}\n${text}`, relative, id, oldIds);
-  let list: "array" | "block" | null = null;
-  const rewritten = lines.map((line) => {
-    const declaration = DECLARATION.exec(line);
-    if (declaration) return `${declaration[1] ?? ""}${id}${declaration[3] ?? ""}`;
-    const key = DEPENDS_KEY.exec(line);
-    if (key) {
-      const value = (key[1] ?? "").replace(/#.*$/, "").trim();
-      list = value === "" ? "block" : value.includes("[") && !value.includes("]") ? "array" : null;
-      return replaceTokens(line, oldIds);
-    }
-    if (list === "array") {
-      if (line.includes("]")) list = null;
-      return replaceTokens(line, oldIds);
-    }
-    if (list === "block" && /^\s*-\s/.test(line)) return replaceTokens(line, oldIds);
-    list = null;
-    return DEPENDS_COMMENT.test(line) ? replaceTokens(line, oldIds) : line;
-  });
-  return rewritten.join("\n");
+    return rewriteStructured(`${declarationLine(relative, id)}\n${text}`, relative, id);
+  return lines
+    .map((line) => {
+      const declaration = DECLARATION.exec(line);
+      return declaration ? `${declaration[1] ?? ""}${id}${declaration[3] ?? ""}` : line;
+    })
+    .join("\n");
 }
 
 /** A Markdown contract declares its ID in its H1: `# API-0001: <title>`. */
@@ -270,21 +248,29 @@ function rewriteContract(
   id: string,
   oldIds: Record<string, string>,
 ): string {
-  return relative.toLowerCase().endsWith(".md")
+  const declared = relative.toLowerCase().endsWith(".md")
     ? rewriteMarkdown(text, relative, id)
-    : rewriteStructured(text, relative, id, oldIds);
+    : rewriteStructured(text, relative, id);
+  return replaceTokens(declared, oldIds);
 }
 
-/** Every old `CON-*` ID still in a rewritten contract, one item per line. */
-function leftoverIds(text: string, repoPath: string, oldIds: Record<string, string>): string[] {
-  return text.split("\n").flatMap((line, index) =>
-    [...new Set(line.match(OLD_CONTRACT_TOKEN) ?? [])].map((token) => {
-      const next = oldIds[token];
-      return next
-        ? `${repoPath}:${index + 1}: ${token} is now ${next}; write ${next} here and wherever the project uses ${token}`
-        : `${repoPath}:${index + 1}: ${token} is declared by no contract, so it has no new ID`;
-    }),
-  );
+/**
+ * Every old `CON-*` ID still in a rewritten contract, one item per line: an ID the
+ * contract map does not translate. `declared` holds the old IDs some contract declared.
+ */
+function leftoverIds(text: string, repoPath: string, declared: ReadonlySet<string>): string[] {
+  return text
+    .split("\n")
+    .flatMap((line, index) =>
+      [...new Set(line.match(OLD_CONTRACT_TOKEN) ?? [])].map(
+        (token) =>
+          `${repoPath}:${index + 1}: ${token} is ${
+            declared.has(token)
+              ? "declared by more than one contract, so it has no single new ID"
+              : "declared by no contract, so it has no new ID"
+          }`,
+      ),
+    );
 }
 
 function contractTitle(text: string, relative: string): string {
@@ -313,6 +299,7 @@ export async function planContracts(context: MigrationContext): Promise<Contract
       content: serializeContractMap(map),
     });
   const oldIds = oldContractIds(map);
+  const declared = new Set(Object.values(map).flatMap((entry) => (entry.old ? [entry.old] : [])));
   const contracts: IndexedContract[] = [];
   const renamed = new Set(Object.values(map).map((entry) => entry.path));
   for (const [relative, entry] of Object.entries(map)) {
@@ -334,7 +321,7 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));
-    forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), oldIds));
+    forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), declared));
     contracts.push(indexed(entry.path, entry.id, text, entry.old, relative));
   }
   for (const relative of await contractFiles(context)) {
