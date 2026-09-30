@@ -21,6 +21,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a reason in place of `contract`; step 7 removes it from
   `04_Business-Rules.md`, writes it to no contract and lists it under
   `## Operations`. Both are read before the ID map is written.
+- **`qfai doctor` warns when a shipped workflow's preconditions are not met.**
+  Four warnings, never errors, so a project without CI is not blocked:
+  `workflows.packageManager` (`pnpm-lock.yaml` without a valid `packageManager`
+  in `package.json`, where the workflows stop before installing),
+  `workflows.lockfiles` (two lockfiles present, naming the one the workflows
+  install with and the one they ignore), `workflows.nodeVersionFile`
+  (`engines.node` declared, no `.nvmrc` or `.node-version`, so the workflows use
+  Node 20) and `workflows.nodePin` (a workflow under `.github/workflows/` pins a
+  Node below `engines.node`). Nothing is reported for a fact that is met.
+  `qfai init` prints one `Shipped workflows:` line with the count when any is
+  unmet. Fixes #2725.
 
 ### Changed
 
