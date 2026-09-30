@@ -41,8 +41,8 @@ async function binaryCheck(
 
 describe("qfai doctor reports whether the mdschema binary runs", () => {
   it("is ok when the installed binary answers --help", async () => {
-    // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-18
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-22
     const root = await project();
     const log = path.join(root, "arguments.txt");
     // A stand-in that records how it was started, so the case shows what doctor ran.
@@ -58,8 +58,8 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
   });
 
   it("is an error naming the fix when the binary cannot run", async () => {
-    // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-19
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-23
     const root = await project();
     await installMdschema(
       root,
@@ -77,8 +77,8 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
   });
 
   it("is ok for the package's own installation in a plain project", async () => {
-    // QFAI:AC-0003-0011-08
-    // QFAI:EX-0003-0011-18
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-22
     const root = await project();
 
     expect((await binaryCheck(root))?.severity).toBe("ok");
