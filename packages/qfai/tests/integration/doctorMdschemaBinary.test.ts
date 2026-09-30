@@ -2,14 +2,33 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
+import type * as AssetsModule from "../../src/shared/assets.js";
+
+/** The mock's switch; `vi.hoisted` because `vi.mock` runs above every import. */
+const packagedAssets = vi.hoisted(() => ({ unresolvable: false }));
+
+vi.mock("../../src/shared/assets.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof AssetsModule>();
+  return {
+    ...actual,
+    getInitAssetsDir: (): string => {
+      if (packagedAssets.unresolvable) {
+        throw new Error("test fixture: the packaged init assets cannot be resolved");
+      }
+      return actual.getInitAssetsDir();
+    },
+  };
+});
+
 const roots: string[] = [];
 
 afterEach(async () => {
+  packagedAssets.unresolvable = false;
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -74,6 +93,18 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check?.message).toContain("npm approve-scripts");
     expect(check?.message).toContain("onlyBuiltDependencies");
     expect(check?.details?.["reason"]).toBe("mdschema binary not found at /nowhere");
+  });
+
+  it("is an error rather than a crash when the packaged checker cannot be located", async () => {
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-23
+    const root = await project();
+    packagedAssets.unresolvable = true;
+
+    const check = await binaryCheck(root);
+
+    expect(check?.severity).toBe("error");
+    expect(check?.message).toContain("the packaged init assets cannot be resolved");
   });
 
   it("is ok for the package's own installation in a plain project", async () => {

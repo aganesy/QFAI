@@ -103,6 +103,7 @@ async function runInstall(withQfai: boolean): Promise<Recorded | "no-bash"> {
 }
 
 describe("the delivered document lane installs its checkers outside the project's dependency tree", () => {
+  // QFAI:AC-0002-0003-04
   // QFAI:EX-0002-0003-07
   it.each([
     ["depends on QFAI", true],

@@ -26,12 +26,13 @@ type FindCommand = (from: string) => unknown;
  * the lane and `qfai validate` would run rather than a path of its own.
  */
 async function loadFindCommand(): Promise<FindCommand | string> {
-  const file = path.join(getInitAssetsDir(), "..", "scripts", "check-mdschema.mjs");
+  let file = "the packaged checker";
   let loaded: unknown;
   try {
+    file = path.join(getInitAssetsDir(), "..", "scripts", "check-mdschema.mjs");
     loaded = await import(pathToFileURL(file).href);
   } catch (error) {
-    return `the checker ${file} could not be loaded: ${error instanceof Error ? error.message : String(error)}`;
+    return `${file} could not be loaded: ${error instanceof Error ? error.message : String(error)}`;
   }
   if (typeof loaded === "object" && loaded !== null && "findMdschemaCommand" in loaded) {
     const find = loaded.findMdschemaCommand;
@@ -39,7 +40,7 @@ async function loadFindCommand(): Promise<FindCommand | string> {
       return (from): unknown => Reflect.apply(find, undefined, [from]);
     }
   }
-  return `the checker ${file} exports no findMdschemaCommand function`;
+  return `${file} exports no findMdschemaCommand function`;
 }
 
 function isCommand(value: unknown): value is MdschemaCommand {
