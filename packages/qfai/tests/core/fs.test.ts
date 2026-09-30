@@ -73,6 +73,23 @@ describe("collectFilesByGlobs", () => {
     }
   });
 
+  it("matches dot-prefixed files and directories only when asked", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
+    try {
+      await mkdir(path.join(root, ".hidden"), { recursive: true });
+      for (const name of ["a.txt", ".b.txt", ".hidden/c.txt"])
+        await writeFile(path.join(root, name), "");
+      const names = async (dot?: boolean) =>
+        (await collectFilesByGlobs(root, { globs: ["**/*"], ...(dot ? { dot } : {}) })).files
+          .map((file) => path.relative(root, file).split(path.sep).join("/"))
+          .sort();
+      expect(await names()).toEqual(["a.txt"]);
+      expect(await names(true)).toEqual([".b.txt", ".hidden/c.txt", "a.txt"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("normalizes limit edge cases", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-fs-"));
     try {

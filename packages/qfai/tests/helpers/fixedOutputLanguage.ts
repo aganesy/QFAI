@@ -3,12 +3,13 @@
  *
  * `constitution/constitution.md` states one Absolute Rule — output in the
  * user's working language — and says it "overrides all other stylistic
- * preferences". A shipped file that also says "報告・出力: 日本語" or "Always
+ * preferences". A shipped file that also says "reports and output: Japanese" (written in Japanese) or "Always
  * respond in English" silently overrides that rule for whichever operator does
  * not work in the named language.
  *
  * The first version of the sweep that guards this looked for two exact
- * Japanese strings (`言語指示`, `報告・出力: 日本語`) — the literal wording of
+ * Japanese strings (the header "language instruction" and the line "reports and output:
+ * Japanese", both in Japanese) — the literal wording of
  * the one block that had leaked in. Any other phrasing of the same defect, in
  * either language, passed. This matcher generalises it: the invariant is that
  * no shipped assistant document binds output to a *named* language, however it
@@ -27,7 +28,8 @@
  *    names no language is a fallback to a fixed one, not a restatement, and is
  *    reported (`If the user does not specify a language, respond in English.`).
  * 2. **Explicitly non-directive** — the unit disclaims pinning in so many
- *    words (`このファイルは出力言語を固定しない…`, `pins no language`).
+ *    words (a Japanese sentence meaning "this file does not fix the output language",
+ *    or `pins no language`).
  * 3. **About stored text** — the unit names the repository as the thing
  *    written (`this repository is written in English`). That is a rule about
  *    source and Markdown, not about what an agent says.
@@ -97,45 +99,46 @@ export const LANGUAGE_NAMES_EN: readonly string[] = [
 /**
  * Language names written in Japanese.
  *
- * Listed explicitly rather than matched as `…語`, which would also catch
- * `用語` / `単語` / `言語` / `述語` and make every glossary a false positive.
+ * Listed explicitly rather than matched as a bare "...go" suffix (Japanese for
+ * "language"), which would also catch the words for "term", "word", "language"
+ * and "predicate", and make every glossary a false positive.
  */
 export const LANGUAGE_NAMES_JA: readonly string[] = [
-  "日本語",
-  "英語",
-  "中国語",
-  "韓国語",
-  "朝鮮語",
-  "フランス語",
-  "ドイツ語",
-  "スペイン語",
-  "ポルトガル語",
-  "イタリア語",
-  "ロシア語",
-  "ウクライナ語",
-  "ポーランド語",
-  "オランダ語",
-  "トルコ語",
-  "アラビア語",
-  "ヘブライ語",
-  "ヒンディー語",
-  "ベンガル語",
-  "ベトナム語",
-  "タイ語",
-  "インドネシア語",
-  "マレー語",
-  "タガログ語",
-  "スウェーデン語",
-  "ノルウェー語",
-  "デンマーク語",
-  "フィンランド語",
-  "チェコ語",
-  "ギリシャ語",
-  "ルーマニア語",
-  "ハンガリー語",
-  "ペルシャ語",
-  "ウルドゥー語",
-  "スワヒリ語",
+  "\u65e5\u672c\u8a9e",
+  "\u82f1\u8a9e",
+  "\u4e2d\u56fd\u8a9e",
+  "\u97d3\u56fd\u8a9e",
+  "\u671d\u9bae\u8a9e",
+  "\u30d5\u30e9\u30f3\u30b9\u8a9e",
+  "\u30c9\u30a4\u30c4\u8a9e",
+  "\u30b9\u30da\u30a4\u30f3\u8a9e",
+  "\u30dd\u30eb\u30c8\u30ac\u30eb\u8a9e",
+  "\u30a4\u30bf\u30ea\u30a2\u8a9e",
+  "\u30ed\u30b7\u30a2\u8a9e",
+  "\u30a6\u30af\u30e9\u30a4\u30ca\u8a9e",
+  "\u30dd\u30fc\u30e9\u30f3\u30c9\u8a9e",
+  "\u30aa\u30e9\u30f3\u30c0\u8a9e",
+  "\u30c8\u30eb\u30b3\u8a9e",
+  "\u30a2\u30e9\u30d3\u30a2\u8a9e",
+  "\u30d8\u30d6\u30e9\u30a4\u8a9e",
+  "\u30d2\u30f3\u30c7\u30a3\u30fc\u8a9e",
+  "\u30d9\u30f3\u30ac\u30eb\u8a9e",
+  "\u30d9\u30c8\u30ca\u30e0\u8a9e",
+  "\u30bf\u30a4\u8a9e",
+  "\u30a4\u30f3\u30c9\u30cd\u30b7\u30a2\u8a9e",
+  "\u30de\u30ec\u30fc\u8a9e",
+  "\u30bf\u30ac\u30ed\u30b0\u8a9e",
+  "\u30b9\u30a6\u30a7\u30fc\u30c7\u30f3\u8a9e",
+  "\u30ce\u30eb\u30a6\u30a7\u30fc\u8a9e",
+  "\u30c7\u30f3\u30de\u30fc\u30af\u8a9e",
+  "\u30d5\u30a3\u30f3\u30e9\u30f3\u30c9\u8a9e",
+  "\u30c1\u30a7\u30b3\u8a9e",
+  "\u30ae\u30ea\u30b7\u30e3\u8a9e",
+  "\u30eb\u30fc\u30de\u30cb\u30a2\u8a9e",
+  "\u30cf\u30f3\u30ac\u30ea\u30fc\u8a9e",
+  "\u30da\u30eb\u30b7\u30e3\u8a9e",
+  "\u30a6\u30eb\u30c9\u30a5\u30fc\u8a9e",
+  "\u30b9\u30ef\u30d2\u30ea\u8a9e",
 ];
 
 const EN = `(?:${LANGUAGE_NAMES_EN.join("|")})`;
@@ -147,7 +150,7 @@ const EN_OUTPUT_VERB =
 
 /** Verbs that name the act of producing operator-facing output, in Japanese. */
 const JA_OUTPUT_VERB =
-  "出力|回答|応答|返答|報告|記述|記載|説明|要約|翻訳|書い|書く|書き|答え|話し|返す|統一|固定|限定";
+  "\u51fa\u529b|\u56de\u7b54|\u5fdc\u7b54|\u8fd4\u7b54|\u5831\u544a|\u8a18\u8ff0|\u8a18\u8f09|\u8aac\u660e|\u8981\u7d04|\u7ffb\u8a33|\u66f8\u3044|\u66f8\u304f|\u66f8\u304d|\u7b54\u3048|\u8a71\u3057|\u8fd4\u3059|\u7d71\u4e00|\u56fa\u5b9a|\u9650\u5b9a";
 
 /** One named way of binding output to a language. */
 interface DirectiveShape {
@@ -196,43 +199,53 @@ const DIRECTIVE_SHAPES: readonly DirectiveShape[] = [
     ),
   },
   {
-    // 「日本語で出力」「英語のみで回答」
+    // Matches phrases meaning "output in Japanese" and "answer in English only".
     name: "ja/language-de-verb",
-    pattern: new RegExp(`${JA}(?:のみ|だけ)?(?:で|にて|に|へ)[^。\\n]{0,20}?(?:${JA_OUTPUT_VERB})`),
-  },
-  {
-    // 「報告・出力: 日本語」「使用言語: 英語」
-    name: "ja/key-value",
-    pattern: new RegExp(`(?:${JA_OUTPUT_VERB}|言語|表記)[^。\\n]{0,20}?[:：]\\s*(?:\\*\\*)?${JA}`),
-  },
-  {
-    // 「日本語に統一」「英語で固定」「日本語とすること」「日本語厳守」
-    name: "ja/exclusive",
     pattern: new RegExp(
-      `${JA}[^。\\n]{0,10}?(?:に統一|で統一|に固定|で固定|限定|厳守|必須|とする|とすること|に限る)`,
+      `${JA}(?:\u306e\u307f|\u3060\u3051)?(?:\u3067|\u306b\u3066|\u306b|\u3078)[^\u3002\\n]{0,20}?(?:${JA_OUTPUT_VERB})`,
     ),
   },
   {
-    // 「必ず日本語」「常に英語」「原則として日本語」
+    // Matches key-value phrases meaning "reports and output: Japanese" and "language used: English".
+    name: "ja/key-value",
+    pattern: new RegExp(
+      `(?:${JA_OUTPUT_VERB}|\u8a00\u8a9e|\u8868\u8a18)[^\u3002\\n]{0,20}?[:\uff1a]\\s*(?:\\*\\*)?${JA}`,
+    ),
+  },
+  {
+    // Matches phrases meaning "unify on Japanese", "fix to English", "must be Japanese" and
+    // "Japanese strictly".
+    name: "ja/exclusive",
+    pattern: new RegExp(
+      `${JA}[^\u3002\\n]{0,10}?(?:\u306b\u7d71\u4e00|\u3067\u7d71\u4e00|\u306b\u56fa\u5b9a|\u3067\u56fa\u5b9a|\u9650\u5b9a|\u53b3\u5b88|\u5fc5\u9808|\u3068\u3059\u308b|\u3068\u3059\u308b\u3053\u3068|\u306b\u9650\u308b)`,
+    ),
+  },
+  {
+    // Matches phrases meaning "always Japanese", "always English" and "Japanese in principle".
     name: "ja/emphatic",
-    pattern: new RegExp(`(?:必ず|常に|原則|一律)[^。\\n]{0,20}?${JA}`),
+    pattern: new RegExp(
+      `(?:\u5fc5\u305a|\u5e38\u306b|\u539f\u5247|\u4e00\u5f8b)[^\u3002\\n]{0,20}?${JA}`,
+    ),
   },
   {
-    // 「日本語のみ使用」
+    // Matches a phrase meaning "use Japanese only".
     name: "ja/language-only-use",
-    pattern: new RegExp(`${JA}(?:のみ|だけ)(?:を|で)?(?:使用|使う|用いる)`),
+    pattern: new RegExp(
+      `${JA}(?:\u306e\u307f|\u3060\u3051)(?:\u3092|\u3067)?(?:\u4f7f\u7528|\u4f7f\u3046|\u7528\u3044\u308b)`,
+    ),
   },
   {
-    // 「報告/Plan/最終出力は日本語」— the topic marker, with the language last.
+    // Matches a phrase meaning "reports / Plan / final output are in Japanese" — the topic
+    // marker, with the language last.
     // Every other Japanese shape expects the language before the particle or
     // beside a colon, so the most ordinary way to state the rule read as prose.
     name: "ja/topic-language",
-    pattern: new RegExp(`(?:${JA_OUTPUT_VERB})[^。\\n]{0,20}?は[^。\\n]{0,10}?${JA}`),
+    pattern: new RegExp(`(?:${JA_OUTPUT_VERB})[^\u3002\\n]{0,20}?\u306f[^\u3002\\n]{0,10}?${JA}`),
   },
   {
     // The header that shipped the original defect, whatever follows it.
     name: "ja/language-instruction-header",
-    pattern: /言語指示/,
+    pattern: /\u8a00\u8a9e\u6307\u793a/,
   },
 ];
 
@@ -242,7 +255,7 @@ const DIRECTIVE_SHAPES: readonly DirectiveShape[] = [
  * Carve-out 1 is not a regex — see {@link isUserLanguageConditional}.
  */
 const PERMITTED_DISCLAIMER_SHAPES: readonly RegExp[] = [
-  /固定しない|固定されない|固定はしない/,
+  /\u56fa\u5b9a\u3057\u306a\u3044|\u56fa\u5b9a\u3055\u308c\u306a\u3044|\u56fa\u5b9a\u306f\u3057\u306a\u3044/,
   /\b(?:pins no|does not pin|do not pin|never pins)\b/i,
 ];
 
@@ -260,7 +273,7 @@ const PERMITTED_DISCLAIMER_SHAPES: readonly RegExp[] = [
  */
 const STORED_TEXT_SHAPES: readonly RegExp[] = [
   /\brepositor(?:y|ies)\b[^.]{0,60}?\bwritten in\b/i,
-  /リポジトリ[^。\n]{0,30}?(?:で書く|で書き|で書かれ|で記述)/,
+  /\u30ea\u30dd\u30b8\u30c8\u30ea[^\u3002\n]{0,30}?(?:\u3067\u66f8\u304f|\u3067\u66f8\u304d|\u3067\u66f8\u304b\u308c|\u3067\u8a18\u8ff0)/,
 ];
 
 const describesStoredText = (unit: string): boolean =>
@@ -279,7 +292,10 @@ const describesStoredText = (unit: string): boolean =>
 function userConditionClause(unit: string): string | null {
   const english = /^(?:if|when|whenever)\b[^,]*?\buser'?’?s?\b[^,]*/i.exec(unit);
   if (english !== null) return english[0];
-  const japanese = /(?:ユーザー?|利用者)[^。]*?(?:場合|なら|に合わせ|に従)/.exec(unit);
+  const japanese =
+    /(?:\u30e6\u30fc\u30b6\u30fc?|\u5229\u7528\u8005)[^\u3002]*?(?:\u5834\u5408|\u306a\u3089|\u306b\u5408\u308f\u305b|\u306b\u5f93)/.exec(
+      unit,
+    );
   return japanese?.[0] ?? null;
 }
 
@@ -332,7 +348,7 @@ export interface FixedLanguageDirective extends LogicalUnit {
 
 const LIST_MARKER = /^\s*(?:[-*+]|\d+[.)])\s+/;
 const BLOCK_START = /^\s*(?:#{1,6}\s|>+\s*$|\||```|---\s*$)/;
-const SENTENCE_END = /[.。!?！？:：][")'”』」）]*\s*$/;
+const SENTENCE_END = /[.\u3002!?\uff01\uff1f:\uff1a][")'”\u300f\u300d\uff09]*\s*$/;
 
 /** Strip the markdown scaffolding that a wrapped sentence carries per line. */
 const stripScaffolding = (line: string): string =>

@@ -42,12 +42,12 @@ async function project(): Promise<string> {
     path.join(dir, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
@@ -57,13 +57,13 @@ async function project(): Promise<string> {
   return dir;
 }
 
-/** A spec whose `01_Spec.md` marks it UI-bearing, i.e. still resolvable. */
+/** A declared UI contract with a screen is still resolvable. */
 async function seedUiBearingSpec(root: string, id: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "specs", `spec-${id}`);
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(dir, { recursive: true });
   await writeFile(
-    path.join(dir, "01_Spec.md"),
-    `---\nsurface_type: ui-bearing\n---\n\n# spec-${id}\n`,
+    path.join(dir, `${id}.yaml`),
+    `# QFAI-CONTRACT-ID: ${id}\nscreens: [{id: home, route: /}]\n`,
     "utf-8",
   );
 }
@@ -81,7 +81,14 @@ async function seedLoop(
   await writeFile(
     path.join(dir, "prototyping.json"),
     `${JSON.stringify(
-      { runId: "run-1", cycle: 3, frozenSurfaceUnion: [...frozen], stopReason, ...extra },
+      {
+        runId: "run-1",
+        cycle: 3,
+        uiContractsCovered: [...frozen],
+        frozenSurfaceUnion: [...frozen],
+        stopReason,
+        ...extra,
+      },
       null,
       2,
     )}\n`,
@@ -97,8 +104,8 @@ async function readProto(root: string): Promise<Record<string, unknown>> {
 /** The state the issue describes: `0011` retired upstream, `0001` still live. */
 async function reducedScope(): Promise<string> {
   const root = await project();
-  await seedUiBearingSpec(root, "0001");
-  await seedLoop(root, ["0001", "0011"], null);
+  await seedUiBearingSpec(root, "UI-0001");
+  await seedLoop(root, ["UI-0001", "UI-0011"], null);
   return root;
 }
 
@@ -108,7 +115,7 @@ const run = (
 ): Promise<number> =>
   runPrototypingRescope({
     root,
-    remove: ["0011"],
+    remove: ["UI-0011"],
     reason: "DELTA-022",
     dryRun: false,
     ...over,
@@ -118,7 +125,7 @@ describe("prototyping rescope refuses", () => {
   it("without --remove", async () => {
     const root = await reducedScope();
     expect(await run(root, { remove: [] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("without --reason", async () => {
@@ -127,12 +134,12 @@ describe("prototyping rescope refuses", () => {
     // rather than recorded as blank.
     const root = await reducedScope();
     expect(await run(root, { reason: "   " })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("when there is no frozen scope to reduce", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
+    await seedUiBearingSpec(root, "UI-0001");
     await seedLoop(root, [], null);
     expect(await run(root)).toBe(2);
   });
@@ -141,33 +148,34 @@ describe("prototyping rescope refuses", () => {
     // A closed loop's scope is history: reducing it would rewrite what the
     // completed loop covered.
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0011"], "converged");
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011"], "converged");
     expect(await run(root)).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("an id the frozen union does not contain", async () => {
     const root = await reducedScope();
-    expect(await run(root, { remove: ["0099"] })).toBe(2);
+    expect(await run(root, { remove: ["UI-0099"] })).toBe(2);
   });
 
+  // QFAI:EX-0001-0118-09
   it("a surface that STILL RESOLVES — the refusal that keeps this from being drift", async () => {
     // `0001` has a UI-bearing marker, so nothing has retired it. Removing it
     // here would be the silent narrowing the frozen union exists to detect;
     // the operator's real situation is that the decision was never applied
     // upstream.
     const root = await reducedScope();
-    expect(await run(root, { remove: ["0001"] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect(await run(root, { remove: ["UI-0001"] })).toBe(2);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 
   it("the whole batch when one member still resolves", async () => {
     // All-or-nothing: a partially applied reduction would leave the loop in a
     // state neither the operator nor the finding described.
     const root = await reducedScope();
-    expect(await run(root, { remove: ["0011", "0001"] })).toBe(2);
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect(await run(root, { remove: ["UI-0011", "UI-0001"] })).toBe(2);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
   });
 });
 
@@ -175,11 +183,11 @@ describe("the two refusals say different things", () => {
   // Both exit 2, so the exit code cannot tell them apart — and the advice is
   // not interchangeable. A typo told to "remove the surface upstream first"
   // sends the operator to edit specs over a mistyped digit.
-  const frozen = ["0001", "0011"] as const;
-  const missing = ["0011"] as const;
+  const frozen = ["UI-0001", "UI-0011"] as const;
+  const missing = ["UI-0011"] as const;
 
   it("says `check the id` for an id outside the frozen union", () => {
-    const message = refuseUnremovable(["0099"], frozen, missing);
+    const message = refuseUnremovable(["UI-0099"], frozen, missing);
     expect(message).not.toBeNull();
     expect(message).toContain("not in frozenSurfaceUnion");
     expect(message).toContain("check the id");
@@ -187,7 +195,7 @@ describe("the two refusals say different things", () => {
   });
 
   it("says `remove it upstream first` for a surface that still resolves", () => {
-    const message = refuseUnremovable(["0001"], frozen, missing);
+    const message = refuseUnremovable(["UI-0001"], frozen, missing);
     expect(message).not.toBeNull();
     expect(message).toContain("still resolves");
     expect(message).toContain("upstream first");
@@ -196,24 +204,27 @@ describe("the two refusals say different things", () => {
 
   it("returns null for a surface that is frozen and unreachable", () => {
     // The direction that must stay open, or the operation refuses everything.
-    expect(refuseUnremovable(["0011"], frozen, missing)).toBeNull();
+    expect(refuseUnremovable(["UI-0011"], frozen, missing)).toBeNull();
   });
 });
 
 describe("prototyping rescope applies", () => {
+  // QFAI:EX-0001-0118-09
   it("removes the retired surface and records why", async () => {
     const root = await reducedScope();
     expect(await run(root)).toBe(0);
 
     const proto = await readProto(root);
-    expect(proto.frozenSurfaceUnion).toEqual(["0001"]);
+    expect(proto.frozenSurfaceUnion).toEqual(["UI-0001"]);
+    expect(proto.uiContractsCovered).toEqual(["UI-0001"]);
     const log = proto.rescopeLog as { surface: string; reason: string; cycle: number }[];
     expect(log).toHaveLength(1);
-    expect(log[0]?.surface).toBe("0011");
+    expect(log[0]?.surface).toBe("UI-0011");
     expect(log[0]?.reason).toBe("DELTA-022");
     expect(log[0]?.cycle).toBe(3);
   });
 
+  // QFAI:EX-0001-0118-09
   it("leaves the loop where it was", async () => {
     // This changes what the loop is ABOUT, not where it is. `--force` was the
     // only route before and it discarded the cycles; a reduction that reset
@@ -229,14 +240,16 @@ describe("prototyping rescope applies", () => {
 
   it("appends to an existing log rather than replacing it", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0011"], null, {
-      rescopeLog: [{ surface: "0007", reason: "DELTA-010", cycle: 1, at: "2026-01-01T00:00:00Z" }],
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011"], null, {
+      rescopeLog: [
+        { surface: "UI-0007", reason: "DELTA-010", cycle: 1, at: "2026-01-01T00:00:00Z" },
+      ],
     });
 
     expect(await run(root)).toBe(0);
     const log = (await readProto(root)).rescopeLog as { surface: string }[];
-    expect(log.map((entry) => entry.surface)).toEqual(["0007", "0011"]);
+    expect(log.map((entry) => entry.surface)).toEqual(["UI-0007", "UI-0011"]);
   });
 
   it("refuses a second time, because the id is no longer frozen", async () => {
@@ -249,12 +262,12 @@ describe("prototyping rescope applies", () => {
 
   it("removes several surfaces under one reason", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0011", "0012"], null);
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011", "UI-0012"], null);
 
-    expect(await run(root, { remove: ["0011", "0012"] })).toBe(0);
+    expect(await run(root, { remove: ["UI-0011", "UI-0012"] })).toBe(0);
     const proto = await readProto(root);
-    expect(proto.frozenSurfaceUnion).toEqual(["0001"]);
+    expect(proto.frozenSurfaceUnion).toEqual(["UI-0001"]);
     expect((proto.rescopeLog as unknown[]).length).toBe(2);
   });
 });
@@ -265,7 +278,7 @@ describe("a --reason that does not read as an id", () => {
   // reduction — worse than a weak field, because it blocks the operation this
   // exists to provide. So both rows assert exit 0 and differ only in whether
   // the operator was told.
-  // `lib/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
+  // `core/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
   // stream so a piped run sees the whole narrative in order. Spying on stderr
   // captured nothing, which is how this row found out.
   const captureWarnings = (): string[] => {
@@ -284,7 +297,8 @@ describe("a --reason that does not read as an id", () => {
     expect(await run(root, { reason: "because the customer said so" })).toBe(0);
 
     expect(lines.join("")).toContain("does not read as a recorded");
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001"]);
+    expect(lines.join("")).toContain("DEC-0001");
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001"]);
   });
 
   it("writes the reason to the log exactly as given", async () => {
@@ -303,7 +317,7 @@ describe("a --reason that does not read as an id", () => {
     const root = await reducedScope();
     const lines = captureWarnings();
 
-    expect(await run(root, { reason: "DELTA-022" })).toBe(0);
+    expect(await run(root, { reason: "DEC-0001" })).toBe(0);
     expect(lines.join("")).not.toContain("does not read as a recorded");
   });
 
@@ -331,7 +345,7 @@ describe("prototyping rescope and the recorded review", () => {
     return abs;
   }
 
-  const PROSE = "All twelve declared screens render, including the 禁止リスト sidebar.";
+  const PROSE = "All twelve declared screens render, including the prohibited-items sidebar.";
 
   it("annotates the review WITHOUT touching the critique", async () => {
     // The issue's second point. What a reviewer saw at cycle N is a historical
@@ -347,21 +361,21 @@ describe("prototyping rescope and the recorded review", () => {
     expect(review.proseCritique).toBe(PROSE);
     const retired = review.retiredSurfaces as { surface: string; reason: string }[];
     expect(retired).toHaveLength(1);
-    expect(retired[0]?.surface).toBe("0011");
+    expect(retired[0]?.surface).toBe("UI-0011");
     expect(retired[0]?.reason).toBe("DELTA-022");
   });
 
   it("does not annotate the same surface twice", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0011", "0012"], null);
+    await seedUiBearingSpec(root, "UI-0001");
+    await seedLoop(root, ["UI-0001", "UI-0011", "UI-0012"], null);
     const abs = await seedReview(root, PROSE);
-    await run(root, { remove: ["0011"] });
-    await run(root, { remove: ["0012"] });
+    await run(root, { remove: ["UI-0011"] });
+    await run(root, { remove: ["UI-0012"] });
 
     const review = JSON.parse(await readFile(abs, "utf-8")) as Record<string, unknown>;
     const retired = review.retiredSurfaces as { surface: string }[];
-    expect(retired.map((entry) => entry.surface)).toEqual(["0011", "0012"]);
+    expect(retired.map((entry) => entry.surface)).toEqual(["UI-0011", "UI-0012"]);
   });
 
   it("prunes the retired surface out of a captured plan", async () => {
@@ -375,8 +389,8 @@ describe("prototyping rescope and the recorded review", () => {
         {
           cycle: 0,
           screens: [
-            { specId: "0001", screenId: "home" },
-            { specId: "0011", screenId: "blocklist" },
+            { uiContractId: "UI-0001", screenId: "home" },
+            { uiContractId: "UI-0011", screenId: "blocklist" },
           ],
         },
         null,
@@ -388,10 +402,28 @@ describe("prototyping rescope and the recorded review", () => {
     expect(await run(root)).toBe(0);
     const plan = JSON.parse(await readFile(abs, "utf-8")) as {
       cycle: number;
-      screens: { specId: string }[];
+      screens: { uiContractId: string }[];
     };
-    expect(plan.screens.map((screen) => screen.specId)).toEqual(["0001"]);
+    expect(plan.screens.map((screen) => screen.uiContractId)).toEqual(["UI-0001"]);
     expect(plan.cycle).toBe(0);
+  });
+
+  // QFAI:EX-0001-0118-09
+  it("keeps a shared captured screen while another UI contract declares it", async () => {
+    const root = await reducedScope();
+    const dir = path.join(evidenceDir(root), "iter-00");
+    await mkdir(dir, { recursive: true });
+    const abs = path.join(dir, "iterate-plan.json");
+    await writeFile(
+      abs,
+      JSON.stringify({ screens: [{ id: "home", uiContractIds: ["UI-0001", "UI-0011"] }] }),
+      "utf-8",
+    );
+    expect(await run(root)).toBe(0);
+    const plan = JSON.parse(await readFile(abs, "utf-8")) as {
+      screens: { uiContractIds: string[] }[];
+    };
+    expect(plan.screens).toEqual([{ id: "home", uiContractIds: ["UI-0001"] }]);
   });
 });
 
@@ -403,14 +435,14 @@ describe("prototyping rescope --dry-run", () => {
     const planAbs = path.join(dir, "iterate-plan.json");
     await writeFile(
       planAbs,
-      `${JSON.stringify({ cycle: 0, screens: [{ specId: "0011" }] }, null, 2)}\n`,
+      `${JSON.stringify({ cycle: 0, screens: [{ uiContractId: "UI-0011" }] }, null, 2)}\n`,
       "utf-8",
     );
     const before = await readFile(planAbs, "utf-8");
 
     expect(await run(root, { dryRun: true })).toBe(0);
 
-    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["0001", "0011"]);
+    expect((await readProto(root)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
     expect((await readProto(root)).rescopeLog).toBeUndefined();
     expect(await readFile(planAbs, "utf-8")).toBe(before);
   });

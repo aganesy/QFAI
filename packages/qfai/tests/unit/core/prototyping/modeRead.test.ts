@@ -5,7 +5,6 @@
  * Pure I/O surface, unit-tested in isolation so the validate-side
  * post-filter has a deterministic helper input.
  */
-// QFAI:SPEC-0012:TC-0012-0475
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

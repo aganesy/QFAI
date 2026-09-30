@@ -1,0 +1,374 @@
+# Routing defaults for the `qfai-implement` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  # Reproduces and locates the cause; changes no code. The verdict names the
+  # layer a missing or defective test belongs to, which is the test design
+  # owner's call.
+  - step: implement-diagnose
+    phases:
+      - id: diagnose
+        mandatory_agents: [test-design-analyst, devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: [test-design-analyst]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # `parallel_groups` describes ROLE FAN-OUT within a phase, not item
+  # dispatch. `iteration` says how often a phase runs: the TDD micro-cycle goes
+  # one ledger row at a time, so `red`, `build` and `test` run once per row,
+  # and `qa-gatekeeper` observes each RED before production code exists and
+  # each GREEN after. The review runs once, at the end of the stage.
+  - step: implement-tdd
+    phases:
+      # Once, before any ledger row is touched: `delivery-planner` frames the
+      # invocation and blocks it when the plan is wrong; `test-design-analyst`
+      # reports coverage and layer-ownership findings. A planner REVISE
+      # changes the ledger the analyst read, so both re-run.
+      - id: plan
+        iteration: per-invocation
+        mandatory_agents: [delivery-planner, test-design-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [delivery-planner]
+        rerun_policy: changed-scope-dependents
+      # The walking skeleton: its exit criterion is that the product runs, and
+      # `qa-gatekeeper` is the only judge of an execution result, so it is
+      # mandatory and blocking. The production owners author the entrypoint
+      # and the smoke script; `devops-ci-engineer` supplies and verifies the
+      # start command. Which owner applies depends on where the entrypoint
+      # lives.
+      - id: skeleton
+        iteration: per-invocation
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      # The failing test exists and no production code does: the only window in
+      # which "watch it fail" is a first-hand observation. The production
+      # owners are conditional because a new-surface row needs its minimal seam
+      # before its failure is an assertion rather than a 404. A gatekeeper
+      # REVISE here is usually about that seam, so its author re-runs with it.
+      - id: red
+        iteration: per-ledger-item
+        mandatory_agents: []
+        conditional_agents: [qa-gatekeeper, frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      - id: build
+        iteration: per-ledger-item
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups:
+          - [frontend-engineer, backend-engineer]
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      # `acceptance-test-engineer` is not listed: acceptance tests belong to the
+      # `atdd-*` steps, and this step does not author them.
+      - id: test
+        iteration: per-ledger-item
+        mandatory_agents: []
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      # Once, over every example the stage implemented. `product-surface-reviewer`
+      # joins exactly when one of them is UI-affecting.
+      - id: review
+        iteration: per-invocation
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: [product-surface-reviewer]
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  # An existing correct test already fails, so there is no RED to take: the
+  # fix is built and the gatekeeper observes the test pass.
+  - step: implement-regression-fix
+    phases:
+      - id: build
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: [product-surface-reviewer]
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-test-fix
+    phases:
+      - id: fix
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  # Only the seam an acceptance result asked for. Which production owner lands
+  # it depends on where the seam lives.
+  - step: implement-seam
+    phases:
+      - id: seam
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-checkpoint
+    phases:
+      - id: test
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  # Finds the culprit change; changes no tracked file.
+  - step: implement-bisect
+    phases:
+      - id: bisect
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-revert
+    phases:
+      - id: revert
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  # Shrinks the crashing input; changes no tracked file.
+  - step: implement-minimize
+    phases:
+      - id: minimize
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: implement-stress-harness
+    phases:
+      - id: harness
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  # Which inputs the parity check covers is a test design call.
+  - step: implement-oracle-parity
+    phases:
+      - id: parity
+        mandatory_agents: [test-design-analyst]
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: [test-design-analyst]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  # Measures twice under the same conditions; changes no tracked file.
+  - step: implement-benchmark
+    phases:
+      - id: measure
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  # The gatekeeper observes the suite green before and after the moves.
+  - step: implement-refactor
+    phases:
+      - id: move
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-retire
+    phases:
+      - id: remove
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer, doc-steward]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-sweep
+    phases:
+      - id: sweep
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-quarantine
+    phases:
+      - id: isolate
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [qa-strategist]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy
+
+  - step: implement-dep-bump
+    phases:
+      - id: bump
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-tooling
+    phases:
+      - id: edit
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  - step: implement-backport
+    phases:
+      - id: pick
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy

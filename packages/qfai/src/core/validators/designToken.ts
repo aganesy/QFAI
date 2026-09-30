@@ -30,9 +30,8 @@ const VALID_PLATFORMS = ["web", "windows", "mobile-ios", "mobile-android", "cros
 
 export async function validateDesignToken(root: string, config: QfaiConfig): Promise<Issue[]> {
   const configuredDir = config.uiux?.designTokensDir;
-  const designDir = configuredDir
-    ? path.resolve(root, configuredDir)
-    : path.join(root, config.paths.contractsDir, "design");
+  if (!configuredDir) return [];
+  const designDir = path.resolve(root, configuredDir);
   const pattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
   const files = await fg(pattern, {
     absolute: true,
