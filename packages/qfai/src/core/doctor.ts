@@ -222,13 +222,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
+    // The text formatter prints only `message`, so the issues the loader
+    // returned are listed there, one line, `; `-joined.
+    const listed = issues.map((issue) => escapeForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,

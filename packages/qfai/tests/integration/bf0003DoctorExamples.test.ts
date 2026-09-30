@@ -111,6 +111,21 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(issues?.some((issue) => issue.message.includes("paths"))).toBe(true);
   });
 
+  it("lists each loader issue in the config.load message", async () => {
+    // QFAI:AC-0003-0001-03
+    // QFAI:EX-0003-0001-08
+    const root = await newTempDir("invalid-text");
+    await put(root, "qfai.config.yaml", "paths:\n  - .qfai/spec\n");
+    const data = await doctorJson(root);
+    const load = check(data, "config.load");
+    const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
+    expect(issues?.length).toBeGreaterThan(0);
+    for (const issue of issues ?? []) {
+      expect(load?.message).toContain(issue.message);
+    }
+    expect(load?.message).not.toContain("\n");
+  });
+
   it("warns about a missing non-default specs directory and names it", async () => {
     // QFAI:EX-0003-0002-01
     const root = await newTempDir("specs");
