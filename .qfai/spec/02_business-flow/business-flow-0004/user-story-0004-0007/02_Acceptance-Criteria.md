@@ -37,4 +37,11 @@ Feature: Build the flows and stories from the plan
     When step 4 runs
     Then it exits 2 naming the rule and the path
     And it writes nothing
+
+  # AC-0004-0007-05
+  Scenario: An ID written as an index table row and as a heading is one record
+    Given an old file that holds an ID both in an index table row and in a heading section
+    When step 4 runs
+    Then the two are read as one record, whatever its kind
+    And two values of one field that disagree stop the run with exit 2, naming both locations
 ```

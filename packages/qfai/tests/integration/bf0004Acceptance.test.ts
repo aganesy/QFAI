@@ -27,6 +27,13 @@ import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
+import {
+  isMigrationReportAncestor,
+  isMigrationReportPath,
+  MIGRATION_REPORT_DIR,
+  migrationReportFiles,
+  readMigrationReport,
+} from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(__dirname, "../..");
@@ -164,6 +171,21 @@ function completedAsExpected(number: number, result: Result): boolean {
   );
 }
 
+function reportPath(kind: "dry-run" | "run", number: number, count: number): string {
+  return `${MIGRATION_REPORT_DIR}/${kind}/step-${String(number).padStart(2, "0")}-${String(count).padStart(3, "0")}.md`;
+}
+
+/** A kept report holds what the run printed, and its exit code as the last line. */
+function expectKeptReport(content: string, result: Result): void {
+  expect(content.slice(0, result.stdout.length)).toBe(result.stdout);
+  if (result.stderr !== "") expect(content).toContain(result.stderr);
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== "");
+  expect(lines.at(-1)).toBe(`Exit code: ${result.status}`);
+}
+
 function pathsNamedByOperations(
   report: string,
   before: Map<string, string>,
@@ -190,12 +212,14 @@ async function fingerprint(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stats = await lstat(file);
-      hash.update(relative + "\0" + stats.mode + "\0");
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(relative + "\0" + stats.mode + "\0");
       if (stats.isSymbolicLink()) {
         hash.update("link\0" + (await readlink(file)) + "\0");
       } else if (stats.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(file);
       } else {
         hash.update("file\0");
@@ -214,6 +238,7 @@ async function fileSnapshot(root: string): Promise<Map<string, string>> {
     for (const name of (await readdir(directory)).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stats = await lstat(file);
       if (stats.isSymbolicLink()) {
         entries.set(relative, "link:" + (await readlink(file)));
@@ -280,7 +305,8 @@ async function networkGuard(root: string): Promise<string> {
 }
 
 // Refuses every file-system call that creates, changes or removes a path, so a
-// dry run that writes and then undoes the write still fails.
+// dry run that writes and then undoes the write still fails. Only the migration's
+// report directory may be written: a dry run keeps its report there.
 async function writeGuard(root: string): Promise<string> {
   const file = path.join(root, "migration-write-guard.cjs");
   await writeFile(
@@ -288,20 +314,28 @@ async function writeGuard(root: string): Promise<string> {
     [
       'const fs = require("node:fs");',
       'const fsp = require("node:fs/promises");',
+      'const path = require("node:path");',
+      "const reportRoot = path.resolve(process.cwd(), " +
+        JSON.stringify(MIGRATION_REPORT_DIR) +
+        ");",
+      "const inside = (target) => { if (typeof target !== 'string') return false; const absolute = path.resolve(target); return absolute === reportRoot || absolute.startsWith(reportRoot + path.sep); };",
+      "const pairs = ['rename', 'copyFile', 'cp', 'link'];",
+      "const allowed = (name, args) => pairs.includes(name) ? inside(args[0]) && inside(args[1]) : inside(args[0]);",
       "const refused = (name) => new Error(`dry run called ${name}`);",
       "const names = ['writeFile', 'appendFile', 'mkdir', 'mkdtemp', 'rename', 'rm', 'rmdir', 'unlink', 'copyFile', 'cp', 'symlink', 'link', 'truncate', 'chmod', 'utimes'];",
       "for (const name of names) {",
-      "  if (fsp[name]) fsp[name] = () => Promise.reject(refused(`fs.promises.${name}`));",
-      "  if (fs[name]) fs[name] = () => { throw refused(`fs.${name}`); };",
-      "  if (fs[`${name}Sync`]) fs[`${name}Sync`] = () => { throw refused(`fs.${name}Sync`); };",
+      "  if (fsp[name]) { const real = fsp[name]; fsp[name] = (...args) => allowed(name, args) ? real(...args) : Promise.reject(refused(`fs.promises.${name}`)); }",
+      "  if (fs[name]) { const real = fs[name]; fs[name] = (...args) => { if (!allowed(name, args)) throw refused(`fs.${name}`); return real(...args); }; }",
+      "  if (fs[`${name}Sync`]) { const real = fs[`${name}Sync`]; fs[`${name}Sync`] = (...args) => { if (!allowed(name, args)) throw refused(`fs.${name}Sync`); return real(...args); }; }",
       "}",
       "const { O_WRONLY, O_RDWR, O_CREAT, O_APPEND, O_TRUNC } = fs.constants;",
       "const writes = (flags) => typeof flags === 'string' ? /[wa+]/.test(flags) : typeof flags === 'number' && (flags & (O_WRONLY | O_RDWR | O_CREAT | O_APPEND | O_TRUNC)) !== 0;",
       "const open = fsp.open;",
-      "fsp.open = (target, flags, ...rest) => writes(flags) ? Promise.reject(refused('fs.promises.open for writing')) : open(target, flags, ...rest);",
+      "fsp.open = (target, flags, ...rest) => writes(flags) && !inside(target) ? Promise.reject(refused('fs.promises.open for writing')) : open(target, flags, ...rest);",
       "const openSync = fs.openSync;",
-      "fs.openSync = (target, flags, ...rest) => { if (writes(flags)) throw refused('fs.openSync for writing'); return openSync(target, flags, ...rest); };",
-      "fs.createWriteStream = () => { throw refused('fs.createWriteStream'); };",
+      "fs.openSync = (target, flags, ...rest) => { if (writes(flags) && !inside(target)) throw refused('fs.openSync for writing'); return openSync(target, flags, ...rest); };",
+      "const createWriteStream = fs.createWriteStream;",
+      "fs.createWriteStream = (target, ...rest) => { if (!inside(target)) throw refused('fs.createWriteStream'); return createWriteStream(target, ...rest); };",
       'require("node:module").syncBuiltinESMExports();',
       "",
     ].join("\n"),
@@ -504,6 +538,8 @@ describe("BF-0004 acceptance criteria", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-layout-"));
     temporary.push(root);
     await mkdir(path.join(root, ".qfai/spec/spec-0001"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/spec/spec-0001/01_Spec.md"), "# Old\n");
+    await writeFile(path.join(root, ".qfai/spec/spec-0001/06_Test-Cases.md"), "# Old cases\n");
     const config = structuredClone(defaultConfig);
     config.paths.specsDir = ".qfai/spec";
     config.paths.contractsDir = ".qfai/spec/03_contract";
@@ -515,8 +551,17 @@ describe("BF-0004 acceptance criteria", () => {
       );
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
-      expect(result.issues[0]?.message).toContain(path.join(root, ".qfai/spec"));
-      expect(result.issues[0]?.message).toContain("/qfai-migration-v1-to-v2");
+      const message = result.issues[0]?.message ?? "";
+      expect(message).toContain(path.join(root, ".qfai/spec"));
+      const lines = message
+        .split(/\r?\n/)
+        .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+        .filter((line) => line !== "");
+      expect(lines).toContain(".qfai/spec/spec-0001/01_Spec.md");
+      expect(lines).toContain(".qfai/spec/spec-0001/06_Test-Cases.md");
+      for (const token of ["/qfai-migration-v1-to-v2", "/qfai-sdd", "retired/"]) {
+        expect(lines.at(-1), token).toContain(token);
+      }
     }
   });
 
@@ -559,6 +604,7 @@ describe("BF-0004 acceptance criteria", () => {
     prepareAllowingPerson(root, 7);
     await rm(path.join(root, "tests"), { recursive: true, force: true });
     const before = await fileSnapshot(root);
+    const results: Result[] = [];
     for (const args of [["--dry-run"], []]) {
       const result = step(root, 8, args);
       expect(result.status, result.stderr).toBe(0);
@@ -566,9 +612,16 @@ describe("BF-0004 acceptance criteria", () => {
         expect(result.stdout, name).toContain(`## ${name}\nnone`);
       }
       expect(result.stdout).toMatch(/^## Operations\n/);
+      results.push(result);
     }
     const after = await fileSnapshot(root);
     expect([...after.keys()].filter((name) => !before.has(name))).toEqual([]);
+    expect(await migrationReportFiles(root, "dry-run", 8)).toEqual([reportPath("dry-run", 8, 1)]);
+    expect(await migrationReportFiles(root, "run", 8)).toEqual([reportPath("run", 8, 1)]);
+    const [dry, real] = results;
+    if (dry === undefined || real === undefined) throw new Error("step 8 did not run twice");
+    expectKeptReport(await readMigrationReport(root, reportPath("dry-run", 8, 1)), dry);
+    expectKeptReport(await readMigrationReport(root, reportPath("run", 8, 1)), real);
   });
 
   // QFAI:AC-0004-0006-03
@@ -741,7 +794,13 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0003-03
   // QFAI:EX-0004-0003-10
   // QFAI:EX-0004-0003-11
-  it("previews the ordered operations without changing files", () => {
+  it("previews the ordered operations without changing files", async () => {
+    for (let number = 1; number <= 10; number += 1) {
+      expect(
+        await migrationReportFiles(journey.root, "dry-run", number),
+        `step ${number} dry-run report`,
+      ).toEqual([reportPath("dry-run", number, 1)]);
+    }
     expect(journey.dryUnchanged).toEqual(Array(10).fill(true));
     expect(journey.dry.map((result) => section(result.stdout, "Operations"))).toEqual(
       journey.applied.map((result) => section(result.stdout, "Operations")),
@@ -787,6 +846,7 @@ describe("BF-0004 acceptance criteria", () => {
     const result = step(root, 1);
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/^## Operations\n- /);
+    expect(await migrationReportFiles(root, "run", 1)).toEqual([reportPath("run", 1, 1)]);
     const after = await fileSnapshot(root);
     const added = [...after.keys()].filter((name) => !before.has(name));
     expect(added.length).toBeGreaterThan(0);
@@ -926,6 +986,36 @@ describe("BF-0004 acceptance criteria", () => {
     for (const [index, result] of journey.applied.entries()) {
       expect(result.stdout).toContain("## Operations");
       expect(completedAsExpected(index + 1, result), result.stdout).toBe(true);
+    }
+  });
+
+  // QFAI:AC-0004-0003-06
+  it("keeps every run's report and exit code, dry runs and real runs apart", async () => {
+    for (let number = 1; number <= 10; number += 1) {
+      const dry = journey.dry[number - 1];
+      const real = journey.applied[number - 1];
+      if (dry === undefined || real === undefined) throw new Error(`step ${number} has no result`);
+      const dryFiles = await migrationReportFiles(journey.root, "dry-run", number);
+      expect(dryFiles, `step ${number} dry runs`).toEqual([reportPath("dry-run", number, 1)]);
+      expectKeptReport(
+        await readMigrationReport(journey.root, reportPath("dry-run", number, 1)),
+        dry,
+      );
+      // The journey runs each real step twice: once to migrate and once to prove the rerun.
+      const realFiles = await migrationReportFiles(journey.root, "run", number);
+      expect(realFiles, `step ${number} real runs`).toEqual([
+        reportPath("run", number, 1),
+        reportPath("run", number, 2),
+      ]);
+      expectKeptReport(await readMigrationReport(journey.root, reportPath("run", number, 1)), real);
+      const rerun = await readMigrationReport(journey.root, reportPath("run", number, 2));
+      expect(
+        rerun
+          .split(/\r?\n/)
+          .filter((line) => line.trim() !== "")
+          .at(-1),
+      ).toBe("Exit code: 0");
+      expect(section(real.stdout, "Operations").join("\n")).not.toContain(MIGRATION_REPORT_DIR);
     }
   });
 
@@ -2183,8 +2273,71 @@ describe("BF-0004 acceptance criteria", () => {
     expect(guide).toMatch(/pinned 1\.x/i);
   });
 
+  // QFAI:AC-0004-0012-03
+  it("teaches the retired config keys, the report directory and how to finish what a step leaves", async () => {
+    const guide = await readFile(
+      path.join(
+        packageRoot,
+        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
+      ),
+      "utf8",
+    );
+    const prose = guide.replace(/\s+/g, " ");
+    const sentences = prose.split(/(?<=[.!?]) (?=[A-Z`*|-])/);
+    const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
+      sentences.some((sentence) =>
+        parts.every((part) =>
+          typeof part === "string" ? sentence.includes(part) : part.test(sentence),
+        ),
+      );
+
+    // The three keys step 1 and step 3 handle, and the key that replaces the third.
+    const keys = [
+      "validation.traceability.scMustHaveTest",
+      "validation.traceability.unknownContractIdSeverity",
+      "prototyping.primarySpecId",
+      "prototyping.primaryUiContract",
+    ];
+    expect(keys.filter((key) => !prose.includes(key))).toEqual([]);
+    // Every run keeps its report, so the guide names where instead of saying no report is written.
+    expect(prose).toContain(`${MIGRATION_REPORT_DIR}/`);
+    expect(prose).not.toMatch(/scripts write no report file/i);
+    // What a person does before the first write and about the steps that cannot be undone.
+    expect(prose).toMatch(/points? of no return/i);
+    expect(
+      sentenceWith(
+        /\bcop(?:y|ies)\b/i,
+        "`.qfai/`",
+        /ignored/i,
+        /before (?:running |you run )?step 1/,
+      ),
+      "copy `.qfai/` with its ignored files before step 1",
+    ).toBe(true);
+    expect(
+      sentenceWith("`plan.yaml`", /before (?:running |you run )?step 1/),
+      "the plan may be written before step 1",
+    ).toBe(true);
+    expect(
+      sentenceWith(/dry runs?/i, /in order|one after another|earlier step|sequential/i),
+      "dry runs follow the order of the steps",
+    ).toBe(true);
+    // How a person closes what steps 4 and 5 left listed, and how a rewritten annotation is finished.
+    expect(
+      sentenceWith("06_Test-Cases.md", "/qfai-sdd"),
+      "a settled step 5 case leaves the archived test-case table",
+    ).toBe(true);
+    expect(
+      sentenceWith("retired/", "/qfai-sdd", /delet|remov/i),
+      "a person finishes a leftover pack file through the SDD skill and removes it once archived",
+    ).toBe(true);
+    expect(
+      sentenceWith(/by hand/i, /annotation/i, "step 4"),
+      "a rewritten annotation is edited by hand only for an example step 4 left unplaced",
+    ).toBe(true);
+  });
+
   // QFAI:AC-0004-0012-01
-  it("instructs the installed skill to plan, preview, retain reports and validate", async () => {
+  it("instructs the installed skill to plan, preview, read the kept reports and validate", async () => {
     const skill = await readFile(
       path.join(packageRoot, "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
@@ -2193,7 +2346,7 @@ describe("BF-0004 acceptance criteria", () => {
       "plan.yaml",
       "Run steps 1 to 3 in order",
       "run `--dry-run` first",
-      "Keep the complete Markdown report and exit code",
+      "read every report from `.qfai/evidence/migration-spec-to-story/report/`",
       "Run steps 4 to 10 in order",
       "qfai validate",
       "there is nothing to",

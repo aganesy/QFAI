@@ -10,6 +10,8 @@ export type LegacyRecord = {
     kind: "table" | "heading" | "table+heading";
     startLine: number;
     endLine: number;
+    /** The record's own line ranges: one for a table row or a heading, two where it holds both. */
+    ranges: { startLine: number; endLine: number }[];
     raw: string;
   };
 };
@@ -71,7 +73,7 @@ function headingCells(
     .split("\n")
     .filter(
       (line) =>
-        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Refs|AC Refs|Status)\s*:/i.test(
+        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Status)\s*:/i.test(
           line
             .replace(/\*\*/g, "")
             .replace(/^\s*-\s*/, "")
@@ -84,6 +86,7 @@ function headingCells(
     return {
       "BR-ID": id,
       Status: field(body, "Status"),
+      "Contract-Refs": field(body, "Contract-Refs") || field(body, "Contract-Ref"),
       Rule: [title, content].filter(Boolean).join("\n\n"),
     };
   }
@@ -96,6 +99,7 @@ function headingCells(
       "EX-ID": id,
       Status: field(body, "Status"),
       "BR-Ref": field(body, "BR-Ref"),
+      "AC-Ref": field(body, "AC-Ref"),
       Input: input || [title, content].filter(Boolean).join("\n\n"),
       Expected: expected,
     };
@@ -109,37 +113,75 @@ function headingCells(
   };
 }
 
-function refs(value: string, prefix: "AC" | "EX"): string[] {
-  return [...new Set(value.match(new RegExp(`${prefix}-\\d{4}-\\d{4}`, "g")) ?? [])].sort();
+const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref", "Contract-Refs"];
+
+function fieldKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/s$/, "");
 }
 
-function mergeCase(table: LegacyRecord, heading: LegacyRecord, file: string): LegacyRecord {
-  for (const [column, prefix] of [
-    ["AC-Refs", "AC"],
-    ["EX-Ref", "EX"],
-  ] as const) {
-    const fromTable = refs(table.cells[column] ?? "", prefix);
-    const fromHeading = refs(heading.cells[column] ?? "", prefix);
-    if (fromTable.length && fromHeading.length && fromTable.join() !== fromHeading.join()) {
-      throw new MigrationInputError(
-        `${file}:${heading.source.startLine}: conflicting ${column} for ${heading.id}; table line ${table.source.startLine}`,
-      );
-    }
+function sameFieldValue(a: string, b: string): boolean {
+  const ids = (value: string): string[] =>
+    [...new Set(value.match(/[A-Z]{2}-\d{4}-\d{4}(?:-\d{2})?/g) ?? [])].sort();
+  const idsA = ids(a);
+  const idsB = ids(b);
+  if (idsA.length || idsB.length) return idsA.join() === idsB.join();
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** The wording of a step, without its Gherkin keyword, bullet, case or punctuation. */
+function stepWording(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(?:given|when|then|and|but)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * The fields whose text both forms hold. A TC heading's `Expected` falls back to its whole body
+ * when no `Expected` or `Verify` line is written, so it is compared only where one is.
+ */
+function wordingFields(heading: LegacyRecord): string[] {
+  if (heading.cells["EX-ID"] !== undefined) return ["Input", "Expected"];
+  const written = /^\s*(?:-\s*)?\**(?:Expected|Verify)\**\s*:/im.test(heading.source.raw);
+  return written ? ["Expected"] : [];
+}
+
+function mergeRecords(table: LegacyRecord, heading: LegacyRecord, file: string): LegacyRecord {
+  const wording = wordingFields(heading);
+  for (const [column, fromHeading] of Object.entries(heading.cells)) {
+    const byWording = wording.includes(column);
+    if (!byWording && !COMPARED_FIELDS.some((name) => fieldKey(name) === fieldKey(column)))
+      continue;
+    if (!fromHeading.trim()) continue;
+    const match = Object.entries(table.cells).find(([name]) => fieldKey(name) === fieldKey(column));
+    if (!match?.[1].trim()) continue;
+    const same = byWording
+      ? stepWording(match[1]) === stepWording(fromHeading)
+      : sameFieldValue(match[1], fromHeading);
+    if (same) continue;
+    throw new MigrationInputError(
+      `${file}:${table.source.startLine} and ${file}:${heading.source.startLine}: ${heading.id} holds a different ${column} in its table row and in its heading section; an ID may be written as an index table row, a heading section or both, with equal values`,
+    );
+  }
+  const cells = { ...table.cells };
+  for (const [column, value] of Object.entries(heading.cells)) {
+    if (value.trim() || cells[column] === undefined) cells[column] = value;
   }
   return {
     id: table.id,
-    cells: {
-      ...table.cells,
-      "AC-Refs": heading.cells["AC-Refs"] || table.cells["AC-Refs"] || "",
-      "EX-Ref": heading.cells["EX-Ref"] || table.cells["EX-Ref"] || "",
-      Steps: heading.cells.Steps || table.cells.Steps || "",
-      Expected: heading.cells.Expected || table.cells.Expected || "",
-    },
+    cells,
     source: {
       kind: "table+heading",
-      startLine: table.source.startLine,
-      endLine: heading.source.endLine,
-      raw: `${table.source.raw}\n\n${heading.source.raw}`,
+      startLine: Math.min(table.source.startLine, heading.source.startLine),
+      endLine: Math.max(table.source.endLine, heading.source.endLine),
+      ranges: [...table.source.ranges, ...heading.source.ranges],
+      raw: `${table.source.raw}
+
+${heading.source.raw}`,
     },
   };
 }
@@ -171,7 +213,13 @@ export function parseLegacyRecords(
     records.push({
       id,
       cells: headingCells(kind, id, title, body),
-      source: { kind: "heading", startLine: heading.line, endLine, raw },
+      source: {
+        kind: "heading",
+        startLine: heading.line,
+        endLine,
+        ranges: [{ startLine: heading.line, endLine }],
+        raw,
+      },
     });
   }
   for (const table of parseAllMarkdownTables(markdown)) {
@@ -195,7 +243,13 @@ export function parseLegacyRecords(
       records.push({
         id,
         cells,
-        source: { kind: "table", startLine: line, endLine: line, raw: lines[lineIndex] ?? "" },
+        source: {
+          kind: "table",
+          startLine: line,
+          endLine: line,
+          ranges: [{ startLine: line, endLine: line }],
+          raw: lines[lineIndex] ?? "",
+        },
       });
     }
   }
@@ -206,11 +260,11 @@ export function parseLegacyRecords(
       byId.set(record.id, record);
       continue;
     }
-    if (kind === "TC" && previous.source.kind !== record.source.kind) {
+    if (previous.source.kind !== record.source.kind) {
       const table = previous.source.kind === "table" ? previous : record;
       const heading = previous.source.kind === "heading" ? previous : record;
       if (table.source.kind === "table" && heading.source.kind === "heading") {
-        byId.set(record.id, mergeCase(table, heading, file));
+        byId.set(record.id, mergeRecords(table, heading, file));
         continue;
       }
     }
@@ -229,8 +283,8 @@ export function withoutLegacyRecords(
   const removedLines = new Set<number>();
   for (const record of records) {
     if (!removedIds.has(record.id)) continue;
-    for (let line = record.source.startLine; line <= record.source.endLine; line++) {
-      removedLines.add(line);
+    for (const range of record.source.ranges) {
+      for (let line = range.startLine; line <= range.endLine; line++) removedLines.add(line);
     }
   }
   return markdown

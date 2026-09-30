@@ -36,6 +36,7 @@ Feature: Move policy and catalog content into the merged files once
     Then each contract has a new contract ID, unique across kinds, a file name that carries it and a declaration of it
     And the contract map records each old path and old ID against the new ones
     And `contracts.md` lists every contract in the index table, and what it cannot hold is listed under For a person
+    And every old `CON-*` ID the contract map translates, in a contract file step 3 wrote, is its new ID there
 
   # AC-0004-0006-05
   Scenario: A Markdown CLI contract takes its template's shape, and what does not fit goes to a person
@@ -52,4 +53,19 @@ Feature: Move policy and catalog content into the merged files once
     Then none of them takes a contract ID or is written to the contract tree
     And each is kept whole under the migration's retired contract archive
     And each is listed under For a person with its archived copy and why it is no contract
+
+  # AC-0004-0006-07
+  Scenario: The primary spec becomes the primary UI contract, or goes to a person
+    Given a qfai.config.yaml holding prototyping.primarySpecId, and contract files whose IDs step 3 renumbers
+    When step 3 runs
+    Then prototyping.primaryUiContract names the new ID of the one UI contract the named spec's rules cite, and the old key is gone
+    And where no single UI contract can be tied to that spec, the old key stays and is listed under For a person with its value
+    And the steps after step 3 refuse, naming the key, while it remains
+
+  # AC-0004-0006-08
+  Scenario: Step 3 lists what a person decides apart from what only renames an ID
+    Given a project on the spec-pack layout where step 3 leaves content for a person and changes constraint IDs
+    When step 3 runs
+    Then For a person lists the content items first, under Content
+    And the items that only pair an old ID with its new one follow, under Identifiers
 ```

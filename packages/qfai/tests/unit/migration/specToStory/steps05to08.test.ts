@@ -10,6 +10,7 @@ import { serializeIdMap } from "../../../../src/migration/specToStory/idMap.js";
 import {
   executePlannedStep,
   type MigrationContext,
+  type MigrationStep,
 } from "../../../../src/migration/specToStory/harness.js";
 import { step04 } from "../../../../src/migration/specToStory/step04RenumberIds.js";
 import { step05 } from "../../../../src/migration/specToStory/step05CasesToExamples.js";
@@ -111,6 +112,63 @@ function capture() {
       stderr: { write: (value: string) => error.push(value) },
     },
   };
+}
+
+const packDir = `.qfai/spec/${spec}`;
+const planFile = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+const twoStoryFlows =
+  "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0002\n";
+const examplesEntry = "examples:\n  - id: EX-0001-0002\n    criterion: AC-0001-0002\n";
+const flowDir = "02_business-flow/business-flow-0001";
+
+/**
+ * A spec pack as it stands after steps 1 to 3: two stories with one criterion each, three
+ * examples (the second cited by two test cases that name different criteria, the third by
+ * none), and the rules and plan the caller gives.
+ */
+async function twoStoryPack(plan: string, rules = "# Rules\n"): Promise<MigrationContext> {
+  const context = await bareFixture();
+  const root = context.root;
+  await put(
+    root,
+    `${packDir}/01_Spec.md`,
+    "# Spec\n\n- Status: active\n\n## Scope\n\n- In: Orders.\n",
+  );
+  await put(
+    root,
+    `${packDir}/02_User-stories.md`,
+    "# Stories\n\n## US-0001-0001: Place order\n\nPlace order.\n\n## US-0001-0002: Review order\n\nReview order.\n",
+  );
+  await put(
+    root,
+    `${packDir}/03_Acceptance-Criteria.md`,
+    "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place an order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\n# AC-0001-0002\n# Parent: US-0001-0002\nScenario: Review an order\n  Given an order\n  When it is opened\n  Then it is shown\n```\n",
+  );
+  await put(root, `${packDir}/04_Business-Rules.md`, rules);
+  await put(
+    root,
+    `${packDir}/05_Examples.md`,
+    "# Examples\n\n| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | one item | accepted |\n| EX-0001-0002 | — | two items | accepted twice |\n| EX-0001-0003 | — | free item | accepted free |\n",
+  );
+  await put(
+    root,
+    `${packDir}/06_Test-Cases.md`,
+    "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | submit | accepted |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0002 | submit twice | accepted |\n| TC-0001-0003 | AC-0001-0002 | EX-0001-0002 | review | shown |\n",
+  );
+  await put(root, planFile, plan);
+  return context;
+}
+
+/** Runs the steps in order and fails on the first that refuses its input, with its message. */
+async function runInOrder(
+  context: MigrationContext,
+  steps: readonly MigrationStep[],
+): Promise<void> {
+  for (const step of steps) {
+    const report = capture();
+    const code = await executePlannedStep(step, context, false, report.io);
+    expect(code, report.error.join("")).not.toBe(2);
+  }
 }
 
 describe("migration steps 5 to 8", () => {
@@ -1081,5 +1139,160 @@ describe("migration steps 5 to 8", () => {
     expect(reportSection(report.output.join(""), "For a person")).toBe(
       `- tests/integration/orders.test.ts:2: ${annotation}: no usable ID mapping`,
     );
+  });
+
+  it("sets an example's AC-Ref from the plan's examples entry", async () => {
+    // QFAI:EX-0004-0008-14
+    const exampleFile = (context: MigrationContext): string =>
+      path.join(context.specsDir, flowDir, "user-story-0001-0002/03_Example.md");
+    const withoutEntry = await twoStoryPack(`${twoStoryFlows}rules: []\n`);
+    await runInOrder(withoutEntry, [step04, step05, step06]);
+    expect(await readFile(exampleFile(withoutEntry), "utf8")).not.toContain("EX-0001-0002-01");
+
+    const context = await twoStoryPack(`${twoStoryFlows}rules: []\n${examplesEntry}`);
+    await runInOrder(context, [step04, step05, step06]);
+    const placed = "| EX-0001-0002-01 | AC-0001-0002-01 | two items | accepted twice |";
+    expect(await readFile(exampleFile(context), "utf8")).toContain(placed);
+
+    const blanked = (await readFile(exampleFile(context), "utf8")).replace(
+      "| EX-0001-0002-01 | AC-0001-0002-01 |",
+      "| EX-0001-0002-01 | — |",
+    );
+    await writeFile(exampleFile(context), blanked);
+    expect(await executePlannedStep(step06, context, false, capture().io)).toBe(0);
+    expect(await readFile(exampleFile(context), "utf8")).toContain(placed);
+  });
+
+  it("removes a rule marked binds none or retire without placing it in a contract", async () => {
+    // QFAI:EX-0004-0009-16
+    const context = await twoStoryPack(
+      `${twoStoryFlows}rules:\n  - id: BR-0001-0001\n    binds: none\n  - id: BR-0001-0002\n    retire: superseded by another rule\n`,
+      "# Rules\n\n| BR-ID | Rule | Contract-Refs |\n| --- | --- | --- |\n| BR-0001-0001 | Orders may be free. | - |\n| BR-0001-0002 | Orders may be held. | - |\n",
+    );
+    await put(context.root, ".qfai/spec/03_contract/api/api-0001-orders.yaml", "openapi: 3.0.0\n");
+    await runInOrder(context, [step04]);
+    const exampleFile = path.join(context.specsDir, flowDir, "user-story-0001-0001/03_Example.md");
+    const placed = await readFile(exampleFile, "utf8");
+    const report = capture();
+    expect(await executePlannedStep(step07, context, false, report.io), report.error.join("")).toBe(
+      0,
+    );
+    const output = report.output.join("");
+    const operations = reportSection(output, "Operations");
+    expect(operations).toContain("BR-0001-0001");
+    expect(operations).toContain("BR-0001-0002");
+    expect(operations).toContain("superseded by another rule");
+    expect(reportSection(output, "For a person")).toBe("none");
+    const map = await readFile(
+      path.join(context.root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+      "utf8",
+    );
+    expect(map).not.toContain("BR-0001-0001");
+    expect(map).not.toContain("BR-0001-0002");
+    await expect(
+      readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    const archive = await readFile(
+      path.join(
+        context.root,
+        ".qfai/evidence/migration-spec-to-story/retired",
+        spec,
+        "04_Business-Rules.md",
+      ),
+      "utf8",
+    );
+    expect(archive).toContain("BR-0001-0001");
+    expect(archive).toContain("BR-0001-0002");
+    expect(
+      await readFile(path.join(context.contractsDir, "api/api-0001-orders.yaml"), "utf8"),
+    ).toBe("openapi: 3.0.0\n");
+    expect(await readFile(exampleFile, "utf8")).toBe(placed);
+  });
+
+  it("removes only a rule's own table row and heading section from its source", async () => {
+    // QFAI:EX-0004-0009-17
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+    );
+    const source =
+      "# Rules\n\n| BR-ID | Status |\n| --- | --- |\n| BR-0001-0001 | active |\n| BR-0001-0002 | active |\n\n## BR-0001-0001: Valid total\n\n- Status: active\n- The total MUST be nonnegative.\n\n## BR-0001-0002: Later rule\n\n- Status: active\n- A later rule.\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
+    );
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+    const report = capture();
+    expect(await executePlannedStep(step07, context, false, report.io)).toBe(3);
+    expect(report.error.join("")).toBe("");
+    const contract = parseYaml(
+      await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8"),
+    );
+    expect(contract).toMatchObject({
+      "x-qfai-rules": [
+        {
+          id: "BR-0002-0001",
+          statement: expect.stringContaining("The total MUST be nonnegative."),
+        },
+      ],
+    });
+    expect(contract).toHaveProperty(["x-qfai-rules", "length"], 1);
+    const remaining = await readFile(
+      path.join(context.specsDir, spec, "04_Business-Rules.md"),
+      "utf8",
+    );
+    expect(remaining.split("\n").filter((line) => line.trim() !== "")).toEqual([
+      "# Rules",
+      "| BR-ID | Status |",
+      "| --- | --- |",
+      "| BR-0001-0002 | active |",
+      "## BR-0001-0002: Later rule",
+      "- Status: active",
+      "- A later rule.",
+    ]);
+    expect(reportSection(report.output.join(""), "For a person")).toContain(
+      `.qfai/spec/${spec}/04_Business-Rules.md: BR-0001-0002: no contract placement in plan`,
+    );
+    expect(
+      await readFile(
+        path.join(
+          context.root,
+          ".qfai/evidence/migration-spec-to-story/retired",
+          spec,
+          "04_Business-Rules.md",
+        ),
+        "utf8",
+      ),
+    ).toBe(source);
+  });
+
+  it("rewrites the annotation of a test case whose example the plan's entry placed", async () => {
+    // QFAI:EX-0004-0010-07
+    const legacy = ["QFAI", "SPEC-0001", "TC-0001-0002"].join(":");
+    const file = "tests/integration/order.test.ts";
+    const withTestFile = async (plan: string): Promise<MigrationContext> => {
+      const context = await twoStoryPack(plan);
+      await put(context.root, file, `// ${legacy}\nit("orders", () => {});\n`);
+      await runInOrder(context, [step04, step05, step06, step07]);
+      return context;
+    };
+    const unplaced = await withTestFile(`${twoStoryFlows}rules: []\n`);
+    const kept = capture();
+    expect(await executePlannedStep(step08, unplaced, false, kept.io)).toBe(3);
+    expect(reportSection(kept.output.join(""), "For a person")).toBe(
+      `- ${file}:1: ${legacy}: no usable ID mapping`,
+    );
+
+    const context = await withTestFile(`${twoStoryFlows}rules: []\n${examplesEntry}`);
+    const report = capture();
+    expect(await executePlannedStep(step08, context, false, report.io)).toBe(0);
+    expect(await readFile(path.join(context.root, file), "utf8")).toBe(
+      `// ${["QFAI", "EX-0001-0002-01"].join(":")}\nit("orders", () => {});\n`,
+    );
+    expect(reportSection(report.output.join(""), "For a person")).toBe("none");
   });
 });

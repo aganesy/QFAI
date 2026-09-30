@@ -35,6 +35,7 @@ import {
 import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { ID_MAP_PATH, IdMapInputError, readIdMap } from "./idMap.js";
+import { captureOutput, writeReportFile } from "./reportFile.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
 
 export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
@@ -66,7 +67,13 @@ export type MigrationContext = {
 };
 
 export type MigrationOperation =
-  | { kind: "write"; target: string; content: string }
+  | {
+      kind: "write";
+      target: string;
+      content: string;
+      /** Report lines printed after the write's own line. */
+      notes?: readonly string[];
+    }
   | { kind: "move"; source: string; target: string; resume?: boolean }
   | { kind: "remove"; target: string; description: string }
   | { kind: "remove-empty-directory"; target: string }
@@ -92,6 +99,12 @@ export type StepPlan = {
   operations: MigrationOperation[];
   annotationTargets?: string[];
   forAPerson?: string[];
+  /**
+   * The items of `forAPerson` that only pair an old ID with its new one. When set,
+   * the section prints under `Content` and `Identifiers` headings: these items
+   * under the second, every other item under the first.
+   */
+  forAPersonIdentifiers?: string[];
   casesToExamples?: string[];
   annotationsKept?: string[];
   reminderHooks?: string[];
@@ -992,7 +1005,7 @@ function operationLines(operation: MigrationOperation): string[] {
       (target) => `${target}: ${operation.description}`,
     );
   }
-  return [operationLine(operation)];
+  return [operationLine(operation), ...(operation.kind === "write" ? (operation.notes ?? []) : [])];
 }
 
 function reportSection(name: string, entries: readonly string[]): string {
@@ -1035,6 +1048,21 @@ function sectionItems(section: ReportSection, plan: StepPlan, dryRun: boolean): 
   }
 }
 
+function groupedReportSection(items: readonly string[], identifiers: readonly string[]): string {
+  const paired = new Set(identifiers);
+  const groups: [string, string[]][] = [
+    ["Content", items.filter((item) => !paired.has(item))],
+    ["Identifiers", items.filter((item) => paired.has(item))],
+  ];
+  const printed = groups
+    .filter(([, entries]) => entries.length > 0)
+    .map(
+      ([heading, entries]) =>
+        `### ${heading}\n${entries.map((entry) => `- ${entry}`).join("\n")}\n`,
+    );
+  return `## For a person\n${printed.length === 0 ? "none\n" : printed.join("\n")}`;
+}
+
 function renderReport(
   step: MigrationStep,
   plan: StepPlan,
@@ -1043,7 +1071,12 @@ function renderReport(
 ): string {
   let report = reportSection("Operations", operations.flatMap(operationLines));
   for (const section of step.sections ?? []) {
-    report += `\n${reportSection(section, sectionItems(section, plan, dryRun))}`;
+    const items = sectionItems(section, plan, dryRun);
+    report += `\n${
+      section === "For a person" && plan.forAPersonIdentifiers !== undefined
+        ? groupedReportSection(items, plan.forAPersonIdentifiers)
+        : reportSection(section, items)
+    }`;
   }
   return report;
 }
@@ -1228,14 +1261,62 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     io.stderr.write("Run the migration from a project root containing qfai.config.yaml.\n");
     return 2;
   }
-  const loaded = await loadConfig(root);
-  // Step 12 reports an invalid workflow mode as one of its checks, and step 11
-  // does not read the mode, so neither refuses for it.
-  const blocking = loaded.issues.filter(
-    (issue) => !((step === 11 || step === 12) && issue.message === WORKFLOW_MODE_MESSAGE),
+  const dryRun = argv.length === 1;
+  const captured = captureOutput(io);
+  const code = await runConfiguredStep(step, dryRun, root, captured.io);
+  const refusal = await writeReportFile(
+    root,
+    step,
+    dryRun,
+    { stdout: captured.stdout(), stderr: captured.stderr() },
+    code,
   );
-  if (blocking.length > 0) {
-    io.stderr.write("Cannot read or parse qfai.config.yaml.\n");
+  if (refusal !== null) io.stderr.write(refusal);
+  return code;
+}
+
+/** The config keys `loadConfig` reports as retired, which steps 1 to 3 migrate. */
+const RETIRED_CONFIG_KEYS = [
+  "prototyping.primarySpecId",
+  "validation.traceability.scMustHaveTest",
+  "validation.traceability.unknownContractIdSeverity",
+] as const;
+
+function holdsRetiredKey(issue: { message: string }): boolean {
+  return RETIRED_CONFIG_KEYS.some((key) => issue.message.startsWith(`${key} is retired`));
+}
+
+/**
+ * The text that refuses the run because of the config, or null when the run may
+ * go on. Steps 1 to 3 run past the retired keys they migrate; steps 11 and 12
+ * report an invalid workflow mode as one of their checks.
+ */
+function configRefusal(
+  step: MigrationStepNumber,
+  issues: readonly { message: string }[],
+): string | null {
+  const blocking = issues.filter(
+    (issue) =>
+      !(step <= 3 && holdsRetiredKey(issue)) &&
+      !((step === 11 || step === 12) && issue.message === WORKFLOW_MODE_MESSAGE),
+  );
+  if (blocking.length === 0) return null;
+  const sentence = blocking.every(holdsRetiredKey)
+    ? `qfai.config.yaml still holds a retired key. Steps 1 and 3 remove or replace it; step ${step} runs once it is gone.`
+    : "Cannot read or parse qfai.config.yaml.";
+  return `${[sentence, ...issues.map((issue) => issue.message)].join("\n")}\n`;
+}
+
+async function runConfiguredStep(
+  step: MigrationStepNumber,
+  dryRun: boolean,
+  root: string,
+  io: OutputIo,
+): Promise<0 | 2 | 3> {
+  const loaded = await loadConfig(root);
+  const refusal = configRefusal(step, loaded.issues);
+  if (refusal !== null) {
+    io.stderr.write(refusal);
     return 2;
   }
   const context: MigrationContext = {
@@ -1244,18 +1325,25 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     specsDir: resolvePath(root, loaded.config, "specsDir"),
     contractsDir: resolvePath(root, loaded.config, "contractsDir"),
   };
-  if (step === 11 || step === 12) return await runEntryStep(step, context, argv.length === 1, io);
+  if (step === 11 || step === 12) return await runEntryStep(step, context, dryRun, io);
   let selected: MigrationStep;
   let staleStages: MigrationOperation[];
   try {
     const map = await readIdMap(root);
     staleStages = await staleStageOperations(context, step);
     if (await migrationFinished(context, step)) {
-      const done = renderReport(await loadStep(step), { operations: [] }, [], argv.length === 1);
+      const done = renderReport(await loadStep(step), { operations: [] }, [], dryRun);
       io.stdout.write(`${done}\n${ALREADY_DONE}\n`);
       return 0;
     }
-    if (!(await hasLegacyEntries(context)) && staleStages.length === 0) {
+    // Step 3 replaces a retired config key, so a project that still holds one is not done with it.
+    const retiredConfigWork = step === 3 && loaded.issues.some(holdsRetiredKey);
+    if (
+      step !== 1 &&
+      !retiredConfigWork &&
+      !(await hasLegacyEntries(context)) &&
+      staleStages.length === 0
+    ) {
       const selected = await loadStep(step);
       if (step === 9) {
         // Step 1 moved the directories the host links pointed at, so an old
@@ -1263,7 +1351,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
         const plan = await selected.plan(context);
         if (plan.operations.length > 0 || (plan.forAPerson?.length ?? 0) > 0) {
           const linkStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
-          return await executePlannedStep(linkStep, context, argv.length === 1, io);
+          return await executePlannedStep(linkStep, context, dryRun, io);
         }
       }
       if (step === 10) {
@@ -1272,7 +1360,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
         const { planStep10 } = await import("./step10UpdateGitignore.js");
         const plan = await planStep10(context, false);
         const localStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
-        return await executePlannedStep(localStep, context, argv.length === 1, io);
+        return await executePlannedStep(localStep, context, dryRun, io);
       }
       io.stdout.write(`${renderReport(selected, { operations: [] }, [], false)}\n`);
       return 0;
@@ -1306,7 +1394,6 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     }
     throw error;
   }
-  const dryRun = argv.length === 1;
   const moveRecovery = staleStages.some(
     (operation) => operation.kind === "move" && operation.resume,
   );
@@ -1384,7 +1471,7 @@ async function runEntryStep(
   step: 11 | 12,
   context: MigrationContext,
   dryRun: boolean,
-  io: MigrationIo,
+  io: OutputIo,
 ): Promise<0 | 2 | 3> {
   try {
     if (await hasPendingRename(context)) {

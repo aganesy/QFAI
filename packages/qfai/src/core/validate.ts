@@ -8,7 +8,11 @@ import {
   flowScopeContainsId,
   type FlowScope,
 } from "./flowScope.js";
-import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
+import {
+  hasLegacySpecPackEntries,
+  listLegacySpecPackFiles,
+  oldLayoutMessage,
+} from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
@@ -122,6 +126,7 @@ export async function validateProject(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
+  const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
     let entries: string[] = [];
     try {
@@ -130,14 +135,14 @@ export async function validateProject(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     if (hasLegacySpecPackEntries(entries)) {
-      oldLayoutRoot = candidate;
-      break;
+      oldLayoutRoot ??= candidate;
+      oldLayoutFiles.push(...(await listLegacySpecPackFiles(root, candidate, entries)));
     }
   }
   if (oldLayoutRoot) {
     const layoutIssue = issue(
       "QFAI-LAYOUT-001",
-      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-v1-to-v2 before validation.`,
+      oldLayoutMessage(oldLayoutRoot, oldLayoutFiles),
       "error",
       oldLayoutRoot,
       "storyTree.oldLayout",

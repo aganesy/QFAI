@@ -4,8 +4,71 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
+  writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
+  or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
+  on standard error, then a last line `Exit code: N`. `NNN` counts the step's
+  files and is never reused. A refusal (exit 2) keeps its report too, once the
+  arguments are valid and `qfai.config.yaml` is found. Git does not track the
+  directory, and no step reads it. The skill's `SKILL.md` and migration guide
+  now say to read the reports from there.
+- **`plan.yaml` can settle what step 4 leaves behind.** An optional `examples`
+  list places an old example under one criterion its test-case rows name, and
+  its test cases then reach the ID map, so step 8 rewrites their annotations. A
+  rule takes `binds: none` (only where its `Contract-Refs` is `-`) or `retire`
+  with a reason in place of `contract`; step 7 removes it from
+  `04_Business-Rules.md`, writes it to no contract and lists it under
+  `## Operations`. Both are read before the ID map is written.
+
+### Changed
+
+- **Migration now removes the retired configuration keys.** This reverses the
+  2.0.0 statement that migration leaves them in place. Step 1 removes
+  `validation.traceability.scMustHaveTest` and
+  `validation.traceability.unknownContractIdSeverity`, and a `validation`
+  mapping the removal leaves empty. Step 3 replaces `prototyping.primarySpecId`
+  by `prototyping.primaryUiContract` when exactly one UI contract is tied to
+  that spec, and otherwise keeps the key and lists it for a person. Steps 1 to 3
+  run although `qfai.config.yaml` still holds one of the three keys; steps 4 to
+  12 refuse, naming the key, until it is gone.
+- **`QFAI-LAYOUT-001` lists the old files.** The one error still stops every
+  other check, but its message now lists, one per line, each file that remains
+  under the `spec-*/` and `_policies/` directories, and ends with a line that
+  names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
+  in before it is deleted.
+- **Step 3 rewrites the `CON-*` IDs its contract map translates in the
+  contract files it writes,** wherever they stand in the file, instead of
+  listing each one for a person. An ID no contract declared, or that more than
+  one declared, is still listed. Its `## For a person` items are grouped under
+  `### Content`, for what a person rewrites or decides, and `### Identifiers`,
+  for an old ID paired with its new one.
+- **Step 4 reads more of what a 1.x project writes.** `from` in `plan.yaml`
+  accepts any H2 heading of the old `_policies/04_Business-Flow.md`. A
+  criterion's story is read from its row of the criteria catalog table
+  (`US Ref`, `US-Refs` or `Maps To`) when it has no `Parent:` line, and a story
+  block written as `As a`, `I want` and `So that` fields becomes the one
+  sentence. An ID written both as an index table row and as a heading section
+  is one record for every kind of record, and only that record's own lines are
+  removed when a step moves it.
+
 ### Fixed
 
+- **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
+  one fixed sentence; it now prints that sentence and then the message of every
+  issue the loader returned.
+- **An indented `Scenario:`, `Scenario Outline:` or `Background:` is read as
+  that keyword,** so criteria written inside an indented `Feature:` block are
+  converted.
+- **Steps 4 and 7 no longer stop on `plan.yaml` when the ID map exists and no
+  spec pack is left.** A missing or rewritten plan was an error even though
+  there was nothing left to place, which kept a project with only a step 5 item
+  from running them again.
+- The migration guide says how to finish what a step leaves: retired keys,
+  the report directory, sequential dry runs, the points of no return, copying
+  `.qfai/` before step 1, writing the plan before step 1, how a person closes a
+  step 5 item or a leftover pack file, and when an annotation is edited by hand.
 - **`qfai validate --profile full` no longer fails a migrated UI project on a
   fresh checkout.** Migration step 10 stops tracking `.qfai/evidence/`, so a
   clean checkout has no `.qfai/evidence/prototyping/`, and the generated CI

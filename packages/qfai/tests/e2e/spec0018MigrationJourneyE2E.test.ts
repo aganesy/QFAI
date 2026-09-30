@@ -33,6 +33,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -116,13 +117,14 @@ async function fingerprint(
     for (const name of (await readdir(directory)).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).replace(/\\/g, "/");
-      if (excluded.has(relative)) continue;
+      if (excluded.has(relative) || isMigrationReportPath(relative)) continue;
       const stats = await lstat(file);
-      hash.update(`${relative}\0${stats.mode}\0`);
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(`${relative}\0${stats.mode}\0`);
       if (stats.isSymbolicLink()) {
         hash.update(`link\0${await readlink(file)}\0`);
       } else if (stats.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(file);
       } else {
         hash.update("file\0");

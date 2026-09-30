@@ -5,7 +5,7 @@ import { parseDocument } from "yaml";
 
 import { isEnoent } from "../../core/fs/errno.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
-import { escapeTableCell } from "../../core/specPackParsers.js";
+import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import { declaredContractId } from "../../core/contractsDecl.js";
 import { CONTRACT_KIND_BY_DIR, nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
@@ -33,6 +33,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
+import { isDashReference } from "./step05CasesToExamples.js";
 
 export type NumberedPlan = {
   flows: Record<string, string>;
@@ -54,7 +55,15 @@ export type NumberingInput = {
 export type PlannedStory = { id: string; criteria: string[] };
 export type PlannedFlow = { title: string; from?: string | undefined; stories: PlannedStory[] };
 export type PlannedRule = { id: string; contract: string };
-export type MigrationPlan = { flows: PlannedFlow[]; rules: PlannedRule[] };
+/** A rule that binds no contract (`retire` null) or is retired, and takes no new ID. */
+export type PlannedMark = { id: string; retire: string | null };
+export type PlannedExample = { id: string; criterion: string };
+export type MigrationPlan = {
+  flows: PlannedFlow[];
+  rules: PlannedRule[];
+  marks: PlannedMark[];
+  examples: PlannedExample[];
+};
 
 const PLAN_PATH = ".qfai/evidence/migration-spec-to-story/plan.yaml";
 
@@ -103,13 +112,14 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     throw new MigrationInputError(`${PLAN_PATH}: ${document.errors[0]?.message ?? "invalid YAML"}`);
   }
   const value: unknown = document.toJS();
-  if (isObject(value) && !hasOnlyKeys(value, ["flows", "rules"])) {
-    const unknown = Object.keys(value).find((key) => key !== "flows" && key !== "rules");
+  if (isObject(value) && !hasOnlyKeys(value, PLAN_KEYS)) {
+    const unknown = Object.keys(value).find((key) => !PLAN_KEYS.includes(key));
     throw new MigrationInputError(`${PLAN_PATH}: unknown field ${unknown}`);
   }
   if (!isObject(value) || !Array.isArray(value.flows) || !Array.isArray(value.rules)) {
     throw new MigrationInputError(`${PLAN_PATH}: flows and rules must be lists`);
   }
+  const examples = readPlannedExamples(value.examples);
   const flows: PlannedFlow[] = [];
   const seenStories = new Set<string>();
   const seenTitles = new Set<string>();
@@ -166,42 +176,104 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     flows.push({ title: entry.title, from: entry.from, stories });
   }
   const rules: PlannedRule[] = [];
+  const marks: PlannedMark[] = [];
   const seenRules = new Set<string>();
   for (const entry of value.rules) {
-    const placement = isObject(entry) && typeof entry.contract === "string" ? entry.contract : "";
+    const planned = readPlannedRule(context, entry);
+    if (seenRules.has(planned.id))
+      throw new MigrationInputError(`${PLAN_PATH}: duplicate rule ${planned.id}`);
+    seenRules.add(planned.id);
+    if ("contract" in planned) rules.push(planned);
+    else marks.push(planned);
+  }
+  return { flows, rules, marks, examples };
+}
+
+const PLAN_KEYS = ["flows", "rules", "examples"];
+const RULE_TARGET_KEYS = ["contract", "binds", "retire"];
+
+/** The `examples` list: each entry names an old example and the old criterion it is placed under. */
+function readPlannedExamples(value: unknown): PlannedExample[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new MigrationInputError(`${PLAN_PATH}: examples must be a list`);
+  const seen = new Set<string>();
+  return value.map((entry: unknown) => {
     if (
       !isObject(entry) ||
-      !hasOnlyKeys(entry, ["id", "contract"]) ||
+      !hasOnlyKeys(entry, ["id", "criterion"]) ||
       typeof entry.id !== "string" ||
-      !/^BR-\d{4}-\d{4}$/.test(entry.id) ||
-      typeof entry.contract !== "string" ||
-      entry.contract.trim() === "" ||
-      !/\.(?:ya?ml|json|sql|md)$/i.test(entry.contract) ||
-      path.isAbsolute(entry.contract) ||
-      entry.contract.split(/[\\/]/).includes("..") ||
-      !path
-        .resolve(context.contractsDir, entry.contract)
-        .startsWith(`${context.contractsDir}${path.sep}`)
+      !/^EX-\d{4}-\d{4}$/.test(entry.id) ||
+      typeof entry.criterion !== "string" ||
+      !/^AC-\d{4}-\d{4}$/.test(entry.criterion)
     ) {
-      throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
-    }
-    const [kindDirectory, ...below] = entry.contract.split(/[\\/]/);
-    const refused = notAContract(entry.contract.replace(/\\/g, "/"));
-    if (refused !== null)
       throw new MigrationInputError(
-        `${PLAN_PATH}: ${entry.id} names ${placement}, which holds no contract: ${refused}`,
-      );
-    if (below.length === 0 || !Object.keys(CONTRACT_KIND_BY_DIR).includes(kindDirectory ?? "")) {
-      throw new MigrationInputError(
-        `${PLAN_PATH}: ${entry.id} names ${placement}, which is not under cli/, api/, db/ or ui/`,
+        `${PLAN_PATH}: every examples entry needs an id and a criterion`,
       );
     }
-    if (seenRules.has(entry.id))
-      throw new MigrationInputError(`${PLAN_PATH}: duplicate rule ${entry.id}`);
-    seenRules.add(entry.id);
-    rules.push({ id: entry.id, contract: entry.contract.replace(/\\/g, "/") });
+    if (seen.has(entry.id))
+      throw new MigrationInputError(`${PLAN_PATH}: duplicate example ${entry.id}`);
+    seen.add(entry.id);
+    return { id: entry.id, criterion: entry.criterion };
+  });
+}
+
+/** A rule entry: a placement in a contract, or a mark that binds no contract or retires it. */
+function readPlannedRule(context: MigrationContext, entry: unknown): PlannedRule | PlannedMark {
+  const placement = isObject(entry) && typeof entry.contract === "string" ? entry.contract : "";
+  if (
+    !isObject(entry) ||
+    !hasOnlyKeys(entry, ["id", ...RULE_TARGET_KEYS]) ||
+    typeof entry.id !== "string" ||
+    !/^BR-\d{4}-\d{4}$/.test(entry.id)
+  ) {
+    throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
   }
-  return { flows, rules };
+  if (RULE_TARGET_KEYS.filter((key) => entry[key] !== undefined).length !== 1) {
+    throw new MigrationInputError(
+      `${PLAN_PATH}: ${entry.id} needs exactly one of contract, binds and retire`,
+    );
+  }
+  if (entry.binds !== undefined) {
+    if (entry.binds !== "none")
+      throw new MigrationInputError(`${PLAN_PATH}: ${entry.id} binds must be none`);
+    return { id: entry.id, retire: null };
+  }
+  if (entry.retire !== undefined) {
+    if (typeof entry.retire !== "string" || entry.retire.trim() === "")
+      throw new MigrationInputError(`${PLAN_PATH}: ${entry.id} retire needs a reason`);
+    return { id: entry.id, retire: entry.retire.trim() };
+  }
+  return { id: entry.id, contract: readRuleContract(context, entry.id, entry.contract, placement) };
+}
+
+function readRuleContract(
+  context: MigrationContext,
+  id: string,
+  contract: unknown,
+  placement: string,
+): string {
+  if (
+    typeof contract !== "string" ||
+    contract.trim() === "" ||
+    !/\.(?:ya?ml|json|sql|md)$/i.test(contract) ||
+    path.isAbsolute(contract) ||
+    contract.split(/[\\/]/).includes("..") ||
+    !path.resolve(context.contractsDir, contract).startsWith(`${context.contractsDir}${path.sep}`)
+  ) {
+    throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
+  }
+  const [kindDirectory, ...below] = contract.split(/[\\/]/);
+  const refused = notAContract(contract.replace(/\\/g, "/"));
+  if (refused !== null)
+    throw new MigrationInputError(
+      `${PLAN_PATH}: ${id} names ${placement}, which holds no contract: ${refused}`,
+    );
+  if (below.length === 0 || !Object.keys(CONTRACT_KIND_BY_DIR).includes(kindDirectory ?? "")) {
+    throw new MigrationInputError(
+      `${PLAN_PATH}: ${id} names ${placement}, which is not under cli/, api/, db/ or ui/`,
+    );
+  }
+  return contract.replace(/\\/g, "/");
 }
 
 export function numberPlannedItems(input: NumberingInput): NumberedPlan {
@@ -233,7 +305,14 @@ export function numberPlannedItems(input: NumberingInput): NumberedPlan {
 }
 
 type OldStory = { id: string; title: string; body: string };
-type OldCriterion = { id: string; parent: string | null; text: string };
+type OldCriterion = {
+  id: string;
+  /** The story the criterion belongs to by its `Parent:` line or its catalog row, if that is one. */
+  parent: string | null;
+  /** Why the criterion has no such story where its two references disagree or name several. */
+  unresolved?: string;
+  text: string;
+};
 type OldExample = { id: string; input: string; expected: string; status: string };
 type OldCase = {
   id: string;
@@ -242,7 +321,7 @@ type OldCase = {
   danglingExamples: string[];
   invalidExampleReference: boolean;
 };
-type OldRule = { id: string; statement: string; status: string };
+type OldRule = { id: string; statement: string; status: string; contractRefs: string };
 type OldPack = {
   id: string;
   dir: string;
@@ -310,7 +389,7 @@ export function parseOldStories(text: string): OldStory[] {
   });
 }
 
-export function parseOldCriteria(text: string): OldCriterion[] {
+export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): OldCriterion[] {
   const headed = sectionBlocks(text, "AC");
   const byId = new Map<string, { line: number; criterion: OldCriterion }>();
   for (const entry of headed) {
@@ -364,9 +443,60 @@ export function parseOldCriteria(text: string): OldCriterion[] {
       },
     });
   }
+  const catalog = catalogStories(text);
   return [...byId.values()]
     .sort((left, right) => left.line - right.line)
-    .map(({ criterion }) => criterion);
+    .map(({ criterion }) => {
+      const declared = (story: string): boolean => storyIds?.has(story) ?? true;
+      if (criterion.parent !== null && !declared(criterion.parent)) {
+        return {
+          ...criterion,
+          parent: null,
+          unresolved: `names ${criterion.parent} in its Parent line, which is no story of its pack; list it under a story's criteria in plan.yaml`,
+        };
+      }
+      return withCatalogParent(criterion, (catalog.get(criterion.id) ?? []).filter(declared));
+    });
+}
+
+const CATALOG_STORY_COLUMN = /^(?:US Ref|US-Refs|Maps To)$/i;
+
+/** The stories each criterion's row of a criteria catalog table names, in a `US Ref` column. */
+function catalogStories(text: string): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const table of parseAllMarkdownTables(text)) {
+    const column = table.headers.findIndex((header) => CATALOG_STORY_COLUMN.test(header.trim()));
+    if (column < 0) continue;
+    for (const row of table.rows) {
+      const id = row.find((cell) => /^AC-\d{4}-\d{4}$/.test(cell.trim()))?.trim();
+      if (id === undefined) continue;
+      const named = splitIds(row[column] ?? "", "US");
+      result.set(id, [...new Set([...(result.get(id) ?? []), ...named])]);
+    }
+  }
+  return result;
+}
+
+/** A criterion's story from its `Parent:` line and its catalog row, or why it has none. */
+function withCatalogParent(criterion: OldCriterion, named: readonly string[]): OldCriterion {
+  const pack = criterion.id.split("-")[1];
+  const row = named.filter((story) => story.split("-")[1] === pack);
+  const line = criterion.parent;
+  if (line !== null && row.some((story) => story !== line)) {
+    return {
+      ...criterion,
+      parent: null,
+      unresolved: `names ${line} in its Parent line and ${row.join(", ")} in its catalog row; list it under a story's criteria in plan.yaml`,
+    };
+  }
+  if (line !== null || row.length === 0) return criterion;
+  if (row.length > 1) {
+    return {
+      ...criterion,
+      unresolved: `is ambiguous: its catalog row names ${row.join(", ")}; list it under a story's criteria in plan.yaml`,
+    };
+  }
+  return { ...criterion, parent: row[0] ?? null };
 }
 
 type GherkinItem = { keyword: string; name: string; lines: string[] };
@@ -421,7 +551,7 @@ function droppedItem(item: GherkinItem): string {
 function criterionShape(criterion: OldCriterion): CriterionShape | null {
   const fenced = /```gherkin\s*\n([\s\S]*?)\n```/m.exec(criterion.text)?.[1];
   const source = fenced ?? criterion.text.replace(/\n```[\s\S]*$/m, "");
-  const start = source.search(/^Scenario(?: Outline)?:\s+\S/m);
+  const start = source.search(/^[ \t]*Scenario(?: Outline| Template)?:[ \t]+\S/m);
   if (start < 0) return null;
   const scenario = source.slice(start);
   if (
@@ -484,7 +614,10 @@ async function readOldPack(context: MigrationContext, id: string): Promise<OldPa
   );
   const raw = Object.fromEntries(entries) as OldPack["raw"];
   const stories = parseOldStories(raw["02_User-stories.md"]);
-  const criteria = parseOldCriteria(raw["03_Acceptance-Criteria.md"]);
+  const criteria = parseOldCriteria(
+    raw["03_Acceptance-Criteria.md"],
+    new Set(stories.map((story) => story.id)),
+  );
   const examples = parseLegacyRecords(raw["05_Examples.md"], "EX", `${id}/05_Examples.md`).map(
     (record) => ({
       id: record.id,
@@ -517,6 +650,7 @@ async function readOldPack(context: MigrationContext, id: string): Promise<OldPa
     id: record.id,
     statement: record.cells.Rule ?? "",
     status: record.cells.Status ?? "",
+    contractRefs: record.cells["Contract-Refs"] ?? "",
   }));
   return {
     id,
@@ -551,6 +685,11 @@ function plannedPlacements(plan: MigrationPlan): MigrationIdMap["placements"] {
 }
 
 export function assertUnchangedPlacements(plan: MigrationPlan, map: MigrationIdMap): void {
+  for (const mark of plan.marks) {
+    if (map.ids[packOf(mark.id)]?.[mark.id] !== undefined) {
+      throw new MigrationInputError(`${PLAN_PATH}: ${mark.id} is marked but the ID map holds it`);
+    }
+  }
   const current = plannedPlacements(plan);
   for (const [pack, placements] of Object.entries(map.placements)) {
     for (const [oldId, destination] of Object.entries(placements)) {
@@ -655,9 +794,6 @@ function selectFlowSection(text: string, selector: string | undefined): string |
         .slice(0, firstChange.line - 1)
         .join("\n");
   } else {
-    if (!selector.startsWith("CHG-")) {
-      throw new MigrationInputError(`${PLAN_PATH}: invalid flow source ${selector}`);
-    }
     const headings = parseHeadings(text).filter(
       (heading) => heading.level === 2 && heading.title === selector,
     );
@@ -678,7 +814,7 @@ function reportUnplaced(
   const placedStories = new Set(
     plan.flows.flatMap((flow) => flow.stories.map((story) => story.id)),
   );
-  const placedRules = new Set(plan.rules.map((rule) => rule.id));
+  const placedRules = new Set([...plan.rules, ...plan.marks].map((rule) => rule.id));
   const forAPerson: string[] = [];
   for (const pack of packs) {
     if (pack.retired) continue;
@@ -696,7 +832,7 @@ function reportUnplaced(
     for (const criterion of pack.criteria) {
       if (!ownerByCriterion.has(criterion.id)) {
         forAPerson.push(
-          `${base}/03_Acceptance-Criteria.md: ${criterion.id} has no single placed story`,
+          `${base}/03_Acceptance-Criteria.md: ${criterion.id} ${criterion.unresolved ?? "has no single placed story"}`,
         );
       } else if (criterionShape(criterion) === null) {
         forAPerson.push(
@@ -762,8 +898,14 @@ const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
 const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
 
 type StoryParts = { sentence: string; nonGoals: string[] };
+/** A story block that holds some of its `As a`, `I want` and `So that` fields and not all. */
+type PartialStory = { missing: string[] };
+const STORY_FIELDS = ["as a", "i want", "so that"] as const;
+/** A list item that opens one of the three story fields, each bold or plain, with or without a colon. */
+const STORY_FIELD_LINE =
+  /^-\s+(?:\*\*)?(As an?|I want|So that)(?:\*\*)?(?:\s*:|\s)(?:\*\*)?\s*(.*)$/i;
 type BlockEntry =
-  | { kind: "field"; key: string; value: string; items: string[] }
+  | { kind: "field"; key: string; value: string; items: string[]; article?: "an" }
   | { kind: "paragraph"; text: string }
   | { kind: "other" };
 
@@ -771,20 +913,27 @@ type BlockEntry =
 const OTHER_BLOCK =
   /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 
+/** The value of a field line whose opening `**` is closed at the end of the value, without that close. */
+function withoutClosingBold(line: string, value: string): string {
+  const unbalanced = (value.match(/\*\*/g)?.length ?? 0) % 2 === 1;
+  return /^-\s+\*\*/.test(line) && unbalanced ? value.replace(/\s*\*\*\s*$/, "") : value;
+}
+
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
   let current: BlockEntry | null = null;
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
-    const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
+    const field = STORY_FIELD_LINE.exec(line) ?? /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
     const item = /^\s+(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
     if (line.trim() === "") {
       if (current?.kind === "paragraph") current = null;
     } else if (field) {
       current = {
         kind: "field",
-        key: (field[1] ?? "").toLowerCase(),
-        value: field[2] ?? "",
+        key: (field[1] ?? "").toLowerCase().replace(/^as an$/, "as a"),
+        value: withoutClosingBold(line, field[2] ?? ""),
         items: [],
+        ...(/^as an$/i.test(field[1] ?? "") ? { article: "an" as const } : {}),
       };
       entries.push(current);
     } else if (current?.kind === "field" && item) {
@@ -811,11 +960,13 @@ function storyBlockEntries(body: string): BlockEntry[] {
 /**
  * The one `As a …, I want …, so that ….` sentence of an old story block and its
  * non-goals, or null when the block holds anything else. The sentence is the
- * block's one paragraph or its `Goal` field.
+ * block's one paragraph, its `Goal` field, or its `As a`, `I want` and `So that` fields
+ * joined; a block holding only some of those fields names the parts it lacks.
  */
-function storyParts(body: string): StoryParts | null {
+function storyParts(body: string): StoryParts | PartialStory | null {
   const sentences: string[] = [];
   const nonGoals: string[] = [];
+  const fields = new Map<string, string>();
   for (const entry of storyBlockEntries(body)) {
     if (entry.kind === "other") {
       return null;
@@ -827,14 +978,35 @@ function storyParts(body: string): StoryParts | null {
       continue;
     } else if (entry.items.length > 0) {
       return null;
+    } else if (STORY_FIELDS.some((key) => key === entry.key)) {
+      if (fields.has(entry.key)) return null;
+      fields.set(entry.key, entry.value.trim());
+      if (entry.article) fields.set("article", entry.article);
     } else if (entry.key === "goal") {
       sentences.push(entry.value);
     } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
       return null;
     }
   }
+  if (fields.size > 0) return storyFromFields(fields, sentences.length, nonGoals);
   const sentence = sentences[0]?.trim() ?? "";
   return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
+}
+
+function storyFromFields(
+  fields: ReadonlyMap<string, string>,
+  otherSentences: number,
+  nonGoals: string[],
+): StoryParts | PartialStory | null {
+  if (otherSentences > 0) return null;
+  const missing = STORY_FIELDS.filter((key) => !fields.get(key)).map((key) =>
+    key === "as a" ? "As a" : key === "i want" ? "I want" : "So that",
+  );
+  if (missing.length > 0) return { missing };
+  const part = (key: string): string => (fields.get(key) ?? "").replace(/\.$/, "");
+  const article = fields.get("article") ?? "a";
+  const sentence = `As ${article} ${part("as a")}, I want ${part("i want")}, so that ${part("so that")}.`;
+  return STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
 }
 
 /**
@@ -1080,6 +1252,51 @@ async function archiveExamples(
   return operations;
 }
 
+/**
+ * Refuses an `examples` entry that names no example of an active pack, is for an example no
+ * test-case row cites, names a criterion of another pack or one no citing row names, or places
+ * an example the existing ID map does not hold.
+ */
+function assertExampleEntries(
+  entries: readonly PlannedExample[],
+  packs: readonly OldPack[],
+  map: MigrationIdMap | null,
+): void {
+  for (const entry of entries) {
+    const pack = packs.find((candidate) => candidate.id === packOf(entry.id));
+    const example = pack?.examples.find((candidate) => candidate.id === entry.id);
+    if (!pack || pack.retired || !example) {
+      throw new MigrationInputError(`${PLAN_PATH}: unknown active example ${entry.id}`);
+    }
+    if (
+      packOf(entry.criterion) !== pack.id ||
+      !pack.criteria.some((c) => c.id === entry.criterion)
+    ) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} names criterion ${entry.criterion}, which is not a criterion of ${pack.id}`,
+      );
+    }
+    if (retiredLegacyStatus(example.status)) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} is ${example.status} and cannot be placed`,
+      );
+    }
+    const cited = pack.cases.filter((item) => item.examples.includes(entry.id));
+    if (!cited.some((item) => item.criteria.includes(entry.criterion))) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} is placed under ${entry.criterion}, which ${
+          cited.length === 0 ? "no test-case row cites it under" : "no citing test-case row names"
+        }`,
+      );
+    }
+    if (map !== null && map.ids[pack.id]?.[entry.id] === undefined) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} places an example the ID map does not hold`,
+      );
+    }
+  }
+}
+
 export const step04: MigrationStep = {
   number: 4,
   writeSet: ["qfai", "specs", "contracts"],
@@ -1089,18 +1306,21 @@ export const step04: MigrationStep = {
     const forAPerson: string[] = [];
     const packIds = await listPacks(context.specsDir);
     const existingMap = await readIdMap(context.root);
-    if (packIds.length === 0 && existingMap === null) return { operations, forAPerson };
+    // With no spec pack left there is nothing to place, so no plan is read.
+    if (packIds.length === 0) return { operations, forAPerson };
     const plan = await readMigrationPlan(context);
     if (plan === null) throw new MigrationInputError(`${PLAN_PATH} is missing`);
-    if (packIds.length === 0 && existingMap !== null) {
-      assertUnchangedPlacements(plan, existingMap);
-      return { operations, forAPerson };
-    }
     const packs = await Promise.all(packIds.map((id) => readOldPack(context, id)));
     if (existingMap !== null && packs.every((pack) => pack.retired)) {
       assertUnchangedPlacements(plan, existingMap);
+      // An entry the map does not hold places an item outside it, whatever the packs' status.
+      const added = plan.examples.filter(
+        (entry) => existingMap.ids[packOf(entry.id)]?.[entry.id] === undefined,
+      );
+      assertExampleEntries(added, packs, existingMap);
       return { operations, forAPerson };
     }
+    assertExampleEntries(plan.examples, packs, existingMap);
     for (const pack of packs.filter((item) => !item.retired)) {
       for (const story of pack.stories.filter((item) => item.title === "")) {
         forAPerson.push(
@@ -1153,10 +1373,12 @@ export const step04: MigrationStep = {
       }
     }
     const exampleCriterion = new Map<string, string>();
+    const entryCriterion = new Map(plan.examples.map((entry) => [entry.id, entry.criterion]));
     for (const pack of packs) {
       for (const example of pack.examples) {
         if (retiredLegacyStatus(example.status)) continue;
-        const criterion = derivedCriterion(example.id, pack.cases);
+        const criterion =
+          entryCriterion.get(example.id) ?? derivedCriterion(example.id, pack.cases);
         if (
           criterion &&
           ownerByCriterion.has(criterion) &&
@@ -1205,15 +1427,21 @@ export const step04: MigrationStep = {
         contract: ruleContracts.get(rule.id) ?? "",
       })),
     };
-    for (const rule of plan.rules) {
+    for (const rule of [...plan.rules, ...plan.marks]) {
       const pack = byPack.get(packOf(rule.id));
       const oldRule = pack?.rules.find((candidate) => candidate.id === rule.id);
       if (!oldRule || pack?.retired) {
         throw new MigrationInputError(`${PLAN_PATH}: unknown active rule ${rule.id}`);
       }
-      if (retiredLegacyStatus(oldRule.status)) {
+      const retiring = "retire" in rule && rule.retire !== null;
+      if (retiredLegacyStatus(oldRule.status) && !retiring) {
         throw new MigrationInputError(
           `${PLAN_PATH}: ${rule.id} is ${oldRule.status} and cannot be placed`,
+        );
+      }
+      if ("retire" in rule && rule.retire === null && !isDashReference(oldRule.contractRefs)) {
+        throw new MigrationInputError(
+          `${PLAN_PATH}: ${rule.id} binds none, but its Contract-Refs is not "-"`,
         );
       }
     }
@@ -1259,6 +1487,16 @@ export const step04: MigrationStep = {
           const prior = existingMap.ids[pack]?.[oldId];
           if (prior !== newId) {
             throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${oldId}`);
+          }
+        }
+      }
+      // An example the map holds and this run no longer places would be dropped from the story
+      // tree while its annotations still map to it.
+      for (const pack of packs.filter((item) => !item.retired)) {
+        for (const example of pack.examples) {
+          const prior = existingMap.ids[pack.id]?.[example.id];
+          if (prior !== undefined && ids[pack.id]?.[example.id] === undefined) {
+            throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${example.id}`);
           }
         }
       }
@@ -1353,10 +1591,15 @@ export const step04: MigrationStep = {
             packMap,
           ),
         );
-        const parts = storyParts(story.body);
-        if (parts === null) {
+        const found = storyParts(story.body);
+        const parts = found !== null && "sentence" in found ? found : null;
+        if (found === null) {
           forAPerson.push(
             `${storyFile}: ${storyId} is not one "As a <actor>, I want <goal>, so that <benefit>." sentence; rewrite its User Story`,
+          );
+        } else if ("missing" in found) {
+          forAPerson.push(
+            `${storyFile}: ${storyId} is missing the ${found.missing.join(" and ")} part of "As a <actor>, I want <goal>, so that <benefit>."; complete its User Story`,
           );
         }
         operations.push({

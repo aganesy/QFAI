@@ -21,6 +21,11 @@ import process from "node:process";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  isMigrationReportPath,
+  migrationReportFiles,
+  readMigrationReport,
+} from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -139,6 +144,7 @@ async function snapshot(root: string): Promise<Map<string, string>> {
     const file = path.join(entry.parentPath, entry.name);
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (/^(?:\.git|node_modules)(?:\/|$)/.test(relative) || entry.isDirectory()) continue;
+    if (isMigrationReportPath(relative)) continue;
     found.set(
       relative,
       entry.isSymbolicLink()
@@ -242,6 +248,22 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       expect(result.stdout).not.toContain(ALREADY_DONE);
     }
     expect(applied.every((result) => result.status === 0 || result.status === 3)).toBe(true);
+    // Each of the twelve steps kept the report of its dry run and of its real run, and the exit code.
+    for (let number = 1; number <= 12; number += 1) {
+      for (const [kind, results] of [
+        ["dry-run", preview],
+        ["run", applied],
+      ] as const) {
+        const kept = await migrationReportFiles(root, kind, number);
+        expect(kept, `step ${number} ${kind}`).toHaveLength(1);
+        const text = await readMigrationReport(root, kept[0] ?? "");
+        const last = text
+          .split(/\r?\n/)
+          .filter((line) => line.trim() !== "")
+          .at(-1);
+        expect(last, `step ${number} ${kind}`).toBe(`Exit code: ${results[number - 1]?.status}`);
+      }
+    }
     expect(applied[11]?.status, applied[11]?.stdout).toBe(0);
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),

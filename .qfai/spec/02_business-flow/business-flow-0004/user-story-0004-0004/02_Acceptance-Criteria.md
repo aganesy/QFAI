@@ -18,4 +18,12 @@ Feature: Move the QFAI directories to their singular names
     Given a project with a .qfai/assistant/skills.local directory
     When step 1 runs
     Then its content is under .qfai/assistant/skill.local and skills.local is gone
+
+  # AC-0004-0004-03
+  Scenario: Step 1 removes the retired traceability keys and runs past the retired-key config issues
+    Given a project whose qfai.config.yaml holds validation.traceability.scMustHaveTest, validation.traceability.unknownContractIdSeverity and prototyping.primarySpecId
+    When step 1 runs
+    Then it does not stop on the config issues those three keys raise
+    And both traceability keys are gone from the file, each listed under Operations
+    And prototyping.primarySpecId is unchanged
 ```

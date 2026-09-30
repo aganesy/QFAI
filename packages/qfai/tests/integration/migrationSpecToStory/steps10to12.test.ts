@@ -33,6 +33,12 @@ import { checkPlans } from "../../../src/core/workflow/plans.js";
 import { isRecord } from "../../../src/core/workflow/parse.js";
 import { runStep } from "../../../src/migration/specToStory/harness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import {
+  MIGRATION_REPORT_DIR,
+  isMigrationReportPath,
+  migrationReportFiles,
+  readMigrationReport,
+} from "../../helpers/migrationReport.js";
 import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import { captureStdout } from "../../helpers/stdout.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
@@ -100,13 +106,17 @@ function section(report: string, name: string): string[] {
     .map((line) => line.slice(2));
 }
 
-/** Every file and link under `root` with what it holds; directories and `.git` are left out. */
+/**
+ * Every file and link under `root` with what it holds. Directories, `.git` and the report
+ * directory are left out: a report file is not a change wherever a step changes no file.
+ */
 async function entries(root: string): Promise<Map<string, string>> {
   const found = new Map<string, string>();
   for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
     const file = path.join(entry.parentPath, entry.name);
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (relative === ".git" || relative.startsWith(".git/") || entry.isDirectory()) continue;
+    if (isMigrationReportPath(relative)) continue;
     const content = entry.isSymbolicLink()
       ? `link:${await readlink(file)}`
       : createHash("sha256")
@@ -389,6 +399,14 @@ async function shippedFreeTextReminder(): Promise<string> {
   const parsed: unknown = JSON.parse(await readFile(SHIPPED_REMINDERS, "utf8"));
   if (!isRecord(parsed)) throw new Error("reminders.json is not an object");
   return JSON.stringify(parsed["free-text-entry"]);
+}
+
+function reportFile(kind: "dry-run" | "run", name: string): string {
+  return `${MIGRATION_REPORT_DIR}/${kind}/${name}`;
+}
+
+function lastLine(report: string): string | undefined {
+  return report.trimEnd().split("\n").at(-1);
 }
 
 let migrated10 = "";
@@ -1034,7 +1052,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
 
 describe("migration step 11: the text the reminder hooks print", () => {
   // QFAI:AC-0004-0013-01
-  it("refreshes an unedited reminders.json, writes a missing one, keeps an edited one and refuses a link", async () => {
+  it("refreshes an unedited reminders.json, writes a missing one, keeps an edited or a deleted one and refuses a link", async () => {
     // QFAI:EX-0004-0013-22
     const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
     const shippedHash = hashAssistantAssetText(shipped);
@@ -1088,6 +1106,22 @@ describe("migration step 11: the text the reminder hooks print", () => {
       `${REMINDERS} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
     );
     expect(await readFile(path.join(elsewhere, "reminders.json"), "utf8")).toBe("{}\n");
+
+    const deleted = await clone(migrated10);
+    await recordReminderText(deleted, await remindersWithout("free-text-entry"));
+    await rm(path.join(deleted, REMINDERS));
+    const lockBefore = await textOrNull(deleted, RULE_LOCK);
+    const skipped = await stepIn(deleted, 11);
+    expect(skipped.code, skipped.output).toBe(0);
+    expect(await textOrNull(deleted, REMINDERS)).toBeNull();
+    expect(await textOrNull(deleted, RULE_LOCK)).toBe(lockBefore);
+    const named = section(skipped.output, "Reminder hooks").filter((line) =>
+      line.includes(REMINDERS),
+    );
+    expect(
+      named.some((line) => line.includes("kept deleted")),
+      `Reminder hooks: ${named.join(" | ")}`,
+    ).toBe(true);
   });
 });
 
@@ -1211,5 +1245,182 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
       }
       expect(await fingerprint(root), name).toBe(before);
     }
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-04
+  it("needs no plan.yaml once no spec pack is left, and still refuses one while a pack is left", async () => {
+    // QFAI:EX-0004-0003-35
+    const { root: finished, afterStep7 } = await earlierRelease();
+    const plan = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+    const unsettled = await clone(finished);
+    await appendFile(
+      path.join(
+        unsettled,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md",
+      ),
+      "| TC-0001-0009 | — | — | Cancel an order | The order is gone |\n",
+    );
+    const rewritten = await clone(unsettled);
+    await put(rewritten, plan, "flows: []\nrules: []\n");
+    const removed = await clone(unsettled);
+    await rm(path.join(removed, plan));
+    const packLeft = await clone(afterStep7);
+    await rm(path.join(packLeft, plan));
+
+    const beforePack = await entries(packLeft);
+    const refused = await stepIn(packLeft, 4);
+    expect(refused.code, refused.output).toBe(2);
+    expect(refused.errors).toContain("plan.yaml");
+    expect(changedPaths(beforePack, await entries(packLeft))).toEqual([]);
+
+    for (const [name, root] of [
+      ["rewritten", rewritten],
+      ["removed", removed],
+    ] as const) {
+      for (const step of [4, 7]) {
+        for (const args of [["--dry-run"], []]) {
+          const label = `${name} step ${step} ${args.join(" ")}`.trimEnd();
+          const before = await entries(root);
+          const result = await stepIn(root, step, args);
+          expect(result.code, `${label}: ${result.errors}`).toBe(0);
+          expect(result.output, label).not.toContain(ALREADY_DONE);
+          const headings = [...result.output.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
+          expect(headings, label).toContain("Operations");
+          for (const heading of headings) {
+            expect(result.output, `${label}: ${heading}`).toContain(`## ${heading}\nnone\n`);
+          }
+          expect(changedPaths(before, await entries(root)), label).toEqual([]);
+        }
+      }
+      const five = await stepIn(root, 5);
+      expect(five.code, name).toBe(3);
+      expect(section(five.output, "For a person"), name).toEqual([
+        expect.stringContaining("TC-0001-0009: no criterion"),
+      ]);
+    }
+  }, 300_000);
+});
+
+describe("migration steps 1 to 12 on a project holding a retired configuration key", () => {
+  // QFAI:AC-0004-0004-03
+  it("removes the retired traceability keys and runs past the retired-key config issues", async () => {
+    const root = await oldProject();
+    expect((await loadConfig(root)).issues).toEqual([]);
+    await writeConfig(root, (config) => {
+      const validation = isRecord(config.validation) ? config.validation : {};
+      const traceability = isRecord(validation.traceability) ? validation.traceability : {};
+      traceability.scMustHaveTest = true;
+      traceability.unknownContractIdSeverity = "warning";
+      validation.traceability = traceability;
+      config.validation = validation;
+      config.prototyping = { primarySpecId: "spec-0001" };
+    });
+    const retired = (await loadConfig(root)).issues.filter((issue) =>
+      issue.message.includes("is retired"),
+    );
+    expect(retired).toHaveLength(3);
+
+    const result = await stepIn(root, 1);
+
+    expect(result.code, result.errors).toBe(0);
+    const operations = section(result.output, "Operations");
+    for (const key of ["scMustHaveTest", "unknownContractIdSeverity"]) {
+      expect(
+        operations.some((line) => line.includes(key)),
+        `${key} in ${operations.join(" | ")}`,
+      ).toBe(true);
+    }
+    const config: unknown = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8"));
+    expect(config).not.toHaveProperty(["validation", "traceability", "scMustHaveTest"]);
+    expect(config).not.toHaveProperty(["validation", "traceability", "unknownContractIdSeverity"]);
+    expect(config).toHaveProperty(["prototyping", "primarySpecId"], "spec-0001");
+  });
+
+  it("runs steps 1 to 3 past primarySpecId and lists it for a person at step 3", async () => {
+    // QFAI:EX-0004-0003-34
+    const root = await oldProject();
+    await writeConfig(root, (config) => {
+      config.prototyping = { primarySpecId: "spec-0001" };
+    });
+    expect((await loadConfig(root)).issues.map((issue) => issue.message)).toEqual([
+      expect.stringContaining("prototyping.primarySpecId"),
+    ]);
+    for (const step of [1, 2]) {
+      const result = await stepIn(root, step);
+      expect(result.code, `step ${step}: ${result.errors}`).not.toBe(2);
+    }
+    const third = await stepIn(root, 3);
+    expect(third.code, third.errors).toBe(3);
+    const items = section(third.output, "For a person");
+    expect(
+      items.some(
+        (item) => item.includes("prototyping.primarySpecId") && item.includes("spec-0001"),
+      ),
+      items.join(" | "),
+    ).toBe(true);
+  }, 300_000);
+
+  it("refuses steps 4 to 12 naming primarySpecId and writes nothing but the report", async () => {
+    // QFAI:EX-0004-0003-34
+    const root = await oldProject();
+    await throughStep(root, 3);
+    const control = await stepIn(root, 4, ["--dry-run"]);
+    expect(control.code, control.errors).not.toBe(2);
+    await writeConfig(root, (config) => {
+      config.prototyping = { primarySpecId: "spec-0001" };
+    });
+    for (let step = 4; step <= 12; step += 1) {
+      const before = await entries(root);
+      const result = await stepIn(root, step);
+      expect(result.code, `step ${step}: ${result.output}`).toBe(2);
+      expect(result.errors, `step ${step}`).toContain("prototyping.primarySpecId");
+      expect(changedPaths(before, await entries(root)), `step ${step}`).toEqual([]);
+    }
+  }, 300_000);
+});
+
+describe("migration steps 11 and 12: the report file", () => {
+  // QFAI:AC-0004-0003-06
+  it("prints each report, keeps it with its exit code, and leaves the file out of a no-change check", async () => {
+    const occupied = await clone(migrated10);
+    await mkdir(path.join(occupied, ".claude/skills/qfai-run"), { recursive: true });
+    await writeFile(path.join(occupied, ".claude/skills/qfai-run/notes.md"), "ours\n");
+    const before = await entries(occupied);
+
+    const dry = await stepIn(occupied, 11, ["--dry-run"]);
+    const dryFile = reportFile("dry-run", "step-11-001.md");
+    expect(await migrationReportFiles(occupied, "dry-run", 11)).toEqual([dryFile]);
+    expect(await migrationReportFiles(occupied, "run", 11)).toEqual([]);
+    expect(dry.code).toBe(3);
+    expect(changedPaths(before, await entries(occupied))).toEqual([]);
+    const dryReport = await readMigrationReport(occupied, dryFile);
+    expect(dryReport).toContain(dry.output);
+    expect(lastLine(dryReport)).toBe("Exit code: 3");
+
+    const real = await stepIn(occupied, 11);
+    const runFile = reportFile("run", "step-11-001.md");
+    expect(real.code).toBe(3);
+    const items = section(real.output, "For a person");
+    expect(items).toHaveLength(1);
+    expect(await migrationReportFiles(occupied, "run", 11)).toEqual([runFile]);
+    const runReport = await readMigrationReport(occupied, runFile);
+    expect(runReport).toContain(real.output);
+    expect(runReport).toContain(items[0]);
+    expect(lastLine(runReport)).toBe("Exit code: 3");
+    for (const line of section(real.output, "Operations")) {
+      expect(line).not.toContain(MIGRATION_REPORT_DIR);
+    }
+
+    const clean = await clone(migrated11);
+    const beforeClean = await entries(clean);
+    const passed = await stepIn(clean, 12);
+    expect(passed.code).toBe(0);
+    expect(passed.output).toBe("## Operations\nnone\n\n## For a person\nnone\n\n");
+    const passedFile = reportFile("run", "step-12-001.md");
+    expect(await migrationReportFiles(clean, "run", 12)).toEqual([passedFile]);
+    const passedReport = await readMigrationReport(clean, passedFile);
+    expect(passedReport).toContain(passed.output);
+    expect(lastLine(passedReport)).toBe("Exit code: 0");
+    expect(changedPaths(beforeClean, await entries(clean))).toEqual([]);
   }, 300_000);
 });
