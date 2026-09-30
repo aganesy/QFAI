@@ -1,6 +1,7 @@
 // QFAI:EX-0001-0196-26
 // QFAI:EX-0001-0196-27
 // QFAI:EX-0001-0196-41
+// QFAI:EX-0001-0196-43
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -33,6 +34,11 @@ import { removeTempTree } from "../helpers/tempTree.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders.json";
+
+/** The skill the reminder sends a request to, and the one list of requests both state. */
+const SHIPPED_RUN_SKILL = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/SKILL.md";
+const FREE_TEXT_CASES =
+  "a change, a fix, an investigation of the codebase or a question about the project";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";
@@ -139,6 +145,20 @@ describe("the free-text entry reminder", () => {
       expect(context.length).toBeLessThan(1000);
     },
   );
+
+  it("names the same cases the qfai-run skill names", async () => {
+    const stdout = await runReminderHook(
+      {
+        command: "node",
+        args: argsOf(promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER)),
+      },
+      projectDirOf(repoRoot, SHIPPED_SETTINGS),
+    );
+    expect(contextOf(stdout)).toContain(FREE_TEXT_CASES);
+    const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
+    const description = /^description: "(.*)"$/m.exec(skill)?.[1];
+    expect(description).toContain(FREE_TEXT_CASES);
+  });
 
   it("is the same group in both Claude Code settings files", async () => {
     const [mine, shipped] = await Promise.all([OWN_SETTINGS, SHIPPED_SETTINGS].map(readGroups));

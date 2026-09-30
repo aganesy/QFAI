@@ -52,6 +52,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   sentence. An ID written both as an index table row and as a heading section
   is one record for every kind of record, and only that record's own lines are
   removed when a step moves it.
+- **The free-text entry names one set of requests.** The prompt-time reminder and the
+  `qfai-run` description both say a change, a fix, an investigation of the
+  codebase or a question about the project. The entry line `qfai init` writes
+  into `AGENTS.md` and `CLAUDE.md` is unchanged.
 
 ### Fixed
 
