@@ -13,65 +13,71 @@ dependencies:
 version: 1.0.0
 ---
 
-# 仕様書駆動開発（QFAI Toolkit）運用ガイド
+# Spec-Driven Development (QFAI Toolkit) Operations Guide
 
-QFAI は `.qfai/` 配下の成果物を SSOT として扱い、検証とレポートで整合性を担保する。
-契約参照の SSOT は Spec（QFAI-CONTRACT-REF）とする。
+QFAI treats the story tree under `.qfai/spec/` as the specification source.
+The discussion pack supplies upstream context. Contract rules derive from
+examples in the business flows.
 
-## 全体フロー（成果物ベース）
+## Overall Flow (by artifact)
 
 ```text
-.qfai/discussion（任意の上流入力）
+.qfai/discussion (upstream input when available)
         ↓
-.qfai/specs（_policies + spec-NNNN）
+.qfai/spec/01_policy
         ↓
-.qfai/contracts（ui / api / db / design）
+.qfai/spec/02_business-flow (BF → US → AC → EX)
+        ↓
+.qfai/spec/03_contract (BR → EX)
         ↓
 qfai validate → .qfai/report/validate.json
         ↓
 qfai report → .qfai/report/report.md
 ```
 
-## フェーズ別の要点
+## Key Points by Phase
 
-### Phase 0: 要件の取り込み
+### Phase 0: Importing requirements
 
 - A discussion pack under `.qfai/discussion/` is the usual input, and it is
   optional. A spec set taken in without one is recorded as import-lite evidence
   instead.
 
-### Phase 1: Spec Pack 作成
+### Phase 1: Policy and business flows
 
-- 配置: `.qfai/specs/spec-NNNN/`
-- The required files are `01_Spec.md` through `09_delta.md`, plus `10_Plan.md`.
-  `_policies/` requires `01_Objective.md` through `11_Slice-Policy.md`. Both sets
-  are listed in `02_project/naming.md`, and `E_SPEC_MISSING_FILESET` reports a
-  missing one.
-- `09_delta.md` is append-only. It records what changed, and the Triage table
-  records which requirement drove it and who approved the operation.
+- Write policy first, then each concrete business flow and its stories,
+  acceptance criteria and examples. This repository groups its stories into
+  four flows: development, pull request CI, workspace diagnosis, and migration.
+- Each story has `01_User-story.md`, `02_Acceptance-Criteria.md` and
+  `03_Example.md`. Each EX cites one AC. See `02_project/naming.md`.
+- Record decisions and unresolved questions in `decisions.md` and
+  `open-questions.md`.
 
-### Phase 2: Contracts の作成
+### Phase 2: Writing contracts
 
-- Place each contract under its kind's directory in `.qfai/contracts/`, with
-  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` at the top of the file.
-- Keep the Contract Index in `_policies/05_Contracts.md` current. An indexed
-  file that does not exist stops the run.
+- Write contract rules from the agreed examples. A BR belongs to one contract
+  and cites the EX IDs it explains.
+- Place contracts under `.qfai/spec/03_contract/` and keep
+  `03_contract/contracts.md` current. API, DB and UI contracts retain
+  their `QFAI-CONTRACT-ID` declarations; a CLI contract declares `CLI-NNNN` in
+  its H1.
 
-### Phase 3: 検証とレポート
+### Phase 3: Validation and reporting
 
-- `npx qfai validate --fail-on error` でエラー 0 を確認
-- `npx qfai report` でレポートを生成する
+- Confirm zero errors with `npx qfai validate --fail-on error`
+- Generate the report with `npx qfai report`
 
-## 品質ゲート（最低限）
+## Quality Gates (minimum)
 
-- Spec Pack が 1 つ以上存在する
-- Every required file of each pack is present
-- ID の形式が正しい（`spec-NNNN` / `US` / `AC` / `BR` / `EX` / `TC` / `CON-*`）
-- The `AC → BR → EX → TC` chain resolves, with no reference to an unregistered ID
-- Each spec declares its contract references
-- `validate` の error が 0
+- Each business flow and story has its required files and valid IDs.
+- Every spec-tree document conforms to its schema (`QFAI-DOCSCHEMA-001`).
+- The `BF → US → AC → EX ← BR` links resolve, with no undeclared ID.
+- Every BF has an E2E test, every AC an integration or API test, and every EX
+  a selected non-E2E test, unless a `DONE` decision row exempts its own item.
+- Contract index entries resolve to their files.
+- `validate` reports zero errors
 
-## 実装に進む前の確認
+## Before Moving to Implementation
 
-- 既存の実装パターンは `.instruction/02_project/patterns.md` を参照
-- 不明点が残る場合は実装せず質問する
+- For existing implementation patterns, see `.instruction/02_project/patterns.md`
+- If anything is still unclear, ask instead of implementing

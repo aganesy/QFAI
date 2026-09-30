@@ -95,6 +95,9 @@ describe("review pack revision", () => {
     // the current contract gets an error instead — see below.
     expect(found[0]?.severity).toBe("warning");
     expect(found[0]?.suggested_action).toContain("evidence-revision.md");
+    expect(found[0]?.suggested_action).toContain(
+      ".qfai/assistant/skill/qfai-implement/references/evidence-revision.md",
+    );
     // The remedy has to name the form the reference accepts. It said
     // `working-tree+<porcelain digest>`, which that reference now forbids by
     // name: porcelain gives paths and states, so re-editing the very file

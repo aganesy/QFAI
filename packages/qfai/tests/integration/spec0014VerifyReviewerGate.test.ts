@@ -10,11 +10,12 @@
  * The routed reviewers' gate is a clause an agent executes, not a code path, so
  * what a test can hold there is that the clauses stay: the reviewer answers only
  * `PASS` or `REVISE`, and no DONE or handoff is declared until every routed
- * blocking reviewer returns `PASS`. Each clause is read under the section that
- * makes it binding, in the copy `qfai init` ships and in the copy this
- * repository runs.
+ * blocking reviewer returns `PASS`. The first two are the shared delegation
+ * baseline's, which every skill inherits; the handoff clause is the skill's own.
+ * Each clause is read under the section that makes it binding, in the copy
+ * `qfai init` ships and in the copy this repository runs.
  */
-// QFAI:SPEC-0014:TC-0014-0009
+// QFAI:EX-0001-0157-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,11 +30,12 @@ import { validateProject } from "../../src/core/validate.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const SKILL_REL = ".qfai/assistant/skills/qfai-verify/SKILL.md";
+const SKILL_REL = ".qfai/assistant/skill/qfai-verify/SKILL.md";
+const BASELINE_REL = ".qfai/assistant/rule/shared-skill-delegation-baseline.md";
 
 const COPIES = [
-  ["shipped", path.join(PACKAGE_ROOT, "assets", "init", SKILL_REL)],
-  ["installed", path.join(REPO_ROOT, SKILL_REL)],
+  ["shipped", path.join(PACKAGE_ROOT, "assets", "init")],
+  ["installed", REPO_ROOT],
 ] as const;
 
 const roots: string[] = [];
@@ -77,10 +79,10 @@ async function projectWithCritique(mobileVerdict: "PASS" | "REVISE"): Promise<st
   return root;
 }
 
-/** The body of the `### <heading>` section, up to the next heading of any level. */
+/** The body of the section a heading line opens, up to the next heading of any level. */
 function section(markdown: string, heading: string): string {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `### ${heading}`);
+  const start = lines.findIndex((line) => line.trim() === heading);
   if (start === -1) return "";
   const rest = lines.slice(start + 1);
   const end = rest.findIndex((line) => /^#{1,6} /.test(line));
@@ -110,18 +112,25 @@ describe("TC-0014-0009: verify holds completion behind a reviewer PASS", () => {
     expect(result.issues.filter((found) => found.code === "QFAI-CRIT-008")).toEqual([]);
   });
 
-  for (const [copy, file] of COPIES) {
+  for (const [copy, root] of COPIES) {
     it(`${copy}: the reviewer answers only PASS or REVISE`, async () => {
-      const roles = section(await readFile(file, "utf-8"), "Stage Minimum Roles (MUST)");
-      expect(roles).toContain(
-        "- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.",
+      const baseline = await readFile(path.join(root, BASELINE_REL), "utf-8");
+      expect(section(baseline, "### Verdict vocabulary")).toContain(
+        "- Reviewer responses in-flight use `Result: PASS | REVISE` (this file).",
       );
     });
 
     it(`${copy}: a REVISE from a routed blocking reviewer blocks DONE and handoff`, async () => {
-      const gate = section(await readFile(file, "utf-8"), "Reviewer Gate (MUST)");
-      expect(gate).toContain(
-        "- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.",
+      const baseline = await readFile(path.join(root, BASELINE_REL), "utf-8");
+      expect(section(baseline, "## Reviewer Gate Baseline")).toContain(
+        "- Final completion gate must be delegated to an independent reviewer.",
+      );
+      expect(baseline).toContain(
+        "- Do not declare DONE until all routed blocking reviewers return `PASS`.",
+      );
+      const review = section(await readFile(path.join(root, SKILL_REL), "utf-8"), "## Review");
+      expect(review).toContain(
+        "- Do not hand off until all routed blocking reviewers return `PASS`.",
       );
     });
   }
