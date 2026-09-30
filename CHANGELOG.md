@@ -4,6 +4,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`qfai validate --profile full` no longer fails a migrated UI project on a
+  fresh checkout.** Migration step 10 stops tracking `.qfai/evidence/`, so a
+  clean checkout has no `.qfai/evidence/prototyping/`, and the generated CI
+  workflow then failed on `QFAI-PROT-001` (missing `prototyping.json`),
+  `QFAI-UIE-001` and `QFAI-UIE-002` for every project with UI contracts that
+  declare `screens[]`. The `full` and `verify` profiles now skip those three
+  presence checks while that directory does not exist. The `prototyping` and
+  `saas-package` profiles still run them, and so do `full` and `verify` once
+  the directory exists.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
