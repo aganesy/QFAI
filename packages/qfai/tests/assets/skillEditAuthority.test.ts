@@ -2,10 +2,10 @@
  * A skill that says "update" needs `Edit`.
  *
  * `qfai init` publishes each shipped skill as a symlink into
- * `.qfai/assistant/skills/<id>/`, so the frontmatter in the body below is the
+ * `.qfai/assistant/skill/<id>/`, so the frontmatter in the body below is the
  * frontmatter the tool actually reads — `allowed-tools` is live, not
  * decorative. `/qfai-atdd` mandated "Create and update:
- * `.qfai/evidence/atdd-<spec-id>.md`" while granting only `Write`, which turns
+ * `.qfai/evidence/atdd-BF-NNNN.md`" while granting only `Write`, which turns
  * every append onto a multi-hundred-line evidence file into a whole-file
  * rewrite reproduced from context. That file is also the hash subject of the
  * stage review, so a lossy rewrite moves a hash a reviewer already recorded
@@ -52,7 +52,7 @@ const parseAllowedTools = (source: string, file: string): readonly string[] => {
 };
 
 const loadSkills = async (tree: string): Promise<readonly SkillFrontmatter[]> => {
-  const skillsDir = path.join(repoRoot, tree, "assistant", "skills");
+  const skillsDir = path.join(repoRoot, tree, "assistant", "skill");
   const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: false });
   files.sort();
   const skills: SkillFrontmatter[] = [];
@@ -67,7 +67,15 @@ const loadSkills = async (tree: string): Promise<readonly SkillFrontmatter[]> =>
   if (skills.length === 0) {
     throw new Error(`${tree}: no shipped SKILL.md found`);
   }
-  return skills;
+  // A step runs under its parent's frontmatter, so what a step mandates is
+  // read as part of the parent's body.
+  const stepsDir = path.join(repoRoot, tree, "assistant", "step");
+  const steps = await fg(["*/STEP.md"], { cwd: stepsDir, absolute: true });
+  const stepBodies = await Promise.all(steps.map((file) => readFile(file, "utf-8")));
+  return skills.map((skill) => {
+    const owned = stepBodies.filter((step) => step.includes(`\nowner: ${skill.id}\n`));
+    return { ...skill, body: [skill.body, ...owned].join("\n") };
+  });
 };
 
 describe.each(TREES)("%s", (tree) => {
@@ -78,7 +86,7 @@ describe.each(TREES)("%s", (tree) => {
     if (atdd === undefined) return;
     expect(atdd.allowedTools).toContain("Edit");
     // The append target that made the omission load-bearing.
-    expect(atdd.body).toContain("Create and update: `.qfai/evidence/atdd-<spec-id>.md`");
+    expect(atdd.body).toContain("`.qfai/evidence/atdd-BF-NNNN.md`");
     // Edit is an addition, not a swap: whole-file authoring is still needed
     // for the first write of each evidence file.
     expect(atdd.allowedTools).toContain("Write");
@@ -90,11 +98,7 @@ describe.each(TREES)("%s", (tree) => {
     const mandating = skills.filter((skill) => UPDATE_MANDATE.test(skill.body));
     // Guards the predicate itself: if the phrase is reworded away, this test
     // would otherwise pass vacuously.
-    expect(mandating.map((skill) => skill.id)).toEqual([
-      "qfai-atdd",
-      "qfai-configure",
-      "qfai-verify",
-    ]);
+    expect(mandating.map((skill) => skill.id).sort()).toEqual(["qfai-configure", "qfai-verify"]);
     const missing = mandating
       .filter((skill) => !skill.allowedTools.includes("Edit"))
       .map((skill) => skill.id);

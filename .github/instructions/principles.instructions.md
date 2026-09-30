@@ -5,18 +5,18 @@ excludeAgent: "coding-agent"
 
 # Software Engineering Principles Review
 
-ソフトウェア開発・設計の原則やセオリーに照らして、変更が適切かを検証する。
-原則違反を見つけた場合は、どの原則に違反しているかを明示し、改善案を提示すること。
+Check whether a change is sound against established software design principles.
+When you find a violation, name the principle and propose an improvement.
 
-## 設計の基本原則
+## Basic design principles
 
 ### SOLID
 
-- **SRP（単一責任）**: 1つのクラス・関数・モジュールが複数の理由で変更される設計になっていないか。名前から責務が一意に読み取れるか。
-- **OCP（開放閉鎖）**: 既存コードを書き換えずに拡張できる設計か。設定値・依存注入・ストラテジーパターン等で切り替え可能か。
-- **LSP（リスコフの置換）**: 派生型やサブタイプが親の契約を破っていないか。事前条件を厳しくしたり事後条件を弱めたりしていないか。
-- **ISP（インターフェース分離）**: クライアントが使わないメソッドへの依存を強要していないか。インターフェースは小さく役割別に分割されているか。
-- **DIP（依存性逆転）**: 高水準モジュールが低水準の具象に直接依存していないか。モジュール境界では抽象（インターフェース）に依存しているか。
+- **SRP**: Does a class, function or module change for more than one reason? Does its name state its responsibility?
+- **OCP**: Can it be extended without rewriting existing code, through configuration, dependency injection or a strategy?
+- **LSP**: Does a subtype break its parent's contract, by strengthening preconditions or weakening postconditions?
+- **ISP**: Are clients forced to depend on methods they do not use? Are interfaces small and split by role?
+- **DIP**: Does a high-level module depend on a concrete low-level one, rather than on an abstraction at the boundary?
 
 ### How much code — KISS, YAGNI, DRY
 
@@ -32,76 +32,75 @@ Two things the ladder does not decide, which stay a finding here:
   pulled in different directions by several callers costs more than the
   repetition did.
 
-## モジュール間関係の原則
+## Principles of relations between modules
 
-### Separation of Concerns（関心の分離）
+### Separation of Concerns
 
-- ビジネスロジック・UI・データアクセス・インフラなど、異なる関心が1つのモジュールに混在していないか。
+- Are business logic, UI, data access and infrastructure mixed in one module?
 
-### Law of Demeter（最小知識の原則）
+### Law of Demeter
 
-- `a.getB().getC().doSomething()` のようなメソッドチェーンで遠いオブジェクトに依存していないか。
-- オブジェクトは直接の協力者のみとやり取りしているか。
+- Does the code reach a distant object through a chain such as `a.getB().getC().doSomething()`?
 
 ### Minimise Coupling / Maximise Cohesion
 
-- モジュール間の結合度が不必要に高くないか。変更が他モジュールに波及しにくい設計か。
-- 1つのモジュール内の要素は同じ責務に向かってまとまっているか（高凝集）。
+- Is coupling high enough that a change ripples into other modules?
+- Do the elements of a module serve one responsibility?
 
-### Composition over Inheritance（継承より合成）
+### Composition over Inheritance
 
-- 「is-a」関係でないのに継承を使っていないか。振る舞いの組み合わせは合成（委譲・ミックスイン）で実現すべきか。
+- Is inheritance used without an "is-a" relationship? Would composition fit better?
 
-## 堅牢性・安全性の原則
+## Principles of robustness and safety
 
-### Fail Fast（早期失敗）
+### Fail Fast
 
-- 不正な入力や前提条件の違反を関数の冒頭で検出し、即座にエラーを返しているか。
-- 無効な状態が伝播して後続処理で不可解な障害を起こす設計になっていないか。
+- Are invalid input and violated preconditions rejected at the start of a function?
+- Can an invalid state propagate and fail obscurely later?
 
-### Defensive Programming（防御的プログラミング）
+### Defensive Programming
 
-- 外部入力・API応答・ユーザー入力に対して適切なバリデーションがあるか。
-- null/undefined の安全な処理、リソース解放（finally/using）が適切か。
+- Are external input, API responses and user input validated?
+- Are null/undefined handled and resources released (finally/using)?
 
-### Principle of Least Privilege（最小権限）
+### Principle of Least Privilege
 
-- 必要最小限のアクセス権限・スコープで動作しているか。過剰な権限を要求していないか。
+- Does the code run with only the access it needs?
 
-### Design by Contract（契約による設計）
+### Design by Contract
 
-- 関数の事前条件（引数の制約）・事後条件（戻り値の保証）・不変条件が明確か。
+- Are preconditions, postconditions and invariants clear?
 
-## 可読性・保守性の原則
+## Principles of readability and maintainability
 
-### Principle of Least Astonishment（驚き最小の原則）
+### Principle of Least Astonishment
 
-- API・関数の命名と実際の振る舞いが一致しているか。副作用が名前から予測できるか。
-- 言語やフレームワークのイディオムに従っているか。
+- Do names match behaviour, and can side effects be predicted from them?
+- Does the code follow the idioms of its language and framework?
 
-### Boy Scout Rule（来た時よりきれいに）
+### Boy Scout Rule
 
-- 変更箇所の周辺に明らかな改善余地（命名・型安全・不要コード）があれば併せて改善しているか。
+- Was obvious room for improvement near the change (naming, types, dead code) taken?
 
-### Avoid Premature Optimization（早すぎる最適化の回避）
+### Avoid Premature Optimization
 
-- 計測なしに最適化していないか。可読性を犠牲にした最適化がボトルネック以外に適用されていないか。
+- Was anything optimized without measurement, or at the cost of readability outside the bottleneck?
 
-## 振る舞い・インターフェースの原則
+## Principles of behaviour and interfaces
 
-### Tell, Don't Ask（聞くな、命じよ）
+### Tell, Don't Ask
 
-- オブジェクトの内部状態を外部で問い合わせて判断するのではなく、オブジェクトに振る舞いを委ねているか。
+- Does the code tell an object what to do, rather than query its state and decide for it?
 
-### Command Query Separation（CQS）
+### Command Query Separation
 
-- 状態を変更するメソッド（コマンド）と値を返すメソッド（クエリ）が混在していないか。
+- Are state-changing methods and value-returning methods mixed?
 
-### Encapsulation（カプセル化）
+### Encapsulation
 
-- 内部実装の詳細が不必要に外部に露出していないか。公開APIは必要最小限か。
+- Are implementation details exposed? Is the public API the necessary minimum?
 
-## 適用上の注意
+## Notes on applying these principles
 
-- 原則同士はトレードオフになることがある（DRY vs YAGNI、KISS vs OCP など）。文脈に応じたバランスを評価すること。
-- 原則違反の指摘には [MAJOR] or [MINOR] の重要度を付け、なぜその原則が重要かを簡潔に説明すること。
+- Principles trade off (DRY vs YAGNI, KISS vs OCP). Weigh the balance in context.
+- Give each violation a severity of [MAJOR] or [MINOR] and briefly say why it matters.

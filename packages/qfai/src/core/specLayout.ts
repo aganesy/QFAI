@@ -168,7 +168,7 @@ export type SpecEntry = {
   requiredSharedFiles: Partial<Record<string, string>>;
   requiredSharedFileNames: readonly string[];
   deltaCandidates: string[];
-  // 内部参照用の互換プロパティ
+  // Compatibility properties for internal references
   specPath: string;
   scenarioPath: string;
   caseCataloguePath: string;
@@ -335,9 +335,8 @@ async function readSpecLifecycle(specMetaPath: string): Promise<SpecLifecycle | 
  * nothing, names the spec itself, or names a spec that is retired or declares
  * no readable lifecycle means the obligations moved nowhere — and demoting
  * the ledger would drop every outstanding row out of the gate with no spec
- * left owing it. `QFAI-STATUS-004` reports a dangling reference, but only
- * under `--profile full`; `--profile tdd` runs `validateTddList` without
- * `validateSpecPacks`, and that is the profile the completion gate uses.
+ * left owing it. An incomplete declaration therefore leaves the spec active
+ * for callers that still read the historical spec layout.
  */
 function resolveSpecStatus(
   specId: string,

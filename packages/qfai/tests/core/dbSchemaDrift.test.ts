@@ -67,8 +67,8 @@ afterEach(async () => {
 describe("the order the contracts are applied in", () => {
   it("puts a contract after the one its apply order names", () => {
     const ordered = orderByDeclaredDependencies([
-      { file: "b.sql", ids: ["CON-DB-0002"], dependsOn: ["CON-DB-0001"] },
-      { file: "a.sql", ids: ["CON-DB-0001"], dependsOn: [] },
+      { file: "b.sql", ids: ["DB-0002"], dependsOn: ["DB-0001"] },
+      { file: "a.sql", ids: ["DB-0001"], dependsOn: [] },
     ]);
 
     expect(ordered).toEqual(["a.sql", "b.sql"]);
@@ -76,8 +76,8 @@ describe("the order the contracts are applied in", () => {
 
   it("keeps a contract whose dependency is a cycle rather than dropping it", () => {
     const ordered = orderByDeclaredDependencies([
-      { file: "a.sql", ids: ["CON-DB-0001"], dependsOn: ["CON-DB-0002"] },
-      { file: "b.sql", ids: ["CON-DB-0002"], dependsOn: ["CON-DB-0001"] },
+      { file: "a.sql", ids: ["DB-0001"], dependsOn: ["DB-0002"] },
+      { file: "b.sql", ids: ["DB-0002"], dependsOn: ["DB-0001"] },
     ]);
 
     expect([...ordered].sort()).toEqual(["a.sql", "b.sql"]);
@@ -85,7 +85,7 @@ describe("the order the contracts are applied in", () => {
 
   it("keeps a contract whose dependency names nothing in the set", () => {
     const ordered = orderByDeclaredDependencies([
-      { file: "a.sql", ids: ["CON-DB-0001"], dependsOn: ["CON-DB-0099"] },
+      { file: "a.sql", ids: ["DB-0001"], dependsOn: ["DB-0099"] },
     ]);
 
     expect(ordered).toEqual(["a.sql"]);
@@ -95,23 +95,23 @@ describe("the order the contracts are applied in", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/db/CON-DB-0002.sql",
+      ".qfai/contracts/db/DB-0002.sql",
       [
-        "-- QFAI-CONTRACT-ID: CON-DB-0002",
-        "-- Depends on: CON-DB-0001",
+        "-- QFAI-CONTRACT-ID: DB-0002",
+        "-- Depends on: DB-0001",
         "CREATE TABLE orders (customer_id TEXT REFERENCES customers (id));",
         "",
       ].join("\n"),
     );
     await write(
       root,
-      ".qfai/contracts/db/CON-DB-0001.sql",
-      "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: -\nCREATE TABLE customers (id TEXT PRIMARY KEY);\n",
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: -\nCREATE TABLE customers (id TEXT PRIMARY KEY);\n",
     );
 
     const ordered = await contractApplyOrder(path.join(root, ".qfai/contracts/db"));
 
-    expect(ordered.map((f) => path.basename(f))).toEqual(["CON-DB-0001.sql", "CON-DB-0002.sql"]);
+    expect(ordered.map((f) => path.basename(f))).toEqual(["DB-0001.sql", "DB-0002.sql"]);
   });
 });
 
