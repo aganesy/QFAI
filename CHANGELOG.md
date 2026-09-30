@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-30
+
 ### Added
 
 - The `qfai-migration-v1-to-v2` skill can be run again on a project an earlier
