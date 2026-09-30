@@ -22,6 +22,11 @@
  * reaches it no longer — and a project that installed an earlier set is exactly
  * the one an upgrade is for.
  *
+ * The template's `permissions.allow` entries are merged the same way: the ones
+ * the project lacks are appended after its own, and nothing else under
+ * `permissions` is touched. Claude Code accepts no wildcard for a skill name,
+ * so the template lists each shipped skill.
+ *
  * The groups carry no message text. Each runs a fixed reader over
  * `.agents/rules/reminders.json`, which `qfai init` refreshes wherever the
  * project has not edited it, so a changed message reaches an existing project
@@ -102,6 +107,12 @@ export const CLAUDE_SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 export const CODEX_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 
 export type ClaudeSettings = Record<string, unknown>;
+
+/**
+ * The entry of `events` that stands for the permission entries the merge added,
+ * which are not a hook event.
+ */
+export const PERMISSION_ENTRIES_EVENT = "permissions.allow";
 
 /**
  * Every hook group an earlier template shipped, as the SHA-256 of
@@ -336,11 +347,42 @@ export function mergeDocumentationClarityHooks(
     }
   }
 
+  const allowed = addAllowedEntries(merged, shippedAllowEntries(templateText));
+  if (typeof allowed === "string") return { outcome: "unreadable", reason: allowed };
+  if (allowed) events.push(PERMISSION_ENTRIES_EVENT);
+
   if (events.length === 0) {
     return { outcome: "already-present", edited };
   }
   merged.hooks = mergedHooks;
   return { outcome: "merged", settings: merged, events, edited };
+}
+
+/** The `permissions.allow` strings the template declares, none when it declares no list. */
+function shippedAllowEntries(templateText: string): readonly string[] {
+  const permissions = parseSettings(templateText)?.permissions;
+  const allow = isRecord(permissions) ? permissions.allow : undefined;
+  return isUnknownArray(allow) ? allow.filter((entry) => typeof entry === "string") : [];
+}
+
+/**
+ * Appends the shipped entries the project lacks to `merged.permissions.allow`.
+ *
+ * The project's own entries keep their order and every other key of
+ * `permissions` is left as it is. Returns whether anything was added, or the
+ * reason the project's value cannot be read, which refuses the whole file the
+ * way an unreadable `hooks` value does.
+ */
+function addAllowedEntries(merged: ClaudeSettings, shipped: readonly string[]): boolean | string {
+  if (shipped.length === 0) return false;
+  const permissions = merged.permissions === undefined ? {} : merged.permissions;
+  if (!isRecord(permissions)) return "`permissions` in the project settings file is not an object";
+  const allow = permissions.allow === undefined ? [] : permissions.allow;
+  if (!isUnknownArray(allow)) return "`permissions.allow` is not an array";
+  const missing = shipped.filter((entry) => !allow.includes(entry));
+  if (missing.length === 0) return false;
+  merged.permissions = { ...permissions, allow: [...allow, ...missing] };
+  return true;
 }
 
 /** The template's groups for one event by identity, or `null` when one has no marker. */

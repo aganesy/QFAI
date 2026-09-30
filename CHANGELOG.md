@@ -61,6 +61,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-run` skill says a run ends at `finish` or at `decision` with `stop`, and that
   an answer already given does not end it. In Claude Code the reminders before and
   after a file write print nothing for a file under `.qfai/run/`.
+- **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
+  entry for each shipped skill and `Bash(npx qfai:*)` into `permissions.allow` of
+  `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
+  refused the skills without them. The free-text reminder now tells the agent to stop and say so
+  when `qfai-run` cannot start.
 
 ### Fixed
 

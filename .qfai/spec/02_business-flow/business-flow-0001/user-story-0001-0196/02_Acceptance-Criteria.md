@@ -99,4 +99,14 @@ Feature: Install or upgrade and get the free-text entry
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
     And in `.claude/settings.json` the reminders before and after a file write print nothing for a file under `.qfai/run/`
+
+  # AC-0001-0196-13
+  Scenario: Init allows the shipped skills and the launcher to run without a prompt
+    Given a fresh project, or a project with its own `.claude/settings.json`
+    When `qfai init` runs
+    Then `.claude/settings.json` lists under `permissions.allow` one `Skill(<name>)` entry for each shipped skill and `Bash(npx qfai:*)`
+    And the list holds no wildcard skill pattern
+    And an existing file keeps its own entries in their order and gains only the missing ones, and no other key of `permissions` changes
+    And a `permissions` value init cannot read leaves the file unchanged, with a warning
+    And a second run changes nothing
 ```

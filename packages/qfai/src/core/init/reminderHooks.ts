@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   CODEX_HOOKS_RELATIVE_PATH,
+  PERMISSION_ENTRIES_EVENT,
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
 } from "../claudeCodeHooks.js";
@@ -44,7 +45,10 @@ export function keptHookGroupNote(relativePath: string, group: string): string {
 
 /** What an update adds, as the run reports it. */
 export function reminderHooksUpdateDetail(events: readonly string[]): string {
-  return `reminder hooks: ${events.join(", ")}`;
+  const hooks = events.filter((event) => event !== PERMISSION_ENTRIES_EVENT);
+  const parts = hooks.length > 0 ? [`reminder hooks: ${hooks.join(", ")}`] : [];
+  if (events.includes(PERMISSION_ENTRIES_EVENT)) parts.push("permission entries");
+  return parts.join("; ");
 }
 
 /**

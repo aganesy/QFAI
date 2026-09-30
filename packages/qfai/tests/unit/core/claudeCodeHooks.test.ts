@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+  PERMISSION_ENTRIES_EVENT,
   carriesDocumentationClarityHooks,
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
@@ -406,6 +407,74 @@ describe("an earlier release's hook groups", () => {
     if (result.outcome !== "merged") return;
     expect(groupsFor(result.settings, "PreToolUse")[0]).toEqual(edited);
     expect(result.edited).toEqual([`PreToolUse "${DOCUMENTATION_CLARITY_HOOK_MARKER}"`]);
+  });
+});
+
+// QFAI:EX-0001-0196-47
+// QFAI:EX-0001-0196-48
+describe("the permission entries the template declares", () => {
+  const SHIPPED_ALLOW = ["Skill(qfai-run)", "Bash(npx qfai:*)"];
+  const WITH_ALLOW = JSON.stringify({
+    permissions: { allow: SHIPPED_ALLOW },
+    hooks: JSON.parse(TEMPLATE).hooks,
+  });
+
+  function merged(existing: string): Record<string, unknown> {
+    const result = mergeDocumentationClarityHooks(existing, WITH_ALLOW);
+    if (result.outcome !== "merged") throw new Error(`expected a merge, got ${result.outcome}`);
+    return result.settings;
+  }
+
+  it("adds the entries to a file that has no permissions, and keeps every other key", () => {
+    const settings = merged(JSON.stringify({ model: "x" }));
+    expect(settings.permissions).toEqual({ allow: SHIPPED_ALLOW });
+    expect(settings.model).toBe("x");
+  });
+
+  it("appends only the entries the project lacks, after its own, and touches no other list", () => {
+    const own = {
+      allow: ["Bash(git status)", "Skill(qfai-run)", 7],
+      deny: ["Bash(rm:*)"],
+      ask: ["Bash(git push:*)"],
+    };
+    const settings = merged(JSON.stringify({ permissions: own }));
+    expect(settings.permissions).toEqual({
+      allow: ["Bash(git status)", "Skill(qfai-run)", 7, "Bash(npx qfai:*)"],
+      deny: ["Bash(rm:*)"],
+      ask: ["Bash(git push:*)"],
+    });
+  });
+
+  it("reports the entries as an event of their own, and is a no-op on a second run", () => {
+    const result = mergeDocumentationClarityHooks("{}", WITH_ALLOW);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.events).toEqual(["PreToolUse", "PostToolUse", PERMISSION_ENTRIES_EVENT]);
+    expect(
+      mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), WITH_ALLOW),
+    ).toEqual({ outcome: "already-present", edited: [] });
+  });
+
+  it("adds the entries alone to a file that already carries every hook group", () => {
+    const hooksOnly = serializeClaudeSettings(mergedSettings("{}"));
+    const result = mergeDocumentationClarityHooks(hooksOnly, WITH_ALLOW);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.events).toEqual([PERMISSION_ENTRIES_EVENT]);
+  });
+
+  it.each([
+    ["`permissions` that is not an object", JSON.stringify({ permissions: [] })],
+    ["`permissions.allow` that is not an array", JSON.stringify({ permissions: { allow: "x" } })],
+  ])("refuses a settings file with %s", (_label, existing) => {
+    const result = mergeDocumentationClarityHooks(existing, WITH_ALLOW);
+    expect(result.outcome).toBe("unreadable");
+    if (result.outcome !== "unreadable") return;
+    expect(result.reason).toContain("permissions");
+  });
+
+  it("adds no permissions key when the template declares none", () => {
+    expect(mergedSettings("{}").permissions).toBeUndefined();
   });
 });
 

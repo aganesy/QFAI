@@ -81,6 +81,11 @@ is answered directly, with no run.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
+It also adds `permissions.allow` entries to `.claude/settings.json`: one `Skill(<name>)` for each
+shipped skill and `Bash(npx qfai:*)`. Without them a non-interactive Claude Code run refuses the
+skills. Claude Code accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each
+name is listed. Remove an entry you do not want; the next `npx qfai init` adds it again.
+
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
   stop for your approval. They never change the steps, and a run never loses one.

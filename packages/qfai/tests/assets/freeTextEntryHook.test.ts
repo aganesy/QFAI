@@ -3,6 +3,7 @@
 // QFAI:EX-0001-0196-41
 // QFAI:EX-0001-0196-43
 // QFAI:EX-0001-0196-44
+// QFAI:EX-0001-0196-49
 /**
  * The prompt-time reminder that sends a request naming no skill to `qfai-run`,
  * for Claude Code and for Codex.
@@ -171,6 +172,19 @@ describe("the free-text entry reminder", () => {
     );
     expect(contextOf(stdout)).toContain(
       "A question that one command or one file read answers needs no run: answer it directly.",
+    );
+  });
+
+  it("tells the agent to stop and say so when qfai-run cannot start", async () => {
+    const stdout = await runReminderHook(
+      {
+        command: "node",
+        args: argsOf(promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER)),
+      },
+      projectDirOf(repoRoot, SHIPPED_SETTINGS),
+    );
+    expect(contextOf(stdout)).toContain(
+      "If `qfai-run` cannot start, stop and say so; do not answer without the workflow.",
     );
   });
 
