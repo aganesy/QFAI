@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.12.3",
+  "version": "2.0.1",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -26,6 +26,7 @@
   "files": [
     "dist",
     "assets",
+    "docs/MIGRATION-2.0.0.md",
     "README.md",
     "LICENSE"
   ],
@@ -53,12 +54,14 @@
     "test:cli": "vitest run --project cli",
     "test:unit": "vitest run --project unit",
     "test:scripts": "vitest run --project scripts",
+    "test:windows-parity": "vitest run tests/unit/workflow/ tests/assets/codexToolHooks.test.ts tests/assets/freeTextEntryHook.test.ts tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },
   "dependencies": {
     "@cucumber/gherkin": "^42.0.0",
     "@cucumber/messages": "^34.0.0",
+    "@jackchuka/mdschema": "0.15.4",
     "fast-glob": "^3.3.2",
     "jsdom": "^29.1.1",
     "yaml": "^2.5.1"
@@ -72,6 +75,7 @@
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "ajv": "^8.20.0",
     "markdown-it": "^15.0.0",
     "smol-toml": "^1.6.0",
     "tsup": "^8.3.5",

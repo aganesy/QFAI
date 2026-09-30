@@ -23,7 +23,7 @@ import {
   defaultDatabaseFactory,
   migrationApplyOrder,
 } from "../../core/dbSchemaDrift.js";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../core/logger.js";
 
 export type DbDriftOptions = {
   root: string;

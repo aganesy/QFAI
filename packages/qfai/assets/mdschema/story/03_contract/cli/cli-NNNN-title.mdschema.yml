@@ -1,0 +1,49 @@
+# Document schema: <contractsDir>/cli/cli-NNNN-<slug>.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# CLI-[0-9]{4}: .+$"
+      regex: true
+    description: Contract ID and title.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Ownership boundary$"
+          regex: true
+        description: What this contract decides, and which contract decides the rest.
+        allow_additional: false
+        paragraphs:
+          min: 1
+          max: 3
+        forbidden_text:
+          - pattern: '(?m)^\s*([-*+]|[0-9]+[.)])\s'
+            regex: true
+          - pattern: '(?m)^\s*\|'
+            regex: true
+          - pattern: '(?m)^\s*(```|~~~)'
+            regex: true
+          - pattern: "BR-[0-9]{4}-[0-9]{4}"
+            regex: true
+      - heading:
+          pattern: "^## Business rules$"
+          regex: true
+        description: The rules this contract enforces, each citing the examples that show it.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [BR-ID, Statement, Examples]
+        forbidden_text:
+          - pattern: '(?m)^[^|#\s]'
+            regex: true
+          - pattern: '(?m)^\|[^|\n]*\|[^\n]*BR-[0-9]{4}-[0-9]{4}'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true

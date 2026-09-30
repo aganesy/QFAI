@@ -5,18 +5,18 @@ dependencies: [development-principles-checklist.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-# 開発原則の測定指標
+# Metrics for the Development Principles
 
-品質を定量的に見るための目安。
+Rules of thumb for looking at quality quantitatively.
 
-## 推奨指標
+## Recommended Metrics
 
-- テスト: 主要ロジックのカバレッジ、失敗時の再現テスト有無。
-- 複雑度: 関数の分岐数・行数、責務の粒度。
-- 重複: 同種のロジック・バリデーション・API 呼び出しの重複度。
-- パフォーマンス: N+1、有効なキャッシュの有無、不要な全件取得の有無。
+- Tests: Coverage of the main logic, and whether a reproduction test exists for each failure.
+- Complexity: Number of branches and lines per function, and the granularity of responsibilities.
+- Duplication: How much similar logic, validation and API calls are repeated.
+- Performance: Presence of N+1 queries, effective caching and needless full-table fetches.
 
-## 運用
+## Operation
 
-- CI で定点観測し、悪化した場合は原因と対策を記録する。
-- 数値が改善してもリスク（仕様逸脱・安全性低下）がないか併せて確認する。
+- Observe regularly in CI, and when a metric worsens, record the cause and the countermeasure.
+- Even when a number improves, also check that no risk (specification drift, reduced safety) has crept in.
