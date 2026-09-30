@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Windows parity CI job's timeout is set from measured runs** (#2311).
+  Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
+  now 20, twice the slowest run rounded up to five minutes, down from an
+  unmeasured 30. The per-suite file and test counts and timings are recorded
+  in DEC-1010 of `.qfai/spec/decisions.md`. This affects this repository's CI
+  only.
+
 ## [2.0.1] - 2026-09-30
 
 ### Added
