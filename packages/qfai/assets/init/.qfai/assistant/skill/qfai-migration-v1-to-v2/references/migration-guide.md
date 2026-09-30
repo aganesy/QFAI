@@ -419,10 +419,10 @@ Finish each kind of item that a step leaves as follows:
   example named under `examples` before step 4 needs no edit, because step 8
   rewrites its annotations.
 - **The old-layout error.** While any file remains under a `spec-*/` or
-  `_policies/` directory of the spec directory, `qfai validate` reports one
-  error and runs no other check. It lists each remaining file and ends with a
-  line naming `/qfai-migration-v1-to-v2` and `/qfai-sdd`. Finish those files as
-  above, and the other checks run.
+  `_policies/` directory of the spec directory, `npx qfai validate` reports
+  one error and runs no other check. It lists each remaining file and ends
+  with a line naming `/qfai-migration-v1-to-v2` and `/qfai-sdd`. Finish those
+  files as above, and the other checks run.
 
 An old ID may stand in one old file as an index table row, as a heading section
 or as both. The steps read them as one record, and the two forms must hold equal
