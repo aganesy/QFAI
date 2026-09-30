@@ -17,8 +17,7 @@ Once the plan is checked, and before the first stage:
 
 - the goal, in one sentence;
 - the stages in order;
-- the write scope;
-- when the request changes more than one spec, the part a later run makes.
+- the write scope.
 
 It asks nothing and lists no skipped stage. Text that is not a change request
 gets no run and no announcement.
