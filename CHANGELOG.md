@@ -28,6 +28,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The published notes of 1.10.1, 1.10.2 and 1.11.0 are in English,** cut from
   the same changelog sections as before. The release-notes checks no longer
   carry a rule for notes published in Japanese.
+- **The routing-eval token classes are confirmed** (#2305). The maintainer
+  confirmed every class the agents assigned in the routing-eval token
+  vocabulary, and no class changes. The set of safety-relevant routing seeds is
+  therefore unchanged, and the list derived from these classes may now be
+  recorded. The decision is recorded in `decisions.md`.
 
 ### Fixed
 
