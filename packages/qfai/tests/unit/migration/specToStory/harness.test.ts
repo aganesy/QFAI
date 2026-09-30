@@ -963,6 +963,20 @@ describe("migration step report files", () => {
     }
   });
 
+  it("writes no report through a symbolic link below the project root", async () => {
+    // QFAI:EX-0004-0003-36
+    const root = await oldLayout();
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-report-outside-"));
+    roots.push(outside);
+    await mkdir(path.join(root, ...MIGRATION_REPORT_DIR.split("/")), { recursive: true });
+    await symlink(outside, path.join(root, ...MIGRATION_REPORT_DIR.split("/"), "run"), "junction");
+
+    const result = await stepIn(root, 1);
+
+    expect(result.errors).toContain("The report was not written");
+    expect(await readdir(outside)).toEqual([]);
+  });
+
   it("keeps the report of a refusal once the arguments and the config are found, and of nothing before", async () => {
     // QFAI:EX-0004-0003-37
     const root = await oldLayout();

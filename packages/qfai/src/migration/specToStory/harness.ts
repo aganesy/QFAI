@@ -1264,13 +1264,14 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
   const dryRun = argv.length === 1;
   const captured = captureOutput(io);
   const code = await runConfiguredStep(step, dryRun, root, captured.io);
-  await writeReportFile(
+  const refusal = await writeReportFile(
     root,
     step,
     dryRun,
     { stdout: captured.stdout(), stderr: captured.stderr() },
     code,
   );
+  if (refusal !== null) io.stderr.write(refusal);
   return code;
 }
 

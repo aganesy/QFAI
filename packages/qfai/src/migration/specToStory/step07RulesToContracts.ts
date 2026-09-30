@@ -371,6 +371,8 @@ export const step07: MigrationStep = {
     const groups = new Map<string, Rule[]>();
     const sourceChanges: MigrationOperation[] = [];
     const routedByPack = new Map<string, Set<string>>();
+    const readPacks = new Set<string>();
+    const seenRules = new Set<string>();
     for (const source of sourceFiles) {
       const current = await readMigrationInput(source);
       if (current === null) continue;
@@ -379,6 +381,8 @@ export const step07: MigrationStep = {
       const archived = await readMigrationInput(retired);
       const original = archived ?? current;
       const rows = parseLegacyRecords(original, "BR", source);
+      readPacks.add(specId);
+      for (const row of rows) seenRules.add(row.id);
       const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
       const moved = new Set<string>();
       const notes: string[] = [];
@@ -442,6 +446,13 @@ export const step07: MigrationStep = {
           notes,
         }),
       );
+    }
+    const unmatched = plan.marks.find(
+      (mark) =>
+        readPacks.has(`spec-${/^BR-(\d{4})-/.exec(mark.id)?.[1] ?? ""}`) && !seenRules.has(mark.id),
+    );
+    if (unmatched) {
+      throw new MigrationInputError(`plan.yaml: ${unmatched.id} names no rule of its pack`);
     }
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {

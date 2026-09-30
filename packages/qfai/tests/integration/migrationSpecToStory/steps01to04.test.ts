@@ -1292,6 +1292,24 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("refuses a step 7 rerun whose plan marks a rule the pack does not hold", async () => {
+    // QFAI:EX-0004-0003-39
+    await withProject(async (root) => {
+      await putPlanPack(root);
+      expect((await run(step04, await context(root))).code).toBe(3);
+      await put(
+        root,
+        PLAN_FILE,
+        planYaml({ rules: `${BASE_RULES}  - id: BR-0001-0099\n    binds: none\n` }),
+      );
+      const before = await treeHash(root);
+      const result = await run(step07, await context(root));
+      expect(result.code).toBe(2);
+      expect(result.errors).toContain("BR-0001-0099");
+      expect(await treeHash(root)).toBe(before);
+    });
+  });
+
   it("selects each flow's old section by its exact H2 title", async () => {
     // QFAI:EX-0004-0007-28
     const policy = (second: string): string =>
@@ -1453,6 +1471,44 @@ describe("migration steps 1 to 4", () => {
         await readFile(path.join(root, FLOW_DIR, "user-story-0001-0002/01_User-story.md"), "utf8"),
       ).toBe(`# US-0001-0002: Place order again\n\n## User Story\n\n${sentence}\n`);
       expect(result.output).not.toContain("is not one");
+    });
+  });
+
+  it("keeps the article a story block's As an field was written with", async () => {
+    // QFAI:EX-0004-0007-31
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/02_User-stories.md`,
+        "# Stories\n\n## US-0001-0001: Place order\n\n- As an: administrator\n- I want to place an order\n- So that the cart becomes a purchase.\n",
+      );
+      await run(step04, await context(root));
+      expect(
+        await readFile(path.join(root, FLOW_DIR, "user-story-0001-0001/01_User-story.md"), "utf8"),
+      ).toBe(
+        "# US-0001-0001: Place order\n\n## User Story\n\nAs an administrator, I want to place an order, so that the cart becomes a purchase.\n",
+      );
+    });
+  });
+
+  it("leaves a criterion unresolved when its catalog row names a story that does not exist", async () => {
+    // QFAI:EX-0004-0007-29
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        "# Criteria\n\n## Catalog\n\n| AC-ID | US Ref |\n| --- | --- |\n| AC-0001-0001 | US-0001-9999 |\n\n```gherkin\n# AC-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\n        criteria:\n          - AC-0001-0001\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect((await mapIds(root))["AC-0001-0001"]).toBe("AC-0001-0001-01");
     });
   });
 
