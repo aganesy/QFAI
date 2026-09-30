@@ -72,7 +72,7 @@ export class ProviderRegistry {
     return { status: "skipped", provider: undefined };
   }
 
-  // --- Browser QA provider (WS-B canonical 4-phase) ---
+  // --- Browser QA provider (canonical 4-phase) ---
 
   private qaProviders = new Map<string, BrowserQaProvider>();
 

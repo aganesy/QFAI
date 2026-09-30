@@ -35,29 +35,10 @@
  * ## Digest basis: newline-normalized TEXT
  *
  * Both sides are digested as the sha256 of their newline-normalized text,
- * which is the basis BR-0006-0018 requires (改行正規化後の内容一致) and which
+ * which the workflow integrity rule requires and which
  * the sibling skills-integrity diff already uses. Digesting raw bytes instead
  * would report every installed workflow as drifted on a CRLF checkout — a
  * false advisory for every Windows adopter.
- *
- * The contracts do not merely omit that basis, they state the OPPOSITE one,
- * and the contradiction is named on both sides so a later reader can check it
- * rather than take it on trust. Implemented: BR-0006-0018 (改行正規化後の内容
- * 一致). Contradicting it: the file-state table in §3 of
- * `.qfai/contracts/cli/shipped-workflows.md`, whose `installed` / `modified`
- * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
- * sentence of the `workflows.integrity` section of
- * `.qfai/contracts/cli/qfai-doctor.md`, which says "whose bytes differ".
- * Neither file contains the string `normaliz`, `CRLF` or 改行 anywhere
- * (measured, not assumed), so the normalized basis is attributable to the
- * business rule ALONE.
- *
- * The contradiction is live and belongs to the contract owner, not to a
- * silence this module is free to fill — which is why the two contradicting
- * sections are cited by name above instead of being described. Implementing
- * the business rule is the deliberate call: raw bytes would ship the Windows
- * false advisory. Do not "align" this code to the contract wording without
- * that contradiction being resolved there first.
  *
  * These digests are consequently NOT comparable to the `sha256` field of a
  * provenance entry. That field is a RAW-BYTE digest of exactly the bytes the
@@ -72,7 +53,7 @@
  * together would STILL be wrong, because they answer different questions.
  * `entry.sha256` answers "has the adopter edited this file since install?";
  * the packaged comparison answers "is this adopter behind the copy the
- * running package ships?". REQ-0022 asks for the second, and an adopter who
+ * running package ships?". This check answers the second, and an adopter who
  * never touched a file still has to be told that the package moved on.
  * Do not fold the two together.
  *
@@ -117,30 +98,18 @@ const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
 /**
- * EVERY member of this type is consumed at this revision, and the paragraph that
- * opened here recorded the one that was not — corrected in place rather than
- * appended to, because a reader who stops at the first sentence would otherwise
- * be told the opposite of what the code does. `status === "skipped_unresolved"`
- * was claimed-but-unconsumed, held for the unresolvable-packaged-copy skip of
- * BR-0006-0020; TDD-0039 landed that skip, so `doctor.ts` now reads the member on
- * an arm of its own and the claim is discharged rather than pending.
+ * EVERY member of this type is consumed. `doctor.ts` reads
+ * `status === "skipped_unresolved"` on an arm of its own: the skip the
+ * unresolved-copy rule requires when the packaged copy cannot be resolved.
+ * Widening this status widens that skip, so a second route into
+ * `skipped_unresolved` must be one where the unresolved-copy rule requires a
+ * skip.
  *
- * What that paragraph CONSTRAINED still holds, and the arm is now what enforces
- * it: widening this status widens the skip, so a second route into
- * `skipped_unresolved` must be one BR-0006-0020's skip is true of. The longer
- * argument is version controlled at `.qfai/evidence/implement-spec-0006.md`.
+ * `packagedDir` has TWO consumers: the drift advisory's MESSAGE names it as the
+ * packaged source path to copy from, per the message rule of the `qfai doctor`
+ * contract, and the advisory's `details` carries it.
  *
- * `packagedDir` left that list one row EARLIER, and its departure is still worth
- * stating, because the consumer is not the one this comment used to predict: the
- * drift advisory's MESSAGE names it as the packaged source path to copy from, per
- * the required message content of `.qfai/contracts/cli/qfai-doctor.md`. Its
- * `details` slot (BR-0006-0022) has since landed with TDD-0036 / TC-0006-0034, so
- * the field now has TWO consumers, and the older sentence here — which said the
- * slot was "still outstanding" — was true when written and false from that commit
- * onward. It is corrected rather than annotated, because this paragraph's whole
- * job is to be the checkable inventory.
- *
- * THE CONVENTION THAT ROW LANDED: `details` carries `packagedDir` beside
+ * THE CONVENTION FOR THAT SLOT: `details` carries `packagedDir` beside
  * `workflowsDir`, which puts an ABSOLUTE NATIVE path next to a ROOT-RELATIVE
  * POSIX one in a single JSON object. That mix is intended and is keyed to the
  * ROOT the path belongs to, not to the key it sits under — in-tree paths are
@@ -199,15 +168,14 @@ export type WorkflowsIntegrityDiff = {
   /**
    * Root-relative POSIX paths of the recorded names whose installed file is
    * ABSENT, sorted by codepoint — the `declined` row of the shipped-workflows
-   * state enum (§3): an entry present, the file deliberately removed.
+   * state enum: an entry present, the file deliberately removed.
    *
    * Reported as PAYLOAD and never as a trigger. `status` is keyed on `modified`
    * alone, so a tree whose recorded names were all removed stays `ok` and emits
-   * NO DRIFT FINDING — the `ok` check itself is still registered, which
-   * TC-0006-0035 pins with a guard. (An earlier draft of this sentence said it
-   * "emits nothing", which is measurably false: the run prints
+   * NO DRIFT FINDING — the `ok` check itself is still registered, and a test
+   * pins that with a guard: the run prints
    * `[ok] workflows.integrity: installed shipped workflow(s) match the packaged
-   * copy`.) Reporting no drift finding is what §3's "never reported again"
+   * copy`. Reporting no drift finding is what the contract's "never reported again"
    * requires. This field exists so that an operator reading a finding raised for
    * some OTHER name can see that QFAI knows the missing file is missing and is
    * leaving it alone.
@@ -234,7 +202,7 @@ export type WorkflowsIntegrityDiff = {
    * was looked at. The record is empty for a missing, unreadable or malformed
    * file by contract, and an empty record puts every shipped name in the
    * `adopter-owned` or `absent` row of the shipped-workflows state enum
-   * (§3) — both of which the enum and the doctor contract's emission table
+   * — both of which the enum and the doctor contract's emission table
    * require to stay SILENT, the latter keying `ok` to `installed` alone. So a
    * consumer must be able to tell "compared some names, all matched" from
    * "compared no names", and the second must produce no output.
@@ -246,7 +214,7 @@ export type WorkflowsIntegrityDiff = {
    *
    * Not narrowed to "names that resolved to `installed`", which would be the
    * stronger-looking predicate and is wrong: a tree whose recorded files were
-   * all deliberately removed has zero `installed` names, and BR-0006-0022
+   * all deliberately removed has zero `installed` names, and the workflow rule
    * requires severity `ok` there — truthfully, because QFAI EXAMINED every
    * recorded name and found nothing stale.
    *
@@ -579,9 +547,9 @@ export async function diffInstalledShippedWorkflows(
   // `status` reads `modified` ALONE. A declined-only tree therefore stays `ok`
   // and emits NO DRIFT FINDING — the `ok` check itself is still registered; see
   // the `declined` field's docstring above, which carries the measurement. The
-  // shipped-workflows contract §3 says a declined name is never reported again,
-  // so promoting it to a trigger here would report it forever. TC-0006-0035 is
-  // the boundary that pins this.
+  // shipped-workflows contract says a declined name is never reported again,
+  // so promoting it to a trigger here would report it forever. A declined-only
+  // test pins this boundary.
   return {
     status: modified.length > 0 ? "modified" : "ok",
     workflowsDir: WORKFLOWS_DIR_RELATIVE,

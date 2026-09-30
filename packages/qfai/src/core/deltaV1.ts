@@ -373,7 +373,7 @@ function parseYamlMeta(block: string | null): {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return {
         value: null,
-        error: "Meta YAML はオブジェクト形式で記述してください。",
+        error: "Meta YAML must be written as an object.",
       };
     }
     return { value: parsed as Record<string, unknown>, error: null };
@@ -381,7 +381,7 @@ function parseYamlMeta(block: string | null): {
     const message = error instanceof Error ? error.message : "unknown error";
     return {
       value: null,
-      error: `Meta YAML の解析に失敗しました: ${message}`,
+      error: `Failed to parse Meta YAML: ${message}`,
     };
   }
 }
@@ -425,7 +425,7 @@ function parseVerificationPlan(body: string | null): {
     if (!Array.isArray(parsed)) {
       return {
         planHeadingLine: planHeading.line,
-        parseError: "Verification.Plan は YAML 配列（- id: ...）で記述してください。",
+        parseError: "Verification.Plan must be written as a YAML array (- id: ...).",
         items: [],
       };
     }
@@ -443,7 +443,7 @@ function parseVerificationPlan(body: string | null): {
     const message = error instanceof Error ? error.message : "unknown error";
     return {
       planHeadingLine: planHeading.line,
-      parseError: `Verification.Plan YAML の解析に失敗しました: ${message}`,
+      parseError: `Failed to parse Verification.Plan YAML: ${message}`,
       items: [],
     };
   }

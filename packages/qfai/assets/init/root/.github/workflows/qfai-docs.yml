@@ -4,16 +4,18 @@
 # and the syntax of every Mermaid diagram embedded in them.
 #
 # This is the check markdownlint cannot make. markdownlint answers "is this
-# well-formed Markdown" and treats a fenced block as opaque text, so a spec with
-# no Acceptance Criteria section, a test-case table missing its `EX-Ref` column,
-# and a diagram that renders as an error box all pass it. This lane answers the
-# other question, from the schemas the package ships:
+# well-formed Markdown" and treats a fenced block as opaque text, so a story
+# with no Criteria section, an example table missing its `AC-Ref` column, and a
+# diagram that renders as an error box all pass it. This lane answers the other
+# question, from the schemas the package ships:
 #
-#   - `mdschema` validates each SDD document against the schema for its path -
-#     which chapters it needs, and whether each is a list, a table with named
-#     columns, a Gherkin block or a Mermaid diagram. The schemas are the ones
-#     `qfai init` seeded your templates from, so a document written from the
-#     template passes by construction.
+#   - `mdschema` validates each document under your spec tree against the
+#     schema for its path. The schemas are closed: they fix the headings, their
+#     order, and the one kind of content each section holds - a list, a table
+#     with named columns, a paragraph, or one fenced block. A section the schema
+#     does not name fails, and no document may opt out. The schemas are the
+#     ones the `qfai-sdd` templates are written to, so a document written from
+#     its template passes by construction. `qfai validate` runs the same check.
 #   - the Mermaid lane parses every ```mermaid block with Mermaid's own grammar,
 #     under a headless DOM. No browser, and no rendering - only the parse the
 #     renderer performs before it draws.
@@ -29,7 +31,7 @@
 # | What reads the light one      | the jobs that install nothing and run no test - change detection and the aggregates                      |
 # | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
 # | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
-# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Inert when                    | never inert; the lane is required, and `qfai doctor` reports this file missing if you remove it          |
 # | Skipped when                  | every changed path is code a document check never reads; anything else, or any doubt, runs both checks   |
 # | Default-branch push           | runs the checks the push reaches; with `vars.QFAI_CI_PUSH_POLICY` set to `protected`, runs neither       |
 # | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
@@ -545,7 +547,7 @@ jobs:
           # FROM. `--ignore-scripts` is deliberately NOT passed: the mdschema
           # package resolves its platform binary in a postinstall script, and
           # without it the binary never lands.
-          npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ @jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1
+          npm install --no-save --no-audit --no-fund --registry=https://registry.npmjs.org/ @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
           # QFAI itself, but only when your install did not already provide it.
           #
           # The two steps below run FILES out of the package rather than its
@@ -570,10 +572,10 @@ jobs:
         shell: bash
         run: |
           # The driver and the schemas both come out of the installed package,
-          # so this lane runs the same rules the QFAI repository runs against
-          # its own specs. `--scope all` checks every document the manifest
-          # matches; the driver reads `paths.specsDir` from your
-          # `qfai.config.yaml`, so a relocated specs tree is covered.
+          # and `qfai validate` runs the same check. `--scope all` checks every
+          # document the manifest matches; the driver reads `paths.specsDir` and
+          # `paths.contractsDir` from your `qfai.config.yaml`, so a relocated
+          # tree is covered. A document carrying the opt-out marker fails.
           node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary
       - name: Check Mermaid diagram syntax
         if: matrix.check == 'mermaid'
