@@ -154,8 +154,7 @@ or order. Exit 3 completes the step but leaves items in `## For a person`.
 Resolve those items before declaring migration complete. Completed steps are
 safe to rerun and should make no further changes. The scripts make no network
 calls, but can write configured paths outside `.qfai/`, test annotations,
-host integration links, `AGENTS.md`, `CLAUDE.md`, `.gitignore` and the git
-index. Read the skill guide's write-boundary table before approving a dry run.
+host integration links, `.gitignore` and the git index. Read the skill guide's write-boundary table before approving a dry run.
 
 ## Review decisions and verify
 
