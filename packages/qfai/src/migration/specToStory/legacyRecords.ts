@@ -1,5 +1,10 @@
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { parseAllMarkdownTables, splitMarkdownRow } from "../../core/specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  parseAllMarkdownTables,
+  splitMarkdownRow,
+} from "../../core/specPackParsers.js";
 import { MigrationInputError } from "./harness.js";
 
 export type LegacyKind = "BR" | "EX" | "TC";
@@ -235,7 +240,15 @@ function headerLines(
   for (const table of tables) {
     const wanted = table.headers.join("\u0000");
     let index = from;
-    while (index < lines.length && splitMarkdownRow(lines[index] ?? "").join("\u0000") !== wanted)
+    // A header line is a table row followed by a separator row, as the parser reads a table.
+    while (
+      index < lines.length &&
+      !(
+        looksLikeTableRow(lines[index] ?? "") &&
+        isTableSeparator(lines[index + 1] ?? "") &&
+        splitMarkdownRow(lines[index] ?? "").join("\u0000") === wanted
+      )
+    )
       index += 1;
     found.push(index + 1);
     from = index + 2 + table.rows.length;

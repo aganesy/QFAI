@@ -53,6 +53,26 @@ describe("legacy migration records", () => {
     expect(rule?.cells.Status).toBe("Approved");
   });
 
+  it("finds a table's rows when an earlier line holds the same cells without being a table", () => {
+    const records = parseLegacyRecords(
+      "# Rules\n\n| BR ID | Rule |\n\n| BR ID | Rule |\n| --- | --- |\n| BR-0011-0007 | Tax is added. |\n",
+      "BR",
+      "04_Business-Rules.md",
+    );
+    expect(records.map((record) => record.id)).toEqual(["BR-0011-0007"]);
+    expect(records[0]?.source.startLine).toBe(7);
+  });
+
+  it("names the real table's header line for an unknown header after a look-alike line", () => {
+    expect(() =>
+      parseLegacyRecords(
+        "# Rules\n\n| Rule No | Rule |\n\n| Rule No | Rule |\n| --- | --- |\n| BR-0011-0008 | Tax is added. |\n",
+        "BR",
+        "04_Business-Rules.md",
+      ),
+    ).toThrow("04_Business-Rules.md:5:");
+  });
+
   it("reads a table whose BR ID column is not the first", () => {
     const records = parseLegacyRecords(
       "# Rules\n\n| Description | BR ID | Rule |\n| --- | --- | --- |\n| Totals | BR-0011-0006 | Tax is added. |\n",
