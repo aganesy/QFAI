@@ -110,6 +110,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The in-run CREATE approval test is tied to the `CREATE` bullet.** It matched
+  the approval-check sentence anywhere in the section, so relabelling the bullet
+  to another operation kept it green. It now requires the `**CREATE.**` label in
+  front of the sentence. (#2293)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

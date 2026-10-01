@@ -33,7 +33,7 @@ describe("Stage 1 approvals inside a run", () => {
     const text = await section(TRIAGE, "## Inside a workflow run");
     expect(text).toMatch(/Stage 1 asks the operator nothing itself/i);
     expect(text).toMatch(
-      /checks the `human_decision` the work order's `authorizationRefs` cite for its `new_story` slot, instead of asking/i,
+      /- \*\*CREATE\.\*\* Stage 1 checks the `human_decision` the work order's `authorizationRefs` cite for its `new_story` slot, instead of asking/,
     );
     expect(text).toMatch(
       /its Approach cites the record as `<runId>\/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and the label of each chosen option exactly as the record holds them/i,
