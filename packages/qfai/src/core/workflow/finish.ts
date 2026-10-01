@@ -1,7 +1,7 @@
 import {
   areaCovers,
+  authoredStage,
   everyStageResult,
-  isAuthorOrRecommender,
   isRunChange,
   refusedInput,
 } from "./common.js";
@@ -105,18 +105,19 @@ function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionF
     : unmetOf("gate-failed", ["verify"]);
 }
 
-// A route that ends at `triage-close` changes nothing a gatekeeper has to pass.
+// A route that ends at `triage-close` changes nothing a gatekeeper has to pass. A PASS counts
+// from a reviewer that did not author the stage it reviewed.
 function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   if (endsAtTriageClose(snapshot.plan?.stages ?? [])) return [];
   const actorHistory = snapshot.actorHistory ?? [];
-  const independentPass = (snapshot.acceptedStages ?? [])
-    .flatMap((stage) => stage.reviewResults ?? [])
-    .some(
+  const independentPass = (snapshot.acceptedStages ?? []).some((stage) =>
+    (stage.reviewResults ?? []).some(
       (review) =>
         review.role === "qa-gatekeeper" &&
         review.verdict === "PASS" &&
-        !isAuthorOrRecommender(actorHistory, review.agentInstance),
-    );
+        !authoredStage(actorHistory, review.agentInstance, stage.stageInstanceId),
+    ),
+  );
   return independentPass ? [] : unmetOf("review-missing", ["qa-gatekeeper"]);
 }
 

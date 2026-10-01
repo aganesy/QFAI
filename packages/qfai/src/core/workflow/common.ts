@@ -40,13 +40,17 @@ export function areaCovers(area: string, filePath: string): boolean {
   );
 }
 
-export function isAuthorOrRecommender(
+// Whether the run's history records an agent instance as an author or recommender of a stage
+// instance's output. Authoring another stage's output does not count.
+export function authoredStage(
   actorHistory: readonly WorkflowActor[],
   agentInstance: string,
+  stageInstanceId: string,
 ) {
   return actorHistory.some(
     (actor) =>
       actor.agentInstance === agentInstance &&
+      actor.stageInstanceId === stageInstanceId &&
       (actor.role === "author" || actor.role === "recommender"),
   );
 }

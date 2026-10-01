@@ -1,7 +1,7 @@
 import {
   areaCovers,
+  authoredStage,
   firstMatchedKind,
-  isAuthorOrRecommender,
   notReady,
   RESULT_ID,
   refusedWith,
@@ -86,16 +86,34 @@ function notRunRefusalOf(
   return undefined;
 }
 
-// A review by the result's own actor reviews its own work.
-// SIMPLIFIED: a reviewer recorded as an author or recommender anywhere in the run is refused.
-// Lift when: a review result names the stage it reviewed.
+// A review reviews the output of the stage the result answers. Its reviewer is not independent
+// when it is the result's own actor or the history records it as an author of that stage's
+// output; having authored another stage of the run does not count.
 function reviewerRefusals(result: WorkflowResult, actorHistory: readonly WorkflowActor[]) {
   return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
     review.agentInstance === result.actor?.agentInstance ||
-    isAuthorOrRecommender(actorHistory, review.agentInstance)
+    authoredStage(actorHistory, review.agentInstance, result.stageInstanceId)
       ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
       : [],
   );
+}
+
+// A result that reports its stage accepted carries a PASS from each reviewer role the work order
+// requires. A result that re-routes at a declared branch point hands its work on, and needs none.
+// Who gave a PASS is checked by `reviewerRefusals`.
+function missingReviewRefusals(
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+): InputRefusal[] {
+  if (!isAccepted(result) || result.branch !== undefined) return [];
+  const passed = new Set(
+    (result.reviewResults ?? [])
+      .filter((review) => review.verdict === "PASS")
+      .map((review) => review.role),
+  );
+  return (workOrder.requiredReviewerRoles ?? [])
+    .filter((role) => !passed.has(role))
+    .map((role) => ({ reason: "review-missing", subject: role }));
 }
 
 // SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
@@ -301,6 +319,7 @@ export function resultRefusals(
     ...adoptedRefusals(snapshot, result, workOrder, facts),
     ...raiseRefusals(result),
     ...reviewerRefusals(result, snapshot.actorHistory ?? []),
+    ...missingReviewRefusals(result, workOrder),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
     ...blockedRefusals(snapshot, result, workOrder, facts),

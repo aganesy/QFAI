@@ -110,6 +110,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow accept` refuses a stage result its required reviewers did
+  not pass.** A result reporting its stage `accepted` or `accepted_with_debt`
+  now needs a `PASS` from every role in the work order's
+  `requiredReviewerRoles`; each role without one is refused `review-missing`.
+  A result that re-routes at a declared branch point is exempt. A reviewer is
+  independent unless it authored or recommended the stage output it reviews:
+  authoring another stage of the run no longer disqualifies it, at `accept` or
+  at `finish`. (#2288, #2289, #2290, #2292, #2294, #2296, #2297, #2298)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

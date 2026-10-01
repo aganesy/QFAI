@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planFacts } from "../../../src/core/workflow/observe.js";
 import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
+import { requiredReviews } from "../../helpers/requiredReviews.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
@@ -94,6 +95,11 @@ function acceptOn(
         outcome: "accepted",
         actor: { agentInstance: "author-1" },
         ...fields,
+        reviewResults: requiredReviews(
+          workOrder.requiredReviewerRoles,
+          workOrder.stageInstanceId,
+          Array.isArray(fields.reviewResults) ? fields.reviewResults : [],
+        ),
       },
     },
     { ...facts, ...extra },

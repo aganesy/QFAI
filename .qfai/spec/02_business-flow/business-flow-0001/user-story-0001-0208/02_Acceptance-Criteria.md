@@ -9,7 +9,7 @@ Feature: Verify as the final stage of a run
     Given an orchestrated verify work order
     When the verify stage returns
     Then its artifact references name the verify.json this stage wrote
-    And the qa-gatekeeper verdict is a review result from a reviewer independent of the authors
+    And the qa-gatekeeper verdict is a review result from a reviewer independent of the authors of what it reviews
     And its own gate results are reported as information, never as the gate decision
 
   # AC-0001-0208-02

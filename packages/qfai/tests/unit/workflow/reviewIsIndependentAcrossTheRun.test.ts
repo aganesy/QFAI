@@ -87,7 +87,8 @@ it("Issue work orders across a run with an author, a recommender and a reviewer 
   ).toEqual([actorHistory, actorHistory]);
 });
 
-it("A review result whose reviewer instance the actor history shows as the author", () => {
+// `accept` of an implement result reviewed by `reviewer`, against the actor history given.
+function implementReviewedBy(reviewer: string, history: typeof actorHistory) {
   const run = { id: "run-actors", state: "running", sequence: 9 };
   const workOrder = {
     workOrderId: "work-order-bounded-implement-1",
@@ -106,7 +107,7 @@ it("A review result whose reviewer instance the actor history shows as the autho
         ...firstAccepted,
         { stageInstanceId: "bounded-acceptance", stageKind: "acceptance", outcome: "accepted" },
       ],
-      actorHistory,
+      actorHistory: history,
       outstandingWorkOrder: workOrder,
     },
     {
@@ -121,7 +122,7 @@ it("A review result whose reviewer instance the actor history shows as the autho
         reviewResults: [
           {
             role: "qa-gatekeeper",
-            agentInstance: "agent-atdd-1",
+            agentInstance: reviewer,
             verdict: "PASS",
             reportRef: "evidence/review.json",
           },
@@ -131,17 +132,34 @@ it("A review result whose reviewer instance the actor history shows as the autho
     {},
   );
   const error = decision.verdict.error;
-
-  expect({
-    run: decision.verdict.run,
+  return {
+    state: decision.verdict.run?.state,
     code: error?.code,
     reasons: error && "reasons" in error ? error.reasons : [],
-    events: decision.events,
-  }).toEqual({
-    run,
+    events: decision.events.length,
+  };
+}
+
+it("An implement result reviewed by an instance the actor history shows as an author of the implement stage", () => {
+  const history = [
+    ...actorHistory,
+    { role: "author", agentInstance: "agent-impl-0", stageInstanceId: "bounded-implement" },
+  ];
+
+  expect(implementReviewedBy("agent-impl-0", history)).toEqual({
+    state: "running",
     code: "invalid-input",
     reasons: [{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }],
-    events: [],
+    events: 0,
+  });
+});
+
+it("An implement result reviewed by the instance that authored the acceptance stage", () => {
+  expect(implementReviewedBy("agent-atdd-1", actorHistory)).toEqual({
+    state: "ready",
+    code: undefined,
+    reasons: [],
+    events: 1,
   });
 });
 
@@ -207,25 +225,22 @@ it("The verify work order after two results that each named their actor", () => 
 
 it("A verify result reviewed by the instance that authored the implement stage", () => {
   const { run, facts } = actorsRun();
+  const decision = run.accept(
+    { actor: { agentInstance: "verify-1" }, reviewResults: [review("implement-1")] },
+    facts,
+  );
 
-  expect(
-    reasonsOf(
-      run.accept(
-        { actor: { agentInstance: "verify-1" }, reviewResults: [review("implement-1")] },
-        facts,
-      ),
-    ),
-  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+  expect([decision.verdict.ok, reasonsOf(decision)]).toEqual([true, undefined]);
 });
 
 it("A verify result reviewed by the instance that produced the routing result", () => {
   const { run, facts } = actorsRun("run-1");
+  const decision = run.accept(
+    { actor: { agentInstance: "verify-1" }, reviewResults: [review("run-1")] },
+    facts,
+  );
 
-  expect(
-    reasonsOf(
-      run.accept({ actor: { agentInstance: "verify-1" }, reviewResults: [review("run-1")] }, facts),
-    ),
-  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+  expect([decision.verdict.ok, reasonsOf(decision)]).toEqual([true, undefined]);
 });
 
 it("A verify result whose qa-gatekeeper review names the result's own actor", () => {

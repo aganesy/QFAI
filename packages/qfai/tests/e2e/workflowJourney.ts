@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+import { requiredReviews } from "../helpers/requiredReviews.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import { extractionFor } from "../helpers/workflowExtraction.js";
 
@@ -228,9 +229,17 @@ export async function startRun(root: string, input: unknown = START_INPUT): Prom
   return id;
 }
 
-/** A result for the work order a `next` document names, submitted at the sequence it names. */
+/**
+ * A result for the work order a `next` document names, submitted at the sequence it names, with a
+ * PASS from each reviewer role the work order requires that `extra` leaves out.
+ */
 export function resultFor(document: unknown, resultId: string, extra: object = {}) {
   const workOrder = field(document, "workOrder");
+  const reviews = requiredReviews(
+    field(workOrder, "requiredReviewerRoles"),
+    resultId,
+    "reviewResults" in extra && Array.isArray(extra.reviewResults) ? extra.reviewResults : [],
+  );
   return {
     resultId,
     workOrderId: field(workOrder, "workOrderId"),
@@ -241,6 +250,7 @@ export function resultFor(document: unknown, resultId: string, extra: object = {
     testObservation: "not_applicable",
     actor: { agentInstance: `agent-${resultId}` },
     ...extra,
+    ...(reviews.length > 0 ? { reviewResults: reviews } : {}),
   };
 }
 
