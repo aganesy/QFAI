@@ -627,10 +627,10 @@ async function writeManagedLink(
 }
 
 /**
- * Creates and removes one symlink in a scratch directory, so a platform that
- * refuses symlinks stops the run before anything is written to the project.
+ * Creates and removes one symlink in a scratch directory under the system
+ * temporary directory, before anything is written to the project.
  *
- * Only the refusal Windows gives without Developer Mode stops it. Any other
+ * Only the refusal Windows gives without Developer Mode stops the run. Any other
  * failure of the probe is left to the writes that follow, which report their
  * own error for the path they were creating.
  */

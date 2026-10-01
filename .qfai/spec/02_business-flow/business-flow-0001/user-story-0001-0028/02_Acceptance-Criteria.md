@@ -22,7 +22,7 @@ Feature: Git symlink setting and Windows support
   Scenario: A symlink that cannot be created stops init before it writes anything
     Given a Windows machine with Developer Mode disabled
     When `qfai init` starts without `--dry-run`
-    Then it tries one symlink in a scratch directory outside the project before it writes any file
+    Then it tries one symlink in a scratch directory under the system temporary directory before it writes any file of the project
     And the refusal stops the run with the Developer Mode message and no file of the project is written
     And a probe that fails for another reason does not stop the run
 
