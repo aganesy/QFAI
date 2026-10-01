@@ -63,6 +63,9 @@ function field(body: string, name: string): string {
   return "";
 }
 
+/** A field line that ends a `Rule` field's continuation. */
+const OTHER_FIELD = /^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Status)\s*:/i;
+
 /** A line as a field reads it: no bold markers, no list bullet. */
 function cleanLine(line: string): string {
   return line
@@ -81,7 +84,13 @@ function ruleField(body: string): string {
   if (start < 0) return "";
   const parts = [cleanLine(lines[start] ?? "").replace(/^Rule\s*:\s*/i, "")];
   for (const line of lines.slice(start + 1)) {
-    if (line.trim() === "" || /^\s*[-*]\s/.test(line) || /^\s*\*\*[^*]+\*\*\s*:/.test(line)) break;
+    if (
+      line.trim() === "" ||
+      /^\s*[-*]\s/.test(line) ||
+      /^\s*\*\*[^*]+\*\*\s*:/.test(line) ||
+      OTHER_FIELD.test(cleanLine(line))
+    )
+      break;
     parts.push(cleanLine(line));
   }
   return parts.join(" ").trim();

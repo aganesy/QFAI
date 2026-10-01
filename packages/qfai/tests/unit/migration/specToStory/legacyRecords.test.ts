@@ -43,6 +43,16 @@ describe("legacy migration records", () => {
     expect(rule?.cells.Rule).toContain("Test first");
   });
 
+  it("ends a section's Rule value at the next reference or status field", () => {
+    const rule = parseLegacyRecords(
+      "# Rules\n\n## BR-0011-0004: Totals\n\n- Rule: An order total MUST\n  include tax.\nStatus: Approved\nContract-Refs: API-0001\n",
+      "BR",
+      "04_Business-Rules.md",
+    )[0];
+    expect(rule?.cells.Rule).toBe("An order total MUST include tax.");
+    expect(rule?.cells.Status).toBe("Approved");
+  });
+
   it("reads every table and heading in a mixed file, merging matching TC detail", () => {
     const records = parseLegacyRecords(
       "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0003-0001 | AC-0003-0001 | EX-0003-0001 | Short | Pass |\n| TC-0003-0002 | AC-0003-0002 | EX-0003-0002 | Other | Pass |\n\n## TC-0003-0001: Detail\n\n**EX Refs:** EX-0003-0001\n**AC Refs:** AC-0003-0001\n- Verify the exact behavior.\n",

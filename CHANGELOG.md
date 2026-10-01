@@ -90,7 +90,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai init` already leaves a workflow deleted once
   `.qfai/install-provenance.json` records it, and a 1.x project has no record
   before its first `init`. Delete the workflow after that run and commit the
-  record.
+  record; deleting it before that run lets the next `init` write it again.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

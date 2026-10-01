@@ -30,7 +30,8 @@ scripts' allowed paths and replace local edits.
 The first `npx qfai init` records the workflows it installs in
 `.qfai/install-provenance.json`, so delete a shipped workflow the project does
 not want after that run and commit the record, and later `npx qfai init` runs
-leave it deleted.
+leave it deleted. A workflow already in the 1.x tree has no record, so deleting
+it before that run lets the next `npx qfai init` write it again.
 
 ## Place stories and rules
 

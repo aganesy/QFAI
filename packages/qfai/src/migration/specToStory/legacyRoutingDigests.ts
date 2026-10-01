@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { MigrationInputError } from "./harness.js";
 
 const DIGESTS_FILE = "legacy-routing-entries.json";
 
@@ -28,15 +27,8 @@ export function routingEntryDigest(entry: unknown): string {
 /** The digests of every routing entry the 1.x releases shipped, name included. */
 export async function readLegacyRoutingDigests(): Promise<Set<string>> {
   const file = path.resolve(getInitAssetsDir(), "..", "defaults", DIGESTS_FILE);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(file, "utf8"));
-  } catch (error) {
-    throw new MigrationInputError(`Cannot read ${file}: ${String(error)}`);
-  }
+  const parsed: unknown = JSON.parse(await readFile(file, "utf8"));
   const digests =
-    parsed !== null && typeof parsed === "object" && "digests" in parsed ? parsed.digests : null;
-  if (!Array.isArray(digests) || !digests.every((item) => typeof item === "string"))
-    throw new MigrationInputError(`${file} must hold a list of digests.`);
-  return new Set<string>(digests);
+    typeof parsed === "object" && parsed !== null && "digests" in parsed ? parsed.digests : [];
+  return new Set(Array.isArray(digests) ? digests.filter((item) => typeof item === "string") : []);
 }

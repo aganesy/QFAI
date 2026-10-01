@@ -114,15 +114,12 @@ function sqlRules(original: string): Map<string, Rule | null> {
     const continuations = block
       .slice(1, examplesIndex)
       .map((line) => (line.startsWith("-- ") ? line.slice(3) : null));
-    if (
-      header[2] === undefined ||
-      examplesIndex < 1 ||
-      continuations.some((line) => line === null)
-    ) {
+    const lines = continuations.filter((line): line is string => line !== null);
+    if (header[2] === undefined || examplesIndex < 1 || lines.length !== continuations.length) {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = oneLine([header[2], ...(continuations as string[])].join(" "));
+    const statement = oneLine([header[2], ...lines].join(" "));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
