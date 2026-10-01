@@ -236,12 +236,12 @@ it("flow-binding", () => {
   );
 });
 
-// QFAI:EX-0001-0185-56
+// QFAI:EX-0001-0185-59
 it("one flow the tree does not declare is an unknown ID, not a binding count", () => {
   expect(boundedNaming(["BF-9999"])).toEqual(refused({ reason: "unknown-id", subject: "BF-9999" }));
 });
 
-// QFAI:EX-0001-0185-57
+// QFAI:EX-0001-0185-60
 it("a new story in one flow and a change named in another binds neither", () => {
   expect(
     acceptRouting(
@@ -251,7 +251,7 @@ it("a new story in one flow and a change named in another binds neither", () => 
   ).toEqual(refused({ reason: "flow-binding", subject: "BF-0002" }));
 });
 
-// QFAI:EX-0001-0185-58
+// QFAI:EX-0001-0185-61
 it("the refusal says what satisfies each reason it lists", () => {
   const decision = decide(
     {
