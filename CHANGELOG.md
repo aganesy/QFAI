@@ -35,6 +35,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `sdd` dogfooding lane is a clean gate.** Its backlog is empty, so CI
+  now runs `qfai validate --profile sdd --fail-on error` there instead of the
+  per-file ratchet, and any error fails the build. The comments on the other
+  lanes now name what they still owe: examples and acceptance criteria with no
+  annotated test (#1436).
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
