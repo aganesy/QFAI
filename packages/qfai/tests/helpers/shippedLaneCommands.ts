@@ -1455,9 +1455,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // Re-pinned for the first line and the blank line after it, which are gone: the line that sent a
-  // first free-text change request to `qfai-run`. Prepending that line and a blank line to both
-  // written files reproduces `6d12562c…` and `1832d267…` byte for byte.
+  // Re-pinned for the removal of the opening line that sent a first free-text change request to
+  // `qfai-run`, and the blank line after it. Putting both back at the top of the two written files
+  // reproduces `6d12562c…` and `1832d267…` byte for byte.
   ["AGENTS.md", "ec22cd82c8c97e0b42517127b7f7a8e531d4691ee8882953dda511c134cc0984"],
   ["CLAUDE.md", "8d7086b0adc28b94074bba2b32c59d6511a3dcc5bac211943b89b87f0c26a3ae"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.

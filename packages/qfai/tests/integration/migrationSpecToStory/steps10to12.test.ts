@@ -54,7 +54,7 @@ const SKILL_ASSETS = path.join(ASSISTANT_ASSETS, "skill");
 const STEP_ASSETS = path.join(ASSISTANT_ASSETS, "step");
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const ARCHIVE = ".qfai/evidence/migration-spec-to-story/legacy/skill";
-// The line a release before this change seeded; step 11 neither adds nor removes it.
+// The line that earlier releases seeded; step 11 neither adds nor removes it.
 const EARLIER_LINE =
   "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
 const AGENTS_TEXT = "# Our agents\n\nProject text.\n";

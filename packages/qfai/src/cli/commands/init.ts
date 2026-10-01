@@ -109,7 +109,7 @@ import {
 import {
   refuseUnsafeEntryPointRewrite,
   replaceEntryPointFile,
-} from "../../core/init/entryDirective.js";
+} from "../../core/init/entryPointFile.js";
 import {
   SIDECAR_RE,
   claimSidecar,
@@ -2212,11 +2212,7 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(
-          cited !== refreshed.text,
-          { review: merged !== cited },
-          refreshed.refreshed,
-        ),
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2425,7 +2421,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, { review: false }, refreshed.refreshed),
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2502,7 +2498,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  directives: { review: boolean },
+  reviewDirective: boolean,
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -2513,7 +2509,7 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  if (directives.review) {
+  if (reviewDirective) {
     planned.push("add the review directive");
     done.push("added the review directive");
     byHand.push("add the review directive");

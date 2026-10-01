@@ -19,7 +19,7 @@ import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 const ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md"];
 const COPILOT = ".github/copilot-instructions.md";
 const PROJECT_TEXT = "# Project rules\n\nKeep every original byte.\n";
-// The line a release before this change seeded, kept as it was written.
+// The line that earlier releases seeded, kept as they wrote it.
 const EARLIER_LINE =
   "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
 
