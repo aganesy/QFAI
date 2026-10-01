@@ -29,9 +29,9 @@ import {
 type Rule = { id: string; statement: string; examples: string[] };
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 
-/** A statement on one line: each run of whitespace, line breaks included, is one space. */
+/** A statement on one line: each line break, with the indentation around it, is one space. */
 function oneLine(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replace(/[^\S\r\n]*\r?\n\s*/g, " ").trim();
 }
 
 function ruleIds(value: string): string[] {

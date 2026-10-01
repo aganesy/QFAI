@@ -1239,6 +1239,20 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("names the header row of an Examples table that follows a description", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    Counts a buyer may place.\n    | count |\n    | 2     |\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.output).toContain("with Examples header row | count |");
+    });
+  });
+
   it("writes a placeholder scenario for an outline and an ID-named scenario", async () => {
     // QFAI:EX-0004-0007-21
     await withProject(async (root) => {

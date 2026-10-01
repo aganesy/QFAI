@@ -568,8 +568,11 @@ function gherkinSource(criterion: OldCriterion): { source: string; line: number 
 function examplesHeader(item: GherkinItem): string | null {
   const at = item.lines.findIndex((line) => /^\s*(?:Examples|Scenarios):/.test(line));
   if (at < 0) return null;
-  const row = item.lines.slice(at + 1).find((line) => !/^\s*(?:#|@|$)/.test(line));
-  return row !== undefined && row.trim().startsWith("|") ? row.trim() : null;
+  // The first table row of the block, past any description, and before a further `Examples:`.
+  const rest = item.lines.slice(at + 1);
+  const next = rest.findIndex((line) => /^\s*(?:Examples|Scenarios):/.test(line));
+  const row = (next < 0 ? rest : rest.slice(0, next)).find((line) => line.trim().startsWith("|"));
+  return row === undefined ? null : row.trim();
 }
 
 /** An item's text without the blank, tag and comment lines that lead into the next item. */
