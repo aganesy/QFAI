@@ -106,9 +106,11 @@ The routing work order's result carries the proposal.
   a file that exists, and holds no glob.
 - A `contract-id` reference is refused as unknown. Name the contract file as a
   `path` instead.
-- `affectedFlowIds` names exactly one business flow when `newStories` is empty
-  and the plan has a stage that works on a flow. A route whose only such stage
-  is a test fix takes one flow or none, and any other route binds none.
+- `affectedFlowIds` names exactly one existing business flow when `newStories`
+  is empty and the plan has a stage that works on a flow. A flow the story tree
+  does not declare is refused `unknown-id`. With `newStories`, it names no flow
+  but the ones they join, since a run works on one flow. A route whose only such
+  stage is a test fix takes one flow or none, and any other route binds none.
 - A route that ends by closing the request writes nothing but the records its
   discussion stage keeps, so its `proposedWriteScope` names nothing else.
 - `newStories` holds `{ goal, covers, excludes, evidence, flowId }` for each
@@ -121,7 +123,8 @@ The routing work order's result carries the proposal.
   target. The run refuses any of these.
 - A check that depends on the chosen route, such as the flow binding or the
   write scope of a route that changes nothing, can refuse a proposal whose
-  extraction was valid. Revise it by the reasons `proposal-refused` lists.
+  extraction was valid. Revise it by the reasons `proposal-refused` lists;
+  its `message` says what satisfies each one.
 - After a re-route the routing work order carries `reroute`, and its route is
   already fixed. The result has the same shape, extraction included, but the
   decision rules do not choose again. It supplies the scope, the flows and the

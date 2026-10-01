@@ -110,6 +110,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A routing proposal naming a flow the tree does not declare is refused as an
+  unknown ID, and every refusal says what satisfies it.** One undeclared flow in
+  `affectedFlowIds` was refused `flow-binding`, the reason for naming none or
+  several; it is now `unknown-id` naming the flow. A proposal that adds a story
+  to one flow and names another flow in `affectedFlowIds` used to drop the
+  second flow without a word; it is now refused `flow-binding` naming it, since
+  a run works on one flow. The `proposal-refused` message names, for each
+  reason, what satisfies it, and the `qfai-run` payload reference says a
+  binding route needs exactly one existing flow. Fixes #2394.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
