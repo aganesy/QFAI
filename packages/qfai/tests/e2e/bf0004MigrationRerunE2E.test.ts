@@ -287,7 +287,7 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         "assistant/skill/qfai-run",
       );
     }
-    expect(await textOrNull(root, "AGENTS.md")).toContain("`qfai-run`");
+    expect((await textOrNull(root, "AGENTS.md")) ?? "").not.toContain("`qfai-run`");
     expect(await textOrNull(root, ".gitignore")).toContain(".qfai/run/\n");
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));

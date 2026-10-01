@@ -269,7 +269,7 @@ describe("the prompt-time reminder hooks", () => {
         expect(trustLines(output)).toEqual([]);
         // The run went on past it.
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
     }
@@ -295,7 +295,7 @@ describe("the prompt-time reminder hooks", () => {
         expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
         expect(trustLines(output)).toEqual([]);
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
 
@@ -335,7 +335,7 @@ describe("the prompt-time reminder hooks", () => {
         expect(await readdir(outside)).toEqual([]);
         expect(output).toContain("WARNING: .claude/settings.json was left unchanged");
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
     } finally {

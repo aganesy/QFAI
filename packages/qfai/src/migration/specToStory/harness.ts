@@ -32,7 +32,6 @@ import {
   WORKFLOW_MODE_MESSAGE,
   type QfaiConfig,
 } from "../../core/config.js";
-import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { ID_MAP_PATH, IdMapInputError, readIdMap } from "./idMap.js";
 import { captureOutput, writeReportFile } from "./reportFile.js";
@@ -54,7 +53,6 @@ export type WriteSetArea =
   | "steps"
   | "step-archive"
   | "skill-links"
-  | "entry-points"
   | "reminder-hooks";
 export type ReportSection =
   "Cases to examples" | "Git index" | "For a person" | "Annotations kept" | "Reminder hooks";
@@ -544,8 +542,6 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return inside(path.join(root, path.dirname(SKILL_ARCHIVE_DIR), "step"), target);
     case "skill-links":
       return SKILL_INTEGRATION_DIRS.some((link) => inside(path.join(root, link), target));
-    case "entry-points":
-      return AGENT_ENTRY_POINT_FILES.some((name) => target === path.join(root, name));
     case "reminder-hooks":
       return REMINDER_FILES.some((file) => target === path.join(root, ...file.split("/")));
   }

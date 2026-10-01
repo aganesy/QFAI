@@ -23,15 +23,16 @@ Feature: Install or upgrade and get the free-text entry
     Then no skill directory reached through a host skills directory contains `agents/openai.yaml`
 
   # AC-0001-0196-03
-  Scenario: The entry directive is prepended to `AGENTS.md` and `CLAUDE.md`
-    Given a project whose `AGENTS.md` and `CLAUDE.md` carry no operative entry directive
+  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md` or `CLAUDE.md`
+    Given a fresh project, or a project whose `AGENTS.md` and `CLAUDE.md` exist
     When `qfai init` runs
-    Then each of the two files begins with one directive that sends a first free-text change request to `qfai-run`
-    And the project's existing text and line endings follow it unchanged
-    And `.github/copilot-instructions.md` carries no such directive
-    And the directive is added whether or not `REVIEW.md` exists
+    Then the seeded files open with their heading and carry no line that sends a request to `qfai-run`
+    And an existing file gains no such line, and its text and line endings are kept
+    And a line an earlier init wrote is kept as written, once, and is never removed or edited
+    And `.github/copilot-instructions.md` carries no such line
+    And the review directive is still prepended, only where `REVIEW.md` exists
     And a rerun adds nothing
-    And the shipped Markdown lint accepts the directive above the level-1 heading of the seeded files
+    And the shipped Markdown lint accepts a directive above the level-1 heading
 
   # AC-0001-0196-04
   Scenario: Init names the mode in force and writes no mode key

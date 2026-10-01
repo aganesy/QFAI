@@ -1308,8 +1308,9 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
- * so their bytes are the reviewed surface. Each opens with the entry directive that sends a first
- * free-text change request to `qfai-run`, then a blank line; below it the bytes are unchanged.
+ * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
+ * sent a first free-text change request to `qfai-run` is gone, because the prompt-time hook is the
+ * one place that rule is stated.
  *
  * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
  * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
@@ -1459,8 +1460,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // ends with a question listing the next actions. Derived by running `qfai init` into a temp
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
-  ["AGENTS.md", "6d12562c684becef7fc90a742cc5c3413a594f6fbdcd7c92aa91c962f7a22305"],
-  ["CLAUDE.md", "1832d2675a3d78c7e67c0487c100479c2e15db28a40d468be4e6629bb1f57044"],
+  //
+  // Re-pinned for the removal of the opening line that sent a first free-text change request to
+  // `qfai-run`, and the blank line after it. Putting both back at the top of the two written files
+  // reproduces `6d12562c…` and `1832d267…` byte for byte.
+  ["AGENTS.md", "ec22cd82c8c97e0b42517127b7f7a8e531d4691ee8882953dda511c134cc0984"],
+  ["CLAUDE.md", "8d7086b0adc28b94074bba2b32c59d6511a3dcc5bac211943b89b87f0c26a3ae"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
