@@ -934,13 +934,14 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Whether one code point is a C0, DEL or C1 control character.
+ * Whether one code point must not reach a single-line message: a C0, DEL or C1
+ * control character, a Unicode line or paragraph separator, or a bidirectional
+ * control.
  *
  * Read as code points rather than matched with the equivalent character-class
  * regular expression: that pattern needs an `eslint-disable no-control-regex`,
  * and the universal quality rule forbids adding a suppression without the
- * user’s explicit permission. `reviewerJustification.ts` refuses control
- * characters the same way, for the same reason.
+ * user’s explicit permission.
  */
 function isControlCodePoint(code: number): boolean {
   return (
@@ -952,14 +953,15 @@ function isControlCodePoint(code: number): boolean {
 }
 
 /**
- * Makes one path safe to splice into a single-line finding message.
+ * Makes any display string — a path, a filename or a loader message — safe to
+ * splice into a single-line finding message.
  *
  * A filename may legally contain a newline or an ANSI escape on POSIX, and
- * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
- * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
- * lines — into the very output whose one-finding-per-line shape downstream
- * severity greps rely on. `details` keeps the raw path; only what is rendered
- * is escaped.
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, such a string
+ * could inject extra lines — including counterfeit `[ok]` / `[error]` lines —
+ * into the very output whose one-finding-per-line shape downstream severity
+ * greps rely on. `details` keeps the raw value; only what is rendered is
+ * escaped.
  */
 function escapeForMessage(value: string): string {
   let escaped = "";

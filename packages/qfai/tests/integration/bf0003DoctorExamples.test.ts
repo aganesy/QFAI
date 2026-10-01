@@ -111,19 +111,26 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(issues?.some((issue) => issue.message.includes("paths"))).toBe(true);
   });
 
-  it("lists each loader issue in the config.load message", async () => {
+  it("lists every loader issue on the single config.load line of the text output", async () => {
     // QFAI:AC-0003-0001-03
     // QFAI:EX-0003-0001-08
     const root = await newTempDir("invalid-text");
-    await put(root, "qfai.config.yaml", "paths:\n  - .qfai/spec\n");
-    const data = await doctorJson(root);
-    const load = check(data, "config.load");
-    const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
-    expect(issues?.length).toBeGreaterThan(0);
+    await put(root, "qfai.config.yaml", "paths:\n  - .qfai/spec\nvalidation:\n  failOn: bogus\n");
+    const issues = (
+      check(await doctorJson(root), "config.load")?.details as
+        { issues?: Array<{ message: string }> } | undefined
+    )?.issues;
+    expect(issues?.length).toBeGreaterThan(1);
+
+    const text = await captureStdout(async () => {
+      await runDoctor({ root, rootExplicit: true, format: "text", failOn: "never" });
+    });
+    const lines = text.split("\n").filter((line) => line.includes("config.load"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("[error]");
     for (const issue of issues ?? []) {
-      expect(load?.message).toContain(issue.message);
+      expect(lines[0]).toContain(issue.message);
     }
-    expect(load?.message).not.toContain("\n");
   });
 
   it("warns about a missing non-default specs directory and names it", async () => {
