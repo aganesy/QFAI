@@ -3,17 +3,17 @@
 /**
  * check-review-profile-consistency.mjs
  *
- * Verifies that each review phase in `.qfai/assistant/manifest/agent-routing.yml`
+ * Verifies that each review phase in the package's routing defaults
  * that declares a `review_profile` has `mandatory_agents` and `blocking_agents`
  * that are a superset of the profile's `always_required` set declared in
- * `.qfai/assistant/manifest/review-profiles.yml`. Prevents silent drift
+ * the package's review-profile defaults. Prevents silent drift
  * between the two SSOT files.
  *
  * Exit codes:
  *   0 — all profiles consistent
  *   1 — drift detected (prints one `DRIFT:` line per offending phase)
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
@@ -23,33 +23,9 @@ const require = createRequire(import.meta.url);
 const { parse: parseYaml } = require("./../packages/qfai/node_modules/yaml");
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
-
-/**
- * `manifest/` is the current layout and the one `npx qfai init` ships;
- * `steering/` is the legacy read-compatible layout, still present in this repo
- * as a stale copy. Reading `steering/` first meant the guard was validating a
- * file no skill loads, so a fix to the real manifest left it reporting the old
- * shape. Prefer `manifest/`, fall back to `steering/` for a project that has
- * not migrated.
- */
-function resolveManifest(fileName) {
-  for (const dir of ["manifest", "steering"]) {
-    const candidate = join(ROOT, ".qfai", "assistant", dir, fileName);
-    try {
-      readFileSync(candidate, "utf-8");
-      return candidate;
-    } catch {
-      // try the next layout
-    }
-  }
-  console.error(
-    `Failed to locate ${fileName} under .qfai/assistant/{manifest,steering}/ — cannot check review profile consistency.`,
-  );
-  process.exit(1);
-}
-
-const ROUTING_PATH = resolveManifest("agent-routing.yml");
-const PROFILES_PATH = resolveManifest("review-profiles.yml");
+const DEFAULTS = join(ROOT, "packages", "qfai", "assets", "defaults");
+const ROUTING_DIR = join(DEFAULTS, "agent-routing");
+const PROFILES_PATH = join(DEFAULTS, "review-profiles.yml");
 
 function loadYaml(path) {
   try {
@@ -61,12 +37,19 @@ function loadYaml(path) {
   }
 }
 
-const routingDoc = loadYaml(ROUTING_PATH);
 const profilesDoc = loadYaml(PROFILES_PATH);
 const profiles = profilesDoc?.profiles ?? {};
 
-// agent-routing.yml has top-level `routing:` (array of skill entries).
-const routing = Array.isArray(routingDoc?.routing) ? routingDoc.routing : [];
+// Every file in the routing directory has a top-level `routing:`, an array of
+// `step:` and `skill:` entries. The set is read in file-name order as one list,
+// as the package's own loader reads it.
+const routing = readdirSync(ROUTING_DIR)
+  .filter((name) => name.endsWith(".yml"))
+  .sort()
+  .flatMap((name) => {
+    const doc = loadYaml(join(ROUTING_DIR, name));
+    return Array.isArray(doc?.routing) ? doc.routing : [];
+  });
 
 /**
  * Agents whose output is a verdict. A `review` phase may legitimately route a
@@ -77,7 +60,7 @@ const REVIEWER_NAME = /(?:-reviewer|-gatekeeper)$/;
 
 const drifts = [];
 for (const entry of routing) {
-  const skill = entry.skill ?? "<unknown-skill>";
+  const skill = entry.step ?? entry.skill ?? "<unknown-entry>";
   const profileName = entry.review_profile;
   if (!profileName) continue;
   const profile = profiles[profileName];
@@ -126,7 +109,7 @@ for (const entry of routing) {
 if (drifts.length > 0) {
   for (const line of drifts) console.error(line);
   console.error(
-    `\n${drifts.length} drift(s) detected. Fix agent-routing.yml or review-profiles.yml.`,
+    `\n${drifts.length} drift(s) detected. Fix the routing defaults or review-profiles.yml.`,
   );
   process.exit(1);
 }

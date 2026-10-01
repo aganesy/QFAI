@@ -7,7 +7,7 @@
  * without Reviewer justification is rejected.
  */
 
-// QFAI:SPEC-0012:TC-0012-0454
+// QFAI:EX-0001-0139-01
 
 import { describe, expect, it } from "vitest";
 
@@ -18,6 +18,7 @@ import {
 } from "../../../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
 
 describe("lap-010 missing-route advisory-failing", () => {
+  // QFAI:EX-0001-0139-01
   it("emits lap-010 when the declared route is not reachable in the captured html", () => {
     const findings = findMissingRoutes([
       {

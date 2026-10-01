@@ -54,8 +54,8 @@ async function project(options: { migrationsDir?: string } = {}): Promise<string
   );
   await write(
     root,
-    ".qfai/contracts/db/CON-DB-0001.sql",
-    "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
+    ".qfai/contracts/db/DB-0001.sql",
+    "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
   );
   await write(root, "migrations/0001_orders.sql", "CREATE TABLE orders (id TEXT PRIMARY KEY);\n");
   return root;

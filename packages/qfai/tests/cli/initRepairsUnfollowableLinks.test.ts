@@ -188,19 +188,16 @@ describe("qfai init repairs a link the OS will not follow", () => {
         runInit({ dir: root, force: false, dryRun: false, yes: true }),
       ).rejects.toMatchObject({ code: "EPERM" });
 
-      // The invariant is that the original is never destroyed — not that the
-      // pathname is repopulated. `symlink` is the ONLY non-overwriting way to
-      // put a symlink back (`rename` overwrites, `link` raises EPERM on one),
-      // so a `symlink` that fails for a standing reason — Developer Mode off,
-      // an ACL — fails the restore for the same reason. The answer then is the
-      // one the finding asks for: keep the original and say where it is.
+      // A `symlink` refused for a standing reason — Developer Mode off — is
+      // refused for the restore too. The held link then goes back by
+      // `rename`, which needs no such right, while the pathname is free: the
+      // original entry is at its own path and no hold is left.
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+      expect(path.normalize(await readlink(linkPath))).toBe(path.normalize(targetBefore));
       const holds = (await readdir(path.dirname(linkPath))).filter((name) =>
         name.startsWith(`${path.basename(linkPath)}.qfai-repair-`),
       );
-      expect(holds).toHaveLength(1);
-      const held = path.join(path.dirname(linkPath), String(holds[0]), path.basename(linkPath));
-      expect((await lstat(held)).isSymbolicLink()).toBe(true);
-      expect(path.normalize(await readlink(held))).toBe(path.normalize(targetBefore));
+      expect(holds).toEqual([]);
     });
   });
 
