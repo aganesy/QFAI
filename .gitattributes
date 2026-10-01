@@ -16,3 +16,8 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+
+# The two registers every change appends to: a union merge keeps the rows of
+# both sides, and `qfai validate` still reports two rows with the same ID.
+/.qfai/spec/decisions.md merge=union
+/.qfai/spec/open-questions.md merge=union

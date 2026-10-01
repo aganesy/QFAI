@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The seeded `.gitattributes` union-merges the two registers** (#2265).
+  Every change appends its rows to the end of `decisions.md` and
+  `open-questions.md`, so two open branches conflicted on the same last line
+  whenever the second one merged. `qfai init` now writes `merge=union` for both
+  files into a new `.gitattributes`, and this repository sets the same. Two rows
+  left with one ID are still reported by `qfai validate`. An existing
+  `.gitattributes` is still never rewritten; add the two lines to it by hand.
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then

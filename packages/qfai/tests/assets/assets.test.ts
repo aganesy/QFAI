@@ -1497,6 +1497,26 @@ describe("assets guardrails", () => {
     }
   });
 
+  // QFAI:EX-0001-0196-52
+  it("ships a union merge for the two append-only registers, here and in the seed", async () => {
+    for (const file of [
+      path.join(templateRootDir, ".gitattributes"),
+      path.join(repoRoot, ".gitattributes"),
+    ]) {
+      const rules = (await readFile(file, "utf-8"))
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.startsWith("#"));
+      for (const register of ["decisions.md", "open-questions.md"]) {
+        expect(rules, file).toContain(`/.qfai/spec/${register} merge=union`);
+      }
+      expect(
+        rules.filter((rule) => rule.includes("merge=")),
+        `${file} sets a merge driver only on the two registers`,
+      ).toHaveLength(2);
+    }
+  });
+
   it("states the LF line-ending policy in the Drift Protocol", async () => {
     // The attributes file is create-only, so a project that already had one
     // keeps it and can still produce an EOL-flipped diff. The protocol has to
