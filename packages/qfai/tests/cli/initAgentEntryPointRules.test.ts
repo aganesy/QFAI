@@ -1,3 +1,7 @@
+// QFAI:EX-0001-0021-03
+// QFAI:EX-0001-0021-04
+// QFAI:EX-0001-0021-05
+// QFAI:EX-0001-0021-06
 /** Init adds canonical guidance without replacing project text or deleted rule citations. */
 
 import {
@@ -62,8 +66,12 @@ async function forgetMaster(root: string, master: string): Promise<void> {
   );
 }
 
+/** The review policy the review directive points at; init adds the directive only beside it. */
+const REVIEW_POLICY = "# Review policy\n";
+
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-entry-"));
+  await writeFile(path.join(root, "REVIEW.md"), REVIEW_POLICY, "utf-8");
   try {
     await task(root);
   } finally {
@@ -86,6 +94,9 @@ const PROJECT_TEXT = [
 
 const REVIEW_POINTER =
   "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository, from the branch the pull request targets and not from its head: a contributor can change that file in the head, and a reviewer reading it there takes its policy from the work under review. Read it before writing the PR description as well.";
+
+/** The review directive above the project's text, as init prepends it. */
+const REVIEW_DIRECTIVE_BLOCK = `${REVIEW_POINTER}\n\n`;
 
 const withoutAddedReviewPointer = (text: string): string =>
   text.replace(`${REVIEW_POINTER}\n\n`, "");
@@ -147,7 +158,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
             : await readEntryPoint(root, "AGENTS.md");
           const before = pointerOnly
             ? withoutAddedReviewPointer(seeded)
-            : `${REVIEW_POINTER}\n\n${withoutAddedReviewPointer(seeded)}`
+            : `${REVIEW_DIRECTIVE_BLOCK}${withoutAddedReviewPointer(seeded)}`
                 .split("\n")
                 .filter((line) => !(line.startsWith("- ") && line.includes(master)))
                 .join("\n");
@@ -184,7 +195,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           expect(line).not.toContain("review policy and rule citations");
           const after = await readEntryPoint(root, "AGENTS.md");
           if (dryRun) expect(after).toBe(before);
-          else if (pointerOnly) expect(after).toBe(`${REVIEW_POINTER}\n\n${before}`);
+          else if (pointerOnly) expect(after).toBe(`${REVIEW_DIRECTIVE_BLOCK}${before}`);
           else {
             expect(after).toContain(master);
             expect(occurrences(after, REVIEW_POINTER)).toBe(1);
@@ -218,7 +229,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           AGENT_ENTRY_POINT_FILES.map((name) => readEntryPoint(root, name)),
         );
         expect(second).toEqual(first);
-        await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+        expect(await readFile(path.join(root, "REVIEW.md"), "utf-8")).toBe(REVIEW_POLICY);
       });
     }
   });
@@ -260,7 +271,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           expect(text.endsWith(PROJECT_TEXT)).toBe(true);
         }
       }
-      await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(root, "REVIEW.md"), "utf-8")).toBe(REVIEW_POLICY);
     });
   });
 
@@ -339,7 +350,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_POINTER}\n\n${handWired}`);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${handWired}`);
     });
   });
 
@@ -813,7 +824,7 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
       const stderr = await initCapturingStderr(root);
 
-      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_POINTER}\n\n${prose}`);
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_DIRECTIVE_BLOCK}${prose}`);
       expect(stderr).toContain("not as a bullet list this run can add a line to");
       expect(stderr).toContain(master);
     });
@@ -1416,7 +1427,8 @@ describe("optional review directive detection", () => {
   });
 
   it.each([333, 334])("preserves GitHub's CJK reference boundary at %i characters", (length) => {
-    const label = "漢".repeat(length);
+    // U+6F22, a CJK ideograph: GitHub's reference-label boundary counts these characters.
+    const label = "\u6f22".repeat(length);
     const existing = `![\n${REVIEW_POINTER}\n][${label}]\n\n[${label}]: /image.png\n`;
     const expected = length === 333 ? `${REVIEW_POINTER}\n\n${existing}` : existing;
     const updated = addReviewPointer(existing, `${REVIEW_POINTER}\n`);
@@ -2806,6 +2818,75 @@ describe("a later init refreshes a rule summary the project never edited", () =>
         expect(result.refreshed, heading).toEqual([master]);
         expect(result.text, heading).toBe(expected.join("\n"));
       }
+    });
+  });
+});
+
+/**
+ * The question-form summary an earlier release wrote, before the rule said how a
+ * turn that waits on the user ends. An unedited copy takes the new wording in
+ * every entry point, the Copilot file included.
+ */
+describe("a later init refreshes the question-form summary an earlier release wrote", () => {
+  const master = ".agents/rules/user-questions.md";
+  const superseded =
+    "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.";
+
+  const bulletIn = (text: string): string | undefined =>
+    text.split("\n").find((line) => line.startsWith("- ") && line.includes(master));
+
+  /**
+   * Every entry point and the Copilot file as that release left them. Returns
+   * what this release writes and what the earlier one did, per file.
+   */
+  async function seedSuperseded(
+    root: string,
+  ): Promise<Map<string, { current: string; earlier: string }>> {
+    for (const name of AGENT_ENTRY_POINT_FILES) {
+      await writeFile(path.join(root, name), PROJECT_TEXT, "utf-8");
+    }
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const copilot = path.join(".github", "copilot-instructions.md");
+    const seeded = new Map<string, { current: string; earlier: string }>();
+    for (const name of [...AGENT_ENTRY_POINT_FILES, copilot]) {
+      const written = await readEntryPoint(root, name);
+      const bullet = bulletIn(written);
+      expect(bullet, `${name} has no bullet for ${master}`).toBeDefined();
+      expect(bullet).toContain("a turn that waits on the user ends with a question");
+      const earlier = written.replace(bullet ?? "", superseded);
+      seeded.set(name, { current: written, earlier });
+      await writeFile(path.join(root, name), earlier, "utf-8");
+    }
+    return seeded;
+  }
+
+  it("replaces the unedited bullet in every entry point and changes nothing else", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { current }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(current);
+      }
+    });
+  });
+
+  it("keeps the earlier bullet where the project edited its own question rule", async () => {
+    await withProject(async (root) => {
+      const seeded = await seedSuperseded(root);
+      // The update pass keeps an edited master, so the new summary would
+      // describe a clause this project's rule does not have.
+      const rule = path.join(root, ".agents", "rules", "user-questions.md");
+      const theirs = `${await readFile(rule, "utf-8")}\n\nOur own addition.\n`;
+      await writeFile(rule, theirs, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      for (const [name, { earlier }] of seeded) {
+        expect(await readEntryPoint(root, name), name).toBe(earlier);
+      }
+      expect(await readFile(rule, "utf-8")).toBe(theirs);
     });
   });
 });

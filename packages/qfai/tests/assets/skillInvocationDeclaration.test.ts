@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { skillFrontmatterMapping } from "../../src/core/agentFrontmatter.js";
-import { collectCanonicalSkillIds } from "../../src/cli/commands/init.js";
+import { collectCanonicalSkillIds } from "../../src/core/init/integrationDirs.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -33,7 +33,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ASSISTANT_DIR = "assistant";
-const SKILLS_DIR = `${ASSISTANT_DIR}/skills`;
+const SKILLS_DIR = `${ASSISTANT_DIR}/skill`;
 
 const OPT_OUT_FIELD = "disable-model-invocation";
 const CANONICAL_OPT_OUT = `${OPT_OUT_FIELD}: true`;

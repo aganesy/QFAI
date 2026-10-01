@@ -4,13 +4,1062 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Removed
+### Added
 
-- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
-  dedicated test suites. CI and release checks now run seven test slices. An
-  older tag with the retired slices uses the whole-suite release gate.
+- **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
+  writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
+  or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
+  on standard error, then a last line `Exit code: N`. `NNN` counts the step's
+  files and is never reused. A refusal (exit 2) keeps its report too, once the
+  arguments are valid and `qfai.config.yaml` is found. Git does not track the
+  directory, and no step reads it. The skill's `SKILL.md` and migration guide
+  now say to read the reports from there.
+- **`plan.yaml` can settle what step 4 leaves behind.** An optional `examples`
+  list places an old example under one criterion its test-case rows name, and
+  its test cases then reach the ID map, so step 8 rewrites their annotations. A
+  rule takes `binds: none` (only where its `Contract-Refs` is `-`) or `retire`
+  with a reason in place of `contract`; step 7 removes it from
+  `04_Business-Rules.md`, writes it to no contract and lists it under
+  `## Operations`. Both are read before the ID map is written.
+- **`qfai doctor` warns when a shipped workflow's preconditions are not met.**
+  Four warnings, never errors, so a project without CI is not blocked:
+  `workflows.packageManager` (`pnpm-lock.yaml` without a valid `packageManager`
+  in `package.json`, where the workflows stop before installing),
+  `workflows.lockfiles` (two lockfiles present, naming the one the workflows
+  install with and the one they ignore), `workflows.nodeVersionFile`
+  (`engines.node` declared, no `.nvmrc` or `.node-version`, so the workflows use
+  Node 20) and `workflows.nodePin` (a workflow under `.github/workflows/` pins a
+  Node below `engines.node`). Nothing is reported for a fact that is met.
+  `qfai init` prints one `Shipped workflows:` line with the count when any is
+  unmet. Fixes #2725.
 
 ### Changed
+
+- **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
+  `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
+  open with their heading, and an existing file gains no such line. A line an
+  earlier init wrote is kept as written; init never removes or edits it.
+  Migration step 11 leaves both files as they are, and step 12 no longer checks
+  for the line or reports `entry-directive`. The review directive is still
+  prepended where `REVIEW.md` exists.
+- **Migration now removes the retired configuration keys.** This reverses the
+  2.0.0 statement that migration leaves them in place. Step 1 removes
+  `validation.traceability.scMustHaveTest` and
+  `validation.traceability.unknownContractIdSeverity`, and a `validation`
+  mapping the removal leaves empty. Step 3 replaces `prototyping.primarySpecId`
+  by `prototyping.primaryUiContract` when exactly one UI contract is tied to
+  that spec, and otherwise keeps the key and lists it for a person. Steps 1 to 3
+  run although `qfai.config.yaml` still holds one of the three keys; steps 4 to
+  12 refuse, naming the key, until it is gone.
+- **`QFAI-LAYOUT-001` lists the old files.** The one error still stops every
+  other check, but its message now lists, one per line, each file that remains
+  under the `spec-*/` and `_policies/` directories, and ends with a line that
+  names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
+  in before it is deleted.
+- **A fresh `qfai init` no longer leaves false warnings in `qfai doctor` and
+  `qfai validate`.** An absent `paths.srcDir`, `paths.testsDir` or
+  `paths.outDir` that is still the shipped default is now an `info` check with
+  one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
+  `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
+- **Step 3 rewrites the `CON-*` IDs its contract map translates in the
+  contract files it writes,** wherever they stand in the file, instead of
+  listing each one for a person. An ID no contract declared, or that more than
+  one declared, is still listed. Its `## For a person` items are grouped under
+  `### Content`, for what a person rewrites or decides, and `### Identifiers`,
+  for an old ID paired with its new one.
+- **Step 4 reads more of what a 1.x project writes.** `from` in `plan.yaml`
+  accepts any H2 heading of the old `_policies/04_Business-Flow.md`. A
+  criterion's story is read from its row of the criteria catalog table
+  (`US Ref`, `US-Refs` or `Maps To`) when it has no `Parent:` line, and a story
+  block written as `As a`, `I want` and `So that` fields becomes the one
+  sentence. An ID written both as an index table row and as a heading section
+  is one record for every kind of record, and only that record's own lines are
+  removed when a step moves it.
+- **The free-text entry names one set of requests.** The prompt-time reminder and the
+  `qfai-run` description both say a change, a fix, an investigation of the
+  codebase or a question about the project.
+- **A question that one command answers needs no run, and a run ends on purpose.** The
+  free-text reminder and the `qfai-run` description say a question that one command or one file
+  read answers is answered directly. The
+  `qfai-run` skill says a run ends at `finish` or at `decision` with `stop`, and that
+  an answer already given does not end it. In Claude Code the reminders before and
+  after a file write, and the minimal-implementation one, print nothing for a file under
+  `.qfai/run/`.
+- **A question that changes no file is answered in one stage by one sub-agent, with no separate
+  reviewer.** `answer-question` and `investigate-question` are one stage each, which runs every step of
+  the route down to `triage-close`, and `finish` follows its acceptance. A plan marks such a
+  stage `review: none`, which is admitted only on a triage stage and gives its work order no step
+  reviewer; a run carrying `review:heavy` still adds the heavy reviewers. A defect found while
+  investigating still re-routes by the decision rules. This replaces the earlier multi-stage
+  question routes (investigate, answer, close) and their reviews. Fixes #2730.
+- **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
+  entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`
+  and `Bash(yarn qfai:*)`) into `permissions.allow` of
+  `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
+  refused the skills without them. The free-text reminder now tells the agent to stop and say so
+  when `qfai-run` cannot start.
+- **A checkout with no install is named at every prompt.** A new hook group, for Claude Code and
+  for Codex, looks for `node_modules/.bin/qfai` from the project up to its git root and, when there
+  is none, says to run the project's install command, or `npm i -D qfai` when `package.json` does not
+  list `qfai`. The launcher preflight in the shared operating baseline separates the same two cases,
+  and the migration guide says each checkout and worktree needs its own install.
+
+### Fixed
+
+- **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
+  one fixed sentence; it now prints that sentence and then the message of every
+  issue the loader returned.
+- **An indented `Scenario:`, `Scenario Outline:` or `Background:` is read as
+  that keyword,** so criteria written inside an indented `Feature:` block are
+  converted.
+- **Steps 4 and 7 no longer stop on `plan.yaml` when the ID map exists and no
+  spec pack is left.** A missing or rewritten plan was an error even though
+  there was nothing left to place, which kept a project with only a step 5 item
+  from running them again.
+- The migration guide says how to finish what a step leaves: retired keys,
+  the report directory, sequential dry runs, the points of no return, copying
+  `.qfai/` before step 1, writing the plan before step 1, how a person closes a
+  step 5 item or a leftover pack file, and when an annotation is edited by hand.
+- **`qfai validate --profile full` no longer fails a migrated UI project on a
+  fresh checkout.** Migration step 10 stops tracking `.qfai/evidence/`, so a
+  clean checkout has no `.qfai/evidence/prototyping/`, and the generated CI
+  workflow then failed on `QFAI-PROT-001` (missing `prototyping.json`),
+  `QFAI-UIE-001` and `QFAI-UIE-002` for every project with UI contracts that
+  declare `screens[]`. The `full` and `verify` profiles now skip those three
+  presence checks while that directory does not exist. The `prototyping` and
+  `saas-package` profiles still run them, and so do `full` and `verify` once
+  the directory exists.
+- **The shipped `qfai-docs.yml` installs its checkers outside the project's
+  dependency tree.** It ran `npm install --no-save` into the project's own
+  `node_modules`, which npm cannot read after a pnpm install, so both document
+  checks stopped at that step in every pnpm project. The checkers
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself, with the schema
+  checker it depends on, when the project has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  and the schema and Mermaid scripts take `--tools <dir>` to find them. An
+  installed copy of the workflow is not replaced; copy the packaged file to take
+  the fix.
+- **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
+  new `workflows.mdschemaBinary` check runs `mdschema --help` from the
+  installation found from where the QFAI package sits, not from the inspected
+  project's root, and is an error that names the reason and the fix when the
+  binary does not start. Until now
+  `workflows.docsLane` read `ok` for a project with no binary. The README now
+  says that the package's install script is not needed while the platform
+  package installs, and how to approve it with `npm approve-scripts` (npm 11.16
+  or later) or `pnpm approve-builds` where it is.
+- **The shipped `qfai-docs.yml` installs its checkers with `--ignore-scripts` and `--include=optional`,
+  and its comment no longer says the install script is required.** The
+  `@jackchuka/mdschema` platform binary arrives as an optional dependency, which
+  installs without a script; the package's install script only downloads a
+  binary when that platform package is missing. The lane therefore does not
+  depend on a policy for install scripts that it does not manage.
+- **A fresh clone of a just-initialised project no longer fails
+  `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
+  `03_contract/` are not in a clone, and the check for an untouched seed
+  treated a missing one as an edited seed. It now reads the files and ignores
+  an absent empty directory, so the clone and the directory `init` ran in give
+  the same result.
+- **The managed `.gitignore` block no longer repeats a line the project
+  already has.** When the file has no block yet and its own lines already
+  ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
+  leaves `/tmp/` out of the block and prints one line naming what it left out.
+  A block already in the file is rebuilt as before.
+- **`qfai init` detects a missing Windows Developer Mode before it writes
+  anything.** It creates and removes one symlink in a scratch directory under
+  the system temporary directory, and when Windows refuses it with EPERM it stops
+  with the Developer Mode instruction instead of failing partway through the
+  tree. Any other failure of that attempt is ignored. `--dry-run` makes no
+  attempt.
+- **`qfai init` says when the config file it changes is shared.** Run from a
+  linked worktree, the `core.symlinks` line names the repository's common
+  config file and adds one line saying every worktree reads it, the main
+  checkout included. The setting itself stays `--local`: scoping it to the
+  worktree needs `extensions.worktreeConfig`, which changes the same shared
+  file.
+
+## [2.0.1] - 2026-09-30
+
+### Added
+
+- The `qfai-migration-v1-to-v2` skill can be run again on a project an earlier
+  2.x release migrated. Steps 1 to 10 then change nothing and say the migration
+  is already done, and step 11 adds only what that release lacked, such as the
+  reminder hooks. A 1.x project still gets every step, the hooks included, in
+  one run. On a project 2.0.0 migrated, first run `npx qfai init` without
+  `--force`, which installs the hooks and their text, then step 11 of the
+  installed skill, which replaces its 2.0.0 copy with this release's, and then
+  the skill. Plain `npx qfai init` leaves an older skill copy as it is.
+
+### Changed
+
+- **A guard holds every tracked text file to English.**
+  `scripts/check-repository-language.mjs` runs in `pnpm ci:lint` and fails on
+  Han, Hiragana, Katakana, Hangul, Cyrillic, Arabic, Hebrew, Thai or Devanagari
+  letters, and on CJK or full-width punctuation, in any tracked text file. It has
+  no allowlist: where behaviour needs such a literal, it is written as `\uXXXX`
+  escapes. The narrower checks on operator-facing strings and on this changelog
+  stay. What an adopter writes, and the language an assistant answers in, are
+  unchanged.
+- **The published notes of 1.10.1, 1.10.2 and 1.11.0 are in English,** cut from
+  the same changelog sections as before. The release-notes checks no longer
+  carry a rule for notes published in Japanese.
+
+### Fixed
+
+- **Codex hooks run under any shell.** Codex runs a hook through the session's
+  shell, which on Windows is often PowerShell rather than `cmd.exe`. Every
+  Codex hook's Windows line used `cmd.exe` syntax, so under PowerShell each one
+  failed and showed no reminder.
+  - Each entry in `.codex/hooks.json` is now one `node -e` line that runs the
+    same under `sh`, `cmd.exe`, Windows PowerShell and PowerShell 7. No entry
+    has a `commandWindows` line any more.
+  - The line finds `.agents/rules/reminders.json` itself, looking upward from
+    where Codex runs it and stopping at the repository root. A project below
+    its git root, as in a monorepo, now gets the reminders from its own
+    `.agents/rules`. Outside a git repository the hook still prints nothing.
+  - `npx qfai init` replaces a `.codex/hooks.json` group that 2.0.0 wrote and
+    nobody edited. A group the project edited is kept and named, as before.
+- A project migrated with the `qfai-migration-v1-to-v2` skill now gets the
+  reminder hooks `qfai init` installs, and the text they print.
+  - Step 11 writes the hooks into `.claude/settings.json` and
+    `.codex/hooks.json` through the same merge. A missing file is written from
+    the template, an existing one gains the groups it lacks, a group an
+    earlier release wrote is replaced, and a group the project edited is kept
+    and named under `## Reminder hooks`. When it writes `.codex/hooks.json`, it
+    says that Codex runs those hooks only after they are trusted with `/hooks`.
+  - Step 11 also brings `.agents/rules/reminders.json` to this release's text
+    the way `npx qfai init` brings a rule master: a copy nobody edited is
+    replaced, a missing one is written, and an edited one is kept and named.
+
+## [2.0.0] - 2026-09-30
+
+### Highlights
+
+- **Breaking: specifications move from spec packs to a story tree.** A project's
+  specifications now live under `.qfai/spec/`: policy, business flows with their
+  stories, acceptance criteria and examples, contracts with the business rules
+  they enforce, and one register each for decisions and open questions. Tests
+  annotate story-tree IDs, `qfai report` reports per business flow, and
+  `qfai doctor` and `qfai validate` check the new layout. The `.qfai/specs/spec-*`
+  layout, and every check that read it, is gone.
+
+  - **A project on the 1.x layout must migrate before adopting this release**,
+    or stay on QFAI 1.x until it has. The package ships the
+    `qfai-migration-v1-to-v2` skill and a guide, `docs/MIGRATION-2.0.0.md`.
+    `qfai init` installs the skill on an old-layout project and does not seed a
+    competing story tree.
+  - Install `qfai` as a project dependency first
+    (`npm install --save-dev qfai`), run `qfai init` without `--force`, then
+    open `/qfai-migration-v1-to-v2`.
+    Its scripts move the project to the story tree, each with a `--dry-run`
+    mode and a report, and two further steps install and check the
+    free-text entry below. There is no `qfai migrate` command.
+  - The detail is under _Changed_ and _Removed_ below.
+
+- **Intent-driven work: ask for a change in your own words.** The new `qfai-run`
+  skill reads a request stated in free text, chooses one of 39 fixed routes
+  from what it finds, and runs each stage of that route through the skill that
+  owns it. You name no stage. It stops only for a decision the agent cannot
+  take: a new story, a change to the story tree, a material risk, or a fact
+  only you hold. Invoking a stage skill such as `/qfai-sdd` yourself remains
+  available. `qfai init` opens `AGENTS.md` and `CLAUDE.md` with the line
+  that sends the first request to `qfai-run`. The detail is under _Added_
+  below.
+
+### Added
+
+- **Codex gets the tool-time reminders too.** `.codex/hooks.json` now carries
+  the reminders Claude Code runs around a tool call, under Codex's own tool
+  names. An existing file gains them through the same merge as before.
+
+  | Reminder               | Codex moment                                                                  |
+  | ---------------------- | ----------------------------------------------------------------------------- |
+  | Documentation clarity  | Before a GitHub MCP post; after an `apply_patch` that adds or changes a `.md` |
+  | Grilling               | Before an `apply_patch`; before `spawn_agent`                                 |
+  | Minimal implementation | After an `apply_patch`                                                        |
+  | API budget             | Before a `Bash` command that names `gh` or `api.github.com`                   |
+
+  The grilling reminder before leaving plan mode stays Claude Code only: Codex
+  has no tool call that leaves plan mode. Every Codex hook, the prompt-time
+  ones included, also runs on Windows through its `cmd.exe` line.
+
+- **Every prompt restates the free-text entry, in Claude Code and in Codex.**
+  A host picks a skill from the wording of a request, and may pick another one
+  or none. `npx qfai init` now adds a prompt-time hook that says a request
+  naming no skill goes to the `qfai-run` skill, and a request naming a skill
+  goes to that skill. The line at the top of `AGENTS.md` and `CLAUDE.md` and the
+  entry check in the stage skills stay.
+
+  - Claude Code: a second `UserPromptSubmit` group in `.claude/settings.json`,
+    merged into an existing file like the other reminder groups.
+  - Codex: a new `.codex/hooks.json` with this reminder and the
+    structured-question one. An existing file keeps its own groups and gains
+    the missing ones; a group the project edited is kept and named; a file init
+    cannot read is left unchanged with a warning.
+  - Each Codex hook finds `.agents/rules/reminders.json` from the repository
+    root, so it works from a subdirectory. Outside a git repository, or in a
+    project below its git root (as in a monorepo), it finds no message and
+    prints nothing.
+  - On Windows, Codex runs each hook's `commandWindows` line through
+    `cmd.exe`. That line finds the repository root with `for /f` over
+    `git rev-parse`, runs the same reader, and always exits 0.
+  - `qfai init` neither reads nor writes `.claude/settings.json` or
+    `.codex/hooks.json` through a symbolic link on its path; it warns and
+    leaves that file alone.
+  - Codex runs a project's hooks only after you review and trust them with
+    `/hooks`. `qfai init` says so in one line when it writes or adds them.
+
+- **A turn that waits on you ends with a question.** When an agent reaches a
+  point where the next step is yours — a phase approved, a plan ready, a stage
+  finished — it ends the turn with a structured question listing the next
+  actions, the recommended one first, instead of a status report. The rule is a
+  new clause of `.agents/rules/user-questions.md`.
+
+  - The stage skills' final reports and the `qfai-run` completion report end
+    with that question. `qfai-discussion` offers `/qfai-sdd` through it, in
+    place of the fixed handoff sentence it printed.
+  - Where the question tool is not available, the rule's plain-text fallback
+    lists the same actions. Under a no-question mode such as `--auto` nothing
+    is asked, and the report lists the next actions.
+  - The question resolves no ambiguity, so the clarification budget does not
+    cap it. A stop is confirmed in one line, every open decision is listed as
+    open, and nothing is asked. A `qfai-run` halt ends with its halt notice.
+  - The reminder shown on every prompt names the case, and the rule summaries
+    `qfai init` writes into `AGENTS.md`, `CLAUDE.md` and the Copilot
+    instructions cite it. A summary an earlier release wrote and nobody edited
+    is refreshed.
+
+- **A change can be asked for in your own words.** The new `qfai-run` skill
+  takes a request stated in free text, reads it into facts, and runs each stage
+  of the route the CLI chooses from them through the skill that owns the stage.
+  The operator types no stage name.
+  The run stops only for a decision the agent cannot take: whether to create a
+  new story, whether to approve a change to the story tree, whether to accept
+  a material risk such as data loss, a broken public contract or a production
+  effect, or a fact only the operator holds.
+
+  - `npx qfai workflow` is the run control the skill calls. It has seven
+    operations — `start`, `next`, `accept`, `decision`, `status`, `resume` and
+    `finish` — and each prints one JSON document. It starts no agent and runs
+    no repository command.
+  - A run follows one of 39 built-in routes, described in the next entry, and
+    binds at most one business flow. The plans ship in the package and are not
+    installed into the project.
+  - A result that writes outside the checked scope, rewrites a row of
+    `decisions.md` or `open-questions.md`, drops the test of an annotated
+    example, or claims an approval the operator did not give is refused.
+  - A story-tree change is made only by the stage attempt that holds the
+    operator's answer. It appends the `Change request:` row citing that
+    answer as `<runId>/<authorizationId>`, and the row stands at DONE once
+    every change it names is written.
+  - Only `finish` reports a run complete. It runs `validate` itself, reads
+    only this run's `verify.json`, and needs an independent `qa-gatekeeper`
+    pass. A run whose operator said not to commit completes as a verified
+    working tree, never as done.
+  - Asking to resume or continue picks up the worktree's one open run where
+    it stopped, and asking to cancel stops it.
+  - `workflow.mode` in `qfai.config.yaml` is `active` (the default), `shadow`,
+    which proposes the route and writes nothing, or `off`. Any other value is
+    a configuration error.
+  - Runtime state lives under the git-ignored `.qfai/run/`. A run's summary
+    and the answers it recorded are written under
+    `.qfai/evidence/workflow/<runId>/`, which stays local and is never
+    committed. The request text is kept there only as a keyed digest. An
+    answer that approves a change is written into the `decisions.md` row the
+    run appends.
+  - `qfai-maintain` fixes a typo or other non-normative text inside a run, and
+    stops before an edit that would change behaviour.
+  - A run starts only on a host whose capability report covers what a run
+    needs. No host is declared supported in this release; that needs a
+    recorded evaluation of the host.
+  - `qfai init` opens `AGENTS.md` and `CLAUDE.md` with a line that sends a
+    first free-text change request to `qfai-run`, and adds it to an existing
+    file that lacks it. Its summary names the workflow mode in force.
+
+- **A request runs one of 39 fixed routes, chosen by rules.** Each route has a
+  verb-object name, such as `edit-text`, `fix-defect`, `add-feature`,
+  `prototype-feature`, `decide-design` or `answer-question`, and belongs to one
+  of seven families: close, decide, consistency, change, fix, upkeep and
+  release.
+
+  - `qfai-run` reads the request into an extraction: its intent, entry flags,
+    qualifiers, signals, risks, gate, artifacts and confidence. It never names
+    a route. `npx qfai workflow` picks the route with 29 ordered decision
+    rules.
+  - A request that reads two ways stops with one question naming the candidate
+    routes by what they do, the main reading recommended. Under `--auto`,
+    `qfai-run` takes the first candidate and reports it as an assumption.
+  - Every run on a route runs the same steps. A pass-through step with nothing
+    to write records a pass with the evidence it read, and `accept` refuses the
+    pass while work the step owns remains.
+  - Three modifiers raise what a run asks without changing its steps:
+    `review:heavy` adds the blocking reviewers of the new `heavy` review
+    profile, `gate:user` stops at the route's decision points, and
+    `gate:release` asks for approval at the route's release point. They come
+    from the extraction and the route's defaults, a stage can raise one, and
+    nothing lowers one.
+  - A diagnosis at a branch point the route declares moves the run to a route
+    the plan names for that outcome. Accepted evidence is reused while the
+    revision is unchanged. A third re-route asks the operator first.
+  - A finding that no stage of the route serves leaves the run `blocked`, and
+    the notice names the stage skill to invoke.
+  - A run's `summary.json` records its `modifiers`, `reroutes` and `closure`.
+  - `scripts/check-route-catalog.mjs` keeps each plan equal to its row in the
+    workflow contract and refuses a route change that cites no new change
+    request. It is a repository tool; the package does not ship it.
+
+- **`qfai-triage` handles a request that ends without a change.** It answers a
+  question, closes a duplicate, asks for missing information, splits a request,
+  groups automated crash reports, takes in a security report, hands over an
+  operation only a person can run, and closes the request. It writes no tracked
+  file, and records any work the request needs as a follow-up request.
+
+- **More steps for the routes to run.**
+
+  - `qfai-implement` gains thirteen: bisect, revert, minimize, stress harness,
+    oracle parity, benchmark, refactor, retire, sweep, quarantine, dependency
+    bump, tooling change and backport.
+  - `implement-diagnose` ends in one of eleven verdicts, which decide where a
+    run on a fix route goes next, and has a read-only mode.
+  - `qfai-verify` gains six: change note, repeat run, external confirmation,
+    manual test plan, advisory and release notes.
+  - `sdd-triage` decides which of two disagreeing surfaces owns the truth, and
+    has a `settled` mode that reads recorded decisions without reopening them.
+
+- **Story-tree checks.** `qfai validate` reads the story tree through two new
+  rule families.
+
+  - `QFAI-LAYOUT-001` (`error`) stops validation when the configured spec
+    directory, or `.qfai/specs/`, still holds a `spec-*` pack or `_policies/`.
+    Its fix names the `/qfai-migration-v1-to-v2` skill.
+  - `QFAI-STORY-001` to `-005` and `-011` check the tree itself: the required
+    policy and contract files exist; IDs are well formed, unique, listed in
+    their index and agree with their directories; the decisions and
+    open-questions tables hold valid rows; each story has acceptance criteria
+    and examples with valid references; every business-rule and contract
+    reference resolves; and every business-flow file holds a Mermaid flowchart
+    or sequence diagram.
+  - `QFAI-STORY-006` to `-009` check test annotations. Business flows and
+    acceptance criteria need an annotated test in the `atdd` profile, and
+    examples in the `tdd` profile. Each annotation sits in its layer, names a
+    declared ID, and a test exception cites a declared ID and a decision row
+    in force.
+  - `QFAI-STORY-010`, run by the drift guard, refuses a change to a protected
+    story-tree file that no change request in force authorizes, and an edit
+    to an existing decision row.
+
+- **The `qfai-migration-v1-to-v2` skill and a migration guide.**
+  `qfai init` installs the skill. Its ten scripts move a 1.x project to the
+  story tree, each with a `--dry-run` mode and a report. The scripts load the
+  `qfai` package, so install it as a project dependency first
+  (`npm install --save-dev qfai`); a download through `npx` is not enough.
+  The package ships the guide as `docs/MIGRATION-2.0.0.md`. There is no
+  `qfai migrate` command. On a project that still has the spec-pack layout,
+  `qfai init` installs the skill and does not seed a story tree beside the old
+  one.
+
+- **The migration ends ready for a free-text request.** Two steps follow the
+  ten that move the project.
+
+  - Step 11 (`11-install-entry.mjs`) brings each shipped skill up to the
+    installed package and adds the missing host skill links, the entry
+    directive in `AGENTS.md` and `CLAUDE.md`, and the `.qfai/run/` line of
+    the managed `.gitignore` block. A
+    skill the project changed is moved whole to
+    `.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/` first, never
+    deleted.
+  - Step 12 (`12-check-entry.mjs`) writes nothing. It makes the project
+    checks `npx qfai workflow start` makes, and checks what step 11
+    installs. Each failure is listed for a person by name —
+    `contract-undeclared`, `reviewer-missing`, `invalid-mode`,
+    `entry-directive`, `gitignore`, `qfai-run-link` or `evidence-tracked` —
+    and the step exits 3.
+  - The skill then runs `npx qfai validate` and hands the first free-text
+    change request to `qfai-run`.
+
+- **Project overrides for agent routing and review profiles.** The defaults
+  ship inside the package. The routing defaults are one file per owner under
+  `assets/defaults/agent-routing/`: one per skill whose steps they route,
+  `common.yml` for the `common-*` steps, `skills.yml` for the skills not split
+  into steps, and `_contract.yml` for what every file follows. Every reader,
+  `qfai validate` included, reads them in file-name order as one list, and a
+  finding about a routing default names its file. The review profiles are in
+  `assets/defaults/review-profiles.yml`. A `routing:` or `reviewProfiles:`
+  entry in `qfai.config.yaml` replaces the default entry of the same name as a
+  whole, and a new name adds one. Migration step 3 turns the entries a project
+  had edited in `.qfai/assistant/manifest/` into these overrides.
+
+- **`qfai atdd scaffold --flow <BF-ID>`** writes an end-to-end test skeleton
+  for a business flow. `--story <US-ID>` writes one skeleton per acceptance
+  criterion of a story.
+
+- **`/qfai-sdd` checks its business rules against its examples.** After it
+  writes the rules, an agent that did not write them reads the rules and the
+  examples they cite. It raises findings on the flows, stories, criteria and
+  examples: a case a rule implies that no example states, a redundant example,
+  an example no rule explains, a rule its examples do not support, and a flow,
+  story or criterion split the rules show to be wrong.
+
+  - Each finding is adopted or rejected. A finding that rests on product intent
+    nothing written states goes to the user.
+  - Adopted findings are applied, and the affected rules are rewritten from
+    the updated examples. At most two cycles run.
+  - A rejected finding is recorded in `decisions.md` and is not raised again.
+  - The flow's SDD evidence records each cycle, and the completion reviewer
+    checks that record.
+
+- **Stage skills run in steps.** `qfai-discussion`, `qfai-sdd`,
+  `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify` and
+  `qfai-maintain` are each a short list of steps. A run does every step its
+  route names, and each stage is reviewed once, by the reviewers those steps
+  need.
+
+  - `qfai init` installs each step as `.qfai/assistant/step/<name>/STEP.md`.
+    Steps are not linked into any host skills directory, so the host still
+    lists the same skills.
+  - A skill invoked by name runs its steps in order, reading one step at a
+    time, and runs one review after the last.
+  - A plan stage names its steps, and every step it names runs. A work order
+    names its steps and requires the reviewers of all of them.
+  - Routing entries and `routing:` overrides in `qfai.config.yaml` are keyed
+    by step.
+  - `qfai validate` reports `QFAI-SKILLS-016` for a step tree that cannot be
+    used: a `SKILL.md` under `step/`, a step without `STEP.md` or with a
+    mismatched name, an unknown owner, a list naming a missing step, a step
+    its owner does not list or that nothing uses, and a `requires` list that
+    names anything but common steps, or appears on a common step.
+  - A skill that runs steps lists, in a `requires:` key of its own frontmatter,
+    the common steps its body runs itself, such as the review after its last
+    step. `QFAI-SKILLS-016` checks that list as it checks a step's, and counts
+    no common step as used unless a skill, a plan or a step names it.
+
+- **Contracts can carry their own IDs, and number their rules after them.**
+  `qfai validate` reads them.
+  - A contract under `cli/`, `api/`, `db/` or `ui/` declares a contract ID
+    such as `CLI-0001` or `API-0002`: in its H1 for a Markdown contract
+    (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line otherwise. The number is unique across kinds.
+  - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
+    another number is a BR-to-EX error (`QFAI-STORY-005`).
+  - A Markdown contract holds its rules under `## Business rules`.
+  - A `contracts.md` index with the columns `ID`, `Title`, `File`,
+    `Depends On`, `Reconciled With` and `Purpose` is checked against every
+    contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
+    declares and has a row that agrees with both. A disagreement is
+    `QFAI-CONTRACT-034`.
+- **Parallel pull requests no longer pick the same new story-tree IDs** (#2623).
+  `scripts/story-ids.mjs` is a repository tool; the package does not ship it.
+  - `next <scope>...` prints one free ID per scope — `DEC`, `OQ`, `BF`,
+    `US-<flow>`, `AC-<flow>-<story>`, `EX-<flow>-<story>` or `BR-<contract>` —
+    and nothing else on stdout. It counts the way the package's allocator does,
+    over main, every open pull request and the working tree.
+  - `check` names each ID the branch declares that main or another open pull
+    request declares too, so two branches that picked the same number before
+    either was pushed find out before merging.
+  - Both cost one REST listing and one `git fetch`, however many pull requests
+    are open, and report the remaining allowance on stderr.
+  - The shipped `/qfai-sdd` allocation still reads only the local tree.
+
+### Changed
+
+- **The repository is written in English throughout.** Every Japanese comment,
+  message, test description, document and changelog entry is now English, and
+  the two language guards hold `packages/qfai/src/**` and `CHANGELOG.md` at
+  zero Japanese with no allowlist. Where behaviour depends on a Japanese
+  string, such as a legacy heading keyword or a CJK test fixture, the literal
+  is written as `\uXXXX` escapes. Every message `qfai` prints is English.
+
+- **Breaking: the `## Architecture` section of `tech.md` draws the layers,
+  then lists them from the top down.** A layer is a group of modules with a
+  dependency direction: an upper layer may use the layers below it, and a
+  lower layer never knows an upper one. A section that is a table alone fails
+  the document-schema check until the diagram is added.
+
+  - The section is one `mermaid` `flowchart TD`, with a node per layer and an
+    `Upper --> Lower` edge per dependency, then the table. The rows run from
+    the uppermost layer down, and Depends on names only layers in rows below.
+  - `qfai validate` reports as `QFAI-STORY-013` a Depends on entry that is not
+    a layer below its row, and any layer or edge the diagram and the table do
+    not share.
+  - The `qfai-sdd` rules and playbook, the `sdd-flow` step and
+    `/qfai-configure` say what a layer is and how the section is written.
+  - Migration step 3 draws the layers it moves and orders their rows. A layer
+    table that cannot be ordered, because a layer depends on one with no row
+    or layers depend on each other, is listed for a person instead.
+
+- **Breaking: `constraint.md` is policy in plain words, and `tech.md` holds
+  the architecture.** A document written to the earlier shape fails the
+  document-schema check until it is rewritten.
+
+  - Each section of `01_policy/constraint.md` is one table of ID, Constraint
+    and Rationale. The Impact column is gone, and a row may not hold a
+    backtick or a business rule, example, acceptance-criterion or contract
+    ID. Move a file name, a command or a rule into the contract or
+    `tech.md` that owns it.
+  - Constraint IDs are positional: `TC-`, `OC-` and `BC-` from 01 in table
+    order within each section. No document cites one, so removing a row
+    renumbers the rows after it. `qfai validate` reports an ID out of place
+    as `QFAI-STORY-012`.
+  - `tech.md` has a required `## Architecture` table between Stack and
+    Dependencies: one row per layer, its responsibility, and the layers it
+    may import from. `/qfai-configure` fills it from the codebase and
+    `/qfai-sdd` from the discussion pack. Implementation places new code by
+    it, and the reviewers treat an import that crosses it as a finding. The
+    constitution routes architecture boundaries there instead of to
+    `constraint.md`.
+  - Migration step 3 moves a layer table of an old `catalog/structure.md`
+    into that section, drops the Impact column of an old constraint table,
+    numbers each constraint section from 01 and names every ID it changed,
+    and lists anything else for a person.
+
+- **Breaking: the five routes of earlier 2.0.0 builds are retired.** A run
+  record written under one is read under its successor, and the record itself
+  is never rewritten.
+
+  - `direct` reads as `edit-text`, `bugfix` as `fix-defect`, `bounded-change`
+    as `add-feature` and `discovery` as `decide-design`.
+  - `feature` reads as `prototype-feature` when the run had a prototype stage,
+    and as `add-feature` otherwise.
+  - An unfinished run on a retired id cannot continue: every write operation
+    and `resume` refuse it `fail-closed`, and a `stop` still cancels it.
+  - `docs/MIGRATION-2.0.0.md` lists each retired id and the removed fields.
+
+- **An acceptance-test review pack names its own producer.** A review pack
+  that `/qfai-atdd` writes declares `producer: "atdd"` in `summary.json` and
+  `Producer: atdd` in `review_request.md`, with a `flow` target. It used to
+  declare `implement`, so it could not be told apart from an implementation
+  pack of the same flow. `npx qfai validate` accepts `atdd` as a producer, and
+  neither `--profile sdd` nor `--profile discussion` judges such a pack.
+
+- **A skill no longer restates the shared skill baselines.** `qfai validate`
+  checks each shared obligation once, where the baseline states it, and a
+  skill's `SKILL.md` carries only what is its own.
+
+  - The shared Default Autopilot Policy lives in
+    `rule/shared-skill-operating-baseline.md`. A skill's own
+    `## Default Autopilot Policy` section lists only what it adds, and a skill
+    that adds nothing carries none. `R-AUTOPILOT-POLICY-MISSING` is raised when
+    the baseline loses its shared section or one of its three buckets, and when
+    a skill's section no longer names a hard-required input declared for that
+    skill.
+  - The reviewer gate lives in `rule/shared-skill-delegation-baseline.md`.
+    `QFAI-SKILLS-011` and `QFAI-SKILLS-012` now read its
+    `## Reviewer Gate Baseline` section, and a skill no longer needs a
+    `### Reviewer Gate` section of its own. Both messages are now in English.
+  - A `project_memory:` block is optional. `W-SKILL-PROJECT-MEMORY` is raised
+    only when a declared block is not the last content of its `SKILL.md`.
+  - The shipped stage skills drop the text the baselines already state.
+    `qfai init --force` refreshes an installed copy.
+
+- **The doctor check of root `DESIGN.md` is named after it.** Under
+  `qfai doctor --profile prototyping` the readiness check of root `DESIGN.md`
+  is `prototyping.designMdReadiness`, titled `Root DESIGN.md readiness`; it
+  was `prototyping.designContracts`, titled after design contracts that no
+  longer exist. The `qfai prototyping preflight` help line names UI contracts
+  and `DESIGN.md` instead.
+
+- **Every Markdown file of the spec tree needs a schema.** A Markdown file
+  under `paths.specsDir` or `paths.contractsDir` that no mdschema manifest
+  entry names, or that two entries name, now fails the document lane under
+  every scope that includes it, and `npx qfai validate` reports it as
+  `QFAI-DOCSCHEMA-001` with the `[coverage]` rule. Before, such a file was
+  skipped. The lane and `qfai validate` read the two directories from
+  `qfai.config.yaml` the same way on every platform, so `./.qfai/spec` and
+  `.qfai\spec` name the same directory as `.qfai/spec` for both.
+
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
+
+- **The policy-layer documents and the two registers have closed schemas.**
+  `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
+  `constraint.md`, `decisions.md` and `open-questions.md` now accept only
+  the sections their templates declare, in order, each holding the one kind of
+  content it is for. A section the schema does not name, or a list where a table
+  belongs, fails `pnpm lint:mdschema`.
+
+  - `principle.md` gains a Decision priorities table; `initiative.md` no
+    longer carries an overview or its own priorities.
+  - `glossary.md` is one Term and Definition table.
+  - `constraint.md` has Technical, Operational and Business sections, each one
+    ID, Constraint, Rationale and Impact table, which may be empty.
+  - A section that holds only a table holds exactly its template's columns. An
+    added column fails, and so does a line starting with a pipe directly above
+    the header row.
+  - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
+    strict schema, so a misspelt rule or option fails instead of being ignored.
+  - Migration step 3 writes these five policy files in their template's shape.
+    An old section of the same kind moves into its section; every other one is
+    listed under `## For a person` with its archived copy, and the step exits 3.
+    A table written without its leading and trailing pipes moves too, and is
+    written with them.
+
+- **Every table-only section of the story tree holds exactly its template's
+  columns.** The rule the policy documents and the two registers follow now
+  covers `business-flows.md`, `user-stories.md`, `03_Example.md`,
+  `contracts.md`, the Stack table of `tech.md` and the Business rules table
+  of a CLI contract. An added column fails `pnpm lint:mdschema`, and so does a
+  line starting with a pipe directly above the header row.
+
+- **`qfai-sdd` writes contracts in the contract ID scheme, and references
+  point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
+  constitution, the drift protocol and the agent cards now say:
+  - A new contract takes its kind from its directory and the next contract
+    number, which no other contract of any kind uses and which is never
+    reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares its ID in
+    its H1 or on a `QFAI-CONTRACT-ID` line.
+  - Its rules are `BR-<contract number>-NNNN`, under `## Business rules` in a
+    Markdown contract. The shipped samples show `BR-0001-NNNN`,
+    `BR-0002-0001` and `BR-0003-NNNN`.
+  - A rule cites only examples, and only code and tests cite a rule. A rule
+    several contracts rely on is defined once and cited by no other contract;
+    the skill no longer writes rule refs. A contract never names an
+    implementation file.
+  - A flow's contracts are the ones whose rules cite its examples.
+  - The contract index has the columns `ID`, `Title`, `File`, `Depends On`,
+    `Reconciled With` and `Purpose`.
+  - `qfai validate` describes `QFAI-CONTRACT-034` and `QFAI-STORY-005` by the
+    checks they make on contract IDs and rule numbers.
+
+- **`qfai --help` no longer names an internal contract beside
+  `handoff upgrade`.**
+
+- **The story tree has no `structure.md`.** `qfai init` no longer writes
+  `03_contract/structure.md`, and nothing reads it. Its facts have other
+  homes:
+  - Each entrypoint is a Skeleton line in the Standard commands section of
+    `03_contract/tech.md`: `` - Skeleton: `<entry>` -> `<command>` ``.
+  - An architecture boundary is a Technical Constraints row of
+    `01_policy/constraint.md`.
+  - The paths that render a user-visible surface are `uiux.surfacePaths` in
+    `qfai.config.yaml`: a list of globs, or `[]` for a project that renders
+    none. `/qfai-configure` writes it, and the UI-affecting check reads it.
+  - `QFAI-ASSETS-003` checks `tech.md` alone for unfilled placeholders.
+  - Migration step 3 moves the old structure catalog into those three places
+    and lists the rest under `## For a person`.
+
+- **Every spec-tree document is checked against its schema, and the check is
+  required.** `npx qfai validate` runs the shipped document-schema checker in
+  the `sdd`, `verify` and `full` profiles. Each violation is a
+  `QFAI-DOCSCHEMA-001` error naming the document, line and column, and a
+  check that could not run is `QFAI-DOCSCHEMA-002`.
+
+  - `@jackchuka/mdschema` 0.15.4 is now a dependency of the package, and the
+    shipped `qfai-docs.yml` installs the same version.
+  - `npx qfai doctor` reports an error in `workflows.docsLane` when
+    `.github/workflows/qfai-docs.yml` is missing, and names the packaged copy
+    to restore.
+  - `npx qfai init` ships the rule master `.agents/rules/document-schema.md`
+    and cites it from the `AGENTS.md`, `CLAUDE.md` and
+    `copilot-instructions.md` it writes.
+
+- **`tech.md` has a closed schema of three sections.** `## Stack` is one
+  Component and Choice table with Runtime and Platform rows. `## Dependencies`
+  names each runtime package in backticks with its reason on a nested item, or
+  says `- None.`. `## Standard commands (copy-paste)` holds one labelled item
+  per quality-gate command: Install, Format, Test, Lint, Typecheck, Build,
+  Skeleton and Validate, and optionally Pack / distribution.
+
+  - `tech.md` holds no rules and no constraints. A rule belongs to the contract
+    that enforces it, and a constraint to `01_policy/constraint.md`.
+  - The primary component registry is the `Component catalogue` row of the
+    Stack table.
+  - Migration step 3 writes `tech.md` in its template's shape. The 1.x stack
+    lists become Stack rows, `Smoke` becomes `Skeleton`, and the Constraints
+    section goes to `01_policy/constraint.md`. Anything else is listed under
+    `## For a person`, and the step exits 3.
+
+- **`contracts.md` is one contract index table.** The template `qfai init`
+  seeds, and its schema, hold only `## Contract Index` with the columns `ID`,
+  `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+  `Short ID`, `Entity` and `Declared ID` columns are gone.
+  - `qfai-sdd` ships a CLI contract template, `cli/cli-NNNN-title.md`: the
+    `# CLI-NNNN: <title>` heading, `## Ownership boundary` and one
+    `## Business rules` table. A closed schema for that shape ships beside it.
+  - The `prototype` stage of a `qfai-run` route no longer names
+    `<paths.contractsDir>/design/**` as a write area. Nothing is written there.
+
+- **Seven of QFAI's own CLI contracts are in the template's shape.** The
+  contracts for assistant routing, assistant steps, configuration, the delivery
+  workflow, the research protocol, story-tree authoring and the workflow files
+  hold only their heading, `## Ownership boundary` and one `## Business rules`
+  table.
+  - Their metadata lists and prose sections are gone. Each obligation those
+    sections stated is now a business rule that cites the examples showing it.
+  - Their rules are numbered within each contract, from `BR-0001-0001` to
+    `BR-0020-0021`, and every reference to an old rule number names the new
+    one.
+  - The two repository CI constraints on where a gate runs and on evidence for
+    a parallelism change are now rules of the repository CI contract.
+
+- **The contracts for `qfai atdd scaffold`, `qfai audit log`,
+  `qfai discussion`, `qfai handoff upgrade`, `qfai report`, the migration
+  scripts and the shipped workflow set are in the CLI contract form.** Each
+  holds an ownership boundary and one business-rules table, and every
+  obligation its other sections stated is now a rule citing the examples
+  that show it. The rules are numbered by contract, as `BR-0010-0001`.
+
+- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
+  contracts are written as business rules.** This repository's contracts for
+  those commands now hold an ownership boundary and one business-rules table,
+  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
+  exit codes, payload fields, state transitions and operator screens are rules
+  in that table. No command behaves differently.
+
+- **The `qfai doctor`, `qfai init` and `qfai validate` contracts are one
+  business-rule table each.** Every obligation their synopsis, option,
+  side-effect, exit-code, finding and output-grammar sections stated is now a
+  rule that cites the examples showing it, numbered `BR-0008-NNNN`,
+  `BR-0011-NNNN` and `BR-0016-NNNN`. Obligations no example showed gained one,
+  such as `--clean` pruning expired run logs, the rule citations `qfai init`
+  adds to an existing `AGENTS.md`, and the `--format text` line grammar.
+
+- **The shipped guidance states what each story-tree document may hold.** The
+  `qfai-sdd` skill, its steps and the shared rules now say that a document
+  under `.qfai/spec/` holds its template's headings and nothing else, with one
+  kind of content per section and no history section. The rules a template
+  cannot show — such as the story sentence, one named scenario per acceptance
+  criterion, plain example values and what a glossary term may not contain —
+  are listed once, in the skill's traceability rules.
+
+  - `QFAI-STORY-011` now names the `## Flow` section and its one diagram.
+  - The discussion templates name where `/qfai-sdd` carries success
+    criteria, terms and constraints, and the constraint IDs of a discussion
+    pack no longer share a prefix with the story tree's.
+  - References to retired record files (`08_Open-questions.md`,
+    `07_Decisions.md`, `*_delta.md` and the `Approved By` column) now name
+    `decisions.md` and `open-questions.md`.
+
+- **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
+  name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
+  removes the host links of the old name and moves
+  `.qfai/assistant/skill/qfai-migration-spec-to-story/` whole to
+  `.qfai/evidence/migration-spec-to-story/legacy/skill/`, so an edited copy is
+  kept and `qfai validate` no longer reports it. A migration under way
+  continues under the new name from the step it reached: the plan, the ID map
+  and the archives stay in `.qfai/evidence/migration-spec-to-story/`.
+
+- **Migration step 4 writes stories and criteria in the template's shape.**
+  - `01_User-story.md` holds the story heading, the one
+    `As a …, I want …, so that ….` sentence under `## User Story`, and the old
+    non-goals under `## Non-goals` when there are any.
+  - The pack's scope and source provenance are no longer copied into the
+    story. They stay in the retained archive under
+    `.qfai/evidence/migration-spec-to-story/retired/`.
+  - `02_Acceptance-Criteria.md` opens `Feature:` with the story title and
+    indents each scenario as the template does. A criterion no longer carries a
+    `# Parent:` line; its directory names the story.
+  - A story block that is not one such sentence is written as it stands, and a
+    story with no criterion that takes a new ID gets no
+    `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
+    exits 3.
+
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
+
+- **Migration steps 4 and 5 write criteria and examples in their closed
+  shapes.**
+  - Each criterion holds one named `Scenario:`, the first one it had. A
+    `Background:`, a further scenario, a scenario named only by an ID and a
+    `Scenario Outline:` are not written. Step 4 lists each under
+    `## For a person` with its old file and exits 3.
+  - A criterion left with no named scenario holds a placeholder scenario, and
+    step 4 lists its new file.
+  - An example's Input and Expected lose a leading `Given`, `When`, `Then` or
+    `And` when they hold one step. A cell holding more steps is written as it
+    stands, and the step lists it under `## For a person` and exits 3.
+
+- **Migration step 3 writes CLI contracts in the template's shape.**
+  - A Markdown contract under `cli/` holds its `# CLI-NNNN: <title>` heading,
+    `## Ownership boundary` and a `## Business rules` table, and nothing else,
+    so the migrated contract passes the CLI contract schema.
+  - An old ownership boundary of one to three paragraphs that name no rule is
+    kept. Where there is none, the section holds the template's placeholder and
+    the contract is listed under `## For a person`.
+  - The text before the first section and every other section are left out
+    and listed under `## For a person` with the old file and its copy under
+    `.qfai/evidence/migration-spec-to-story/retired/contract/`. Step 3 exits 3.
+  - Step 7 lists a rule it writes into a CLI contract whose statement names
+    another rule, which that contract's table does not admit, and exits 3.
+
+- **Migration step 3 retires 1.x files that are not 2.0.0 contracts.**
+  - A Markdown file under `api/`, `db/` or `ui/` gets no contract ID and is
+    not written into the contract tree. It is listed under `## For a person`
+    with the form its directory's contracts take: OpenAPI YAML or JSON, SQL,
+    or YAML.
+  - No file under `design/` is numbered. The directory moves whole, and each
+    file is listed with where its content now belongs: the brand in the root
+    `DESIGN.md`, a screen in a `ui/` contract. A dot-prefixed file such as
+    `.tokens.json` is listed too, and so is an empty `.gitkeep`.
+  - Each original is kept under
+    `.qfai/evidence/migration-spec-to-story/retired/contract/`, and step 3
+    exits 3. A plan that places a rule in one of these files stops step 4.
+
+- **The business-flow and story documents have closed schemas.** The document
+  lane now refuses any section, table, list or code block in these six
+  documents that their `qfai-sdd` template does not declare, and the templates
+  follow the same shape.
+  - `business-flow.md` states `## Purpose` in prose, draws the flow as one
+    Mermaid diagram under `## Flow`, and lists branches and failures under the
+    new required `## Alternate and exception paths`.
+  - `01_User-story.md` holds one `As a …, I want …, so that ….` sentence under
+    `## User Story`, and optionally a `## Non-goals` list.
+  - `02_Acceptance-Criteria.md` holds one Gherkin block: `Feature:` with a
+    name, then for each criterion a `# AC-…` comment and one named `Scenario:`,
+    indented two and four spaces. A `# Parent:` line, or a scenario named only
+    by its ID, fails.
+  - `03_Example.md`, `business-flows.md` and `user-stories.md` each hold one
+    table and nothing else. An example's `Input` and `Expected` are plain
+    values, not `Given` or `Then` steps.
+
+- **Breaking: specs move to the story tree.** A project's specifications live
+  under `.qfai/spec/`: policy in `01_policy/`, business flows with their
+  stories, acceptance criteria and examples in `02_business-flow/`, contracts
+  and the business rules they enforce in `03_contract/`, and one
+  `decisions.md` and one `open-questions.md` at the root. `qfai init` seeds
+  that tree. A project on the former `.qfai/specs/spec-*` layout must run the
+  bundled `qfai-migration-v1-to-v2` skill before adopting this release,
+  or stay on QFAI 1.x until migration is complete.
+
+  Migration step 1 moves these directories:
+
+  - `.qfai/specs/` to `.qfai/spec/`;
+  - `.qfai/contracts/` to `.qfai/spec/03_contract/`;
+  - `.qfai/assistant/skills/`, `agents/` and `prompts/` to `skill/`, `agent/`
+    and `prompt/`, and `skills.local/` to `skill.local/`;
+  - `.qfai/prototypes/` to `.qfai/prototype/`;
+  - `.qfai/evidence/decisions/`, which `qfai audit log` reads, to
+    `.qfai/evidence/decision/`;
+  - `.qfai/report/specs-coverage/` to `.qfai/report/spec-coverage/`.
+
+  It rewrites `paths.specsDir`, `paths.contractsDir`, `paths.skillsDir` and
+  `paths.promptsDir` in `qfai.config.yaml` where they hold the old default; an
+  unset key takes the new default. `.qfai/specs/` and `.qfai/contracts/` move
+  only where their key is unset or holds the old default.
+
+  The shipped rules from `.qfai/assistant/constitution/`, except
+  `requirements-decomposition.md`, and the shipped references
+  `test-layers.md`, `ui-definition-protocol.md` and `ui-procurement.md` from
+  `.qfai/assistant/catalog/`, are now in `.qfai/assistant/rule/`. Migration
+  step 3 moves a project's own catalog content into the story tree:
+
+  - `product.md` into `01_policy/objective.md`, with its `Milestones` section
+    into `01_policy/initiative.md`;
+  - `manifest.md` into `01_policy/principle.md`;
+  - `tech.md` and `structure.md` into `03_contract/`.
+
+  Step 3 archives everything else in `constitution/`, `catalog/`, `manifest/`
+  and `process/` under `.qfai/evidence/migration-spec-to-story/retired/`. The
+  exception is a `*.local.md` overlay whose rule still exists, which moves to
+  `rule/`. `requirements-decomposition.md` from `constitution/` is now a
+  reference of the `/qfai-sdd` skill. `qfai init` no longer writes
+  `review-gate.rules.yml`, `spec_required_files.json` or
+  `test-layers-ci-lanes.md`.
+
+  `qfai init --upgrade-assistant-tree` migrates a legacy assistant tree to
+  `rule/`, `skill/`, `agent/` and `prompt/`.
+
+- **Breaking: tests annotate story-tree IDs.** An end-to-end test carries
+  `QFAI:BF-NNNN`, an integration or API test `QFAI:AC-NNNN-NNNN-NN`, and a
+  test in any other layer `QFAI:EX-NNNN-NNNN-NN`. Migration step 8 rewrites
+  the annotations its ID map resolves. ATDD evidence is kept per business flow,
+  in the local `.qfai/evidence/atdd-BF-NNNN.md`, which `qfai validate` does
+  not read.
+
+- **Breaking: `qfai report` reports per business flow.** It writes
+  `<outDir>/business-flow-NNNN/coverage.md` and `traceability-graph.json` in
+  place of the per-spec directories. `--flow` on `validate` and `report`
+  scopes a run to one or more flows, and a scoped `report` reads
+  `validate.flow-<ids>.json` and writes `report.flow-<ids>.md`. On
+  `validate`, a `--flow` value that names no business flow is reported as
+  `QFAI-FLOW-005` (`error`) and no scoped result is written; `report` refuses
+  it. `QFAI-FLOW-001` remains the Mermaid `stateDiagram` warning.
+
+- **Breaking: agent routing no longer lives in the project.** `qfai init` no
+  longer writes `.qfai/assistant/manifest/agent-catalog.yml`,
+  `agent-routing.yml` or `review-profiles.yml`. Each agent card's frontmatter
+  is its definition, and the routing defaults come from the installed package.
+
+- **`qfai validate` no longer requires a discussion pack on the story tree.**
+  `/qfai-sdd` may start from an explicit user requirement, so a story-tree
+  project with no discussion pack of any name no longer gets
+  `QFAI-DPACK-001`. A misnamed pack still reports `QFAI-DPACK-005` or
+  `QFAI-DPACK-006`, and `QFAI-DPACK-001` with it.
+
+- **Breaking: `qfai doctor` checks the story tree.** The `spec.layout` and
+  `spec.capCatalogSpecColumn` checks are gone, and `prototyping.primarySpec`
+  is now `prototyping.primaryUiContract`.
+
+- **Shipped rules and messages name the story-tree locations.** The rules
+  `qfai init` copies into `.agents/rules/` name `.qfai/assistant/rule/` and
+  `.qfai/spec/`, and state the traceability chain as business flow, story,
+  acceptance criterion, example, test and code, with each business rule in
+  the contract that enforces it. The same change reaches:
+
+  - the `expected` text of `QFAI-CFG-LINK-001`, which names
+    `prototyping.primaryUiContract`;
+  - the `expected` text of `QFAI-UIE-001` and `QFAI-UIE-002`, which name
+    `<paths.contractsDir>/ui/`;
+  - the `--force` entry of `qfai --help`, the example in the seeded
+    `waivers.yml`, and the sample `DESIGN.md` comment.
+
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states
+  when a host is declared supported, and declares none in this release.
+
+- **`qfai init` says how many shipped skills it left unchanged.** A plain run
+  keeps a shipped skill whose project copy differs from this release. It now
+  prints how many it kept, and that `qfai init --force` replaces them with the
+  shipped versions, overwriting local edits.
+
+- **The migration skill's guide covers the former migration memos.** The
+  `.qfai/assistant/process/` directory is gone, and `qfai init` writes no
+  migration memo. Migration step 3 moves the memos a 1.x release wrote to
+  `.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`,
+  where nothing reads them. Upgrade notes live in this changelog.
+  `## Former migration memos` in the skill's `references/migration-guide.md`
+  lists the three forms a project upgrading from a release before 1.10.0 meets
+  as errors for the first time: the `playwright-cli` browser wrapper, readers
+  of `.qfai/output/validate.json`, and hand-written per-skill handoff files.
+
+- **The migration guides describe what the migration writes today.** The
+  skill's `references/migration-guide.md` and `docs/MIGRATION-2.0.0.md` now
+  say that:
+  - each story-tree document the steps write is in its template's shape, and
+    content that does not fit is listed under `## For a person`;
+  - a pack's scope and source provenance, a story's `Parent`, `Source` and
+    `Flow` fields and a criterion's `# Parent:` line stay in the archive;
+  - step 3 routes the old structure catalog by section and writes no structure
+    document;
+  - rules are numbered `BR-<contract number>-NNNN` and written in each
+    contract format's own form, a `## Business rules` table in Markdown;
+  - the design lock, the token mirror and `prototype-handoff.yaml` are not
+    carried over, and the handoff now lives in `prototyping.json`.
+
+- **The dogfooding backlog guard names the findings behind a count it
+  refuses.** When a file held at zero reports errors, or a pinned file reports
+  more than its pin, the guard now prints each error finding in that file as
+  `code: message` under the refusal. GitHub caps the annotations a run shows,
+  so the findings that changed the count were often not visible anywhere.
 
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
@@ -21,152 +1070,478 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a pool block, and `vite` is declared as the peer the runner requires
   instead of being resolved for it. The supported Node range is unchanged.
 
-- **The type checker moves to TypeScript 6.** The seventh major ships the
-  compiler as a native binary and no longer exposes the classic compiler API
-  from its main entry, which the test tree and the declaration build both read;
-  the linter refuses to load against it at all. The sixth is the newest release
-  every part of this toolchain supports, and it reports the deprecations the
-  seventh turns into errors. The forward lane keeps type-checking against the
-  seventh, so nothing stops tracking it.
+- **The type checker moves to TypeScript 6.** TypeScript 7 ships the compiler
+  as a native binary and no longer exposes the classic compiler API from its
+  main entry, which the test tree and the declaration build both read; the
+  linter refuses to load against it at all. TypeScript 6 is the newest release
+  every part of this toolchain supports, and it reports the deprecations
+  TypeScript 7 turns into errors. A separate CI job keeps type-checking
+  against TypeScript 7, so nothing stops tracking it.
 
   One deprecation is silenced, inside the declaration rollup only: the bundler
   builds that rollup with `baseUrl` whatever the project declares, and this
-  package declares neither `baseUrl` nor `paths`. The lifting condition is
-  written beside it, and the forward lane now names any such exemption on a
-  passing run instead of reading only the compiler configuration.
+  package declares neither `baseUrl` nor `paths`. The condition for removing
+  the exemption is written beside it, and the TypeScript 7 job now names any
+  such exemption on a passing run instead of reading only the compiler
+  configuration.
+
+- **Breaking: `.qfai/evidence/` is local and never committed.** `qfai init`
+  ignores the whole directory, and a rerun strips the evidence negations
+  earlier releases wrote into the managed `.gitignore` block. Stage evidence,
+  run records and decision records stay in the working tree for review; what
+  has to last goes into the story tree, the `decisions.md` rows and the tests.
+  - **Breaking:** `qfai validate` no longer reads evidence. `QFAI-ATDD-131`,
+    `QFAI-ATDD-132`, `QFAI-ATDD-133`, `QFAI-GRILL-001`, `QFAI-GRILL-002`,
+    `QFAI-CONTRACT-031` and `QFAI-DCON-019` are removed. A waiver that names
+    one of them is reported as naming an unknown rule (`QFAI-WAIVER-004`).
+  - **Breaking:** a `decisions.md` row that records a workflow approval cites
+    the answer as `<runId>/<authorizationId>` and writes who answered, when
+    the answer was recorded, and the label of each chosen option, exactly as
+    the run's authorization record holds them. A row that names only who
+    answered is refused.
+  - **Breaking:** a local import-lite record under `.qfai/evidence/` no longer suppresses
+    `QFAI-DPACK-001`.
+  - Migration step 10 (`10-update-gitignore.mjs`) takes a migrating project
+    there. It removes every `.gitignore` line that re-includes
+    `.qfai/evidence/`, deletes `.qfai/evidence/.gitignore`, and removes the
+    directory's entries from the git index without deleting the files. The
+    removals are left staged for the person to commit, and a new
+    `## Git index` section says how many paths left the index. The migration
+    plan, ID map and archives stay in that one working copy.
+  - No CI lane runs the prototyping profile.
+
+- **The migration gives every 1.x contract its 2.x contract ID.** No old
+  `CON-*` ID is left where a step can rewrite it.
+  - Step 3 numbers every contract under `cli/`, `api/`, `db/` and `ui/`
+    that has no 2.x ID, from `0001` across kinds, in the order CLI, API, DB,
+    UI, then by old number. It renames each file to
+    `<kind>-NNNN-<slug>.<ext>`, declares the new ID in its H1 or
+    `QFAI-CONTRACT-ID` line, and rewrites the old IDs in `-- Depends on:` and
+    `x-qfai-depends-on`. Its dry run names each rename with the new ID.
+  - The old and new IDs and paths are recorded in `contract-map.json` beside
+    the plan, and step 4 copies them into the ID map.
+  - `contracts.md` becomes one `## Contract Index` table with the columns
+    `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+    old index's other sections go to a person.
+  - The plan still names a rule's contract by its old path. Step 4 refuses a
+    path outside those four contract directories, or one that names no
+    contract, and numbers each contract's rules `BR-<contract number>-NNNN`.
+  - Step 7 writes a Markdown contract's rules under `## Business rules`, and
+    rewrites the old IDs in each rule statement through the ID map.
+  - Step 8 rewrites a `QFAI:CON-*` annotation to the new contract ID.
+  - An old ID no contract declared, and one left elsewhere in a contract, such
+    as a UI marker, is listed for a person with its file and line.
+  - **Breaking:** the migration no longer continues from a plan and ID map
+    written under the skill's earlier name, `qfai-migration-spec-to-story`.
+
+- **Every CLI contract is held to the closed CLI contract schema.** The
+  document lane and `qfai validate` check each
+  Markdown file under `<paths.contractsDir>/cli/` against the schema of the
+  `cli-NNNN-title.md` template: the `# CLI-NNNN: <title>` heading,
+  `## Ownership boundary` and one `## Business rules` table, and nothing else.
+  - The contract index is read with any GFM delimiter row, so `| -- |`
+    separates its header as `| --- |` does.
+
+### Removed
+
+- **Breaking: per-request step choices in a workflow run.** The route alone
+  fixes which steps run.
+
+  - A route proposal no longer carries `candidateRoute`, `requiredStages` or
+    `optionalSteps`. The run refuses each as an unknown key.
+  - A plan no longer carries `when` on a stage or a step, and no step is
+    marked `proposed`. What those decided is now a pass-through step's
+    obligation check or a branch point the route declares.
+  - `assets/defaults/agent-routing.yml` is gone; its entries are the files of
+    `assets/defaults/agent-routing/`, unchanged.
+
+- **Breaking: `qfai handoff upgrade` and string `primary_tasks` items.**
+  The two compatibility forms whose sunset had passed are gone (#2564).
+  - `qfai handoff upgrade` is removed, with `D-HANDOFF-LEGACY-FORMAT`.
+    Nothing reads a per-skill handoff file such as `session-handoff.yaml`;
+    rewrite it as `.qfai/handoff.yaml` by hand.
+  - A `screens[].primary_tasks` item in a UI contract must be a mapping with
+    exactly `id`, `label` and `acceptance`. A plain string item is reported
+    as `QFAI-AUD-021` and does not count as a task, so a screen listing only
+    strings also reports `QFAI-AUD-001`. `qfai prototyping preflight` names
+    the entry shape for such a screen instead of saying it has no task.
+- **`qfai prototyping certify` no longer reads `fullHarness.runId`.** A
+  `prototyping.json` without a top-level `runId` is refused with exit 2
+  instead of being sealed after a `D-DEPRECATED-SCHEMA` message. Run
+  `qfai prototyping iterate --cycle 0` to write the current shape.
+- **Review text for the retired breakthrough loop.** `scoring-review.md` no
+  longer asks about plateau, breakthrough or best-of-history handling.
+
+- **A spec document can no longer opt out of its schema.**
+  `<!-- mdschema:ignore -->` is now reported as a violation, under every
+  `--scope` of the document lane and by `npx qfai validate`, and the document
+  is still checked.
+- **The 1.x spec-pack and policy schemas are gone.** The `spec/` and
+  `policies/` schemas, their manifest entries and the `when:` routing that
+  sent a retired spec pack to its own schema are removed.
+- **`validation.require.specSections` is removed.** No validator read it. A
+  document's sections come only from the shipped schemas, and
+  `qfai.config.yaml` has no `validation.require` section.
+
+- **Breaking: the design lock, the token mirror and the handoff YAML.**
+  Nothing writes or reads `DESIGN.md.lock.yaml`, `design-system.yaml` or
+  `prototype-handoff.yaml` under `<paths.contractsDir>/design/` any more.
+
+  - `qfai prototyping iterate` and `certify` compare root `DESIGN.md` only
+    with `prototyping.json#designMd.sha256`, the hash cycle 0 records. To
+    change `DESIGN.md` during a loop, edit it and restart from cycle 0.
+  - `iterate` writes no token copy when the loop stops. `/qfai-implement`
+    reads the tokens from root `DESIGN.md`.
+  - The handoff is `handoff` in `.qfai/evidence/prototyping/prototyping.json`:
+    `finalArtifact`, `procurement` and `implementationNotes`. The
+    prototyping profile of `qfai validate` checks it with `QFAI-DCON-012`
+    and `QFAI-DCON-013`, and checks that `finalArtifact` exists with
+    `QFAI-PROT-009`.
+  - `qfai validate` no longer emits `QFAI-DCON-001`, `QFAI-DCON-005`,
+    `QFAI-DCON-009`, `QFAI-DCON-031` or `QFAI-DCON-032`, and
+    `qfai doctor --profile prototyping` no longer reports
+    `prototyping.designMdLock` or `prototyping.designMdSha`.
+  - The saas-package profile's design-system attestation is root
+    `DESIGN.md`, present and parsing.
+  - `/qfai-sdd` no longer freezes `DESIGN.md`, and the two sample files for
+    the lock and the handoff are no longer shipped.
+
+- **Breaking: the `design/` contract directory and the `DESIGN` contract
+  kind.** The brand design is root `DESIGN.md`, and screens are `ui/`
+  contracts.
+  - Contracts live in `api/`, `cli/`, `db/` and `ui/`, and a contract ID is
+    `CLI-`, `API-`, `DB-` or `UI-NNNN`. `qfai init` no longer creates
+    `03_contract/design/`.
+  - A file in any other directory under `paths.contractsDir`, `design/`
+    included, is not a contract. `QFAI-CONTRACT-034` reports it once, and no
+    contract ID or rule is read from it.
+  - The best-practice and anti-pattern rule files are no longer read, and
+    `QFAI-BPAP-001` to `QFAI-BPAP-012` are gone.
+  - Design token files are read only from the directory
+    `uiux.designTokensDir` names. With it unset, none is read.
+
+- **Breaking: the `DESIGN.md` patch zone.** `qfai validate` no longer
+  compares root `DESIGN.md` with `.qfai/contracts/design/DESIGN.md.backup`,
+  and a `patch_zone:` block in its front matter is no longer read.
+  `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is gone, and the Reviewer-Gate catalog of
+  codes that need a justification holds seven. A waiver that names it is
+  reported as naming an unknown rule (`QFAI-WAIVER-004`).
+
+- **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
+  `list`, `extract` and `check` actions are gone, along with their `--path`,
+  `--max` and `--keyword` options. `qfai doctor` no longer runs the
+  `guardrails.present` check. `qfai report` no longer writes a Decision
+  Guardrails section, and its JSON output has no `guardrails` field. The
+  package entry point no longer exports the decision-guardrail functions and
+  types.
+
+  Nothing told a project to write `DG-NNNN` entries, and each kind already has
+  a home. Record a non-goal under Non-goals in `01_policy/objective.md` and a
+  trade-off in the decision-priority table of `01_policy/principle.md`. Record
+  a deferral as a `decisions.md` row or a DEFERRED row in `open-questions.md`.
+
+- **Breaking: the spec-pack layout and every check that read it.** `qfai`
+  no longer reads `.qfai/specs/spec-*` packs, the shared `_policies/` pack,
+  the `tdd/test-list.md` ledger, triage tables, delta files or test-case
+  tables. These rule families are gone:
+
+  - spec-pack structure and content: `QFAI-SPACK` except `QFAI-SPACK-102`,
+    `QFAI-SPECSECTION`, `QFAI-AC`, `QFAI-EX`, `QFAI-TC`, `QFAI-TCLEVEL`,
+    `QFAI-ID`, `QFAI-TABLE`, `QFAI-BRREF`, `QFAI-BFLOW`, `QFAI-DENSITY`,
+    `QFAI-DECISION`, `QFAI-STATUS`, `QFAI-STATUSLEAK`, `QFAI-LEDGER`,
+    `QFAI-MMD`, `QFAI-NAV`, and the `E_*` codes;
+  - the TDD ledger: `QFAI-TDDLIST`, `TDDLIST-*` and `TDDLIST_*`;
+  - traceability and coverage along the spec chain: `QFAI-TRACE`, `TRACE_*`,
+    `QFAI-LAYER`, `QFAI-PLAN`, `QFAI-COV` and `QFAI-ORPHAN`;
+  - triage, splitting, change types and intake: `QFAI-TRIAGE`, `QFAI-SPLIT`,
+    `QFAI-CTYPE`, `QFAI-SCOPE` and `QFAI-IMPLITE`;
+  - the per-spec ATDD checks: `QFAI-ATDD`. `QFAI-ATDD-131` to `-133`, which
+    read evidence, go with the entry on `.qfai/evidence/` above.
+
+  Single codes also go from families that remain: `QFAI-AGENT-004`, `-006`
+  and `-014`; `QFAI-CONTRACT-030`, `-032`, `-033`, `-035` and `-043`;
+  `QFAI-PROT-251` to `-253` and `-273` to `-276`; `QFAI-SCAN-001`;
+  `QFAI-WAIVER-005`; `D-SURFACE-TYPE-MISSING` and `D-SCAFFOLD-FOREIGN-HOME`.
+  A waiver that names a removed code is reported as naming an unknown rule
+  (`QFAI-WAIVER-004`) and applies to nothing; delete it.
+
+- **Breaking: spec-chain fields in the JSON output and the package API.**
+
+  - `validate.json` no longer carries `traceability` (`sc` and `testFiles`),
+    and an issue no longer carries `dl_id`.
+  - `report.json` has a new shape. Its `summary` counts `flows`, `stories`,
+    `acceptanceCriteria`, `examples`, `rules` and `contracts`, and a new
+    `flows` list names each flow's members. `root`, `configPath`, `ids`,
+    `traceability`, `testStrategy`, `tddCoverage` and `changeType` are gone.
+    `waivers` appears only when validate recorded waivers, and carries no
+    `expired` list.
+  - The package entry no longer exports the spec-chain validators from
+    `validators/ids`, `traceability`, `layeredTraceability`,
+    `orphanProhibition`, `atddCodeTraceability` and `specSplitByCapability`.
+  - The package entry no longer exports `collectHeadingTcLevelsFrom`. Only the
+    removed TDD ledger check read it.
+
+- **Breaking: `match.dl_ids` in `waivers.yml`.** A waiver that uses it is
+  refused as `QFAI-WAIVER-001` (`error`) and applies to nothing. Name the
+  files it covers in `scope.paths` instead.
+
+- **Breaking: options and settings that named a spec.** Each is refused. The
+  replacement is:
+
+  - for `--spec` on `qfai validate` and `qfai report`, `--flow BF-NNNN`;
+  - for `--spec` on `qfai atdd scaffold`, `--story US-NNNN-NNNN` or
+    `--flow BF-NNNN`;
+  - for `qfai prototyping show-spec`, `qfai prototyping show-ui-contract`;
+  - for `--primary-spec-id` on `qfai prototyping iterate`,
+    `--primary-ui-contract CON-UI-NNNN`;
+  - for `prototyping.primarySpecId` in `qfai.config.yaml`,
+    `prototyping.primaryUiContract: CON-UI-NNNN`. The old key is a
+    configuration error, and migration leaves it in place.
+
+- **Breaking: the prototyping loop covers UI contracts, not a primary spec.**
+  `qfai prototyping iterate` evaluates every UI contract and each screen it
+  declares. `prototyping.json` records `uiContractsCovered` in place of
+  `specsCovered` and `frozenSpecsCovered`, the completion certificate records
+  `convergedUiContracts` and `laggingUiContracts` in place of `convergedSpecs`
+  and `laggingSpecs`, and each review is written to
+  `iter-NN/CON-UI-NNNN/<screen>.review.json`. A `prototyping.json` from 1.x
+  is reported as `QFAI-PROT-008` (`error`), and a 1.x certificate is not
+  accepted; re-seed the loop with `qfai prototyping iterate --cycle 0`.
+
+- **Breaking: four configuration keys that governed spec-pack checks.**
+  `validation.traceability.scMustHaveTest` and
+  `validation.traceability.unknownContractIdSeverity` are retired and reported
+  as `QFAI-CFG-001` errors until deleted. The configuration `qfai init` wrote
+  in 1.x set both, and migration leaves them in place.
+  `validation.testStrategy.maxE2eScenarioRatio` and `maxE2eScenarioCount` are
+  no longer read.
+
+- **Breaking: the AI work-log surface `.qfai/steering/`** (#2221). QFAI no
+  longer creates, reads or checks the directory.
+
+  - `qfai init` no longer seeds `.qfai/steering/`, and the
+    `.github/copilot-instructions.md` it writes no longer names it. An
+    existing instructions file keeps the line until `qfai init --force`
+    rewrites it.
+  - `qfai validate` no longer reports `W-WORKLOG-SCHEMA`,
+    `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` or
+    `R-HANDOFF-INCOMPLETE`. A reviewer finding coded `R-WORKLOG-DRIFT` no
+    longer needs a `justification`.
+  - The shipped `worklog-entry.schema.md` is withdrawn, and the skills no
+    longer describe work-log entries.
+
+  Records go where the skills now send them:
+
+  - A decision goes to a row of `decisions.md`.
+  - A question for the user, or an out-of-scope discovery, goes to a row of
+    `open-questions.md`. `/qfai-atdd` and `/qfai-implement` send each to
+    `/qfai-sdd` as a change request.
+  - A stage that stops says what it waits on in its report.
+
+  What to do in an existing project:
+
+  - Files under `.qfai/steering/` are left untouched, and the migration skill
+    does not move or rewrite them. Nothing reads them or reacts to them, so
+    they can be deleted.
+  - In a 1.x project the file is
+    `.qfai/assistant/catalog/worklog-entry.schema.md`, and migration step 3
+    archives it under `.qfai/evidence/migration-spec-to-story/retired/` with
+    the rest of `catalog/`.
+
+- **`cli-ux-guidelines.md`.** `qfai init` no longer writes it to
+  `.qfai/assistant/catalog/` or anywhere else. The `--format text` grammar it
+  described is part of the `qfai validate` contract, and the rule that
+  operator-facing messages are English is part of QFAI's own repository
+  language rule.
+
+- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
+  dedicated test suites. CI and release checks now run seven test slices.
+  Releasing from an older tag that still has the retired slices runs that
+  tag's whole test suite instead.
+
+- The distributed-surface guards no longer exempt the version in a migration
+  memo's file name. `qfai init` writes no migration memo, so a name such as
+  `.qfai/assistant/process/migrations/v1.4.27-notes.md` in the package is now
+  reported as a version marker, like any other file name.
+
+- The repository's `scripts/pin-stage-evidence-counts.mjs` and
+  `scripts/derive-e2e-callsites.mjs`, with the e2e test count they kept in an
+  ATDD evidence record. The check that compared that count with the tree went
+  when the record's spec was retired, so the count had gone stale and nothing
+  read it.
+
+- **Breaking: the old contract and rule forms are no longer read.**
+  `qfai validate` reads a contract's rules only from `## Business rules`, a
+  rule ID only as `BR-<contract number>-NNNN`, a contract ID only as
+  `<KIND>-NNNN`, and the contract index only in its six current columns.
+  - A single-segment `BR-NNNN` is a malformed ID (`QFAI-STORY-002`).
+  - A `## Rules` section, a `Rule refs:` line, `x-qfai-rule-refs` and a SQL
+    `-- Rule refs:` line are not read, and a rule ref naming no rule is no
+    longer reported.
+  - A `CON-API-*`, `CON-DB-*` or `CON-UI-*` declaration and a `QFAI:CON-*`
+    annotation are not read. The 1.x to 2.x migration rewrites them.
+  - An index with the `Short ID`, `Entity` and `Declared ID` columns is not
+    read, so each contract it lists is reported by `QFAI-CONTRACT-034` as
+    having no row.
+- **The loose CLI contract template is gone.** `qfai-sdd` no longer ships
+  `templates/spec/03_contract/cli/command.md` or its schema;
+  `cli-NNNN-title.md` is the one CLI contract template.
+- **`QFAI-CONTRACT-050` is removed.** `qfai validate` no longer checks the
+  `- SSOT modules:` entries of a contract, which never names an implementation
+  file.
+- **Unused UI-affecting and TDD ledger code is removed.** No command called
+  the code that matched a path against `uiux.surfacePaths` or linked a ledger
+  obligation to a UI contract. The `/qfai-implement` reference on UI-affecting
+  examples still tells the agent to do both. No shipped file writes the
+  ledger columns the removed code read.
 
 ### Fixed
 
-- **The generated Copilot instructions describe the legacy layout as the
-  tool treats it** (#2214). The `.github/copilot-instructions.md` that
+- **`qfai init` no longer writes skill links, agent links or the Copilot
+  instructions through a linked host directory** (#2672). With `.codex`,
+  `.claude`, `.agents` or `.github` a symbolic link or a junction to a
+  directory outside the project, init created the skill and agent links at the
+  link's target. It now checks each directory on those paths first, and a
+  linked one, or one that is not a directory, is named and left alone while
+  the run carries on.
+  - Covered: the skill links in `.claude/skills`, `.agents/skills`,
+    `.codex/skills` and `.github/skills`; the agent links in `.claude/agents`
+    and `.github/agents`; and `.github/copilot-instructions.md`, which is also
+    left alone when it is itself a link.
+  - `--force` no longer removes a wrapper an earlier release wrote in
+    `.claude/commands`, `.github/prompts` or a skills directory when that
+    directory is reached through a link.
+  - Not covered: `.agents/rules` and `.github/instructions` are still written
+    through a linked parent.
+  - The skip message for `.codex/agents` names the directory relative to the
+    project, as the new ones do.
+
+- **`qfai validate` reports a qfai reached through a link to another
+  checkout** (#2674). A workspace dependency makes `node_modules/qfai` a link
+  to a source checkout, so the package that runs sits outside every
+  `node_modules` directory and was not reported. It is now reported when the
+  nearest `node_modules/qfai` above the project is that link, in one of two
+  places: a project `node_modules` that is itself a link to another checkout's,
+  or the `node_modules` of a directory above the project.
+
+  - `QFAI-TOOL-002` reports it at error where the project declares qfai, and
+    `QFAI-TOOL-001` at info where it does not.
+  - A link is not reported in the project's own `node_modules`, as
+    `npm link` makes, or in the `node_modules` of the nearest directory that
+    declares qfai, such as a monorepo top level.
+  - The fix line of both findings says to remove only a `node_modules` link
+    itself, not what it points to, before reinstalling.
+
+- **A route that ends without a specification stage no longer writes
+  `DESIGN.md`.** The discussion stage writes only its own records;
+  `/qfai-sdd` writes `DESIGN.md` for a UI-bearing flow. A route proposal
+  ending at `triage-close` that names `DESIGN.md` is refused as a scope
+  escape, and the `qfai-run` routing reference lists `DESIGN.md` under the
+  `sdd` stage.
+
+- **A backslash in the spec paths names one directory on every platform**
+  (#2625). `qfai validate` reads a `\` in `paths.specsDir` and
+  `paths.contractsDir` as `/`, as the document-schema lane does. On Linux and
+  macOS a value such as `.qfai\spec` sends both gates to `.qfai/spec`.
+
+- **A listed file outside the contract kind directories is reported once.**
+  `QFAI-CONTRACT-034` reported a file under a directory such as `design/`
+  that `contracts.md` lists twice: once for the file, and once for the row
+  as naming no contract file. The row is no longer reported separately.
+
+- **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
+  - A business-flow `traceability-graph.json` names a Markdown or CLI contract
+    by the `<KIND>-NNNN` ID it declares, not by its file path.
+  - `## Business rules ##` and `## Contract Index ##` are read as the rules
+    section and the index: a closing run of `#` is part of the heading syntax,
+    not of the title.
+
+- **A Markdown file under `api/`, `db/` or `ui/` is not a contract.** An API
+  contract is OpenAPI YAML or JSON, a DB contract SQL and a UI contract YAML;
+  Markdown is a contract form under `cli/`. The contract index and ATDD
+  coverage counted a Markdown file there whose H1 declared an ID of that kind,
+  although no document schema covers it. Now no check counts it or reads its
+  ID or rules, and `QFAI-CONTRACT-034` reports it once, naming the form its
+  directory takes.
+
+- **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
+  (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
+  issue, and `qfai prototyping iterate` then took the first UI contract as
+  primary and started cycle 0. Without `--primary-ui-contract`, `iterate` and
+  `show-ui-contract` now exit 2 and name the key and the value received.
+
+- **The prototyping skill check no longer reads `CON-UI-NNNN` as the UI
+  contract scope** (#2580). It looked for the text `ui-nnnn` anywhere, which
+  the retired form also contains, so a skill still written with that form
+  passed. It now needs `UI-NNNN` standing on its own, and otherwise raises
+  `UIX-VAL-SKILL-UI-BEARING-FALSE`.
+
+- **A misdeclared `db/` contract no longer gets a correct one blamed**
+  (#2580). `QFAI-CONTRACT-036` took the first ID a `db/` file declared, of any
+  kind, as the owner of the tables the file creates. A file declaring an
+  `API-` ID, or an `API-` ID before its `DB-` ID, then sent a correct file to
+  declare a dependency on it. Only a file declaring exactly one `DB-` ID now
+  owns tables or receives the finding; the declaration checks already report
+  the others.
+
+- **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
+  only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a
+  plan's `from` selects. Each new `business-flow.md` now also carries that
+  section's text under Purpose, with its level-two headings lowered to level
+  three.
+
+- **Migration step 3 stops before writing on two overlays of one name.** When
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` both hold
+  `<name>.local.md`, and either could move beside `rule/<name>.md`,
+  `03-move-catalog.mjs` planned both moves to one path and failed after earlier
+  writes. It now writes nothing, lists both overlays under `## For a person`
+  and exits 3; keep one and run the step again.
+
+- **A work order that binds nothing now refuses a target.** The shipped
+  `work-order.schema.json` required a `target` on every other stage kind but
+  accepted one on the `route`, `discussion`, `maintenance` and `verify` work
+  orders, which carry none.
+
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack.
+
+- **The generated Copilot instructions describe the legacy assistant layout
+  as the tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
   read-compatible and `D-DEPRECATED-PATH` a warning. The compatibility window
   has closed, and `qfai init` reports the layout on stderr as an error. The
   line now says so, names `.qfai/assistant/instructions/` as well, and still
   names `qfai init --upgrade-assistant-tree`. A file that already exists is
-  rewritten only by `qfai init --force`. A new case, `TC-0003-0059`, and a
-  ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
-  the tool does not write.
+  rewritten only by `qfai init --force`.
 
-- **A review pack's request may list its `TDD-ID`s under a heading, and a
-  response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
-  round's ids only from one `TDD-ID:` line, so a `review_request.md` naming
-  them as a `## TDD IDs` bullet list was refused although the review-artifact
-  layout asks for a list. The heading must appear once, and every item under
-  it must be one `TDD-NNNN` id. The per-id `Audited evidence hash` in a
-  response was also compared as raw text, so `sha256:<hex>` failed against the
-  row's bare hex. It is now compared with the prefix and case removed, as the
-  gate's other hash checks already were.
-- **A ledger row that owes a test case and names none is reported**
-  (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
-  holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
-  `REQ-0012-0075 (REQ-0109 follow-up)`. The other checks on the column read
-  only the ids it holds, so such a row passed them all. Every row is read
-  except `E2E` and `API` rows and an `Integration` row carrying a `CON-DB-*`
-  contract, which record their obligation in another column.
-  The seven spec-0012 rows it reported now name a case or are retired:
-  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
-  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
-  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
-
-- **spec-0012 states what `--auto-serve` does when its teardown fails**
-  (#2208). A case once required a failed teardown to be reported, and that
-  clause was lost when the case was rewritten, so the report could be removed
-  with no test failing. `REQ-0012-0062` now states it as the product behaves:
-  iterate prints a line on stdout naming the `--auto-serve` teardown and the
-  reason it failed, and returns the exit code the cycle would otherwise have
-  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
-  it.
-
-- **A `done` row whose test case only an annotation carrier names is
-  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
-  lists obligations and declares no test, so no runner selects a case named
-  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
-  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
-  not reported, and neither is an `exception` row. The finding names the row,
-  the case and the carrier. The fix is to annotate the test that discharges the
-  case. Where no test does, the row leaves `done` only through an upstream
-  reset approved by a Change Request. A test scan that passes its file limit or
-  cannot read a file is reported under the same code rather than read as a
-  pass. The 33 existing findings are carried as a backlog in
-  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
-  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
-
-- **A `done` row goes stale only when something its test reached changed**
-  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
-  every observation. In an active repository every completed row therefore went
-  stale within hours, whatever changed, and full-history validation failed on
-  rows whose test and module had not moved. A `done` row is now measured over
-  its test file, the files its newest `RED test manifest` lists, and the files
-  under `srcDir` those import, directly or transitively. Relative imports are
-  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
-  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
-  installed packages are outside the project. Where an import cannot be
-  followed — an alias no pattern resolves, a computed `import()` or
-  `require()`, a relative path that names no file, or a test file that is not
-  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
-  and the finding says why. The finding now names the covered set it measured.
-  `evidence-revision.md` states the at-rest scope; the in-flight check before
-  submitting still covers the whole source directory.
-
-- **A blocked ledger row whose Change Request is settled is reported**
-  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
-  the request was decided, and nothing said so. `validate` now warns with
-  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
-  Requests — or, with no blocker there, its `Evidence` cell names some — and
-  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
-  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
-  is the resumption edge. An open request, an approved one not yet applied, an
-  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
-  another blocker as well report nothing.
-
-- **The rest of spec-0003 states what `qfai init` and the shipped workflows
-  do now** (#2203). Sixteen more statements still described the product before
-  a deliberate change. They said init creates the artifact directories and a
-  steering README, and that the `.gitignore` block carries README negations.
-  They also said a legacy layout only warns on stdout, two jobs install, one
-  job requests full history, the shape pins nine dimensions, and a second
-  runner tier is deferred. Each now says what the tests and the source do. The
-  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
-  never asserted that init leaves the artifact directories out.
-
-- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
-  hashes it** (#2256). The skill said the hash took the revision manifest's
-  shape, whose `mode` is four octal digits. The gate hashes six digits spelled
-  like git's tree mode — `100644`, `100755` or `120000` — so a hash computed as
-  the skill said never matched, and `validate` refused evidence that was
-  complete. The six-digit form is the intended one: the gate recomputes the
-  hash on whichever checkout runs it, and every permission bit but the execute
-  bits follows that checkout's umask. The skill now names the three values and
-  says where the execute bit is read from. The revision manifest keeps its own
+- **The RED test hash in the `/qfai-atdd` skill is the same on every checkout
+  of one commit** (#2256, #2257). The skill said the hash took the revision
+  manifest's `mode`, four octal digits that follow each checkout's umask. It
+  now names git's six-digit tree mode — `100644`, `100755` or `120000` — and
+  says to read the execute bit the way `git add` does: from the index where
+  `core.fileMode` is `false`, as in a repository git created on Windows, and
+  from the owner's execute bit on disk everywhere else. Evidence recorded on
+  Windows and on POSIX then hashes alike. The revision manifest keeps its own
   four digits.
 
-- **The RED test hash reads the execute bit where git reads it** (#2257).
-  `validate` took a manifest file's execute bit off the disk. Windows has none,
-  so a file git marks executable hashed as `100644` on a Windows checkout and
-  `100755` on a POSIX one, and evidence recorded on one was refused on the
-  other. The gate now reads the bit the way `git add` does: from the index where
-  `core.fileMode` is `false`, as in a repository git created on Windows, and
-  from the owner's execute bit on disk everywhere else. An execute bit held
-  only by the group or others no longer selects `100755`; git never recorded
-  it either.
+- **The leak guards reject a contract file name, not only a contract ID.**
+  Source comments named this repository's own contract files by file name,
+  and the guards matched only the upper-case contract ID. The pre-build lint, the post-build guard and the smoke test now
+  also reject `cli-NNNN`, `api-NNNN`, `db-NNNN` and `ui-NNNN` outside the
+  sample band where no letter, digit, `_` or `-` precedes them. The comments
+  state what they relied on in plain words instead.
 
-  Two kinds of recorded evidence now hash differently, and `validate` refuses
-  them until their `RED test hash` is recorded again: evidence recorded on
-  Windows whose manifest names a file git marks executable, and evidence whose
-  manifest names a file executable by the group or others but not its owner.
-  POSIX checkouts already refused the first kind.
-
-- **A BR or AC heading is read with or without a title after a colon.** The
-  check that compares a spec's rules and criteria with their merge-base copy
-  accepted `## AC-0001: Title` but not `## AC-0001`, nor the `# AC-0001` comment
-  the shipped template opens each Gherkin scenario with. A file written only in
-  those shapes therefore held no obligations. Editing it raised
-  `QFAI-TRACE-003` ("could not be compared") instead of `QFAI-TRACE-001` for
-  the criterion that changed. Both shapes are read now. A `# AC-0001` comment
-  inside a `## AC-0001` section still counts as part of that criterion, not as
-  a second copy of it. Only a spec whose rules or criteria changed on the
-  branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+- **The published type declarations no longer cite this repository's own
+  documents.** Source comments named requirement, test-design and test-case
+  IDs, spec IDs, contract file names, workstream labels and a decision number
+  that a reader of the package cannot follow. They now state the fact in plain
+  words. The pre-build lint rejects a `REQ-` or `TDD-` ID with any four-digit
+  number at the start of a source comment line, so the rule holds without
+  review.
 
 ## [1.12.3] - 2026-09-24
 
@@ -6388,38 +7763,45 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
 
 ### Added
 
-- **Mermaid 図の構文チェックレーン (`packages/qfai/assets/scripts/check-mermaid.mjs`)。** markdownlint
-  はフェンスの中身を不透明なテキストとして扱うため、GitHub 上でエラーボックスに
-  なる図でも Markdown 規則は全て通る。唯一の判定基準は Mermaid 自身の文法なので、
-  レンダラが描画前に呼ぶ `mermaid.parse()` を jsdom 上で走らせる (ブラウザ不要)。
-  フェンス走査は CommonMark 準拠で、より広いフェンスの内側に書かれた
-  ` ```mermaid ` は「Mermaid の書き方の説明」であって図ではないため解析しない。
-  プレースホルダを含むテンプレート図は直前行の `<!-- mermaid-lint:ignore -->` で
-  個別に除外できる (ファイル単位の除外は、後から足された図を黙って覆うので設けない)。
-  現状リポジトリ全体で 1,472 ファイル中 52 図すべてが解析に成功する。
+- **Mermaid diagram syntax check lane (`packages/qfai/assets/scripts/check-mermaid.mjs`).**
+  markdownlint treats the contents of a fence as opaque text, so a diagram that
+  turns into an error box on GitHub still passes every Markdown rule. The only
+  criterion is Mermaid's own grammar, so the lane runs `mermaid.parse()`, which
+  the renderer calls before drawing, on jsdom (no browser needed).
+  Fence scanning follows CommonMark: a ` ```mermaid ` written inside a wider
+  fence is an explanation of how to write Mermaid, not a diagram, so it is not
+  parsed. A template diagram that carries placeholders can be excluded one at a
+  time with `<!-- mermaid-lint:ignore -->` on the line above it (there is no
+  per-file exclusion, because it would silently cover a diagram added later).
+  Today all 52 diagrams across 1,472 files in the repository parse.
 
-- **宣言的な Markdown ドキュメントスキーマ (`packages/qfai/assets/mdschema/`)。**
-  「どの章が必要か」「その章はリストか、テーブルか、Mermaid か」を YAML で宣言し、
-  `mdschema` で検証する。spec パック 11 種と `_policies` 11 種の計 22 スキーマ +
-  `manifest.yml` を同梱し、`qfai-sdd` テンプレートを SSOT として写している。
-  テーブルは必須カラム名まで固定するので、`EX-Ref` 列の改名がトレースを黙って
-  空にする代わりにこのレーンで落ちる。`_policies/04_Business-Flow.md` は
-  `mermaid` 型のコードブロックを必須とする (無指定フェンスは不可)。
-  ドライバ `packages/qfai/assets/scripts/check-mdschema.mjs` は `qfai.config.yaml` の
-  `paths.specsDir` を読み、`--scope changed|all|files` で適用範囲を切り替える。
+- **Declarative Markdown document schemas (`packages/qfai/assets/mdschema/`).**
+  Which sections are required, and whether each section is a list, a table or
+  Mermaid, is declared in YAML and checked with `mdschema`. The package ships 22
+  schemas (11 spec-pack kinds and 11 `_policies` kinds) plus `manifest.yml`,
+  copied from the `qfai-sdd` templates as the SSOT.
+  Tables fix even the required column names, so renaming the `EX-Ref` column
+  fails this lane instead of silently emptying the trace.
+  `_policies/04_Business-Flow.md` requires a code block of type `mermaid` (an
+  unlabelled fence is not accepted).
+  The driver `packages/qfai/assets/scripts/check-mdschema.mjs` reads
+  `paths.specsDir` from `qfai.config.yaml` and switches its scope with
+  `--scope changed|all|files`.
 
-- **配布ワークフロー `qfai-docs.yml`。** `qfai init` が adopter の
-  `.github/workflows/` に書く 3 本目。上の 2 レーンを adopter の CI でも走らせる
-  — ドライバもスキーマもインストール済みパッケージから読むので、QFAI 自身が
-  自分の spec に当てているのと同じ規則が動く。specs ディレクトリが無いツリーでは
-  「0 件を検査した」と述べて exit 0 する (何も検査せずに緑を出さない)。
-  このレーンは `qfai` の bin ではなくパッケージ内の**ファイル**を実行するため、
-  パッケージが展開されている必要がある。`qfai init` は adopter の manifest に
-  QFAI を追加しないので、`node_modules/qfai` が無いときに限り `--no-save` で
-  取得する。既に依存として入れているリポジトリでは、そのリポジトリが選んだ版の
-  規則がそのまま報告される (勝手に最新へ差し替えない)。
-  `SHIPPED_WORKFLOW_NAMES` / 構造ゲート / lane-command 許可リスト /
-  provenance / init-path 各列挙に登録済み。
+- **Shipped workflow `qfai-docs.yml`.** It is the third workflow `qfai init`
+  writes into an adopter's `.github/workflows/`. It runs the two lanes above in
+  the adopter's CI as well: the driver and the schemas are both read from the
+  installed package, so the same rules QFAI applies to its own specs run there.
+  On a tree with no specs directory it says "0 files checked" and exits 0 (it
+  never reports green without checking anything).
+  This lane runs a **file** inside the package rather than the `qfai` bin, so
+  the package has to be unpacked. `qfai init` does not add QFAI to the
+  adopter's manifest, so the package is fetched with `--no-save`, and only when
+  `node_modules/qfai` is absent. In a repository that already depends on it, the
+  rules of the version that repository chose are reported as they are (it is
+  never swapped for the latest without being asked).
+  Registered in each of the `SHIPPED_WORKFLOW_NAMES` / structure gate /
+  lane-command allowlist / provenance / init-path enumerations.
 
 ### Changed
 
@@ -6439,1110 +7821,1263 @@ unadjudicated`, read off a Work Orders Summary row the session writes rather
   add `/tmp/` to `.gitignore` — it does, in the managed block. No rule content
   changed.
 
-- **spec / `_policies` の表記揺れを正典へ収束。** `10_Plan.md` は
-  実装戦略・`1. Implementation Strategy`・`Implementation Strategy`・
-  `Implementation approach` の 4 系統が混在していた。`_policies` の
-  3 ファイルは日本語見出しのまま残っていた。見出しリネームとコンテナ節の
-  追加が中心で、`Test approach` / `Risk mitigation` など実際に欠けていた節は
-  各 spec 自身の材料 (証明しているテスト、実在する順序制約) から起こした。
-  `AC_ID` → `AC-ID`、`# 09 delta` → `# 09 Delta` 等の ID・タイトル表記も統一。
-  結果として 185 文書すべてがスキーマに適合する。
+- **Converge notation drift in specs and `_policies` onto the canonical form.**
+  `10_Plan.md` mixed four variants: the Japanese "implementation
+  strategy" heading, `1. Implementation Strategy`, `Implementation Strategy` and
+  `Implementation approach`. Three `_policies` files still had Japanese
+  headings. The change is mostly heading renames and added container sections;
+  sections that were actually missing, such as `Test approach` and
+  `Risk mitigation`, were written from each spec's own material (the tests that
+  prove it, the ordering constraints that really exist).
+  ID and title notation was unified as well: `AC_ID` -> `AC-ID`,
+  `# 09 delta` -> `# 09 Delta`, and so on.
+  As a result all 185 documents conform to the schemas.
 
-- **`markInvalid()` の `guardrails` 専用分岐を削除した。** 既定値が 2 になった時点で、
-  この分岐は**既に入っている値を代入するだけの死んだコード**になっていた。ただ無害
-  ではなく「guardrails だけ exit code が特別」と読めてしまう — それは #755 が訂正
-  するために起票された思い込みそのものである。
+- **Removed the `guardrails`-only branch in `markInvalid()`.** Once the default
+  became 2, that branch was **dead code that only assigned the value already in
+  place**. It was not just harmless: it read as "only guardrails has a special
+  exit code", which is exactly the misconception #755 was filed to correct.
 
-  併せて、使用法エラーのコードが**全コマンドで同一**であることを 8 コマンドに対して
-  検証するケースを追加した。1 コマンドだけでは既定値と特別扱いを区別できない。
+  Also added a case that verifies the usage-error code is **the same for every
+  command**, across 8 commands. One command alone cannot tell a default from a
+  special case.
 
-- **ソースに紛れていた NUL バイト 2 件を除去し、再発を止めるガードを追加した。**
-  NUL が 1 バイトあると、そのファイルはあらゆるテキストツールから **バイナリ扱い**
-  になる。`grep` / `ripgrep` は `Binary file ... matches` と出すだけで中身を表示せず、
-  `git diff` は `Binary files differ` になり、テキストとして読むスキャナは
-  そのファイルを飛ばすか NUL で読み止まる。つまり 1 バイトで、識別子の漏洩を
-  探すものを含めたリポジトリの全ガードの射程からファイルが静かに外れる。
+- **Removed 2 stray NUL bytes from source and added a guard against a
+  recurrence.** A single NUL byte makes every text tool treat the file as
+  **binary**. `grep` / `ripgrep` print only `Binary file ... matches` without
+  showing the content, `git diff` becomes `Binary files differ`, and a scanner
+  that reads the file as text either skips it or stops reading at the NUL. So
+  one byte quietly takes the file out of reach of every guard in the
+  repository, including the ones that look for leaked identifiers.
 
-  2 件とも、2 文字のエスケープを書くべきところに生バイトが入っていた:
-  `validators/traceability.ts` は不正な glob を説明するコメント内、
-  `testFileGlobsConfiguration.test.ts` は glob そのもの。後者は
-  **fast-glob が拒否するパターンが必要**で機能的だが、だからこそエスケープが
-  正しい綴りである — 値は同じで、ファイルはテキストのまま。
+  In both cases a raw byte sat where a 2-character escape belonged:
+  `validators/traceability.ts` in a comment explaining an invalid glob, and
+  `testFileGlobsConfiguration.test.ts` in the glob itself. The latter is
+  functional, since it **needs a pattern that fast-glob rejects**, and that is
+  exactly why the escape is the correct spelling: the value is the same and the
+  file stays text.
 
-- **`findOutDirCoOwners` が返すパスをプラットフォーム標準の区切り文字に揃えた。**
-  `owners.roots` は fast-glob の結果に `path.dirname()` をかけたもので、fast-glob は
-  どのプラットフォームでも `/` を出す。そのため Windows では `C:/Users/...` が返り、
-  `path.join` で組んだ値と一致せず、`cleanRunLogs` の拒否メッセージも誤った区切り文字で
-  オペレータに表示されていた。直後の `path.resolve(owner) !== selfRoot` は既に解決済みの
-  パスを前提にしており、戻り値だけがそうなっていなかった。
+- **`findOutDirCoOwners` now returns paths with the platform's native
+  separator.** `owners.roots` is fast-glob's result passed through
+  `path.dirname()`, and fast-glob emits `/` on every platform. On Windows this
+  returned `C:/Users/...`, which did not match values built with `path.join`,
+  and the `cleanRunLogs` refusal message was also shown to the operator with
+  the wrong separator. The `path.resolve(owner) !== selfRoot` that follows
+  already assumed a resolved path; only the return value did not.
 
-- **出荷アセットの行上限を 500 から 800 に上げた。** 分割では届かないことを
-  実測した上での変更である (#1179)。
+- **Raised the line limit for shipped assets from 500 to 800.** This follows
+  measurement showing that splitting cannot reach it (#1179).
 
-  3 つの skill 本体が上限に張り付いていた: `qfai-implement` 498 行、`qfai-sdd`
-  498 行、`qfai-atdd` 500 行。触れている open PR はそれぞれ 33 / 22 / 16 本。
-  差分を実測すると、`qfai-implement` と `qfai-atdd` は増減がほぼ相殺する
-  (-7 行 / -4 行) が、`qfai-sdd` は違う: 11 本が**単独で**上限を超え (最大
-  549 行)、意図された差分の合計は 498 行の本体に **+161 行**である。
+  Three skill bodies were pinned at the limit: `qfai-implement` at 498 lines,
+  `qfai-sdd` at 498 and `qfai-atdd` at 500. The open PRs touching them number
+  33, 22 and 16 respectively. Measuring the diffs, `qfai-implement` and
+  `qfai-atdd` roughly cancel out (-7 lines and -4 lines), but `qfai-sdd` is
+  different: 11 PRs exceed the limit **on their own** (549 lines at most), and
+  the intended diffs add up to **+161 lines** on a 498-line body.
 
-  相殺するから安全、でもない。PR は 1 本ずつ入る。498 行の本体は、4 行足す
-  最初の 1 本で落ちる — 後の 1 本がそれを戻すとしても、その中間状態が main
-  を壊す。
+  Cancelling out does not make it safe either. PRs land one at a time. A
+  498-line body fails at the first PR that adds 4 lines, and even if a later PR
+  takes them back, that intermediate state breaks main.
 
-  分割では埋まらない。`execution-ledger.md` のときは参照 0 件の 85 行トピックが
-  残っていた (#1175) が、skill 本体に同じものはない。全 `##` セクションを
-  テスト側から測ると、どのセクションも本文の 2〜8% を assets テストが文字列で
-  固定しており、固定している側には「実装エージェントが自分の義務として読む形
-  だから本体に置く」という趣旨のコメントが付いている。実際に
-  `### Handoff Contracts` (25 行) を `references/` へ出してみたところ、8 ファイル
-  14 アサーションが落ちた。動かせる残りは数十行で、275 行には届かない。
+  Splitting does not fill the gap. In the `execution-ledger.md` case a
+  85-line topic with 0 references was left over (#1175), but the skill bodies
+  have nothing like it. Measuring every `##` section from the test side, the
+  assets tests pin 2 to 8% of each section's text as strings, and the pinning
+  side carries a comment saying the form is kept in the body because
+  implementation agents read it as their own obligation. When
+  `### Handoff Contracts` (25 lines) was actually moved to `references/`, 14
+  assertions in 8 files failed. What remains movable is a few dozen lines,
+  which does not reach 275.
 
-  上限に張り付くこと自体が兆候だった。本体はトピックを外に出すのをやめ、行を
-  長くする方向へ逃げる。`qfai-implement/SKILL.md` は 98 行が 200 文字を超え、
-  最長行は 6192 文字ある。行数はもうエージェントが読む量を測っていない。
-  文字数ベースの予算は別 issue として起票する。
+  Sticking to the limit was itself a symptom. Instead of moving topics out, the
+  bodies escape by making lines longer. In `qfai-implement/SKILL.md`, 98 lines
+  exceed 200 characters and the longest line is 6192 characters. Line count no
+  longer measures how much an agent reads. A character-based budget will be
+  filed as a separate issue.
 
-  数字は `src/core/doctor/assetLineBudget.ts` が持ち、出荷される
-  `shared-skill-operating-baseline.md` が同じ数字を書く。両者が黙って食い違わない
-  よう、後者を読んで定数と突き合わせるテストを `assets.test.ts` に追加した。
+  The numbers are held by `src/core/doctor/assetLineBudget.ts`, and the shipped
+  `shared-skill-operating-baseline.md` states the same numbers. To keep the two
+  from drifting apart silently, a test in `assets.test.ts` reads the latter and
+  compares it with the constants.
 
-- **`execution-ledger.md` の義務列トピックを `obligation-columns.md` に分割した。**
-  出荷アセットの 500 行上限に達しており、**次の追加が入らない**状態だった
-  (#1175)。実測で 10 本の PR がこれで止まっていた。
+- **Split the obligation-columns topic out of `execution-ledger.md` into
+  `obligation-columns.md`.** The file had reached the 500-line limit for
+  shipped assets, so **the next addition would not fit** (#1175). By
+  measurement, 10 PRs were blocked by this.
 
-  再ラップでは足りない。30 行削る必要があるが、42 行を 140 文字幅にしても
-  19 行しか縮まらず、MD013 の上限 200 文字まで使っても届かない。
-  `skillBudget.ts` 自身が「上限に近づいたファイルはセクションを外に出す合図で
-  あって、上限を上げる合図ではない」と書いており、これはその通りの対応である。
+  Re-wrapping is not enough. 30 lines have to go, but rewrapping 42 lines to
+  140 columns saves only 19, and even using the whole MD013 limit of 200
+  columns does not get there. `skillBudget.ts` itself says that a file nearing
+  the limit is a signal to move a section out, not a signal to raise the
+  limit, and this change does exactly that.
 
-  出したのは `## Obligation columns` (85 行)。**アンカー参照が
-  assets / tests / src のどこからも 0 件**で、最も安く動かせるトピックだった
-  (`#allowed-transitions` は 16 箇所から参照されている)。本文は 1 バイトも
-  変えていない — 見出しの階層だけが変わり、元の位置には要約と行き先を残した。
+  What moved is `## Obligation columns` (85 lines). It had **0 anchor references
+  from assets, tests or src**, which made it the cheapest topic to move
+  (`#allowed-transitions`, by contrast, is referenced from 16 places). Not one
+  byte of the body changed: only the heading level did, and a summary and a
+  pointer to the new location remain at the original position.
 
-  ledger は 488 → 413 行になり、次の追加のための余裕ができた。
+  The ledger goes from 488 to 413 lines, leaving room for the next addition.
 
-  移動したテキストを検証していた 2 つの suite — `tddLedgerTemplate.test.ts` の
-  6 箇所と `tddListObligationColumns.test.ts` の 3 箇所 — は、緩めるのではなく
-  **新しい surface に向け直した**。検証内容は変えていないので、その文が出荷
-  ツリーから消えれば従来どおり落ちる。
+  Two suites that verified the moved text (6 places in
+  `tddLedgerTemplate.test.ts` and 3 in `tddListObligationColumns.test.ts`) were
+  **pointed at the new surface** rather than loosened. What they verify is
+  unchanged, so they still fail if that sentence disappears from the shipped
+  tree.
 
-- **`actions/checkout` と `actions/setup-node` を Node 24 対応版へ。**
-  どちらも `runs.using: node20` を宣言しており、runner が Node 24 で強制実行
-  したうえで全 job に deprecation warning を出していた。GitHub が Node 20 を
-  撤去した時点で checkout が失敗して全 lane が落ちる、予告済みの破壊的変更
-  である (#1161)。
-  - `actions/checkout` → `fbc6f399…` (v5.1.0)
-  - `actions/setup-node` → `a0853c24…` (v5.0.0)
+- **Moved `actions/checkout` and `actions/setup-node` to Node 24 compatible
+  versions.** Both declared `runs.using: node20`, so the runner forced them onto
+  Node 24 and emitted a deprecation warning on every job. When GitHub removes
+  Node 20, checkout would fail and take every lane down; the change was
+  announced in advance (#1161).
+  - `actions/checkout` -> `fbc6f399…` (v5.1.0)
+  - `actions/setup-node` -> `a0853c24…` (v5.0.0)
 
-  どちらの SHA も `action.yml` を取得して `using: node24` を実際に確認した。
-  出荷アセット側 (`qfai-tests.yml` / `qfai-validate.yml`) も同時に上げている
-  ため、`qfai init` が書く workflow も同じ警告を出さなくなる。
+  For both SHAs, `action.yml` was fetched and `using: node24` was confirmed. The
+  shipped asset side (`qfai-tests.yml` / `qfai-validate.yml`) is bumped at the
+  same time, so the workflows `qfai init` writes no longer show the same
+  warning.
 
-  出荷 action の pin は 1 箇所ではなく 4 箇所に登録されている: `uses:` 行、
-  version を含む step の `name:` ラベル、`ALLOWED_ACTION_COMMITS` と
-  `ALLOWED_STEP_SHAPE`、そして `ALLOWED_WORKFLOW_FILES` の byte digest。
-  `uses:` だけ書き換えると label が古い版を指したまま残り、e2e の
-  scaffold gate が落ちる。4 箇所すべてを更新済み。
+  A shipped action pin is registered in 4 places, not 1: the `uses:` line, the
+  `name:` label of the step that includes the version, `ALLOWED_ACTION_COMMITS`
+  and `ALLOWED_STEP_SHAPE`, and the byte digest in `ALLOWED_WORKFLOW_FILES`.
+  Rewriting only `uses:` leaves the label pointing at the old version and fails
+  the e2e scaffold gate. All 4 places are updated.
 
 ### Fixed
 
-- **`.qfai/specs/spec-0010/01_Spec.md` に欠けていた `## Evidence Summary`
-  節を追加。** 新設の spec スキーマが検出したもので、これで 17 本すべての
-  `01_Spec.md` がテンプレート構造に適合する。
+- **Added the missing `## Evidence Summary` section to
+  `.qfai/specs/spec-0010/01_Spec.md`.** The new spec schema caught it, and now
+  all 17 `01_Spec.md` files conform to the template structure.
 
-- **配布テンプレート `09_delta.md` の `### Plan` ブロックが未フェンスの
-  YAML だった問題。** 2 スペース字下げの `# comment` は CommonMark 上は
-  正当な ATX 見出しなので、テンプレートは自身のコメントを GitHub 上で
-  最上位見出しとして描画していた。`parseVerificationPlan` がフェンス付き
-  ブロックを読むようにし (無い場合は従来どおり本文をそのまま読む)、
-  テンプレートをフェンス化した。既存の未フェンス delta は影響を受けない。
+- **The `### Plan` block of the shipped template `09_delta.md` was unfenced
+  YAML.** A 2-space-indented `# comment` is a valid ATX heading under
+  CommonMark, so the template rendered its own comments as top-level headings
+  on GitHub. `parseVerificationPlan` now reads a fenced block (and, when there
+  is none, reads the body as it did before), and the template is fenced.
+  Existing unfenced deltas are not affected.
 
-- **`brandCatalogStepAnchor.test.ts` の path 判定を Windows でも成立するように
-  した。** `fast-glob` は `absolute: true` でも**常に `/` 区切り**を返すのに、
-  比較相手が `path.sep` (`\`) 由来だった (#1176)。
+- **Made the path checks in `brandCatalogStepAnchor.test.ts` work on Windows
+  too.** `fast-glob` **always returns `/` separators**, even with
+  `absolute: true`, but the value it was compared against came from `path.sep`
+  (`\`) (#1176).
 
-  2 つの assertion が**逆方向に**壊れていた:
-  - `startsWith(dir + path.sep)` は `/` 区切りの結果を `\` 区切りの prefix と
-    比べるので**決して真にならず**、誰も触っていない木で行が落ちる
-  - `not.toContain(verifySkillMd)` は `\` 区切りの絶対パスと比べるので
-    **決して一致せず、常に通る** — Windows では何も検証していなかった
+  Two assertions were broken **in opposite directions**:
+  - `startsWith(dir + path.sep)` compares a `/`-separated result with a
+    `\`-separated prefix, so it is **never true** and the line fails on a tree
+    nobody touched
+  - `not.toContain(verifySkillMd)` compares against a `\`-separated absolute
+    path, so it **never matches and always passes**: on Windows it verified
+    nothing
 
-  後者のほうが悪い。落ちない行は coverage として報告されるからである。
-  両側を `/` に正規化し、scan が空でないことも主張した。
+  The latter is worse, because a line that cannot fail is reported as coverage.
+  Both sides are normalized to `/`, and the test also asserts that the scan is
+  not empty.
 
-- **`qfai init` が書く `<!-- qfai:language-rules -->` を、実際に埋めるか
-  取り除くようにした。** このマーカーはパッケージ内で出荷アセット 2 本にしか
-  出現せず、**埋めるコードが 1 行も無かった** (#1167)。1 つ前の版はそこに
-  具体的な TypeScript レビュー規則を出荷していたので、以降に作られた
-  プロジェクトは規則の代わりに HTML コメントを受け取っていた。機能が
-  半分だけ入っていて、しかも入る前より出荷内容が薄い状態である。
+- **The `<!-- qfai:language-rules -->` that `qfai init` writes is now either
+  filled in or removed.** In the package this marker appears in only 2 shipped
+  assets, and **no code filled it in at all** (#1167). The previous version
+  shipped concrete TypeScript review rules there, so projects created since
+  then received an HTML comment in place of the rules. The feature was only half
+  in, and what shipped was thinner than before it landed.
 
-  埋める内容は **(ファイル, 言語) の組**で決まる。消えた TypeScript 規則は
-  レビュー観点なので code-review 側に戻し、principles 側はどの言語でも
-  内容が無い (マーカー導入前もそこには何も無かった)。
+  What fills the slot is decided by the **(file, language) pair**. The vanished
+  TypeScript rules are review perspectives, so they return to the code-review
+  side, and the principles side has no content in any language (there was
+  nothing there before the marker was introduced either).
 
-  **入れるものが無いスロットは残さず削除する。** ここが置き換え前との違いで
-  ある — 出力を読む人は、プロジェクトが何で書かれていようとマーカーに
-  出会ってはいけない。規則の無い言語では、スロット導入前とまったく同じ
-  内容になる。
+  **A slot with nothing to put in it is deleted, not left behind.** This is the
+  difference from before the replacement: whoever reads the output must never
+  meet the marker, whatever language the project is written in. For a language
+  with no rules, the content is exactly what it was before the slot existed.
 
-  言語判定は manifest (`tsconfig.json` / `package.json` の `typescript`)
-  のみで、ツリー走査はしない。判定できない場合は「いいえ」に倒す —
-  読めない manifest を「はい」と読むと、別言語のレビュアーの前に
-  TypeScript 規則が並ぶ。認識する言語を 1 つに絞っているのは、規則と判定を
-  同時に足させるためである (それが今回の「半分だけ出荷」を構造的に防ぐ)。
+  Language detection reads only the manifest (`tsconfig.json` / the
+  `typescript` entry in `package.json`) and does not walk the tree. When it
+  cannot decide, it falls back to "no": reading an unreadable manifest as "yes"
+  would put TypeScript rules in front of a reviewer of another language. The
+  recognised languages are limited to one so that the rules and the detection
+  are added together (which structurally prevents this "half shipped" state).
 
-- **JS リテラルを消す tokenizer が 1 つになった。** `atddTraceability.ts` は
-  2 つの独立した実装でリテラルを blank していた — annotation scan は
-  `validators/jsSourceMask.ts` の `maskJsNonCode`、carrier 判定はこのファイル
-  ローカルの `stripCommentsAndLiterals` である。そして **`if (x) /re/` の `/`
-  が正規表現であることを知っているのは後者だけだった** (#1154)。
+- **There is now one tokenizer that blanks JS literals.** `atddTraceability.ts`
+  blanked literals with 2 independent implementations: the annotation scan uses
+  `maskJsNonCode` in `validators/jsSourceMask.ts`, and carrier detection uses
+  `stripCommentsAndLiterals`, local to this file. And **only the latter knew
+  that the `/` in `if (x) /re/` starts a regular expression** (#1154).
 
-  前者は `/` の直前の有意文字だけを見て判定するため、制御構文のヘッダを閉じる
-  `)` を「値の終わり」と読む。すると `/^\s*```/` は除算として読まれ、中の
-  backtick が template literal を開いて次の backtick までの全行を blank する。
-  実際、緑の branch 2 本を統合した時点で **live な `it(` を持つファイルが
-  annotation only の carrier として報告された**。
+  The former decides by looking only at the last significant character before
+  `/`, so it reads the `)` that closes a control-flow header as "the end of a
+  value". Then `/^\s*```/` is read as a division, the backtick inside opens a
+  template literal, and every line up to the next backtick is blanked. In fact,
+  right after merging two green branches, **a file with a live `it(` was
+  reported as an annotation-only carrier**.
 
-  制御構文ヘッダの規則を `maskJsNonCode` 側に移し、ローカル実装 (184 行) を
-  削除した。判定は後方走査ではなく `(` ごとのスタックにしてある — 走査時点で
-  文字列とコメントは既にスキップ済みなので、その中の括弧を数えてしまうことが
-  なく、lookback の上限も要らない。正規表現リテラルの flag も literal の一部
-  として消費する。
+  The control-flow header rule moved to the `maskJsNonCode` side, and the local
+  implementation (184 lines) was deleted. The decision uses a stack per `(`
+  rather than a backward scan. Strings and comments are already skipped at scan
+  time, so parentheses inside them are never counted, and no lookback limit is
+  needed. The flags of a regular expression literal are consumed as part of the
+  literal.
 
-  **統合は「`comments` option の有無だけ」ではなかった。** ローカル実装は
-  多言語 (Python / Ruby / Gherkin の `#` コメント、docstring の三重引用符) を
-  扱っており、`maskJsNonCode` は JS 専用である。`#` を無条件に コメントとして
-  扱うと JS の private field (`this.#count`) が行末まで消える。そこで言語側の
-  span は option (`hashComments` / `tripleQuoted`) にした。Rust の `#[test]`
-  は carrier 検出パターンそのものなので、`#` 規則が食べないことをテストで
-  固定している。
+  **The merge was not just a matter of "having a `comments` option or not".**
+  The local implementation handled multiple languages (`#` comments in Python /
+  Ruby / Gherkin, triple-quoted docstrings), while `maskJsNonCode` is JS-only.
+  Treating `#` unconditionally as a comment would erase a JS private field
+  (`this.#count`) to the end of the line. So the language-side spans became
+  options (`hashComments` / `tripleQuoted`). Rust's `#[test]` is itself a
+  carrier detection pattern, so a test pins that the `#` rule does not consume
+  it.
 
-- **`--format github` の annotation 上限が GitHub の実際の上限と一致するように
-  なり、summary が「全件出した」と誤読されなくなった。** 上限は 100 件・run 全体
-  で持っていたが、GitHub の上限は **level ごと 10 件 / step** であり、
-  `error` / `warning` / `notice` は別勘定である。error が 40 件ある run は
-  `annotations=40/40` と表示し、これは「全件 annotation 化した」と読めるが、
-  実際には runner が 10 件だけ表示して 30 件を黙って捨てていた。operator が
-  見るのは summary だけなので、起きたことと逆を表示していた (#1164)。
-  `test (cli)` lane の実測では 3 つの level がすべてちょうど 10 件で、
-  切り捨ては例外ではなく定常状態だった。
+- **The `--format github` annotation cap now matches GitHub's actual cap, and
+  the summary is no longer misread as "everything was emitted".** The cap was
+  100 per run, but GitHub's cap is **10 per level per step**, with `error` /
+  `warning` / `notice` counted separately. A run with 40 errors printed
+  `annotations=40/40`, which reads as "every finding became an annotation", but
+  the runner showed only 10 and silently dropped 30. The operator sees only the
+  summary, so it displayed the opposite of what happened (#1164).
+  Measured on the `test (cli)` lane, all 3 levels were at exactly 10, so
+  truncation was the steady state rather than an exception.
 
-  上限を level ごとに適用し、summary の `annotations=` は
-  **このプロセスが実際に書き出した workflow command の数**を報告する。
-  切り捨てが起きた level は `上限省略=error 10/40, warning 10/12` のように
-  level ごとに名指しする — 1 つの数字では per-level の上限を表現できず、
-  「error 5 件 / notice 200 件」の run は片方の level では完全で
-  もう片方では切れている。
+  The cap is now applied per level, and `annotations=` in the summary reports
+  **the number of workflow commands this process actually wrote**. A level where
+  truncation happened is named individually, as in
+  `cap omitted=error 10/40, warning 10/12`: a single number cannot express a
+  per-level cap, and a run with "5 errors / 200 notices" is complete at one
+  level and cut off at the other.
 
-  上限判定は severity ではなく **annotation の level** で行う。suppressed な
-  error は `notice` として出力されるため、severity で数えると error の予算を
-  消費したことになり、runner の勘定と食い違う。level の導出は 1 箇所に
-  切り出して emitter と共有している。
+  The cap is judged by the **annotation's level**, not by severity. A
+  suppressed error is emitted as a `notice`, so counting by severity would
+  spend the error budget on it and disagree with the runner's accounting. The
+  level derivation is factored out into one place and shared with the emitter.
 
-  上限を超えて出し続ける案は取らなかった: runner が捨てるので読み手には
-  届かず、ローカル実行では誰も読まない行が増えるだけである。全件は JSON に
-  残る。
+  Emitting past the cap was rejected: the runner discards the excess so it
+  never reaches a reader, and in local runs it only adds lines nobody reads. The
+  full set stays in the JSON.
 
-- **テストが実 GitHub annotation を出さなくなった。**
-  `qfai validate --format github` は `::error file=…::message` を
-  `process.stdout` へ直接書き、`issue.file` は**検証対象ツリーからの相対
-  パス**である。テストは `mkdtemp` の fixture を検証するため
-  `.qfai/specs/_policies/03_Capabilities.md` のような相対パスが出力され、
-  runner はそれをリポジトリ root に解決する。結果、実在する健全なファイルが
-  「見つかりません」と注釈されていた (#1160)。
+- **Tests no longer emit real GitHub annotations.**
+  `qfai validate --format github` writes `::error file=…::message` straight to
+  `process.stdout`, and `issue.file` is a **path relative to the tree being
+  validated**. Tests validate a `mkdtemp` fixture, so relative paths such as
+  `.qfai/specs/_policies/03_Capabilities.md` were printed, and the runner
+  resolves them against the repository root. As a result, real, healthy files
+  were annotated as "not found" (#1160).
 
-  被害は見た目ではない。GitHub の annotation 上限は **level ごと 10 件 /
-  step** で、fixture が 10 件出した lane には本物の指摘の席が残らない。
-  `cli` lane を実測すると **184 件**が漏れていた。
+  The damage is not cosmetic. GitHub's annotation cap is **10 per level per
+  step**, so a lane whose fixtures emit 10 leaves no seat for a real finding.
+  Measuring the `cli` lane, **184** annotations had leaked.
 
-  vitest の `setupFiles` 1 箇所で全 project を守る。個別テストの
-  `vi.spyOn` による規律は既に 2 件存在していて**スケールしなかった** —
-  `qfai init` + validate を足す新しいテストが無自覚に穴を開ける。
+  One `setupFiles` entry in vitest guards every project. The discipline of
+  using `vi.spyOn` in individual tests already existed in 2 places and **did
+  not scale**: a new test that adds `qfai init` + validate opens a hole without
+  noticing.
 
-  **抑止であって黙殺ではない。** 落とした行はその場で stderr に報告する
-  (上限付き)。stderr である理由は、GitHub が workflow command を stdout
-  からしか読まないため、報告自身が command になれないようにするため。
+  **It is suppression, not silencing.** Dropped lines are reported on stderr on
+  the spot (with a cap). The reason for stderr is that GitHub reads workflow
+  commands only from stdout, so the report cannot itself become a command.
 
-  setup の宣言場所も動かしている。当初は `vitest.knobs.ts` の `projectKnobs`
-  に入れていたが、**parallelism の E2E はこの object を `mkdtemp` の fixture
-  root へそのまま spread する** (宣言された knob を再現して runner の挙動を
-  測るのがその suite の目的である)。相対パスの `setupFiles` は fixture root
-  から解決されて存在せず、slot 4 ファイルが全部 collect に失敗した。
-  `vitest.knobs.ts` は _parallelism_ の knob 集合であり、`setupFiles` は
-  parallelism の knob ではない。別 export にして `vitest.workspace.ts` 側
-  (fixture が写さない場所) で各 project に渡す。`projectKnobs` に root 相対
-  パスが無いことをテストで固定した — 「setupFiles が無いこと」ではなく
-  「root 相対のものが無いこと」が守るべき不変条件である。
+  The place where the setup is declared was also moved. It was first put in
+  `projectKnobs` in `vitest.knobs.ts`, but **the parallelism E2E spreads this
+  object as-is into a `mkdtemp` fixture root** (the point of that suite is to
+  reproduce the declared knobs and measure the runner's behavior). A relative
+  `setupFiles` path is resolved from the fixture root, where it does not exist,
+  and all 4 slot files failed to collect. `vitest.knobs.ts` is the set of
+  _parallelism_ knobs, and `setupFiles` is not a parallelism knob. It is now a
+  separate export, passed to each project on the `vitest.workspace.ts` side
+  (a place the fixture does not copy). A test pins that `projectKnobs` holds no
+  root-relative path: the invariant to protect is "nothing root-relative", not
+  "no `setupFiles`".
 
-  child process で走らせる 3 行は Node の `--experimental-strip-types` に
-  依存していたが、このフラグは Node 22.6 で入ったもので `engines.node` は
-  `>=20.19.0` である。floor lane では child が **コマンドラインの時点で
-  status 9 で死に**、setup が読み込まれる前に落ちていた — フィルタの挙動
-  ではなくフラグの有無を報告していたことになる。version 判定で skip する案は
-  取らなかった: package が約束している版を実際に走らせる唯一の lane で、
-  フィルタが一度も動かなくなる。型除去は devDependency の `typescript`
-  (`transpileModule`) で行い、child は素の `node` で走る。
+  The 3 lines that run in a child process depended on Node's
+  `--experimental-strip-types`, but that flag arrived in Node 22.6 while
+  `engines.node` is `>=20.19.0`. On the floor lane the child **died at the
+  command line with status 9**, before the setup was loaded, so it was
+  reporting whether the flag existed rather than how the filter behaves.
+  Skipping by version check was rejected: it is the only lane that actually
+  runs the version the package promises, and the filter would then never run.
+  Type stripping is done by the devDependency `typescript`
+  (`transpileModule`), and the child runs on plain `node`.
 
-- **`qfai init` が `.gitignore` の managed ブロックを毎回重複追記しなくなった。**
-  ブロックの範囲を求める 2 つの走査は「既知の行である限り前進し、知らない行で
-  止まる」形だった。旧版が書いた行がブロック内にあり、現行のブロックにも legacy
-  一覧にも登録されていない場合、その行でブロックが途中で切れる。本リポジトリには
-  実際に `.qfai/output/*` (legacy な validate 出力先) が 3 行目にあった (#1168)。
+- **`qfai init` no longer appends the managed `.gitignore` block again on
+  every run.** The two scans that find the block's range advanced as long as a
+  line was known and stopped at an unknown one. When a line written by an
+  older version sat inside the block and was registered neither in the current
+  block nor in the legacy list, the block was cut off at that line. This
+  repository actually had `.qfai/output/*` (a legacy validate output location)
+  on line 3 (#1168).
 
-  影響は見た目の重複では終わらない。鮮度判定は抽出したブロックを読むので
-  governance negation が「無い」と判定されて早期 return が働かず、除去も同じ
-  途中までしか消さず、再構築されたブロックが**消されていない 20 行の上に**
-  差し込まれる。git は最後にマッチしたパターンを採用するため、追記された
-  negation 群は自分を打ち消す ignore 行より上に来て**何の効果も持たない**。
-  実行のたびに無効な行が 1 ブロックずつ増える。
+  The effect does not end at visible duplication. The freshness check reads the
+  extracted block, so it decided the governance negation was "absent" and the
+  early return did not fire; removal also deleted only up to the same cut-off
+  point, and the rebuilt block was inserted **on top of 20 lines that were not
+  removed**. Git takes the last matching pattern, so the appended negations
+  came above the ignore line that cancels them and **had no effect**. Every run
+  added one more block of ineffective lines.
 
-  ブロックの終端は空行・マーカー以外のコメント・EOF とし、その範囲内の
-  **最後の既知行**までをブロックとする。間に挟まった未登録行では切れず、
-  ブロック直下にプロジェクトが書いた行 (空行なし) は従来どおりブロックの外に
-  残る — 内側に取り込むと negation より上に移動し、プロジェクトが ignore した
-  かったファイルが追跡対象に変わってしまう。
+  The block now ends at a blank line, a comment that is not a marker, or EOF,
+  and the block extends to the **last known line** within that range. An
+  unregistered line in between no longer cuts it, and lines a project wrote
+  directly under the block (with no blank line) stay outside it as before:
+  pulling them inside would move them above the negations and turn files the
+  project wanted ignored into tracked ones.
 
-  取り込まれた未登録行は失われない。`rebuildManagedBlock` は「マーカーでも
-  negation でも legacy でもない行」を保持する。
+  An unregistered line that gets absorbed is not lost. `rebuildManagedBlock`
+  keeps "lines that are neither a marker, a negation nor legacy".
 
-- **`.qfai/steering/_templates/entry.md` の seed が formatter を通ると必ず drift
-  するのをやめた。** frontmatter の trailing comment を桁揃えしていたが、Prettier は
-  YAML の `#` 直前の連続スペースを潰す。seed は create-only で、re-init は seed と
-  byte 単位で突き合わせるため、adopter が一度でも `prettier --write` を掛けると
-  **本人が触っていないファイルについて** `_templates/entry.md differs from the seed
-this qfai release generates` が以後ずっと出続ける。毎回出る通知は読み飛ばされる
-  ようになり、本物の seed 変更を伝えるという通知本来の役目が失われる。
+- **The seed for `.qfai/steering/_templates/entry.md` no longer drifts every
+  time it goes through a formatter.** It aligned the trailing comments in the
+  frontmatter into columns, but Prettier collapses consecutive spaces before a
+  YAML `#`. The seed is create-only and re-init compares against the seed
+  byte for byte, so once an adopter runs `prettier --write`, the notice
+  `_templates/entry.md differs from the seed
+this qfai release generates` keeps appearing from then on **for a file the
+  adopter never touched**. A notice that appears every time gets skipped, and
+  it loses its real job of telling the adopter about a genuine seed change.
 
-  桁揃えをやめ、`#` の前を 1 スペースに統一した。コメントの中身は変えていない。
+  The column alignment is gone and there is now a single space before `#`. The
+  content of the comments is unchanged.
 
-- **`doctor --clean` / `--autoremediate` は、追跡されている review pack を
-  git-ignore された `_archive/` へ退避しなくなった。** 退避は削除ではなく rename
-  だが、行き先が ignore されていて元が追跡されていた場合、git からは 20 個の
-  ファイルが消えたように見え、次の commit でリポジトリから削除される。pack は
-  操作者のディスクにだけ残り、しかもその削除は "remediate" という名前の
-  コマンドによる意図的な操作としてレビューに現れる (#1157)。
+- **`doctor --clean` / `--autoremediate` no longer move a tracked review pack
+  into the git-ignored `_archive/`.** The move is a rename, not a deletion, but
+  when the destination is ignored and the source was tracked, git sees 20 files
+  as gone and the next commit deletes them from the repository. The pack
+  remains only on the operator's disk, and the deletion shows up in review as
+  a deliberate act by a command named "remediate" (#1157).
 
-  条件は **両方**必要である。現在の同梱 `.gitignore` では pack は追跡されない
-  ので、行き先が ignore されていても失うものは無く、そこで拒否すると `--clean`
-  が全プロジェクトで無意味になる。失うのは pack を force-add した
-  プロジェクト — QFAI 自身のリポジトリがそれである。
+  Both conditions are required. The bundled `.gitignore` does not track packs
+  today, so nothing is lost when the destination is ignored, and refusing there
+  would make `--clean` useless in every project. The projects that do lose
+  something are those that force-added packs — QFAI's own repository is one.
 
-  拒否した pack は `kept-tracked=N` として数え、pack ごとに理由を出力する。
-  黙って何もしないと `archived=0` が「TTL がまだ切れていない」と読まれる。
+  A refused pack is counted as `kept-tracked=N`, and the reason is printed for
+  each pack. Doing nothing silently would let `archived=0` be read as "the TTL
+  has not expired yet".
 
 ### Added
 
-- **AI が書く文章の品質基準を全 AI 共通ルールに追加した。**
-  `.agents/rules/documentation-clarity.md` が SSOT で、PR / issue のタイトルと説明、
-  変更差分に含まれるコードコメントと Markdown に適用される。内容は 6 項目:
-  内輪の識別子を書かない、経緯を書かない、削る、平易に書く、箇条書きと表で整える、
-  書き終えたら全件読み直して翻訳調を直す。`qfai init` が配布する
-  `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` / `.codex/README.md`
-  と、constitution の `communication.md`、Copilot の review instructions がこれを参照する。
+- **Added a quality standard for AI-written text to the rules shared by all
+  AIs.** `.agents/rules/documentation-clarity.md` is the SSOT. It applies to PR
+  and issue titles and descriptions, and to code comments and Markdown in a
+  change's diff. It has six items: do not write internal identifiers, do not
+  write the history, cut, write plainly, organize with lists and tables, and
+  after writing, re-read everything and fix translation-style phrasing.
+  `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` and
+  `.codex/README.md` (all distributed by `qfai init`), the constitution's
+  `communication.md` and Copilot's review instructions refer to it.
 
-- **Claude Code の hooks で、その基準を必要な場面だけ自動で読み込ませる。**
-  `qfai init` が `.claude/settings.json` を配布する。GitHub の MCP ツールで PR /
-  issue / レビューを投稿する直前 (PreToolUse) と、Markdown を書き込んだ直後
-  (PostToolUse) の 2 箇所で発火する。
+- **Claude Code hooks load that standard automatically, only where it is
+  needed.** `qfai init` distributes `.claude/settings.json`. The hooks fire at
+  two points: just before a PR / issue / review is posted through GitHub's MCP
+  tools (PreToolUse), and just after Markdown is written (PostToolUse).
 
-  hook は `node` を引数付きで直接起動し、固定の JSON を 1 行出すだけで、シェルも
-  ファイル読み込みもネットワークも使わない。設定ファイルが既にあるプロジェクトでは
-  既存の内容を残したまま hook のエントリだけを追記し、2 回目以降の `init` は何も
-  足さない。JSON として読めない設定ファイルは書き換えず、警告だけ出す。
+  A hook starts `node` directly with arguments and prints one fixed line of
+  JSON; it uses no shell, reads no file and uses no network. In a project that
+  already has a settings file, `init` appends only the hook entries and keeps
+  the existing content, and every later `init` adds nothing. A settings file
+  that cannot be read as JSON is not rewritten; `init` only prints a warning.
 
-  `gh` コマンドは対象外。Bash 引数の条件指定は複合コマンドにも一致するため、
-  GitHub と無関係な作業の前でリマインダーが出てしまう。
+  The `gh` command is out of scope. A condition on Bash arguments also matches
+  compound commands, so the reminder would appear before work that has nothing
+  to do with GitHub.
 
-- **依存更新 PR を GitHub 上で自動生成する仕組み。** `.github/workflows/renovate.yml`
-  が週次 (Asia/Tokyo の月曜 6 時前) と手動 dispatch で Renovate を回し、
-  `.github/renovate.json5` が何をどうまとめるかを持つ。設定手順は
-  `.github/renovate.md`。
+- **A mechanism that generates dependency-update PRs on GitHub.**
+  `.github/workflows/renovate.yml` runs Renovate weekly (before 6 am on Monday,
+  Asia/Tokyo) and on manual dispatch, and `.github/renovate.json5` holds what is
+  grouped and how. The setup steps are in `.github/renovate.md`.
 
-  **Renovate GitHub App ではなく self-hosted。** App の設定は github.com 側に
-  あってリポジトリのレビューを通らない。このリポジトリに書き込む他の仕組みは
-  すべて SHA pin 済みの workflow なので、bot も同じ扱いにした。
+  **Self-hosted, not the Renovate GitHub App.** The App's settings live on
+  github.com and do not go through this repository's review. Every other
+  mechanism that writes to this repository is a workflow with pinned SHAs, so
+  the bot gets the same treatment.
 
-  **job が 2 つあるのは #1161 が理由である。** action の SHA を書き換えるだけでは
-  済まない: `.github/actions/setup/action.yml` は `.github/pinned-bytes.txt` に
-  sha256 で pin され、その list の digest は `ci.yml` に、その step の body は
-  `.github/required-status-contexts.json` に入っている。`uses:` を書き換えて
-  終わる bot は、誰かが読む前から赤い PR を開き続けることになる。
+  **There are two jobs because of #1161.** Rewriting the action SHAs is not
+  enough: `.github/actions/setup/action.yml` is pinned by sha256 in
+  `.github/pinned-bytes.txt`, the digest of that list is in `ci.yml`, and the
+  body of that step is in `.github/required-status-contexts.json`. A bot that
+  stops after rewriting `uses:` keeps opening PRs that are red before anyone has
+  read them.
 
-  Renovate 設定の `postUpgradeTasks` は使えなかった。action は Renovate を
-  自前の container の中で自前の clone に対して走らせるが、
-  `scripts/pin-verification-bodies.mjs` は `packages/qfai/node_modules` から
-  `yaml` を読む — その container で `pnpm install` は一度も走っていない。
-  そこで再 pin は `renovate/**` への push で動く 2 つ目の job にし、木の他の
-  toolchain job と同じ共有 setup action を使わせた。
+  Renovate's `postUpgradeTasks` could not be used. The action runs Renovate
+  inside its own container against its own clone, but
+  `scripts/pin-verification-bodies.mjs` reads `yaml` from
+  `packages/qfai/node_modules` — and `pnpm install` has never run in that
+  container. So the re-pin is a second job triggered by pushes to
+  `renovate/**`, and it uses the same shared setup action as the tree's other
+  toolchain jobs.
 
-  書き込みは job token ではなく `RENOVATE_TOKEN` secret を通す。
-  `GITHUB_TOKEN` による push / PR 作成には workflow event が発生しないため、
-  checks が一度も走らない PR ができてしまう (`prepare-release.yml` と同じ理由)。
-  **この secret は本変更では作成できない** — 手順は `.github/renovate.md`。
+  Writes go through the `RENOVATE_TOKEN` secret, not the job token. A push or PR
+  creation made with `GITHUB_TOKEN` raises no workflow event, which produces PRs
+  on which no checks ever run (the same reason as `prepare-release.yml`).
+  **This change cannot create the secret** — the steps are in
+  `.github/renovate.md`.
 
-- **その依存更新 PR を、CI グリーンだけを条件に自動マージするようにした。**
-  `.github/renovate.json5` の top level に `automerge: true` を置いたので、
-  major を含むすべての更新種別が対象になる。`matchUpdateTypes` で major を
-  除外する一般的な書き方を**あえて採っていない**。
+- **Those dependency-update PRs now merge automatically on a green CI alone.**
+  `automerge: true` sits at the top level of `.github/renovate.json5`, so every
+  update type is covered, major included. The common way of excluding major
+  updates through `matchUpdateTypes` is **deliberately not used**.
 
-  マージ条件が CI だけで成立するのは、ここの CI が何であるかによる。
-  `ci-pass` は lint / 型 2 lane / Node floor / Vitest 全体 / scanner coverage /
-  pack 検証をすべて needs に持ち、`success` でも `skipped` でもない job 結果を
-  受理しない。このリポジトリを壊す依存はその verdict に落ちるので PR はマージ
-  されず、落ちない依存は誰にも読まれずにマージされる。
+  CI alone can be the merge condition because of what CI is here. `ci-pass` has
+  lint, both type lanes, the Node floor, the whole Vitest suite, scanner
+  coverage and pack verification all in its needs, and accepts no job result
+  that is neither `success` nor `skipped`. A dependency that breaks this
+  repository fails that verdict, so the PR is not merged; a dependency that does
+  not fail is merged without anyone reading it.
 
-  マージを実行するのは Renovate ではなく GitHub である (`platformAutomerge`)。
-  週次スケジュールのもとで Renovate 側マージを使うと、緑になった PR が最大 1 週間
-  放置される — 「自動マージ」と書いてあるのに実質そうならない。かわりに
-  **branch protection が唯一の門番になる**: `main` で `ci-pass` を required
-  status check に設定していないと、GitHub は lane が 1 つも始まらないうちに
-  マージする。リポジトリ設定は PR からは読めないので、
-  `.github/required-status-contexts.json` に期待が宣言されていることだけを
-  `renovateMechanism.test.ts` が要求する — automerge を宣言しながら required
-  context を宣言しない状態を構造的に拒否する。設定手順は `.github/renovate.md`。
+  GitHub, not Renovate, performs the merge (`platformAutomerge`). With a weekly
+  schedule, a merge done on the Renovate side would leave a green PR waiting for
+  up to a week — it says "automerge" but is not so in practice. Instead,
+  **branch protection becomes the only gatekeeper**: unless `main` sets `ci-pass`
+  as a required status check, GitHub merges before a single lane has started.
+  Repository settings cannot be read from a PR, so `renovateMechanism.test.ts`
+  requires only that the expectation is declared in
+  `.github/required-status-contexts.json` — it structurally rejects a state that
+  declares automerge but declares no required context. The setup steps are in
+  `.github/renovate.md`.
 
-  併せて: `engines` / `packageManager` の `dependencyDashboardApproval` を外した
-  (単独 PR にはなるが承認待ちはしない)。PR 上限は 5/2 から 10/5 に上げた —
-  旧上限は「人が読む queue」を前提にした数字で、週 5 件しか流れない自動マージは
-  遅い手動マージと変わらない。`ignoreTests: false` は既定値だが明示した。これを
-  倒すと上のすべてが無意味になる唯一の knob だからである。
+  Also: `dependencyDashboardApproval` is removed for `engines` and
+  `packageManager` (they still get their own PR, but no longer wait for
+  approval). The PR limits are raised from 5/2 to 10/5 — the old limits assumed
+  a queue that people read, and an automerge that lets only 5 through per week
+  is no different from a slow manual merge. `ignoreTests: false` is the default
+  but is now explicit, because it is the only knob whose reversal makes
+  everything above pointless.
 
-  repin job は push の前に branch がまだ remote に存在するかを確認する。
-  自動マージにより、この job が計算している最中に PR がマージされて branch が
-  消えうる — そして削除済み branch への `git push HEAD:refs/heads/<name>` は
-  失敗せず **branch を作り直す**。action bump を自動マージするたびに孤児 branch が
-  残ることになる。lookup 1 回で通常ケースを塞いだ (force push はしていない)。
+  The repin job checks that the branch still exists on the remote before it
+  pushes. With automerge, the PR can be merged while this job is computing and
+  the branch deleted — and `git push HEAD:refs/heads/<name>` to a deleted branch
+  does not fail; it **recreates the branch**. Every auto-merged action bump
+  would then leave an orphan branch behind. One lookup closes the ordinary case
+  (no force push is made).
 
-- **Renovate を日次にし、設定側の実行時間帯を撤去した。** cron を
-  `0 20 * * 0` (週次) から `41 19 * * *` (日次 = Asia/Tokyo 04:41) に変更し、
-  `.github/renovate.json5` の `schedule` を `["before 6am on monday"]` から
-  `["at any time"]` にした。
+- **Made Renovate daily and removed the schedule window on the config side.**
+  The cron changes from `0 20 * * 0` (weekly) to `41 19 * * *` (daily = 04:41
+  Asia/Tokyo), and `schedule` in `.github/renovate.json5` changes from
+  `["before 6am on monday"]` to `["at any time"]`.
 
-  **後者は cadence の変更ではなく、実測されたバグの修正である。** Renovate には
-  時計が 2 つある — workflow の cron (いつ bot が走るか) と config の `schedule`
-  (いつ branch を作ってよいか) — これを対で狭く設定していた。初回の実運転が
-  その帰結を測定した: cron は 20:00 UTC を要求し、GitHub がジョブを開始したのは
-  **21:55 UTC** = Asia/Tokyo 06:55 で、窓の 1 時間外である。窓の外に落ちた run は
-  何も作らずに success を返すので、**失敗が無言**で、「更新が無かった」と区別が
-  つかない。
+  **The latter is not a change of cadence but the fix for a measured bug.**
+  Renovate has two clocks — the workflow's cron (when the bot runs) and the
+  config's `schedule` (when it may create branches) — and the two had been set
+  narrowly as a pair. The first real run measured the consequence: the cron
+  asked for 20:00 UTC, and GitHub started the job at **21:55 UTC** = 06:55
+  Asia/Tokyo, one hour outside the window. A run that falls outside the window
+  creates nothing and returns success, so **the failure is silent** and cannot
+  be told apart from "there were no updates".
 
-  GitHub はスケジュール遅延に上限を設けていない。そして日次化は窓を遅延に対して
-  相対的に小さくするので、状況は悪化する。したがって窓は廃止し、cron を唯一の
-  時計にした。`renovateMechanism.test.ts` が両側を固定している —
-  config 側の窓が開いたままであることと、cron が日次のままであること。
+  GitHub sets no upper limit on schedule delay, and making the run daily makes
+  the window smaller relative to the delay, so the situation gets worse. The
+  window is therefore abolished and the cron is the only clock.
+  `renovateMechanism.test.ts` pins both sides — that the config-side window
+  stays open, and that the cron stays daily.
 
-  cron の分は :00 を避けた。GitHub 自身が「毎時 0 分のスケジュールは最も混雑し
-  遅延しやすい」と文書化しており、上の 1 時間 55 分は実際 `0 20 * * 0` で起きた。
+  The cron minute avoids :00. GitHub itself documents that schedules at minute 0
+  of every hour are the busiest and the most prone to delay, and the 1 hour 55
+  minutes above actually happened with `0 20 * * 0`.
 
-- **`.github/renovate.md` のトークン権限に `Workflows` が抜けていたのを直した。**
-  fine-grained token の必要権限として Contents / Pull requests / Issues しか
-  挙げていなかったが、workflow ファイルを含む commit の push は専用権限を要求
-  される。このリポジトリの Renovate は常時それに触る — config は全 GitHub
-  Action を 1 つの PR にまとめて digest pin し、repin job は `ci.yml` を
-  書き換える。
+- **Fixed `.github/renovate.md`, whose token permissions lacked `Workflows`.**
+  It listed only Contents / Pull requests / Issues as the permissions a
+  fine-grained token needs, but pushing a commit that contains workflow files
+  requires a dedicated permission. Renovate in this repository always touches
+  them — the config groups every GitHub Action into one PR and digest-pins it,
+  and the repin job rewrites `ci.yml`.
 
-  **症状が原因を名乗らない**のが厄介な点である: 他のパッケージは普通に更新され、
-  actions group の push だけが拒否される。classic token なら `repo` + `workflow`
-  の 2 スコープが等価。`Commit statuses` (Renovate 自身の branch status) と
-  `Dependabot alerts` (`vulnerabilityAlerts` 用) も併せて明記した。
+  **The symptom does not name its cause**, which is what makes it awkward: other
+  packages update normally, and only the push of the actions group is rejected.
+  For a classic token, the two scopes `repo` + `workflow` are equivalent.
+  `Commit statuses` (Renovate's own branch status) and `Dependabot alerts` (for
+  `vulnerabilityAlerts`) are now stated as well.
 
-  ドキュメントが黙って古くなるのを防ぐため、`renovateMechanism.test.ts` が
-  「config が workflow ファイルを管理している」ことと「setup 文書が
-  `Workflows` 権限を名指ししている」ことを 1 行で結んでいる。
+  To keep the document from going stale silently, `renovateMechanism.test.ts`
+  ties "the config manages workflow files" to "the setup document names the
+  `Workflows` permission" in a single line.
 
-- **QFAI 利用側リポジトリ向けの Renovate preset を公開した。**
-  `.github/renovate-presets/qfai.json` と `qfai-self-hosted.json`。
-  `github>aganesy/QFAI//.github/renovate-presets/qfai` の 1 行で extend する。
+- **Published a Renovate preset for repositories that use QFAI.**
+  `.github/renovate-presets/qfai.json` and `qfai-self-hosted.json`. Extend it
+  with the single line `github>aganesy/QFAI//.github/renovate-presets/qfai`.
 
-  `qfai` の bump は、バージョン番号が変わった時点では終わっていない唯一の依存
-  更新である。パッケージは adopter のリポジトリに assistant tree (skills /
-  agents と `.agents/` `.claude/` `.codex/` `.github/` の wrapper) を書き込むが、
-  新しい版を入れても既に書かれたものは更新されない — 更新するのは
-  `qfai init --force` だけである。バンプ単体でマージすると、リポジトリは
-  「自分が持っていない skills のバージョン」を名乗ることになる。
+  A `qfai` bump is the only dependency update that is not finished when the
+  version number changes. The package writes an assistant tree into the
+  adopter's repository (skills / agents and the wrappers in `.agents/`,
+  `.claude/`, `.codex/` and `.github/`), and installing a newer version does not
+  update what is already written — only `qfai init --force` does. If the bump is
+  merged alone, the repository claims a version of skills that it does not have.
 
-  そこで preset は `postUpgradeTasks` で更新ブランチ内に
-  `npx --yes qfai@{{newVersion}} init --force` を走らせ、再生成された tree を
-  同じ PR に commit させる。ただしそのコマンドを走らせてよいかは Renovate の
-  **管理者設定** (`allowedCommands`) で、config 側からは読めない — self-hosted
-  なら許可でき、hosted app は既定で許可しない。
+  So the preset runs `npx --yes qfai@{{newVersion}} init --force` inside the
+  update branch through `postUpgradeTasks`, and has the regenerated tree
+  committed in the same PR. But whether that command may run is set by
+  Renovate's **administrator configuration** (`allowedCommands`), which the
+  config side cannot read — a self-hosted instance can allow it, and the hosted
+  app does not allow it by default.
 
-  したがって base preset は **fail closed** にした: `qfai` だけは自動マージ
-  しない。再生成が走ったかどうかを設定ファイルは知りえないので、走らなかった
-  場合に stale な assistant tree が default branch へ無点検で入ることを構造的に
-  防ぐ。`qfai-self-hosted` はその hold だけを外した同じ preset で、コマンドを
-  allow-list 済みの Renovate 向けである。
+  The base preset is therefore **fail closed**: only `qfai` is not
+  auto-merged. A config file cannot know whether the regeneration ran, so this
+  structurally prevents a stale assistant tree from entering the default branch
+  unchecked when it did not. `qfai-self-hosted` is the same preset with only
+  that hold removed, for a Renovate whose commands are allow-listed.
 
-  preset の**パスは公開インターフェース**であり、改名すれば adopter 側の
-  Renovate が config 解決エラーになる一方、こちらは緑のままになる。そのため
-  self-hosted preset が base を参照する `github>` 文字列は、base ファイルが
-  実際に置かれているパスから導出して検証している。
+  The preset **path is a public interface**: renaming it makes the adopter's
+  Renovate fail to resolve its config, while our side stays green. So the
+  `github>` string by which the self-hosted preset refers to the base is
+  verified by deriving it from the path where the base file actually sits.
 
 ## [1.10.2] - 2026-09-05
 
 ### Added
 
-- **`QFAI-TDDLIST-009` — `Revision` を読むだけでなく、木と突き合わせる。**
-  `evidence-revision.md#what-makes-evidence-stale` は staleness を完全に機械的に
-  定義している（「観測が覆ったファイルを変更した commit はそれを無効にする」）
-  のに、それを**計算する仕組みが無かった**。フィールドは手書きで、3 箇所で必須
-  で、何とも比較されていなかった — `QFAI-REVIEW-009` は `summary.json` の
-  フィールドが**存在するか**を見るだけで、**現在のものか**は見ない。
+- **`QFAI-TDDLIST-009` — not only reads `Revision`, but checks it against the
+  tree.** `evidence-revision.md#what-makes-evidence-stale` defines staleness
+  fully mechanically ("a commit that changes a file the observation covered
+  invalidates it"), yet **nothing computed it**. The field was written by hand,
+  required in three places, and compared with nothing — `QFAI-REVIEW-009` only
+  looks at whether a `summary.json` field **exists**, not whether it is
+  **current**.
 
-  失敗は沈黙し、かつ自己整合する。stale な `Revision` は fresh なものと
-  見分けがつかない — 記録中のコマンドはすべて実在し、記録の中で矛盾する要素は
-  何も無い。唯一の signal は誰かが観測をやり直して一致しないと気付くことである。
+  The failure is silent and self-consistent. A stale `Revision` cannot be told
+  from a fresh one — every command in the record exists, and nothing in the
+  record contradicts anything else. The only signal is someone redoing the
+  observation and noticing that it does not match.
 
-  行ごとに `git diff --name-only <Revision>..HEAD -- <test file> <srcDir>` を
-  計算し、非空なら報告する。promotion window 付き `warning` から始める —
-  これまで誰も計算していなかった以上、どのプロジェクトも**構造的に**蓄積した
-  stale を抱えており、即時 `error` は誰も知らされていない backlog で gate を
-  落とす。
+  For each row it computes `git diff --name-only <Revision>..HEAD -- <test file>
+<srcDir>` and reports when the result is non-empty. It starts as a `warning`
+  with a promotion window — since nobody computed this before, every project
+  **structurally** holds accumulated staleness, and an immediate `error` would
+  fail the gate on a backlog nobody has been told about.
 
-  `changedFilesSince` は **3 値**を返す。`getChangedFilesAgainstBase` が
-  あらゆる失敗を空集合に潰すのは、その呼び手が「検査対象なし」と読むから
-  正しい。ここで同じ潰し方をすると「evidence は fresh」と読まれる —
-  この finding が終わらせようとしている沈黙を、finding の内側で再現する
-  ことになる。
+  `changedFilesSince` returns **three values**. `getChangedFilesAgainstBase`
+  collapses every failure into an empty set, which is correct because its
+  callers read that as "nothing to check". Collapsing the same way here would be
+  read as "the evidence is fresh" — reproducing, inside the finding, the very
+  silence this finding is meant to end.
 
-  未解決 revision は emit しない。`actions/checkout` は既定で depth 1 なので
-  window を共有すれば promote 後に shallow clone の CI が全行で error になり、
-  `QFAI-REVIEW-009` が既に同条件を報告している（本リポジトリで 63 件）。
-  「間違っているから解決できない」と「shallow だから解決できない」を区別
-  できない残課題はソースに明記した。
+  An unresolved revision is not emitted. `actions/checkout` defaults to depth 1,
+  so sharing the window would turn every row into an error in a shallow-clone CI
+  after promotion, and `QFAI-REVIEW-009` already reports the same condition (63
+  in this repository). The remaining problem — that "cannot be resolved because
+  it is wrong" and "cannot be resolved because the clone is shallow" cannot be
+  told apart — is stated in the source.
 
-  **git は distinct revision ごとに 1 回だけ呼ぶ。** 行ごとに 2 プロセスを
-  起動する最初の実装は、本リポジトリで実測 104 回・約 10.5 秒（行あたり
-  200ms）だった。observation revision は spec と round の単位で、行の単位では
-  ないので行間で共有される — 500 行のプロジェクトなら
-  `validate --profile tdd`（`qfai-implement` が回す完了 gate）に約 100 秒の
-  上乗せになり、これは費用ではなく回帰である。木全体の diff を revision ごとに
-  1 回取り、行ごとの絞り込みはメモリ内で行う。キャッシュはモジュール状態では
-  なく引数にした — run をまたいで残るキャッシュは、後の run に以前の木の答えを
-  返してしまう。 (#1146)
+  **Git is called only once per distinct revision.** The first implementation,
+  which started two processes per row, measured 104 calls and about 10.5 seconds
+  in this repository (200 ms per row). An observation revision belongs to a spec
+  and a round, not to a row, so it is shared across rows — for a 500-row
+  project that would add about 100 seconds to `validate --profile tdd` (the
+  completion gate that `qfai-implement` runs), which is a regression, not a
+  cost. The diff of the whole tree is taken once per revision, and the per-row
+  narrowing is done in memory. The cache is an argument, not module state — a
+  cache that survives across runs would return an earlier tree's answer to a
+  later run. (#1146)
 
 ### Fixed
 
-- **`QFAI-DRIFT-001` が二点比較していたため、`origin/main` 側で変わった
-  ファイルが「このブランチで変更された」と報告されていた。**
-  `git diff <base>..HEAD` は「この 2 つの木はどう違うか」に答える — つまり
-  ブランチが分岐した**後に `base` が得た変更**も全部含む。finding の文面は
+- **`QFAI-DRIFT-001` compared two points, so files changed on the `origin/main`
+  side were reported as "changed on this branch".** `git diff <base>..HEAD`
+  answers "how do these two trees differ" — that is, it also includes every
+  change that **`base` gained after** the branch diverged. The wording of the
+  finding is
 
   > Upstream SSOT modified **on this branch** without an approved Change Request
 
-  であり、main で変わりブランチが一度も触れていないファイルについて、この文は
-  偽である。実測 (`tmp/1149/probe.mjs`):
+  and for a file that changed on main and that the branch never touched, this
+  sentence is false. Measured (`tmp/1149/probe.mjs`):
 
   ```text
   two-dot   (main..HEAD):  [".qfai/contracts/api/other.yaml", ".qfai/contracts/db/owned.sql"]
   three-dot (main...HEAD): [".qfai/contracts/db/owned.sql"]
   ```
 
-  これは偽陽性以上の問題だった。gate item 12 の step 4 は
-  `qfai validate --fail-on error` なので、**`origin/main` が進むだけで error 数が
-  増える** — しかもその gate 自身が 2 名のレビュアと `qa-gatekeeper` を各 round
-  に要求してレビューサイクルを遅くしている。報告者のレビュアの診断が的確である:
-  「増加は tree の内容ではなく validate を**いつ**実行したかの関数になっている」。
+  This was more than a false positive. Step 4 of gate item 12 is `qfai validate
+--fail-on error`, so **the error count grows just because `origin/main`
+  advances** — and that same gate slows the review cycle by requiring two
+  reviewers and `qa-gatekeeper` in each round. The reporter's reviewer
+  diagnosed it accurately: "the increase is a function of **when** validate was
+  run, not of the tree's content".
 
-  `<base>...HEAD` は merge-base 比較で、これが「このブランチが変更した」の意味で
-  ある。消費者は 2 つあり、どちらもその問いを立てている —
-  `upstreamSsotGuard`（downstream フェーズが保護対象を編集したか）と
-  `traceabilityIntegrity`（このブランチが変えた spec pack はどれか）。
+  `<base>...HEAD` is a merge-base comparison, and that is what "this branch
+  changed" means. There are two consumers, and both ask that question —
+  `upstreamSsotGuard` (did a downstream phase edit a protected target) and
+  `traceabilityIntegrity` (which spec packs did this branch change).
 
-  `changedFilesSince` (#1146) の**二点比較はそのまま**にし、意図的である旨を
-  明記した。あちらの `revision` は別ブランチではなくこのブランチの履歴上の
-  **点**であり、問うているのは「その点から今までに木が動いたか」である。
-  三点にすると rebase で捨てられた線の上の観測を取りこぼす —
-  過少報告であり、しかも沈黙する。 (#1149)
+  The **two-point comparison in** `changedFilesSince` (#1146) is **left as it
+  is**, and its intent is now stated. There, `revision` is a **point** in this
+  branch's history, not another branch, and the question is "has the tree moved
+  from that point until now". A three-point comparison would miss an
+  observation on a line that a rebase discarded — an under-report, and a silent
+  one. (#1149)
 
-- **staleness の規則を「commit の性質」ではなく「計算する区間」として述べた。**
-  `#what-makes-evidence-stale` の書き方だと「自分の**最後の commit** 以降に
-  何か変わったか?」という別の、はるかに弱い問いに手が伸びる。issue が報告した
-  2 件の見落としはどちらもその原因で、2 件目は 1 件目を教訓として書き留めた
-  後に起きている。区間はコマンド 1 つで表せるので、それを書いた:
-  `git diff --name-only <観測が名指す revision>..HEAD -- src tests` (#1146)
+- **Stated the staleness rule as "the interval to compute", not as "a property
+  of a commit".** The wording of `#what-makes-evidence-stale` invites a
+  different, much weaker question: "has anything changed since my **last
+  commit**?" Both oversights the issue reported came from that, and the second
+  happened after the first had been written down as a lesson. The interval can
+  be expressed as a single command, so that is what is written: `git diff
+--name-only <the revision the observation names>..HEAD -- src tests` (#1146)
 
-- **`qfai prototyping rescope` — loop を捨てずに退役した surface を外す。**
-  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
-  以降のあらゆる編集は lock drift (exit 2) である。drift ルールとしては正しい。
-  だがそれが**唯一のルール**だったため、正当なケース — loop が開いている間に
-  製品判断が screen を退役させた — も同じ扱いになり、用意されている経路は
-  `iterate --cycle 0 --force` だけだった。これは `iter-00` を退避させ、
-  それまでに支払ったすべての cycle のレビューを捨てる。
+- **`qfai prototyping rescope` — drop a retired surface without discarding the
+  loop.** Cycle 0 freezes the screen set in
+  `prototyping.json#frozenSurfaceUnion`, and every later edit is lock drift
+  (exit 2). As a drift rule, that is correct. But it was the **only rule**, so a
+  legitimate case — a product decision retires a screen while the loop is open
+  — got the same treatment, and the only path provided was
+  `iterate --cycle 0 --force`. That moves `iter-00` aside and throws away the
+  reviews of every cycle paid for so far.
 
   ```bash
   npx qfai prototyping rescope --remove 0011 --reason DELTA-022
   ```
 
-  `frozenSurfaceUnion` から surface を外し、captured な
-  `iterate-plan.json#screens` から取り除き、
-  `{surface, reason, cycle, at}` を `prototyping.json#rescopeLog` に記録し、
-  **loop は現在の cycle のまま**にする。`--remove` は repeatable、
-  `--reason` は必須、`--dry-run` は書かずに報告する。
+  It removes the surface from `frozenSurfaceUnion`, removes it from the captured
+  `iterate-plan.json#screens`, records `{surface, reason, cycle, at}` in
+  `prototyping.json#rescopeLog`, and **leaves the loop at its current cycle**.
+  `--remove` is repeatable, `--reason` is required, and `--dry-run` reports
+  without writing.
 
-  これが drift ルールの穴にならない理由が 3 つある:
-  1. **すでに到達不能なものしか外せない。** 除去可能集合は
-     `frozenScope.missing` — `QFAI-PROT-011` が報告するのと同じ集合 — なので、
-     spec がまだ UI marker を宣言している surface は**拒否**される。
-     `--add` は存在せず、拡大は表現できない。finding と操作は
-     `core/prototyping/frozenScope.ts` という**単一の reader** を読むので、
-     この一致は文書ではなく構造で保たれる。
-  2. **`--reason` を要求する。** 記録済みの delta / decision id が、
-     「適用された判断」と「exit-2 ルールが止めるべき黙った変更」を分ける唯一の
-     signal であり、audit entry が保存するのもそれである。id らしくない値は
-     **拒否ではなく警告**にした — id の解決には delta / decision が置かれうる
-     全ての場所（`.qfai/decisions/`、spec の `09_delta.md`、
-     `_policies/10_delta.md`、および利用側プロジェクト独自の場所）が必要で、
-     取りこぼす resolver は**正当な**縮小を拒否してしまう。これはこの操作が
-     存在する理由そのものを塞ぐため、弱いフィールドより悪い。実際の制御は
-     audit entry であり、警告は「後で log を読む reviewer」ではなく
-     「その場の操作者」に伝えるためにある。
-  3. **critique を書き換えない。** reviewer が cycle N に見たものは歴史的事実で
-     ある。該当する `iter-NN/review.json` には `retiredSurfaces` 注釈を追加し、
-     `proseCritique` は一字も変えない。読者が「古い記述」と「誤った記述」を
-     区別できるのはそのためである。
+  There are three reasons why this is not a hole in the drift rule:
+  1. **It can only remove what is already unreachable.** The removable set is
+     `frozenScope.missing` — the same set that `QFAI-PROT-011` reports — so a
+     surface whose UI marker the spec still declares is **refused**. There is no
+     `--add`, and widening cannot be expressed. The finding and the operation
+     read a **single reader**, `core/prototyping/frozenScope.ts`, so this
+     agreement is kept by structure, not by documentation.
+  2. **It requires `--reason`.** A recorded delta / decision id is the only
+     signal that separates "an applied decision" from "a silent change that the
+     exit-2 rule should stop", and it is what the audit entry stores. A value
+     that does not look like an id is a **warning, not a refusal** — resolving
+     an id needs every place a delta / decision can live (`.qfai/decisions/`, a
+     spec's `09_delta.md`, `_policies/10_delta.md`, and the adopting project's
+     own locations), and a resolver that misses one would refuse a **legitimate**
+     reduction. That blocks the very reason this operation exists, which is worse
+     than a weak field. The actual control is the audit entry; the warning is
+     there to tell "the operator on the spot", not "a reviewer reading the log
+     later".
+  3. **It does not rewrite the critique.** What the reviewer saw in cycle N is
+     historical fact. A `retiredSurfaces` annotation is added to the relevant
+     `iter-NN/review.json`, and `proseCritique` is not changed by a single
+     character. That is how a reader can tell "an old statement" from "a wrong
+     statement".
 
-  sealed loop (`stopReason` あり) も拒否する — 完了した loop の scope は歴史で
-  あり、縮めることはその loop が何を覆ったかの書き換えになる。
+  A sealed loop (one with `stopReason`) is also refused — the scope of a
+  completed loop is history, and shrinking it would rewrite what that loop
+  covered.
 
-  `QFAI-PROT-011` の message / remedy と `qfai-prototyping/SKILL.md` の
-  「Scope reduction has no in-loop path」節も追従した。後者は #1099 の part 4
-  （「(1) が無いうちはそう書け」）で書かれたもので、役目は果たしたが、
-  操作が存在する今はファイル中で最も有害なテキストだった — 読者を破壊的経路へ
-  名指しで送るからである。 (#1099)
+  The message / remedy of `QFAI-PROT-011` and the "Scope reduction has no
+  in-loop path" section of `qfai-prototyping/SKILL.md` were updated to match.
+  The latter was written in part 4 of #1099 ("write it that way until (1)
+  exists"); it did its job, but now that the operation exists it was the most
+  harmful text in the file — it names a destructive path and sends the reader
+  there. (#1099)
 
-- **依存宣言と食い違う qfai の解決を `QFAI-TOOL-002` として分離した。**
-  `QFAI-TOOL-001` は path 比較だけで判定しており、4 つの解決を区別できなかった:
-  worktree ハザード / `_npx` キャッシュ / 意図的なグローバルインストール /
-  monorepo root への hoist。前 2 つはハザード、後 2 つは正常運用なので、
-  1 つの code では両方について真であることを言えない。
-  区別に必要なのは **intent の signal** で、それはプロジェクト自身の依存宣言
-  である。`findDeclaringDir` が root から上方に、`qfai` を任意の dependency
-  field で宣言する最も近い `package.json` を探す。そのディレクトリが
-  「その宣言が入れる copy はどこか」の答なので、内側なら宣言どおり
-  (npm の `node_modules/qfai`、pnpm が解決する `.pnpm/...` を含む)、外側なら
-  **宣言があるのに別の copy が走っている** = ハザードである。
-  判定:
-  宣言あり + 宣言の外の copy → `QFAI-TOOL-002` (`warning`、昇格窓付き) /
-  宣言なし → `QFAI-TOOL-001` (`info`、グローバルか npx 取得しか実行経路が
-  無いので operator の選択) / workspace root への hoist →
-  `QFAI-TOOL-001` (`info`、宣言は honour されている)。
-  つまり**昇格ではなく code の分割**で、これは issue 自身が
-  「that row can be promoted while the rest stays `info`, which means splitting
-  the code rather than promoting it」と述べている形である。
-  `QFAI-TOOL-002` には昇格窓を置いた。ここでは P7 の既定が正しい —
-  この条件は**今日不可視**なので、抱えているプロジェクトは一度も知らされて
-  いない。gate が落ち始める前に気付いて直すための 1 minor が必要である。
-  版番の比較ではなく**包含**で判定する。lockfile が pin した版は実行中の
-  プロセスから読めないが、ディレクトリは読める。
-  `classifyAgainstDeclaration` と `findDeclaringDir` を export した。
-  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
-  動かせず、判定すべき状態に到達できない。最初に書いた行はすべて
-  `declaredElsewhere === false` の assert で、**一度も発火しないルールでも
-  全行通る**状態だった (このリポジトリで 3 度目の one-sided suite)。
-  書き直して 6 positive / 11 negative にし、4 変異 (判定が発火しない / 常に
-  発火する / walk が最初の manifest で止まる / `dependencies` のみを数える)
-  すべてが検出されることを確認した。
+- **Split a qfai resolution that disagrees with the dependency declaration out
+  as `QFAI-TOOL-002`.** `QFAI-TOOL-001` judged by path comparison alone and
+  could not tell four resolutions apart: a worktree hazard / an `_npx` cache /
+  a deliberate global install / a hoist to the monorepo root. The first two are
+  hazards and the last two are normal operation, so a single code cannot be
+  true for both.
+  What tells them apart is a **signal of intent**, and that is the project's
+  own dependency declaration. `findDeclaringDir` searches upward from the root
+  for the nearest `package.json` that declares `qfai` in any dependency field.
+  That directory is the answer to "where is the copy that declaration installs":
+  if the running copy is inside it, it is as declared (including npm's
+  `node_modules/qfai` and the `.pnpm/...` that pnpm resolves), and if outside,
+  **a declaration exists yet another copy is running** = a hazard.
+  The judgment:
+  declaration present + a copy outside the declaration → `QFAI-TOOL-002`
+  (`warning`, with a promotion window) /
+  no declaration → `QFAI-TOOL-001` (`info`; the only execution paths are a
+  global install or an npx fetch, so it is the operator's choice) /
+  hoisted to the workspace root → `QFAI-TOOL-001` (`info`; the declaration is
+  honoured).
+  So this is **a split of the code, not a promotion**, which is the very form
+  the issue itself describes: "that row can be promoted while the rest stays
+  `info`, which means splitting the code rather than promoting it".
+  `QFAI-TOOL-002` has a promotion window. Here the P7 default is right — this
+  condition is **invisible today**, so the projects that have it have never been
+  told. One minor is needed to notice and fix it before the gate starts failing.
+  It is judged by **containment**, not by comparing version numbers. The version
+  a lockfile pinned cannot be read from the running process, but the directory
+  can.
+  `classifyAgainstDeclaration` and `findDeclaringDir` are exported.
+  `resolveToolPackageDir()` returns its own real location, so a test cannot move
+  the package and cannot reach the state to be judged. Every row written first
+  asserted `declaredElsewhere === false`, so **all rows passed even for a rule
+  that never fires** (the third one-sided suite in this repository).
+  Rewritten as 6 positive / 11 negative, and confirmed that all 4 mutations (the
+  judgment never fires / always fires / the walk stops at the first manifest /
+  it counts only `dependencies`) are detected.
   (#1108)
-- **waiver 処理後に追加される finding を「未知の rule」と呼ばないようにした。**
-  `isPostWaiverSource` は `src/cli/` を `EMITTED_RULE_CODES` から意図的に除外
-  している。これは正しい — `applyWaivers` は `core/validate.ts` の中で走るので、
-  `src/cli/` が追加する finding は waiver で抑制できず、登録すると
-  「一致し得ない waiver が active と報告される」ことになる。
-  しかし帰結が operator には**偽の文**として届いていた。`QFAI-WAIVER-004` は
-  「未知の rule '<id>' が指定されています」と言うが、真実は「rule は存在するが、
-  waiver 処理の後に追加されるのでどの waiver とも一致しない」である。
-  `waivers.ts:471-475` は隣接する区別 (「何も emit していない」対「この実行では
-  黙っていた」) を既に書いているが、3 番目の状態 —
-  **emit されているが構造上 waivable でない** — に名前が無かった。
-  「未知の rule」と言われた operator は存在しない typo を探しに行く。remedy も
-  異なる: typo は訂正するもので、これは削除するものである。
-  生成器が 4 つ目の export `POST_WAIVER_RULE_CODES` を出すようにした。除外した
-  code を**登録せずに名指しする**ためのリストで、`EMITTED_RULE_CODES` は不変
-  (waiver が一致するかという問いに対しては、これらは依然 known ではない)。
-  実装中に生成器側の同じ盲点も 1 つ直した: `constants` / `factories` の map は
-  登録対象ソースのみから構築されていたため、post-waiver ファイルが
-  `code: TRUNCATED_SCAN_CODE` のように module-level `const` 経由で code を
-  名指す場合を解決できず、最初は literal で書かれた 1 件しか収集できなかった。
-  両ソース集合から構築するようにして `QFAI-SCAN-001` / `QFAI-SCAN-002` が
-  収集されるようになった。
-  変異検査: post-waiver 分岐を無効化すると 1 行落ちる。negative control
-  (「本当に未知の rule は依然 未知 と言う」) も追加した。
+- **Stopped calling a finding added after waiver processing an "unknown rule".**
+  `isPostWaiverSource` deliberately excludes `src/cli/` from
+  `EMITTED_RULE_CODES`. That is correct — `applyWaivers` runs inside
+  `core/validate.ts`, so a finding that `src/cli/` adds cannot be suppressed by
+  a waiver, and registering it would mean "a waiver that cannot match is
+  reported as active".
+  But the consequence reached the operator as a **false statement**.
+  `QFAI-WAIVER-004` says "unknown rule '<id>' was specified", while the truth is
+  "the rule exists, but it is added after waiver processing, so it matches no
+  waiver". `waivers.ts:471-475` already writes an adjacent distinction ("emits
+  nothing" versus "was silent in this run"), but the third state — **emitted but
+  structurally not waivable** — had no name. An operator told "unknown rule"
+  goes looking for a typo that does not exist. The remedy differs too: a typo is
+  corrected, whereas this is removed.
+  The generator now emits a fourth export, `POST_WAIVER_RULE_CODES`. It is a
+  list for **naming the excluded codes without registering them**, and
+  `EMITTED_RULE_CODES` is unchanged (to the question whether a waiver matches,
+  these are still not known).
+  During the implementation the same blind spot in the generator was fixed too:
+  the `constants` / `factories` maps were built only from the registered
+  sources, so it could not resolve a post-waiver file that names a code through
+  a module-level `const`, such as `code: TRUNCATED_SCAN_CODE`, and at first it
+  collected only the one written as a literal. Building the maps from both
+  source sets makes it collect `QFAI-SCAN-001` / `QFAI-SCAN-002`.
+  Mutation check: disabling the post-waiver branch fails one row. A negative
+  control was also added ("a really unknown rule is still called unknown").
   (#1110)
 
-- **P7 に「初日から error」を表現する 4 番目の答を追加した
-  (`ERROR_FROM_INTRODUCTION`)。** それまで post-baseline な code に対する答は
-  3 つしかなかった: 昇格窓 (`RULE_PROMOTIONS`) / ラダー外の `info`
-  (`INFO_ONLY_SINCE_BASELINE`) / 政策より前 (frozen baseline)。どれも
-  **「即座に error で、それは退行ではない」**を言えない。ガードは正しくそれを
-  弾く — 登録した entry は `newRuleSeverity` で severity を決めねばならず、
-  導入リリース以前の pin は「P7 が書かれた原因そのものの退行」として拒否される。
-  `QFAI-SCAN-002` はその 4 番目を必要とする。「実行が完走しなかった」という
-  意味で、この code が無かった時点でその条件は stderr 1 行と非 0 exit で
-  プロセスを終わらせていた。窓を付けると 2 minor のあいだ結果が反転する —
-  finding は `warning` になり、既定の `--fail-on error` では exit 0 なので、
-  **クラッシュをより良く報告する変更がクラッシュを pass に変える**。窓の
-  存在理由も無い: 新たに落ちるプロジェクトの backlog を吸収するためのものだが、
-  この状態で通っているプロジェクトは存在しない (クラッシュするので)。
-  判定基準は 1 つで、レビュー時に検証可能: **その条件は今日すでに実行を
-  落としている**。各 entry は理由を必須とし、ガードは (a) 理由が空でない、
-  (b) 全 site で `"error"`、(c) 何かが実際に emit している、(d) frozen
-  baseline が既にカバーしていない、の 4 点を検査する。**理由が真かはガードでは
-  検査できない** — 読者は「この code が無かった時ツリーはどうなったか」を問うて
-  検証する。だからリストは短く保つ。
-  あわせて ratchet の object-literal 抽出を広げた。`OBJECT_CODE_RE` は
-  `code: "リテラル"` を要求しており、`cli/lib/warnings.ts` は
-  `code: TRUNCATED_SCAN_CODE` と書くので、この形の post-P7 code は
-  **一度も答を問われていなかった**。解決機構は 3 行上に既にあり
-  (`issue(...)` 側の `resolveArg`)、それを使うだけだった。同じ盲点は
-  `severityExpressionsFor` の object-literal 半分にもあり、そちらも定数
-  エイリアスを解決するようにした — さもないと「全 site で error」を検査する
-  新ガード自身が、検査したい severity を見られない。
-  広げた結果 `QFAI-SCAN-001` が初めて ratchet に見えるようになった。導入時期を
-  調べると P7 と同日に別ブランチで併行開発され、main へは先に到達している
-  (`97abcbfe8` 2026-08-30T23:45:11Z vs `56c59f7fa` 2026-08-31T00:43:00Z)。
-  固定 `warning` で `--fail-on error` を落とさないので、baseline リストの
-  docblock が認めている例外 (「抽出器を広げると P7 以前の code が現れる」) に
-  該当する。receipt をコメントに残して追加した。
-  P7 の節にも 3 つの免除とそれぞれの判定基準を記述した。
+- **Added a fourth answer to P7 for "an error from day one"
+  (`ERROR_FROM_INTRODUCTION`).** Until now there were only three answers for a
+  post-baseline code: a promotion window (`RULE_PROMOTIONS`), an `info` outside
+  the ladder (`INFO_ONLY_SINCE_BASELINE`), or predating the policy (the frozen
+  baseline). None of them can say **"an error immediately, and that is not a
+  regression"**. The guard rightly rejects it: a registered entry must decide
+  its severity through `newRuleSeverity`, and a pin at or before the
+  introducing release is rejected as "the very regression P7 was written to
+  prevent". `QFAI-SCAN-002` needs that fourth answer. It means "the run did not
+  complete", and before this code existed that condition ended the process with
+  one line on stderr and a non-zero exit. Giving it a window would invert the
+  result for 2 minors: the finding would become a `warning`, which exits 0 under
+  the default `--fail-on error`, so **a change that reports a crash better
+  turns the crash into a pass**. There is also no reason for a window: a window
+  exists to absorb the backlog of projects that newly fail, but no project
+  passes in this state today (it crashes).
+  There is one criterion, and it can be verified in review: **the condition
+  already fails the run today**. Every entry must carry a reason, and the guard
+  checks four things: (a) the reason is not empty, (b) the severity is `"error"`
+  at every site, (c) something actually emits the code, and (d) the frozen
+  baseline does not already cover it. **The guard cannot check that the reason
+  is true** — a reader verifies it by asking what happened to the tree when this
+  code did not exist. That is why the list is kept short.
+  The ratchet's object-literal extraction was widened as well. `OBJECT_CODE_RE`
+  required `code: "literal"`, and `cli/lib/warnings.ts` writes
+  `code: TRUNCATED_SCAN_CODE`, so a post-P7 code of this shape had **never been
+  asked for an answer**. The resolution mechanism already existed three lines
+  above (`resolveArg` on the `issue(...)` side), and it only had to be used. The
+  same blind spot was in the object-literal half of `severityExpressionsFor`,
+  which now resolves constant aliases too — otherwise the new guard that checks
+  "an error at every site" could not see the very severity it is meant to
+  check.
+  The widened extraction made `QFAI-SCAN-001` visible to the ratchet for the
+  first time. Its introduction date shows it was developed in parallel with P7
+  on another branch and reached main first (`97abcbfe8` 2026-08-30T23:45:11Z vs
+  `56c59f7fa` 2026-08-31T00:43:00Z). Its fixed `warning` does not fail
+  `--fail-on error`, so it falls under the exception the baseline list's
+  docblock already allows ("widening the extractor surfaces codes that predate
+  P7"). It was added with the receipt kept in the comment.
+  The P7 section also describes the three exemptions and the criterion for each.
   (#1111, #1110)
-- **`validate.json` を public サーフェスとして文書化し、4 つの矛盾を 1 つの話に
-  そろえた。** それまでこのファイルは同時に 4 つのことだった:
-  **読むことを MUST とされ** (`qfai-verify/SKILL.md:152`、
-  `shared-skill-operating-baseline.md:130`)、**`@api` と宣言され**
-  (`change-classification.md:54`)、**internal で安定契約でないと宣言され**
-  (`README.md:328`)、そして**キーが 1 つも文書化されていなかった**。
-  結果は予測どおりで、findings 配列を探したエージェントは `findings` に手を
-  伸ばし、配列名が `issues` のファイルから `undefined` を得た。
-  public として解決した — skill がエージェントに読ませている以上、README が
-  何と書いていても実質的にサーフェスである。
-  `qfai-verify/references/validate-json-schema.md` を新設し、top level
-  (`toolVersion` / `generatedAt` / `profile` / `issues` / `counts` /
-  `traceability` / `waivers`) と `issues[]` の全キーを、必須と任意を区別して
-  記載した。**何が安定で何が安定でないか**も明記した: キー名・`counts` の形・
-  3 つの severity 値・配列名が `issues` であることは `@api` 経路の対象で、
-  `message` の文面・`issues` の順序・どの任意キーが埋まるかは対象外。
-  `message` で match する consumer は壊れるので `code` で match する。
-  README の internal 宣言は `report.json` / `doctor.json` / `run-*` を残し、
-  `validate.json` を外してスキーマ文書を指すようにした (両 README を整合)。
-  2 つの命令元にはエージェントが探しに行くキーを明記した — waiver の `rule:`
-  は `issues[].code`、判定は `counts`、そして**配列は `findings` ではなく
-  `issues`** であること。
-  提案 (3) の `findings` alias と (4) の `qfai report --format json` 安定
-  クエリ面は入れていない。前者はまさに public にしようとしているサーフェスの
-  スキーマ変更で、後者は新規 CLI 契約である。「どちらなのか」に答えが出た
-  今、両方とも issue 側の判断に残す。
+- **Documented `validate.json` as a public surface and brought four
+  contradictions into one story.** Until now this file was four things at once:
+  **required reading** (`qfai-verify/SKILL.md:152`,
+  `shared-skill-operating-baseline.md:130`), **declared `@api`**
+  (`change-classification.md:54`), **declared internal and not a stable
+  contract** (`README.md:328`), and **had no key documented at all**. The result
+  was as predicted: an agent looking for a findings array reached for
+  `findings` and got `undefined` from a file whose array is named `issues`.
+  It was resolved as public — since a skill makes agents read it, it is a
+  surface in practice, whatever the README says.
+  `qfai-verify/references/validate-json-schema.md` is new. It lists the top
+  level (`toolVersion` / `generatedAt` / `profile` / `issues` / `counts` /
+  `traceability` / `waivers`) and every key of `issues[]`, distinguishing
+  required from optional. It also states **what is stable and what is not**:
+  the key names, the shape of `counts`, the three severity values and the array
+  being named `issues` fall under the `@api` path, while the wording of
+  `message`, the order of `issues` and which optional keys are filled do not. A
+  consumer that matches on `message` breaks, so match on `code`.
+  The README's internal declaration keeps `report.json` / `doctor.json` /
+  `run-*`, drops `validate.json`, and points to the schema document (both
+  READMEs are aligned).
+  The two instructing sources now name the keys an agent goes looking for: a
+  waiver's `rule:` is `issues[].code`, the verdict is `counts`, and **the array
+  is `issues`, not `findings`**.
+  Proposal (3), a `findings` alias, and proposal (4), a stable
+  `qfai report --format json` query surface, are not included. The former is a
+  schema change to the very surface being made public, and the latter is a new
+  CLI contract. Now that "which is it?" has an answer, both are left to the
+  issue's own decision.
   (#1102)
-- **他 spec が所有する ID を参照する正しい形を、finding と参照文書に書いた。**
-  2 つのルールが「他 spec 所有の ID を名指すこと」を `error` にしている
-  (`QFAI-SPACK-101` = namespace、`TRACE_DOWNSTREAM_REF` = 参照方向)。個別には
-  妥当だが、両者が揃うと**よくある状況に表現形が無くなる**。レイヤード spec は
-  entity を共有するので「この spec のルールは所有者のルールに従う」は実在する
-  関係で、素直に「per BR-0017-0004」と書くと `error=0` が `error=2` になる。
-  通る形は所有 spec の **contract id** (`CON-DB-*` / `CON-API-*` /
-  `CON-UI-*`) を引用することだが、それを述べる箇所がどこにも無かった。
-  `QFAI-SPACK-101` の remedy は「ID をこの spec に合わせて修正してください」で、
-  これは**著者にできない唯一のこと**である — その ID は他 spec のものだから。
-  `TRACE_DOWNSTREAM_REF` には remedy が無かった。両方に正しい形を書いた。
-  あわせて `spec-traceability-rules.md` に
-  `### Citing an ID another spec owns` を追加し、namespace 検査が
-  **どのファイルを対象にするか**を実測値で表にした:
-  `02` / `03` / `04` / `05` / `06` は対象、`09_delta.md` は対象外
-  (delta は起きたことを記録するので他 spec の ID を載せられる)、
-  `10_Plan.md` は**現在対象外**。後者は issue が「? 」として保留していた問いで、
-  意図的な決定か抜けかは #1101 に残した。
-  提案 (3) の `[owner:BR-…]` という認可された引用形は実装していない — 2 つの
-  validator・traceability graph・参照文書にまたがる新しい ID 文法で、その関係を
-  first-class にするかどうかの判断を伴う。
+- **Wrote the correct way to reference an ID another spec owns into the finding
+  and the reference document.** Two rules make "naming an ID another spec owns"
+  an `error` (`QFAI-SPACK-101` = namespace, `TRACE_DOWNSTREAM_REF` = reference
+  direction). Each is reasonable alone, but together they leave **a common
+  situation with no way to express it**. Layered specs share entities, so "this
+  spec's rule follows the owner's rule" is a real relationship, and writing
+  "per BR-0017-0004" naively turns `error=0` into `error=2`. The form that
+  passes is to cite the owning spec's **contract id** (`CON-DB-*` / `CON-API-*` /
+  `CON-UI-*`), but nowhere stated that.
+  The remedy of `QFAI-SPACK-101` was "fix the ID to match this spec", which is
+  **the one thing an author cannot do** — the ID belongs to another spec.
+  `TRACE_DOWNSTREAM_REF` had no remedy. Both now state the correct form.
+  `spec-traceability-rules.md` also gains `### Citing an ID another spec owns`,
+  with a table of **which files the namespace check covers**, from measured
+  values: `02` / `03` / `04` / `05` / `06` are covered, `09_delta.md` is not
+  (the delta records what happened, so it may carry another spec's IDs), and
+  `10_Plan.md` is **currently not covered**. The latter is a question the issue
+  left open as "?"; whether it is an intentional decision or an omission is left
+  to #1101.
+  The authorized citation form `[owner:BR-…]` from proposal (3) is not
+  implemented — it would be a new ID grammar spanning two validators, the
+  traceability graph and the reference documents, and it involves deciding
+  whether to make that relationship first-class.
   (#1101)
 
-- **loop 中に退役した surface を検出するようにした (`QFAI-PROT-011`)。**
-  cycle 0 は screen set を `prototyping.json#frozenSurfaceUnion` に凍結し、
-  以降の編集は lock drift として `iterate` が exit 2 で止める。drift ルールと
-  しては正しい — 誰も凍結範囲を黙って広げてはならない。しかしそれが唯一の
-  ルールで、**製品判断で screen を 1 つ退役させた**正当なケースも同じ扱いに
-  なっていた。しかも `iterate` の hard-stop は **UI-bearing spec が全て**
-  消えたときにしか発火しない (`prototypingIterate.ts:529-573`) ため、部分的な
-  縮小は precheck の「zero UI-bearing specs resolved」条件を満たさず、
-  `validate` は存在しない screen を記述した loop に対して `error=0` を出して
-  いた。operator が気付くのは次の `iterate` — 唯一の道が
-  `--cycle 0 --force` (= `iter-00` を退避し、支払い済みのレビューを全部捨てる)
-  になる、後戻りできない地点である。
-  新 validator は `frozenSurfaceUnion` と現在 UI-bearing に解決される spec を
-  比較する。silent にするのは 4 ケース: loop が無い / 読めない
-  `prototyping.json` (それは `certify` が拒否する) / `frozenSurfaceUnion` が
-  無い / **loop が閉じている** (閉じた loop は履歴であって現在の主張ではない)。
-  さらに「全 marker 消滅」も silent — `iterate` の hard-stop が既に凍結 union を
-  名指しして別の remedy を出しており、1 つの状態に 2 つの finding は自動修復を
-  2 経路に分岐させる。
-  severity は promotion window から取る (`sunsetLedger` のガードが、登録した
-  entry は `newRuleSeverity` で severity を決めることを要求する)。窓には実務上の
-  意味がある — in-loop の逃げ道 (`rescope` 操作) がまだ存在しないので、
-  `error` にすると「remedy が支払い済みレビューの破棄しかない」条件で gate を
-  落とすことになり、置き換えた沈黙より悪くなる。
-  あわせて `qfai-prototyping/SKILL.md` に `### Scope reduction has no in-loop
-path` を追加した。drift ルールは対称だが縮小は非対称であること、reset が何を
-  捨てるか、finding が「後戻りできない地点の前に」見えること、そして 2 つの
-  出口 (restore / 意図的な reset) を明記した。
-  issue が提案する `rescope` サブコマンド (1) と critique の supersede 注記 (2)
-  は本 PR には含めない — 新規 CLI サーフェスと audit schema を伴う製品判断で、
-  (2) は (1) の設計制約である。
-  変異検査: 3 つの保護 (何も報告しない / 閉じた loop を無視する /
-  全 marker 消滅を二重報告する) すべてが検出される。
+- **Detect a surface retired mid-loop (`QFAI-PROT-011`).** Cycle 0 freezes the
+  screen set into `prototyping.json#frozenSurfaceUnion`, and any later edit is
+  lock drift that `iterate` stops with exit 2. As a drift rule it is right —
+  nobody may silently widen the frozen scope. But it was the only rule, and the
+  legitimate case where **a product decision retired one screen** was treated
+  the same way. Moreover, the `iterate` hard-stop fires only when **all**
+  UI-bearing specs are gone (`prototypingIterate.ts:529-573`), so a partial
+  reduction did not meet the precheck's "zero UI-bearing specs resolved"
+  condition, and `validate` reported `error=0` for a loop that described a
+  screen that no longer exists. The operator notices at the next `iterate`, a
+  point of no return where the only way forward is `--cycle 0 --force` (which
+  sets `iter-00` aside and discards every review already paid for).
+  The new validator compares `frozenSurfaceUnion` with the specs that currently
+  resolve to UI-bearing. It stays silent in 4 cases: there is no loop, an
+  unreadable `prototyping.json` (which `certify` rejects), there is no
+  `frozenSurfaceUnion`, or **the loop is closed** (a closed loop is history, not
+  a current claim). It is also silent when "every marker is gone" — the
+  `iterate` hard-stop already names the frozen union and gives a different
+  remedy, and two findings for one state would split auto-repair into two
+  paths.
+  Severity comes from the promotion window (the `sunsetLedger` guard requires a
+  registered entry to decide its severity through `newRuleSeverity`). The window
+  has a practical meaning: the in-loop way out (a `rescope` operation) does not
+  exist yet, so making it an `error` would fail the gate on a condition whose
+  only remedy is discarding paid-for reviews, which is worse than the silence it
+  replaces.
+  `qfai-prototyping/SKILL.md` also gains `### Scope reduction has no in-loop
+path`. It states that the drift rule is symmetric but a reduction is
+  asymmetric, what a reset discards, that the finding is visible "before the
+  point of no return", and the two exits (restore / an intentional reset).
+  The `rescope` subcommand (1) and the supersede note on a critique (2)
+  proposed by the issue are not part of this PR — they are product decisions
+  involving a new CLI surface and an audit schema, and (2) is a design
+  constraint on (1).
+  Mutation check: all three protections (reporting nothing / ignoring a closed
+  loop / double-reporting "every marker is gone") are detected.
   (#1099)
-- **`QFAI-CONTRACT-040` を、DB 側が ENUM のとき `error` に上げた。**
-  このルールは API 契約が要求する status/state 値を、同名フィールドを宣言する
-  DB 契約が保持できないときに発火する。固定 `warning` だったが、qfai が指示する
-  gate はすべて `--fail-on error` なので何もブロックせず、実プロジェクトでは
-  95 件規模の warning バケットに埋もれ、**制約違反を先に見つけるのは Postgres**
-  だった。
-  issue は「(1) `error` に上げる / (2) どうしても `warning` なら ENUM のときだけ
-  昇格させる」を提案していた。収集器を読んだ結果 **(2) が代替案ではなく本筋**
-  だと判断した。DB 側の domain 収集は 3 形を読む:
-  `CHECK_IN_PATTERN` / `CREATE_TYPE_ENUM_PATTERN` / `INLINE_ENUM_PATTERN`。
-  後 2 者は Postgres ENUM で、domain 外の値は insert 時に拒絶される — つまり
-  両契約を満たす実装は存在せず、これは issue が言うとおり定義上 error である。
-  一方 `CHECK (col IN (...))` は列の物理形ではなく DB が**現在**主張している
-  境界で、drop / 再定義 / `NOT VALID` で外せる。無条件に上げると issue 自身が
-  「soft なケースは soft に保つ」と書いた区別を失う。
-  `DbDomain` はどの形由来かを保持していなかったので `enumBacked` を追加した。
-  1 つのフィールドが両形で束縛されている場合は enum が勝つ — 実装が満たさねば
-  ならないのは最も厳しい制約であり、ENUM 列に冗長な CHECK が付いていても
-  違反は不可能なままである。
-  `collectSqlEnumDomains` の export シグネチャは変えず、形は
-  `collectSqlDomainBounds` という 2 つ目の export で返す。値だけが必要な呼び出し
-  側は無変更。
-  提案 (3) も実装した。remedy は「DB 契約に値を追加するか、API 側の terminal
-  semantics を訂正してください」と**両方向を対称に**提示していて、これは
-  事例で実際に判断を要した点そのものだった。`dbFileList` は既に手元にあるので、
-  ENUM 由来なら「その DB 契約が正」と名指しし、CHECK 由来なら両方向が取れる旨と
-  「所有 spec の Contracts 表で判断する」ことを述べる。message には制約形も
-  載せた — severity がそこで決まるので、`error` と `warning` を見比べた読者が
-  SQL を開かずに理由を知れるようにするため。
+- **Raised `QFAI-CONTRACT-040` to `error` when the DB side is an ENUM.** The
+  rule fires when a status/state value that an API contract requires cannot be
+  held by a DB contract declaring a field of the same name. It was a fixed
+  `warning`, but every gate qfai directs runs with `--fail-on error`, so it
+  blocked nothing and was buried in a warning bucket of about 95 entries in a
+  real project, and **Postgres was the first to find the constraint
+  violation**.
+  The issue proposed "(1) raise to `error` / (2) if it must stay a `warning`,
+  raise it only for ENUMs". After reading the collector, we judged that **(2) is
+  the main line, not an alternative**. The DB-side domain collection reads 3
+  shapes: `CHECK_IN_PATTERN` / `CREATE_TYPE_ENUM_PATTERN` /
+  `INLINE_ENUM_PATTERN`. The latter two are Postgres ENUMs, where a value
+  outside the domain is rejected on insert — so no implementation satisfies both
+  contracts, and this is by definition an error, as the issue says. On the other
+  hand, `CHECK (col IN (...))` is not the column's physical form but the
+  boundary the DB claims **at present**, and it can be removed by dropping,
+  redefining or `NOT VALID`. Raising it unconditionally would lose the very
+  distinction the issue itself draws ("keep the soft cases soft").
+  `DbDomain` did not keep which shape a domain came from, so `enumBacked` was
+  added. When one field is bound by both shapes, the enum wins — what an
+  implementation must satisfy is the strictest constraint, and even with a
+  redundant CHECK on an ENUM column the violation stays impossible.
+  The export signature of `collectSqlEnumDomains` is unchanged, and the shape is
+  returned by a second export, `collectSqlDomainBounds`. Callers that need only
+  the values are untouched.
+  Proposal (3) is implemented too. The remedy offered **both directions
+  symmetrically**: "add the value to the DB contract, or correct the API side's
+  terminal semantics", which was exactly the point that needed a real judgment
+  in the case at hand. `dbFileList` is already at hand, so for an ENUM origin it
+  names "that DB contract is authoritative", and for a CHECK origin it says both
+  directions are open and that the decision is "made in the owning spec's
+  Contracts table". The message also carries the constraint shape — severity is
+  decided there, so a reader comparing an `error` with a `warning` can learn the
+  reason without opening the SQL.
   (#1100)
-- **`R-CERTIFY-VERIFY-CIRCULAR` を `validate` では `info` にし、強制は
-  `certify` に残した (`CR-20260904-0004`)。** `error` のままでは
-  `/qfai-verify` の Completion Contract が Work Order H 外で満たせなかった。
-  skill は `verify.json` を MUST とし、その `scope` は「実際に実行した stage を
-  名指しし、実行していない stage は決して書かない」(`SKILL.md:148` / `:173` /
-  `:72-73`)。したがって通常の full プロファイル実行は `scope: "full"` を書く
-  しかなく、prototyping loop が開いている間、このルールがまさにそれで発火した。
-  実測: `error=0` → ファイル作成 → `error=1` → 削除 → `error=0`。waiver は
-  `warning` / `info` に限られる (`:151`) ので逃げ道が 1 つも無かった。
-  `SKILL.md:65` の carve-out は Work Order H に明示的に限定されており、
-  実プロジェクトでは loop が数週間開いたまま他の stage が走るため、この状態は
-  例外ではなく通常である。
-  強制点は変えていない — `prototypingCertify.ts:374-383` が既に非 prototyping
-  scope を exit 2 で拒否しており、そのコメント自身が、この finding は
-  「keeps the certify command self-contained instead of relying on a downstream
-  validate pass to surface the same condition」と述べている。
-  `scope: "full"` の verdict がディスク上にあること自体は damage ではない —
-  それを `certify` が **consume** することが damage で、`certify` は拒否する。
-  finding のメッセージには逃げ道を追加した (loop を閉じ、Work Order H として
-  `/qfai-verify` を再実行して `scope: "prototyping"` を記録する)。従来は
-  ルールと contract 条項だけを述べ、代わりに何を書けばよいかは述べていなかった。
-  severity は `REQ-0015-0013` / `US-0015-0007` / `AC-0015-0013` /
-  `EX-0015-0009` に規定された upstream SSOT なので Change Request を伴う。
-  4 箇所すべてに新 severity と **その理由** を記録した — 「CIRCULAR」という名前の
-  ルールに `info` を見た読者が、強制が無くなったと誤解しないため。
-  issue の案 (2) (`prototypingLoop: "open"` の追加) と (3) (SKILL.md に例外を
-  明記) はコストではなく中身で却下した: (2) は `prototyping.json` が既に持つ
-  情報を schema field に二重化し、どちらが正かを両 reader で合わせる必要が
-  生じる。(3) は skill が artifact を MUST としつつ「書かない条件」も述べる形に
-  なり、実際の error を捕らえるのは依然 `certify` なので、発火しない gate の
-  ための文書になる。
+- **Made `R-CERTIFY-VERIFY-CIRCULAR` an `info` in `validate` and left
+  enforcement to `certify` (`CR-20260904-0004`).** Left as an `error`, the
+  Completion Contract of `/qfai-verify` could not be met outside Work Order H.
+  The skill makes `verify.json` a MUST, and its `scope` "names the stage
+  actually run and never writes a stage that was not run" (`SKILL.md:148` /
+  `:173` / `:72-73`). A normal full-profile run therefore has no choice but to
+  write `scope: "full"`, and while a prototyping loop was open, this rule fired
+  on exactly that. Measured: `error=0` → file created → `error=1` → file
+  deleted → `error=0`. Waivers are limited to `warning` / `info` (`:151`), so
+  there was no way out at all. The carve-out at `SKILL.md:65` is explicitly
+  limited to Work Order H, and in a real project a loop stays open for weeks
+  while other stages run, so this state is the norm, not the exception.
+  The enforcement point is unchanged — `prototypingCertify.ts:374-383` already
+  rejects a non-prototyping scope with exit 2, and its own comment says this
+  finding "keeps the certify command self-contained instead of relying on a
+  downstream validate pass to surface the same condition".
+  A `scope: "full"` verdict sitting on disk is not itself damage — `certify`
+  **consuming** it is the damage, and `certify` refuses. The finding's message
+  gained a way out (close the loop, then rerun `/qfai-verify` as Work Order H to
+  record `scope: "prototyping"`). Before, it stated only the rule and the
+  contract clause, not what to write instead.
+  The severity is upstream SSOT, prescribed in `REQ-0015-0013` / `US-0015-0007` /
+  `AC-0015-0013` / `EX-0015-0009`, so it involves a Change Request. All four
+  places record the new severity and **the reason for it**, so a reader who sees
+  `info` on a rule named "CIRCULAR" does not conclude enforcement is gone.
+  The issue's option (2) (adding `prototypingLoop: "open"`) and (3) (writing the
+  exception into SKILL.md) were rejected on substance, not cost: (2) duplicates
+  into a schema field information `prototyping.json` already holds, forcing both
+  readers to agree on which is authoritative. (3) makes the skill require the
+  artifact as a MUST while also stating the conditions for not writing it, and
+  since `certify` still catches the real error, it would document a gate that
+  never fires.
   (#1097)
 
-- **`discussion` profile が root DESIGN.md の parse を見られるようにした。**
-  `qfai-discussion` は parsable な root DESIGN.md を MUST とし、gate として
-  `--profile discussion` を指定している。しかしその profile が走らせる 5 つの
-  validator (mermaid / pack readiness / visuals / research summary /
-  review artifacts) はどれも DESIGN.md を読まず、`QFAI-DCON-033` は sdd か
-  prototyping の readiness gate からしか実行に載らなかった。つまり
-  **ファイルを author する stage が、そのファイルが parse するかだけ検査されて
-  いなかった** — malformed なファイルは author 時の gate を通り、レビュー 1 巡
-  あとに別の skill の下で表面化していた。
-  parse と lock を分離した。`validateRootDesignMdParse` は parse 半分だけで、
-  lock 比較は入れていない — それは `/qfai-sdd` Phase 0 が解消するもので、
-  discussion 実行を「その stage では直せない理由」で落とすことになる。
-  「ファイルが malformed」と「ファイルが凍結 hash と一致しない」は
-  owner の異なる別の失敗である。
-  `QFAI-DCON-033` の生成は 1 つの builder に集約した。emitter が 2 つになるので、
-  message / rule / remedy が食い違えば自動修復が 1 つの defect に 2 経路を取る。
-  あわせて `design-md-spec.md` に `## accessibility allowed keys` を追加し、
-  `contrast_ratio_min` と `motion` のみで list が **closed** であること、
-  なぜ ignore ではなく reject なのか (dropped directive が lock に hash され、
-  iterate / certify が読む parsed tokens には現れない)、新しい accessibility
-  義務はどこに書くのか (`# Brand Philosophy` 本文 / screen contract の
-  `observable_outcome`) を明記した。
-  issue の提案のうち「失敗を比例的にする」(未知 leaf 1 つで document 全体を
-  落とさない) は **実装しなかった**。`designMd.ts:405-425` が記録している
-  理由が反対に働く — document を parse させて key ごとの finding にすると、
-  lock は parsed tokens が持たない key を凍結し、document と lock は一致するのに
-  どちらも author されたものと一致しない。判断が必要なので issue に報告した。
-  「許可キーをメッセージに載せる」提案は既に満たされていた
-  (`rejectUnknownKeys` が全 scope 共通で `Allowed: <list>.` を出す)。
+- **Let the `discussion` profile see the parse of the root DESIGN.md.**
+  `qfai-discussion` makes a parsable root DESIGN.md a MUST and names
+  `--profile discussion` as the gate. But none of the 5 validators that profile
+  runs (mermaid / pack readiness / visuals / research summary / review
+  artifacts) read DESIGN.md, and `QFAI-DCON-033` reached a run only from the sdd
+  or prototyping readiness gate. In other words, **the stage that authors the
+  file was not checked for whether the file parses** — a malformed file passed
+  the authoring-time gate and surfaced one review round later, under a different
+  skill.
+  Parse and lock are separated. `validateRootDesignMdParse` is the parse half
+  only and includes no lock comparison — that is what `/qfai-sdd` Phase 0
+  resolves, and it would fail a discussion run for a reason that cannot be fixed
+  in that stage. "The file is malformed" and "the file does not match the frozen
+  hash" are separate failures with different owners.
+  The generation of `QFAI-DCON-033` is consolidated into one builder. With two
+  emitters, a mismatch in message / rule / remedy would send auto-repair down
+  two paths for one defect.
+  `design-md-spec.md` also gains `## accessibility allowed keys`, which states
+  that the list is **closed** to `contrast_ratio_min` and `motion` only, why it
+  rejects instead of ignoring (a dropped directive is hashed into the lock yet
+  does not appear in the parsed tokens that iterate / certify read), and where a
+  new accessibility obligation goes (the body of `# Brand Philosophy` / the
+  `observable_outcome` of a screen contract).
+  Of the issue's proposals, "make the failure proportionate" (one unknown leaf
+  does not fail the whole document) was **not implemented**. The reason recorded
+  at `designMd.ts:405-425` cuts the other way — if the document is parsed and
+  turned into per-key findings, the lock freezes a key the parsed tokens do not
+  hold, and the document and the lock agree while neither matches what was
+  authored. It needs a decision, so it was reported to the issue. The proposal
+  to "put the allowed keys in the message" was already met (`rejectUnknownKeys`
+  prints `Allowed: <list>.` for every scope).
   (#1098)
-- **`certify` が封印する evidence と保存済み `validate.json` を関係づけるようにした。**
-  それまで `certify` はその file について 3 点しか検査していなかった — 存在、
-  `profile` が `prototyping`、`counts.error` が 0
-  (`prototypingCertify.ts:286-319`) — そして結果とツリーを結ぶものが何も無かった。
-  そのため flat な `review.json` があった時点で記録された成功のまま、flat を
-  削除して per-spec を書いた状態を封印でき、現在の `validate` が reject する
-  ツリーに証明書が出ていた。
-  さらに証明書は `validateRun.ranAt` に **certify 実行時刻** を書いていた
-  (`:937` の `new Date()`)。「fresh な run に対して封印されたか」を監査しようと
-  した人が読んでいたのは、その問いが答えられなくなった瞬間に作られた
-  timestamp だった。
-  `ValidationResult` に `generatedAt` を追加し、`certify` は (a) evidence の
-  いずれかが run より新しければ refuse し、対象ファイルを名指しする、
-  (b) 証明書に run 自身の時刻を記録する。
-  `generatedAt` が **無い** 場合は「古い writer」であって検査失敗ではないので、
-  refuse せず note を出して続行する。issue が求めているのは「evidence が新しい
-  ときに refuse」であり、時刻を持たない結果を拒否すると、その条件を表現できない
-  すべての既存 `validate.json` を弾くことになる。このバージョンで `validate` を
-  走らせれば必ず刻まれるので、窓は stale な 1 ファイル分で、次の run が閉じる。
-  mtime の限界 (同一秒の書き込みは「新しくない」と見える / 改竄耐性が無い) は
-  兄弟の check (`:1216-1294`) が既に記録しているものをそのまま引き継いだ。
-  証明書と run を content digest で結ぶ形 (case B) が強い版で、別判断を要する。
-  変異検査: 鮮度 gate を無効化すると 1 行、`ranAt` を certify 時刻に戻すと
-  1 行が落ちる。
+- **Related the evidence `certify` seals to the saved `validate.json`.** Until
+  now `certify` checked only 3 things about that file — that it exists, that
+  `profile` is `prototyping`, and that `counts.error` is 0
+  (`prototypingCertify.ts:286-319`) — and nothing tied the result to the tree.
+  So it could seal a state where the flat `review.json` had been deleted and a
+  per-spec one written after a success recorded while the flat file existed, and
+  a certificate was issued for a tree the current `validate` rejects.
+  Moreover, the certificate wrote the **certify run time** into
+  `validateRun.ranAt` (`new Date()` at `:937`). Someone auditing "was it sealed
+  against a fresh run?" was reading a timestamp made at the moment that
+  question became unanswerable.
+  `generatedAt` is added to `ValidationResult`, and `certify` (a) refuses when
+  any evidence is newer than the run, naming the file concerned, and (b) records
+  the run's own time in the certificate.
+  When `generatedAt` is **absent**, that is an "old writer", not a failed check,
+  so `certify` does not refuse; it prints a note and continues. The issue asks
+  to "refuse when the evidence is newer", and rejecting a result that carries no
+  time would reject every existing `validate.json` that cannot express that
+  condition. Running `validate` with this version always stamps it, so the
+  window is one stale file, closed by the next run.
+  The mtime limits (a write in the same second looks "not newer" / no tamper
+  resistance) are carried over as they are from the sibling check
+  (`:1216-1294`), which already records them. Tying the certificate to the run
+  by a content digest (case B) is the stronger version and needs a separate
+  decision.
+  Mutation check: disabling the freshness gate fails 1 line, and reverting
+  `ranAt` to the certify time fails 1 line.
   (#1107)
-- **spec-0004 の `review.json` スキーマを出荷バリデータに合わせた
-  (`CR-20260904-0003`)。** 3 箇所で乖離しており、いずれも実装を canonical と
-  する判断（ユーザ）。
-  `AC-0004-0012` は `lap-*` の 8 ID を navigation / interaction の欠陥
-  (orphan-page, deadend-flow, input-trap ...) として列挙していたが、
-  `loadKnownLapIds` が解決する `assets/validators/layoutAntiPatterns.json` は
-  **layout archetype** (saas-dashboard, bento-grid ... 6 件 `layout`、2 件
-  `semantic`) を列挙している。8 件中 7 件に対応が無く、criterion が挙げた ID は
-  `lap-008-no-back-affordance` を除きすべて出荷 gate に reject され、gate が
-  受け付ける ID は同じ 1 件を除きすべて criterion 違反だった。**同じ種類の
-  ものですらない**ため「コードを spec に合わせる」は取れない — 動作している
-  detector 8 件を散文のために消すことになる。criterion をレジストリ参照に変え、
-  撤回した 8 ID を criterion 内に記録した。
-  `AC-0004-0013` の `designMdViolations` は
-  `{category, expected, found, location}` で「余分な field でも reject」と
-  していたが、`prototypingEvidence.ts:79-87` は `{kind, found}` だけを検査し
-  残りは無視する。enum (color/font/radius/shadow) は元から一致していた。
-  `04_Business-Rules.md` / `05_Examples.md` の `prose` は
-  `proseCritique` へ。実装には 17 箇所あり `REVIEW_KNOWN_KEYS` にも入っている
-  ため、spec どおりに書いた payload は **2 回** reject されていた（未知キーと
-  必須キー欠落）。
-  DERIVED 側とテストは無変更 — `06_Test-Cases.md` は criterion を ID で参照し、
-  テストは既に実装の形を assert している（それを canonical にした）。
-  **未決の 2 件**は `08_Open-questions.md` に `OQ-0168` / `OQ-0169` として
-  記録した: navigation 系欠陥の族を別途検出すべきか（撤回した 7 ID には現在
-  detector が無く、意図的に retire されたわけでもない）、reviewer に
-  `expected` / `location` を要求すべきか（gate は両方を落とすので、違反は
-  位置情報なしで報告される）。canonical の選択は「今 gate が何を要求するか」を
-  決めるだけで、「gate が何を要求すべきか」は決めない。
+- **Aligned the `review.json` schema of spec-0004 with the shipped validator
+  (`CR-20260904-0003`).** It diverged in 3 places, and in each the decision
+  (by the user) is that the implementation is canonical.
+  `AC-0004-0012` listed 8 `lap-*` IDs as navigation / interaction defects
+  (orphan-page, deadend-flow, input-trap ...), but
+  `assets/validators/layoutAntiPatterns.json`, which `loadKnownLapIds` resolves,
+  lists **layout archetypes** (saas-dashboard, bento-grid ... 6 of kind `layout`
+  and 2 of kind `semantic`). 7 of the 8 have no counterpart: except for
+  `lap-008-no-back-affordance`, every ID the criterion named is rejected by the
+  shipped gate, and every ID the gate accepts, except that same one, violates
+  the criterion. They are **not even the same kind of thing**, so "fit the code
+  to the spec" is not an option — it would delete 8 working detectors for the
+  sake of prose. The criterion now refers to the registry, and the 8 withdrawn
+  IDs are recorded inside the criterion.
+  `AC-0004-0013` said `designMdViolations` is `{category, expected, found,
+location}` and rejects "even an extra field", but `prototypingEvidence.ts:79-87`
+  checks only `{kind, found}` and ignores the rest. The enums
+  (color/font/radius/shadow) already matched.
+  `prose` in `04_Business-Rules.md` / `05_Examples.md` becomes `proseCritique`.
+  The implementation has it in 17 places and it is in `REVIEW_KNOWN_KEYS`, so a
+  payload written as the spec says was rejected **twice** (an unknown key and a
+  missing required key).
+  The DERIVED side and the tests are unchanged — `06_Test-Cases.md` refers to
+  the criteria by ID, and the tests already assert the implementation's shape
+  (which is now canonical).
+  **Two open items** are recorded in `08_Open-questions.md` as `OQ-0168` /
+  `OQ-0169`: whether the family of navigation defects should be detected
+  separately (the 7 withdrawn IDs currently have no detector, and were not
+  deliberately retired), and whether the reviewer should be required to give
+  `expected` / `location` (the gate drops both, so violations are reported
+  without position information). Choosing the canonical side decides only "what
+  the gate requires now", not "what the gate should require".
   (#1105)
 
-- **validate が完走できなかったときに判定を出すようにした (`QFAI-SCAN-002`)。**
-  `runValidate` は `validateProject` を try 無しで await していたため、どの
-  validator の fs エラーでも `cli/index.ts` に届いて stderr 1 行になり、
-  `counts:` も `run-log:` も `validate.json` も出なかった。出荷 skill はすべて
-  validate を `| tail` に通すので、エージェントには gate の判定があるべき場所に
-  その 1 行だけが見えていた。Windows の `git worktree` は
-  `.claude/skills/*` を directory を指す FILE symlink にし、`stat` が毎回
-  `EPERM` を返すので、この経路には実運用で到達する。
-  先例は `QFAI-SCAN-001` で、`cli/lib/warnings.ts` が理由まで書いている —
-  不完全な scan は finding でなければならない、「stdout への echo だけでは
-  `--fail-on` / `--strict`、GitHub annotation stream、run-log のいずれからも
-  到達できない」から。クラッシュした実行は同じ条件のより厳しい版である。
-  finding は errno とパスを載せ、`validate.json` には finding と 0 埋めの
-  coverage を書く。counts は **finding の severity から導出** する
-  (固定値で書くと severity と乖離し、`counts.error: 1` なのに error severity の
-  issue が無い `validate.json` になる — 変異検査で実際にその状態を作った)。
-  severity は `error` 固定で promotion window を置かない。`sunsetLedger` の
-  ガードは「登録した entry は `newRuleSeverity` で severity を決めること」を
-  要求するので、登録すると 1.12.0 まで `warning` になる。`warning` は既定の
-  `--fail-on error` で exit 0 なので、**クラッシュを pass に変える** — 置き換える
-  前の stderr 1 行すら exit 1 だったので、それより悪い。窓が吸収すべき backlog も
-  無い (今日この条件は必ずクラッシュするので、この状態で通っているプロジェクトは
-  存在しない)。P7 が「初日から error」を表現できないことは政策側のギャップとして
-  #1111 に、そもそも `QFAI-SCAN-001/-002` が `EMITTED_RULE_CODES` から見えず
-  waiver が「存在しない rule」と報告される問題は #1110 に起票した。
-  あわせて `cli/lib/fs.ts` の無防備な `stat` を、判定できなかったパスを名指しする
-  エラーに変えた。2 行上の `exists()` は `lstat` を使い、OS が follow しない
-  reparse type の symlink でも **成功する** ので、entry は存在すると判定された
-  直後に `stat` が無防備に throw していた。飲み込まない — 同モジュールのコメントは
-  `catch(() => false)` と `catch(() => [])` がいずれも「失敗している filesystem を
-  自信ありげな clean report に変える」として **削除された** ことを記録している。
-  残り 10 箇所の `stat` サイトは issue の分割どおり後続に残した (各々が個別の
-  判断を要し、この変更でミスがクラッシュではなく degrade になる)。
+- **validate now produces a verdict when it cannot finish (`QFAI-SCAN-002`).**
+  `runValidate` awaited `validateProject` with no try, so an fs error from any
+  validator reached `cli/index.ts` and became a single stderr line, with no
+  `counts:`, no `run-log:` and no `validate.json`. Every shipped skill pipes
+  validate through `| tail`, so the agent saw only that one line where the
+  gate's verdict should have been. On Windows, `git worktree` makes
+  `.claude/skills/*` a FILE symlink pointing at a directory, and `stat` returns
+  `EPERM` every time, so this path is reached in real use.
+  The precedent is `QFAI-SCAN-001`, and `cli/lib/warnings.ts` gives the reason:
+  an incomplete scan must be a finding, because "an echo to stdout alone cannot
+  be reached from `--fail-on` / `--strict`, the GitHub annotation stream or the
+  run-log". A crashed run is a stricter version of the same condition.
+  The finding carries the errno and the path, and `validate.json` gets the
+  finding plus zero-filled coverage. The counts are **derived from the finding's
+  severity** (writing fixed values lets them drift from the severity, giving a
+  `validate.json` with `counts.error: 1` and no error-severity issue — mutation
+  testing actually produced that state).
+  The severity is fixed at `error` with no promotion window. The `sunsetLedger`
+  guard requires a registered entry to decide its severity through
+  `newRuleSeverity`, so registering it would make it `warning` until 1.12.0.
+  A `warning` exits 0 under the default `--fail-on error`, so it **turns a crash
+  into a pass**. The single stderr line it replaces exited 1, so that would be
+  worse. There is also no backlog for a window to absorb (today this condition
+  always crashes, so no project passes in this state). That P7 cannot express
+  "error from day one" is recorded as a policy gap in #1111, and that
+  `QFAI-SCAN-001/-002` are invisible to `EMITTED_RULE_CODES`, so a waiver is
+  reported as naming a "nonexistent rule", is filed as #1110.
+  In addition, the unguarded `stat` in `cli/lib/fs.ts` now raises an error that
+  names the path it could not judge. The `exists()` two lines above uses
+  `lstat`, which **succeeds** even for a symlink of a reparse type the OS does
+  not follow, so an entry was judged to exist and `stat` then threw unguarded
+  right after. It is not swallowed — a comment in the same module records that
+  both `catch(() => false)` and `catch(() => [])` were **removed** because they
+  "turn a failing filesystem into a confidently clean report".
+  The other 10 `stat` sites are left for follow-ups, as the issue splits them
+  (each needs its own decision, and with this change a miss degrades instead of
+  crashing).
   (#1104)
-- **temporary-files ルールの適用範囲を明文化した。** ルールは
-  「一時ファイルはリポジトリルート `tmp/` に置く」と述べ、Rule 5 は例外なしに
-  「`tmp/` の外に見つかったら defect として移動または削除する」と書いていた。
-  一方でテストスイートは 643 箇所 (252 ファイル) で
-  `mkdtemp(path.join(os.tmpdir(), …))` を使っている。つまり 2 つの読みが同時に
-  成立していて、それ自体が問題だった — レビューは新規テスト 1 件を個別に
-  指摘するが、著者は「同じファイルの他のケースと同じヘルパーを呼んでいる」と
-  正直に答えられてしまう。
-  適用範囲を「**ワーキングツリーに書かれるファイル**」に限定した。scratch
-  スクリプト・中間成果物・ダウンロードした fixture・メモは対象。テストが
-  `os.tmpdir()` 配下に `mkdtemp` で作るサンドボックスは非対象。これは Rule 1 の
-  禁止事項からの帰結であって例外ではない — Rule 1 が挙げるのはリポジトリ
-  ルート・`src/`・`.qfai/specs/` などの production/artifact ディレクトリで、
-  リポジトリ外の `mkdtemp` root はそのいずれにもファイルを置けず、作った
-  テストが自分で削除する (Rule 4 が求めていること)。
-  代替案 (`tmp/` 配下に共通ヘルパーを作り 643 箇所を移行) は却下した。
-  テスト I/O がリポジトリ内に入り、file-watcher とツリーを歩く guard すべての
-  視界に入る。
-  同じ scope を憲法 Article XI (配布 asset) と `CLAUDE.md` にも反映した。
-  あわせて `## Reference` の参照先を修正した:
-  `.qfai/assistant/instructions/constitution.md` は存在せず、Article XI の実体は
-  `.qfai/assistant/constitution/constitution.md` — ルールから典拠を辿った読者は
-  何も見つけられなかった。
+- **Clarified the scope of the temporary-files rule.** The rule says scratch
+  files go in the repository-root `tmp/`, and Rule 5 says, with no exception,
+  that a file found outside `tmp/` is a defect to move or delete. Meanwhile the
+  test suite uses `mkdtemp(path.join(os.tmpdir(), …))` at 643 sites (252
+  files). So two readings held at once, and that was itself the problem: a
+  review flags one new test individually, and its author can honestly answer
+  that it calls the same helper as the other cases in the same file.
+  The scope is now limited to **files written into the working tree**. Scratch
+  scripts, intermediate artifacts, downloaded fixtures and notes are covered. A
+  sandbox a test creates with `mkdtemp` under `os.tmpdir()` is not. This
+  follows from Rule 1's prohibition rather than being an exception to it: Rule 1
+  lists production and artifact directories such as the repository root, `src/`
+  and `.qfai/specs/`, and a `mkdtemp` root outside the repository cannot place a
+  file in any of them, and the test that created it deletes it itself (which is
+  what Rule 4 asks for).
+  The alternative (create a shared helper under `tmp/` and migrate the 643
+  sites) was rejected. It would bring test I/O inside the repository, into view
+  of file-watchers and of every guard that walks the tree.
+  The same scope is reflected in Constitution Article XI (the shipped asset)
+  and in `CLAUDE.md`.
+  The `## Reference` targets were also corrected:
+  `.qfai/assistant/instructions/constitution.md` does not exist, and the actual
+  Article XI is in `.qfai/assistant/constitution/constitution.md` — a reader
+  following the rule to its authority found nothing.
   (#1094)
-- **どの qfai が走ったのかを毎回出力し、プロジェクト外から解決された場合は finding にする。**
-  出荷 skill はすべて bare `npx qfai …` を指示しているが、`npx` は bare name を
-  **親ディレクトリ方向** に `node_modules/.bin` を探して解決する。Claude Code の
-  worktree はメインチェックアウトの 3 階層下にあるため、自前の依存を持たない
-  worktree では囲んでいるチェックアウトのバイナリ (別ブランチ・別 lockfile) が
-  走り、実行結果には何も現れなかった。版番は `validate.json` の内部にしか無く、
-  README はそれを internal と呼んでいるので、gate も貼り付けた evidence も 2 つの
-  実行を区別できなかった。`run-log:` の隣に `qfai: <version> (<package dir>)` を
-  出力し、走っている package が **プロジェクト root の外にある installed copy** の
-  場合は `QFAI-TOOL-001` を出す (`--fail-on` から assert できる)。`RULE_PROMOTIONS`
-  で 1.12.0 まで `warning` に固定。
-  issue の提案からは 2 点を訂正した。`process.argv[1]` ではなく package
-  ディレクトリを比較対象にする — 実インストールでは前者は npm が `.bin` に書く
-  shim で、転送先の package とは別パスであり、報告された版番の持ち主でもない。
-  また issue は「worktree のケースだけを捉える」としているが、そうではない:
-  意図的なグローバルインストールと monorepo root への hoist はどちらも正当に
-  root 外へ落ちる。どちらも defect と呼ばずメッセージと docblock に明記した。
-  `outside` は `node_modules` セグメントを併せて要求する。`npx` が親探索で到達
-  できるのはそこだけ (別チェックアウトのコピー / hoist されたコピー /
-  グローバル prefix / 親に無いとき `npx` が黙って作る `_npx` キャッシュ) で、
-  この条件が無いと直接実行したソースチェックアウトでも発火し、実際に
-  `surfaceShortCircuitScope` と `skillsIntegrity` が落ちた — スイートの temp root は
-  構造上すべてソースツリーの外にある。
-  `classifyToolLocation` を純粋関数として切り出して export した。
-  `resolveToolPackageDir()` は自分自身の実在位置を返すので、テストは package を
-  動かせず、ルールが検出すべき状態に到達できない。最初に書いた 5 行はすべて
-  `outside === false` の assert で、**一度も発火しないルールでも全行通る**。
-  この継ぎ目で到達する 4 行を追加し、両方向を変異検査した (強制 off で
-  positive 4 行が、強制 on で 7 行が落ちる)。
-  provenance 行は **検証開始前** に、かつ **両 format** で出力する。`run-log:` の
-  隣に置くと `--format github` では一切出力されず、出荷 SDD skill と evidence
-  テンプレート (`skills/qfai-sdd/SKILL.md`、`templates/evidence/sdd-spec.md`) は
-  その形式を指定しているため、製品が実際に走る経路で答えが欠けていた。また
-  `validateProject` の後に出力すると、最も必要な実行 — 外部解決された古い qfai が
-  新しいプロジェクト構造で例外を投げる場合 — で stack trace だけが残った。
-  package directory の解決は固定深度 (`../../package.json`) から **上方探索** に
-  変えた。tsup は公開 API を `dist/index.mjs`、CLI を `dist/cli/index.mjs` に
-  別々に bundle するので、前者から 2 階層上は package の **1 つ上**
-  (`/project/node_modules/package.json`) で、報告される版番もディレクトリも
-  別物になる。`resolveToolVersion` に元からあった欠陥で、`src/core/` からも
-  `dist/cli/` からも偶然正しくなるため気付かれていなかった。探索は `name` が
-  `qfai` の manifest で止まるので、`node_modules/` の 1 つ上にある利用側
-  プロジェクトの manifest を取り違えない。
-  severity は `warning` + 昇格窓ではなく **`info` 固定** にした。同じ path 判定は
-  意図的なグローバルインストールと monorepo root への hoist を捉え、どちらも
-  正常運用なので、`error` へ昇格すると何も誤っていないプロジェクトで
-  `--fail-on error` が必ず失敗し、しかも `applyWaivers` は error finding に対する
-  waiver を `QFAI-WAIVER-002` で拒否するため逃げ道が無い。恒久的な `warning` は
-  表現できない (ratchet は post-baseline code に parseable な `promoteAt` を要求
-  するので、登録＝昇格の予約になる)。`INFO_ONLY_SINCE_BASELINE` が
-  まさにこの形のための category で、既存メンバー `QFAI-REVIEW-010` の説明
-  「ツリーが誤っていると主張しない、閉じるべき gate でもない」がそのまま当てはまる。
-  昇格には依存宣言から意図を判別する仕組みが必要で、その要件は #1108 に記録した。
-  `qfai --version` (#786) と skill 側の worktree ガイダンスも別 issue に残した。
-  前者は独立した既知 defect、後者はどの解決形を規定するかという判断を伴う。
+- **Every run now prints which qfai ran, and a copy resolved from outside the
+  project becomes a finding.**
+  Every shipped skill instructs a bare `npx qfai …`, but `npx` resolves a bare
+  name by looking for `node_modules/.bin` **toward the parent directories**.
+  A Claude Code worktree sits three levels below the main checkout, so a
+  worktree with no dependencies of its own ran the enclosing checkout's binary
+  (another branch, another lockfile), and nothing in the output showed it. The
+  version number existed only inside `validate.json`, which the README calls
+  internal, so neither the gate nor the pasted evidence could tell the two runs
+  apart. Next to `run-log:` it now prints `qfai: <version> (<package dir>)`, and
+  when the running package is an **installed copy outside the project root** it
+  emits `QFAI-TOOL-001` (which can be asserted from `--fail-on`). It is pinned
+  to `warning` until 1.12.0 through `RULE_PROMOTIONS`.
+  Two points from the issue's proposal were corrected. The package directory is
+  compared, not `process.argv[1]` — in a real install the latter is the shim npm
+  writes into `.bin`, which is a different path from the package it forwards to
+  and is not the owner of the reported version. And the issue says the rule
+  "catches only the worktree case", which is not so: an intentional global
+  install and a hoist to a monorepo root both legitimately land outside the
+  root. Neither is called a defect, and the message and the docblock say so.
+  `outside` also requires a `node_modules` segment. That is the only place
+  `npx` can reach by parent search (a copy in another checkout, a hoisted copy,
+  a global prefix, or the `_npx` cache that `npx` silently creates when nothing
+  is found in a parent), and without the condition the rule also fires for a
+  source checkout run directly, which is how `surfaceShortCircuitScope` and
+  `skillsIntegrity` actually failed — the suite's temp roots are all outside the
+  source tree by construction.
+  `classifyToolLocation` was extracted as a pure function and exported.
+  `resolveToolPackageDir()` returns its own real location, so a test cannot move
+  the package and cannot reach the state the rule is meant to detect. The 5 rows
+  first written all assert `outside === false`, so **all the rows pass even for
+  a rule that never fires**. 4 rows reachable at this seam were added, and both
+  directions were mutation-tested (forcing it off fails the 4 positive rows,
+  forcing it on fails 7 rows).
+  The provenance line is printed **before validation starts**, and in **both
+  formats**. Placed next to `run-log:`, it was not printed at all under
+  `--format github`, and the shipped SDD skill and the evidence template
+  (`skills/qfai-sdd/SKILL.md`, `templates/evidence/sdd-spec.md`) specify that
+  format, so on the path the product really runs, the answer was missing. And
+  printed after `validateProject`, the run that needs it most — an old,
+  externally resolved qfai throwing on a new project structure — left only a
+  stack trace.
+  Package directory resolution changed from a fixed depth (`../../package.json`)
+  to an **upward search**. tsup bundles the public API into `dist/index.mjs` and
+  the CLI into `dist/cli/index.mjs` separately, so two levels up from the former
+  is **one level above** the package (`/project/node_modules/package.json`),
+  and both the reported version and the directory come out wrong. This was an
+  existing defect in `resolveToolVersion`, unnoticed because it happens to be
+  right from both `src/core/` and `dist/cli/`. The search stops at a manifest
+  whose `name` is `qfai`, so it does not mistake the consuming project's
+  manifest one level above `node_modules/` for the package's.
+  The severity is fixed at **`info`**, not `warning` plus a promotion window.
+  The same path check catches an intentional global install and a hoist to a
+  monorepo root, and both are normal operation, so promoting it to `error`
+  would make `--fail-on error` always fail on a project where nothing is wrong,
+  and with no way out, because `applyWaivers` rejects a waiver against an error
+  finding with `QFAI-WAIVER-002`. A permanent `warning` cannot be expressed (the
+  ratchet requires a parseable `promoteAt` on post-baseline code, so
+  registering means reserving a promotion). `INFO_ONLY_SINCE_BASELINE` is the
+  category for exactly this shape, and the description of its existing member
+  `QFAI-REVIEW-010` — "does not claim the tree is wrong, and is not a gate that
+  should be closed" — applies as it stands. Promotion would need a way to tell
+  intent from the dependency declaration, and that requirement is recorded in
+  #1108.
+  `qfai --version` (#786) and the skill-side worktree guidance are left to
+  separate issues. The former is an independent known defect, and the latter
+  involves a decision about which resolution shape to prescribe.
   (#1096)
 
-- **ツリーから導出される事実をリテラルで pin しているガードに、再導出ツールを同梱した。**
-  `stageEvidenceCounts.test.ts` は e2e callsite 数をツリーから計算し、隣にコミットされた
-  リテラルと突き合わせる。導出は出荷されていなかったので、このガードで赤くなった寄稿者は
-  全員がガードの散文から walk を再実装するしかなかった — #1065 は 1 回の巡回で 8 体の
-  エージェントが独立に同じことをしたと記録している。しかもコンフリクトを人間が見ると
-  「もっともらしい整数が 2 つ」並ぶだけで、**正解がそのどちらでもない** ことを示す手がかりが
-  無い。正解は常に新しい導出である。
-  `scripts/derive-e2e-callsites.mjs` が導出を 1 箇所に持ち、
-  `scripts/pin-stage-evidence-counts.mjs` がそれを record に書く (`--check` で書かずに報告)。
-  ガードも同じモジュールを import する — 2 実装は食い違いうるし、そうなるとガードは
-  ツリーではなく再 pin ツールを測ることになる。ガードが検査するのは **コミットされた
-  リテラル** 対ツリーなので、導出を共有しても self-referential にはならない。
-  ガードの失敗メッセージはツールのコマンド名と per-root の内訳を出すので、寄稿者が
-  数え方を再実装する必要はない。`vitest.workspace.ts` から `e2e` project の include を読む
-  部分も共有側に移した — 「e2e project の callsite」を測ると称してディレクトリを自分で
-  書いているガードは、include が 1 つ増えた瞬間に別のものを測る。parse できない include は
-  黙って落とさず throw する。
-  **suite の 2 つの total は対象外**。テストの中からスイートを走らせない限り導出できず、
-  record 自身がそう述べている。このツールが動かすのはその total を無効化する 1 つの数だけで、
-  total は「妥当性条件が明示された人間の主張」のまま残る。
-- **`atddCredentialReuseGuidance.test.ts` には再導出コマンドを文書化し、自動書き込みは
-  意図的に付けなかった。** この baseline は「数」ではなく **列挙** であり、それは
-  「1 つ失って 1 つ得た集合はサイズが変わらない」という swap を捕まえるためにそうなっている。
-  自動書き込みは swap を黙って吸収してしまい、レビュアーがそれを見る機会を消す。
-  導出コマンドは出力するだけで、編集は人間が行う。#1065 の提案 3 は「ガードごとに再 pin
-  script」だが、**導出された数**と**意図的に凍結された集合**では正しい道具が違う。
-- **`tsconfig.tests.json#include` の test エントリはソート順になった** (#1066 で実施)。
-  #1065 の提案 4 で、append が最終行に集中しなくなる。
-- **Round 2b が正しく検出した重大欠陥を「修正して要件を維持する」経路が存在しなかった
-  deadlock に、1 回限りの corrective review という出口を定義した。** 既存規則の交点が行き止まりで
-  あることは構造的に到達可能である: named fix が **導入または露出** した欠陥を Round 2b が
-  報告すると 2 度目の escalation になり、そこで 2b cap が _apply a named fix_ を、severity floor が
-  _accept as Open Question_ を封じる — security / data-loss / released-contract correctness の
-  finding では残るのが _drop the item from scope_ だけになる。欠陥を直して要件を保つ選択には
-  検証経路が無く、artifact は永久に `REVISE` に留まる。Round 2b が仕事をしたことがこの状態を
-  作る。
-  そのユーザーが drop ではなく修正を選んだ場合に限り、**corrective review artifact を 1 つ**
-  開ける。third round でも budget reset でもなく、round より狭い remit を持つ別 artifact であり、
-  同じ 2 規則がこれを通して再合成できないよう境界を持つ: 元 artifact と Round 2b finding の
-  逐語、ユーザー決定、修正内容、および触れた全 artifact の before/after revision を digest として
-  記録する義務。remit は finding と named fix のみ、独立 review は 1 回のみ (`Round: corrective`
-  — 番号は後継を招くので使わない)、`PASS` は当該 finding を supersede して未通過の review gate に
-  戻すのみ、`REVISE` は terminal で追加 artifact も追加 review も無い。severity floor と
-  Open Question 禁止は弱まらない。
-- **2b cap の一文が事実と違っていたのを直した。** 「floor が両方を封じるなら」と書かれていたが、
-  floor が封じるのは _accept as Open Question_ の 1 つだけである。`drop` だけが残るのは floor
-  単独ではなく **cap と floor の交点** であり、そう述べ直した。
-- **review 終了規則を `constitution/review-convergence.md` に分離した。**
-  `shared-skill-delegation-baseline.md` は 500 行の shipped-asset 上限に対して 499 行であり、
-  1 行の追加すら `assets guardrails > keeps every shipped assistant asset inside the line ceiling`
-  を落とす。その guard 自身のメッセージが処方する remedy が "move a topic into references/" で
-  あり、`Round budget` と `Convergence` は「review がどう終わるか」という 1 つの topic で
-  delegation とは別なので、`drift-protocol.md` が既に確立している sibling constitution file の
-  慣習に従った。規則の内容は移動によって変わっていない (baseline 439 行 / 新ファイル 121 行)。
-- **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
-  `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
-  `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を
-  作成する。その PR が main に入ると `Tag release commit` が `vX.Y.Z` を push し、`release.yml` が
-  起動する。publish は従来どおり `release` environment の必須レビュアー承認で止まる。
-- **tag はリリース PR が運んだコミットにしか付かない。** 起動条件は
-  `packages/qfai/package.json` の変更だが、それは必要条件であって十分条件ではない
-  — `feature/vX.Y.Z` のような pinned branch は manifest と CHANGELOG 見出しを両方揃えるため、
-  それだけでは区別できない。tag ジョブはそのコミットを運んだ PR を API に問い、head branch が
-  `release/vX.Y.Z` であることを要求する。`.agents/rules/version-discipline.md` は tag の発行に
-  独立した明示指示を求めており、pin が与えるのは「版」であって「tag を切ってよい」ではない。
-- **版に関する検査はリテラルで行う。** CHANGELOG 見出しの照合は文字列一致で、正規表現ではない
-  (`1.10.2` を正規表現として使うと `1010.2` に一致してしまう)。同名 tag が既にある場合は
-  commit まで dereference し、このコミットを指すときだけ no-op として、異なるコミットを指す
-  ときは両方の sha を示して失敗する。`01.11.0` / `1.011.0` のような先頭ゼロ入りの版は両
-  ワークフローが拒否する — node-semver が拒否するため、通してしまうと publish 時まで失敗が
-  遅れ、そのときには PR も tag も既に存在している。
-- **リリース文面は自動生成しない。** 内容は各変更の作者が `## [Unreleased]` に書き足したものがそのまま
-  使われ、GitHub Release の本文も同じセクションから抽出される。裏返しとして `## [Unreleased]` が
-  何も説明していなければ `Prepare release` は失敗する — 空の場合だけでなく、`### Added` のような
-  カテゴリ見出ししか無い場合も含む。誰も書いていないリリースノートは「何も起きなかった」と読める。
-  なお `## [X.Y.Z] - <日付>` の日付は **Prepare release を実行した日** で、tag が切られるのは PR が
-  マージされたときなので、翌日以降にマージするならリリース PR の中で直す (PR 本文がその旨を告げる)。
-- **版番号も自動化は選ばない。** `.agents/rules/version-discipline.md` が版番号の決定権をユーザに置いて
-  いるため、入力は必須で既定値を持たない。作成されるブランチ名が pin を運ぶので
-  `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
-  `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
-  `BR-0017-0016` の閉じた逸脱集合は広がらない。
-- **準備が途中で失敗しても再開できる。** branch の push と PR の作成は別々の失敗で、後者だけが
-  remote に branch を残す。force-push は規則で禁止されているため、素直に再実行すると
-  non-fast-forward で拒否されて手が無くなる。既存 branch と既存 PR を検出して採用するので、
-  原因を直して再実行すればそのまま続けられる (同名でも別の版を宣言している branch は衝突
-  として名指しで拒否する)。
+- **Shipped a re-derivation tool for guards that pin a tree-derived fact as a
+  literal.** `stageEvidenceCounts.test.ts` computes the e2e callsite count from
+  the tree and compares it with a literal committed beside it. The derivation
+  was not shipped, so every contributor turned red by this guard had to
+  reimplement the walk from the guard's prose — #1065 records 8 agents
+  independently doing the same thing in one sweep. And when a human looks at a
+  conflict, they see only "two plausible integers", with no hint that **the
+  right answer is neither of them**. The right answer is always a fresh
+  derivation.
+  `scripts/derive-e2e-callsites.mjs` holds the derivation in one place, and
+  `scripts/pin-stage-evidence-counts.mjs` writes it into the record (`--check`
+  reports without writing). The guard imports the same module — two
+  implementations can disagree, and then the guard would measure the re-pin
+  tool instead of the tree. What the guard checks is the **committed literal**
+  against the tree, so sharing the derivation does not make it self-referential.
+  The guard's failure message prints the tool's command name and a per-root
+  breakdown, so a contributor need not reimplement the counting. The part that
+  reads the `e2e` project's include from `vitest.workspace.ts` also moved to the
+  shared side — a guard that claims to measure "the e2e project's callsites"
+  while writing the directories itself measures something else the moment an
+  include is added. An include that cannot be parsed throws instead of being
+  silently dropped.
+  **The suite's two totals are out of scope.** They cannot be derived without
+  running the suite from inside a test, and the record itself says so. The one
+  number this tool touches is the one that invalidates those totals, and the
+  totals stay "human claims with their validity conditions stated".
+- **`atddCredentialReuseGuidance.test.ts` gets a documented re-derivation
+  command, and deliberately no automatic write.** This baseline is an
+  **enumeration**, not a count, and it is so in order to catch a swap: "a set
+  that lost one and gained one keeps its size". An automatic write would absorb
+  a swap silently and remove the reviewer's chance to see it. The derivation
+  command only prints; a human makes the edit. #1065's proposal 3 is a
+  "re-pin script per guard", but a **derived number** and an **intentionally
+  frozen set** need different tools.
+- **The test entries of `tsconfig.tests.json#include` are now sorted** (done in
+  #1066). This is #1065's proposal 4, and appends no longer concentrate on the
+  last line.
+- **Defined a one-time corrective review as the way out of a deadlock: no path
+  existed to "fix the defect and keep the requirement" after Round 2b correctly
+  found a serious one.** Reaching a dead end at the intersection of the existing
+  rules is structurally possible: when Round 2b reports a defect that a named
+  fix **introduced or exposed**, that is a second escalation, and there the 2b
+  cap forbids _apply a named fix_ and the severity floor forbids _accept as Open
+  Question_ — for a security, data-loss or released-contract-correctness
+  finding, only _drop the item from scope_ remains. Fixing the defect and
+  keeping the requirement has no verification path, and the artifact stays at
+  `REVISE` forever. That Round 2b did its job is what creates this state.
+  Only where the user chooses to fix rather than drop, **one corrective review
+  artifact** is opened. It is not a third round or a budget reset; it is a
+  separate artifact with a narrower remit than a round, and it has boundaries so
+  that the same 2 rules cannot recompose through it: an obligation to record, as
+  a digest, the original artifact and the Round 2b finding verbatim, the user's
+  decision, the fix, and the before/after revision of every artifact touched.
+  The remit is the finding and the named fix only, there is exactly one
+  independent review (`Round: corrective` — no number, since a number invites a
+  successor), `PASS` only supersedes that finding and returns to the review gate
+  not yet passed, and `REVISE` is terminal, with no further artifact and no
+  further review. The severity floor and the Open Question prohibition are not
+  weakened.
+- **Fixed a sentence in the 2b cap that did not match the facts.** It said "if
+  the floor forbids both", but the floor forbids only one of them, _accept as
+  Open Question_. That only `drop` remains is the result of the **intersection
+  of the cap and the floor**, not of the floor alone, and the text now says so.
+- **Split the review termination rules out into
+  `constitution/review-convergence.md`.**
+  `shared-skill-delegation-baseline.md` is at 499 lines against the shipped-asset
+  ceiling of 500, and even one added line fails
+  `assets guardrails > keeps every shipped assistant asset inside the line ceiling`.
+  The remedy the guard's own message prescribes is "move a topic into
+  references/", and `Round budget` and `Convergence` are one topic, "how a
+  review ends", separate from delegation, so this follows the convention of a
+  sibling constitution file that `drift-protocol.md` already established. The
+  content of the rules did not change with the move (baseline 439 lines, new
+  file 121 lines).
+- **Turned the release version bump and tagging into a workflow.** Entering
+  `X.Y.Z` in `Prepare release` syncs `packages/qfai/package.json#version`,
+  renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - <date>` and
+  re-inserts an empty `## [Unreleased]`, and creates a PR for `release/vX.Y.Z`.
+  When that PR lands on main, `Tag release commit` pushes `vX.Y.Z` and
+  `release.yml` starts. Publishing is still held, as before, by the required
+  reviewer approval of the `release` environment.
+- **A tag is placed only on a commit the release PR carried.** The trigger is a
+  change to `packages/qfai/package.json`, but that is a necessary condition, not
+  a sufficient one — a pinned branch such as `feature/vX.Y.Z` aligns both the
+  manifest and the CHANGELOG heading, so that alone cannot tell them apart. The
+  tag job asks the API for the PR that carried the commit and requires its head
+  branch to be `release/vX.Y.Z`. `.agents/rules/version-discipline.md` requires
+  a separate explicit instruction to create a tag, and what a pin gives is the
+  "version", not permission to "cut a tag".
+- **Version checks are done as literals.** The CHANGELOG heading match is a
+  string comparison, not a regular expression (using `1.10.2` as a regular
+  expression would also match `1010.2`). When a tag of the same name already
+  exists, it is dereferenced to the commit, and it is a no-op only if it points
+  at this commit; if it points at a different commit, the run fails and shows
+  both shas. A version with leading zeros such as `01.11.0` / `1.011.0` is
+  rejected by both workflows — node-semver rejects it, so letting it through
+  would delay the failure until publish, by which time the PR and the tag
+  already exist.
+- **Release text is not generated automatically.** What the author of each
+  change added to `## [Unreleased]` is used as it is, and the GitHub Release
+  body is extracted from the same section. The flip side is that `Prepare
+release` fails if `## [Unreleased]` explains nothing — not only when it is
+  empty, but also when it holds nothing except category headings such as
+  `### Added`. Release notes that nobody wrote can be read as "nothing
+  happened". Note that the date in `## [X.Y.Z] - <date>` is **the day Prepare
+  release was run**, and the tag is cut when the PR is merged, so if it merges
+  on a later day, fix the date inside the release PR (the PR body says so).
+- **The version number is not automated either.**
+  `.agents/rules/version-discipline.md` gives the user the decision on the
+  version number, so the input is required and has no default. The branch name
+  it creates carries the pin, so `check-branch-version-pin.sh` can verify that
+  it agrees with the manifest. Writes go through `RELEASE_AUTOMATION_TOKEN`, so
+  the workflow's `permissions:` stays at `contents: read`, and the closed set of
+  deviations in `BR-0017-0016` does not widen.
+- **Preparation can be resumed after a mid-way failure.** Pushing the branch and
+  creating the PR are separate failures, and only the latter leaves a branch on
+  the remote. Force-push is prohibited by rule, so a naive rerun would be
+  rejected as non-fast-forward and leave no way forward. An existing branch and
+  an existing PR are detected and adopted, so after fixing the cause a rerun
+  simply continues (a branch of the same name that declares a different version
+  is rejected by name as a collision).
 - **`qfai --version` / `qfai -V` print the tool version.** Both spellings were
   unrecognised and fell through to `Unknown command`, and `usage()` advertised
   no version affordance at all; the only way to read the version was
@@ -7594,785 +9129,948 @@ path` を追加した。drift ルールは対称だが縮小は非対称であ�
 
 ### Fixed
 
-- **`--force` / `--yes` / `--dry-run` も、読まないコマンドで受理されていた。**
-  #1143 の残りである。`validate --dry-run` は exit 0 で**実際の実行**を行い
-  `.qfai/report/validate.json` と run-log を書いていた — リハーサルのつもりの
-  操作者が本番を得る。
+- **`--force` / `--yes` / `--dry-run` were also accepted by commands that do not
+  read them.** This is the remainder of #1143. `validate --dry-run` exited 0
+  while doing the **real run**, writing `.qfai/report/validate.json` and the
+  run-log — an operator who meant a rehearsal got production.
 
   ```console
-  $ npx qfai validate --force    --root .   # exit 0、フラグは無視
-  $ npx qfai validate --yes      --root .   # exit 0、フラグは無視
-  $ npx qfai validate --dry-run  --root .   # exit 0、フラグは無視
+  $ npx qfai validate --force    --root .   # exit 0, flag ignored
+  $ npx qfai validate --yes      --root .   # exit 0, flag ignored
+  $ npx qfai validate --dry-run  --root .   # exit 0, flag ignored
   ```
 
-  所有リストは推測ではなく `main.ts` の読み取り位置を `case` アームに対応
-  づけて導出した:
+  The ownership list was derived by mapping the read positions in `main.ts` to
+  the `case` arms, not by guessing:
 
-  | field                         | 読むアーム                                 |
+  | field                         | arms that read it                          |
   | ----------------------------- | ------------------------------------------ |
   | `force`                       | `init`, `handoff`, `prototyping`           |
   | `yes`                         | `init`, `doctor`                           |
   | `dryRun`                      | `init`, `doctor`, `handoff`, `prototyping` |
   | `dir`, `upgradeAssistantTree` | `init` (#1143)                             |
 
-  #1143 で入れた `ownedByInit()` は `ownedBy(...commands)` に一般化し、5 つの
-  フラグすべてを 1 つの述語に通した。ほぼ同じ意味の述語が 2 つあると、歩調を
-  合わせるべき契約が 2 つになる。
+  The `ownedByInit()` added in #1143 is generalised to `ownedBy(...commands)`,
+  and all 5 flags go through one predicate. With two near-identical predicates
+  there would be two contracts to keep in step.
 
-  **配布物との照合を先に行った**: これらのフラグをコマンドと組で書いている
-  配布例は `qfai init --force` と `qfai prototyping iterate … --force` の
-  2 つだけで、どちらも所有リスト内。README 2 つは 5 つとも `npx qfai init` の
-  下でのみ文書化している。配布された手順が失敗し始めることはない。
+  **Checked against the distributed material first**: the only shipped examples
+  that write these flags together with a command are `qfai init --force` and
+  `qfai prototyping iterate … --force`, and both are inside the ownership list.
+  The two READMEs document all 5 only under `npx qfai init`. No shipped
+  procedure starts failing.
 
-  拒否時に出る usage banner が**所有先の唯一の答え**になるので、過小に述べて
-  いた 2 行も直した: `--force` は `prototyping iterate`（配布 SKILL.md の
-  破壊的リセット手順そのもの）を挙げておらず、`--yes` は `doctor` を挙げて
-  いなかった。`--yes` の doctor 側の説明は `doctor.ts` 自身の docblock
-  (`skip interactive confirmation (autoremediate)`) から取った。
+  The usage banner printed on rejection is **the only answer about ownership**,
+  so two lines that understated it were also fixed: `--force` did not list
+  `prototyping iterate` (the very destructive-reset step in the shipped
+  SKILL.md), and `--yes` did not list `doctor`. The description of `--yes` on
+  the doctor side is taken from `doctor.ts`'s own docblock
+  (`skip interactive confirmation (autoremediate)`).
 
-  **アップグレード時の注意:** `validate --dry-run` のようなスクリプトは失敗する
-  ようになる。以前からリハーサルではなく本番を実行していたので、失敗する方が
-  厳密に良い。 (#1144)
+  **Upgrade note:** a script such as `validate --dry-run` will now fail. It was
+  already running production rather than a rehearsal, so failing is strictly
+  better. (#1144)
 
-- **`--dir` が `init` 以外でも受理され、黙って無視されていた。** その結果
-  `validate --dir <path>` は**現在のディレクトリ**について判定を返し、
-  `report --dir <path>` は現在のディレクトリの `report.md` を**上書き**していた。
+- **`--dir` was accepted by commands other than `init` and silently ignored.**
+  As a result, `validate --dir <path>` returned a verdict for the **current
+  directory**, and `report --dir <path>` **overwrote** the current directory's
+  `report.md`.
 
   ```console
   $ npx qfai validate --dir "C:/nope/does/not/exist"
-  counts: info=6 warning=950 error=0        # <- 現在のリポジトリの結果
+  counts: info=6 warning=950 error=0        # <- the current repository's result
 
-  $ npx qfai validate --dir /tmp/empty-dir  # 存在する空ディレクトリでも
-  counts: info=6 warning=950 error=0        # <- やはり現在のリポジトリ
+  $ npx qfai validate --dir /tmp/empty-dir  # even for an existing empty directory
+  counts: info=6 warning=950 error=0        # <- still the current repository
 
   $ npx qfai report --dir "C:/nope/does/not/exist"
-  wrote report: C:\Users\...\QFAI\.qfai\report\report.md   # <- 名指ししていない木に書く
+  wrote report: C:\Users\...\QFAI\.qfai\report\report.md   # <- writes to a tree that was not named
   ```
 
-  機構: `--dir` は `options.dir` を設定し、`resolveRoot` が読むのは
-  `options.root` / `options.rootExplicit`（`--root` だけが設定する）。
-  `options.dir` の読み手は dispatch の `init` アームただ 1 箇所である。
+  Mechanism: `--dir` sets `options.dir`, while `resolveRoot` reads
+  `options.root` / `options.rootExplicit` (set only by `--root`). The only
+  reader of `options.dir` is the `init` arm of the dispatch.
 
-  これは文書化された制約ではなく欠陥である。`lib/args.ts` は「所有していない
-  コマンドで使われたフラグは引数エラー」を **80 箇所**で実装しており
-  (`--target-url`、`--spec`、`--remove`、`--reason` …)、`--dir` だけが例外
-  だった — その `markInvalid()` は**値が無い**場合のみだった。
+  This is a defect, not a documented constraint. `lib/args.ts` implements "a
+  flag used on a command that does not own it is an argument error" at **80
+  sites** (`--target-url`, `--spec`, `--remove`, `--reason` …), and only `--dir`
+  was the exception — its `markInvalid()` applied only when there was **no
+  value**.
 
-  `init` 以外では引数エラーにした。usage 行も「init 専用。他コマンドの対象指定は
-  `--root`」と述べる — `markInvalid` は理由を取らず usage を出す方式なので、
-  そこが操作者の学ぶ場所である。判定は `ownedByInit()` という名前付き述語に
-  した (`ownedByPrototyping` / `ownedByGuardrails` に倣う) ので、次の
-  init 専用フラグは誰もこの issue を覚えていなくても正しくなる。
+  It is now an argument error outside `init`. The usage line also says "for
+  init only. Other commands take their target from `--root`" — `markInvalid`
+  takes no reason and prints usage, so that is where the operator learns. The
+  check is a named predicate, `ownedByInit()` (following `ownedByPrototyping` /
+  `ownedByGuardrails`), so the next init-only flag comes out right even if
+  nobody remembers this issue.
 
-  **同じ形の 2 例目**として `--upgrade-assistant-tree` も塞いだ。こちらは
-  ある意味より悪く、`validate --upgrade-assistant-tree` は exit 0 で**何も
-  更新せず**、操作者は assistant tree が更新されたと信じたまま古い tree を
-  読み続けていた。
+  As a **second instance of the same shape**, `--upgrade-assistant-tree` was
+  closed too. This one was in a sense worse: `validate --upgrade-assistant-tree`
+  exited 0 while **updating nothing**, and the operator kept reading the old
+  tree while believing the assistant tree had been updated.
 
-  本リポジトリ自身のスイートにもこの取り違えがあった:
-  `validateRunIncomplete.test.ts` の 3 行が `report --dir` を使っており、
-  修正後に落ちた（`--dir` が引数エラーになり dispatch に届かなくなったため）。
-  `--root` に直した — これは修正が効いている証拠である。
+  This repository's own suite had the same mix-up: three lines of
+  `validateRunIncomplete.test.ts` used `report --dir` and failed after the fix
+  (`--dir` became an argument error and no longer reached dispatch). They now
+  use `--root`, which is evidence that the fix works.
 
-  **アップグレード時の注意:** `validate --dir X` のようなスクリプトは失敗する
-  ようになる。それらは以前から意図した動作をしておらず（別の木について答えて
-  いた）、失敗する方が厳密に良い。`--root` に置き換えること。 (#1143)
+  **Upgrade note:** scripts such as `validate --dir X` now fail. They never did
+  what was intended (they answered about a different tree), and failing is
+  strictly better. Replace `--dir` with `--root`. (#1143)
 
-- **注釈スキャナが、文字列 / template / 正規表現リテラルの中の**完全な** TC / US
-  id を今も参照として読んでいた。** #1123 は**切り詰められた** id が
-  `/^…TC-0001-\d{4}$/` から取り出されるのを止めたが、同 issue が述べていた
-  構造的問題 —「正規表現の中の文字列、文字列リテラル、コメント、本物の注釈は
-  同じテキストである」— には触れていなかった。実測:
+- **The annotation scanner still read **complete** TC / US ids inside string /
+  template / regular-expression literals as references.** #1123 stopped
+  **truncated** ids from being extracted out of `/^…TC-0001-\d{4}$/`, but it
+  did not touch the structural problem that issue described: "a string inside a
+  regex, a string literal, a comment and a real annotation are the same text".
+  Measured:
 
   ```text
-  as designed  コメント内の本物の注釈:              matched=true  want=true
-  DEFECT       正規表現リテラル内の完全な id:        matched=true  want=false
-  DEFECT       文字列リテラル内の完全な id:          matched=true  want=false
-  DEFECT       template リテラル内の完全な id:       matched=true  want=false
-  as designed  #1123 が閉じた切り詰め形:             matched=false want=false
+  as designed  real annotation in a comment:              matched=true  want=true
+  DEFECT       complete id in a regex literal:            matched=true  want=false
+  DEFECT       complete id in a string literal:           matched=true  want=false
+  DEFECT       complete id in a template literal:         matched=true  want=false
+  as designed  truncated form that #1123 closed:          matched=false want=false
   ```
 
-  つまり id を**データとして**保持する fixture が、それを参照していると報告
-  されていた。#1123 はその両方（コンストラクトをデータとして持つ generator /
-  parser スイート、および対象の id を引用する自己検査型 deferral ledger）を
-  日常的な形として挙げている。finding は `QFAI-ATDD-101` / `-102` = `error`
-  である。
+  In other words, a fixture that holds an id **as data** was reported as
+  referencing it. #1123 lists both of the ordinary forms of this (a generator /
+  parser suite that holds the construct as data, and a self-checking deferral
+  ledger that quotes the id it covers). The findings are `QFAI-ATDD-101` /
+  `-102` = `error`.
 
-  必要なレキサーは**同じディレクトリに既にあった** —
-  `validators/jsSourceMask.ts#maskJsNonCode` は該当スパンを正確に知っており、
-  難所（`a / b` は除算、`= /re/` は違う）も扱っている。ただし**コメントも
-  消す**ため、注釈がコメントに書かれるこの用途にはそのまま使えなかった。
-  そこで `comments` オプションを足し（既定は `true`、既存の消費者は不変）、
-  注釈スキャンはリテラルだけを消すようにした。
+  The lexer that was needed **was already in the same directory**:
+  `validators/jsSourceMask.ts#maskJsNonCode` knows exactly which spans to
+  blank, and it handles the hard cases (`a / b` is a division, `= /re/` is not).
+  But it **also blanks comments**, so it could not be used as is where
+  annotations are written in comments. So a `comments` option was added (default
+  `true`, so existing consumers are unchanged), and the annotation scan blanks
+  literals only.
 
-  拡張子でゲートしている。`.md` / `.feature` は
-  `DEFAULT_TEST_FILE_GLOB` に含まれる注釈キャリアで、Markdown に JS レキサーを
-  当てると散文中のアポストロフィが行末までの文字列開始として読まれ、その後の
-  注釈が**消える** — over-blanking は本物の注釈を隠すので、この方向だけは
-  導入してはならない。 (#1141)
+  It is gated by extension. `.md` / `.feature` are annotation carriers in
+  `DEFAULT_TEST_FILE_GLOB`, and applying a JS lexer to Markdown reads an
+  apostrophe in prose as the start of a string that runs to the end of the line,
+  so the annotations after it **disappear**. Over-blanking hides real
+  annotations, so this is the one direction that must not be introduced.
+  (#1141)
 
-- **CR の免除が `## Impact scope` を 1 つしか読まず、しかも code fence の中まで
-  読んでいたため、書式例がそのパスを承認していた。** どちらも本リポジトリが
-  `## Triage` に対して**既に発見・修正済み**の欠陥である
-  (`specPack.ts#collectTriageSections`)。
-  1. **最初のセクションしか読まない。** 兄弟実装の docblock がその修正を
-     記録している —「以前は最初の 1 つだけを読んでいたため、skill 再実行で
-     2 つ目以降のセクションに積まれた行が…丸ごと外れていた」。
-     `QFAI-TRIAGE-008` の remedy は作者に対して
-     「`## Triage` を複数置けば全セクションが検査されます」と明示しており、
-     **再実行のたびに H2 を追記するのはこのシステムの確立された作法**である。
-     それに倣った CR は後半の宣言が黙殺され、**申告済みの編集**に対して
-     `QFAI-DRIFT-001` が出ていた。
-  2. **fence の中を読む。** 兄弟実装は `maskNonSpecRegions` を先に通しており、
-     理由も書かれている（書式例として fence 内に置かれた見出しが 2 つ目の
-     セクションとして収集される）。Triage では偽陽性の方向だが、**免除では
-     向きが逆で、はるかに悪い** — 書式を fence で説明した CR が、その
-     **例が名指すパス**の免除を与える。#1121 の見出しそのもの
-     （「禁止が許可になる」）が、別経路で再び開いていた。HTML コメントも
-     同じ形で、CR テンプレートは説明用の HTML コメントだらけである。
+- **The CR exemption read only one `## Impact scope` section, and read inside
+  code fences too, so a format example approved that path.** Both are defects
+  this repository had **already found and fixed** for `## Triage`
+  (`specPack.ts#collectTriageSections`).
+  1. **It reads only the first section.** The sibling implementation's docblock
+     records the fix: "it used to read only the first one, so rows piled up in
+     the second and later sections by a skill rerun ... dropped out entirely".
+     The remedy of `QFAI-TRIAGE-008` tells the author explicitly that "if you
+     place more than one `## Triage`, every section is checked", and
+     **appending an H2 on every rerun is this system's established practice**.
+     A CR that followed it had its later declarations silently ignored, and
+     `QFAI-DRIFT-001` was raised against an **already declared edit**.
+  2. **It reads inside fences.** The sibling implementation passes the text
+     through `maskNonSpecRegions` first, and the reason is written down (a
+     heading placed inside a fence as a format example is collected as a second
+     section). For Triage the failure is a false positive, but **for the
+     exemption the direction is reversed, and far worse**: a CR that explains
+     the format in a fence grants the exemption for **the path the example
+     names**. The very heading of #1121 ("a prohibition becomes a permission")
+     had been opened again by another route. An HTML comment has the same shape,
+     and the CR template is full of explanatory HTML comments.
 
-  兄弟実装がすでに持っていたもの（全セクション収集 + `maskNonSpecRegions`）を
-  そのまま採用した。
+  It adopts what the sibling implementation already had (collecting all
+  sections plus `maskNonSpecRegions`) as it is.
 
-  検証で見つかった 2 つの「テスト不能コード」も処理した: `lastIndex` の
-  リセットは `matchAll` で**状態ごと設計から消し**（`exec` ループと違い
-  pattern の `lastIndex` を変えない）、section の join separator は
-  `slice(0, next.index)` が次の見出しの `^##` で切るため非最終セクションは
-  必ず改行で終わる旨を**証明として書いた**上で残した。 (#1139)
+  Two "untestable code" spots found during verification were also handled: the
+  `lastIndex` reset was **removed from the design, state and all,** by using
+  `matchAll` (unlike an `exec` loop, it does not change the pattern's
+  `lastIndex`), and the section join separator was kept after **writing down the
+  proof** that a non-final section always ends with a newline, because
+  `slice(0, next.index)` cuts at the next heading's `^##`. (#1139)
 
-- **`prototyping rescope` の書き込み順序が「クラッシュしても再実行で回復できる」
-  ことを決めていたが、コードにそう書かれておらず、テストも無かった。**
-  派生成果物 (`iterate-plan.json` / `review.json`) を先に、正の記録
-  (`prototyping.json`) を最後に書いている。これは直感と**逆**であり、逆の方が
-  正しい: `rescope` は `frozenSurfaceUnion` に無い surface を拒否するので、
-  2 群の書き込みの間で死んだプロセスが残す状態は
+- **The write order of `prototyping rescope` settled that "a crash can be
+  recovered by rerunning", but the code did not say so and no test covered
+  it.** The derived artifacts (`iterate-plan.json` / `review.json`) are written
+  first and the record of truth (`prototyping.json`) last. This is the
+  **opposite** of intuition, and the opposite is the correct one: `rescope`
+  rejects a surface that is not in `frozenSurfaceUnion`, so the state a process
+  that dies between the two groups of writes leaves behind is
 
-  | クラッシュ位置     | `frozenSurfaceUnion` | 再実行                                | 結果                                                                        |
-  | ------------------ | -------------------- | ------------------------------------- | --------------------------------------------------------------------------- |
-  | 現行順（派生が先） | まだ surface を含む  | **受理**（id はまだ `missing`）       | 注釈は既存でスキップ、plan 削除は no-op、最後の書き込みが完了。**収束する** |
-  | 逆順（正が先）     | もう含まない         | **拒否**「not in frozenSurfaceUnion」 | 古い plan と未注釈の review をこのコマンドで直す手段が無い                  |
+  | Crash point                   | `frozenSurfaceUnion`  | Rerun                                    | Result                                                                                        |
+  | ----------------------------- | --------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+  | Current order (derived first) | Still has the surface | **Accepted** (the id is still `missing`) | Annotation skipped as existing, plan deletion is a no-op, last write completes. **Converges** |
+  | Reverse order (truth first)   | No longer has it      | **Rejected** "not in frozenSurfaceUnion" | No way for this command to fix the stale plan and the unannotated review                      |
 
-  journal 無しでどちらの順序も crash-safe ではない。現行が回復可能な方である。
-  問題は (1) その理由がコードに無く、順序が偶然に見えること、(2) 2 行を入れ替え
-  ても**全行が通る**こと — どの行もクラッシュ窓に入らないため。この
-  「成り立っていて、重要で、何も守っていない性質」は本リポジトリが繰り返し
-  見つけている形である。
+  Without a journal neither order is crash-safe. The current one is the
+  recoverable one. The problems are (1) the code does not give the reason, so
+  the order looks accidental, and (2) swapping the two lines leaves **every row
+  passing**, because no row enters the crash window. This kind of "a property
+  that holds, matters, and is guarded by nothing" is a shape this repository
+  keeps finding.
 
-  不変条件を書き込み地点に明記し、`tests/cli/prototypingRescopeCrashWindow.test.ts`
-  が意図的にその窓に入る行を持つようにした。
+  The invariant is now stated at the write site, and
+  `tests/cli/prototypingRescopeCrashWindow.test.ts` has rows that deliberately
+  enter that window.
 
-  検証自体の誤りも 1 つ潰した: 最初の mutation は 2 ブロックを文字列で入れ替えた
-  ため、正の書き込みが参照する宣言より上に移動して **`tsc` が落ちる**コードに
-  なっていた。行は「壊れたビルド」で失敗しており、順序について何も証明せずに
-  "detected" と表示されていた。手書きの逆順版（`tsc` exit 0）に差し替え、
-  verdict を信じる前に型チェックするようにした。 (#1137)
+  One mistake in the verification itself was also removed: the first mutation
+  swapped the two blocks as strings, which moved the write of the truth above
+  the declaration it references and produced code where **`tsc` fails**. The row
+  failed on "broken build" and printed "detected" while proving nothing about
+  order. It was replaced with a hand-written reversed version (`tsc` exit 0),
+  and code is now type-checked before a verdict is believed. (#1137)
 
-- **Windows ツリーでは必ず赤く CI では緑になる 2 行を、理由を明記した skip に
-  した。** どちらも POSIX 固有のファイルシステム性質に依存していた。赤い行が
-  2 つあること自体より悪いのは、開発者が作業するプラットフォームで恒常的に
-  赤いスイートは「失敗はノイズ」と読むよう訓練してしまう点である — 実際そう
-  なった（本セッションはこれらと #1130 を数時間「既知の先行失敗」に分類して
-  いた。それは**本物の回帰が見えなくなる**状態である）。
-  1. `tddListDecisionRecord` の `DR-0270-<slug>.md` は Windows では
-     **作成できない**（`<` と `>` はファイル名に使えない）ので、
-     `writeFile` が assertion に到達する前に `ENOENT` を返す。二次的な事実が
-     修正の形を決める: 対象のハザード（未置換の `<slug>` が記録ファイル名に
-     残ること）自体も同じ理由で Windows では**起こり得ない**。`tddList.ts` は
-     その綴り (`DR-<id>-<slug>.md`) をテンプレートとして文書化しているので、
-     広げるべきギャップは無い — ルールがそのプラットフォームで到達不能
-     なのであり、skip は事実を述べている。兄弟フィクスチャ
-     (`DR-0270-.md` / `DR-0270--.md`) は作成可能で全環境で走る。
-  2. `tddListEvidence` の `chmod(file, 0o755)` 後に RED hash が stale に
-     なることを期待する行。Windows の `fs.chmod` は read-only 属性しか
-     切り替えず実行ビットは存在しないので、hash の入力が変わらない。
-  3. `initRoutingMergeRaces` の 2 行。当初「並行性の問題でこのクラスでは
-     ない」と切り分けたが、測ったら同じクラスだった:
-     `restoreOwnership` は `if (process.platform === "win32") return true`
-     で即座に戻る（`init.ts` 自身が「Windows に意味のある `fchown` は無い」と
-     書いている）ので `handle.chown` が呼ばれず、テストが仕込む `EPERM` は
-     起こり得ない。decline が発火せず merge が進む。
-     **うち 1 行はこのクラスで最悪の形**だった —
-     `leaves no staging file behind when it declines` は Windows で
-     **PASS しながら何も検証していなかった**（decline が起きても起きなくても
-     `.tmp` は残らない）。何も証明しない green には、気付くべき失敗が無い。
+- **Two rows that are always red on a Windows tree and green in CI were made
+  skips with the reason stated.** Both depended on a POSIX-specific file-system
+  property. Worse than having two red rows is that a suite that is permanently
+  red on the platform where developers work trains them to read "a failure is
+  noise" — and that is what happened (this session classed these and #1130 as
+  "known prior failures" for hours, which is a state in which **a real
+  regression becomes invisible**).
+  1. `DR-0270-<slug>.md` in `tddListDecisionRecord` **cannot be created** on
+     Windows (`<` and `>` cannot be used in file names), so `writeFile` returns
+     `ENOENT` before it reaches the assertion. A secondary fact decides the
+     shape of the fix: the hazard under test (an unsubstituted `<slug>` left in
+     a record file name) also **cannot occur** on Windows for the same reason.
+     `tddList.ts` documents that spelling (`DR-<id>-<slug>.md`) as a template,
+     so there is no gap to widen — the rule is unreachable on that platform,
+     and the skip states a fact. The sibling fixtures (`DR-0270-.md` /
+     `DR-0270--.md`) can be created and run everywhere.
+  2. The row in `tddListEvidence` that expects the RED hash to go stale after
+     `chmod(file, 0o755)`. Windows `fs.chmod` toggles only the read-only
+     attribute and there is no execute bit, so the hash input does not change.
+  3. Two rows of `initRoutingMergeRaces`. They were first set aside as "a
+     concurrency problem, not this class", but measuring showed they are the
+     same class: `restoreOwnership` returns at once with
+     `if (process.platform === "win32") return true` (`init.ts` itself writes
+     "there is no meaningful `fchown` on Windows"), so `handle.chown` is never
+     called and the `EPERM` the test plants cannot occur. The decline does not
+     fire and the merge proceeds. **One of the rows was the worst shape in this
+     class** — `leaves no staging file behind when it declines` **PASSED** on
+     Windows **while verifying nothing** (no `.tmp` is left whether or not the
+     decline happens). A green that proves nothing has no failure to notice.
 
-  機構はリポジトリに既にあった —
-  `it.skipIf(process.platform === "win32")` は `integrationSurface` /
-  `atddCoverageDepth` / `businessFlow` で十数箇所使われている。2 行はそれに
-  倣い、理由がファイル内に書かれるようにした（「どの失敗を無視するか」の
-  記憶ではなく）。
+  The mechanism was already in the repository:
+  `it.skipIf(process.platform === "win32")` is used in a dozen places in
+  `integrationSurface` / `atddCoverageDepth` / `businessFlow`. The two rows
+  follow it, so the reason is written in the file (rather than in someone's
+  memory of "which failures to ignore").
 
-  skip が壊れた行を隠していないことも確認した: 各 skip を強制的に off に
-  すると、失敗理由は**プラットフォーム由来のもの**
-  (`ENOENT` / `expected false to be true` / manifest 内容の不一致) だけである。
-  3 番目の強制実行は、この確認自体の価値も示した —
-  `leaves no staging file behind` は強制実行でも PASS する。 (#1133)
+  It was also confirmed that the skips do not hide a broken row: forcing each
+  skip off gives only **platform-caused** failure reasons (`ENOENT` /
+  `expected false to be true` / a manifest content mismatch). The third forced
+  run also showed the value of this check itself — `leaves no staging file
+behind` PASSES even when forced. (#1133)
 
-- **finding code の family カバレッジ証明が Windows では一度も走っていなかった
-  （CI は green のまま）。** `codesInFile` は解析済みソースをパスで引く:
-  `scan.sources.find((c) => c.fileName === file)`。`ts.createSourceFile` は
-  渡された名前を**スラッシュに正規化**し、`file` は `path.resolve` の結果である。
-  POSIX では同一文字列なので一致するが、win32 では
+- **The family-coverage proof for finding codes had never run on Windows (while
+  CI stayed green).** `codesInFile` looks up the parsed source by path:
+  `scan.sources.find((c) => c.fileName === file)`. `ts.createSourceFile`
+  **normalizes the name it is given to slashes**, and `file` is the result of
+  `path.resolve`. On POSIX the two are the same string and match; on win32 they
+  are
 
   ```text
   C:/Users/.../src/core/validators/testTodoStubs.ts     (fileName)
   C:\Users\...\src\core\validators\testTodoStubs.ts     (file)
   ```
 
-  となり、lookup は常に外して行は `not scanned:` で throw していた。
+  so the lookup always missed and the row threw `not scanned:`.
 
-  この行が実装している保証は「gate が emit するコードはすべて**family**
-  エントリで覆われる（bare code ではなく）」であり、gate が 2 つ目のコードを
-  得たときに `QFAI-PROFILE-001` の notice から黙って抜け落ちるのを防ぐもの。
-  `validateTestTodoStubs` は `runTddValidators` の中、つまり
-  `qfai-implement` が gate にする profile で走るので、覆われていることを
-  確認できていなかったのはそこのコードである。
+  The guarantee this row implements is that "every code the gate emits is
+  covered by a **family** entry (not by a bare code)", which keeps a second code
+  from silently dropping out of the `QFAI-PROFILE-001` notice when the gate
+  gains one. `validateTestTodoStubs` runs inside `runTddValidators`, that is, in
+  the profile `qfai-implement` uses as its gate, so the code there is the code
+  whose coverage could not be confirmed.
 
-  さらに悪いのは、Windows ツリーでは常に赤く CI では緑になるため、
-  開発者がこの行をノイズとして読むよう訓練される点である（実際そうなった —
-  本セッションは数時間これを「既知の先行失敗」に分類していた）。
+  Worse, because it is always red on a Windows tree and green in CI, developers
+  are trained to read this row as noise (which is what happened — this session
+  classed it as a "known prior failure" for hours).
 
-  比較の両辺を同じ key 関数に通した。正規化は `path.sep` ではなく `\` を
-  無条件に畳む — `path.sep` を使うと POSIX ではこの関数が恒等写像になり、
-  Linux 上では正規化を外しても全行が緑のままになる。**この欠陥を生かした
-  片側プラットフォーム盲点そのもの**なので、win32 形式の key を使う回帰行を
-  追加し、両プラットフォームで落ちるようにした。 (#1130)
+  Both sides of the comparison now go through the same key function. The
+  normalization folds `\` unconditionally rather than using `path.sep` — with
+  `path.sep` the function is an identity on POSIX, and on Linux every row would
+  stay green even with the normalization removed. **That is exactly the
+  one-platform blind spot that let this defect live**, so a regression row that
+  uses a win32-shaped key was added and fails on both platforms. (#1130)
 
-- **網羅を主張する profile が drift gate を走らせておらず、しかもそれを
-  「未評価」として報告することもできなかった。** `QFAI-DRIFT-001` は
-  downstream フェーズが upstream SSOT を直接書き換えたことを検出する唯一の
-  gate で、`drift-protocol.md#non-negotiable-constraints` はその禁止について
-  **「これは検出される」**と書いている。実際に emit するのは `--profile tdd`
-  だけである。それでも `PROFILE_GATE_GROUPS.full = ALL_GATE_GROUPS` であり、
-  さらに `QFAI-DRIFT-*` は `GATE_GROUP_FAMILIES` の**どのエントリにも無い**ため
-  `unevaluatedFamilies()` が名指すこともできなかった。`QFAI-PROFILE-001` 自身の
-  助言（「完了宣言の前に `qfai validate --fail-on error` (full profile) を
-  実行せよ」）に従った作業者は、一度も見ていない実行から PASS を受け取り、
-  そのことを一切知らされない。
+- **A profile that claims full coverage did not run the drift gate, and could
+  not report it as "not evaluated" either.** `QFAI-DRIFT-001` is the only gate
+  that detects a downstream phase rewriting the upstream SSOT directly, and
+  `drift-protocol.md#non-negotiable-constraints` says of that prohibition
+  **"this is detected"**. Only `--profile tdd` actually emits it. Yet
+  `PROFILE_GATE_GROUPS.full = ALL_GATE_GROUPS`, and since `QFAI-DRIFT-*` is in
+  **no entry** of `GATE_GROUP_FAMILIES`, `unevaluatedFamilies()` could not name
+  it either. A worker who followed the advice of `QFAI-PROFILE-001` itself
+  ("run `qfai validate --fail-on error` (full profile) before declaring
+  completion") received a PASS from a run in which the gate was never looked at,
+  and was told nothing of it.
 
-  issue が挙げる 2 案のうち後者を採った。opt-out の理由は精査に耐える —
-  `/qfai-sdd` はこれらのファイルの**所有者**で、CR なしに編集するのが設計で
-  あり、その作者も完了前に full profile を実行するよう言われている。`full` に
-  emit させれば、正当な authoring 編集をすべて flag することになり、opt-out が
-  避けている失敗そのものになる。
+  The second of the two options the issue lists was taken. The reason for the
+  opt-out holds up under scrutiny — `/qfai-sdd` is the **owner** of these files
+  and editing them without a CR is by design, and its author is also told to run
+  the full profile before completion. Making `full` emit would flag every
+  legitimate authoring edit, which is the very failure the opt-out avoids.
 
-  そこで `full` は網羅の主張をやめた。`drift` を gate group として追加し、
-  `tdd` だけがそれを評価する profile であることを map に書き、notice が
-  それを名指すようにした。これは defect (2) と同じ欠落エントリなので、
-  1 つの変更で両方が閉じる。
+  So `full` stops claiming coverage. `drift` was added as a gate group, the map
+  now says that `tdd` is the only profile that evaluates it, and the notice
+  names it. This is the same missing entry as defect (2), so one change closes
+  both.
 
-  notice の文言は狭い profile では従来どおり（`tdd` / `sdd` / `discussion` /
-  `atdd` / `saas-package` は実際に partial なので原文が正しい）。`full` /
-  `verify` には専用の文を与えた — 「partial profile」と呼ぶと逆方向に
-  言い過ぎで、読者は残りを探しに行く。また full 実行に対して「full profile を
-  実行せよ」と助言するのは循環なので、その文は落とした。drift には
-  「`npx qfai validate --profile tdd` だけが評価する — どの wide profile も
-  wire しないので `--fail-on error` だけでは決して検査されない」という
-  独自の 1 文を付けた。 (#1122)
+  The notice wording is unchanged for the narrow profiles (`tdd` / `sdd` /
+  `discussion` / `atdd` / `saas-package` really are partial, so the original
+  text is right). `full` / `verify` were given a sentence of their own —
+  calling them a "partial profile" says too much in the opposite direction, and
+  the reader goes looking for the rest. Advising a full run to "run the full
+  profile" is circular, so that sentence was dropped. Drift got a sentence of
+  its own: "only `npx qfai validate --profile tdd` evaluates it — no wide
+  profile wires it, so `--fail-on error` alone never checks it". (#1122)
 
-- **`QFAI-DRIFT-001` の免除が承認済み CR 全文への substring 一致だったため、
-  禁止文が許可として働いていた。** `readApprovedCrText` は `Status: approved`
-  の CR **本文全体**を連結し、変更されたパスがその中に現れるかだけを見ていた。
-  帰結が 3 つある:
-  1. **禁止が許可になる。** 「`.qfai/contracts/db/db-0022.sql` を編集するな」と
-     書いた CR は、`Status` が `approved` に達した瞬間にそのパスの免除を
-     **与える**。`## Rejected` 行も同様であり、`#when-drift-is-detected` step 2 が
-     defect クラス CR に**必須**としている `## Reproduction` ブロックも同様 —
-     報告対象のパスを引用した再現手順が、その編集を承認していた。
-  2. **承認済み CR は、たまたま言及したどのパスも免除する。** blob はリポジトリ
-     全体なので、`spec-0007` の CR が無関係な contract を引用するとその
-     contract の finding も黙る。
-  3. **contract を名指す自然な 2 つの書き方が両方黙って失敗する。**
-     テンプレートの `## Impact scope` は `Contracts: <CON-*>` を求めるのに、
-     ガードは相対パスに一致する。ID 形式もベース名形式も効かない。
+- **The `QFAI-DRIFT-001` exemption was a substring match against the full text
+  of an approved CR, so a prohibition acted as a permission.**
+  `readApprovedCrText` concatenated the **whole body** of every CR with
+  `Status: approved` and only looked at whether the changed path appeared in
+  it. This has three consequences:
+  1. **A prohibition becomes a permission.** A CR that says "do not edit
+     `.qfai/contracts/db/db-0022.sql`" **grants** the exemption for that path
+     the moment its `Status` reaches `approved`. The same goes for a
+     `## Rejected` line, and for the `## Reproduction` block that
+     `#when-drift-is-detected` step 2 **requires** in a defect-class CR — a
+     reproduction that quotes the reported path approved that edit.
+  2. **An approved CR exempts any path it happens to mention.** The blob is the
+     whole repository, so a CR of `spec-0007` that quotes an unrelated contract
+     also silences that contract's finding.
+  3. **Both natural ways of naming a contract fail silently.** The template's
+     `## Impact scope` asks for `Contracts: <CON-*>`, but the guard matches
+     relative paths. Neither the ID form nor the base-name form worked.
 
-  免除を**宣言されたフィールド**に移した。承認済み CR の `## Impact scope`
-  セクション（かつそこだけ）が権限の所在であり、`## Context` や
-  `## Reproduction`、却下された選択肢の散文は何も承認しない。セクション内では
-  **リポジトリ相対パス**と**ベース名**の両方を受け付ける（contract ID は
-  受け付けない — ファイル内の宣言を指す名前であって、ファイルを指す名前では
-  ないため）。一致はトークン境界付きなので、隣接アーティファクト
-  (`<path>.bak` / `<path>2`) の名前がそのファイルを承認することはない。
-  finding の remedy はセクション名と受け付ける綴りを述べる — 従来の文言は
-  4 通りの綴りで満たされ、効くのはそのうち 1 つだけだった。
+  The exemption was moved to a **declared field**. The `## Impact scope`
+  section of an approved CR (and only that section) is where the authority
+  lives, and `## Context`, `## Reproduction` and the prose of rejected options
+  approve nothing. Within the section both the **repository-relative path** and
+  the **base name** are accepted (a contract ID is not — it names a declaration
+  inside the file, not the file). Matching is token-bounded, so the name of an
+  adjacent artifact (`<path>.bak` / `<path>2`) never approves the file. The
+  remedy of the finding states the section name and the accepted spellings — the
+  old wording was satisfied by four spellings, and only one of them worked.
 
-  promotion window も新コードも使わない。これは条件の追加ではなく、
-  **得られていなかった免除の撤回**であり、通す finding は同じ編集が未申告
-  だった場合すでに `error` である。禁止が許可を与えていたために通っていた
-  リポジトリは失敗するようになるべきで、remedy は何を書けばよいかを正確に
-  述べる。CR テンプレートと `drift-protocol.md#non-negotiable-constraints` も
-  追従した。 (#1121)
+  Neither a promotion window nor a new code is used. This is not an added
+  condition but the **withdrawal of an exemption that was never earned**, and
+  the finding that now passes through is already an `error` when the same edit
+  is undeclared. A repository that passed only because a prohibition granted a
+  permission should start failing, and the remedy says exactly what to write.
+  The CR template and `drift-protocol.md#non-negotiable-constraints` were
+  updated to match. (#1121)
 
-- **注釈スキャナが切り詰めた TC / US id を一致させ、それを「未定義参照」として
-  報告していた。** 注釈の正規表現は後半を optional (`(?:-\d{4})?`) にしていた
-  ため、自分の注釈を検証するテスト — 自己検査型の deferral ledger が素直に書く形
-  — が**自分自身の 4 桁短い prefix として一致**した。optional 側は `-\d` を
-  消費できず、短形式が成立し、`-` は word 文字でないので `\b` も満たされる。
-  結果 `QFAI-ATDD-102` が、切り詰めが**発明した**ために構造的に未登録な TC id を
-  報告していた。短形式に `(?!-)` を付けた。両方の長さは引き続き正当 —
-  `TC-0001` も `TC-0001-0002` も `TC_ID_RE` / `TC_REF_SHAPE` / `TC_ID_TOKEN` が
-  受け入れるので、8 桁必須にすると実在の注釈を取り落とす。正当でないのは
-  「短形式のあとに `-` が続く」形だけである (実在の短形式注釈の次に来るのは
-  空白・引用符・`)`・行末で、ハイフンではない)。
-  ガードは**短形式側のみ**に置いた。完全だが不正な注釈
-  (`TC-0001-0002-draft`) は引き続き一致し、未定義参照として報告される —
-  誤報を黙った取り落としに変えるのは、バリデータでは悪い方向である。
-  `US-` は同一の形で同一の欠陥を持つため同時に修正した。 (#1123)
-- **`validate` 以外のコマンドが、ファイルシステム障害でどのコマンドが落ちたかも
-  分からない 1 行を残していた。** #1112 で `validateProject` を包んだので
-  `validate` は `QFAI-SCAN-002` という判定に降格する。他のコマンドは libuv の
-  エラーをそのまま `cli/index.ts` に届け、そこは `err.message` を書いて exit 1
-  する — errno とパスは名乗るが**コマンド名を名乗らず**、その実行が
-  「問題なし」ではなく「未判定」であることも言わない。これが #1104 が
-  最初に挙げている苦情そのものである。`run` に境界を 1 つ置き、`validate` が
-  既に持っている帰属を全コマンドに与えた。書き換えるのは `code` と `syscall`
-  の**両方**を持つ未加工の libuv エラーだけ — 意図的な拒否はどちらも持たない
-  ので、著者が書いたメッセージのまま通る。再 throw であり、握り潰さない。
-  (#1104)
+- **The annotation scanner matched truncated TC / US ids and reported them as
+  "undefined references".** The annotation regex made its second half optional
+  (`(?:-\d{4})?`), so a test that verifies its own annotations — the form a
+  self-checking deferral ledger naturally takes — **matched itself as its own
+  four-digit-shorter prefix**. The optional side cannot consume `-\d`, the short
+  form succeeds, and `\b` is satisfied because `-` is not a word character. As
+  a result `QFAI-ATDD-102` reported a TC id that is structurally unregistered
+  because the truncation **invented** it. The short form now carries `(?!-)`.
+  Both lengths remain legitimate — `TC-0001` and `TC-0001-0002` are both
+  accepted by `TC_ID_RE` / `TC_REF_SHAPE` / `TC_ID_TOKEN`, so requiring eight
+  digits would drop real annotations. The only illegitimate shape is "the short
+  form followed by `-`" (what follows a real short-form annotation is
+  whitespace, a quote, `)` or end of line, never a hyphen).
+  The guard was placed on **the short-form side only**. A complete but invalid
+  annotation (`TC-0001-0002-draft`) still matches and is reported as an
+  undefined reference — turning a false alarm into a silent drop is the wrong
+  direction for a validator. `US-` has the same shape and the same defect, so it
+  was fixed at the same time. (#1123)
+- **Commands other than `validate` left a one-line message that does not say
+  which command failed on a file-system fault.** #1112 wrapped
+  `validateProject`, so `validate` degrades to a `QFAI-SCAN-002` verdict. The
+  other commands let the libuv error reach `cli/index.ts` unchanged, which
+  writes `err.message` and exits 1 — it names the errno and the path but **not
+  the command**, and does not say that the run is "undetermined" rather than
+  "no problem". That is exactly the first complaint #1104 lists. One boundary
+  was placed in `run`, giving every command the attribution `validate` already
+  had. It rewrites only a raw libuv error that carries **both** `code` and
+  `syscall` — a deliberate refusal carries neither, so the message its author
+  wrote passes through as written. It is a rethrow and does not swallow the
+  error. (#1104)
 
-  残る `stat` サイトの掃き出しは**行わない**。分類を現在のツリーから再導出した
-  結果、issue の「残り 10 箇所」は 3 つの理由で数え過ぎだった:
-  `lstat` はこのクラスに**該当しない** (#1095 の条件は `lstat` が成功し `stat`
-  が拒否すること)、`handle.stat()` は解決済み handle への fstat、そして
-  path 追従 `stat` 48 箇所のうち 40 箇所は囲みの `catch` が全部飲むので errno
-  は逃げない。逃げるのは 8 箇所で、うち `integrationSurface.ts` の 2 箇所は
-  #1103 で `EPERM` を finding に narrow 済み、`cli/lib/fs.ts` は #1112 で
-  パスを名乗るメッセージに包み済み、`prototypingIterate.ts` の `dirExists` は
-  **伝播が安全性そのもの** (破壊的な `--force` 再実行の gate なので `EPERM` を
-  「無い」と読んだら再実行が通る)、`prototypingCertify.ts` は gate なので
-  拒否が正しい出力である。
+  The sweep of the remaining `stat` sites is **not done**. Re-deriving the
+  classification from the current tree showed that the issue's "10 remaining
+  sites" overcounted for three reasons: `lstat` is **not in** this class (the
+  condition of #1095 is that `lstat` succeeds and `stat` is refused),
+  `handle.stat()` is an fstat on an already resolved handle, and of the 48
+  path-following `stat` sites 40 have an enclosing `catch` that swallows
+  everything, so the errno does not escape. Eight escape, and of those the two
+  in `integrationSurface.ts` were already narrowed to a finding for `EPERM` in
+  #1103, `cli/lib/fs.ts` was already wrapped in a path-naming message in #1112,
+  `dirExists` in `prototypingIterate.ts` has **propagation as its safety
+  property** (it is the gate of a destructive `--force` rerun, so reading
+  `EPERM` as "absent" would let the rerun through), and `prototypingCertify.ts`
+  is a gate, so refusal is the correct output.
 
-- **Windows の git worktree で `qfai validate` が判定を一切出さずに落ちる問題を直した** (#1095)。
-  `git worktree add` は `.claude/skills/*` のリンクを **file symlink**（ターゲットは
-  ディレクトリ）として作る — リンクを書く時点でターゲットが新 worktree に存在せず、
-  reftype のヒントが無いため。Windows はこれを追跡できず `fs.stat` が `EPERM` を投げる。
-  `readlink` は正しいターゲットを返し `lstat` は symlink と答えるので、
-  lstat ベースの検査はツリーを健全と報告する一方、同じパスの `stat` が落ちる。
-  `integrationSurface.ts` はまさにその wrapper を `stat` しており、catch は
-  `ELOOP` / `ENOTDIR` を「検査対象自身の構造的破損」として finding にしつつ
-  それ以外を伝播していた。結果 `EPERM` はそのまま最上位まで抜け、`cli/index.ts` が
-  `err.message` だけを出して exit 1 — **finding code なし・`counts:` 行なし・
-  `validate.json` なし**。判定の無いゲートである。
-  EPERM は既存 2 つと同じクラスで、その 2 つの catch コメントには「伝播させた結果
-  run が終わった / スタックトレースで終了した」という同型の履歴が残っている。
-  module が既に `cycle` / `not-a-directory` を通している 4 箇所（`PathState`、
-  `canonicalState`、`statOrNull`、`describeDamage`）に `unfollowable` として通し、
-  新しい機構は作っていない。wrapper 側は
-  `resolves through a symlink the OS will not follow -> <target>` を伴う
-  `QFAI-LINK-001` になる。
-  `core/fs/errno.ts` に `isEperm` を追加した（同ファイルの docblock が
-  「`EACCES` / `EBUSY` / `EPERM` … はこの module を拡張せよ」と指示している）。
-  テストは同ファイル既存の手法（`stat` spy に合成 errno を reject させる）に従うので
-  Windows 以外でも検証できる。修正を外すと赤くなることを確認済み。
-  **負のコントロール**も追加した: この rule が検査しないパスからの EPERM
-  （skills ディレクトリ自体の `readdir`）は引き続き伝播する — 「失敗している
-  filesystem が健全な surface として読まれてはならない」という module の規約を守るため。
-  Codex レビューで 2 件の実在欠陥が出たので併せて直した。
-  1 件目は深刻で、**この finding が印字する修復手順が finding を解消しない**という指摘。
-  `suggested_action` は「`qfai init` を再実行、`--force` は不要」と案内するが、
-  `ensureSymlink` は「entry が symlink かつ `readlink` が一致」なら `--force` 無しで
-  `skipped` を返す — まさにこの wrong-reparse-type がその条件を満たす。
-  Windows worktree の利用者は案内どおりにしてもゲートが赤のままになる。
-  `qfai init` 側を自己修復させた（同じ形の過去事例が flattened link で既に修正済みで、
-  そのコメントが「`skipped` を返したことで修復できず、`--force` が必要なことを誰も
-  操作者に伝えなかった」と記録している）。
-  2 件目は EPERM 変換が広すぎた点。`statOrNull` は通常の canonical `SKILL.md` も検査するため、
-  そのファイルや祖先の権限・filesystem 起因 EPERM まで「OS が追跡できない symlink」に
-  誤変換していた。`lstat` で symlink を確認してから変換するようにし、`lstat` catch 側の
-  変換は削除した（wrong-type symlink では `lstat` は成功するので不要であり、
-  誤診の範囲だけを広げていた）。
-  なお追加テストが**私の修正の別の欠陥**を捕まえた: 修復に `recreateFlattenedLink` を
-  再利用したのは誤りで、あれは「内容がリンク先文字列の通常ファイル」用に hard link と
-  4096 bytes 上限で退避する実装のため symlink には使えない（`link()` が EPERM）。
-  `rm` → `symlink` の既存経路に合流させた。
-- **#1078 の矛盾を `OQ-0012-0013` に記録した** (`CR-20260904-0002`)。
-  canonical をどちらにするかの判断は**保留**（ユーザ判断）。コード・contract・テストは
-  いずれも無変更で、変更は記録のみ。
-  記録した到達条件は 10 巡のレビューを経て確定した。`validate` は記録済み非 seed
-  iteration すべてに flat `iter-NN/review.json` を要求する。`certify` が layout 分岐に
-  到達するのは `validate.json` を読み `frozenSpecsCovered` を検証した後だが、
-  **well-formed な single-spec frozen set はそこを通過して layout 分岐に達する** —
-  したがって single-spec 凍結は緩和策にならない。よって矛盾は
-  **「`validate` が監査する記録済み非 seed iteration が per-spec 成果物を持ち、flat を
-  持たない」**瞬間に live になる。
-  当初の枠組み 2 点は誤りだったので明記する: (1) 矛盾は **multi-spec frozen set を
-  必要としない**（したがって single-spec 凍結と `TC-0012-0388` は緩和策にならない）。
-  (2) 2 つのレイアウトは**常に排他ではない** — flat を残して per-spec も書く dual-write は
-  両ゲートを満たすので、wire-in は canonical を決めずに dual-write で land できる。
-  排他なのは per-spec **のみ**の状態だけである。
-- **「trigger を守るガードを追加する」という scope 拡張は本 PR では出荷せず、
-  要件仕様として #1093 に分離した。**
-  **守る対象の実装が存在しない状態では、正しいガードは書けない。**
-  `dispatchReviewerToPair` は production caller 0 で、wire-in は未実装の `OQ-0012-0007`。
-  9 巡で 7 稿を試し、いずれも反証された — どれも「まだ書かれていないコードの形」への
-  推測だったため。反証された 7 稿と、正しいガードが満たすべき要件を #1093 に記録した。
-  なお `iterationReviewPathPerSpec` / `dispatchReviewerToPair` の caller が 0 であることは
-  **到達不能の根拠にならない** — `prototypingCertify.ts` は per-spec パスをテンプレート
-  文字列で組み立て、どちらの helper も import していない。
-- **1 つのルールに対して 4 つあった手書き reduction を、共有ヘルパ 1 本に統合した**
-  (#1089)。`tests/helpers/sourceReduction.ts` が `withoutComments` /
-  `withoutCommentsOrLiterals` を出し、4 つのガードがこれを import する。
-  4 実装はいずれも**別々の間違い方**をしていた。故障は「ケースの抜け」ではなく
-  構造的で、**この種のスキャンが探す区切り文字はすべて別の構文の内側にも現れうる**
-  ため、構文 X を追跡しないスキャンは X の中身を自分の構文として読む:
-  - 2 パス `replace`: コメント区切りがコメント内にある場合に破綻
-  - コメントのみ追跡: 文字列内の `//` がコメントを開く
-  - 文字列と template を追跡: **正規表現内の backtick** が phantom template を開く
-    計測値（統合前 → 統合後）:
-    | ガード                                                                      | 症状                                 | 変化                                         |
-    | --------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
-    | `unit/validators-are-wired`                                                 | (file, validator) 対の誤判定         | 5 → 0 (#1061 で既に修正)                     |
-    | `validators/ruleCodeUniqueness`                                             | コメント散文がコードとして漏れる     | 8/264 → **0/264**                            |
-    | `helpers/prototypingGateSurface`                                            | 同上                                 | 8/264 → **0/264**                            |
-    | `core/prototyping/reviewerDispatch`                                         | **コメントでないテキストの過剰削除** | 11,381 文字・識別子 91 個 → **0 文字・0 個** |
-    | `reviewerDispatch` の故障方向が特に危険だった。走査対象は                   |
-    | `prototypingIterate.ts` 1 ファイルのみで、アサーションが                    |
-    | `not.toMatch(/captureScreenshots/)` という **否定**なので、過剰削除は       |
-    | アサーションを通りやすくする。消えた識別子の 1 つは                         |
-    | `resolvedCaptureScreens` — まさに禁止対象の隣だった。つまりこのガードは     |
-    | 一度も赤くならずに黙って空回りしうる状態だった。                            |
-    | 統合により消費側から 217 行を削除し、44 行を追加した。                      |
-    | `tests/unit/sourceReduction.test.ts` が共有側の契約を 12 ケースで固定する — |
-    | 各世代を壊した入力そのものを行にしてあるので、5 世代目の手書き実装は        |
-    | 散文を読むのではなく、失敗するテストに突き当たる。                          |
-- **同じ欠陥を持つ `TDD-0012` / `TDD-0013` / `REQ-0020` も付け替えた**
-  (`CR-20260904-0001` の scope 拡張、別途承認)。3 件とも
-  `tests/core/prototypingEvidence.negative.test.ts` を引いており、
-  そのファイルの `QFAI-PROT-002` は **0 件**。ledger 側 2 行は `done` だった。
-  対象挙動は両方 `tests/validators/prototypingEvidence.test.ts` に既存なので
-  **テストは追加していない** — ポインタ 3 箇所の付け替えのみ。
-  なお `TDD-0012` の `Selector` は backtick で囲んだ。prettier が markdown
-  テーブル内の裸の `*` を `\*` にエスケープするため、そのままでは verbatim
-  一致が壊れ、`selectorResolves` の末尾トークン fallback（"declares" という
-  ありふれた語）でしか通らなくなる。これはこの CR が消そうとしている
-  「偶然の通過」そのものなので、`normalizeSelector` が明示的に除去する
-  backtick 囲みにした。3 行すべてが strict predicate で verbatim 一致することを
-  確認済み。
-- **`TDD-0011` が `QFAI-PROT-002` のテストを 1 件も持たないファイルに対して `done`
-  だったのを正した** (#1079, `CR-20260904-0001`)。`Test file` セルは
-  `tests/core/prototypingEvidence.negative.test.ts` を指していたが、このファイルの
-  中身は別 spec の `TC-0012-0238..0248` で、`QFAI-PROT-002` のアサーションは **0 件**。
-  つまり CLAUDE.md が要求する REQ -> Spec -> Code -> Test の鎖が `TC-0004-0011` に
-  ついて閉じていないのに、ledger は閉じていると述べていた。
-  `tests/validators/prototypingEvidence.test.ts` に付け替え、`EX-0004-0010` の
-  payload をそのまま食わせて欠落 required keys を列挙させるテストを 1 件追加し、
-  `Selector` をそのテスト名にした。`Status: done` は変更していない — **真になる**ため。
-  変異テストで空回りでないことを確認済み: unknown-key 報告を止めると失敗、
-  `pivotDirective` 欠落の報告を止めると失敗、復元すると成功。
-- **#1079 の当初の前提 2 点は誤りだったので、issue 側に訂正を投稿した。**
-  (1) `schema v3` は「どこにも定義がない形状」ではなく、`03_Acceptance-Criteria.md:48`
-  と `04_Business-Rules.md:60` が 4 UX axes / ordinal 尺度 / 200..500 語 /
-  `pivotDirective` enum を列挙して定義している (ハイフン付き `schema-v3` だけを
-  grep してスペース版を見落とした — #1076 で犯したのと同じ種類の見落としを、
-  それを報告する issue で繰り返した)。
-  (2) `TC-0004-0011` の「v1.x-shaped」は版判定ではない。`EX-0004-0010` が入力を
-  「旧キーを持ち `pivotDirective` を欠く payload」と定義しており、版フィールドは
-  不要で `.agents/rules/distributed-surface.md` と矛盾しない。
-  したがって upstream (`03` / `04` / `05` / `06`) は正しいので一切変更していない。
-- **validator 結線ガードの reduction を TypeScript パーサに置き換えた。**
-  `validators-are-wired.test.ts` の `codeOnly` / `stripComments` は、コメントと
-  リテラルを手書きスキャンで除去していた。この故障は「ケースの抜け」ではなく構造的で、
-  **このヘルパが探す区切り文字はすべて別の構文の内側にも現れうる**ため、構文 X を
-  追跡しないスキャンは X の中身を自分の構文として読む。世代ごとに 1 つ追跡対象を
-  増やしてきたが、毎回「次の 1 つ」で間違っていた:
-  - 2 パス `replace`: glob を引用した行コメントがブロックコメントの opener を運び、
-    ブロック側が 27 行先の本物の closer まで走って途中の
-    `validateStaleReferences(...)` 呼び出しを飲み込んだ (#1061 の見出し。単一パス化で
-    修正済み)
-  - コメントのみ追跡するスキャン: 文字列内の `//` がまだコメントを開いた
-  - 文字列と template を追跡するスキャン: **正規表現リテラル内の backtick** がまだ
-    phantom template を開いた。`core/specPackParsers.ts` は CommonMark の
-    コードフェンス照合器を持つので regex の中に backtick の連続が入っており、
-    そこから開いた phantom が **46 行先の JSDoc** まで走ってその JSDoc 自身の
-    opener を飲み込む。以降は解釈が反転し、doc の backtick 間の散文がコードとして、
-    実際のコードが文字列データとして読まれた。
-    パーサ真値と突き合わせると、`main` は **5 つの (file, validator) 対で誤答**しており、
-    しかも両方向に誤っていた — 1 つは JSDoc に名前が出ているだけで「結線済み」、
-    4 つは自分自身の宣言が消えていた。ガードが緑だったのは「どれか 1 ファイルで
-    参照されていれば結線済み」と集約されるためで、集約の偶然に守られていただけである。
-    `ts.createSourceFile` に置き換えた結果、この 5 件は 0 件になった。パーサは
-    「4 世代目の手書きスキャンが見落としたはずの構文」も知っている。加えて、
-    ここのどのスキャンも引けなかった区別を引く: template の `${...}` は実行される
-    コードなので `count=${validateX(root)}` は呼び出し箇所であり、その周囲の
-    literal 部分はそうではない。呼び出しは (module, validator) 対ごとに問われるため、
-    reduction はソーステキストで memo 化した (実行時間は 3.67s -> 3.61s で不変)。
-- **同種の reduction を持つ他 3 ガードは本 PR の対象外**。`ruleCodeUniqueness.test.ts`
-  は 264 ファイル中 8 件でコメント散文が漏れており (対象ガードは 5 件)、
-  `reviewerDispatch.test.ts` は 2 パス `replace` のまま (漏れではなく過剰削除側の故障)、
-  `helpers/prototypingGateSurface.ts` も regex を追跡していない。#1061 の本文が
-  `validators-are-wired.test.ts` に限定して書かれているため、計測値を添えて別 issue に
-  切り出した。
-- **条件式で emit された finding code が、code 抽出を行う 2 つのガードの双方から見えていなかった
-  構造的な穴を塞いだ。** `sunsetLedger.test.ts` の `ISSUE_ARG_RE` と
-  `ruleCodeUniqueness.test.ts` の `ISSUE_FIRST_ARG` はどちらも「リテラル or 識別子」しか
-  受けない。`issue(cond ? "A" : "B", …)` は識別子側で `cond` に一致した直後にカンマを要求される
-  ため **一致自体が起きず**、その呼び出し地点は P7 promotion window の検査 (severity が
-  `newRuleSeverity` を通っているかどうか) も ownership の帰属も受けない。
-  `design-principles.md` の「新しい code は warning で出荷し、最低 1 minor 先の promotion
-  release に pin する」という規律が、この経路では強制されない。
-  両方の抽出器が条件式の **両分岐** を辿るようにした。どちらの分岐も利用者に届く code に
-  なりうるので、片方だけ帰属させるのは死角を半死角に替えるだけである。解決できない分岐は
-  プレーンな引数と同様にファイルを opaque 扱いにする。`severityExpressionsFor` は
-  `firstArgNames` 経由で、直接 / file-local alias / 条件式のいずれかで code を名指す
-  first argument を認識する。
-  **今日隠れているものは無く、それは設計ではなく偶然である**: `src/` にある条件式 emission は
-  `validators/reviewArtifacts.ts` の 2 箇所だけで、名指す `QFAI-REVIEW-007` /
-  `QFAI-REVIEW-009` は両方 baseline code であり、しかも同じファイル内の別の呼び出しで
-  リテラルとしても emit されている。issue の指摘どおり、問題は構造 — 条件式で出す新しい
-  hard error は、ハウススタイルに従ったまま登録も所有もされずに利用者に届く。
-  検証は `src/` ではなく合成 body に対して行う。実ツリーは上記 2 つの偶然で穴を隠すので、
-  `src/` を見るテストは今日通り、抽出器が退行しても通り続ける。旧パターンが何も見ないことも
-  同じケースで明示的に assert した。あわせて「条件式 emission に post-baseline code は
-  無い」という測定を 1 行のテストにして、なぜ今 registration が不要なのかを読者が
-  再導出しなくても済むようにした。
-- **README が `qfai init` の実挙動と逆のことを書いていた誤りを直し、alignment gate に実挙動と
-  紐づく 2 本目の oracle を足した。** 両 README が `It does not generate GitHub Actions workflows.`
-  と述べていたが、`qfai init` はまさに 2 本の workflow を書き出す
-  (`src/shared/shippedWorkflowNames.ts#SHIPPED_WORKFLOW_NAMES` = `qfai-validate.yml` /
-  `qfai-tests.yml`、`cli/commands/init.ts` が利用者の `.github/workflows/` へコピー、出荷ファイル
-  自身が `# Generated by \`qfai init\``で始まる)。しかも**同じ段落の直前の文**が
-「QFAI generates integration wrappers under …`.github/**`…」と述べており自己矛盾していた。`scripts/check-readme-alignment.mjs`の oracle は 2 つの README の行単位一致だけだったので、
-**同じ内容で両方とも間違っていれば "aligned"** になる。ガードは仕様どおり動いていたが、
-"aligned" が "correct" と読まれていた。
-2 本目の oracle は他方の README ではなく **binary 内の write set** と突き合わせる:`SHIPPED_WORKFLOW_NAMES`の各名が CI セクションに現れることを要求し、`RETIRED_WORKFLOW_NAMES` の名が現れないことを要求し、`does not generate GitHub Actions
-  workflows`という文自体も明示的に拒否する (正しいファイル名を両方書いた上でこの文が残ると、
-名前一覧の検査だけでは通ってしまう自己矛盾 README になるため)。
-parse できない宣言形は **黙って skip せず報告する** — 実際これが初稿の穴を捕まえた:`new Set<string>([...])`だけを想定していたため、空宣言の`RETIRED_WORKFLOW_NAMES`
-(`new Set<string>()`) を unparseable として報告した。両形を受けるよう直した。
-  適用範囲は「CI セクションを持つ README」に限る。CI セクションの無い README は workflow に
-  ついて何も主張していないので判定対象外 — oracle 1 の fixture がこれに当たる。ただし
-  **既定パスを検査しているときにセクションが無ければ error\*\* にする: 主張が消えたことで
-  oracle が通るのは、この oracle が答えるために存在する失敗そのものだから。
-- **500 行上限を守らせている `assets.test.ts` 自身が型検査対象外で、潜在的な `TS2345` を
-  抱えていた欠陥を塞いだ。** `tsconfig.tests.json#include` は glob ではなく列挙であり、
-  そのファイル自身の `$comment` が方針を「この変更が持つ責任範囲の境界」と述べているのに、
-  出荷アセットの行上限を強制している当のガードがその列挙から漏れていた。列挙外のテストは
-  何によっても型検査されない (vitest は型エラーを無視してトランスパイルする) ため、
-  `validate.issues.map((i) => i.file).filter(Boolean)` の結果が `(string | undefined)[]` の
-  まま `path.isAbsolute` に渡され続けていた。`.filter(Boolean)` は実行時に `undefined` を
-  落とすが型を絞らない。型述語 (`(file): file is string => file !== undefined`) で narrowing
-  した — bare `as` は同じことを検査せずに主張するだけなので使わない。
-  列挙への追加は無料ではなく、`eslint.config.js` が同じリストを `TYPED_TEST_FILES` として
-  読んで promise 系 4 ルールを有効化する。露出した `require-await` 6 件 (`await` を持たない
-  `async` の `it` コールバック) は `async` を外して解消した。
-- **同じ形の再発を構造的に塞いだ。** `testTypeCheckEnumeration.test.ts` に「出荷アセットの
-  予算を強制する suite は、それ自身が型検査対象でなければならない」という行を追加した。
-  budget helper を import している suite は予算を強制している suite であり、これはツリーから
-  決定できる — 490 ファイルの census (同ファイルの docstring が実測に基づいて却下している)
-  を持ち込まずに済む。この行は追加した時点で `assets.test.ts` 以外に **3 件**
+- **Fixed `qfai validate` crashing without any verdict in a Windows git
+  worktree** (#1095). `git worktree add` creates the `.claude/skills/*` links as
+  **file symlinks** (whose target is a directory) — the target does not exist
+  in the new worktree when the link is written, and there is no reftype hint.
+  Windows cannot follow these, so `fs.stat` throws `EPERM`. `readlink` returns
+  the correct target and `lstat` answers that it is a symlink, so an
+  lstat-based check reports the tree as healthy while a `stat` of the same path
+  fails. `integrationSurface.ts` `stat`s exactly that wrapper, and its catch
+  turned `ELOOP` / `ENOTDIR` into a finding ("structural damage to the checked
+  entry itself") while propagating everything else. As a result `EPERM` escaped
+  all the way to the top, and `cli/index.ts` printed only `err.message` and
+  exited 1 — **no finding code, no `counts:` line, no `validate.json`**. A gate
+  with no verdict.
+  EPERM is in the same class as the existing two, and the catch comments of
+  those two carry the same history: "propagating it ended the run / it exited
+  with a stack trace". It is passed as `unfollowable` through the four places
+  where the module already passes `cycle` / `not-a-directory` (`PathState`,
+  `canonicalState`, `statOrNull`, `describeDamage`), and no new mechanism was
+  built. On the wrapper side it becomes a `QFAI-LINK-001` with
+  `resolves through a symlink the OS will not follow -> <target>`.
+  `isEperm` was added to `core/fs/errno.ts` (the docblock of the same file
+  instructs "extend this module for `EACCES` / `EBUSY` / `EPERM` ...").
+  The test follows the existing technique of the same file (a `stat` spy
+  rejects with a synthetic errno), so it can be verified off Windows too.
+  Removing the fix was confirmed to turn it red.
+  A **negative control** was added too: an EPERM from a path this rule does not
+  check (the `readdir` of the skills directory itself) still propagates — to
+  keep the module's convention that "a failing filesystem must not be read as a
+  healthy surface".
+  Codex review raised two real defects, which were fixed as well.
+  The first was serious: **the repair procedure this finding prints does not
+  resolve the finding**. `suggested_action` says "rerun `qfai init`, `--force`
+  is not needed", but `ensureSymlink` returns `skipped` without `--force` when
+  "the entry is a symlink and `readlink` matches" — and this wrong-reparse-type
+  meets exactly that condition. A Windows worktree user who follows the advice
+  still gets a red gate. The `qfai init` side was made to repair itself (a past
+  case of the same shape was already fixed for the flattened link, and its
+  comment records: "returning `skipped` meant it could not repair, and nobody
+  told the operator that `--force` was needed").
+  The second was that the EPERM conversion was too broad. `statOrNull` also
+  checks the ordinary canonical `SKILL.md`, so an EPERM caused by permissions
+  or the filesystem on that file or its ancestors was misconverted into "a
+  symlink the OS cannot follow". It now confirms the symlink with `lstat`
+  before converting, and the conversion on the `lstat` catch side was removed
+  (with a wrong-type symlink `lstat` succeeds, so it was unnecessary and only
+  widened the range of misdiagnosis).
+  Note that the added test also caught **another defect in my fix**: reusing
+  `recreateFlattenedLink` for the repair was wrong, because it is for "a
+  regular file whose content is the link target string" and is implemented to
+  move things aside with a hard link and a 4096-byte limit, so it cannot be
+  used for a symlink (`link()` fails with EPERM). It was merged into the
+  existing `rm` -> `symlink` path.
+- **Recorded the contradiction of #1078 as `OQ-0012-0013`**
+  (`CR-20260904-0002`). The decision of which layout is canonical is **on
+  hold** (a user decision). Code, contracts and tests are all unchanged; the
+  change is a record only.
+  The reachability condition recorded was settled after ten rounds of review.
+  `validate` requires a flat `iter-NN/review.json` for every recorded non-seed
+  iteration. `certify` reaches the layout branch after reading `validate.json`
+  and verifying `frozenSpecsCovered`, but **a well-formed single-spec frozen
+  set passes that and reaches the layout branch** — so a single-spec freeze is
+  not a mitigation. The contradiction therefore becomes live at the moment
+  **"a recorded non-seed iteration that `validate` audits has per-spec
+  artifacts and no flat one"**.
+  Two of the initial framings were wrong and are stated here: (1) the
+  contradiction **does not require a multi-spec frozen set** (so a single-spec
+  freeze and `TC-0012-0388` are not mitigations). (2) The two layouts are **not
+  always exclusive** — a dual-write that keeps the flat file and also writes
+  per-spec satisfies both gates, so the wire-in can land as a dual-write
+  without deciding which is canonical. Only the state with per-spec **only** is
+  exclusive.
+- **The scope expansion "add a guard that protects the trigger" is not shipped
+  in this PR and was split out to #1093 as a requirements specification.**
+  **A correct guard cannot be written while the implementation it protects does
+  not exist.** `dispatchReviewerToPair` has 0 production callers, and the
+  wire-in is the unimplemented `OQ-0012-0007`. Seven drafts were tried over
+  nine rounds and every one was refuted — each was a guess about "the shape of
+  code not yet written". The seven refuted drafts, and the requirements a
+  correct guard must meet, are recorded in #1093.
+  Note that the fact that `iterationReviewPathPerSpec` /
+  `dispatchReviewerToPair` have 0 callers is **not evidence of
+  unreachability** — `prototypingCertify.ts` builds the per-spec path with a
+  template string and imports neither helper.
+- **Four hand-written reductions for one rule were merged into one shared
+  helper** (#1089). `tests/helpers/sourceReduction.ts` provides
+  `withoutComments` / `withoutCommentsOrLiterals`, and the four guards import
+  it. The four implementations were each wrong **in a different way**. The
+  failure is not "a missing case" but structural: **every delimiter this kind of
+  scan looks for can also appear inside another syntax**, so a scan that does
+  not track syntax X reads the contents of X as its own syntax:
+  - two-pass `replace`: breaks when a comment delimiter is inside a comment
+  - comment-only tracking: a `//` inside a string opens a comment
+  - string and template tracking: **a backtick inside a regular expression**
+    opens a phantom template
+    Measured values (before merge -> after merge):
+    | Guard                                                                     | Symptom                                       | Change                                                               |
+    | ------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+    | `unit/validators-are-wired`                                               | misjudged (file, validator) pairs             | 5 -> 0 (already fixed in #1061)                                      |
+    | `validators/ruleCodeUniqueness`                                           | comment prose leaks as code                   | 8/264 -> **0/264**                                                   |
+    | `helpers/prototypingGateSurface`                                          | same                                          | 8/264 -> **0/264**                                                   |
+    | `core/prototyping/reviewerDispatch`                                       | **over-deletion of text that is not comment** | 11,381 characters, 91 identifiers -> **0 characters, 0 identifiers** |
+    | The failure direction of `reviewerDispatch` was especially dangerous. The |
+    | only file scanned is `prototypingIterate.ts`, and the assertion is a      |
+    | **negation**, `not.toMatch(/captureScreenshots/)`, so over-deletion makes |
+    | the assertion easier to pass. One of the identifiers that vanished was    |
+    | `resolvedCaptureScreens` — right next to the forbidden target. The guard  |
+    | could therefore spin idle silently without ever going red.                |
+    | The merge removed 217 lines from the consumers and added 44.              |
+    | `tests/unit/sourceReduction.test.ts` pins the shared side's contract in   |
+    | 12 cases — each row is the very input that broke a generation, so a fifth |
+    | hand-written implementation runs into a failing test instead of reading   |
+    | prose.                                                                    |
+- **`TDD-0012` / `TDD-0013` / `REQ-0020`, which had the same defect, were
+  repointed too** (scope expansion of `CR-20260904-0001`, approved
+  separately). All three pointed to
+  `tests/core/prototypingEvidence.negative.test.ts`, whose `QFAI-PROT-002` has
+  **0 matches**. Two of the ledger rows were `done`. The target behaviour
+  already exists in `tests/validators/prototypingEvidence.test.ts` for both, so
+  **no test was added** — only the three pointers were repointed.
+  Note that the `Selector` of `TDD-0012` was wrapped in backticks. Prettier
+  escapes a bare `*` in a Markdown table as `\*`, which would break the
+  verbatim match and let it pass only through the trailing-token fallback of
+  `selectorResolves` (the ordinary word "declares"). That is exactly the
+  "accidental pass" this CR is meant to remove, so it was wrapped in the
+  backticks that `normalizeSelector` explicitly strips. All three rows were
+  confirmed to match verbatim under the strict predicate.
+- **Fixed `TDD-0011` being `done` for a file that has no test of
+  `QFAI-PROT-002`** (#1079, `CR-20260904-0001`). The `Test file` cell pointed to
+  `tests/core/prototypingEvidence.negative.test.ts`, but the contents of that
+  file are `TC-0012-0238..0248` of a different spec, and it has **0**
+  assertions on `QFAI-PROT-002`. In other words, the REQ -> Spec -> Code -> Test
+  chain that CLAUDE.md requires was not closed for `TC-0004-0011`, while the
+  ledger said it was.
+  It was repointed to `tests/validators/prototypingEvidence.test.ts`, one test
+  was added that feeds the payload of `EX-0004-0010` as it is and makes the
+  validator list the missing required keys, and the `Selector` is that test's
+  name. `Status: done` was not changed — it **becomes true**.
+  A mutation test confirmed the test is not idle: it fails when the
+  unknown-key report is stopped, fails when the report of the missing
+  `pivotDirective` is stopped, and passes when they are restored.
+- **A correction of two initial premises of #1079 was posted on the issue.**
+  (1) `schema v3` is not "a shape defined nowhere": `03_Acceptance-Criteria.md:48`
+  and `04_Business-Rules.md:60` define it by listing the 4 UX axes, the ordinal
+  scale, 200..500 words and the `pivotDirective` enum (only the hyphenated
+  `schema-v3` was grepped and the spaced form was missed — the same kind of
+  oversight as in #1076, repeated in the issue that reports it).
+  (2) "v1.x-shaped" in `TC-0004-0011` is not a version check. `EX-0004-0010`
+  defines the input as "a payload that has old keys and lacks `pivotDirective`",
+  no version field is needed, and it does not contradict
+  `.agents/rules/distributed-surface.md`.
+  Upstream (`03` / `04` / `05` / `06`) is therefore correct and was not changed
+  at all.
+- **Replaced the reduction of the validator wiring guard with a TypeScript
+  parser.** `codeOnly` / `stripComments` in `validators-are-wired.test.ts`
+  removed comments and literals with a hand-written scan. The failure is not "a
+  missing case" but structural: **every delimiter this helper looks for can
+  also appear inside another syntax**, so a scan that does not track syntax X
+  reads the contents of X as its own syntax. Each generation added one tracked
+  construct, and each time it was wrong on "the next one":
+  - two-pass `replace`: a line comment quoting a glob carried the opener of a
+    block comment, and the block side ran to a real closer 27 lines later,
+    swallowing the `validateStaleReferences(...)` call in between (the headline
+    of #1061; fixed by making it a single pass)
+  - comment-only tracking scan: a `//` in a string still opened a comment
+  - scan tracking strings and templates: **a backtick inside a regular
+    expression literal** still opened a phantom template.
+    `core/specPackParsers.ts` has a CommonMark code fence matcher, so a run of
+    backticks is inside a regex, and the phantom opened from there ran to the
+    JSDoc **46 lines later** and swallowed that JSDoc's own opener. From then on
+    the interpretation was inverted: prose between the doc's backticks was read
+    as code, and the actual code as string data.
+    Against parser ground truth, `main` **answered wrongly for 5 (file,
+    validator) pairs**, and in both directions — one was "wired" only because
+    it was named in a JSDoc, and four had their own declaration erased. The
+    guard was green because it aggregates as "wired if referenced from any one
+    file", so it was protected only by an accident of aggregation.
+    After replacing it with `ts.createSourceFile`, these 5 became 0. The parser
+    also knows "the syntax the fourth-generation hand-written scan would have
+    missed". In addition it draws a distinction that no scan here could: the
+    `${...}` of a template is executed code, so `count=${validateX(root)}` is a
+    call site while the surrounding literal part is not. A call is asked per
+    (module, validator) pair, so the reduction is memoized by source text
+    (runtime is unchanged at 3.67s -> 3.61s).
+- **The other 3 guards with a similar reduction are out of scope for this PR.**
+  `ruleCodeUniqueness.test.ts` leaks comment prose in 8 of 264 files (5 for the
+  guard in question), `reviewerDispatch.test.ts` is still a two-pass `replace`
+  (a failure on the over-deletion side, not a leak), and
+  `helpers/prototypingGateSurface.ts` does not track regexes either. Because
+  the body of #1061 is written limited to `validators-are-wired.test.ts`, they
+  were split into a separate issue with the measured values attached.
+- **Closed a structural hole in which a finding code emitted from a conditional
+  expression was invisible to both guards that extract codes.** `ISSUE_ARG_RE`
+  in `sunsetLedger.test.ts` and `ISSUE_FIRST_ARG` in
+  `ruleCodeUniqueness.test.ts` both accept only "a literal or an identifier".
+  `issue(cond ? "A" : "B", …)` requires a comma right after `cond` matched on
+  the identifier side, so **there is no match at all**, and that call site
+  receives neither the P7 promotion-window check (whether the severity goes
+  through `newRuleSeverity`) nor ownership attribution. The discipline in
+  `design-principles.md` — "ship a new code as a warning, and pin it to a
+  promotion release at least one minor ahead" — is not enforced on this path.
+  Both extractors now follow **both branches** of a conditional expression.
+  Either branch can become a code that reaches users, so attributing only one
+  would just turn a blind spot into a half blind spot. A branch that cannot be
+  resolved makes the file opaque, as a plain argument does.
+  `severityExpressionsFor` recognizes, through `firstArgNames`, a first
+  argument that names a code directly / through a file-local alias / through a
+  conditional expression.
+  **Nothing is hidden today, and that is an accident, not a design**: the only
+  conditional-expression emissions in `src/` are two places in
+  `validators/reviewArtifacts.ts`, and the codes they name, `QFAI-REVIEW-007` /
+  `QFAI-REVIEW-009`, are both baseline codes and are also emitted as literals
+  by other calls in the same file. As the issue points out, the problem is the
+  structure — a new hard error emitted from a conditional expression reaches
+  users neither registered nor owned while following the house style.
+  Verification runs against a synthetic body, not `src/`. The real tree hides
+  the hole through the two accidents above, so a test that looks at `src/`
+  passes today and would keep passing if the extractor regressed. The same case
+  also explicitly asserts that the old pattern sees nothing. A one-line test
+  of the measurement "there is no post-baseline code in a conditional-expression
+  emission" was added too, so a reader need not re-derive why registration is
+  not needed now.
+- **Fixed the README saying the opposite of what `qfai init` actually does, and
+  added a second oracle to the alignment gate that is tied to actual
+  behaviour.** Both READMEs said `It does not generate GitHub Actions
+workflows.`, but `qfai init` writes exactly two workflows
+  (`src/shared/shippedWorkflowNames.ts#SHIPPED_WORKFLOW_NAMES` =
+  `qfai-validate.yml` / `qfai-tests.yml`, `cli/commands/init.ts` copies them
+  into the user's `.github/workflows/`, and the shipped files themselves start
+  with `# Generated by \`qfai init\``). Moreover **the sentence just before it
+in the same paragraph** said "QFAI generates integration wrappers under
+…`.github/**`…", which contradicted it. The oracle of
+`scripts/check-readme-alignment.mjs`was only a line-by-line match between the
+two READMEs, so **if both are wrong in the same way, they are "aligned"**. The
+guard worked as specified, but "aligned" was being read as "correct".
+The second oracle checks against **the write set inside the binary** rather
+than the other README: it requires each name in`SHIPPED_WORKFLOW_NAMES`to
+appear in the CI section, requires that no name in`RETIRED_WORKFLOW_NAMES`appears, and explicitly rejects the sentence`does not generate GitHub Actions
+  workflows`itself (because if both correct file names are written and the
+sentence remains, the name-list check alone would let a self-contradicting
+README pass).
+A declaration form that cannot be parsed is **reported, not silently
+skipped** — in fact this caught a hole in the first draft: it expected only`new Set<string>([...])`, so it reported the empty declaration
+`RETIRED_WORKFLOW_NAMES` (`new Set<string>()`) as unparseable. Both forms are
+  now accepted.
+  The scope is limited to "a README that has a CI section". A README with no CI
+  section claims nothing about workflows, so it is not judged — the fixture of
+  oracle 1 is such a case. But **when the default path is being checked and the
+  section is missing, it is an error\*\***: a claim disappearing and thereby
+  satisfying the oracle is exactly the failure this oracle exists to answer.
+- **Closed the defect that `assets.test.ts`, which enforces the 500-line limit,
+  was itself outside type checking and carried a latent `TS2345`.**
+  `tsconfig.tests.json#include` is an enumeration, not a glob, and the file's
+  own `$comment` states the policy as "the boundary of the responsibility this
+  change carries", yet the very guard that enforces the line limit on shipped
+  assets was missing from that enumeration. A test outside the enumeration is
+  type-checked by nothing (vitest transpiles and ignores type errors), so the
+  result of `validate.issues.map((i) => i.file).filter(Boolean)` kept being
+  passed to `path.isAbsolute` as `(string | undefined)[]`. `.filter(Boolean)`
+  drops `undefined` at run time but does not narrow the type. It was narrowed
+  with a type predicate (`(file): file is string => file !== undefined`) — a
+  bare `as` is not used because it asserts the same thing without checking it.
+  Adding to the enumeration is not free: `eslint.config.js` reads the same list
+  as `TYPED_TEST_FILES` and enables the four promise rules for it. The six
+  `require-await` errors that surfaced (`async` `it` callbacks with no `await`)
+  were resolved by removing `async`.
+- **Closed the recurrence of the same shape structurally.** A row was added to
+  `testTypeCheckEnumeration.test.ts`: "a suite that enforces the budget for
+  shipped assets must itself be type-checked". A suite that imports the budget
+  helper is a suite that enforces a budget, and this can be decided from the
+  tree — without bringing in a 490-file census (which the docstring of the same
+  file rejects on measured grounds). When added, the row detected **3** files
+  besides `assets.test.ts`
   (`implementCheckpointVerification.test.ts` / `sddSkillTriagePhase.test.ts` /
-  `assetLineBudget.test.ts`) を検出し、いずれも型エラー 0 件・lint エラー 0 件で列挙できた。
-- **`include` の test エントリをソート順にした。** #1065 の 4 番目の提案。append が
-  最終行に集中せず collating position に落ちるので、併走 PR 間の衝突面が縮む。
-- **`prototyping iterate` が `--dry-run` を無視して、preview を求めた実行そのもので cycle-0 の
-  破壊的リセットを行っていた欠陥を塞いだ。** `--dry-run` は `変更を行わず表示のみ` と文書化され
-  引数パーサでは解釈されていたが、`runPrototypingIterate` へ渡されていなかった (`init` と `doctor`
-  にしか結線されていなかった)。実測では 27 ファイル / 1,475,551 バイトの iteration evidence が
-  `iter-00.backup-<ISO>` へ移動し、`iterate-plan.json` は `screens: []` で書き直され、
-  `mutation-log.jsonl` は 27 件すべてを `"action":"move"` の実書き込みとして記録した
-  — dry-run を示す印は 1 件も付かない。しかも直後の非 dry-run 実行はもう動かすものが残っておらず
-  1 件しか記録しなかった。
-  cycle-0 の破壊的再実行ゲートは `--force` なしでの上書きを既に拒否しており、その outcome を
-  「意図的な選択」にするために存在する。`--dry-run` はそのゲートが守ろうとしている結果を
-  そのまま素通りしていた。
-  preview は `handoffUpgrade` が #515 で採った形に合わせ、**あらゆる書き込みの直前** で止まる
-  — 最初の mutation は cycle-0 リセット内の mutation-log 書き込みなので、その手前。読み取り
-  専用のゲート (zero-UI-bearing precheck、DESIGN.md の読み取りと hash、lock ゲート、収束ループ
-  拒否、`--primary-spec-id` 正規化、cycle 範囲ゲート、そして破壊的再実行の拒否) はすべて
-  preview より前に走るので、**preview は実行が返すのと同じ exit code を返す**: 既存の `iter-00`
-  に対して `--force` なしの `--cycle 0 --dry-run` は実行と同じく 2 で拒否する。preview が
-  0 を返して素通りするなら、それは同じ欠陥を場所を変えて作り直すことになる。
-  preview が主張しないことも明示した: capture / license-verify / validate はこの地点より後に
-  あるので、preview が覆うのは「この command が行う書き込み」であって「実行の結末」ではない。
-  `--help` の `--dry-run` 行にも `prototyping iterate` を加えた。
-- **直前に入れた reviewer-deliverable gate が、既定の運用経路では no-op だった欠陥を塞いだ。** seed 除外を
-  `reviewerId === "iterate-seed"` だけで判定していたが、これはどちらの向きにも load-bearing ではなかった。
-  (a) **解除されない** — `reviewerId` は `Iteration` 型に宣言が無く、書き手は `buildSeedIterations` だけで、
-  同じレコードを in-place で更新する transcription で上書きせよという指示は出荷物のどこにも無かった。
-  したがって review 済みの `iterations[0]` は seed の刻印を保持したまま、loop の寿命いっぱい除外され続ける
-  — cycle 0 で収束する loop では、それが certify が封印する当のイテレーションである。
-  (b) **どの index でも効いた** — gate が信用しないと宣言しているファイルに 1 語書けば、その行の義務
-  (presence / schema / mirror) がすべて消える。しかも `reviewerId` は mirror 比較対象に入っていなかったので、
-  bypass の原因となった不一致それ自体が報告不能だった。修正前の実測: iteration 3 件すべて 4 軸
-  `exceptional`、`stopReason: "axes-exceptional"`、`review.json` はディスク上に 1 件も無い状態で
-  `validate` は finding 0 件を返した。
-  判定は `isUntouchedCycleZeroSeed` に集約し、構造と内容の両方を要求する: iteration がちょうど 1 件で
-  index 0、`reviewerId` と `commitSha` が seed のもの、かつ `proseCritique` が placeholder と 1 バイト一致。
-  最後の条件が self-clearing にしている — review は critique を 200-500 語の本文に置き換えるので、
-  `reviewerId` を直し忘れても除外は自動的に外れる。`reviewerId` は mirror 比較対象にも加えた。
-- **cap 違反の `review.json` が、どの編集でも満たせない finding の対を出していた問題を直した。**
-  `layoutAntiPatternsDetected[]` が非空なら `informationArchitecture` を `acceptable` 以下に抑える規則は
-  mirror 側だけで検査されていたため、違反は「忠実な転記」を通してしか報告されなかった。結果として
-  cap 検査は `prototyping.json` の IA を下げろと要求し、mirror 検査は `review.json` に一致させろと要求する
-  — どちらの finding も欠陥が実在するファイルを名指さない。review 側でも cap を検査し、
-  そのファイルを修正して再転記せよと述べる。
-- **`lap-*` registry の空集合を「読めた」と扱っていた fail-soft を直した。**
-  `loadLayoutAntiPatterns` は throw しない劣化経路を 2 つ持つ — JSON が配列でなければ `[]` を返し、
-  shape 検査に落ちた entry を黙って捨てる。どちらも `undefined` ではなく空 / 部分集合を生むので、
-  registry 側が壊れているときに、適合した `review.json` の妥当な `lap-*` id すべてが
-  「registry が宣言していない code」として error になった — fail-soft の doc が名指しで防ぐと書いていた
-  反転そのもの。空集合は読めなかったのと区別できないので、同じ扱いにした。
-- **mismatch message が長い値の先頭 120 文字を残していたため、両側が同一に見えていた。**
-  `proseCritique` は 200-500 語で、転記時の言い換えが先頭 120 文字に入ることはほぼ無い。同長の置換
-  (片方だけ typo を直した等) では 2 つのレンダリングが文字列として完全に一致し、operator には
-  validator の不具合と区別できなかった。最初に食い違う位置を中心に窓を取り、切り出しは UTF-16 単位では
-  なく code point で行う (critique band は日本語 / 中国語を受けるので、surrogate pair の中間で切ると
-  lone surrogate が `Issue.message` と `validate.json` に混入する)。
-- **`designMdViolations` の canonical 化を、宣言済み 2 key への射影から key の再帰ソートに変えた。**
-  射影は 2 つのケースを隠していた: (1) 3 つ目の key を持つ entry と持たない entry が equal になり、
-  mirror 義務が捕まえると謳っている「転記が field を落とす」ケースがまさに不可視だった。
-  (2) 射影が `kind` の enum 適合を条件にしていたため、enum 外の `kind` では両側が raw stringify 経路に
-  落ちて、忠実な `{found, kind}` 転記が enum finding の上に mirror mismatch として報告された
-  — 1 つの欠陥に 3 件、うち 1 件は誤り。配列順は従来どおり比較対象 (順序は evidence である)。
-- **`review.json` の unknown top-level key を拒否するようにした。** reviewer には前 cycle の
-  `review.json` が入力として与えられるので、それを編集する際の key の綴り間違い
-  (`pivotDirectiv` を足して古い `pivotDirective` が残る) は、完全で enum 内、忠実に転記され、mirror とも
-  一致する payload を残す — そして loop は前 cycle の directive で動く。同じ理由で closed になっている
-  per-screen payload と揃えた。
-- **BOM 付き `review.json` を unparseable と報告していた。** PowerShell の `Set-Content -Encoding UTF8` /
-  `Out-File`、および "UTF-8 with signature" を既定とする Windows のエディタは先頭に U+FEFF を出す。
-  payload は妥当なので、reviewer の再実行を促すのは誤誘導だった。
-- **unreadable finding が絶対パスを漏らしていた。** `EACCES` / `EPERM` 等で Node のメッセージには
-  絶対パスが入るため、operator のホームディレクトリとユーザ名が `validate.json` / `validate.log` / CI ログに
-  乗り、finding がマシンとチェックアウト位置ごとに変わっていた。errno code だけを載せる
-  (ファイル名は repo-relative POSIX 形式の `rel` が既に名指している)。
-- **配列位置と `index` が食い違うレコードで、作られていないディレクトリを名指していた。** review path は
-  配列位置から導出されるので、`index` がずれたレコードでは存在しない `iter-NN/review.json` の不在を
-  報告し、reviewer の実ファイルは読まれないままだった。ずれ自体は QFAI-PROT-004 が報告するので、
-  その修正を待つ。
-- **軸リストの 3 つ目の複製をやめた。** `evaluatorReview.ts` が `ORDINAL_AXES` を export し `OrdinalAxis` を
-  そこから導出しており、`validators/uix/` の 2 モジュールがそれを SSOT と明記している。ローカルの複製は
-  「5 番目の軸が追加されたらこの validator だけ 4 軸を検査し続ける」という、この gate が塞ぐために
-  存在する形の穴だった。
-- **`validateReviewArtifacts` を `validateIterationReviewArtifacts` に改名した。**
-  `validators/reviewArtifacts.ts` が同名を export し barrel 経由で公開しているため、
-  `prototyping/iterationPaths.ts` が `iterationDir` → `iterationDirPerSpec` の改名で回避したのと同じ
-  「IDE の autoimport が別のシンボルを黙って選ぶ」経路に乗っていた。
-- **出荷される transcription 指示を実際の義務に合わせた。** `qfai-prototyping/SKILL.md` の cycle 表は
-  「`prototyping.json#iterations[]` を update」としか述べず、転記対象の列挙に `reviewerId` と
-  `evidenceRefs` が入っていなかった — 両方が hard gate の前提になっているのに、出荷物のどこにも
-  上書きせよと書かれていなかった。C0 行の "Append entry" も、`iterate --cycle 0` が既に seed を
-  書いている以上そのまま append すると index 0 が 2 件になり QFAI-PROT-004 に落ちる。
-  "Transcription" 節を追加して 7 field と 2 つの落とし穴を明示した。あわせて
-  `references/reviewer-prompt.md` の Inputs が screenshot を full path、HTML snapshot を短縮形で
-  並べていた不整合を直した — その 2 行をそのまま `evidenceRefs` に書くと mirror 不一致になる。
+  `assetLineBudget.test.ts`), and all could be enumerated with 0 type errors
+  and 0 lint errors.
+- **Sorted the test entries of `include`.** The fourth proposal of #1065.
+  Appends now land at their collating position rather than concentrating on the
+  last line, which shrinks the collision surface between concurrent PRs.
+- **Closed the defect that `prototyping iterate` ignored `--dry-run` and
+  performed the destructive cycle-0 reset in the very run that asked for a
+  preview.** `--dry-run` is documented as "show only, make no changes" and was
+  interpreted by the argument parser, but was not passed to
+  `runPrototypingIterate` (it was wired only to `init` and `doctor`). In
+  measurement, 27 files / 1,475,551 bytes of iteration evidence were moved to
+  `iter-00.backup-<ISO>`, `iterate-plan.json` was rewritten with
+  `screens: []`, and `mutation-log.jsonl` recorded all 27 as real writes with
+  `"action":"move"` — not one carried a mark showing dry-run. Moreover, the
+  non-dry-run run right after had nothing left to move and recorded only one.
+  The destructive rerun gate of cycle 0 already refuses to overwrite without
+  `--force`, and exists to make that outcome "an intentional choice".
+  `--dry-run` passed straight through the very result that gate protects.
+  The preview follows the shape `handoffUpgrade` adopted in #515 and stops
+  **right before any write** — the first mutation is the mutation-log write
+  inside the cycle-0 reset, so it stops before that. The read-only gates
+  (zero-UI-bearing precheck, reading and hashing DESIGN.md, the lock gate, the
+  convergence-loop refusal, `--primary-spec-id` normalization, the cycle range
+  gate, and the destructive-rerun refusal) all run before the preview, so
+  **the preview returns the same exit code the run would**: `--cycle 0
+--dry-run` against an existing `iter-00` without `--force` refuses with 2, as
+  the run does. If the preview passed through with 0, it would recreate the same
+  defect somewhere else.
+  What the preview does not claim is also stated: capture / license-verify /
+  validate come after this point, so the preview covers "the writes this command
+  makes" and not "the outcome of the run".
+  The `--dry-run` line of `--help` now lists `prototyping iterate` too.
+- **Closed the defect that the reviewer-deliverable gate added just before was a
+  no-op on the default operating path.** The seed exclusion was decided by
+  `reviewerId === "iterate-seed"` alone, and that was load-bearing in neither
+  direction. (a) **It is never lifted** — `reviewerId` has no declaration in
+  the `Iteration` type, the only writer is `buildSeedIterations`, and nothing in
+  the shipped material instructs overwriting it in a transcription that updates
+  the same record in place. A reviewed `iterations[0]` therefore keeps the
+  seed's stamp and stays excluded for the whole life of the loop — in a loop
+  that converges at cycle 0, that is the very iteration certify seals.
+  (b) **It worked at any index** — writing one word in the file the gate
+  declares it does not trust removes every obligation of that row (presence /
+  schema / mirror). And `reviewerId` was not among the mirror comparison
+  targets, so the mismatch that caused the bypass could not itself be reported.
+  Measured before the fix: with all three iterations at 4 axes `exceptional`,
+  `stopReason: "axes-exceptional"`, and not one `review.json` on disk,
+  `validate` returned 0 findings.
+  The decision is centralized in `isUntouchedCycleZeroSeed`, which requires both
+  structure and content: exactly one iteration, at index 0, with the seed's
+  `reviewerId` and `commitSha`, and with `proseCritique` matching the
+  placeholder byte for byte. The last condition makes it self-clearing — a
+  review replaces the critique with a body of 200-500 words, so forgetting to
+  fix `reviewerId` lifts the exclusion automatically. `reviewerId` was also
+  added to the mirror comparison targets.
+- **Fixed a cap-violating `review.json` producing a pair of findings that no
+  edit can satisfy.** The rule that caps `informationArchitecture` at
+  `acceptable` or below when `layoutAntiPatternsDetected[]` is non-empty was
+  checked only on the mirror side, so the violation was reported only through
+  a "faithful transcription". As a result the cap check demanded that the IA in
+  `prototyping.json` be lowered while the mirror check demanded that it match
+  `review.json` — neither finding named the file where the defect actually is.
+  The cap is now checked on the review side too, and says to fix that file and
+  transcribe again.
+- **Fixed the fail-soft that treated an empty set from the `lap-*` registry as
+  "read".** `loadLayoutAntiPatterns` has two degraded paths that do not throw —
+  it returns `[]` if the JSON is not an array, and it silently drops entries
+  that fail the shape check. Both produce an empty / partial set rather than
+  `undefined`, so when the registry side was broken, every valid `lap-*` id of
+  a conforming `review.json` became an error as "a code the registry does not
+  declare" — exactly the inversion the fail-soft doc says it guards against by
+  name. An empty set cannot be told apart from unreadable, so it is now handled
+  the same way.
+- **The mismatch message kept the first 120 characters of a long value, so both
+  sides looked identical.** `proseCritique` is 200-500 words, and a paraphrase
+  made during transcription almost never falls within the first 120
+  characters. With a same-length replacement (for example a typo fixed on one
+  side only), the two renderings were exactly equal as strings, and the
+  operator could not tell it from a validator bug. It now takes a window
+  centred on the first position where they differ, and cuts by code point, not
+  by UTF-16 unit (the critique band accepts Japanese / Chinese, and cutting in
+  the middle of a surrogate pair would put a lone surrogate into
+  `Issue.message` and `validate.json`).
+- **Changed the canonicalization of `designMdViolations` from a projection onto
+  the two declared keys to a recursive sort of keys.** The projection hid two
+  cases: (1) an entry with a third key and one without became equal, so the very
+  case the mirror obligation claims to catch — "a transcription drops a field"
+  — was invisible. (2) The projection was conditional on `kind` conforming to
+  the enum, so with an out-of-enum `kind` both sides fell to the raw stringify
+  path, and a faithful `{found, kind}` transcription was reported as a mirror
+  mismatch on top of the enum finding — three findings for one defect, one of
+  them wrong. Array order is still compared as before (order is evidence).
+- **Made unknown top-level keys in `review.json` an error.** The reviewer is
+  given the previous cycle's `review.json` as input, so a misspelled key while
+  editing it (adding `pivotDirectiv` while the old `pivotDirective` remains)
+  leaves a payload that is complete, in the enum, faithfully transcribed and
+  matching the mirror — and the loop runs on the previous cycle's directive.
+  This is aligned with the per-screen payload, which is closed for the same
+  reason.
+- **A `review.json` with a BOM was reported as unparseable.** PowerShell's
+  `Set-Content -Encoding UTF8` / `Out-File`, and Windows editors whose default
+  is "UTF-8 with signature", emit a U+FEFF at the start. The payload is valid,
+  so prompting the reviewer to rerun was misleading.
+- **The unreadable finding leaked absolute paths.** With `EACCES` / `EPERM` and
+  the like, the Node message contains an absolute path, so the operator's home
+  directory and user name landed in `validate.json` / `validate.log` / CI logs,
+  and the finding changed from machine to machine and checkout location to
+  checkout location. Only the errno code is now included (the file name is
+  already named by `rel`, in repo-relative POSIX form).
+- **A record whose array position and `index` disagree named a directory that
+  was never created.** The review path is derived from the array position, so
+  for a record with a shifted `index` it reported the absence of a nonexistent
+  `iter-NN/review.json` and left the reviewer's real file unread. The shift
+  itself is reported by QFAI-PROT-004, so this waits for that fix.
+- **Stopped keeping a third copy of the axis list.** `evaluatorReview.ts`
+  exports `ORDINAL_AXES` and derives `OrdinalAxis` from it, and the two modules
+  in `validators/uix/` state that it is the SSOT. The local copy was exactly
+  the kind of hole this gate exists to close: "when a fifth axis is added, only
+  this validator keeps checking four".
+- **Renamed `validateReviewArtifacts` to `validateIterationReviewArtifacts`.**
+  `validators/reviewArtifacts.ts` exports the same name and publishes it through
+  the barrel, so it was on the same path — "the IDE's autoimport silently picks
+  a different symbol" — that `prototyping/iterationPaths.ts` avoided by renaming
+  `iterationDir` to `iterationDirPerSpec`.
+- **Aligned the shipped transcription instructions with the actual
+  obligations.** The cycle table in `qfai-prototyping/SKILL.md` said only
+  "update `prototyping.json#iterations[]`", and its list of transcription
+  targets did not include `reviewerId` and `evidenceRefs` — both are
+  prerequisites of the hard gate, yet nowhere in the shipped material was it
+  written that they must be overwritten. The "Append entry" of the C0 row would
+  also, if appended as it stands, produce two index-0 entries because
+  `iterate --cycle 0` already writes the seed, and fail with QFAI-PROT-004. A
+  "Transcription" section was added that states the 7 fields and the 2
+  pitfalls. The inconsistency in `references/reviewer-prompt.md` Inputs, which
+  listed the screenshot by full path and the HTML snapshot in shortened form,
+  was also fixed — writing those two lines into `evidenceRefs` as they stand
+  would produce a mirror mismatch.
 
-- **cycle-0 seed が「何も書かないファイル」を evidence として引用し、`iterate` と `review` の間で
-  自分の gate を落としていた欠陥を塞いだ。** `prototyping iterate --cycle 0` が書く seed iteration の
-  `evidenceRefs` は、宣言済み screen が無いとき `iter-NN/index.png` / `iter-NN/index.html` に
-  fallback していた。この 2 パスは loop のどこにも writer が存在しない — 同じ invocation が書く
-  `iterate-plan.json` 自身が `paths.screenshotTemplate` を `iter-NN/{screen}.png` と宣言しており、
-  capture はその template に従うので `index.png` はどの時点でも生成されない。結果として
-  `validatePrototypingArtifactRefIntegrity` が `QFAI-PROT-009` を 2 件出し、`iterate` 完了直後から
-  reviewer の結果が mirror されるまでの窓 (capture と reviewer pass 全体を含む) でプロジェクトは
-  自分の gate を通れなかった。しかも finding は「missing artifact」を名指すので「capture が
-  走っていない」と読め、自然な対処である capture 再実行は per-screen ファイルしか書かないため
-  救いにならない。screen が宣言されていても窓は消えない: seed は capture より **前** に書かれるので、
-  最初の screen のパスもその時点では存在しない。
-  seed は `evidenceRefs` を持たなくなり、`QFAI-PROT-009` は `reviewerId` が seed のものである
-  iteration を skip する。2 つは 1 つの変更である — 除外なしに field を落とすと、missing-artifact
-  error 2 件が empty-field error 2 件に置き換わるだけになる。除外は default ではなく positive claim
-  なので、`reviewerId` を省いた iteration も別の reviewer を名乗る iteration も従来どおり両方の ref を
-  要求される。`SeedMetadata.declaredScreens` はこの `evidenceRefs` を組むためだけに存在していたので、
-  reader を失った field として併せて削除した。
-- **上の欠陥を green のまま出荷させていたテストを、自分で作った postcondition を検証しないよう
-  直した。** `prototypingIterate.validateConformant.test.ts` の「no declared screens で
-  ref-integrity が error 0 件」を主張するケースは、その主張の直前に `iter-00/index.png` と
-  `iter-00/index.html` を **自分で書いていた**。根拠として添えられたコメントは
-  「seed は `--capture` 経由で暗黙にこれを行う。`--capture` なしなら operator の workflow が
-  最初の validate 前に書く」だが、両方とも事実ではない: capture が書くのは plan の
-  `screenshotTemplate` どおりの `iter-NN/<screen>.{png,html}` で `index.*` ではなく、`index.*` を
-  operator に書かせる記述も出荷物のどこにも無い。fixture が結論を製造していたため、実運用が
-  `QFAI-PROT-009` を 2 件出している間もこのテストは通り続けていた。現在は何も書かず、
-  `iterate --cycle 0` が実際に残すツリーだけを観測する。
-- **`iter-NN/review.json` を一度も読まずに「schema gate がある」と宣言していた
-  reviewer-deliverable gate を実装した。** `qfai-prototyping/SKILL.md` は「review.json の
-  shape だけが受理される。未知の layoutAntiPatterns code や enum 外の designMdViolations は
-  QFAI-PROT-002 で validate を落とす」と書いていたが、その gate は存在しなかった。
-  `validate --profile prototyping` が読んでいたのは `prototyping.json#iterations[]` —
-  reviewer のファイルを orchestrator が転記した **mirror** のほうだけで、reviewer 側は
-  丸ごと素通りだった。実測では、未知の `lap-999-not-a-real-code`、`pivotDirective: "stop"`、
-  `scores.usability: "catastrophic"`、そして `review.json` の削除まで、いずれも `error=0` を
-  返した。reviewer が走ったことを保証するはずの gate が、reviewer が走ったかどうかを
-  判定できていなかった。`validatePrototypingEvidence` が 3 つの義務を QFAI-PROT-002 で
-  報告する: (1) presence — review を記録した iteration には parse 可能な `review.json` が
-  ある (不在と「あるが読めない」は別 finding — `EACCES` / `EISDIR` を「missing」と報告すると、
-  ディスク上にあるファイルの上書きへ操作者を誘導してしまう)、(2) schema — payload が `references/reviewer-prompt.md` の shape に一致し、
-  `layoutAntiPatternsDetected[]` は任意の文字列ではなく registry 照合を受ける、
-  (3) mirror — 転記された `iterations[N]` が reviewer のファイルと一致する。(3) はどちらの
-  surface も単独では捕まえられなかったもので、field を落とす・並べ替える・言い換える転記は
-  「内部的には整合した 2 つのファイルが互いに食い違う」状態を作り、各ファイルは自分の検査を
-  通ってしまう。code は QFAI-PROT-002 のまま — SKILL.md が既に約束している code であり、
-  `ruleCodeUniqueness` が 1 code に owner module 1 つを要求するので、検査は sibling
-  validator ではなく `prototypingEvidence.ts` に置いた。cycle-0 seed
-  (`reviewerId: iterate-seed`) は 3 つすべてから除外される — reviewer がまだ走っていない
-  ことがその存在理由なので、義務を課せば `iterate` と最初の review の間の window で全
-  プロジェクトが落ちる。除外は default ではなく positive claim であり、`reviewerId` を
-  省いた iteration も別の reviewer を名乗る iteration も義務を負う。SKILL.md の該当行は、
-  定義がツリーのどこにも存在しない schema 名を挙げるのをやめて実挙動に合わせた。
-- **publish に成功した `rename` を「まだ publish していない」ものとして retry していた
-  install-provenance lock の欠陥を塞いだ。** `acquireRecordLock` の待機ループは、成功した
-  `rename(staging, lockDir)` のあとに行う marker の stamp と identity 照合まで同じ `try` に
-  抱えており、その `catch` は「宛先が publish できなかった、もう一度」を意味する腕だった。
-  しかし成功した `rename` は `staging` を消費する — 以降の試行はすべて存在しない source を
-  rename する `ENOENT` であり、writer は残りの patience まるごとを確実に失敗する no-op に
-  費やしたうえで `another process is writing the record` を報告した。その時点でそれは偽で、
-  原因を取り違えている。さらに publish 済みの lock は heartbeat を止めたまま残るため、同じ
-  tree の他の writer は全員 `LOCK_STALE_MS` を待たされた。負荷をかけた実測 (fault 注入なし):
-  `lock was replaced` の throw が 1 回、それを move して restore した reclaimer が 1 回、
-  そのあと 178 回の `ENOENT` rename と entry 1 件の喪失。待機は `publishLock` に切り出して
-  rename だけを retry させ、publish 後の処理は 1 回だけ走る — 呼び出し側にはもう loop が
-  無い。GitHub Actions 上で無関係の PR を赤くしていた
-  `keeps every entry under heavy concurrency` の flake は、この欠陥そのものだった。
-- **一瞬 quarantine された lock を「奪われた」と読まないようにした。** reclaimer は lock を
-  stale と判定してから MOVE するが、その 2 つは別の syscall である — 直前の holder の marker
-  を abandoned と読み、その `rename` が「その直後に publish された lock」に着地しうる。
-  `clearAbandonedLock` は move した object に fresh な marker を見つけて restore するので
-  lock は同じ inode のまま戻ってくるが、その window の中で名前を 1 回だけ読んだ holder は
-  起きていない置き換えを報告していた。publish 直後の identity 読み取りは `LOCK_CONFIRM_MS`
-  (1s、ceiling の十分内側) を上限に再読する。受け入れるのは `dev`/`ino` が staging のものと
-  一致する object だけなので、1 回読みが通さないものは何も通さない。
-- **待機の忍耐を反復回数ではなく持続時間で表した。** `LOCK_ATTEMPTS` (200) と `LOCK_POLL_MS`
-  の積は公称 sleep でしか実際の待ち時間にならず、`LOCK_STALE_MS` を上回るという不変条件は
-  どちらかが動くたびに書き直され、過去に 2 回とも誤った。`LOCK_PATIENCE_MS` (15s) 1 つと
-  なったことで ceiling との比較は直接になり、poll が重くなったときの対処が patience を黙って
-  削ることにもならない。`LOCK_POLL_MS` は読んで字のとおり「どれだけの頻度で見るか」になった。
-- **失敗した acquisition が lock を置き去りにしないようにした。** identity 照合が通らなかった
-  ときは、standing な lock がこの holder の object であるときに限って `release` に返させる
-  (link になった名前は拒否し、marker は名前指定で 1 つだけ unlink する — どのガードも review
-  finding が買ったものなので、失敗しかけの acquisition が即興で書き直さない)。あわせて、
-  `staging` を open できなかった経路が関数末尾の `clearInterval` を飛び越して `unref` 済み
-  timer を残していた漏れも塞いだ — heartbeat の停止は 1 箇所に集約した。
-- **昇格 window を持たない 9 個の finding code を、ガードの母集団を狭めるのではなく登録して塞いだ。**
-  56 本の PR をまとめて取り込んだ後、`RULE_PROMOTIONS` に登録の無い code が 9 個残っていた。
-  最初の修正はガードの母集団を `errorCapable` な code に絞るものだったが、これは誤りだった —
-  P7 は「新しい code は `warning` で出荷し、1 minor 以上先の release に昇格を pin する」と
-  定めており、`errorCapable: false` は新しい code の**正しい初期状態**である。あの filter は
-  ガードが守るべき母集団そのもの (登録の無い新しい warning は永久に素通りし、昇格もされない)
-  を除外していた。filter を撤回し、`QFAI-AGENT-014` / `QFAI-CONTRACT-015` / `-032` / `-033` /
-  `-034` / `-035` / `QFAI-RESEARCH-012` / `QFAI-TRIAGE-008` の 8 個を `RULE_PROMOTIONS` に
-  登録した。severity は literal ではなく `newRuleSeverity` が pin から決め、finding 本文は
-  window の終わる release を名乗る (P7 step 2 / 3)。`resolveToolVersion()` は validator 実行
-  ごとに 1 回だけ解決する。error に到達しうる code として、8 個には `expected:` / `fix:` の
-  catalog 行も揃えた。`QFAI-REVIEW-010` だけは `info` のまま据え置いた: P7 の梯子は
-  warning → error であり、`newRuleSeverity` は `info` を返さない。info の code をそこへ通すと
-  登録した日に severity が上がり、pin の release で build が落ちる — window の目的と逆になる。
-  除外は「src/ のどの emission site でも `info` である」ことをテストが毎回検証する、
-  名前つきの 1 行として置いた。
-- **exploration の hard-error 一覧から落ちていた UIX gate を戻した (24 個)。**
-  到達可能性 walk が module-level の配列定数を展開しないため、`CANONICAL_UIX_VALIDATORS` を
-  `map` で回す canonical UI/UX validator 群が「到達不能」と読まれ、その gate 20 個が
-  `EXPLORATION_HARD_ERROR_CODES` から削除されていた。削除ではなく walk 側の盲点だった —
-  discussion pack がある限りこれらは実際に走る。walk が配列 initializer も関数本体と同じ
-  規則で辿るようにしたところ、equality テストが 24 個を要求した (以前の 20 個に加えて、
-  一度も一覧に載ったことのない `validateTrendScan` の 4 個)。
-- **GitHub Release の本文が長すぎるときに、リリースを失敗させずに切り詰めるようにした。**
-  `release.yml` の抽出ステップは本文が空の場合しか検査しておらず、CHANGELOG のセクションが
-  GitHub Release 本文の上限 125,000 文字を超えると `gh release create` が 422 を返して
-  Release が作られなかった (v1.10.1 のセクションは 160,679 文字)。npm publish は別ジョブの
-  ため成功しており、run を読むまで表面化しなかった。切り詰めはエントリ境界・文書順で行い、
-  どこまで残したかと全文へのリンクを本文末尾に付ける。どのエントリが重要かはこの機構が
-  決めない。
+- **Fixed a defect where the cycle-0 seed cited files that nothing writes as
+  evidence, so the project failed its own gate between `iterate` and
+  `review`.** The `evidenceRefs` of the seed iteration that
+  `prototyping iterate --cycle 0` writes fell back to `iter-NN/index.png` /
+  `iter-NN/index.html` when no screen was declared. Nothing in the loop ever
+  writes those two paths: the `iterate-plan.json` written by the same
+  invocation declares `paths.screenshotTemplate` as `iter-NN/{screen}.png`, and
+  capture follows that template, so `index.png` is never produced at any point.
+  As a result `validatePrototypingArtifactRefIntegrity` raised two
+  `QFAI-PROT-009` findings, and from the moment `iterate` finished until the
+  reviewer's result was mirrored (a window that includes capture and the whole
+  reviewer pass) the project could not pass its own gate. Worse, the finding
+  names a "missing artifact", so it reads as "capture has not run", and the
+  natural remedy, rerunning capture, does not help because capture writes only
+  per-screen files. Declaring screens does not close the window: the seed is
+  written **before** capture, so the path of the first screen does not exist at
+  that point either.
+  The seed no longer carries `evidenceRefs`, and `QFAI-PROT-009` skips an
+  iteration whose `reviewerId` is the seed's. The two are one change: dropping
+  the field without the exclusion would only replace two missing-artifact
+  errors with two empty-field errors. The exclusion is a positive claim, not a
+  default, so an iteration that omits `reviewerId`, or names another reviewer,
+  is still required to provide both refs as before.
+  `SeedMetadata.declaredScreens` existed only to build these `evidenceRefs`, so
+  it was removed as a field that had lost its reader.
+- **Fixed the test that let the defect above ship green so that it no longer
+  verifies a postcondition it built itself.** The case in
+  `prototypingIterate.validateConformant.test.ts` that asserts "ref-integrity
+  has 0 errors with no declared screens" **wrote** `iter-00/index.png` and
+  `iter-00/index.html` itself just before making that assertion. The comment
+  offered as justification said "the seed does this implicitly via `--capture`;
+  without `--capture` the operator's workflow writes it before the first
+  validate", and neither is true: capture writes `iter-NN/<screen>.{png,html}`
+  as the plan's `screenshotTemplate` says, not `index.*`, and nothing shipped
+  tells the operator to write `index.*`. Because the fixture manufactured the
+  conclusion, the test kept passing while real use produced two
+  `QFAI-PROT-009` findings. It now writes nothing and observes only the tree
+  that `iterate --cycle 0` actually leaves behind.
+- **Implemented the reviewer-deliverable gate that declared a schema gate
+  without ever reading `iter-NN/review.json`.** `qfai-prototyping/SKILL.md`
+  said "only the shape of review.json is accepted; an unknown
+  layoutAntiPatterns code or a designMdViolations value outside the enum fails
+  validate with QFAI-PROT-002", but that gate did not exist.
+  `validate --profile prototyping` read only `prototyping.json#iterations[]`,
+  the **mirror** the orchestrator transcribes from the reviewer's file, and the
+  reviewer's own file passed through untouched. Measured, an unknown
+  `lap-999-not-a-real-code`, `pivotDirective: "stop"`,
+  `scores.usability: "catastrophic"` and even deleting `review.json` all
+  returned `error=0`. The gate that was supposed to guarantee the reviewer ran
+  could not tell whether the reviewer had run.
+  `validatePrototypingEvidence` now reports three obligations under
+  QFAI-PROT-002: (1) presence: an iteration that recorded a review has a
+  parseable `review.json` (absence and "present but unreadable" are separate
+  findings, because reporting `EACCES` / `EISDIR` as "missing" would steer the
+  operator into overwriting a file that is on disk), (2) schema: the payload
+  matches the shape in `references/reviewer-prompt.md`, and
+  `layoutAntiPatternsDetected[]` is checked against the registry rather than
+  accepting any string, (3) mirror: the transcribed `iterations[N]` matches the
+  reviewer's file. Neither surface could catch (3) alone: a transcription that
+  drops, reorders or rewords a field produces two internally consistent files
+  that disagree with each other, and each file passes its own check. The code
+  stays QFAI-PROT-002, which SKILL.md already promises, and because
+  `ruleCodeUniqueness` requires one owner module per code, the check lives in
+  `prototypingEvidence.ts` rather than in a sibling validator. The cycle-0 seed
+  (`reviewerId: iterate-seed`) is excluded from all three: the reviewer has not
+  run yet, which is the seed's reason to exist, so imposing the obligations
+  would fail every project in the window between `iterate` and the first
+  review. The exclusion is a positive claim, not a default, so an iteration
+  that omits `reviewerId`, or names another reviewer, carries the obligations.
+  The relevant line of SKILL.md no longer names a schema whose definition
+  exists nowhere in the tree, and now matches the actual behaviour.
+- **Fixed a defect in the install-provenance lock where a `rename` that had
+  published successfully was retried as "not yet published".** The wait loop of
+  `acquireRecordLock` kept the marker stamp and identity check that follow a
+  successful `rename(staging, lockDir)` inside the same `try`, and its `catch`
+  was the arm meaning "the destination could not be published, try again". But
+  a successful `rename` consumes `staging`: every later attempt is an `ENOENT`
+  from renaming a source that no longer exists, so the writer spent the whole
+  remainder of its patience on guaranteed-to-fail no-ops and then reported
+  `another process is writing the record`, which was false at that point and
+  blamed the wrong cause. Moreover, a published lock is left with a stopped
+  heartbeat, so every other writer on the same tree had to wait out
+  `LOCK_STALE_MS`. Measured under load (no fault injection): one
+  `lock was replaced` throw, one reclaimer that moved the lock and restored it,
+  then 178 `ENOENT` renames and the loss of one entry. The wait is now split
+  out into `publishLock` and retries only the rename, and the post-publish work
+  runs exactly once; the caller no longer has a loop. The flaky
+  `keeps every entry under heavy concurrency` test that turned unrelated PRs
+  red on GitHub Actions was this very defect.
+- **Stopped reading a momentarily quarantined lock as "taken over".** A
+  reclaimer decides a lock is stale and then MOVEs it, and those are two
+  separate syscalls: it can read the previous holder's marker as abandoned, and
+  its `rename` can land on a lock that was published right after that.
+  `clearAbandonedLock` finds a fresh marker on the object it moved and restores
+  it, so the lock comes back as the same inode, but a holder that read the name
+  once inside that window reported a replacement that had not happened. The
+  identity read right after publishing is now repeated up to `LOCK_CONFIRM_MS`
+  (1s, well inside the ceiling). Only an object whose `dev`/`ino` match the
+  staging one is accepted, so nothing passes that a single read would have
+  rejected.
+- **Expressed the wait patience as a duration rather than an iteration count.**
+  The product of `LOCK_ATTEMPTS` (200) and `LOCK_POLL_MS` equals the actual wait
+  only through the nominal sleep, and the invariant that it exceeds
+  `LOCK_STALE_MS` had to be rewritten whenever either moved, and was gotten
+  wrong both times in the past. With a single `LOCK_PATIENCE_MS` (15s), the
+  comparison with the ceiling is direct, and the fix for a heavier poll no
+  longer silently trims the patience. `LOCK_POLL_MS` now means what it says:
+  how often to look.
+- **Stopped a failed acquisition from leaving its lock behind.** When the
+  identity check fails, the standing lock is handed back to `release` only if it
+  is this holder's own object (a name that has become a link is refused, and the
+  marker is unlinked by name, one at a time; each of these guards was bought by
+  a review finding, so a failing acquisition does not improvise a rewrite of
+  them). Also fixed a leak where the path that could not open `staging` jumped
+  over the `clearInterval` at the end of the function and left an `unref`'d
+  timer behind; stopping the heartbeat is now in a single place.
+- **Closed the 9 finding codes that had no promotion window by registering them
+  rather than narrowing the guard's population.** After a batch merge of 56
+  PRs, 9 codes were left unregistered in `RULE_PROMOTIONS`. The first fix
+  narrowed the guard's population to `errorCapable` codes, and that was wrong:
+  P7 says "ship a new code as `warning` and pin its promotion to a release at
+  least one minor away", so `errorCapable: false` is the **correct initial
+  state** of a new code. That filter excluded exactly the population the guard
+  exists to protect (an unregistered new warning would slip through forever and
+  never be promoted). The filter was withdrawn, and 8 codes, `QFAI-AGENT-014` /
+  `QFAI-CONTRACT-015` / `-032` / `-033` / `-034` / `-035` /
+  `QFAI-RESEARCH-012` / `QFAI-TRIAGE-008`, were registered in
+  `RULE_PROMOTIONS`. Their severity is determined from the pin by
+  `newRuleSeverity` rather than as a literal, and the finding text names the
+  release in which the window ends (P7 steps 2 and 3). `resolveToolVersion()`
+  is resolved once per validator run. Because they can reach error, all 8 also
+  got `expected:` / `fix:` catalog rows. Only `QFAI-REVIEW-010` stays `info`:
+  the P7 ladder runs from warning to error, and `newRuleSeverity` never returns
+  `info`. Routing an info code through it would raise its severity on the day it
+  is registered and fail the build on the pin's release, the opposite of what
+  the window is for. The exclusion is a named single line, which a test checks
+  on every run to be `info` at every emission site in `src/`.
+- **Restored the UIX gates that had dropped out of the exploration hard-error
+  list (24 of them).** The reachability walk does not expand module-level array
+  constants, so the canonical UI/UX validators that `CANONICAL_UIX_VALIDATORS`
+  runs through `map` were read as "unreachable", and 20 of their gates had been
+  deleted from `EXPLORATION_HARD_ERROR_CODES`. The blind spot was in the walk,
+  not in the gates: they really do run whenever a discussion pack exists. Once
+  the walk followed array initializers by the same rules as function bodies, the
+  equality test required 24 (the earlier 20, plus 4 from `validateTrendScan`
+  that had never been on the list).
+- **A GitHub Release body that is too long is now truncated instead of failing
+  the release.** The extraction step in `release.yml` checked only for an empty
+  body, so when a CHANGELOG section exceeded the GitHub Release body limit of
+  125,000 characters, `gh release create` returned 422 and no Release was
+  created (the v1.10.1 section is 160,679 characters). The npm publish
+  succeeded because it is a separate job, and the failure did not surface until
+  someone read the run. Truncation happens on entry boundaries in document
+  order, and a note saying where it stopped and a link to the full text are
+  added at the end of the body. The mechanism does not decide which entries
+  matter.
 
 - **`QFAI-WAIVER-004` is answered from the emitters, not from this run.**
   Whether a waiver names a rule that exists was decided from the findings the
@@ -8468,34 +10166,42 @@ parse できない宣言形は **黙って skip せず報告する** — 実際�
 
 ### Changed
 
-- **`/qfai-sdd` にとって discussion pack は上流 SSOT ではなく、非規範的な参照資料であると
-  分類し直した。** Stage 0 が「最新 pack が欠落・不完全・blocking OQ を持つなら停止」と
-  hard stop していたため、SDD が矛盾や考慮漏れや未解決の問いを見つけた場合、実際に振る舞いを
-  規定する artifact を書く前に、過渡的な discovery pack を修復して review cycle を回し直す
-  ことを求められていた。これは所有境界の逆転である — `.qfai/specs/**` が詳細な振る舞い /
-  設計の SSOT であり、pack は来歴と参照材料であるべきなのに、低忠実度の artifact が実際の
-  SSOT を上書きする圧力になっていた。
-  Stage 0 は source inventory / reference-quality の確認になった: pack は任意であり、
-  不完全でも矛盾していても blocking OQ を持っていても、それ単独ではこの stage を止めない。
-  自分の gate を通すために pack を編集・修復・再実行することは禁止で、そこから導かれる訂正は
-  SDD 所有の spec / policy / contract に入れ、来歴の食い違いは delta/evidence に記録する。
-  停止するのは「使える source が 1 つも無い」場合 (pack も import-lite input も明示的な
-  user requirement も無い) のみ。安全に推論できない product decision は従来どおり user に
-  確認し、その答えは pack に書き戻さず SDD artifact に記録する。
-  Inputs Priority も normative な優先順位ではなく reference / provenance 入力という語に改めた
-  — `Source: <pack>#<id>` の引用は従来どおり支持されるが、引用された文が拘束力を持つことは
-  意味しない。矛盾は pack を書き換えるのではなく、明示的な rationale (product な選択なら
-  user decision) とともに SDD artifact の中で解決する。
-  併せて `drift-protocol.md` の上流 artifact 一覧から discussion 出力を外し、
-  `contract-artifact-rules.md` の「Discussion UI/UX files are upstream discovery artifacts」を
-  非規範的な discovery / reference artifact に改め、`sdd-execution-playbook.md` の Stage 0 手順と
-  `sdd-triage.md` の Inputs も追従させた。
-  **この再分類は pack だけを対象とする**: 本物の上流 artifact は従来どおり上流優先で修復し、
-  dependent な spec 内容を書いている最中に見つけた contract 欠陥は contract-first で直す。
-  なお validator 側は既にこの形だった — `runSddValidators` は discussion pack validator を
-  1 つも実行していない (`validateDiscussionPackReadiness` は `discussion` profile 専用) ので、
-  sdd profile が pack の完全性を gate したことはコード上は無く、hard stop は出荷 prose だけに
-  存在していた。
+- **Reclassified the discussion pack for `/qfai-sdd` as non-normative
+  reference material rather than an upstream SSOT.** Stage 0 hard-stopped when
+  the latest pack was missing, incomplete or carried a blocking OQ, so when SDD
+  found a contradiction, an omission or an unresolved question it was told to
+  repair the transitional discovery pack and rerun the review cycle before
+  writing the artifacts that actually govern behaviour. That inverted ownership:
+  `.qfai/specs/**` is the SSOT for detailed behaviour and design, and the pack
+  should be provenance and reference material, yet a low-fidelity artifact was
+  pressing to override the real SSOT.
+  Stage 0 is now a source inventory and reference-quality check: the pack is
+  optional, and being incomplete, contradictory or carrying a blocking OQ does
+  not by itself stop the stage. Editing, repairing or rerunning the pack to get
+  through the stage's own gate is prohibited; corrections that follow from it go
+  into the SDD-owned spec, policy or contract, and provenance mismatches are
+  recorded in the delta or evidence. The stage stops only when no usable source
+  exists at all (no pack, no import-lite input and no explicit user
+  requirement). A product decision that cannot be inferred safely is still
+  confirmed with the user as before, and the answer is recorded in the SDD
+  artifact, not written back into the pack.
+  Inputs Priority now speaks of reference / provenance inputs instead of a
+  normative priority order: `Source: <pack>#<id>` citations are still
+  supported, but a cited statement does not become binding. A contradiction is
+  resolved inside the SDD artifact with an explicit rationale (a user decision
+  when it is a product choice), not by rewriting the pack.
+  `drift-protocol.md` drops discussion output from its list of upstream
+  artifacts, `contract-artifact-rules.md` changes "Discussion UI/UX files are
+  upstream discovery artifacts" to non-normative discovery / reference
+  artifacts, and the Stage 0 steps of `sdd-execution-playbook.md` and the
+  Inputs of `sdd-triage.md` follow.
+  **The reclassification covers the pack only:** a genuine upstream artifact is
+  still repaired upstream-first, and a contract defect found while writing
+  dependent spec content is still fixed contract-first.
+  The validators already had this shape: `runSddValidators` runs no discussion
+  pack validator (`validateDiscussionPackReadiness` is for the `discussion`
+  profile only), so the sdd profile never gated on pack completeness in code and
+  the hard stop existed only in shipped prose.
 - **A validation issue can now carry the CI job its producer reported (`job`).** The
   reviewer-justification gate ingests the workflow-set lint lanes' findings, and those lanes
   report a site as `file` + `job` + `rule`. The gate previously overwrote `file` with the path
@@ -9458,7 +11164,7 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   git writes `/` and the target comes from `path.relative`.
 - **A rollback that could not write says so.** The restore was wrapped in an
   empty `catch`, so a disk error or permission change during it still produced
-  "元のファイルは復元しました" — on the one path where the operator has to know
+  "the original file was restored" — on the one path where the operator has to know
   the file is gone. The restore's own outcome now decides the message, and the
   content it could not write back is carried in it.
 - **`ENOTDIR` is a type collision, not an absence.** It says a path component
@@ -13309,7 +15015,7 @@ ui-bearing` marker landed mid-loop) exits 2 — preventing the
 
 ### Changed (BREAKING)
 
-- **spec layout**: spec-0017 (CAP-0017 v2.0 single-thread evolution loop / UX-loop redesign) decomposed into spec-0012 (primary) + spec-0004 (validators) + spec-0010 (discussion) + spec-0011 (implement) + spec-0013 (sdd) + spec-0014 (verify) + spec-0015 (agent routing) + spec-0007 (guardrails). CAP-0017 absorbed into CAP-0012. `.qfai/specs/spec-0017/` and `CAP-0017` permanently retired (gap reserved per slice-policy §ID 安定性ルール 5). Backward compatibility intentionally NOT preserved.
+- **spec layout**: spec-0017 (CAP-0017 v2.0 single-thread evolution loop / UX-loop redesign) decomposed into spec-0012 (primary) + spec-0004 (validators) + spec-0010 (discussion) + spec-0011 (implement) + spec-0013 (sdd) + spec-0014 (verify) + spec-0015 (agent routing) + spec-0007 (guardrails). CAP-0017 absorbed into CAP-0012. `.qfai/specs/spec-0017/` and `CAP-0017` permanently retired (gap reserved per slice-policy §ID stability rule 5). Backward compatibility intentionally NOT preserved.
 - **spec-0012 v1.x purge**: legacy AC-0012-0011..0019, BR-0012-0011..0016, EX-0012-0090..0097/0108..0109, TC-0012-0287..0288/0297..0309/0314..0318, DR-0012-0004/0006/0007/0008/0009/0011 removed. EX-0012-0098..0102 (Delegation Scope, Validate/Verify Gates, Non-UI Exclusion, Legacy Traceability Space) remain active. mode budgets / `fullHarness.iterations[]` / `scoringTrace[]` / `allReviewerAxesPerfect100` / weighted-total scoring / r5/r3/r2/r1 round funnel / hard-floor evaluation-rubric enforcement are no longer in the active spec surface.
 - **`designContractReadiness` / `doctor` lock-sha contract tightened**: `DESIGN.md.lock.yaml#designMdSha256` is now required to be a 64-character hex string (case-insensitive, normalized to lower-case). Previously the validator path accepted any non-empty string and silently disagreed with the doctor path (regex-anchored 64 hex). Existing locks generated by `/qfai-sdd` Phase 0 are 64-hex by construction; manually-edited locks with placeholder or shortened sha values now surface as DCON-031 instead of slipping through validate. The new `src/core/design/designMdLock.ts#readDesignMdLockSha` is the single SSOT extractor and is consumed by `doctor.ts`, `validators/designContractReadiness.ts`, `cli/commands/prototypingIterate.ts`, and `cli/commands/prototypingCertify.ts`.
 
@@ -13651,7 +15357,7 @@ prototyping`, `qfai prototyping preflight`, validators, and shipped
 
 ### Removed
 
-- なし
+- None
 
 ## [1.8.4] - 2026-04-27
 
@@ -13856,14 +15562,14 @@ for the recommended cleanup path.
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- package root export (`qfai`) で full-harness helper の互換公開を維持
+- Keep the full-harness helpers publicly exported for compatibility from the package root export (`qfai`)
 - restored: `loadHistory`, `appendIteration`, `computeTerminationReason`
 - restored: `validateReviewer`, `resolveCommitSha`, `REVIEWER_PLACEHOLDERS`
-- restored: `FullHarnessHistory`, `MeasurementInput` などの harness type export
+- restored: harness type exports such as `FullHarnessHistory` and `MeasurementInput`
 
 ### Removed
 
@@ -13992,60 +15698,60 @@ for the recommended cleanup path.
 
 ### Added
 
-- 3-layer 評価テンプレート（invariant/trend-derived/product-specific/aggregate/dynamic-overrides）
-- Design taste interview テンプレート（11_design_taste_interview.md）
+- 3-layer evaluation templates (invariant/trend-derived/product-specific/aggregate/dynamic-overrides)
+- Design taste interview template (11_design_taste_interview.md)
 - browserQa minimal truthful runner
-- テスト並列実行: Vitest workspace による 5 スライス（core/validators/integration/e2e/cli）
-- CI: Node 20 単一 + 5 スライス並列マトリクスに移行
-- pr-fix skill にバージョン整合チェックを追加
+- Parallel test execution: 5 slices via a Vitest workspace (core/validators/integration/e2e/cli)
+- CI: moved to a single Node 20 with a 5-slice parallel matrix
+- Added a version consistency check to the pr-fix skill
 
 ### Changed
 
-- 評価軸テンプレートを 3-layer 正規名にリネーム（20-23*eval_axis*\* → 20-23_design_eval\_\*）
-- SKILL.md: HTML/CSS mock をオプション化
-- US-0012-0008..0010 テストを prototyping SKILL.md に切り替え
+- Renamed the evaluation axis templates to the canonical 3-layer names (20-23*eval_axis*\* → 20-23_design_eval\_\*)
+- SKILL.md: made the HTML/CSS mock optional
+- Switched the US-0012-0008..0010 tests over to the prototyping SKILL.md
 
 ### Removed
 
-- 31_anchor.md, 60_critique_loop.md（レガシーテンプレート）
+- 31_anchor.md, 60_critique_loop.md (legacy templates)
 
 ### Fixed
 
-- delta/AC の migration warning → error 整合
-- source_translation バリデーションをバレット行のみに制限
-- threeLayer relPath 表記を実際のファイル範囲（2[0-3]\_design_eval\_\*）に修正
-- prototypingWordingAlignment テストの silent return → throw Error
-- renderEvidenceIntegration テストの truncated expected string 補完
+- Aligned the delta/AC migration warning with the error
+- Restricted source_translation validation to bullet lines only
+- Corrected the threeLayer relPath notation to the actual file range (2[0-3]\_design_eval\_\*)
+- prototypingWordingAlignment test: silent return → throw Error
+- renderEvidenceIntegration test: completed a truncated expected string
 
 ## [1.7.11] - 2026-03-31
 
 ### Added
 
-- npm publish dry-run CI チェック（`ci:build-verify` に統合、警告=エラー）
-- E2E テスト 8 ファイル + Integration テスト 3 ファイル（計 263 テスト）
-- `detectAspirationalClaims()`: SKILL.md の未実装機能主張を検出（spec-0006 TDD-0015）
-- `checkRoutingConsistency()`: フルハーネスルーティング一貫性検証（spec-0006 TDD-0016）
-- ATDD カバレッジ: 12 E2E US + 52 Integration TC（QFAI-ATDD-111/112 解消）
-- TDDLIST バックフィル: 9 spec に 43 エントリ追加
+- npm publish dry-run CI check (folded into `ci:build-verify`, warning = error)
+- 8 E2E test files + 3 Integration test files (263 tests in total)
+- `detectAspirationalClaims()`: detects claims of unimplemented features in SKILL.md (spec-0006 TDD-0015)
+- `checkRoutingConsistency()`: verifies full-harness routing consistency (spec-0006 TDD-0016)
+- ATDD coverage: 12 E2E US + 52 Integration TC (resolves QFAI-ATDD-111/112)
+- TDDLIST backfill: added 43 entries across 9 specs
 
 ### Fixed
 
-- bin パス auto-correction 警告修正（`./dist` → `dist`）
-- uixDetection phase1 ratchet テストの時刻依存バグ修正
+- Fixed the bin path auto-correction warning (`./dist` → `dist`)
+- Fixed a time-dependent bug in the uixDetection phase1 ratchet test
 
 ## [1.7.10] - 2026-03-31
 
 ### Added
 
-- Spec Auto-Discovery Protocol: spec引数なしで4ソース統合差分検出により作業対象specを自動特定
+- Spec Auto-Discovery Protocol: with no spec argument, identifies the spec to work on automatically by detecting differences across four integrated sources
 - Traceability Integrity Validator: QFAI-TRACE-001 (error) / QFAI-TRACE-002 (warning)
-- `baseBranch` 設定: qfai.config.yaml で比較対象ブランチを指定可能
-- discussion .gitignore: 生成されたdiscussion packをデフォルトでGit管理外に（init標準仕様）
+- `baseBranch` setting: the branch to compare against can be specified in qfai.config.yaml
+- discussion .gitignore: generated discussion packs are kept out of Git by default (standard `init` behaviour)
 
 ### Changed
 
-- SKILL.md (prototyping/implement): Spec Auto-Discovery Protocol セクション追加
-- specDiffDetector/traceabilityIntegrity: execSync → execFileSync でコマンドインジェクション対策
+- SKILL.md (prototyping/implement): added a Spec Auto-Discovery Protocol section
+- specDiffDetector/traceabilityIntegrity: `execSync` → `execFileSync` as a command-injection countermeasure
 
 ## [1.7.9] - 2026-03-30
 
@@ -14083,42 +15789,42 @@ for the recommended cleanup path.
 
 ### Changed
 
-- package: npm version を `1.7.8` に更新
-- specs: 4 spec の TDD execution ledger を全項目 `done` に更新
+- package: updated the npm version to `1.7.8`
+- specs: updated the TDD execution ledgers of 4 specs so every item is `done`
 
 ### Notes
 
-- v1.7.8 は v1.7.7 gap analysis に基づく Canonical Convergence correction release
-- 20 gaps を 14 deliverables に統合し、4 capability groups (CAP-0034~0037) で実装
-- Migration window: 4-axis → 3-layer および weak strategy → strong schema は v1.7.8 で warning、v1.8.0 で error
-- Non-UI safety: 全 UI-bearing validator が non-ui surface type で zero fires を保証
+- v1.7.8 is a Canonical Convergence correction release based on the v1.7.7 gap analysis
+- Consolidated 20 gaps into 14 deliverables, implemented in 4 capability groups (CAP-0034~0037)
+- Migration window: 4-axis → 3-layer and weak strategy → strong schema are warnings in v1.7.8 and errors in v1.8.0
+- Non-UI safety: every UI-bearing validator is guaranteed to fire zero times on a non-ui surface type
 
 ## [1.7.7] - 2026-03-30
 
 ### Added
 
-- specs: master design spec に基づく several specs の remediation alignment を追加
-- evidence: v1.7.7 correction release 向けの SDD preflight / evidence 記録を追加
+- specs: added remediation alignment for several specs based on the master design spec
+- evidence: added SDD preflight / evidence records for the v1.7.7 correction release
 
 ### Changed
 
-- specs: spec の評価モデル記述を 3-layer canonical model に統一
-- specs: spec の screen contract minimum を screen-level obligation に更新
-- specs: spec の UI-bearing detection を `surface classification primary / content-signal fallback` に更新
-- docs: root/package README の release context と tutorial/versioned headings を v1.7.7 に整合
-- package: `packages/qfai` の npm version を `1.7.7` に更新
-- steering: product steering / initiative policy の milestone と release posture を v1.7.7 に更新
+- specs: unified the evaluation model description of the spec on the 3-layer canonical model
+- specs: updated the screen contract minimum of the spec to a screen-level obligation
+- specs: updated the UI-bearing detection of the spec to `surface classification primary / content-signal fallback`
+- docs: aligned the release context and tutorial/versioned headings of the root/package README with v1.7.7
+- package: updated the npm version of `packages/qfai` to `1.7.7`
+- steering: updated the milestone and release posture of the product steering / initiative policy to v1.7.7
 
 ### Fixed
 
-- traceability: spec の AC-0026-0014 → TC 参照漏れを修正
-- validate: review summary minimum schema (`QFAI-REVIEW-007`) と prototyping coverage matrix (`QFAI-PROT-111`) の即時 blocker を解消
-- validate: spec decisions の `status:` 混入警告 (`QFAI-STATUS-001`) を解消
+- traceability: fixed a missing AC-0026-0014 → TC reference in the spec
+- validate: resolved the immediate blockers for the review summary minimum schema (`QFAI-REVIEW-007`) and the prototyping coverage matrix (`QFAI-PROT-111`)
+- validate: resolved the warning for `status:` leaking into spec decisions (`QFAI-STATUS-001`)
 
 ### Notes
 
-- repo-wide `qfai validate --fail-on error` は既存の review/evidence/ATDD/TDD blocker により未通過
-- v1.7.7 は v1.7.6 remediation/correction release として扱い、プロトタイピング前の仕様整合と version normalization を優先
+- repo-wide `qfai validate --fail-on error` does not yet pass because of existing review/evidence/ATDD/TDD blockers
+- v1.7.7 is treated as a remediation/correction release for v1.7.6, prioritizing spec alignment and version normalization ahead of prototyping
 
 ## [1.7.6] - 2026-03-30
 
@@ -14149,20 +15855,20 @@ for the recommended cleanup path.
 
 ### Added
 
-- traceability: `..0027` の required `US-*` / `TC-*` を E2E・Integration traceability ledger に補完
-- evidence: `/qfai-verify` 実行証跡 `verify-` を追加し、repo gate / validate / report の結果を記録
+- traceability: filled in the required `US-*` / `TC-*` of `..0027` in the E2E/Integration traceability ledger
+- evidence: added the `/qfai-verify` run evidence `verify-` and recorded the repo gate / validate / report results
 
 ### Changed
 
-- docs: `qfai-implement` / `qfai-verify` の README 説明を ledger-first / full-scan verify + evidence 運用に更新
-- tdd: several specs の ledger 整合を更新
-- specs: spec の BR/EX/TC 参照整合を補正
+- docs: updated the README descriptions of `qfai-implement` / `qfai-verify` to the ledger-first / full-scan verify + evidence workflow
+- tdd: updated the ledger alignment of several specs
+- specs: corrected the BR/EX/TC reference alignment of the spec
 
 ### Fixed
 
-- prototyping: `failOpen` 有効時に Playwright 不在でも `renderEvidence` を `skipped` として記録
-- validate: `QFAI-SKILLS-001`, `QFAI-REVIEW-004/005/007`, `QFAI-PROT-111`, `QFAI-ATDD-111/112`, `QFAI-DDP-014`, `QFAI-DDP-019` の blocker を解消
-- steering: `product.md` の `v1.7.1` 状態表記を現況に更新
+- prototyping: with `failOpen` enabled, `renderEvidence` is recorded as `skipped` even when Playwright is absent
+- validate: resolved the blockers for `QFAI-SKILLS-001`, `QFAI-REVIEW-004/005/007`, `QFAI-PROT-111`, `QFAI-ATDD-111/112`, `QFAI-DDP-014` and `QFAI-DDP-019`
+- steering: updated the `v1.7.1` status notation in `product.md` to the current state
 
 ## [1.7.3] - 2026-03-29
 
@@ -14213,18 +15919,18 @@ for the recommended cleanup path.
 
 ### Changed
 
-- validators: layered ID / traceability validator の解釈改善
-- specs: shared policy / steering の v1.7.1 状態表記更新
+- validators: improved the interpretation by the layered ID / traceability validator
+- specs: updated the v1.7.1 status notation of the shared policy / steering
 
 ### Fixed
 
-- validators: repo-wide validator blocker 解消（historical review/discussion, layered ID 誤検知, traceability 欠落）
+- validators: resolved the repo-wide validator blockers (historical review/discussion, layered ID false positives, missing traceability)
 
 ## [1.7.0] - 2026-03-25
 
 ### Added
 
-- validators: Discussion Design Hardening (QFAI-DDP-019..025) — DDS 存在・オプション比較・アンカースクリーン・競合リファレンス・CTA 階層・ステートカバレッジ・デザインアンチゴール検証（CAP-0023）
+- validators: Discussion Design Hardening (QFAI-DDP-019..025) — validation of DDS presence, option comparison, anchor screens, competitive references, CTA hierarchy, state coverage and design anti-goals (CAP-0023)
 - validators: `isUiBearing()` artifact-based UI-bearing detection (DR-0042)
 - templates: Design Direction Summary section in 03_Story-Workshop.md
 - templates: Competitive Reference Registry in 04_Sources.md
@@ -14239,10 +15945,10 @@ for the recommended cleanup path.
 
 ### Added
 
-- validators: DDP validation (QFAI-DDP-001..018) — Design Direction Pack 必須フィールド・テーマ・CTA 階層・アンチゴール・テンプレート・コンフィグ検証（CAP-0019）
-- validators: Navigation flow validation (QFAI-NAV-001..007) — Mermaid 遷移図構文・到達可能性・エラーリカバリー・実装整合（CAP-0020）
-- validators: Render critique validation (QFAI-CRIT-001..010) — クリティークループプロセス・ビューポート批評・taskFidelity 検証（CAP-0021）
-- validators: Design fidelity validation (QFAI-FID-001..011) — スコアカード 4/5 次元・閾値・warning→error 昇格（CAP-0022）
+- validators: DDP validation (QFAI-DDP-001..018) — validation of required Design Direction Pack fields, theme, CTA hierarchy, anti-goals, templates and config (CAP-0019)
+- validators: Navigation flow validation (QFAI-NAV-001..007) — Mermaid transition diagram syntax, reachability, error recovery and implementation alignment (CAP-0020)
+- validators: Render critique validation (QFAI-CRIT-001..010) — critique loop process, viewport critique and taskFidelity validation (CAP-0021)
+- validators: Design fidelity validation (QFAI-FID-001..011) — scorecard 4/5 dimensions, thresholds and warning→error promotion (CAP-0022)
 - specs:..0022 SDD artifacts (Design Direction, Navigation, Render Critique, Fidelity Scorecard)
 - discussion: ChatGPT UI/UX analysis integrated discussion pack (discussion-20260324090005338)
 - tests: 126 new tests (54 DDP + 21 NAV + 23 CRIT + 28 FID)
@@ -14260,28 +15966,28 @@ for the recommended cleanup path.
 
 ### Added
 
-- codex: 39 `.codex/agents/*.toml` + `.codex/config.toml` — Codex サブエージェント TOML 実装（CAP-0018）
+- codex: 39 `.codex/agents/*.toml` + `.codex/config.toml` — Codex sub-agent TOML implementation (CAP-0018)
 - specs: SDD artifacts (Codex sub-agent TOML support)
 - discussion: discussion pack for Codex sub-agent implementation (v1.6.4)
 - tests: 14 tests (12 TCs) for Codex agent TOML validation
-- policies: DR-0027〜DR-0030 — Codex 向け設計決定記録（TOML 形式・39 スコープ・sandbox 分類・静的配置）
+- policies: DR-0027~DR-0030 — design decision records for Codex (TOML format, 39 scopes, sandbox classification, static placement)
 
 ### Changed
 
-- policies: CAP-0018 追加、用語・制約・意思決定記録の更新
-- devDependencies: smol-toml 追加
+- policies: added CAP-0018; updated the glossary, constraints and decision records
+- devDependencies: added smol-toml
 
 ## [1.6.3] - 2026-03-22
 
 ### Added
 
-- init: `.github/instructions/` に Copilot レビューインストラクション（code-review, principles）を create-only で配布
+- init: distributes Copilot review instructions (code-review, principles) to `.github/instructions/` as create-only
 - specs: SDD artifacts (Copilot review instructions distribution)
 - discussion: discussion pack for
 
 ### Changed
 
-- policies: CAP-0017 追加、用語・制約・意思決定記録の更新
+- policies: added CAP-0017; updated the glossary, constraints and decision records
 
 ## [1.6.2] - 2026-03-20
 
@@ -14333,901 +16039,1260 @@ for the recommended cleanup path.
 
 ### Added
 
-- skills: `/qfai-implement` — TDD micro-cycle (Red/Green/Refactor) を一括管理する統合実装スキルを追加
-- validators: `tddList` — `test-list.md` の構造・ステータス・TC参照を検証する validator を追加
-- specs: (CAP-0014) qfai-implement unification の SDD アーティファクトを追加
-- assets: `spec-XXXX/tdd/test-list.md` テンプレートを init に追加
+- skills: `/qfai-implement` — added an integrated implementation skill that manages the TDD micro-cycle (Red/Green/Refactor) as a whole
+- validators: `tddList` — added a validator that checks the structure, status and TC references of `test-list.md`
+- specs: (CAP-0014) added the SDD artifacts for the qfai-implement unification
+- assets: added the `spec-XXXX/tdd/test-list.md` template to init
 
 ### Removed
 
-- skills: `/qfai-tdd-red`, `/qfai-tdd-green`, `/qfai-tdd-refactor` を廃止（`/qfai-implement` に統合）
+- skills: removed `/qfai-tdd-red`, `/qfai-tdd-green` and `/qfai-tdd-refactor` (merged into `/qfai-implement`)
 
 ### Changed
 
-- workflow: implementation stage の説明を `/qfai-implement` に統一
-- integration: `.agents/.claude/.codex` の skill ラッパーを symlink に統一
+- workflow: unified the description of the implementation stage on `/qfai-implement`
+- integration: unified the `.agents/.claude/.codex` skill wrappers as symlinks
 
 ## [1.5.7] - 2026-03-16
 
 ### Added
 
-- specs: (CAP-0013) UI/UX 定義・レビュー基盤の validator 8系統を追加（QFAI-DT / QFAI-MOCK / QFAI-FLOW / QFAI-BPAP / QFAI-PLATFORM / QFAI-CONSISTENCY / QFAI-RESEARCH / QFAI-AGENT）
-- cli: `--platform <web|windows|mobile-ios|mobile-android|cross-platform>` 引数を追加
-- validators: Design Token 3層（primitive/semantic/component）検証を追加
-- validators: HTML Mock の構造・参照・アクセシビリティ観点の検証を追加
-- agents: UI/UX 専門エージェント定義と関連 steering ドキュメントを追加
+- specs: (CAP-0013) added 8 validator families for the UI/UX definition and review foundation (QFAI-DT / QFAI-MOCK / QFAI-FLOW / QFAI-BPAP / QFAI-PLATFORM / QFAI-CONSISTENCY / QFAI-RESEARCH / QFAI-AGENT)
+- cli: added the `--platform <web|windows|mobile-ios|mobile-android|cross-platform>` argument
+- validators: added Design Token 3-layer (primitive/semantic/component) validation
+- validators: added HTML Mock validation of structure, references and accessibility
+- agents: added UI/UX specialist agent definitions and related steering documents
 
 ### Changed
 
-- validate: `qfai validate` の検証対象を UI/UX 領域へ拡張
-- config: `qfai.config.yaml` に `uiux` 設定を追加
+- validate: extended the validation scope of `qfai validate` to the UI/UX area
+- config: added the `uiux` setting to `qfai.config.yaml`
 
 ## [1.5.6] - 2026-03-15
 
 ### Added
 
-- review: Devil's Advocate と Pattern Doubler をロースターに追加し、12-reviewer 運用を明確化
+- review: Add Devil's Advocate and Pattern Doubler to the roster and clarify
+  the 12-reviewer operation
 
 ### Changed
 
-- skills: 全レビュアーの FAIL 時に具体的代替案を必須化
-- templates: discussion review テンプレートを 12-reviewer 前提に更新
-- steering: review-agent enhancement を次期マイルストーンとして整理
+- skills: Require a concrete alternative whenever any reviewer returns FAIL
+- templates: Update the discussion review template to assume 12 reviewers
+- steering: Organize the review-agent enhancement as the next milestone
 
 ## [1.5.5] - 2026-03-14
 
 ### Added
 
-- specs: Spec Diff Protocol (SDP) の増分実行フローを定義し、差分実行の運用指針を明確化
+- specs: Define the incremental execution flow of the Spec Diff Protocol (SDP)
+  and clarify the operating guidance for differential runs
 
 ### Changed
 
-- skills: AskUserQuestion Protocol を MUST 運用として整理し、SSOT 手順を強化
-- init/assets: skill integration の symlink 構成説明を最新アーキテクチャに整合
-- docs: Minimal tutorial と examples の toolVersion を `1.5.5` に更新
+- skills: Restate the AskUserQuestion Protocol as a MUST operation and
+  strengthen the SSOT procedure
+- init/assets: Align the description of the skill integration symlink layout
+  with the latest architecture
+- docs: Update `toolVersion` in the Minimal tutorial and the examples to
+  `1.5.5`
 
 ## [1.5.4] - 2026-03-13
 
 ### Added
 
-- skills: 全 9 SSOT スキルに `AskUserQuestion Protocol` セクションを追加
-- tests: skill integration と `pr-merge` plan 生成まわりの回帰テストを追加・拡張
+- skills: Add an `AskUserQuestion Protocol` section to all 9 SSOT skills
+- tests: Add and extend regression tests for skill integration and `pr-merge`
+  plan generation
 
 ### Changed
 
-- init: integration wrapper 配布をテキストコピーから symlink ベースへ移行
-- ci: required build check context と matrix/needs の扱いを見直し、workflow の安定性を改善
-- docs: release/skill/README の説明を symlink アーキテクチャと AskUserQuestion 運用に整合
-- docs: Minimal tutorial と examples の toolVersion を `1.5.4` に更新
+- init: Move integration wrapper distribution from text copies to symlinks
+- ci: Revisit the required build check context and the handling of
+  matrix/needs to improve workflow stability
+- docs: Align the release, skill and README descriptions with the symlink
+  architecture and the AskUserQuestion operation
+- docs: Update `toolVersion` in the Minimal tutorial and the examples to
+  `1.5.4`
 
 ### Fixed
 
-- assets/init: legacy wrapper cleanup と symlink error handling の挙動を修正
-- skills: `pr-fix` / Copilot guidance の記述差分を吸収し、各 integration の整合を回復
+- assets/init: Fix the behavior of legacy wrapper cleanup and symlink error
+  handling
+- skills: Absorb the wording differences between `pr-fix` and the Copilot
+  guidance, restoring consistency across integrations
 
 ## [1.5.3] - 2026-03-07
 
 ### Changed
 
-- **BREAKING**: layered spec の shared policy directory を `.qfai/specs/_shared/` から `.qfai/specs/_policies/` へ変更
-- assets: init scaffold / skill templates / specs README を `_policies` と Consumer View / Escalation Hook 方針へ更新
-- validate: layered spec path checks と関連 error / guidance を `_policies` 前提へ更新
-- tests: assets/core 回帰テストを `_policies` 期待値に更新
-- docs/migrations: `docs/migrations/v1.5.3.md` を追加し、`_shared` → `_policies` の移行手順を明文化
-- docs: Minimal tutorial と examples の toolVersion を `1.5.3` に更新
+- **BREAKING**: Change the shared policy directory of layered specs from
+  `.qfai/specs/_shared/` to `.qfai/specs/_policies/`
+- assets: Update the init scaffold, the skill templates and the specs README
+  to `_policies` and the Consumer View / Escalation Hook policy
+- validate: Update the layered spec path checks and the related errors and
+  guidance to assume `_policies`
+- tests: Update the assets/core regression tests to expect `_policies`
+- docs/migrations: Add `docs/migrations/v1.5.3.md`, documenting the
+  `_shared` to `_policies` migration steps
+- docs: Update `toolVersion` in the Minimal tutorial and the examples to
+  `1.5.3`
 
 ## [1.5.2] - 2026-03-04
 
 ### Added
 
-- assets: `qfai-discussion` / `qfai-sdd` に skill-local な `references/rcp_footer.md` を追加
+- assets: Add a skill-local `references/rcp_footer.md` to `qfai-discussion`
+  and `qfai-sdd`
 
 ### Changed
 
-- assets: `qfai-discussion` / `qfai-sdd` の RCP footer 参照先を `assistant/templates` から各 skill 配下へ移設
-- tests: init assets テストを skill-local RCP footer 構成に更新
-- docs: Minimal tutorial と examples の toolVersion を `1.5.2` に更新
+- assets: Move the RCP footer reference of `qfai-discussion` and `qfai-sdd`
+  from `assistant/templates` to each skill's own directory
+- tests: Update the init assets tests to the skill-local RCP footer layout
+- docs: Update `toolVersion` in the Minimal tutorial and the examples to
+  `1.5.2`
 
 ### Removed
 
-- assets: `.qfai/assistant/templates/rcp_footer.md` と空の `assistant/templates` ディレクトリを削除
+- assets: Remove `.qfai/assistant/templates/rcp_footer.md` and the empty
+  `assistant/templates` directory
 
 ## [1.5.1] - 2026-03-03
 
 ### Added
 
-- validators: `validateDiscussionVisuals` を追加し、`QFAI-VIS-001` / `QFAI-VIS-002` を導入
-- tests: discussion 統合に伴う validator/preflight の回帰テストを追加・更新
+- validators: Add `validateDiscussionVisuals` and introduce `QFAI-VIS-001` /
+  `QFAI-VIS-002`
+- tests: Add and update validator/preflight regression tests for the
+  discussion integration
 
 ### Changed
 
-- core/preflight: `11_OQ-Register.md` の `Disposition: open` を gate 非依存で blocking 判定するよう統一
-- validators: review target kind を `discussion` / `spec` に統一し、legacy `require` 判定を廃止
-- validators/discussMermaid: issue code を `QFAI-DPACK-009` / `QFAI-DPACK-010` に統一
-- assets/docs: discussion 命名とテンプレート（Mermaid/HTML+CSS mock）を統一
+- core/preflight: Treat `Disposition: open` in `11_OQ-Register.md` as
+  blocking regardless of the gate
+- validators: Unify the review target kinds as `discussion` / `spec` and
+  remove the legacy `require` check
+- validators/discussMermaid: Unify the issue codes as `QFAI-DPACK-009` /
+  `QFAI-DPACK-010`
+- assets/docs: Unify the discussion naming and templates (Mermaid/HTML+CSS
+  mock)
 
 ### Removed
 
-- core/validators: legacy `validateDiscussPack` / `validateRequirePackReadiness` を削除
+- core/validators: Remove the legacy `validateDiscussPack` /
+  `validateRequirePackReadiness`
 
 ## [1.5.0] - 2026-03-03
 
 ### Added
 
-- core: `discussionPack.ts` — 15ファイル構成の統合 discussion pack インスペクタ
-- core/packLocator: `"discussion"` PackKind（timestamp 命名 `discussion-YYYYMMDDhhmmssSSS`）
-- validators: `validateDiscussionPackReadiness` — QFAI-DPACK-001..008 コード
-- assets: `qfai-discussion` スキル（SKILL.md + 15 テンプレート + review テンプレート）
+- core: `discussionPack.ts` - an integrated discussion pack inspector with a
+  15-file layout
+- core/packLocator: `"discussion"` PackKind (timestamp naming
+  `discussion-YYYYMMDDhhmmssSSS`)
+- validators: `validateDiscussionPackReadiness` - QFAI-DPACK-001..008 codes
+- assets: `qfai-discussion` skill (SKILL.md + 15 templates + review template)
 - assets: `.qfai/discussion/README.md`
-- docs/migrations: `v1.5.0.md` 移行ガイド
+- docs/migrations: `v1.5.0.md` migration guide
 
 ### Changed
 
-- **BREAKING**: config `requireDir` → `discussionDir`（QfaiPaths 型変更）
-- core/sddPreflight: require-pack → discussion-pack ベースに切り替え
-- core/doctor: `requireDir` → `discussionDir`
-- core/runLog: `discuss_pack` / `require_pack` → `discussion_pack`
-- validators/importLite: `requireDir` → `discussionDir`
-- validators/requireIndex: `requireDir` → `discussionDir`
-- validators/requirementsContext: 全参照を discussion ベースに移行
-- validators/discussMermaid: `.qfai/discuss` → `.qfai/discussion`, `04_Business-flow.md` → `03_Story-Workshop.md`
-- validators/mermaidEnforcement: `.qfai/discussion` を TARGETS に追加
-- validators/repositoryHygiene: `discuss` / `require` → `discussion` legacy ルール追加
-- validators/reviewArtifacts: `ALLOWED_TARGET_KINDS` に `"discussion"` 追加
-- assets: `qfai.config.yaml` で `requireDir` → `discussionDir`
+- **BREAKING**: config `requireDir` -> `discussionDir` (QfaiPaths type change)
+- core/sddPreflight: Switch from require-pack to discussion-pack
+- core/doctor: `requireDir` -> `discussionDir`
+- core/runLog: `discuss_pack` / `require_pack` -> `discussion_pack`
+- validators/importLite: `requireDir` -> `discussionDir`
+- validators/requireIndex: `requireDir` -> `discussionDir`
+- validators/requirementsContext: Move every reference to discussion
+- validators/discussMermaid: `.qfai/discuss` -> `.qfai/discussion`,
+  `04_Business-flow.md` -> `03_Story-Workshop.md`
+- validators/mermaidEnforcement: Add `.qfai/discussion` to TARGETS
+- validators/repositoryHygiene: Add a `discuss` / `require` -> `discussion`
+  legacy rule
+- validators/reviewArtifacts: Add `"discussion"` to `ALLOWED_TARGET_KINDS`
+- assets: `requireDir` -> `discussionDir` in `qfai.config.yaml`
 
 ### Deprecated
 
-- validators/requirePack: `validateRequirePackReadiness` は deprecated（`validateDiscussionPackReadiness` を使用）
-- skills: `qfai-discuss` / `qfai-require` → `qfai-discussion` に統合
+- validators/requirePack: `validateRequirePackReadiness` is deprecated (use
+  `validateDiscussionPackReadiness`)
+- skills: Merge `qfai-discuss` / `qfai-require` into `qfai-discussion`
 
 ### Removed
 
-- assets: `qfai-discuss` スキル
-- assets: `qfai-require` スキル
-- assets: `.qfai/discuss/` ディレクトリ
-- assets: `.qfai/require/` ディレクトリ
+- assets: `qfai-discuss` skill
+- assets: `qfai-require` skill
+- assets: `.qfai/discuss/` directory
+- assets: `.qfai/require/` directory
 
 ## [1.4.38] - 2026-03-03
 
 ### Changed
 
-- core/prototyping: `collectElements` を `ids` + `labels` 両方返却するよう拡張（`collectElementsDetailed` 相当）
-- core/prototyping: `expectedMarkers` を `CONTRACT_ID:ELEMENT_ID` ベースに変更（旧: `CONTRACT_ID:ELEMENT_LABEL`）
-- core/prototyping: `UiFidelityGeneratedScreen.expected` に `ids` フィールドを追加
-- core/prototyping: `UiFidelityAutogenExpected` に `elementIds` フィールドを追加
-- core/prototyping: `ContractScreenInput` に `elementIds` フィールドを追加
-- validate/prototyping: `QFAI-PROT-242` を `expected.ids` 優先に変更し、旧形式（label ベース）も後方互換で許容
-- validate/prototyping: `UiFidelityScreenEvidence.expected` に `ids?: string[]` を追加
-- validate/prototyping: QFAI-PROT-242 の診断メッセージを `CONTRACT_ID:ELEMENT_ID` 形式に更新
-- docs/migrations: `v1.4.37.md` のマーカー記述を `CONTRACT_ID:ELEMENT_ID` に修正
-- docs/migrations: `v1.4.38.md` を追加
-- docs: UI Contract README のマーカー推奨値を `CONTRACT_ID:ELEMENT_ID` に統一
-- repo: パッケージバージョンを 1.4.38 に更新
+- core/prototyping: Extend `collectElements` to return both `ids` and `labels`
+  (equivalent to `collectElementsDetailed`)
+- core/prototyping: Base `expectedMarkers` on `CONTRACT_ID:ELEMENT_ID`
+  (formerly `CONTRACT_ID:ELEMENT_LABEL`)
+- core/prototyping: Add an `ids` field to
+  `UiFidelityGeneratedScreen.expected`
+- core/prototyping: Add an `elementIds` field to `UiFidelityAutogenExpected`
+- core/prototyping: Add an `elementIds` field to `ContractScreenInput`
+- validate/prototyping: `QFAI-PROT-242` now prefers `expected.ids` and still
+  accepts the old label-based form for backward compatibility
+- validate/prototyping: Add `ids?: string[]` to
+  `UiFidelityScreenEvidence.expected`
+- validate/prototyping: Update the QFAI-PROT-242 diagnostic message to the
+  `CONTRACT_ID:ELEMENT_ID` form
+- docs/migrations: Fix the marker description in `v1.4.37.md` to
+  `CONTRACT_ID:ELEMENT_ID`
+- docs/migrations: Add `v1.4.38.md`
+- docs: Unify the recommended marker value in the UI Contract README as
+  `CONTRACT_ID:ELEMENT_ID`
+- repo: Update the package version to 1.4.38
 
 ## [1.4.37] - 2026-03-02
 
 ### Added
 
-- validate/prototyping: `QFAI-PROT-241` (error) — `uiFidelity.screens[].missing.labels` が空でない場合のラベル欠落検出を追加（`expected.labels` 存在時のみ適用、後方互換）
-- validate/prototyping: `QFAI-PROT-242` (error) — `uiFidelity.screens[].missing.markers` が空でない場合のマーカー欠落検出を追加（`expected.elements > 0` 時に適用）
-- validate/prototyping: `QFAI-PROT-243` (warning) — placeholder/single-text ページ検知を追加（`expected.elements > 2` かつ `observed <= 1`）
-- core/prototyping: `extractDomMarkers()` を追加し、`[data-qfai]` 属性からのマーカー抽出を実装
-- docs/migrations: `docs/migrations/v1.4.37.md` を追加
+- validate/prototyping: `QFAI-PROT-241` (error) - Add detection of missing
+  labels when `uiFidelity.screens[].missing.labels` is non-empty (applies only
+  when `expected.labels` is present, backward compatible)
+- validate/prototyping: `QFAI-PROT-242` (error) - Add detection of missing
+  markers when `uiFidelity.screens[].missing.markers` is non-empty (applies
+  when `expected.elements > 0`)
+- validate/prototyping: `QFAI-PROT-243` (warning) - Add detection of
+  placeholder/single-text pages (`expected.elements > 2` and `observed <= 1`)
+- core/prototyping: Add `extractDomMarkers()` and implement marker extraction
+  from `[data-qfai]` attributes
+- docs/migrations: Add `docs/migrations/v1.4.37.md`
 
 ### Changed
 
-- cli/prototyping: `--autogen-only` かつ `--autogen-ui-fidelity` 未指定時に exit 2 を返すよう変更（no-op 事故防止）
-- cli/prototyping: autogen 未有効時に `uiFidelityAutogen.status=skipped` を evidence に書き込むよう変更（検知可能性向上）
-- cli/prototyping: 既存 evidence の `runtimeGate.ui[].route` および `specs[].missing.uiRoutes` から route hints を自動抽出するよう変更
-- core/prototyping: `hasLabelMatch` を正規化完全一致に変更（部分一致によるチート防止）
-- core/prototyping: body テキストトークン化をオプトイン化（`QFAI_AUTOGEN_BODY_TOKENS=1`、デフォルト無効）
-- core/prototyping: crawl 結果に `markers` フィールドを追加し、`buildUiFidelityScreens` で `found.markers / missing.markers` を生成
-- validate/prototyping: `UiFidelityScreenEvidence` 型に `expected.labels`, `found`, `missing`, `coverage` を任意フィールドとして追加（後方互換）
-- repo: パッケージバージョンを 1.4.37 に更新
+- cli/prototyping: Return exit 2 when `--autogen-only` is given without
+  `--autogen-ui-fidelity` (prevents no-op mistakes)
+- cli/prototyping: Write `uiFidelityAutogen.status=skipped` to the evidence
+  when autogen is not enabled (improves detectability)
+- cli/prototyping: Extract route hints automatically from the existing
+  evidence's `runtimeGate.ui[].route` and `specs[].missing.uiRoutes`
+- core/prototyping: Change `hasLabelMatch` to a normalized exact match
+  (prevents cheating through partial matches)
+- core/prototyping: Make body text tokenization opt-in
+  (`QFAI_AUTOGEN_BODY_TOKENS=1`, disabled by default)
+- core/prototyping: Add a `markers` field to crawl results and generate
+  `found.markers / missing.markers` in `buildUiFidelityScreens`
+- validate/prototyping: Add `expected.labels`, `found`, `missing` and
+  `coverage` as optional fields to the `UiFidelityScreenEvidence` type
+  (backward compatible)
+- repo: Update the package version to 1.4.37
 
 ## [1.4.36] - 2026-02-28
 
 ### Added
 
-- cli/prototyping: `qfai prototyping --autogen-ui-fidelity` コマンドを追加し、`contracts/ui/**` と DOM 巡回による `uiFidelity` 自動生成を実装
-- core/prototyping: `uiFidelityAutogen` モジュールを追加（`collectExpectedFromContracts`, `crawlRoutesAndCollectFoundLabels`, `runMockPaths`, `emitUiFidelity`）
-- dependencies: `jsdom` を追加（軽量 DOM 解析用）
+- cli/prototyping: Add the `qfai prototyping --autogen-ui-fidelity` command,
+  which generates `uiFidelity` automatically from `contracts/ui/**` and a DOM
+  crawl
+- core/prototyping: Add the `uiFidelityAutogen` module
+  (`collectExpectedFromContracts`, `crawlRoutesAndCollectFoundLabels`,
+  `runMockPaths`, `emitUiFidelity`)
+- dependencies: Add `jsdom` (for lightweight DOM parsing)
 
 ### Changed
 
-- cli: `--autogen-ui-fidelity`, `--autogen-only`, `--evidence-out`, `--base-url`（prototyping 用）オプションを args に追加
-- env: `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` / `QFAI_PROTOTYPE_BASE_URL` 環境変数をサポート
-- docs: README に prototyping autogen の使用方法・CI 統合例・失敗時ハンドリングを追記
-- repo: パッケージバージョンを 1.4.36 に更新
+- cli: Add the `--autogen-ui-fidelity`, `--autogen-only`, `--evidence-out` and
+  `--base-url` options (for prototyping) to the args
+- env: Support the `QFAI_PROTOTYPE_FIDELITY_AUTOGEN=1` /
+  `QFAI_PROTOTYPE_BASE_URL` environment variables
+- docs: Add prototyping autogen usage, a CI integration example and failure
+  handling to the README
+- repo: Update the package version to 1.4.36
 
 ## [1.4.35] - 2026-02-28
 
 ### Added
 
-- docs/migrations: `docs/migrations/v1.4.35.md` を追加し、v1.4.34 からの運用更新点（gate追加なし）を明文化
-- docs/examples: UI Contract と `uiFidelity` の良い例を追加（`docs/examples/ui-contract.good.yaml`, `docs/examples/prototyping-ui-fidelity.good.json`）
+- docs/migrations: Add `docs/migrations/v1.4.35.md`, documenting the
+  operational updates since v1.4.34 (no new gates)
+- docs/examples: Add good examples of a UI Contract and `uiFidelity`
+  (`docs/examples/ui-contract.good.yaml`,
+  `docs/examples/prototyping-ui-fidelity.good.json`)
 
 ### Changed
 
-- validate/prototyping: `QFAI-PROT-232` の診断性を改善し、`refs` に `contract_id/route/contract_element_labels(_by_contract_route)/missing_labels(alias)/required_actions` を付与
-- validate/prototyping: `QFAI-PROT-231/232/233` のメッセージを次アクション指向に更新（label描画・`data-qfai` マーカー・action配線）
-- templates/contracts-ui: `contracts/ui/README.md` に `elements[].id` 命名/変更ポリシー、`elements[].label` 運用、L2 `actions[]` 最小セット、FAQ を追加
-- templates/review: `assistant/templates/rcp_footer.md` と `review/README.md` に prototyping 失敗時の診断手順と「最初に見るファイル」順を追加
-- tests/assets+core: 上記 docs/validator 変更に追従する回帰チェックを追加・更新
-- repo: パッケージバージョンを 1.4.35 に更新
+- validate/prototyping: Improve the diagnostics of `QFAI-PROT-232` by adding
+  `contract_id/route/contract_element_labels(_by_contract_route)/missing_labels(alias)/required_actions`
+  to `refs`
+- validate/prototyping: Update the `QFAI-PROT-231/232/233` messages to be
+  next-action oriented (label rendering, `data-qfai` markers, action wiring)
+- templates/contracts-ui: Add the `elements[].id` naming/change policy, the
+  `elements[].label` usage, the minimum set of L2 `actions[]` and an FAQ to
+  `contracts/ui/README.md`
+- templates/review: Add the diagnostic steps for a prototyping failure and the
+  "first files to look at" order to `assistant/templates/rcp_footer.md` and
+  `review/README.md`
+- tests/assets+core: Add and update regression checks that follow the docs and
+  validator changes above
+- repo: Update the package version to 1.4.35
 
 ## [1.4.34] - 2026-02-27
 
 ### Added
 
-- validate/prototyping: `uiFidelity` interactive hard gate を追加し、欠落を `QFAI-PROT-231`（error）として検出
-- validate/prototyping: UI contract と `uiFidelity` の欠落整合検証を `QFAI-PROT-232`（error）として追加（contract参照/route/elements/actions）
-- validate/prototyping: interactive 時の `mockPaths.status=pass` 欠落検知 `QFAI-PROT-233`（warning）を追加
-- docs/migrations: `docs/migrations/v1.4.34.md` を追加し、v1.4.33 からの最小移行手順を明文化
+- validate/prototyping: Add the `uiFidelity` interactive hard gate and detect
+  omissions as `QFAI-PROT-231` (error)
+- validate/prototyping: Add the consistency check between the UI contract and
+  `uiFidelity` omissions as `QFAI-PROT-232` (error) (contract reference,
+  route, elements, actions)
+- validate/prototyping: Add `QFAI-PROT-233` (warning), which detects a missing
+  `mockPaths.status=pass` in interactive mode
+- docs/migrations: Add `docs/migrations/v1.4.34.md`, documenting the minimal
+  migration steps from v1.4.33
 
 ### Changed
 
-- tests/core: `prototypingEvidence` 回帰テストを拡張し、`QFAI-PROT-231/232/233` の最小セットを追加
-- tests/core: `validate` fixture の `prototyping.json` を v1.4.34 hard gate 準拠に更新
-- templates/evidence: `README.md` の `uiFidelity` 説明を optional から modeベース運用（interactive必須 / skeleton許容）へ更新
-- docs/tests/validator: README・CIガイド・validator文言・回帰テスト期待値を v1.4.34 に更新
-- repo: パッケージバージョンを 1.4.34 に更新
+- tests/core: Extend the `prototypingEvidence` regression tests and add the
+  minimal set for `QFAI-PROT-231/232/233`
+- tests/core: Update the `prototyping.json` of the `validate` fixture to
+  comply with the v1.4.34 hard gate
+- templates/evidence: Update the `uiFidelity` description in `README.md` from
+  optional to mode-based operation (required for interactive, skeleton
+  allowed)
+- docs/tests/validator: Update the README, the CI guide, the validator
+  wording and the regression test expectations to v1.4.34
+- repo: Update the package version to 1.4.34
 
 ## [1.4.33] - 2026-02-27
 
 ### Added
 
-- templates/contracts-ui: `contracts/ui/README.md` に mockable prototype（`prototype.mode/mockPaths/markers`）の規約と `elements/actions` フィールド詳細を追記し、copy-ready な sample/example を追加
-- templates/evidence: `prototyping` 証跡テンプレートへ `uiFidelity`（optional, backward-compatible）を追記
+- templates/contracts-ui: Add the conventions for the mockable prototype
+  (`prototype.mode/mockPaths/markers`) and the `elements/actions` field
+  details to `contracts/ui/README.md`, together with copy-ready samples and
+  examples
+- templates/evidence: Add `uiFidelity` (optional, backward-compatible) to the
+  `prototyping` evidence template
 
 ### Changed
 
-- templates/prototyping: `/qfai-prototyping` の DoD を L1/L2 二層で明文化し、既定 L2（interactive）+ `uiFidelity` 出力必須 + placeholder-only output を REVISE 規約に更新
-- tests/assets+core: 上記テンプレート/skill追加に対する guardrail を追加し、v1.4.33 表記へ更新
-- docs/tests/validator: README・CIガイド・validator文言・回帰テスト期待値を v1.4.33 に更新
-- repo: パッケージバージョンを 1.4.33 に更新
+- templates/prototyping: State the DoD of `/qfai-prototyping` in two layers,
+  L1/L2, and update the REVISE conventions: default L2 (interactive),
+  `uiFidelity` output required, and placeholder-only output rejected
+- tests/assets+core: Add guardrails for the template/skill additions above and
+  update the notation to v1.4.33
+- docs/tests/validator: Update the README, the CI guide, the validator wording
+  and the regression test expectations to v1.4.33
+- repo: Update the package version to 1.4.33
 
 ## [1.4.32] - 2026-02-24
 
 ### Added
 
-- wrappers: `.agents` / `.github/prompts` の `qfai-sdd` wrapper に no-arg all-specs batch reminder（Capabilities SSOT / parallel delegation / batch末尾validate+review）を追加
+- wrappers: Add the no-arg all-specs batch reminder (Capabilities SSOT /
+  parallel delegation / validate and review at the end of the batch) to the
+  `qfai-sdd` wrappers in `.agents` and `.github/prompts`
 
 ### Changed
 
-- templates/docs: `.qfai/README.md` の deprecated wrappers 説明を「route」から「initでは非配布・`/qfai-sdd` を使用」へ修正
-- tests/assets: `qfai-sdd` wrapper reminder の回帰guardrailを追加
-- docs/tests/validator: v1.4.32 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.32 に更新
+- templates/docs: Fix the description of deprecated wrappers in
+  `.qfai/README.md` from "route" to "not distributed by init; use
+  `/qfai-sdd`"
+- tests/assets: Add a regression guardrail for the `qfai-sdd` wrapper reminder
+- docs/tests/validator: Update the README, the CI guide, the validator wording
+  and the regression test expectations to match the v1.4.32 notation
+- repo: Update the package version to 1.4.32
 
 ## [1.4.31] - 2026-02-24
 
 ### Added
 
-- tests/assets: `/qfai-sdd` の引数なし実行で「全spec対象 + 並列委任必須」ルールが維持されることを検知する guardrail を追加
+- tests/assets: Add a guardrail that detects whether the "target all specs +
+  parallel delegation required" rule is kept when `/qfai-sdd` runs without
+  arguments
 
 ### Changed
 
-- templates/sdd: `/qfai-sdd` の引数解釈を更新し、引数なし時は `_shared/03_Capabilities.md` の順序に従って `spec-0001..N` を全件対象にするルールを明文化
-- templates/sdd: 引数なしバッチ時は Contracts-first/Outline を1回、Slice/Plan/Delta を spec毎に並列委任、validate/review をバッチ末尾1回で実施する必須ルールを追加
-- templates/instructions: `workflow.md` に `/qfai-sdd` の target policy（引数あり単一spec・引数なし全spec）を追記
-- docs/tests/validator: v1.4.31 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.31 に更新
+- templates/sdd: Update the argument handling of `/qfai-sdd` and state the
+  rule that, without arguments, all of `spec-0001..N` are targeted in the
+  order of `_shared/03_Capabilities.md`
+- templates/sdd: Add mandatory rules for the no-arg batch: Contracts-first and
+  Outline run once, Slice/Plan/Delta are delegated in parallel per spec, and
+  validate/review run once at the end of the batch
+- templates/instructions: Add the `/qfai-sdd` target policy (single spec with
+  an argument, all specs without) to `workflow.md`
+- docs/tests/validator: Update the README, the CI guide, the validator wording
+  and the regression test expectations to match the v1.4.31 notation
+- repo: Update the package version to 1.4.31
 
 ## [1.4.30] - 2026-02-23
 
 ### Added
 
-- validate/prototyping: `.qfai/evidence/prototyping.json` を検査する `validatePrototypingEvidence` を追加し、全spec網羅・declared/checked整合・API 404禁止（`QFAI-PROT-101/111/112/113/114`）を hard gate 化
-- templates/agents: prototyping の coverage 欠落を検知して STOP する `prototyping-coverage-auditor` ロールカードを追加
+- validate/prototyping: Add `validatePrototypingEvidence`, which inspects
+  `.qfai/evidence/prototyping.json`, and make full spec coverage,
+  declared/checked consistency and the ban on API 404
+  (`QFAI-PROT-101/111/112/113/114`) a hard gate
+- templates/agents: Add the `prototyping-coverage-auditor` role card, which
+  detects missing prototyping coverage and STOPs
 
 ### Changed
 
-- templates/prototyping: `/qfai-prototyping` を `<spec-id>` 前提から **ALL specs** 前提へ更新し、Preflight/Execution/Runtime Gate v2 + `prototyping.md/json` 証跡を必須化
-- templates/instructions: `workflow.md` / `constitution.md` の prototyping 完了条件を `evidence + qfai validate --fail-on error` に統一し、scope 縮小禁止を明文化
-- tests/assets: prototyping guardrail（ALL specs/evidence必須/DONE禁止条件）の退行検知を追加
-- docs/tests: v1.4.30 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.30 に更新
+- templates/prototyping: Update `/qfai-prototyping` from assuming a
+  `<spec-id>` to assuming **ALL specs**, and require Preflight/Execution/
+  Runtime Gate v2 plus `prototyping.md/json` evidence
+- templates/instructions: Unify the prototyping completion condition in
+  `workflow.md` / `constitution.md` as `evidence + qfai validate --fail-on
+error` and state the ban on narrowing the scope
+- tests/assets: Add regression detection for the prototyping guardrails (ALL
+  specs / evidence required / DONE prohibition conditions)
+- docs/tests: Update the README, the CI guide, the validator wording and the
+  regression test expectations to match the v1.4.30 notation
+- repo: Update the package version to 1.4.30
 
 ## [1.4.29] - 2026-02-22
 
 ### Added
 
-- tests/assets: init assets 内の禁止文字列（Coverage Ledger hard gate 残骸）・legacy spec 参照（`spec.md` / `delta.md`）・`qfai-sdd/templates/spec-pack` 再導入を検知する guardrail を追加
+- tests/assets: Add a guardrail that detects forbidden strings in the init
+  assets (remnants of the Coverage Ledger hard gate), legacy spec references
+  (`spec.md` / `delta.md`) and the reintroduction of
+  `qfai-sdd/templates/spec-pack`
 
 ### Changed
 
-- templates/skills+agents: `assistant/**` の完了ゲートを `qfai validate --fail-on error` + `assistant/steering/test-layers.md` に統一し、Coverage Ledger / `scenario.feature` 必須導線を除去
-- templates/specs: spec 参照を layered v1.4.21 命名（`01_Spec.md` / `09_delta.md` / `_shared/10_delta.md`）へ統一
-- templates/sdd: `qfai-sdd/templates/spec-pack/**` を配布対象から除去し、`templates/specs/**` のみを配布
-- templates/skills: `qfai-sdd-planning` / `qfai-sdd-refinement` を init 配布対象から除外し、`qfai-tdd-red|green|refactor` を deprecated wrapper 運用へ更新
-- docs/tests: v1.4.29 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.29 に更新
+- templates/skills+agents: Unify the completion gate of `assistant/**` as
+  `qfai validate --fail-on error` + `assistant/steering/test-layers.md`, and
+  remove the mandatory Coverage Ledger / `scenario.feature` paths
+- templates/specs: Unify spec references to the layered v1.4.21 naming
+  (`01_Spec.md` / `09_delta.md` / `_shared/10_delta.md`)
+- templates/sdd: Remove `qfai-sdd/templates/spec-pack/**` from the
+  distribution and distribute only `templates/specs/**`
+- templates/skills: Exclude `qfai-sdd-planning` / `qfai-sdd-refinement` from
+  the init distribution and update `qfai-tdd-red|green|refactor` to operate as
+  deprecated wrappers
+- docs/tests: Update the README, the CI guide, the validator wording and the
+  regression test expectations to match the v1.4.29 notation
+- repo: Update the package version to 1.4.29
 
 ## [1.4.28] - 2026-02-22
 
 ### Added
 
-- tests/assets: 汎用 skills/agents に `Coverage Ledger 100%` ゲート残骸が再導入されないことを検査する guardrail を追加
+- tests/assets: Add a guardrail that checks that remnants of the
+  `Coverage Ledger 100%` gate are not reintroduced into the generic
+  skills/agents
 
 ### Changed
 
-- templates/skills: `qfai-verify` / `qfai-sdd` / `qfai-configure` / `qfai-prototyping` から coverage ledger 完了ゲートを除去し、`qfai validate --fail-on error` + `assistant/steering/test-layers.md` を必須ゲートとして明記
-- templates/skills: 上記4 skill で `scenario.feature` / coverage ledger を mandatory 入力から optional legacy 入力へ格下げ
-- templates/agents: `orchestrator` / `test-engineer` / `qa-engineer` / `qa-reviewer` / `unit-test-scope-enforcer` / `backend-engineer` / `frontend-engineer` を SSOT（US/TC/CON-API + validate gate）に整合
-- docs/tests: v1.4.28 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.28 に更新
+- templates/skills: Remove the coverage ledger completion gate from
+  `qfai-verify` / `qfai-sdd` / `qfai-configure` / `qfai-prototyping` and state
+  `qfai validate --fail-on error` + `assistant/steering/test-layers.md` as the
+  mandatory gate
+- templates/skills: Downgrade `scenario.feature` / the coverage ledger from
+  mandatory inputs to optional legacy inputs in the 4 skills above
+- templates/agents: Align `orchestrator` / `test-engineer` / `qa-engineer` /
+  `qa-reviewer` / `unit-test-scope-enforcer` / `backend-engineer` /
+  `frontend-engineer` with the SSOT (US/TC/CON-API + validate gate)
+- docs/tests: Update the README, the CI guide, the validator wording and the
+  regression test expectations to match the v1.4.28 notation
+- repo: Update the package version to 1.4.28
 
 ## [1.4.27] - 2026-02-22
 
 ### Added
 
-- templates/migration: ATDD運用の v1.4.27 hard gate 整合を明記する `v1.4.27-atdd-alignment.md` を追加
+- templates/migration: Add `v1.4.27-atdd-alignment.md`, which describes the
+  alignment of the ATDD operation with the v1.4.27 hard gate
 
 ### Changed
 
-- templates/assistant: `test-layers` / `workflow` / `agent-selection` / `drift-protocol` を US/TC/CON-API 中心の運用へ更新
-- templates/skills+agents: `/qfai-atdd` と atdd implementers・reviewer・coverage planning 系を ledger 必須から validate error gate 中心へ更新
-- docs/tests: v1.4.27 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.27 に更新
+- templates/assistant: Update `test-layers` / `workflow` / `agent-selection` /
+  `drift-protocol` to an operation centered on US/TC/CON-API
+- templates/skills+agents: Update `/qfai-atdd` and the atdd implementers,
+  reviewer and coverage planning agents from requiring a ledger to centering
+  on the validate error gate
+- docs/tests: Update the README, the CI guide, the validator wording and the
+  regression test expectations to match the v1.4.27 notation
+- repo: Update the package version to 1.4.27
 
 ## [1.4.26] - 2026-02-21
 
 ### Added
 
-- validate/atdd: spec→コード（ATDD注釈）の hard gate を追加し、Unknown参照（`QFAI-ATDD-101/102/103`）・Coverage欠落（`QFAI-ATDD-111/112/113`）・禁止参照（`QFAI-ATDD-121/122`）を error として検出
-- report/atdd-traceability: `.qfai/report/atdd-traceability/summary.json` と `summary.md` の出力を追加（出力失敗は `QFAI-ATDD-901` warning）
+- validate/atdd: Add a spec -> code (ATDD annotation) hard gate that detects
+  unknown references (`QFAI-ATDD-101/102/103`), missing coverage
+  (`QFAI-ATDD-111/112/113`) and forbidden references
+  (`QFAI-ATDD-121/122`) as errors
+- report/atdd-traceability: Add output of
+  `.qfai/report/atdd-traceability/summary.json` and `summary.md` (an output
+  failure is a `QFAI-ATDD-901` warning)
 
 ### Changed
 
-- templates/docs: test-layer運用とRCP観点を v1.4.26 の ATDD注釈運用に更新
-- docs/tests: v1.4.26 表記に合わせて README・CIガイド・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.26 に更新
+- templates/docs: Update the test-layer operation and the RCP perspectives to
+  the ATDD annotation operation of v1.4.26
+- docs/tests: Update the README, the CI guide, the validator wording and the
+  regression test expectations to match the v1.4.26 notation
+- repo: Update the package version to 1.4.26
 
 ## [1.4.25] - 2026-02-21
 
 ### Added
 
-- validate/layerCoverage: v1.4.21 layered specs 向けに構造完全性 hard gate（`QFAI-COV-204`/`QFAI-COV-205`/`QFAI-COV-206`）を追加し、空参照行を error として検出
-- validate/layerCoverage: EX の複数 BR 参照を薄さシグナルとして警告する `QFAI-COV-207` を追加
-- ci: `qfai validate --fail-on error --format github` 実行と report artifact upload を workflow に追加
+- validate/layerCoverage: Add a structural completeness hard gate for the
+  v1.4.21 layered specs (`QFAI-COV-204` / `QFAI-COV-205` / `QFAI-COV-206`),
+  detecting empty reference rows as errors
+- validate/layerCoverage: Add `QFAI-COV-207`, which warns when an EX
+  references multiple BRs as a signal of thinness
+- ci: Add running `qfai validate --fail-on error --format github` and the
+  report artifact upload to the workflow
 
 ### Changed
 
-- templates/skills: `/qfai-sdd` に validate 実行（error=0）と evidence（`validate.log` / `specs-coverage`）必須の completion gate を追加
-- templates/skills: `/qfai-discuss` に Example Mapping 観点（Happy/Negative/Edge/Permission/State/Idempotency）と Density Review 連携を追加
-- templates/review+agents: RCP footer / review request / coverage-planner / test-case-owner / test-volume-estimator / qa-gatekeeper を v1.4.21 layered 入力と hard gate 運用に更新
-- docs/tests: v1.4.25 運用に合わせて README・validator文言・回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.25 に更新
+- templates/skills: Add a completion gate to `/qfai-sdd` that requires running
+  validate (error=0) and evidence (`validate.log` / `specs-coverage`)
+- templates/skills: Add the Example Mapping perspectives
+  (Happy/Negative/Edge/Permission/State/Idempotency) and the Density Review
+  link to `/qfai-discuss`
+- templates/review+agents: Update the RCP footer, the review request,
+  coverage-planner, test-case-owner, test-volume-estimator and qa-gatekeeper
+  to the v1.4.21 layered inputs and hard gate operation
+- docs/tests: Update the README, the validator wording and the regression test
+  expectations to match the v1.4.25 operation
+- repo: Update the package version to 1.4.25
 
 ## [1.4.24] - 2026-02-20
 
 ### Added
 
-- validate/contracts: `11_Contracts.md` と `_shared/05_Contracts.md` の契約参照IDを宣言済み契約へ照合する validator を追加（`QFAI-CONTRACT-030`、short ID 正規化対応）
-- init/wrappers: `.agents/skills/**` と `.agents/README.md` の生成を追加し、`--force` 時の stale wrapper 削除に対応
+- validate/contracts: Add a validator that checks the contract reference IDs
+  of `11_Contracts.md` and `_shared/05_Contracts.md` against the declared
+  contracts (`QFAI-CONTRACT-030`, with short ID normalization)
+- init/wrappers: Add generation of `.agents/skills/**` and
+  `.agents/README.md`, and support deleting stale wrappers with `--force`
 
 ### Changed
 
-- templates/sdd: `/qfai-sdd` を contracts-first 必須フローへ更新し、`_shared/05_Contracts.md` の Contract Index（DB/API/UI short ID）規約を明記
-- templates/specs: layered shared/spec の欠番対策として `_shared/08_Decisions.md` / `_shared/09_Open-questions.md` / `_shared/10_delta.md` を追加し、`07/08` 系の empty 時 `0 items` 明示を標準化
-- templates/prototyping: `/qfai-prototyping` に「契約不足時STOP」「契約ファイル新規作成禁止」を追加
-- docs/tests: `.agents` wrapper 追加・v1.4.24 運用に合わせて README と回帰テストを更新
-- repo: パッケージバージョンを 1.4.24 に更新
+- templates/sdd: Update `/qfai-sdd` to a mandatory contracts-first flow and
+  state the Contract Index (DB/API/UI short ID) convention of
+  `_shared/05_Contracts.md`
+- templates/specs: Add `_shared/08_Decisions.md` /
+  `_shared/09_Open-questions.md` / `_shared/10_delta.md` to prevent missing
+  numbers in layered shared/spec, and standardize the explicit `0 items` for
+  empty `07/08` files
+- templates/prototyping: Add "STOP when contracts are insufficient" and "no
+  creating new contract files" to `/qfai-prototyping`
+- docs/tests: Update the README and the regression tests for the added
+  `.agents` wrappers and the v1.4.24 operation
+- repo: Update the package version to 1.4.24
 
 ## [1.4.23] - 2026-02-18
 
 ### Added
 
-- validate/layered: v1.4.21 layered specs 向けに下位参照検知（`TRACE_DOWNSTREAM_REF`）と `_shared` 責務違反検知（`TRACE_SHARED_SCOPE_VIOLATION`）を追加
-- validate/status: `.qfai/status` の legacy 検知 validator を追加（`LEGACY_STATUS_DIR` / `LEGACY_STATUS_DIR_NONEMPTY`）
-- report/run-log: `qfai validate` 実行ごとに `.qfai/report/run-*/` を append-only 生成し、`run.json` / `validator.json` / `traceability.json` / `summary.md` を保存
+- validate/layered: Add detection of downstream references
+  (`TRACE_DOWNSTREAM_REF`) and of `_shared` responsibility violations
+  (`TRACE_SHARED_SCOPE_VIOLATION`) for the v1.4.21 layered specs
+- validate/status: Add a validator that detects the legacy `.qfai/status`
+  (`LEGACY_STATUS_DIR` / `LEGACY_STATUS_DIR_NONEMPTY`)
+- report/run-log: Generate `.qfai/report/run-*/` append-only on every
+  `qfai validate` run, saving `run.json` / `validator.json` /
+  `traceability.json` / `summary.md`
 
 ### Changed
 
-- validate/spec-pack: release gate の `release_candidate` 判定を specs Initiative レイヤーに統一し、`.qfai/status/*.json` 依存を廃止
-- templates/docs: init scaffold と README 群の status 記述を run-log 運用（`.qfai/report/run-*`）へ更新
-- tests: layered v1.4.21 traceability・legacy status warning・run-log 生成の回帰テストを追加/更新
-- repo: パッケージバージョンを 1.4.23 に更新
+- validate/spec-pack: Unify the `release_candidate` decision of the release
+  gate on the specs Initiative layer and remove the dependency on
+  `.qfai/status/*.json`
+- templates/docs: Update the status descriptions of the init scaffold and the
+  READMEs to the run-log operation (`.qfai/report/run-*`)
+- tests: Add/update regression tests for layered v1.4.21 traceability, the
+  legacy status warning and run-log generation
+- repo: Update the package version to 1.4.23
 
 ## [1.4.22] - 2026-02-18
 
 ### Added
 
-- core/pack-locator: discuss/require pack の命名判定・timestamp 解析・latest 選定を共通化し、生成系（preflight）と検証系（validator）で同一ルールを適用
-- validate/hygiene: legacy directory（`discussions/`, `requirements/`, `spec/`, `specification/`）と legacy pack（`*-0001` 形式）検知を追加（v1.4.22 は warn 中心、危険命名は error）
+- core/pack-locator: Share the naming detection, timestamp parsing and latest
+  selection of discuss/require packs, so that the generating side (preflight)
+  and the validating side (validator) apply the same rules
+- validate/hygiene: Add detection of legacy directories (`discussions/`,
+  `requirements/`, `spec/`, `specification/`) and legacy packs (`*-0001`
+  form) (v1.4.22 mostly warns; dangerous names are errors)
 
 ### Changed
 
-- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を実処理なしの deprecated wrapper へ置換し、`/qfai-sdd` へ一本化
-- templates/init: report ディレクトリに `.gitignore` を追加し、ログ/成果物の追記型運用を明確化
-- docs/tests: v1.4.22 の skill 導線・衛生ルール・テンプレ構成へ README と回帰テスト期待値を更新
-- repo: パッケージバージョンを 1.4.22 に更新
+- templates/skills: Replace `qfai-sdd-refinement` / `qfai-sdd-planning` with
+  deprecated wrappers that do no real processing, consolidating on `/qfai-sdd`
+- templates/init: Add a `.gitignore` to the report directory to make the
+  append-only operation of logs/artifacts explicit
+- docs/tests: Update the README and the regression test expectations to the
+  v1.4.22 skill routes, hygiene rules and template layout
+- repo: Update the package version to 1.4.22
 
 ## [1.4.21] - 2026-02-18
 
 ### Added
 
-- validate/layerCoverage: v1.4.21 向けの `AC->TC` / `BR->EX` / `EX->TC` 必須カバレッジ検証（error）を追加
-- validate/layerCoverage: `.qfai/report/specs-coverage/spec-XXXX.md` のカバレッジレポート出力と signal 行を追加
-- validate/layerCoverage: `specs/plan.md` 禁止・`10_Plan.md` の How-only 禁止項目検査を追加
+- validate/layerCoverage: Add the mandatory coverage checks (error) `AC->TC` /
+  `BR->EX` / `EX->TC` for v1.4.21
+- validate/layerCoverage: Add coverage report output to
+  `.qfai/report/specs-coverage/spec-XXXX.md` and a signal line
+- validate/layerCoverage: Add a check that bans `specs/plan.md` and bans
+  non-How-only items in `10_Plan.md`
 
 ### Changed
 
-- templates/specs: layered canonical 名を v1.4.21 へ更新（`03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` / `06_Test-Cases.md` / `_shared/04_Business-Flow.md`）
-- core/spec-layout: layered 既定 required file set を v1.4.21 名へ更新し、`LayeredStyle=v1421` 判定を追加
-- validate/business-flow/mermaid/review-gate: Business Flow の canonical 名を `04_Business-Flow.md` に統一し、旧名は warning で検出
-- templates/docs/tests: v1.4.21 命名・Plan方針に合わせて manifest / skill / README / test expectation を更新
-- repo: パッケージバージョンを 1.4.21 に更新
+- templates/specs: Update the layered canonical names to v1.4.21
+  (`03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` /
+  `06_Test-Cases.md` / `_shared/04_Business-Flow.md`)
+- core/spec-layout: Update the default required file set of layered specs to
+  the v1.4.21 names and add the `LayeredStyle=v1421` detection
+- validate/business-flow/mermaid/review-gate: Unify the canonical name of the
+  Business Flow as `04_Business-Flow.md` and detect the old names with a
+  warning
+- templates/docs/tests: Update the manifest / skill / README / test
+  expectations to match the v1.4.21 naming and Plan policy
+- repo: Update the package version to 1.4.21
 
 ## [1.4.20] - 2026-02-18
 
 ### Added
 
-- templates/discuss: `/qfai-discuss` の固定成果物を `01_Context.md`..`09_delta.md` の9ファイル構成へ更新
-- templates/review: `review-roster.yml` と共通RCPフッター（`assistant/templates/rcp_footer.md`）のSSOTを追加
-- validate/discuss: 最新 discuss pack の OQ 検査（`Disposition: open` 禁止、`deferred` 必須メタ検査）を追加
+- templates/discuss: Update the fixed artifacts of `/qfai-discuss` to a
+  9-file layout, `01_Context.md`..`09_delta.md`
+- templates/review: Add the SSOT of `review-roster.yml` and the shared RCP
+  footer (`assistant/templates/rcp_footer.md`)
+- validate/discuss: Add checks of the OQ in the latest discuss pack
+  (`Disposition: open` prohibited, required-metadata check for `deferred`)
 
 ### Changed
 
-- templates/skills: `/qfai-discuss` を Open OQ=0 ループ（`deferred` 許容）へ更新し、`/qfai-discuss` `/qfai-require` `/qfai-sdd` で総動員レビュー導線を統一
-- docs/tests: v1.4.20 表記と discuss 固定テンプレート構成に合わせて回帰テストを更新
-- repo: パッケージバージョンを 1.4.20 に更新
+- templates/skills: Update `/qfai-discuss` to an Open OQ=0 loop (`deferred`
+  allowed) and unify the all-hands review route across `/qfai-discuss`,
+  `/qfai-require` and `/qfai-sdd`
+- docs/tests: Update the regression tests to match the v1.4.20 notation and
+  the fixed discuss template layout
+- repo: Update the package version to 1.4.20
 
 ## [1.4.19] - 2026-02-17
 
 ### Added
 
-- validate/require: `require-<timestamp>/` の固定9ファイル存在・最小内容・Blocking OQ（`Disposition: open` + `Gate: discuss|require|sdd`）検査を追加
-- validate/review: `.qfai/review/.gitignore` と `review-*` 最小成果物（`review_request.md` / `R*_*.md` / `summary.json`）検査を追加
-- core/preflight: `/qfai-sdd` 用 preflight に require-pack 必須停止ガード（不足時の次コマンド誘導）を追加
-- core/spec-layout: layered spec 必須ファイル集合のSSOTを追加し、欠落・番号飛び検知を強化
+- validate/require: Add checks of the fixed 9 files of `require-<timestamp>/`,
+  their minimum content and the Blocking OQ (`Disposition: open` +
+  `Gate: discuss|require|sdd`)
+- validate/review: Add checks of `.qfai/review/.gitignore` and the minimum
+  `review-*` artifacts (`review_request.md` / `R*_*.md` / `summary.json`)
+- core/preflight: Add a stop guard that requires a require-pack to the
+  `/qfai-sdd` preflight (guides to the next command when it is missing)
+- core/spec-layout: Add the SSOT of the required file set of layered specs and
+  strengthen detection of missing files and gaps in numbering
 
 ### Changed
 
-- templates/init: `.qfai/review/.gitignore` を常設し、review 生成物の追記型運用を固定化
-- templates/require: `/qfai-require` の成果物を固定9ファイル（`01_Sources.md`..`09_delta.md`）へ更新
-- templates/skills: `/qfai-require` `/qfai-sdd` `/qfai-sdd-refinement` `/qfai-sdd-planning` を require-pack 必須導線へ更新
-- docs/tests: v1.4.19 表記と require-pack / preflight / review / layered spec 回帰テストを更新
-- repo: パッケージバージョンを 1.4.19 に更新
+- templates/init: Always provide `.qfai/review/.gitignore` to fix the
+  append-only operation of review artifacts
+- templates/require: Update the artifacts of `/qfai-require` to the fixed 9
+  files (`01_Sources.md`..`09_delta.md`)
+- templates/skills: Update `/qfai-require` `/qfai-sdd` `/qfai-sdd-refinement`
+  `/qfai-sdd-planning` to a route that requires a require-pack
+- docs/tests: Update the v1.4.19 notation and the require-pack / preflight /
+  review / layered spec regression tests
+- repo: Update the package version to 1.4.19
 
 ## [1.4.18] - 2026-02-16
 
 ### Added
 
-- validate/mermaid: `.qfai/specs|require|discuss`（`evidence` 除外）を対象に Mermaid 記法の fenced block 強制 + Business Flow 必須図を検証する validator を追加
-- validate/layered: v1.4.17 layered spec の `US -> AC -> BR -> EX -> TC` に対して「親が最低1つの子を持つ」coverage validator を追加
+- validate/mermaid: Add a validator that targets `.qfai/specs|require|discuss`
+  (excluding `evidence`) and enforces fenced blocks for Mermaid notation and
+  checks the mandatory Business Flow diagram
+- validate/layered: Add a coverage validator, for the v1.4.17 layered specs
+  `US -> AC -> BR -> EX -> TC`, that requires each parent to have at least one
+  child
 
 ### Changed
 
-- templates/specs: `_shared/04_Business-flow.md` と `_shared/05_Contracts.md` の Mermaid 必須表現を強化
-- templates/specs: `spec/05_Examples.feature` の `# Parent:` 必須ルールをテンプレートに明記
-- templates/skills: `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement` `/qfai-sdd-planning` の FINAL CHECKLIST を v1.4.18 要件へ更新
-- docs/tests: v1.4.18 表記と Mermaid/Coverage validator の回帰テストを更新
-- repo: パッケージバージョンを 1.4.18 に更新
+- templates/specs: Strengthen the mandatory Mermaid representation in
+  `_shared/04_Business-flow.md` and `_shared/05_Contracts.md`
+- templates/specs: State the mandatory `# Parent:` rule of
+  `spec/05_Examples.feature` in the template
+- templates/skills: Update the FINAL CHECKLIST of `/qfai-discuss`
+  `/qfai-require` `/qfai-sdd-refinement` `/qfai-sdd-planning` to the v1.4.18
+  requirements
+- docs/tests: Update the v1.4.18 notation and the regression tests of the
+  Mermaid/Coverage validators
+- repo: Update the package version to 1.4.18
 
 ## [1.4.17] - 2026-02-16
 
 ### Added
 
-- validate/layered: CAP単位のspec分割を検証する `validateSpecSplitByCapability` を追加
-- validate/layered: Parent参照の方向（下位→上位のみ）を検証する `validateLayeredTraceability` を追加
-- validate/layered: US/AC/BR/EX/TC の孤児禁止を検証する `validateOrphanProhibition` を追加
-- templates/specs: `_shared/03_Capabilities.md` と `spec/01..09` の v1.4.17 テンプレート群を追加
+- validate/layered: Add `validateSpecSplitByCapability`, which checks the spec
+  split per CAP
+- validate/layered: Add `validateLayeredTraceability`, which checks the
+  direction of Parent references (lower to upper only)
+- validate/layered: Add `validateOrphanProhibition`, which checks the ban on
+  orphan US/AC/BR/EX/TC
+- templates/specs: Add the v1.4.17 templates for `_shared/03_Capabilities.md`
+  and `spec/01..09`
 
 ### Changed
 
-- core/spec-layout: layered spec の標準構成を `01_Spec.md + 02..06` へ対応しつつ旧構成との互換を維持
-- templates/skills: `/qfai-sdd` `/qfai-sdd-refinement` の分割規約を CAP単位ループ・Parent必須ルールへ更新
-- templates/review: review request / reviewer / summary テンプレートの layer 名を v1.4.17 スキーマへ更新
-- docs/tests: v1.4.17 表記と layered traceability / orphan 検証の回帰テストを更新
-- repo: パッケージバージョンを 1.4.17 に更新
+- core/spec-layout: Support `01_Spec.md + 02..06` as the standard layout of
+  layered specs while keeping compatibility with the old layout
+- templates/skills: Update the split conventions of `/qfai-sdd`
+  `/qfai-sdd-refinement` to a per-CAP loop and the mandatory Parent rule
+- templates/review: Update the layer names of the review request / reviewer /
+  summary templates to the v1.4.17 schema
+- docs/tests: Update the v1.4.17 notation and the regression tests of layered
+  traceability / orphan checks
+- repo: Update the package version to 1.4.17
 
 ## [1.4.16] - 2026-02-16
 
 ### Added
 
-- templates/sdd: import-lite 用 evidence テンプレート（`templates/evidence/import-lite.md`）を追加
-- templates/sdd: preflight 報告テンプレート（`templates/report/preflight_summary.md`）を追加
-- validate/require: `02_requirement-index.md` の最小 shape（`REQ-` 件数、`Source refs` 欠落率）を検査する warning validator を追加
-- validate/import-lite: specs が存在するのに require index と import-lite evidence の両方が無い場合の warning validator を追加
-- core/preflight: SDD preflight 入力選択と `preflight_summary.md` 生成ユーティリティを追加
+- templates/sdd: Add the evidence template for import-lite
+  (`templates/evidence/import-lite.md`)
+- templates/sdd: Add the preflight report template
+  (`templates/report/preflight_summary.md`)
+- validate/require: Add a warning validator that checks the minimum shape of
+  `02_requirement-index.md` (the number of `REQ-` entries, the missing rate of
+  `Source refs`)
+- validate/import-lite: Add a warning validator for the case where specs exist
+  but neither a require index nor import-lite evidence exists
+- core/preflight: Add utilities for SDD preflight input selection and
+  `preflight_summary.md` generation
 
 ### Changed
 
-- templates/require: `02_requirement-index.md` を索引専用（`REQ-ID / Statement / Priority / Source refs / Notes`）へ更新し、specs との重複禁止を明確化
-- templates/skills: `/qfai-sdd` `/qfai-sdd-refinement` の preflight 手順を `require-index` 優先 + import-lite fallback + report 出力に整合
-- templates/init: `.qfai/report/README.md` を追加し、preflight_summary の格納先を明確化
-- docs/tests: v1.4.16 表記と import-lite/preflight テンプレート参照を更新
-- repo: パッケージバージョンを 1.4.16 に更新
+- templates/require: Update `02_requirement-index.md` to be index-only
+  (`REQ-ID / Statement / Priority / Source refs / Notes`) and clarify the ban
+  on duplicating specs
+- templates/skills: Align the preflight steps of `/qfai-sdd`
+  `/qfai-sdd-refinement` with `require-index` first + import-lite fallback +
+  report output
+- templates/init: Add `.qfai/report/README.md` to clarify where
+  preflight_summary is stored
+- docs/tests: Update the v1.4.16 notation and the import-lite/preflight
+  template references
+- repo: Update the package version to 1.4.16
 
 ### Changed
 
-- なし
+- None
 
 ## [1.4.15] - 2026-02-16
 
 ### Added
 
-- templates/init: `.qfai/status/README.md` を追加し、status（運用状態）の保管場所を明確化
-- validate/status: specs 配下の status 混入（`release_candidate` / `Status` / `Progress` / `Risk(s)`）を検知する warning validator を追加
-- validate/density: BR/Examples/Test-cases の最低存在チェック（`BR-` / `Scenario` / `TC-` と Coverage Matrix）を warning validator として追加
+- templates/init: Add `.qfai/status/README.md` to clarify where status
+  (operational state) is stored
+- validate/status: Add a warning validator that detects status leaking into
+  specs (`release_candidate` / `Status` / `Progress` / `Risk(s)`)
+- validate/density: Add a warning validator for the minimum existence checks
+  of BR/Examples/Test-cases (`BR-` / `Scenario` / `TC-` and the Coverage
+  Matrix)
 
 ### Changed
 
-- templates/specs: Business Rules / Examples / Test-cases テンプレートを v1.4.15 の密度要件（Catalog/Rule Definitions/Matrix 等）へ強化
-- templates/skills: `/qfai-sdd-refinement` `/qfai-sdd-planning` の review 観点に BR→Examples→Test-cases の分解品質チェックを追加
-- docs/tests: v1.4.15 表記と status 分離・density validator の回帰テストを更新
-- repo: パッケージバージョンを 1.4.15 に更新
+- templates/specs: Strengthen the Business Rules / Examples / Test-cases
+  templates to the v1.4.15 density requirements (Catalog/Rule
+  Definitions/Matrix, etc.)
+- templates/skills: Add a decomposition quality check of BR -> Examples ->
+  Test-cases to the review perspectives of `/qfai-sdd-refinement`
+  `/qfai-sdd-planning`
+- docs/tests: Update the v1.4.15 notation and the regression tests of status
+  separation and the density validator
+- repo: Update the package version to 1.4.15
 
 ## [1.4.14] - 2026-02-16
 
 ### Added
 
-- validate/mermaid: Mermaid 記法が `mermaid` 以外の fenced code block に書かれた場合を検出する validator（error）を追加
-- validate/business-flow: `.qfai/specs/_shared/04_Business-flow.md` の mermaid 必須チェック（flowchart または sequenceDiagram）を追加
-- validate/compat: `.qfai/specs/_shared/*Business-flow*.feature` を deprecated warning として検出
+- validate/mermaid: Add a validator (error) that detects Mermaid notation
+  written in a fenced code block other than `mermaid`
+- validate/business-flow: Add a mandatory mermaid check (flowchart or
+  sequenceDiagram) for `.qfai/specs/_shared/04_Business-flow.md`
+- validate/compat: Detect `.qfai/specs/_shared/*Business-flow*.feature` as a
+  deprecated warning
 
 ### Changed
 
-- templates/skills: `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement` の Mermaid ルールと review checklist を更新
-- templates/specs: Business Flow のテンプレート/README を `Markdown + Mermaid` 前提へ更新
-- docs/tests: v1.4.14 表記と Mermaid 関連の回帰テストを更新
-- repo: パッケージバージョンを 1.4.14 に更新
+- templates/skills: Update the Mermaid rules and the review checklist of
+  `/qfai-discuss` `/qfai-require` `/qfai-sdd-refinement`
+- templates/specs: Update the Business Flow template/README to assume
+  `Markdown + Mermaid`
+- docs/tests: Update the v1.4.14 notation and the Mermaid-related regression
+  tests
+- repo: Update the package version to 1.4.14
 
 ## [1.4.13] - 2026-02-16
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- templates/discuss+require: discuss / require 出力ディレクトリ命名を timestamp (`discuss-*` / `require-*`) へ統一し、README・skill 定義を更新
-- validate/discovery: discuss 探索を `discuss-*` 優先に変更し、旧形式 (`DISCUSS-####`) は後方互換 + warning として扱う
-- docs/tests: v1.4.13 表記と成果物パス表記を更新
-- repo: パッケージバージョンを 1.4.13 に更新
+- templates/discuss+require: Unify the naming of the discuss / require output
+  directories on timestamps (`discuss-*` / `require-*`) and update the README
+  and the skill definitions
+- validate/discovery: Change discuss discovery to prefer `discuss-*`, and
+  treat the old form (`DISCUSS-####`) as backward compatible with a warning
+- docs/tests: Update the v1.4.13 notation and the artifact path notation
+- repo: Update the package version to 1.4.13
 
 ## [1.4.12] - 2026-02-16
 
 ### Added
 
-- templates/review: `/qfai-discuss` / `/qfai-require` / `/qfai-sdd-refinement` / `/qfai-sdd-planning` に review artifacts 用テンプレート（`review_request.md` / `Rxx_reviewer.md` / `summary.json`）を追加
-- templates/steering: `review-gate.rules.yml` を追加し、required/optional gate と default reviewers を定義
-- validate/review-gate: `.qfai/review/**/summary.json` を検証する review gate validator（schema / fixed 条件 / attempt 連番 / fingerprint / required gate）を追加
+- templates/review: Add templates for review artifacts (`review_request.md` /
+  `Rxx_reviewer.md` / `summary.json`) to `/qfai-discuss` / `/qfai-require` /
+  `/qfai-sdd-refinement` / `/qfai-sdd-planning`
+- templates/steering: Add `review-gate.rules.yml`, defining required/optional
+  gates and default reviewers
+- validate/review-gate: Add a review gate validator that checks
+  `.qfai/review/**/summary.json` (schema / fixed conditions / attempt
+  sequence numbers / fingerprint / required gate)
 
 ### Changed
 
-- templates/skills: discuss/require/sdd-refinement/sdd-planning に RCP 手順（attempt 採番・差戻しループ・fixed 判定）を明記
-- tests: review gate validation と review template 配布の回帰テストを追加
-- tests/docs: v1.4.12 表記へ更新
-- repo: パッケージバージョンを 1.4.12 に更新
+- templates/skills: State the RCP procedure (attempt numbering, rework loop,
+  fixed decision) in discuss/require/sdd-refinement/sdd-planning
+- tests: Add regression tests for review gate validation and review template
+  distribution
+- tests/docs: Update to the v1.4.12 notation
+- repo: Update the package version to 1.4.12
 
 ## [1.4.11] - 2026-02-16
 
 ### Added
 
-- templates/skills: `/qfai-sdd-refinement` / `/qfai-sdd-planning` を追加し、SDD preflight の分割運用を再導入
-- templates/sdd: import-lite 証跡テンプレート（`qfai-sdd-refinement/templates/import-lite-evidence.md`）を追加
+- templates/skills: Add `/qfai-sdd-refinement` / `/qfai-sdd-planning` and
+  reintroduce the split operation of the SDD preflight
+- templates/sdd: Add the import-lite evidence template
+  (`qfai-sdd-refinement/templates/import-lite-evidence.md`)
 
 ### Changed
 
-- templates/require: `/qfai-require` の成果物を `01_sources.md` / `02_requirement-index.md` / `03_open-questions.md` へ刷新
-- docs/workflow: require・specs・README 導線を import-lite/preflight 前提へ更新
-- validate: require context validator を `qfai validate` の実行対象から外し、旧 require 構造依存を解消
-- tests/verify-pack: require index 新構造と SDD split skill に追従
-- tests/docs: v1.4.11 表記へ更新
-- repo: パッケージバージョンを 1.4.11 に更新
+- templates/require: Renew the artifacts of `/qfai-require` as
+  `01_sources.md` / `02_requirement-index.md` / `03_open-questions.md`
+- docs/workflow: Update the require, specs and README routes to assume
+  import-lite/preflight
+- validate: Remove the require context validator from what `qfai validate`
+  runs, resolving the dependency on the old require structure
+- tests/verify-pack: Follow the new require index structure and the SDD split
+  skills
+- tests/docs: Update to the v1.4.11 notation
+- repo: Update the package version to 1.4.11
 
 ## [1.4.10] - 2026-02-16
 
 ### Added
 
-- validate/layered: `_shared + spec-XXXX` レイアウト向け検証（CAP↔spec整合、US→AC→BR→SC→CASE の必須エッジ、namespace整合）を追加
+- validate/layered: add validation for the `_shared + spec-XXXX` layout (CAP↔spec
+  consistency, the required US→AC→BR→SC→CASE edges, namespace consistency)
 
 ### Changed
 
-- validate/ids: `CAP` / `US` を ID 抽出・重複検知対象に追加
-- validate/layout: `*_delta.md` を許容し、Layered layout を優先検出
-- docs/skills: `.qfai/specs/README.md` と skill の Mandatory Outputs を v1.4.10 契約へ更新
-- tests/docs: v1.4.10 表記へ更新
-- repo: パッケージバージョンを 1.4.10 に更新
+- validate/ids: add `CAP` / `US` to ID extraction and duplicate detection
+- validate/layout: accept `*_delta.md` and detect the Layered layout first
+- docs/skills: update `.qfai/specs/README.md` and the skill's Mandatory Outputs
+  to the v1.4.10 contract
+- tests/docs: update to the v1.4.10 notation
+- repo: update the package version to 1.4.10
 
 ## [1.4.9] - 2026-02-14
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- init/integrations: `qfai init` で `.claude/commands`・`.github/prompts`・`.codex/skills` と agent wrapper（`.claude/agents`・`.github/agents`）を再生成するよう修正（対象は現行 canonical skills のみ）
-- init/force: `qfai init --force` で canonical skills と integration wrappers を再同期する挙動へ更新
-- verify-pack/tests/docs: wrapper 配布前提に検証・ドキュメントを更新
-- tests/docs: v1.4.9 表記へ更新
-- repo: パッケージバージョンを 1.4.9 に更新
+- init/integrations: fix `qfai init` to regenerate `.claude/commands`,
+  `.github/prompts`, `.codex/skills` and the agent wrappers (`.claude/agents`,
+  `.github/agents`), for the current canonical skills only
+- init/force: `qfai init --force` now resyncs the canonical skills and the
+  integration wrappers
+- verify-pack/tests/docs: update verification and documentation to assume the
+  wrappers are distributed
+- tests/docs: update to the v1.4.9 notation
+- repo: update the package version to 1.4.9
 
 ## [1.4.8] - 2026-02-14
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- templates/init-root: `qfai init` 実行時に `features/spec-0001.feature` を生成しないよう、root サンプル feature を削除
-- tests/docs: v1.4.8 表記へ更新
-- repo: パッケージバージョンを 1.4.8 に更新
+- templates/init-root: remove the root sample feature so that `qfai init` no
+  longer generates `features/spec-0001.feature`
+- tests/docs: update to the v1.4.8 notation
+- repo: update the package version to 1.4.8
 
 ## [1.4.7] - 2026-02-14
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- templates/skills: 廃止対象 skill（`qfai-implement` / `qfai-pr` / `qfai-scenario-test` / `qfai-spec` / `qfai-unit-test`）を削除
-- templates/wrappers: `.claude` / `.codex` / `.github` 配下の配布資産を撤廃
-- templates/contracts: contracts サンプルを `qfai-sdd/templates/contracts/` へ移設し、参照を更新
-- docs/tests/init: 廃止導線の参照を削除し、`qfai-sdd` 中心フローへ統一
-- repo/ci: このリポジトリ自身の品質ゲートとして `build`（`pnpm ci:local`）を GitHub Actions で維持
-- repo: パッケージバージョンを 1.4.7 に更新
+- templates/skills: remove the retired skills (`qfai-implement` / `qfai-pr` /
+  `qfai-scenario-test` / `qfai-spec` / `qfai-unit-test`)
+- templates/wrappers: withdraw the assets distributed under `.claude` /
+  `.codex` / `.github`
+- templates/contracts: move the contracts samples to
+  `qfai-sdd/templates/contracts/` and update the references
+- docs/tests/init: remove references to the retired paths and unify on a
+  `qfai-sdd`-centred flow
+- repo/ci: keep `build` (`pnpm ci:local`) in GitHub Actions as this
+  repository's own quality gate
+- repo: update the package version to 1.4.7
 
 ## [1.4.6] - 2026-02-14
 
 ### Added
 
-- templates/skills: 全 canonical skill (`.qfai/assistant/skills/*/SKILL.md`) に `Completion Checklist (MUST)` と `Completion Message & Next Actions (MUST)` を追加
-- templates/skills: `qfai-discuss` に固定の完了メッセージ（`/qfai-require` 誘導）を必須化
+- templates/skills: add `Completion Checklist (MUST)` and `Completion Message &
+Next Actions (MUST)` to every canonical skill
+  (`.qfai/assistant/skills/*/SKILL.md`)
+- templates/skills: require a fixed completion message in `qfai-discuss` (it
+  points to `/qfai-require`)
 
 ### Changed
 
-- templates/skills: 完了時に「次のユーザー行動」を列挙する導線を全 skill で標準化
-- repo: パッケージバージョンを 1.4.6 に更新
+- templates/skills: standardize, across all skills, listing the "next user
+  actions" on completion
+- repo: update the package version to 1.4.6
 
 ## [1.4.5] - 2026-02-14
 
 ### Added
 
-- templates/skills: contracts サンプルを `.qfai/assistant/skills/qfai-spec/templates/contracts/` に追加
+- templates/skills: add the contracts samples to
+  `.qfai/assistant/skills/qfai-spec/templates/contracts/`
 
 ### Changed
 
-- templates/init: `qfai init` 初期資産を空スキャフォールド化（specs/discuss/require/contracts は README/.gitignore のみ）
-- templates/init: legacy `.qfai/discussions/` を削除し、参照を `.qfai/discuss/` に統一
-- tests: init 直後に sample pack が無い前提へ検証セットアップを更新
-- repo: パッケージバージョンを 1.4.5 に更新
+- templates/init: turn the initial assets of `qfai init` into an empty scaffold
+  (specs/discuss/require/contracts hold only README/.gitignore)
+- templates/init: remove the legacy `.qfai/discussions/` and unify the
+  references on `.qfai/discuss/`
+- tests: update the verification setup to assume no sample pack exists right
+  after init
+- repo: update the package version to 1.4.5
 
 ## [1.4.4] - 2026-02-13
 
 ### Added
 
-- validate: release_candidate 判定（`03_Initiative.md` の `release_candidate: true`）と release gate（OQ open blocking）を追加
-- validate: `18_delta.md` の required sections / Rejected の `DO NOT`・`Temptation` 必須チェックを追加
+- validate: add release_candidate detection (`release_candidate: true` in
+  `03_Initiative.md`) and the release gate (blocking open OQ)
+- validate: add checks for the required sections of `18_delta.md` and the
+  required `DO NOT` / `Temptation` entries in Rejected
 
 ### Changed
 
-- validate: Spec Pack/Ledger 系エラーの修正指示を強化し、error_code ベースで原因と対処を明確化
-- cleanup/docs: 旧資産導線を整理し、v1.4.4 hardening 方針へ統一
-- repo: パッケージバージョンを 1.4.4 に更新
+- validate: strengthen the fix instructions for Spec Pack/Ledger errors and
+  make the cause and remedy clear per error_code
+- cleanup/docs: tidy up the paths to the old assets and unify on the v1.4.4
+  hardening policy
+- repo: update the package version to 1.4.4
 
 ## [1.4.3] - 2026-02-13
 
 ### Added
 
-- templates/skills: 統合SDD skill `qfai-sdd` を追加し、`templates/spec-pack/01..18` を単一skill配下に集約
-- templates/wrappers: `.codex` / `.claude` / `.github` 向け `qfai-sdd` wrapper を追加
+- templates/skills: add the integrated SDD skill `qfai-sdd` and consolidate
+  `templates/spec-pack/01..18` under that single skill
+- templates/wrappers: add `qfai-sdd` wrappers for `.codex` / `.claude` /
+  `.github`
 
 ### Changed
 
-- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を廃止し、`qfai-spec` は `qfai-sdd` への deprecated alias に更新
-- templates/docs: README / `.qfai` ドキュメント導線を `qfai-sdd` 一本化へ更新
-- repo: パッケージバージョンを 1.4.3 に更新
+- templates/skills: retire `qfai-sdd-refinement` / `qfai-sdd-planning` and make
+  `qfai-spec` a deprecated alias of `qfai-sdd`
+- templates/docs: update the README / `.qfai` documentation paths to point to
+  `qfai-sdd` alone
+- repo: update the package version to 1.4.3
 
 ## [1.4.2] - 2026-02-13
 
 ### Added
 
-- templates: `qfai-discuss` / `qfai-require` の v1.4.2 ヒアリングテンプレート（Core / Optional deep dive, `00..07`）を追加
+- templates: add the v1.4.2 interview templates for `qfai-discuss` /
+  `qfai-require` (Core / Optional deep dive, `00..07`)
 
 ### Changed
 
-- templates/skills: `qfai-discuss` / `qfai-require` を「レイヤー型 Spec Pack 入力を揃える構造化ヒアリング」フローに刷新
-- templates/docs: discuss / require 成果物フォーマットを v1.4.2 仕様へ更新
-- repo: パッケージバージョンを 1.4.2 に更新
+- templates/skills: rework `qfai-discuss` / `qfai-require` into a "structured
+  interview that gathers the inputs for a layered Spec Pack" flow
+- templates/docs: update the discuss / require artifact formats to the v1.4.2
+  specification
+- repo: update the package version to 1.4.2
 
 ## [1.4.1] - 2026-02-12
 
 ### Added
 
-- validate/report: 新Spec Pack（`01..18`）と Ledger SSOT を前提にした検証・レポート生成を追加
+- validate/report: add validation and report generation based on the new Spec
+  Pack (`01..18`) and the Ledger SSOT
 
 ### Changed
 
-- validate: 旧成果物（`spec.md` / `scenario.feature` / `case-catalogue.md` / `traceability-matrix.md`）前提の探索・検証を廃止
-- repo: パッケージバージョンを 1.4.1 に更新
+- validate: remove the discovery and validation that assumed the old artifacts
+  (`spec.md` / `scenario.feature` / `case-catalogue.md` /
+  `traceability-matrix.md`)
+- repo: update the package version to 1.4.1
 
 ## [1.4.0] - 2026-02-12
 
 ### Added
 
-- templates/spec-pack: `01_Spec.md` から `18_delta.md` までの新 Spec Pack テンプレートを `qfai-sdd-refinement` / `qfai-sdd-planning` の skills 配下に追加
-- templates/specs/contracts: init 直後に参照できる `spec-0001` サンプルと `API-0001` / `DB-0001` / `UI-0001` サンプル契約を追加
+- templates/spec-pack: add the new Spec Pack templates, `01_Spec.md` through
+  `18_delta.md`, under the `qfai-sdd-refinement` / `qfai-sdd-planning` skills
+- templates/specs/contracts: add a `spec-0001` sample and sample contracts
+  `API-0001` / `DB-0001` / `UI-0001` that can be consulted right after init
 
 ### Changed
 
-- templates/docs: `.qfai/specs/README.md` を Spec Pack 01..18 構成と参照方向ルール（下位→上位のみ）へ更新
-- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` の作業フロー規約と Mandatory Outputs を新構成へ更新
-- repo: パッケージバージョンを 1.4.0 に更新
+- templates/docs: update `.qfai/specs/README.md` to the Spec Pack 01..18 layout
+  and the reference-direction rule (lower to upper only)
+- templates/skills: update the working-flow rules and Mandatory Outputs of
+  `qfai-sdd-refinement` / `qfai-sdd-planning` to the new layout
+- repo: update the package version to 1.4.0
 
 ## [1.3.19] - 2026-02-11
 
 ### Added
 
-- validate: Drift Protocol / test-layer hardening 用の assistant assets validator を追加（`QFAI-ASSETS-001/002`, `QFAI-SKILLS-010/011/012`）
-- validate: `.qfai/assistant/skills/**` と `.qfai/assistant/skills.local/**` の `SKILL.md` 必須 marker / Reviewer Gate 静的検証を追加
+- validate: add an assistant assets validator for the Drift Protocol /
+  test-layer hardening (`QFAI-ASSETS-001/002`, `QFAI-SKILLS-010/011/012`)
+- validate: add static validation of the required markers and the Reviewer Gate
+  in the `SKILL.md` files under `.qfai/assistant/skills/**` and
+  `.qfai/assistant/skills.local/**`
 
 ### Changed
 
-- validate: `implementation-brief.md` 単独存在を warning から error へ変更（How SSOT を `plan.md` に完全統一）
-- templates/docs: `implementation-brief.md` の互換期間説明を廃止し、`plan.md` 必須方針へ更新
-- repo: パッケージバージョンを 1.3.19 に更新
+- validate: change a lone `implementation-brief.md` from a warning to an error
+  (the How SSOT is now fully unified on `plan.md`)
+- templates/docs: remove the compatibility-period description of
+  `implementation-brief.md` and update the policy so that `plan.md` is required
+- repo: update the package version to 1.3.19
 
 ## [1.3.18] - 2026-02-11
 
 ### Added
 
-- templates: How SSOT の新テンプレート `.qfai/templates/spec/plan.md` を追加
-- templates: Drift Protocol 規範 `.qfai/assistant/instructions/drift-protocol.md` とテストレイヤ規範 `.qfai/assistant/steering/test-layers.md` を追加
-- validate: `plan.md` 検証と legacy `implementation-brief.md` 互換判定（`QFAI-HOW-001/002` 継続）を追加
-- templates/agents: reviewer 系サブエージェントに Drift Protocol / test-layer policy 観点を追加
+- templates: add `.qfai/templates/spec/plan.md`, the new template for the How
+  SSOT
+- templates: add the Drift Protocol norm
+  `.qfai/assistant/instructions/drift-protocol.md` and the test-layer norm
+  `.qfai/assistant/steering/test-layers.md`
+- validate: add `plan.md` validation and the compatibility check for a legacy
+  `implementation-brief.md` (`QFAI-HOW-001/002` continue)
+- templates/agents: add the Drift Protocol / test-layer policy viewpoints to
+  the reviewer sub-agents
 
 ### Changed
 
-- templates/specs/docs: How SSOT の標準ファイル名を `implementation-brief.md` から `plan.md` へ移行（legacy は互換期間で warning 扱い）
-- templates/skills: Reviewer Gate と work order 制約を更新し、drift 承認制・test-layer 準拠を明文化
-- templates/skills: ATDD のテストボリューム floors/倍率を「ゲート」ではなく「不足検知シグナル」として扱う方針に更新
-- repo/docs: README・命名規約・関連説明を `plan.md` 前提へ整合
-- repo: パッケージバージョンを 1.3.18 に更新
+- templates/specs/docs: move the standard file name of the How SSOT from
+  `implementation-brief.md` to `plan.md` (the legacy name is treated as a
+  warning during the compatibility period)
+- templates/skills: update the Reviewer Gate and the work order constraints,
+  and state explicitly that drift requires approval and that test layers must
+  be followed
+- templates/skills: update the policy so that the ATDD test volume floors and
+  multipliers are treated as signals of a shortfall, not as a "gate"
+- repo/docs: align the README, the naming conventions and the related
+  explanations with `plan.md`
+- repo: update the package version to 1.3.18
 
 ## [1.3.17] - 2026-02-10
 
 ### Added
 
-- validate: case-catalogue の必須カラム表ヘッダ検証を追加（`QFAI-CASE-011`）
-- validate: `.qfai/discussions/discuss-*.md` の Mermaid `sequenceDiagram` 検証を追加（`QFAI-DISCUSS-021`）
+- validate: add validation of the required column table header of the
+  case-catalogue (`QFAI-CASE-011`)
+- validate: add validation of the Mermaid `sequenceDiagram` in
+  `.qfai/discussions/discuss-*.md` (`QFAI-DISCUSS-021`)
 
 ### Changed
 
-- validate: CI 環境で `--phase refinement` 実行を禁止し、`QFAI-VALIDATE-017` で Fail 化
-- validate: waiver を Warn/Info 用途に限定し、Error finding 対象 waiver を `QFAI-WAIVER-002` として Fail 化
-- validate: waiver 期限切れの扱いを `QFAI-WAIVER-003` warning へ変更
-- templates/docs: waiver 運用と refinement phase の注意事項（CI は full を使用）を更新
-- repo: パッケージバージョンを 1.3.17 に更新
+- validate: prohibit running `--phase refinement` in a CI environment and fail
+  it with `QFAI-VALIDATE-017`
+- validate: limit waivers to Warn/Info findings and fail a waiver that targets
+  an Error finding with `QFAI-WAIVER-002`
+- validate: change the handling of an expired waiver to the `QFAI-WAIVER-003`
+  warning
+- templates/docs: update the waiver operation and the notes on the refinement
+  phase (CI uses full)
+- repo: update the package version to 1.3.17
 
 ## [1.3.16] - 2026-02-10
 
 ### Added
 
-- templates/skills: 全 Skill に `Sub-agent Delegation (MANDATORY)` セクションを追加し、Capability Probe / Simulation mode / Work Orders Summary / Reviewer Gate を明文化
-- test/assets: skills 出荷アセットの委任要件整合を検査する静的チェックを追加
+- templates/skills: add a `Sub-agent Delegation (MANDATORY)` section to every
+  skill and spell out the Capability Probe / Simulation mode / Work Orders
+  Summary / Reviewer Gate
+- test/assets: add a static check of the delegation requirements in the shipped
+  skills assets
 
 ### Changed
 
-- templates/skills: 主要工程（discuss/require/sdd/atdd/tdd/verify）の委任フローを Delegate → Integrate → Reviewer Gate に更新
-- templates/wrappers: `.claude/.github/.codex` の wrapper skill へ同等の委任要件を反映
-- repo: パッケージバージョンを 1.3.16 に更新
+- templates/skills: update the delegation flow of the main stages
+  (discuss/require/sdd/atdd/tdd/verify) to Delegate → Integrate → Reviewer Gate
+- templates/wrappers: reflect the same delegation requirements in the wrapper
+  skills under `.claude/.github/.codex`
+- repo: update the package version to 1.3.16
 
 ## [1.3.15] - 2026-02-10
 
 ### Added
 
-- templates: `require/business-flows.md` と discussions の Business Flow 例で Mermaid `sequenceDiagram` を標準化
-- validate: requirements context で `business-flows.md` の Mermaid 必須チェックを追加（`QFAI-REQCTX-020/021`）
+- templates: standardize the Mermaid `sequenceDiagram` in
+  `require/business-flows.md` and in the Business Flow examples of the
+  discussions
+- validate: add a required-Mermaid check for `business-flows.md` in the
+  requirements context (`QFAI-REQCTX-020/021`)
 
 ### Changed
 
-- templates: skills 構造を `SKILL.md` 単体完結（SSOT）へ移行し、`qfai-source` / `10_workflow.md` 依存を廃止
-- templates: `assistant/instructions/workflow.md` と各工程 skill に steering 補完ルールを明記
-- templates/docs: `specs/README.md` の `case-catalogue.md` テンプレを表形式へ更新
-- repo: パッケージバージョンを 1.3.15 に更新
+- templates: move the skills structure to a self-contained `SKILL.md` (SSOT)
+  and remove the dependency on `qfai-source` / `10_workflow.md`
+- templates: state the steering supplement rules in
+  `assistant/instructions/workflow.md` and in each stage skill
+- templates/docs: update the `case-catalogue.md` template in `specs/README.md`
+  to a table format
+- repo: update the package version to 1.3.15
 
 ## [1.3.14] - 2026-02-09
 
 ### Added
 
-- validate: `--phase refinement` を追加し、Refinement段階の専用検証プロファイルを導入
-- validate: `implementation-brief.md` 検証を追加（`QFAI-HOW-001/002`）
-- templates/skills: `qfai-sdd-refinement` / `qfai-sdd-planning` を追加し、How SSOT（`implementation-brief.md`）運用を導入
-- templates: `.qfai/templates/spec/implementation-brief.md` を追加
+- validate: add `--phase refinement` and introduce a validation profile
+  dedicated to the Refinement stage
+- validate: add `implementation-brief.md` validation (`QFAI-HOW-001/002`)
+- templates/skills: add `qfai-sdd-refinement` / `qfai-sdd-planning` and
+  introduce the How SSOT (`implementation-brief.md`) operation
+- templates: add `.qfai/templates/spec/implementation-brief.md`
 
 ### Changed
 
-- validate: refinement phase では How必須チェックと SC→Test 強制（`QFAI-TRACE-010/013`）を緩和
-- templates/docs: Spec Pack 必須ファイルに `implementation-brief.md` を追加し、SDDフローを refinement/planning に更新
-- skills: `qfai-spec` を deprecated alias として `qfai-sdd-refinement` へ誘導
-- repo: パッケージバージョンを 1.3.14 に更新
+- validate: relax the required How check and the SC→Test enforcement
+  (`QFAI-TRACE-010/013`) in the refinement phase
+- templates/docs: add `implementation-brief.md` to the files required in a Spec
+  Pack and update the SDD flow to refinement/planning
+- skills: make `qfai-spec` a deprecated alias that leads to
+  `qfai-sdd-refinement`
+- repo: update the package version to 1.3.14
 
 ## [1.3.13] - 2026-02-08
 
 ### Added
 
-- templates: skills-only 配布構成（`.claude/skills` / `.github/skills`）を追加
-- validate/doctor: `skillsIntegrity` チェックを追加（`.qfai/assistant/skills/**` を検査）
+- templates: add a skills-only distribution layout (`.claude/skills` /
+  `.github/skills`)
+- validate/doctor: add the `skillsIntegrity` check (it inspects
+  `.qfai/assistant/skills/**`)
 
 ### Changed
 
-- templates: `prompts/commands` を廃止し、`.qfai/assistant/skills` を SSOT とする構成へ移行
-- init: `--force` の上書き対象を `assistant/skills` と publish 先 skills（`.claude/.github/.codex`）へ変更
-- config: `paths.skillsDir` を追加し、`paths.promptsDir` を deprecated 扱いへ変更
-- tests/scripts/docs: assets テスト・verify-pack・README 群を skills-only 構成に更新
-- repo: パッケージバージョンを 1.3.13 に更新
+- templates: retire `prompts/commands` and move to a layout where
+  `.qfai/assistant/skills` is the SSOT
+- init: change what `--force` overwrites to `assistant/skills` and the skills
+  publish targets (`.claude/.github/.codex`)
+- config: add `paths.skillsDir` and treat `paths.promptsDir` as deprecated
+- tests/scripts/docs: update the assets tests, verify-pack and the READMEs to
+  the skills-only layout
+- repo: update the package version to 1.3.13
 
 ## [1.3.12] - 2026-02-08
 
 ### Added
 
-- validate: delta.md の Verification Plan 検証を追加（VFY-001〜007）
-- report: Verification findings（Error/Warn）の可視化を追加
+- validate: add validation of the Verification Plan in delta.md (VFY-001 to
+  VFY-007)
+- report: add a view of the Verification findings (Error/Warn)
 
 ### Changed
 
-- templates: delta.md テンプレートに Verification セクションを追加
-- templates: PR テンプレートに verification 確認項目を追加
-- docs: verification 運用の最小ガイドを README と init docs に追記
-- repo: パッケージバージョンを 1.3.12 に更新
+- templates: add a Verification section to the delta.md template
+- templates: add a verification checklist item to the PR template
+- docs: add a minimal verification operation guide to the README and the init
+  docs
+- repo: update the package version to 1.3.12
 
 ## [1.3.11] - 2026-02-08
 
 ### Added
 
-- validate: waiver 設定（`.qfai/waivers.yml`）と適用機構を追加（WAIVER-001〜006）
-- report: Active Waivers / Suppressed Summary / Expired Waivers の表示を追加
-- templates: `.qfai/waivers.yml` テンプレートを init 資産に追加
+- validate: add the waiver configuration (`.qfai/waivers.yml`) and its
+  application mechanism (WAIVER-001 to WAIVER-006)
+- report: add the display of Active Waivers / Suppressed Summary / Expired
+  Waivers
+- templates: add the `.qfai/waivers.yml` template to the init assets
 
 ### Changed
 
-- validate: findings に waiver マッチ用メタ（`dl_id` / `file`）を付与し、waiver 適用後の結果で fail 判定
-- templates: PR テンプレートに Waivers 申告セクションを追加
-- tests: waiver の unit/integration/assets 回帰テストを追加
-- repo: パッケージバージョンを 1.3.11 に更新
+- validate: attach the metadata used for waiver matching (`dl_id` / `file`) to
+  findings and decide pass or fail on the result after waivers are applied
+- templates: add a Waivers declaration section to the PR template
+- tests: add unit/integration/assets regression tests for waivers
+- repo: update the package version to 1.3.11
 
 ## [1.3.10] - 2026-02-07
 
 ### Added
 
-- validate: compat/scope 整合チェックを追加（COMPAT-001〜005, SCOPE-001/002）
-- report: compat 観点と scope mismatch の表示を追加
+- validate: add compat/scope consistency checks (COMPAT-001 to COMPAT-005,
+  SCOPE-001/002)
+- report: add the compat viewpoint and the display of scope mismatches
 
 ### Changed
 
-- templates: delta.md を v1.1（`#### Migration / Follow-ups`）へ更新し、PR テンプレートに compat セクションを追加
-- tests: compat/scope ルールとテンプレート更新の回帰テストを追加
-- repo: パッケージバージョンを 1.3.10 に更新
+- templates: update delta.md to v1.1 (`#### Migration / Follow-ups`) and add a
+  compat section to the PR template
+- tests: add regression tests for the compat/scope rules and the template
+  update
+- repo: update the package version to 1.3.10
 
 ## [1.3.9] - 2026-02-07
 
 ### Added
 
-- validate: delta.md フォーマット v1（Update History / Decision Log / Meta YAML / Rejected guardrails）検証を追加（DELTA-001/002/003）
-- validate: Change Type の語彙検証と diff ベース矛盾検知を追加（CTYPE-001/002/003）
-- report: Change Type（Primary/Tags/compat）集計と CTYPE-002 警告一覧を追加
+- validate: add validation of the delta.md format v1 (Update History / Decision
+  Log / Meta YAML / Rejected guardrails) (DELTA-001/002/003)
+- validate: add Change Type vocabulary validation and diff-based contradiction
+  detection (CTYPE-001/002/003)
+- report: add Change Type (Primary/Tags/compat) aggregation and a list of
+  CTYPE-002 warnings
 
 ### Changed
 
-- templates: delta.md テンプレートを v1 構造に更新し、PR テンプレートに Change Type / Tags / delta 参照 / Review Focus を追加
-- tests: delta/ctype 関連ユニットテストと assets ガードレールを更新
-- repo: パッケージバージョンを 1.3.9 に更新
+- templates: update the delta.md template to the v1 structure and add Change
+  Type / Tags / delta reference / Review Focus to the PR template
+- tests: update the delta/ctype unit tests and the assets guardrails
+- repo: update the package version to 1.3.9
 
 ## [1.3.8] - 2026-02-06
 
 ### Changed
 
-- templates: Claude Code slash commands（`.claude/commands/*.md`）が `.qfai/assistant/skills/<id>/SKILL.md` を参照するよう更新（skills -> prompts(SSOT)）
-- docs: README の integration 説明を Claude commands の skills 優先に更新
-- repo: パッケージバージョンを 1.3.8 に更新
+- templates: update the Claude Code slash commands (`.claude/commands/*.md`) to
+  refer to `.qfai/assistant/skills/<id>/SKILL.md` (skills -> prompts(SSOT))
+- docs: update the README integration description so that Claude commands
+  prefer skills
+- repo: update the package version to 1.3.8
 
 ## [1.3.7] - 2026-02-06
 
@@ -15240,394 +17305,504 @@ for the recommended cleanup path.
 
 ### Changed
 
-- templates: GitHub Copilot prompt wrappers（`.github/prompts/*.prompt.md`）が `.qfai/assistant/skills/*/SKILL.md` を参照するよう更新（skills -> prompts(SSOT)）
-- templates: `.github/copilot-instructions.md` のガイダンスを skills 優先に更新
-- docs: README の integration 説明を skills 優先に更新
-- repo: パッケージバージョンを 1.3.6 に更新
+- templates: update the GitHub Copilot prompt wrappers
+  (`.github/prompts/*.prompt.md`) to refer to
+  `.qfai/assistant/skills/*/SKILL.md` (skills -> prompts(SSOT))
+- templates: update the guidance in `.github/copilot-instructions.md` so that
+  skills are preferred
+- docs: update the README integration description so that skills are preferred
+- repo: update the package version to 1.3.6
 
 ## [1.3.5] - 2026-02-06
 
 ### Added
 
-- templates: `.qfai/assistant/skills/<skill-name>/SKILL.md` と `.qfai/assistant/skills.local/` を追加（experimental: prompt の thin wrapper）
+- templates: add `.qfai/assistant/skills/<skill-name>/SKILL.md` and
+  `.qfai/assistant/skills.local/` (experimental: a thin wrapper around the
+  prompt)
 
 ### Changed
 
-- init: `assistant/skills.local` を `qfai init --force` の上書き対象から保護
-- verify-pack: `assistant/skills` / `assistant/skills.local` の生成を検証
-- repo: パッケージバージョンを 1.3.5 に更新
+- init: protect `assistant/skills.local` from being overwritten by
+  `qfai init --force`
+- verify-pack: verify the generation of `assistant/skills` /
+  `assistant/skills.local`
+- repo: update the package version to 1.3.5
 
 ## [1.3.4] - 2026-02-05
 
 ### Changed
 
-- validate: requirements コンテキスト段階導入メッセージのバージョン表記を v1.3.4 に更新
-- repo: パッケージバージョンを 1.3.4 に更新
+- validate: update the version notation in the message about the staged
+  introduction of the requirements context to v1.3.4
+- repo: update the package version to 1.3.4
 
 ## [1.3.3] - 2026-02-05
 
 ### Added
 
-- templates: change classification（Primary/Tags）判断基準の SSOT を追加（`.qfai/assistant/instructions/change-classification.md`）
+- templates: add the SSOT of the criteria for deciding the change
+  classification (Primary/Tags)
+  (`.qfai/assistant/instructions/change-classification.md`)
 
 ### Changed
 
-- docs/templates: README と `.qfai/README.md` に change classification 参照を追加
-- prompts: `qfai-spec` / `qfai-verify` に Primary/Tags の必須化を追加
-- templates: `specs/README.md` に Primary/Tags メタデータとガイドを追加
-- repo: PR テンプレに Primary/Tags のセクションを追加
+- docs/templates: add a change classification reference to the README and
+  `.qfai/README.md`
+- prompts: make Primary/Tags mandatory in `qfai-spec` / `qfai-verify`
+- templates: add Primary/Tags metadata and a guide to `specs/README.md`
+- repo: add a Primary/Tags section to the PR template
 
 ## [1.3.2] - 2026-02-05
 
 ### Added
 
-- validate: requirements コンテキスト（glossary/actors/business-flows）と Coverage Map の段階導入チェックを追加（QFAI-REQCTX-000/001/002/003/004/010）
-- config: `paths.requireDir`（デフォルト `.qfai/require`）を追加
-- tests: requirements コンテキスト検証のユニットテストを追加
+- validate: add checks for the staged introduction of the requirements context
+  (glossary/actors/business-flows) and the Coverage Map
+  (QFAI-REQCTX-000/001/002/003/004/010)
+- config: add `paths.requireDir` (default `.qfai/require`)
+- tests: add unit tests for the requirements context validation
 
 ### Changed
 
-- templates: `qfai.config.yaml` に `paths.requireDir` を追記
-- docs: README の config 例に `requireDir` を追記
+- templates: add `paths.requireDir` to `qfai.config.yaml`
+- docs: add `requireDir` to the config example in the README
 
 ## [1.3.1] - 2026-02-04
 
 ### Added
 
-- prompts: legacy entrypoint 向け prompt（`qfai-scenario-test` / `qfai-unit-test` / `qfai-implement` / `qfai-pr`）を追加
-- templates: legacy entrypoint 向け wrapper（`.github/prompts` / `.claude/commands` / `.codex/skills`）を追加
-- templates: `.qfai/require/require.md` テンプレを追加
-- templates: `.qfai/discussions/README.md` を追加
-- templates: `require/glossary.md` / `require/actors.md` / `require/business-flows.md` を追加
-- instructions: `assistant/instructions/requirements-decomposition.md` を追加
+- prompts: add prompts for the legacy entrypoints (`qfai-scenario-test` /
+  `qfai-unit-test` / `qfai-implement` / `qfai-pr`)
+- templates: add wrappers for the legacy entrypoints (`.github/prompts` /
+  `.claude/commands` / `.codex/skills`)
+- templates: add the `.qfai/require/require.md` template
+- templates: add `.qfai/discussions/README.md`
+- templates: add `require/glossary.md` / `require/actors.md` /
+  `require/business-flows.md`
+- instructions: add `assistant/instructions/requirements-decomposition.md`
 
 ### Changed
 
-- docs: README を npm EN v1.0.7 の内容に整合（root/package 同期）し、設定例を現行スキーマに整合
-- templates: `.qfai/README.md` / `require/README.md` を要求分解と Coverage Map に整合
-- prompts: `/qfai-discuss` / `/qfai-require` / `/qfai-spec` を ACT/BF/TERM と Coverage Map に整合
+- docs: align the README with the content of npm EN v1.0.7 (root/package
+  synced) and align the config example with the current schema
+- templates: align `.qfai/README.md` / `require/README.md` with the
+  requirements decomposition and the Coverage Map
+- prompts: align `/qfai-discuss` / `/qfai-require` / `/qfai-spec` with
+  ACT/BF/TERM and the Coverage Map
 
 ## [1.3.0] - 2026-02-04
 
 ### Added
 
-- validate: delta.md の Change Type（primary/tags）と Decision Records の do_not/temptation 欠落警告を追加（QFAI-DELTA-201〜204）
-- tests: Change Type 警告のユニットテストを追加
+- validate: add warnings for a missing Change Type (primary/tags) in delta.md
+  and missing do_not/temptation in the Decision Records (QFAI-DELTA-201 to 204)
+- tests: add unit tests for the Change Type warnings
 
 ### Changed
 
-- templates: delta.md の Change Log テンプレートに Change Type と rejected 補強（do_not/temptation）を追加
-- prompts/instructions: 作業開始時に Change Type を宣言する運用を追加
-- docs: PR テンプレに Change Type / Compatibility / delta.md 更新点を追加
+- templates: add Change Type and the rejected reinforcement (do_not/temptation)
+  to the Change Log template of delta.md
+- prompts/instructions: add the practice of declaring the Change Type when work
+  starts
+- docs: add Change Type / Compatibility / delta.md update points to the PR
+  template
 
 ## [1.2.14] - 2026-02-03
 
 ### Added
 
-- prompts: /qfai-atdd の Coverage Ledger 必須化、sub-agent 必須、Stage Gates/DoD/差戻し条件を強化
-- prompts: /qfai-prototyping・/qfai-tdd-green の Runtime Gate を必須化、/qfai-tdd-red の TDD Ledger を必須化
-- prompts: /qfai-require・/qfai-spec の未定義/OQ 検知とユーザー質問を必須化、/qfai-discuss の事前調査を必須化
-- agents: Orchestrator / ATDD Implementers / Reviewer / Runtime Gatekeeper / Doc Steward / Test Volume Estimator を追加
-- templates: evidence の階層化パスと命名規則を追加、traceability matrix に status 列を追加
-- validate: traceability-matrix の status 列検証を追加
+- prompts: make the Coverage Ledger mandatory in /qfai-atdd, require
+  sub-agents, and strengthen the Stage Gates / DoD / rework conditions
+- prompts: make the Runtime Gate mandatory in /qfai-prototyping and
+  /qfai-tdd-green, and the TDD Ledger mandatory in /qfai-tdd-red
+- prompts: make detection of undefined items/OQ and questions to the user
+  mandatory in /qfai-require and /qfai-spec, and prior research mandatory in
+  /qfai-discuss
+- agents: add Orchestrator / ATDD Implementers / Reviewer / Runtime Gatekeeper /
+  Doc Steward / Test Volume Estimator
+- templates: add hierarchical evidence paths and naming rules, and add a status
+  column to the traceability matrix
+- validate: add validation of the status column of the traceability-matrix
 
 ### Changed
 
-- docs: README の ATDD 説明と sub-agent 必須化を更新
-- instructions: agent-selection の委譲マップを新ロールに整合
+- docs: update the README's ATDD description and the sub-agent requirement
+- instructions: align the delegation map in agent-selection with the new roles
 
 ## [1.2.13] - 2026-02-01
 
 ### Added
 
-- prompts: inputs の優先順位（instructions/steering/delta）と rejected ガード、DONE 宣言の必須情報を全プロンプトに追加
-- agents: 全ロールに Preflight / rejected ガード / DR-ID 参照を追記
-- validate: delta.md の最小構造検証（Change Log / Decision Records / 順序 / rejected）を追加
-- tests: delta validator の新規検証に対応するユニットテストを追加
+- prompts: add the inputs priority (instructions/steering/delta), the rejected
+  guard and the information required in a DONE declaration to all prompts
+- agents: add Preflight / rejected guard / DR-ID references to all roles
+- validate: add validation of the minimal structure of delta.md (Change Log /
+  Decision Records / order / rejected)
+- tests: add unit tests for the new checks of the delta validator
 
 ### Changed
 
-- templates: `.qfai/specs/README.md` の delta.md 契約を Change Log + Decision Records + RE-OPEN へ更新
-- prompts: qfai-spec の delta.md 要件を新契約に整合し、qfai-discuss/qfai-require に意思決定ログ前提を追記
-- docs: README のワークフロー説明に delta 参照/RE-OPEN の前提を追記
+- templates: update the delta.md contract in `.qfai/specs/README.md` to Change
+  Log + Decision Records + RE-OPEN
+- prompts: align the delta.md requirements of qfai-spec with the new contract
+  and add the decision-log premise to qfai-discuss/qfai-require
+- docs: add the delta reference / RE-OPEN premise to the workflow description
+  in the README
 
 ## [1.2.12] - 2026-01-31
 
 ### Added
 
-- prompts: 完了契約に OQ/placeholder スキャンと成果物の全量チェックを追加（全プロンプト共通）
+- prompts: add an OQ/placeholder scan and a full check of the deliverables to
+  the completion contract (common to all prompts)
 
 ### Changed
 
-- なし
+- None
 
 ## [1.2.11] - 2026-01-31
 
 ### Added
 
-- agents: OptionExplorer / OptionReviewer ロールを追加（delta の案出し/レビュー）
-- agents: UI/UX Reviewer ロールを追加（UI レイアウト健全性のレビュー）
-- templates: specs/README の delta.md テンプレートを拡張（Decision Summary / Considered Options / Selection Criteria / Chosen・Rejected / Contract Trace）
+- agents: add the OptionExplorer / OptionReviewer roles (proposing and
+  reviewing options for delta)
+- agents: add the UI/UX Reviewer role (reviewing the soundness of the UI
+  layout)
+- templates: extend the delta.md template in specs/README (Decision Summary /
+  Considered Options / Selection Criteria / Chosen / Rejected / Contract Trace)
 
 ### Changed
 
-- prompts: qfai-spec に OptionExplorer / OptionReviewer の作業順と必須セクションを追記
-- prompts: qfai-prototyping に Runtime Interaction Gate と UI レイアウトガードレールを追加
-- prompts: qfai-tdd-green の Runtime Interaction Gate と UI レイアウト健全性チェックを強化
-- instructions: agent-selection の委譲マップを v1.2.11 の新ロールに整合
+- prompts: add the working order and required sections for OptionExplorer /
+  OptionReviewer to qfai-spec
+- prompts: add the Runtime Interaction Gate and UI layout guardrails to
+  qfai-prototyping
+- prompts: strengthen the Runtime Interaction Gate and the UI layout soundness
+  check in qfai-tdd-green
+- instructions: align the delegation map in agent-selection with the new roles
+  of v1.2.11
 
 ## [1.2.10] - 2026-01-31
 
 ### Added
 
-- prompts: qfai-require/qfai-spec に OQ ハーベストと問診ループを追加
-- agents: OQHarvester / OQReviewer ロールを追加
-- templates: require に open-questions 台帳を追加
+- prompts: add OQ harvesting and an interview loop to qfai-require/qfai-spec
+- agents: add the OQHarvester / OQReviewer roles
+- templates: add an open-questions ledger to require
 
 ### Changed
 
-- prompts: Open=0 をデフォルト完了条件にし、Deferred にはユーザー承認の証跡を必須化
-- prompts: qfai-spec の未定義潰しを require 相当のヒアリングとして内包
+- prompts: make Open=0 the default completion condition and require evidence of
+  user approval for Deferred
+- prompts: build the resolution of undefined items in qfai-spec into it as an
+  interview equivalent to require
 
 ## [1.2.9] - 2026-01-31
 
 ### Added
 
-- prompts: qfai-discuss に事前知識収集フェーズ（Researcher 委任）を追加
-- agents: Researcher ロールカードを追加
+- prompts: add a prior-knowledge collection phase (delegated to a Researcher)
+  to qfai-discuss
+- agents: add the Researcher role card
 
 ### Changed
 
-- prompts: qfai-discuss の質問設計を「全量ドラフト→1問ずつ（総数/番号表示、3択+おまかせ）」に更新
-- prompts: qfai-discuss の Evidence に収集メモ/質問設計根拠の記録を追加
-- docs: qfai-discuss の説明と委任ルールを更新
+- prompts: update the question design of qfai-discuss to "draft everything,
+  then one question at a time (total and number shown, 3 choices + leave it to
+  you)"
+- prompts: add records of the collection notes and the rationale for the
+  question design to the Evidence of qfai-discuss
+- docs: update the description and delegation rules of qfai-discuss
 
 ## [1.2.8] - 2026-01-30
 
 ### Changed
 
-- templates: `.qfai/**/README.md` の構成説明をツリー表記に統一
+- templates: unify the structure descriptions in `.qfai/**/README.md` on a tree
+  notation
 
 ## [1.2.7] - 2026-01-30
 
 ### Added
 
-- prompts: `/qfai-prototyping` を追加（契約からの最小実行可能スケルトン実装フェーズ）
-- prompts: 全プロンプトに FORMAT SSOT (Mandatory) セクションを追加（README-as-SSOT for formatting）
-- templates: `.qfai/**/README.md` に正規テンプレートとサンプルを追加
-- templates: `specs/README.md` に spec.md/delta.md/scenario.feature/case-catalogue.md/traceability-matrix.md の完全テンプレートを追加
+- prompts: add `/qfai-prototyping` (a phase that implements a minimal runnable
+  skeleton from the contracts)
+- prompts: add a FORMAT SSOT (Mandatory) section to all prompts (README-as-SSOT
+  for formatting)
+- templates: add canonical templates and samples to `.qfai/**/README.md`
+- templates: add complete templates for spec.md/delta.md/scenario.feature/
+  case-catalogue.md/traceability-matrix.md to `specs/README.md`
 
 ### Changed
 
-- prompts: 全プロンプトで `.qfai/**/README.md` をフォーマットの単一の情報源として参照するよう更新
-- templates: `.qfai/README.md` に推奨ワークフローシーケンス（prototyping フェーズ含む）を追加
-- docs: README に `/qfai-prototyping` を推奨シーケンスに追加
+- prompts: update all prompts to refer to `.qfai/**/README.md` as the single
+  source of truth for formatting
+- templates: add the recommended workflow sequence (including the prototyping
+  phase) to `.qfai/README.md`
+- docs: add `/qfai-prototyping` to the recommended sequence in the README
 
 ## [1.2.6] - 2026-01-28
 
 ### Added
 
-- prompts: 全プロンプトに Completion Contract（CRITICAL CONSTRAINTS/Evidence/FINAL CHECKLIST）を水平展開
-- prompts: Evidence を `.qfai/evidence/` に統一し、Git 管理外（.gitignore 同梱）を明記
-- agents: 全ロールカードに Mission/Inputs/Deliverables/Stop/Sign-off を追加
-- init: `.qfai/evidence/.gitignore` を同梱し、Evidence を自動で追跡対象外に
-- tests: assets guardrails で Evidence .gitignore を検査
+- prompts: roll out the Completion Contract (CRITICAL CONSTRAINTS/Evidence/FINAL
+  CHECKLIST) horizontally to all prompts
+- prompts: unify Evidence under `.qfai/evidence/` and state that it is outside
+  Git management (a .gitignore is bundled)
+- agents: add Mission/Inputs/Deliverables/Stop/Sign-off to all role cards
+- init: bundle `.qfai/evidence/.gitignore` so that Evidence is automatically
+  untracked
+- tests: check the Evidence .gitignore in the assets guardrails
 
 ## [1.2.5] - 2026-01-28
 
 ### Added
 
-- prompts: 全プロンプトに Completion Contract（CRITICAL CONSTRAINTS/Evidence 要求）を追加
-- prompts: qfai-tdd-green に契約→実装スコープ表、ステージゲート、Runtime Smoke を追加
-- prompts: qfai-tdd-green に evidence テンプレートを追加
-- init: `.qfai/evidence` をテンプレート構成に追加
-- tests: prompts の必須セクションを assets guardrails でスモーク検証
+- prompts: add the Completion Contract (CRITICAL CONSTRAINTS/Evidence
+  requirements) to all prompts
+- prompts: add a contract → implementation scope table, stage gates and a
+  Runtime Smoke to qfai-tdd-green
+- prompts: add an evidence template to qfai-tdd-green
+- init: add `.qfai/evidence` to the template layout
+- tests: smoke-verify the required sections of the prompts in the assets
+  guardrails
 
 ### Changed
 
-- prompts: qfai-tdd-green をオーケストレーター主導の完了分離フローに強化
+- prompts: strengthen qfai-tdd-green into an orchestrator-led flow with
+  separated completion
 
 ## [1.2.4] - 2026-01-28
 
 ### Added
 
-- traceability: .feature の @SC-XXXX-XXXX をテスト証跡として収集
-- traceability: layer-aware enforcement と deferred info を追加
-- config: traceability.testFileGlobs に `features/**/*.feature` を追加
-- prompts: qfai-atdd / qfai-tdd-\* に Coverage Ledger と完了条件を追加
-- prompts: qfai-spec の粒度ガイドを更新（1BR=1ルール＋分割）
-- agents: Coverage Ledger 監査と差し戻し条件を追加
+- traceability: collect @SC-XXXX-XXXX in .feature files as test evidence
+- traceability: add layer-aware enforcement and deferred info
+- config: add `features/**/*.feature` to traceability.testFileGlobs
+- prompts: add the Coverage Ledger and completion conditions to qfai-atdd /
+  qfai-tdd-\*
+- prompts: update the granularity guide of qfai-spec (1 BR = 1 rule, plus
+  splitting)
+- agents: add Coverage Ledger auditing and rework conditions
 
 ### Changed
 
-- traceability: SC 未参照の出力を layer 付き + サンプル上限化
-- docs: README / templates の説明を更新
+- traceability: output SCs that are not referenced with the layer and cap it at
+  a sample limit
+- docs: update the README / templates descriptions
 
 ## [1.2.3] - 2026-01-27
 
 ### Added
 
-- config: testStrategy に requireLayerTags / requireSizeTags / maxE2eScenarioRatio / maxE2eScenarioCount を追加
+- config: add requireLayerTags / requireSizeTags / maxE2eScenarioRatio /
+  maxE2eScenarioCount to testStrategy
 
 ### Changed
 
-- validate: Spec が契約 ID を列挙しているのに Scenario が none の場合は warning を追加
-- report: e2e 比率/上限のガードレール表示を追加
+- validate: add a warning when a Spec lists contract IDs but the Scenario says
+  none
+- report: add a display of the e2e ratio/limit guardrails
 
 ## [1.2.2] - 2026-01-27
 
 ### Added
 
-- prompts: qfai-atdd / qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor を追加
+- prompts: add qfai-atdd / qfai-tdd-red / qfai-tdd-green / qfai-tdd-refactor
 
 ### Changed
 
-- prompts/docs: qfai-scenario-test / qfai-unit-test / qfai-implement を廃止し、新ワークフローへ更新
+- prompts/docs: retire qfai-scenario-test / qfai-unit-test / qfai-implement and
+  update to the new workflow
 
 ## [1.2.1] - 2026-01-27
 
 ### Added
 
-- scenario: @layer-_/@size-_ タグの検証を追加（opt-in + 集約出力）
-- report: layer/size 分布と未設定一覧を追加
-- spec: case-catalogue / traceability-matrix の検証を追加
-- traceability: Scenario の contract-ref subset 検証を追加
+- scenario: add validation of @layer-_/@size-_ tags (opt-in + aggregated
+  output)
+- report: add the layer/size distribution and a list of unset items
+- spec: add validation of case-catalogue / traceability-matrix
+- traceability: add validation that a Scenario's contract-ref is a subset
 
 ### Changed
 
-- report: scenarios を scenario.feature のファイル数ではなく総シナリオ数で集計
+- report: count scenarios by the total number of scenarios, not by the number
+  of scenario.feature files
 
 ## [1.2.0] - 2026-01-26
 
 ### Added
 
-- ids: AC/CASE のフォーマット検証と Spec Pack 間の重複検知を追加
-- traceability: scenario.feature 内の SC 重複検出（QFAI-TRACE-035）を追加
+- ids: add format validation of AC/CASE and duplicate detection across Spec
+  Packs
+- traceability: add detection of duplicate SCs within scenario.feature
+  (QFAI-TRACE-035)
 
 ### Changed
 
-- traceability: scenario.feature の複数 Scenario/Outline を許容し、Spec:SC=1:1 の制約を撤廃
-- prompts/docs: Spec Pack ガイドと qfai-spec を複数シナリオ対応に更新
-- report/tests: 新ルールに合わせてレポート/テストを更新
+- traceability: allow multiple Scenarios/Outlines in scenario.feature and drop
+  the Spec:SC=1:1 constraint
+- prompts/docs: update the Spec Pack guide and qfai-spec to support multiple
+  scenarios
+- report/tests: update the report/tests to match the new rule
 
 ## [1.1.11] - 2026-01-26
 
 ### Changed
 
-- prompts: qfai-unit-test をテスト実装専用に固定し、完了条件をテスト実行ベースへ更新
-- prompts: qfai-implement を実装専用に固定し、runnable 証拠の明示とテスト責務分離を強化
-- tests: assets guardrails に qfai-unit-test / qfai-implement の必須フレーズ検証を追加
+- prompts: restrict qfai-unit-test to test implementation only and update its
+  completion condition to be based on running the tests
+- prompts: restrict qfai-implement to implementation only, and strengthen
+  explicit runnable evidence and the separation of test responsibilities
+- tests: add validation of the required phrases of qfai-unit-test /
+  qfai-implement to the assets guardrails
 
 ## [1.1.10] - 2026-01-25
 
 ### Changed
 
-- prompts: qfai-unit-test にテスト専用の範囲制約とブロック条件/DoD を追加
-- prompts: qfai-implement に runtime evidence 必須化と禁止完了条件を追加
-- agents: Unit Test Scope Enforcer / Runtime Gatekeeper のロールカードとラッパーを追加
+- prompts: add a test-only scope constraint and blocking conditions/DoD to
+  qfai-unit-test
+- prompts: make runtime evidence mandatory in qfai-implement and add prohibited
+  completion conditions
+- agents: add role cards and wrappers for Unit Test Scope Enforcer / Runtime
+  Gatekeeper
 
 ## [1.1.9] - 2026-01-24
 
 ### Changed
 
-- ids: Spec内ローカル連番に合わせて BR/SC ID フォーマットを更新
-- traceability: SC/BR タグとテストアノテーションの検出を新形式へ対応
-- prompts: qfai-discuss/qfai-spec/qfai-scenario-test を v1.1.9 方針に合わせて強化
-- agents: 多層レビュー向けの役割カードを追加
-- docs: 命名規約と例示の ID 形式を更新
+- ids: update the BR/SC ID format to match the local sequence numbers within a
+  Spec
+- traceability: support the new format in detecting SC/BR tags and test
+  annotations
+- prompts: strengthen qfai-discuss/qfai-spec/qfai-scenario-test to match the
+  v1.1.9 policy
+- agents: add role cards for multi-layer review
+- docs: update the ID format in the naming conventions and examples
 
 ## [1.1.8] - 2026-01-23
 
 ### Changed
 
-- init: `.qfai` テンプレートから指定 README と require.md を削除し、report は実行時生成へ統一
-- init: テンプレート Markdown を英語・汎用化（日本語/日付/版表記を除去）
-- prompts: README 非編集ルールを全プロンプトへ拡張
-- prompts: qfai-require の require.md 自動作成と安定テンプレ遵守を明記
-- prompts: qfai-spec に要求/契約の事前準備を追加し、gate 実行条件を明確化
-- tests: init 期待ファイル/プロンプト整合テストを更新し、英語-only ガードレールを追加
+- init: remove the specified READMEs and require.md from the `.qfai` templates
+  and unify on generating the report at run time
+- init: make the template Markdown English and generic (remove Japanese,
+  dates and version notations)
+- prompts: extend the rule against editing READMEs to all prompts
+- prompts: state that qfai-require creates require.md automatically and follows
+  a stable template
+- prompts: add preparation of requirements/contracts to qfai-spec and clarify
+  the conditions for running the gate
+- tests: update the init expected-files/prompt consistency tests and add an
+  English-only guardrail
 
 ## [1.1.7] - 2026-01-23
 
 ### Changed
 
-- init: `.qfai` 配下の全 README.md を全面刷新 — 意義/背景、配置可否、構造例、テンプレ、完成例、チェックリストを統一フォーマットで記載
-- prompts: qfai-discuss / qfai-require / qfai-spec に README rule（README は編集せず参照のみ）を追加
-- agents: 主要エージェントに README rule を追加
+- init: fully rewrite every README.md under `.qfai`, describing the purpose and
+  background, where files may be placed, a structure example, a template, a
+  finished example and a checklist in a unified format
+- prompts: add a README rule (do not edit READMEs, only refer to them) to
+  qfai-discuss / qfai-require / qfai-spec
+- agents: add the README rule to the main agents
 
 ## [1.1.6] - 2026-01-22
 
 ### Changed
 
-- prompts: qfai-spec に Contracts First の順序強制（contracts完成→FIX→specs作成）を追加
-- prompts: qfai-spec の Hard Constraints を強化（1ファイル=1シナリオ、BR=1、許可カテゴリ api/db/ui のみ、samples生成禁止）
-- prompts: qfai-discuss のコンセプト/NFR/方針必須化と discussions 保存を強化
-- agents: contract-designer に UI/API/DB 必須成果物の強制と禁止事項（infra、YAML中のMarkdown混入）を追加
-- tests: assets テストにプロンプト退行防止チェック（キーフレーズ存在検証）を追加
+- prompts: add Contracts First ordering to qfai-spec (finish contracts, FIX,
+  then create specs)
+- prompts: strengthen the Hard Constraints of qfai-spec (one file = one
+  scenario, BR = 1, only the api/db/ui categories allowed, no samples
+  generation)
+- prompts: make concept/NFR/policy mandatory in qfai-discuss and strengthen
+  saving to discussions
+- agents: enforce the required UI/API/DB deliverables in contract-designer and
+  add prohibitions (infra, Markdown mixed into YAML)
+- tests: add prompt regression checks (key-phrase presence) to the assets tests
 
 ## [1.1.5] - 2026-01-21
 
 ### Changed
 
-- prompts: qfai-spec に定量ガードレール（1 spec pack = 1シナリオ、ID形式、BR上限、contractRef必須）を追加
-- prompts: qfai-spec の delta.md に Decision Log（候補→採用/不採用/保留）を必須化
-- prompts: qfai-spec に discuss 記録参照を必須化し、最終ゲート（validate + repo gates）を作業完了条件に明記
-- prompts: qfai-discuss にコンセプト/NFR/方針の必須化と `.qfai/discussions/discuss-XXXX.md` 保存を追加
-- prompts: qfai-scenario-test に事前チェック（単一シナリオ確認）と SC 注釈ルール、最終ゲートを追加
-- prompts: qfai-unit-test に SC 注釈ルールと最終ゲートを追加
-- prompts: qfai-implement に最終ゲートを明記
-- prompts: qfai-verify と qfai-require に最終ゲートを明記
+- prompts: add quantitative guardrails to qfai-spec (1 spec pack = 1 scenario,
+  ID format, BR limit, contractRef required)
+- prompts: make a Decision Log (candidate -> adopted/rejected/deferred)
+  mandatory in the delta.md of qfai-spec
+- prompts: make qfai-spec reference the discuss record and state the final gate
+  (validate + repo gates) as a completion condition
+- prompts: add mandatory concept/NFR/policy and saving to
+  `.qfai/discussions/discuss-XXXX.md` to qfai-discuss
+- prompts: add a pre-check (single-scenario confirmation), SC annotation rules
+  and a final gate to qfai-scenario-test
+- prompts: add SC annotation rules and a final gate to qfai-unit-test
+- prompts: state the final gate in qfai-implement
+- prompts: state the final gate in qfai-verify and qfai-require
 
 ## [1.1.4] - 2026-01-20
 
 ### Changed
 
-- init: `.qfai/samples/**` の生成を撤廃し、Decision Guardrails の例を README 内のインライン例へ移行
-- prompts: qfai-spec の delta.md テンプレートに Decision Table / Decision Guardrails を追加
-- prompts: qfai-implement に delta の decision log 参照を必須化
-- verify-pack: guardrails extract のスモークを合成 delta で実施
-- docs: README の guardrails 説明を samples 依存から切り離し、ツリー記述も更新
+- init: drop generation of `.qfai/samples/**` and move the Decision Guardrails
+  example to an inline example in the README
+- prompts: add a Decision Table / Decision Guardrails to the delta.md template
+  of qfai-spec
+- prompts: make qfai-implement reference the decision log of delta
+- verify-pack: run the guardrails extract smoke test with a synthetic delta
+- docs: detach the README guardrails description from samples and update the
+  tree description
 
 ## [1.1.3] - 2026-01-20
 
 ### Added
 
-- init: `.github/agents` と `.claude/agents` にサブエージェント wrapper を追加（.qfai の role card 参照）
+- init: add sub-agent wrappers to `.github/agents` and `.claude/agents` (they
+  reference the .qfai role cards)
 
 ## [1.1.2] - 2026-01-20
 
 ### Changed
 
-- prompts: qfai-spec に preflight（config/steering 収束保証）を追加
-- prompts: qfai-configure に qfai-spec preflight の注記を追加
-- docs: README に qfai-spec preflight の注記とフロー補足を追加
+- prompts: add a preflight (config/steering convergence guarantee) to qfai-spec
+- prompts: add a note about the qfai-spec preflight to qfai-configure
+- docs: add a note about the qfai-spec preflight and a flow supplement to the
+  README
 
 ## [1.1.1] - 2026-01-19
 
 ### Changed
 
-- docs: v1.0.14 実体に合わせ、v1.1.0 設計資料へ v1.1.1 addendum を追記
-- init: `.qfai/README.md` の Template version を撤去し、テンプレ内 semver を排除
-- init: `steering/manifest.md` と steering/specs の導線を v1.1.1 方針に整合
-- prompts: qfai-configure に manifest 補完の evidence/assumptions を明記
-- repo: PR テンプレに Manifest / Decision Guardrails の確認項目を追加
+- docs: append a v1.1.1 addendum to the v1.1.0 design document to match the
+  v1.0.14 implementation
+- init: remove the Template version from `.qfai/README.md` and eliminate semver
+  inside templates
+- init: align the `steering/manifest.md` and steering/specs entry points with
+  the v1.1.1 policy
+- prompts: state the manifest completion evidence/assumptions in
+  qfai-configure
+- repo: add Manifest / Decision Guardrails check items to the PR template
 
 ## [1.1.0] - 2026-01-19
 
 ### Added
 
-- guardrails: Decision Guardrails の抽出/検査/整形 CLI を追加
-- guardrails: delta.md の Decision Guardrails サンプルを同梱（opt-in）
-- report: Decision Guardrails の集計章を追加
-- doctor: Decision Guardrails の導入状況チェックを追加
-- tests: guardrails のパース/CLI/verify-pack を追加
+- guardrails: add a CLI to extract, check and format Decision Guardrails
+- guardrails: bundle a Decision Guardrails sample in delta.md (opt-in)
+- report: add a Decision Guardrails aggregation chapter
+- doctor: add a check of the Decision Guardrails adoption status
+- tests: add guardrails parse/CLI/verify-pack tests
 
 ### Changed
 
-- init: steering をフラット化し、manifest の参照を一意化
-- prompts: qfai-configure に steering 自動補完ステップを追加
-- verify-pack: guardrails extract のスモークを追加
-- init: `.qfai/README.md` の Template version を明示（唯一の例外として許可）
+- init: flatten steering and make manifest references unique
+- prompts: add an automatic steering completion step to qfai-configure
+- verify-pack: add a guardrails extract smoke test
+- init: state the Template version in `.qfai/README.md` explicitly (allowed as
+  the only exception)
 
 ## [1.0.14] - 2026-01-19
 
@@ -15673,27 +17848,30 @@ for the recommended cleanup path.
 
 ### Changed
 
-- spec: BR 抽出を固定セクション依存から全体走査に変更
-- config: `validation.require.specSections` の既定値を空配列に変更
-- docs: specSections の任意設定と /qfai-configure の推奨フローを追記
+- spec: change BR extraction from depending on fixed sections to scanning the
+  whole document
+- config: change the default of `validation.require.specSections` to an empty
+  array
+- docs: document the optional specSections setting and the recommended
+  /qfai-configure flow
 
 ## [1.0.8] - 2026-01-18
 
 ### Changed
 
-- docs: README の設定スキーマ例を実装に合わせて修正
+- docs: fix the config schema example in the README to match the implementation
 
 ## [1.0.7] - 2026-01-16
 
 ### Added
 
-- init: `qfai-configure` プロンプトを追加
-- init: Copilot / Claude Code / Codex 向けのラッパー資産を追加
+- init: add the `qfai-configure` prompt
+- init: add wrapper assets for Copilot / Claude Code / Codex
 
 ### Changed
 
-- docs: README を英語版に刷新し、npm README と同期
-- verify-pack: init 資産の検証対象を拡張
+- docs: rewrite the README in English and sync it with the npm README
+- verify-pack: extend what is verified of the init assets
 
 ## [1.0.6] - 2026-01-14
 
@@ -15711,579 +17889,660 @@ for the recommended cleanup path.
 
 ### Added
 
-- init: `.qfai/assistant/**` を同梱（instructions/steering/prompts/agents）
+- init: bundle `.qfai/assistant/**` (instructions/steering/prompts/agents)
 
 ### Changed
 
-- Breaking: `.qfai/out/` を廃止し、`.qfai/report/` に統一
-- Breaking: `.qfai/prompts/` を `.qfai/assistant/prompts/` に移動
-- Breaking: `qfai analyze` と analyze 資産を廃止
-- init: `.qfai` テンプレ構成を v1.0.5 へ刷新（assistant 資産を SSOT 化）
+- Breaking: remove `.qfai/out/` and unify on `.qfai/report/`
+- Breaking: move `.qfai/prompts/` to `.qfai/assistant/prompts/`
+- Breaking: remove `qfai analyze` and the analyze assets
+- init: renew the `.qfai` template layout to v1.0.5 (the assistant assets
+  become the SSOT)
 
 ## [1.0.4] - 2026-01-10
 
 ### Changed
 
-- `qfai init` から `.qfai/rules/**` と `.qfai/samples/**` を削除（導入を簡素化）
-- `delta.md` の「変更区分（Compatibility/Change）」チェック運用を撤廃（テスト/QA ゲートへ移行）
-- `promptpack` / `prompts` / docs から分類ルールの参照を削除
+- remove `.qfai/rules/**` and `.qfai/samples/**` from `qfai init` (simplifies
+  adoption)
+- retire the "change category (Compatibility/Change)" check practice in
+  `delta.md` (moved to the test/QA gates)
+- remove references to the classification rules from `promptpack` / `prompts` /
+  docs
 
 ### Fixed
 
-- doctor の path checks から `rulesDir` を削除
-- report のガイダンス文言を更新
+- remove `rulesDir` from the doctor path checks
+- update the report guidance wording
 
 ## [1.0.3] - 2026-01-10
 
 ### Added
 
-- thema 契約（`thema-*.yml`）を導入
-- UI 契約に `themaRef` / `themeOverrides` / `assets` を追加
-- validate に assets 参照整合チェックを追加（最小検証）
+- introduce thema contracts (`thema-*.yml`)
+- add `themaRef` / `themeOverrides` / `assets` to UI contracts
+- add an assets reference consistency check to validate (minimal validation)
 
 ### Changed
 
-- Breaking: Scenario は `scenario.feature` 固定（v1.0.2 で導入済みのため再掲）
-- Breaking: `scenario.md` は v1.0.3 から error（自動救済なし）
-- 移行: `scenario.md` を `scenario.feature` にリネームし、参照スクリプトも更新
-- 補足: v1.0.2 が変更の初出、v1.0.3 で `scenario.md` の拒否挙動を追加
+- Breaking: Scenario is fixed to `scenario.feature` (restated because it was
+  already introduced in v1.0.2)
+- Breaking: `scenario.md` is an error from v1.0.3 (no automatic rescue)
+- Migration: rename `scenario.md` to `scenario.feature` and update the scripts
+  that reference it
+- Note: v1.0.2 is the first appearance of the change, and v1.0.3 adds the
+  rejection behavior for `scenario.md`
 
 ## [1.0.2] - 2026-01-09
 
 ### Added
 
-- なし
+- None
 
 ### Changed
 
-- Breaking: Spec Pack の Scenario ファイルを `scenario.feature` に変更（旧拡張子は非対応）
-- docs: Spec Pack の例・命名規約・PRテンプレ等を `scenario.feature` に統一
-- docs: 破壊的変更の例外運用（minor/patch での実施）を明記
-- tests/pack: init テンプレと配布物検証を `scenario.feature` 前提に更新
-- tests: fs glob のパス表記差を吸収するため比較を正規化
+- Breaking: change the Scenario file of a Spec Pack to `scenario.feature` (the
+  old extension is not supported)
+- docs: unify the Spec Pack examples, naming conventions, PR template and so on
+  on `scenario.feature`
+- docs: state the exceptional handling of breaking changes (made in a
+  minor/patch release)
+- tests/pack: update the init templates and the artifact verification to assume
+  `scenario.feature`
+- tests: normalize comparisons to absorb path notation differences in fs glob
 
 ## [1.0.1] - 2026-01-09
 
 ### Added
 
-- report: `--base-url` を追加し、report.md 内のファイルパスをリンク化可能に
-- core: glob 走査の上限ガードレール（20000件で打ち切り + warning）
-- ci: Node 20 の検証ジョブを追加
+- report: add `--base-url` so file paths in report.md can be turned into links
+- core: add a guardrail on glob scanning (stop at 20000 entries + warning)
+- ci: add a Node 20 verification job
 
 ### Changed
 
-- core: testFileGlobs 走査に truncated/limit を追加
-- docs: Node.js の Supported/Tested/Recommended を明記
-- docs: report.json / doctor.json の内部表現方針を明文化
+- core: add truncated/limit to the testFileGlobs scan
+- docs: state the Supported/Tested/Recommended Node.js versions
+- docs: document the policy on the internal representation of report.json /
+  doctor.json
 
 ## [1.0.0] - 2026-01-08
 
 ### Added
 
-- verify:pack: analyze の `--list` / `--prompt spec_to_scenario` を配布物ゲートに追加
-- ci: analyze の CLI スモークを追加
-- tests: root README と npm README の一致チェックを追加
+- verify:pack: add analyze `--list` / `--prompt spec_to_scenario` to the
+  artifact gate
+- ci: add a CLI smoke test of analyze
+- tests: add a check that the root README and the npm README match
 
 ### Changed
 
-- docs: v1.0.0 向けに README/RELEASE/CHANGELOG を整合
+- docs: align README/RELEASE/CHANGELOG for v1.0.0
 
 ## [0.9.2] - 2026-01-07
 
 ### Added
 
-- tests: npm README の初日導線/インストール/参照整合のガードレールを追加
+- tests: add guardrails for the npm README first-day flow, installation and
+  reference consistency
 
 ### Changed
 
-- docs: README の初日導線を init→doctor→validate→report に統一
-- docs: npm README のインストール案内を dev dependency 前提に修正
-- docs: npm README の docs/\*\* 参照を GitHub リンクへ置換
+- docs: unify the README first-day flow as init -> doctor -> validate -> report
+- docs: fix the npm README installation guidance to assume a dev dependency
+- docs: replace the docs/\*\* references in the npm README with GitHub links
 
 ## [0.9.1] - 2026-01-07
 
 ### Added
 
-- cli: `qfai analyze` を追加（`--list` / `--prompt <name>`）
-- init: analyze 用の入力バンドル例を `.qfai/samples/analyze/input_bundle.md` に同梱（create-only）
+- cli: add `qfai analyze` (`--list` / `--prompt <name>`)
+- init: bundle an example input bundle for analyze at
+  `.qfai/samples/analyze/input_bundle.md` (create-only)
 
 ### Changed
 
-- init: analyze 用標準プロンプトの雛形/命名を改善
+- init: improve the template/naming of the standard analyze prompts
 
 ## [0.9.0] - 2026-01-07
 
 ### Added
 
-- init: analyze 用の標準プロンプトを `.qfai/prompts/analyze/**` に同梱
-- init: analyze 実施ログのテンプレートを `.qfai/samples/analyze/analysis.md` に同梱（create-only）
+- init: bundle the standard analyze prompts in `.qfai/prompts/analyze/**`
+- init: bundle a template for the analyze run log at
+  `.qfai/samples/analyze/analysis.md` (create-only)
 
 ### Changed
 
-- docs: analyze の目的/使い方/注意事項を追記
+- docs: add the purpose, usage and cautions of analyze
 
 ## [0.8.2] - 2026-01-07
 
 ### Fixed
 
-- docs: init/--force の挙動説明を実装契約に一致させ、specs/contracts 破壊の誤誘導を解消
-- cli: init 実行時に `--force` の適用範囲（prompts のみ）を明示
+- docs: make the init/--force behavior description match the implementation
+  contract and remove the misleading suggestion that specs/contracts are
+  destroyed
+- cli: state the scope of `--force` (prompts only) when init runs
 
 ### Added
 
-- tests: init の overwrite/create-only 契約を回帰テストで固定
+- tests: pin the init overwrite/create-only contract with regression tests
 
 ## [0.8.1] - 2026-01-07
 
 ### Added
 
-- validate: issue に category（compatibility/change）と suggested_action を追加
-- doctor: `.qfai/prompts` の整合性チェック（標準 assets との差分検出）を追加
+- validate: add category (compatibility/change) and suggested_action to issues
+- doctor: add a consistency check of `.qfai/prompts` (detect differences from
+  the standard assets)
 
 ### Changed
 
-- init: `.qfai/prompts` のみ `--force` で上書き（それ以外は create-only）
-- validate: `.qfai/prompts` 直編集（標準資産改変）を error として検出
-- report.md: Dashboard + カテゴリ別章 + issue カード形式に変更
-- docs: validate.json schema/examples に category/suggested_action を反映
+- init: overwrite only `.qfai/prompts` with `--force` (everything else is
+  create-only)
+- validate: detect direct edits of `.qfai/prompts` (modifying the standard
+  assets) as an error
+- report.md: change to a Dashboard + per-category chapters + issue card format
+- docs: reflect category/suggested_action in the validate.json schema/examples
 
 ## [0.8.0] - 2026-01-07
 
 ### Added
 
-- verify:pack: `.qfai/prompts.local/**` が `init --force` でも上書きされないことを回帰で検証
-- validate: GitHubサマリに failOn/result を出力し、次アクション（report生成）を案内
+- verify:pack: verify by regression that `.qfai/prompts.local/**` is not
+  overwritten even by `init --force`
+- validate: print failOn/result in the GitHub summary and point to the next
+  action (report generation)
 
 ### Changed
 
-- report.md: Summary / Findings / Guidance に再構成し、Issue集計・安定ソート・fail-on根拠を明示
-- docs: 初日導線（init→doctor→validate→report）の整合、prompts.local保護対象の明記
-- validate: 代表的なエラーメッセージを具体化（例/次アクションを明示）
+- report.md: restructure into Summary / Findings / Guidance and state the issue
+  counts, the stable sorting and the fail-on rationale
+- docs: align the first-day flow (init -> doctor -> validate -> report) and
+  state what prompts.local protects
+- validate: make representative error messages concrete (state an example and
+  the next action)
 
 ## [0.7.3] - 2026-01-06
 
 ### Added
 
-- LICENSE を追加（repo root + packages/qfai、npm tarball に同梱）
+- add a LICENSE (repo root + packages/qfai, included in the npm tarball)
 
 ### Changed
 
-- packages/qfai: package.json のメタデータを補完（license/description/repository 等）
-- verify:pack: packed artifact に LICENSE/README.md が含まれることを検査
+- packages/qfai: complete the package.json metadata (license/description/
+  repository and so on)
+- verify:pack: check that LICENSE/README.md are included in the packed artifact
 
 ## [0.7.2] - 2026-01-06
 
 ### Changed
 
-- packages/qfai: パッケージメタデータ修正のため v0.7.2 として再リリース（version フィールド整合）
+- packages/qfai: re-release as v0.7.2 to fix the package metadata (version
+  field consistency)
 
 ## [0.7.1] - 2026-01-06
 
 ### Added
 
-- Prompts Overlay を採用（`.qfai/prompts.local/**` を優先参照する運用）
+- adopt the Prompts Overlay (a practice of referencing `.qfai/prompts.local/**`
+  first)
 
 ### Changed
 
-- `init` は `.qfai/prompts.local/**` を上書きしない（利用者カスタム領域を保護）
-- `doctor` に `.qfai/prompts.local` の存在を情報として出力
+- `init` does not overwrite `.qfai/prompts.local/**` (protects the user
+  customization area)
+- `doctor` reports the presence of `.qfai/prompts.local` as information
 
 ### Removed
 
-- `qfai sync`（PromptPack 差分検知・export）を撤去（overlay 方針へ一本化）
+- remove `qfai sync` (PromptPack difference detection/export) (unified on the
+  overlay policy)
 
 ## [0.7.0] - 2026-01-05
 
 ### Added
 
-- `qfai sync` を追加（PromptPack の差分検知・同期候補書き出し）
-- `--mode check`: 同梱アセットとの差分を検出（exit 0=差分なし、1=差分あり、2=エラー）
-- `--mode export`: 同期候補を非破壊でエクスポート
-- `--out <path>`: export の出力先
-- `--format <text|json>`: 出力形式
+- add `qfai sync` (PromptPack difference detection and export of sync
+  candidates)
+- `--mode check`: detect differences from the bundled assets (exit 0 = no
+  difference, 1 = differences, 2 = error)
+- `--mode export`: export sync candidates non-destructively
+- `--out <path>`: the output destination of export
+- `--format <text|json>`: the output format
 
 ### Changed
 
-- なし
+- None
 
 ## [0.6.3] - 2026-01-05
 
 ### Changed
 
-- docs: 回数ベースの完了基準を削除し、DoD/CI 基準に統一
-- docs: README の JSON 例から version フィールドを削除
-- docs: README にバッジ・目次・インストールセクション・ライセンスセクションを追加
-- docs: npm パッケージ README をルート README と同期
+- docs: remove the count-based completion criteria and unify on DoD/CI criteria
+- docs: remove the version field from the JSON examples in the README
+- docs: add badges, a table of contents, an installation section and a license
+  section to the README
+- docs: sync the npm package README with the root README
 
 ## [0.6.2] - 2026-01-05
 
 ### Added
 
-- doctor に `--fail-on` を追加（warning/error で exit 1）
-- doctor に monorepo outDir 衝突検出（`--root` 指定時のみ）
-- CI と verify:pack に doctor スモークを追加
+- add `--fail-on` to doctor (exit 1 on warning/error)
+- add monorepo outDir collision detection to doctor (only when `--root` is
+  given)
+- add doctor smoke tests to CI and verify:pack
 
 ### Changed
 
-- report/doctor JSON から formatVersion を削除
-- README/ドキュメントに非契約方針とレビュー完了基準を追記
+- remove formatVersion from the report/doctor JSON
+- add the non-contract policy and the review completion criteria to the
+  README/docs
 
 ## [0.6.1] - 2026-01-05
 
 ### Changed
 
-- doctor のチェック出力順を config→paths→spec→output→traceability に整合
-- README に doctor JSON / report.json の非契約方針と短い例を追記
+- align the doctor check output order as config -> paths -> spec -> output ->
+  traceability
+- add the non-contract policy for doctor JSON / report.json and a short example
+  to the README
 
 ## [0.6.0] - 2026-01-05
 
 ### Added
 
-- `qfai doctor` を追加（設定/探索/パス/glob/validate.json の事前診断）
+- add `qfai doctor` (pre-diagnosis of config/discovery/paths/glob/validate.json)
 
 ### Changed
 
-- `report --format json` に `reportFormatVersion` を追加
+- add `reportFormatVersion` to `report --format json`
 
 ## [0.5.2] - 2026-01-04
 
 ### Added
 
-- `report --run-validate` / `report --in` を追加
-- `qfai.config.yaml` の自動探索（cwd から親へ）
-- `test:assets` と CI での assets/Docs スモーク検証
+- add `report --run-validate` / `report --in`
+- automatic discovery of `qfai.config.yaml` (from cwd up to the parents)
+- assets/Docs smoke verification in `test:assets` and CI
 
 ### Changed
 
-- `validate --format github` のアノテーション上限・重複排除・サマリ出力
-- report の Spec キーを specId 固定にし、出力パスは root 相対化
-- PromptPack と docs/examples の運用ガイドを更新（非契約/experimental 明記）
+- annotation limit, de-duplication and summary output for
+  `validate --format github`
+- fix the report Spec key to specId and make output paths root-relative
+- update the operation guide of PromptPack and docs/examples (state
+  non-contract/experimental)
 
 ## [0.5.1] - 2026-01-04
 
 ### Added
 
-- Scenario の 1ファイル=1シナリオ検証（`QFAI-TRACE-030`）を追加
-- report で Spec→契約の missing/none を区別し、全 Spec を出力
+- add the one-file-one-scenario check for Scenario (`QFAI-TRACE-030`)
+- distinguish missing/none for Spec -> contract in report and output all Specs
 
 ### Changed
 
-- Scenario の契約参照を `# QFAI-CONTRACT-REF:` コメント宣言に統一（タグ抽出を廃止）
-- issue code を `QFAI-TRACE-xxx` 形式へ正規化し、Spec の contract-ref エラーを `021/023/024` に分割
-- orphan contract 設定を `allowOrphanContracts` から `orphanContractsPolicy` へ移行
-- docs/examples・init テンプレートを新ルールに整合
+- unify the Scenario contract reference on the `# QFAI-CONTRACT-REF:` comment
+  declaration (tag extraction removed)
+- normalize issue codes to the `QFAI-TRACE-xxx` form and split the Spec
+  contract-ref error into `021/023/024`
+- migrate the orphan contract setting from `allowOrphanContracts` to
+  `orphanContractsPolicy`
+- align docs/examples and the init templates with the new rules
 
 ## [0.5.0] - 2026-01-03
 
 ### Added
 
-- report に Spec の contract-ref 未宣言一覧を追加
-- トレーサビリティ/契約/変更区分の運用プロンプトを追加
+- add a list of Specs with no contract-ref declaration to report
+- add operation prompts for traceability/contracts/change category
 
 ### Changed
 
-- report の契約→Spec / Spec→契約 表に (none)/(orphan) を明示
-- PromptPack と README の導線・文言を v0.5.0 仕様に整合
+- state (none)/(orphan) explicitly in the contract -> Spec / Spec -> contract
+  tables of report
+- align the entry points and wording of PromptPack and the README with the
+  v0.5.0 spec
 
 ## [0.4.9] - 2026-01-03
 
 ### Fixed
 
-- README の `unknownContractIdSeverity` 説明を Scenario 側の契約参照に整合（Spec の未知契約は常に error）
-- `prepack` を `npm run build` に変更し、pack の自己完結性を向上
+- align the README description of `unknownContractIdSeverity` with the contract
+  references on the Scenario side (an unknown contract in a Spec is always an
+  error)
+- change `prepack` to `npm run build` to make pack more self-contained
 
 ## [0.4.8] - 2026-01-03
 
 ### Fixed
 
-- npm pack/publish 時に dist が必ず生成されるようにし、壊れた成果物の生成を防止
-- d.ts ビルドが monorepo 外でも成立しやすいように @types/node を追加
+- make sure dist is always generated on npm pack/publish, preventing broken
+  artifacts
+- add @types/node so that the d.ts build works more easily outside the monorepo
 
 ## [0.4.7] - 2026-01-03
 
 ### Fixed
 
-- PromptPack/.instruction のトレーサビリティ文面を現行方針に整合（Spec→下流参照禁止は運用担保、Spec→Contract を SSOT）
+- align the traceability text of PromptPack/.instruction with the current
+  policy (the ban on Spec -> downstream references is guaranteed by operation,
+  and Spec -> Contract is the SSOT)
 
 ## [0.4.6] - 2026-01-03
 
 ### Fixed
 
-- init テンプレの contracts README を Spec/Contract ルールに整合（Spec の参照が SSOT、Scenario→Contracts は任意）
+- align the contracts README of the init template with the Spec/Contract rules
+  (the Spec reference is the SSOT, Scenario -> Contracts is optional)
 
 ## [0.4.5] - 2026-01-03
 
 ### Added
 
-- 契約ファイルの `QFAI-CONTRACT-ID` 宣言を必須化（1ファイル1ID）
-- Spec の `QFAI-CONTRACT-REF` 宣言を必須化（`none` 可）
-- 契約→Spec のカバレッジ検証（orphan contract）
-- report に契約カバレッジと Spec/Contract マップを追加
-- PromptPack と PR テンプレに Compatibility / Change の分類欄を追加
+- make the `QFAI-CONTRACT-ID` declaration in contract files mandatory (one ID
+  per file)
+- make the `QFAI-CONTRACT-REF` declaration in a Spec mandatory (`none` is
+  allowed)
+- contract -> Spec coverage check (orphan contract)
+- add contract coverage and a Spec/Contract map to report
+- add a Compatibility / Change classification field to PromptPack and the PR
+  template
 
 ### Changed
 
-- DATA ID を DB ID に統一（`DATA-xxxx` を無効化）
-- 契約 ID の抽出を宣言行（SSOT）に統一（本文/operationId からの抽出を撤去）
-- SC→契約の接続必須ルールを廃止
-- init テンプレの Spec/Contract サンプルと README を新ルールに整合
+- unify the DATA ID into the DB ID (`DATA-xxxx` is disabled)
+- unify contract ID extraction on the declaration line (SSOT) (extraction from
+  the body/operationId removed)
+- remove the rule that an SC must be connected to a contract
+- align the Spec/Contract samples and the README of the init templates with the
+  new rules
 
 ## [0.4.2] - 2026-01-02
 
 ### Added
 
-- テスト探索の glob 設定（`testFileGlobs` / `testFileExcludeGlobs`）を追加
-- init テンプレートにテスト glob 生成プロンプトを追加
-- validate/report にテスト探索のメタ情報（glob/除外/件数）を追加
+- add glob settings for test discovery (`testFileGlobs` /
+  `testFileExcludeGlobs`)
+- add a test glob generation prompt to the init templates
+- add test discovery metadata (globs/exclusions/counts) to validate/report
 
 ### Changed
 
-- SC→Test 判定を glob 設定に切替（未設定・一致0件は `QFAI-TRACE-013`）
-- Scenario の SPEC/BR 欠落を `QFAI-TRACE-014/015` として検出
-- Spec→Contract 参照の存在チェック（`QFAI-TRACE-009`）を廃止
-- Spec:SC=1:1 で SC が 0 件の場合も error
+- switch the SC -> Test decision to the glob settings (not set or zero matches
+  is `QFAI-TRACE-013`)
+- detect a missing SPEC/BR in a Scenario as `QFAI-TRACE-014/015`
+- remove the existence check of Spec -> Contract references
+  (`QFAI-TRACE-009`)
+- with Spec:SC = 1:1, zero SCs is also an error
 
 ## [0.4.1] - 2026-01-02
 
 ### Added
 
-- SC→Test アノテーション方式（`QFAI:SC-xxxx`）と `tests/`・`src/` 探索を追加
-- テスト側の未知 SC アノテーション検出（`QFAI-TRACE-011`）を追加
-- Spec:SC=1:1 検証（`QFAI-TRACE-012`）を追加
-- `validate.json` に SC→Test カバレッジを追加
-- report に Spec:SC=1:1 違反一覧を追加
+- add the SC -> Test annotation method (`QFAI:SC-xxxx`) and discovery of
+  `tests/` and `src/`
+- add detection of unknown SC annotations on the test side (`QFAI-TRACE-011`)
+- add the Spec:SC = 1:1 check (`QFAI-TRACE-012`)
+- add SC -> Test coverage to `validate.json`
+- add a list of Spec:SC = 1:1 violations to report
 
 ### Changed
 
-- Scenario の複数記述を許容（参照 SC は同一）
-- SCカバレッジの missing 表示に scenario ファイル情報を付与
-- `QFAI-TRACE-002` を info に格下げ
-- init テンプレートのテストサンプルをアノテーション方式に更新
+- allow multiple descriptions of a Scenario (the referenced SC is the same)
+- attach scenario file information to the missing display of SC coverage
+- downgrade `QFAI-TRACE-002` to info
+- update the test samples of the init templates to the annotation method
 
 ## [0.4.0] - 2026-01-01
 
 ### Added
 
-- SC→Test 参照のトレーサビリティ検証（`scMustHaveTest` / `scNoTestSeverity`）
-- report に SC カバレッジと参照テスト一覧を追加
-- init テンプレートに tests サンプルを追加
+- traceability check of SC -> Test references (`scMustHaveTest` /
+  `scNoTestSeverity`)
+- add SC coverage and a list of referenced tests to report
+- add a tests sample to the init templates
 
 ### Changed
 
-- report の Markdown 出力に SC カバレッジセクションを追加
+- add an SC coverage section to the Markdown output of report
 
 ### Removed
 
-- ロードマップ文書を削除
+- remove the roadmap document
 
 ## [0.3.8] - 2026-01-01
 
 ### Changed
 
-- validate/report の入出力から schemaVersion を廃止（後方互換破棄）
-- docs/examples を現行例に一本化
-- テスト/fixture を schemaVersion 廃止に追従
+- remove schemaVersion from the validate/report input and output (backward
+  compatibility dropped)
+- consolidate docs/examples into the current examples
+- update tests/fixtures to follow the removal of schemaVersion
 
 ### Removed
 
-- `docs/schema/validation-result.schema.json` から schemaVersion を削除
+- remove schemaVersion from `docs/schema/validation-result.schema.json`
 
 ## [0.3.7] - 2026-01-01
 
 ### Changed
 
-- （タグ整合のための追記）v0.3.7 は既にリリース済み
+- (added for tag consistency) v0.3.7 has already been released
 
 ## [0.3.6] - 2026-01-01
 
 ### Changed
 
-- `.instruction/02_project` を QFAI Toolkit 向けに更新し、誤誘導の元を除去
-- `AGENTS.md` の参照ガイドとレビュー運用ルールを更新
-- `docs/rules/naming.md` の版表記を削除
-- README/RELEASE/テスト/パッケージのバージョン表記を更新
+- update `.instruction/02_project` for the QFAI Toolkit and remove the source of
+  misleading guidance
+- update the reference guide and the review operation rules in `AGENTS.md`
+- remove the version notation in `docs/rules/naming.md`
+- update the version notation in README/RELEASE/tests/package
 
 ## [0.3.5] - 2025-12-31
 
 ### Added
 
-- PromptPack を init テンプレートに追加（`.qfai/promptpack/`）
-- `docs/promptpack.md` を追加
+- add PromptPack to the init templates (`.qfai/promptpack/`)
+- add `docs/promptpack.md`
 
 ### Changed
 
-- OQ表記の排除対象を「現行仕様として参照される場所」に限定する方針を明文化
-- RELEASE/README の表記を更新（PromptPack 追記を含む）
+- state the policy that the targets of removing OQ notation are limited to
+  "places referenced as the current spec"
+- update the notation in RELEASE/README (including the PromptPack addition)
 
 ## [0.3.4] - 2025-12-31
 
 ### Changed
 
-- init で生成する require を `.qfai/require/` 配下へ移動（後方互換なし）
+- move the require generated by init under `.qfai/require/` (no backward
+  compatibility)
 
 ### Fixed
 
-- PRテンプレのOQチェックリストを撤去し、決定事項チェックへ置換
-- 命名規約の過去状態（OQ継続/版表記）を除去し、標準構成へ収束
-- CHANGELOG の誤記（ADR検証表現）を修正
+- remove the OQ checklist from the PR template and replace it with a decision
+  check
+- remove past states (OQ continuation/version notation) from the naming
+  conventions and converge on the standard layout
+- fix an error in the CHANGELOG (the ADR validation wording)
 
 ## [0.3.3] - 2025-12-31
 
 ### Added
 
-- pnpm allowlist 運用ガイド（`.qfai/rules/pnpm.md`）をテンプレートに追加
-- `.qfai/require/README.md` と require-to-spec プロンプト雛形をテンプレートに追加
+- add the pnpm allowlist operation guide (`.qfai/rules/pnpm.md`) to the
+  templates
+- add `.qfai/require/README.md` and a require-to-spec prompt skeleton to the
+  templates
 
 ### Changed
 
-- README に「できること」セクションを追加
-- init テストでテンプレート生成を検証
-- 命名規約ドキュメントの版表記を更新
+- add a "What you can do" section to the README
+- verify template generation in the init tests
+- update the version notation in the naming conventions document
 
 ### Fixed
 
-- init のテンプレート探索パスを明確化し、見つからない場合はエラーで通知
+- clarify the template search path of init and report an error when it is not
+  found
 
 ## [0.3.2] - 2025-12-31
 
 ### Added
 
-- Gherkin 公式パーサ（@cucumber/gherkin）と Scenario モデルを追加
-- Scenario 内の本文/DocString から契約 ID を抽出するトレーサビリティを追加
-- Feature の SPEC タグ必須チェックと Scenario/Spec ファイルの存在チェックを追加
+- add the official Gherkin parser (@cucumber/gherkin) and the Scenario model
+- add traceability that extracts contract IDs from the body/DocString in a
+  Scenario
+- add the required SPEC tag check on Feature and the existence check of
+  Scenario/Spec files
 
 ### Changed
 
-- Spec Pack のディレクトリ名を `spec-0001`（4 桁）へ統一（`spec-001` など 3 桁は非対応）
-- Spec Pack は `.qfai/specs` 直下のディレクトリのみサポート（ネスト構成を廃止）
-- Scenario/ID/Traceability の解析を AST ベースへ刷新
+- unify Spec Pack directory names on `spec-0001` (4 digits) (3 digits such as
+  `spec-001` are not supported)
+- Spec Packs are supported only as directories directly under `.qfai/specs`
+  (nested layouts removed)
+- renew the Scenario/ID/Traceability analysis to be AST based
 
 ## [0.3.1] - 2025-12-30
 
 ### Added
 
-- Spec Pack（spec.md / delta.md / Scenario ファイル）のテンプレートと規約を追加
-- delta.md の変更区分検証を追加
-- Scenario 単位のタグ検証（SC 1件必須、Feature タグ継承）を追加
+- add templates and conventions for a Spec Pack (spec.md / delta.md / Scenario
+  files)
+- add the change category check of delta.md
+- add per-Scenario tag checks (exactly one SC required, Feature tag
+  inheritance)
 
 ### Changed
 
-- config スキーマを刷新（paths.\* / output.validateJsonPath）
-- Scenario ファイルの配置を `specs/spec-xxx/` に統一
-- validate は常に `validate.json` を出力し、report は固定パスを入力に使用
-- init テンプレート/README/verify-pack を新構成に整合
+- renew the config schema (paths.\* / output.validateJsonPath)
+- unify the placement of Scenario files under `specs/spec-xxx/`
+- validate always outputs `validate.json`, and report uses the fixed path as
+  its input
+- align the init templates/README/verify-pack with the new layout
 
 ### Removed
 
-- decisions/ADR のバリデーションを除外
+- exclude validation of decisions/ADR
 
 ## [0.3.0] - 2025-12-30
 
 ### Added
 
-- parse 層（Spec/Scenario/ADR）を導入し、構造解析を集約
-- BR Priority（P0〜P3）の検証を追加
-- Scenario の Feature/Scenario/タグ必須チェックを追加
-- ADR パーサ（parseAdr）ユーティリティを追加
+- introduce a parse layer (Spec/Scenario/ADR) and consolidate structural
+  analysis
+- add validation of BR Priority (P0 to P3)
+- add required checks of Feature/Scenario/tags in a Scenario
+- add an ADR parser (parseAdr) utility
 
 ### Changed
 
-- Spec 必須セクション判定を H2 見出しベースへ変更
-- traceability の Spec→BR を BR 定義（業務ルール内）に限定
-- init テンプレ/README を現行仕様へ整合
+- change the Spec required section decision to be based on H2 headings
+- limit Spec -> BR in traceability to BR definitions (inside business rules)
+- align the init templates/README with the current spec
 
 ## [0.2.9] - 2025-12-29
 
 ### Added
 
-- ContractIndex を導入し、契約 ID を共通収集（パース失敗時はテキスト抽出）
-- 契約パース失敗時のノイズ低減テストを追加
+- introduce ContractIndex and collect contract IDs in common (falls back to
+  text extraction when parsing fails)
+- add a test that reduces noise when contract parsing fails
 
 ### Changed
 
-- traceability/duplicate 検証の契約 ID 収集を共通化
-- init テンプレの固定表現を削除
-- API サンプルから `x-qfai-refs` を撤去
+- share contract ID collection between the traceability/duplicate checks
+- remove fixed wording from the init templates
+- remove `x-qfai-refs` from the API sample
 
 ## [0.2.8] - 2025-12-29
 
 ### Added
 
-- Contract パース失敗/ID 未定義の検出（UI/API）
-- Spec → Contract 参照の実在性チェック
+- detect Contract parse failures/undefined IDs (UI/API)
+- existence check of Spec -> Contract references
 
 ### Changed
 
-- report から rules 指標を削除
-- `paths.rulesDir` を削除（互換不要）
+- remove the rules metric from report
+- remove `paths.rulesDir` (no compatibility needed)
 
 ## [0.2.7] - 2025-12-29
 
 ### Added
 
-- Scenario 参照 ID の実在性チェック（SPEC/BR/Contract）
-- BR が参照 SPEC に属するかの検証
-- 定義 ID の重複検知（Spec/Scenario/Contracts）
-- unknown Contract 参照の severity 設定（warning|error）
+- existence check of the IDs referenced by a Scenario (SPEC/BR/Contract)
+- check that a BR belongs to the referenced SPEC
+- detect duplicate definition IDs (Spec/Scenario/Contracts)
+- severity setting for unknown Contract references (warning|error)
 
 ### Changed
 
-- ID 形式を `PREFIX-0001` に厳格化
-- 命名規約/テンプレートの説明を整合
+- make the ID format strictly `PREFIX-0001`
+- align the naming convention/template descriptions
 
 ## [0.2.6] - 2025-12-28
 
 ### Added
 
-- .qfai 配下の README 群とガイドを追加（spec/contracts/prompts/out）
-- Spec/Scenario/Contracts の最小例を刷新
+- add the README files and guides under .qfai (spec/contracts/prompts/out)
+- renew the minimal examples of Spec/Scenario/Contracts
 
 ### Changed
 
-- init の生成先を `.qfai/` に統一
-- 既定の探索/設定パスを `.qfai` 前提に更新
-- Scenario の既定配置を `.qfai/spec/scenarios` に変更
+- unify the init output destination on `.qfai/`
+- update the default discovery/config paths to assume `.qfai`
+- change the default placement of Scenario to `.qfai/spec/scenarios`
 
 ### Removed
 
-- legacy の `spec.md` 探索互換を削除
+- remove the legacy `spec.md` discovery compatibility
 
 ## [0.2.5] - 2025-12-28
 
 ### Added
 
-- 命名規約ドキュメントを追加（docs/rules/naming.md）
-- overview / Business Flow 生成用プロンプトをテンプレートに同梱
+- add the naming convention document (docs/rules/naming.md)
+- bundle the prompts for generating the overview / Business Flow in the
+  templates
 
 ### Changed
 
-- init テンプレートの Spec/Contracts サンプルを ID+slug 命名に変更
-- validate/report/traceability の Spec 探索を `spec-0001-*.md` に対応
+- change the Spec/Contracts samples of the init templates to ID+slug naming
+- support `spec-0001-*.md` in the Spec discovery of validate/report/traceability
 
 ### Behavior
 
-- legacy の `spec.md` は引き続き探索対象（後方互換維持）
+- legacy `spec.md` is still a discovery target (backward compatibility kept)
 
 ## [0.2.4] - 2025-12-26
 
 ### Added
 
-- CHANGELOG.md を追加
-- RELEASE.md を追加
+- add CHANGELOG.md
+- add RELEASE.md
 
 ### Changed
 
-- README の Quick Start を現行 CLI 挙動に整合
-- validate/report の入出力と GitHub Actions テンプレート導線を明記
+- align the README Quick Start with the current CLI behavior
+- state the validate/report input and output and the GitHub Actions template
+  entry point
 
 ### Behavior
 
-- No behavior change（validate/report/CLI の挙動は維持）
+- No behavior change (validate/report/CLI behavior is kept)
 
 ## [0.2.3] - 2025-12-25
 
 ### Changed
 
-- report: validate.json 欠損時の案内と exit code 2
-- init: 既存ファイル衝突時の --force 案内
-- build: import.meta 警告の解消と警告ゲート追加
+- report: guidance when validate.json is missing and exit code 2
+- init: guidance to use --force when an existing file collides
+- build: resolve the import.meta warning and add a warning gate

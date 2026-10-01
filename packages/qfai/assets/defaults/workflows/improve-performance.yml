@@ -1,0 +1,45 @@
+route: improve-performance
+family: fix
+stages:
+  - id: baseline
+    kind: diagnose
+    steps: [implement-benchmark]
+  - id: profile
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [baseline]
+  - id: spec
+    kind: sdd_append
+    steps:
+      - { step: sdd-story, passThrough: true }
+      - sdd-gate
+    after: [profile]
+  - id: implement
+    kind: implement
+    steps: [implement-tdd, implement-checkpoint]
+    after: [spec]
+  - id: compare
+    kind: diagnose
+    steps: [implement-benchmark]
+    after: [implement]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [compare]
+defaultModifiers: []
+decisionPoints: [implement-diagnose]
+branchPoints:
+  - step: implement-diagnose
+    outcomes:
+      - { outcome: as-specified, routes: [answer-question] }
+      - { outcome: not-ours, routes: [close-no-change] }
+      - { outcome: duplicate, routes: [close-duplicate] }
+      - { outcome: needs-info, routes: [request-info] }
+      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: defective-test, routes: [repair-test] }
+      - { outcome: regression, routes: [fix-red-main] }
+      - { outcome: surface-conflict, routes: [repair-consistency] }

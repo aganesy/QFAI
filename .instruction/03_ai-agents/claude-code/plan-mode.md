@@ -6,24 +6,24 @@ dependencies:
 version: 1.0.0
 ---
 
-# Plan モード運用
+# Plan Mode Operations
 
-Plan モード時は読み取り専用で調査・計画に徹する。
+In Plan mode, stay read-only and limit the work to investigation and planning.
 
-## 制約
+## Constraints
 
-- 禁止: 編集・書き込み系操作、コマンドでの変更。
-- 許可: 読み取り（ls/read/grep）や Web 検索のみ。
-- 実装が必要になったら ExitPlanMode で承認を得る。
+- Prohibited: edit and write operations, and changes made through commands.
+- Allowed: reads (ls, read, grep) and web search only.
+- When implementation becomes necessary, get approval through ExitPlanMode.
 
-## 調査フロー
+## Investigation Flow
 
-1. プロジェクト構成と主要ディレクトリを把握。
-2. 技術スタック・ビルド/テストコマンドを確認。
-3. 既存の実装パターンとドメインルールを調査。
-4. 要件の不明点を洗い出し、質問を作成。
+1. Understand the project layout and the main directories.
+2. Check the technology stack and the build and test commands.
+3. Investigate the existing implementation patterns and domain rules.
+4. List the unclear points in the requirements and draft questions.
 
-## 計画の提示
+## Presenting the Plan
 
-- ステップを小さく分けた Plan を提示し、合意を得てから実装に移る。
-- 役割に応じてサブエージェントの活用を検討し、タスク分割を明確にする。
+- Present a plan split into small steps and move to implementation after agreement.
+- Consider using sub-agents according to their roles, and make the task split explicit.

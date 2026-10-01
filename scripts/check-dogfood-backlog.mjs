@@ -5,16 +5,13 @@
  * a ratchet.
  *
  * The dogfooding lanes exist so QFAI meets its own gates before shipping them.
- * That was checked as `--fail-on error`, which worked while the ledger rules
- * reported `warning`. They report `error` now, and the repository carries a
- * backlog of rows written before those rules existed: prose in an `Evidence`
- * cell that owes a pointer, a cell past the length cap, a coverage row for a
- * test case the ledger does not own.
+ * The story-tree migration makes test obligations explicit at the BF, AC and
+ * EX layers. Historical artifacts have gaps that predate these checks, and a
+ * few existing tests are intentionally skipped. The first story-tree pin
+ * records those findings by file without inventing test annotations or proof.
  *
- * Fixing those means re-running the work and recording what it produced, spec
- * by spec. Writing a pointer to evidence nobody captured would be worse than
- * the backlog. Until the backfill lands, two contracts keep each lane
- * meaningful:
+ * Fixing them means adding the required tests and recording what they prove.
+ * Until that backfill lands, two contracts keep each lane meaningful:
  *
  * | Contract     | Holds                                                           |
  * | ------------ | --------------------------------------------------------------- |
@@ -74,6 +71,13 @@ export function errorsByFile(report) {
     counts.set(file, (counts.get(file) ?? 0) + 1);
   }
   return counts;
+}
+
+/** Name the findings behind a changed file count when annotations are capped. */
+export function errorsForFile(report, file) {
+  return (report.issues ?? [])
+    .filter((issue) => issue.severity === "error" && (issue.file ?? "(no file)") === file)
+    .map(({ code, message }) => ({ code, message }));
 }
 
 function fail(message) {
@@ -143,11 +147,17 @@ function main() {
     console.error(
       `check-dogfood-backlog: ${file} is held at zero for ${profile} but reports ${String(n)} error(s).`,
     );
+    for (const { code, message } of errorsForFile(report, file)) {
+      console.error(`  ${String(code)}: ${String(message)}`);
+    }
   }
   for (const [file, n] of over) {
     console.error(
       `check-dogfood-backlog: ${file} reports ${String(n)} error(s) for ${profile}, past its pinned ${String(pinned[file])}.`,
     );
+    for (const { code, message } of errorsForFile(report, file)) {
+      console.error(`  ${String(code)}: ${String(message)}`);
+    }
   }
   if (unpinned.length > 0 || over.length > 0) {
     console.error(

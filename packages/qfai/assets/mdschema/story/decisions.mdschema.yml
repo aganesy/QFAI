@@ -1,0 +1,32 @@
+# Document schema: <specsDir>/decisions.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Decisions$"
+      regex: true
+    description: An append-only register; only a row's Status changes after it is added.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Decisions$"
+          regex: true
+        description: Exactly one table; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Content, Approach, Status]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
