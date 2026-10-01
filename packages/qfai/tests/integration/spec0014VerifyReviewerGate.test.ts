@@ -15,7 +15,6 @@
  * Each clause is read under the section that makes it binding, in the copy
  * `qfai init` ships and in the copy this repository runs.
  */
-// QFAI:EX-0001-0157-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -89,6 +88,7 @@ function section(markdown: string, heading: string): string {
   return (end === -1 ? rest : rest.slice(0, end)).join("\n");
 }
 
+// QFAI:EX-0001-0157-01
 describe("TC-0014-0009: verify holds completion behind a reviewer PASS", () => {
   it("verify's binding gate fails on a render critique the reviewer returned REVISE", async () => {
     const result = await validateProject(await projectWithCritique("REVISE"), undefined, {

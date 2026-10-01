@@ -607,8 +607,8 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
     expect(sddCodes).not.toContain("QFAI-REVIEW-005");
   });
 
+  // QFAI:EX-0001-0150-04
   it("files an acceptance-test pack under its own producer", async () => {
-    // QFAI:EX-0001-0150-04
     const flowPath = ".qfai/specs/02_business-flow/business-flow-0001";
 
     const complete = await newTempDir();

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-07
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -64,6 +62,7 @@ function routeWithOneMissingValue() {
   );
 }
 
+// QFAI:EX-0001-0188-07
 it("A routing result blocked only by the expected HTTP status, opened as one question", () => {
   const routed = routeWithOneMissingValue();
   const questions = routed.verdict.questions ?? [];

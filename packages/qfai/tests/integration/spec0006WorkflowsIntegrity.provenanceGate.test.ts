@@ -27,8 +27,6 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-// QFAI:EX-0003-0011-04
-// QFAI:EX-0003-0011-10
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -83,6 +81,8 @@ const ADOPTER_BODY = [
   "",
 ].join("\n");
 
+// QFAI:EX-0003-0011-04
+// QFAI:EX-0003-0011-10
 describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never reported, while a provenance-backed stale file still is", () => {
   it("keeps silent about the unrecorded colliding file while reporting the recorded stale one", async () => {
     // The collision has to predate the install: the root template copy is

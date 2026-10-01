@@ -3,7 +3,6 @@
 // QFAI:AC-0001-0187-01
 // QFAI:AC-0001-0187-02
 // QFAI:AC-0001-0187-03
-// QFAI:EX-0001-0187-06
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -39,6 +38,7 @@ const VERIFY_STEPS = [
 const reasons = (document: unknown) =>
   list(document, "error.reasons").map((each) => field(each, "reason"));
 
+// QFAI:EX-0001-0187-06
 it("A regression on an annotated example is fixed by the fix-red-main fix stage, which needs its re-run and review", async () => {
   const root = await flowProject();
   const testBefore = await readFile(path.join(root, UNIT_TEST));

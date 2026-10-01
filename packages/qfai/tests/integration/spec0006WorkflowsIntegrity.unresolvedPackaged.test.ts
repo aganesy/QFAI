@@ -70,7 +70,6 @@
  * round-by-round derivation — mutations as needle text, blobs, outputs — is in
  * `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:EX-0003-0011-11
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -122,6 +121,7 @@ const pool = useAdopterTreePool();
  */
 const STALE_NAME = "qfai-tests.yml";
 
+// QFAI:EX-0003-0011-11
 describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory skips at severity info with an empty modified list", () => {
   it("registers one info-severity skip that reports no drift, in a tree whose drift is otherwise reported", async () => {
     const dir = await pool.seedAdopterTree();

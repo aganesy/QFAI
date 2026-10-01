@@ -1,10 +1,9 @@
-// QFAI:EX-0001-0189-04
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
 
+// QFAI:EX-0001-0189-04
 it("resume facts where one receipt's dependency cannot be read", () => {
   const resumed = decide(
     {

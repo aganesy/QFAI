@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0185-48
-// QFAI:EX-0001-0185-08
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -11,6 +8,8 @@ import type {
 } from "../../../src/core/workflow/parse.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
+// QFAI:EX-0001-0185-08
+// QFAI:EX-0001-0185-48
 it("unknown-path", () => {
   const missingPath = "packages/qfai/src/core/workflow/missing-observed-reference.ts";
   const missingRootFile = "Dockerfile";

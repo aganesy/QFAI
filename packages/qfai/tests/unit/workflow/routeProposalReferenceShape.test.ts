@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-45
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -56,6 +54,7 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
   };
 }
 
+// QFAI:EX-0001-0185-45
 it("bare string in expectedBehaviorRefs", () => {
   const actual = acceptRouting({
     expectedBehaviorRefs: ["request"],

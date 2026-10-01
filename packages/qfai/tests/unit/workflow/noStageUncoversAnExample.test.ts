@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0186-05
-// QFAI:EX-0001-0186-06
-// QFAI:EX-0001-0186-12
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -81,6 +77,9 @@ function acceptAgainst(
 const implement = "implement";
 const sddDelta = "sdd";
 
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0186-06
+// QFAI:EX-0001-0186-12
 it("A result after which an annotated example has no annotating test", () => {
   expect(
     acceptAgainst(

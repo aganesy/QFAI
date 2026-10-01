@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-05
 // Fault seeds: FAULT-007
 
 import { createHash } from "node:crypto";
@@ -96,6 +95,7 @@ const changedDigest = (snapshot: Snapshot): Snapshot => ({
   scopeDigest: "b".repeat(64),
 });
 
+// QFAI:EX-0001-0185-05
 it("scope-digest-at-issue", () => {
   expect(atIssue(changedDigest)).toEqual(reasked);
 });

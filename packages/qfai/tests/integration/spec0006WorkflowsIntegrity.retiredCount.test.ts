@@ -11,7 +11,6 @@
  * The two directions are one property: a name the package no longer ships is out of scope, and a name
  * it does ship is in scope whether or not its installed file is still there.
  */
-// QFAI:EX-0003-0011-08
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -56,6 +55,7 @@ async function recordOnlyRetiredEntry(dir: string, retiredName: string): Promise
   );
 }
 
+// QFAI:EX-0003-0011-08
 describe("a record holding only retired names compares nothing", () => {
   it("reports a zero count rather than a successful comparison", async () => {
     const dir = await pool.seedAdopterTree();

@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0039-08
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -85,6 +84,7 @@ async function collectAssistantDocs(): Promise<string[]> {
   return files;
 }
 
+// QFAI:EX-0001-0039-08
 describe("shipped assistant docs invoke qfai through the canonical launcher", () => {
   it("no shipped doc prescribes a bare qfai invocation", async () => {
     const files = await collectAssistantDocs();

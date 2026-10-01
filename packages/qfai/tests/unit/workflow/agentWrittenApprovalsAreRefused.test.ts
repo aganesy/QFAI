@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-09
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -89,6 +87,7 @@ function summary(decision: ReturnType<typeof decide>) {
   };
 }
 
+// QFAI:EX-0001-0188-09
 it("A stage result carrying approved", () => {
   expect(acceptCarrying({ approved: true })).toEqual({
     ok: false,

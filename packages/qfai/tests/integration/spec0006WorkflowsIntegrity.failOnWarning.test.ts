@@ -79,8 +79,6 @@
  * oracle: "the exit code moved AND the summary moved" is only observable while both
  * claims can fail in the same run.
  */
-// QFAI:EX-0003-0011-05
-// QFAI:EX-0003-0011-06
 
 import { describe, expect, it } from "vitest";
 
@@ -123,6 +121,8 @@ function failingIdsOtherThanDrift(checks: { id: string; severity: string }[]): s
     .map((entry) => entry.id);
 }
 
+// QFAI:EX-0003-0011-05
+// QFAI:EX-0003-0011-06
 describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on warning", () => {
   it("exits 0 with summary.warning still 0 while the drift advisory is emitted", async () => {
     const dir = await pool.seedAdopterTree();

@@ -20,7 +20,6 @@
  * field would be read by no production path, so its absence is pinned
  * here as a regression guard.
  */
-// QFAI:EX-0001-0172-01
 
 import { describe, expect, it } from "vitest";
 
@@ -30,6 +29,7 @@ import {
   isAdvisoryFailingCatalogCode,
 } from "../../../../src/core/validators/justificationCatalog.js";
 
+// QFAI:EX-0001-0172-01
 describe("TC-0015-0026: justification catalog SSOT", () => {
   it("registers exactly the 7 catalog codes", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code).sort();

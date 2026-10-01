@@ -10,7 +10,6 @@
  * branches by stubbing the dynamic import via vi.mock and feeding
  * controlled response shapes.
  */
-// QFAI:EX-0001-0130-03
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
@@ -61,6 +60,7 @@ afterEach(async () => {
   vi.resetModules();
 });
 
+// QFAI:EX-0001-0130-03
 describe("defaultCaptureScreen — HTTP response-status guard", () => {
   beforeEach(() => {
     vi.resetModules();

@@ -8,8 +8,6 @@
  * links by default and that the discussion pack step instructs
  * anchor-form authoring. These guard the template ↔ validator contract.
  */
-// QFAI:EX-0001-0089-01
-// QFAI:EX-0001-0089-02
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -48,6 +46,8 @@ const SKILL_REL = path.resolve(
   "STEP.md",
 );
 
+// QFAI:EX-0001-0089-01
+// QFAI:EX-0001-0089-02
 describe("TC-0010-0009/0010: QFAI-MOCK-010 href classification (anchor-form strict)", () => {
   it("anchor-form #href produces no localRefs (PASS QFAI-MOCK-010)", async () => {
     const result = await parseHtmlMock('<a href="#orders">Orders</a>');

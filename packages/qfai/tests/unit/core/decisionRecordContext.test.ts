@@ -11,7 +11,6 @@
  *   - rejected-option (re-adoption)
  *   - scope-expansion
  */
-// QFAI:EX-0001-0170-01
 
 import { describe, expect, it } from "vitest";
 
@@ -20,6 +19,7 @@ import {
   isEnvelopeDeviationContext,
 } from "../../../src/core/decisionRecord.js";
 
+// QFAI:EX-0001-0170-01
 describe("TC-0015-0023: isEnvelopeDeviationContext rejects non-envelope strings", () => {
   it("recognizes the canonical 4 envelope-deviation contexts", () => {
     expect(isEnvelopeDeviationContext("skill-envelope")).toBe(true);

@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-02
-// QFAI:EX-0001-0189-05
 
 import { afterEach, expect, it } from "vitest";
 
@@ -15,6 +14,7 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0189-05
 it("second start refused run-active, continue resumes the one run", async () => {
   const root = await minimalProject();
   const { runId } = await routedRun(root);

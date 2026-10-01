@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0021-07
 /**
  * A rule a project deleted stays deleted.
  *
@@ -46,6 +45,7 @@ async function citesSubject(root: string): Promise<boolean> {
   return entryPoint.includes(`${RULES_DIR_CITATION}/${SUBJECT}`);
 }
 
+// QFAI:EX-0001-0021-07
 describe("a rule master the project deleted", () => {
   it("is not written again, and its bullet is not added back", async () => {
     const root = await initialisedProject();

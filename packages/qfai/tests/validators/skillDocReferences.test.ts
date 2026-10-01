@@ -4,8 +4,6 @@
  * Covers TC-0004-0023 (project_memory shape) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
-// QFAI:EX-0001-0045-02
-// QFAI:EX-0001-0046-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

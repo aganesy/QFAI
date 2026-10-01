@@ -1,9 +1,8 @@
-// QFAI:EX-0001-0185-20
-
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
 
+// QFAI:EX-0001-0185-20
 it("Decide finish on a run with no accepted verify stage", () => {
   const snapshot = readySnapshot();
   const withoutVerify = {

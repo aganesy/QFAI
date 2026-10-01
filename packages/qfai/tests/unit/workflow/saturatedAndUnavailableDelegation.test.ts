@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0189-17
 // Fault seeds: FAULT-020
 
 import { expect, it } from "vitest";
@@ -41,6 +40,7 @@ function delegationResult(workOrder: WorkOrder, sequence: number, status: string
   };
 }
 
+// QFAI:EX-0001-0189-17
 it("Four results in turn with delegation", () => {
   let snapshot: Snapshot & { outstandingWorkOrder: WorkOrder } = running();
   const workOrderId = snapshot.outstandingWorkOrder.workOrderId;

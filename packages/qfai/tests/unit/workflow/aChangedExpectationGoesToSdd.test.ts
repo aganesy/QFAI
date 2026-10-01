@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0187-04
 // Fault seeds: FAULT-016
 
 import { expect, it } from "vitest";
@@ -27,6 +26,7 @@ const workOrder = {
 // An example ID first: the test fix goes to `qfai-implement`.
 const facts = {};
 
+// QFAI:EX-0001-0187-04
 it("A test_fix result whose citedAfter differs from citedBefore", () => {
   const decision = decide(
     {

@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-09
-// QFAI:EX-0001-0185-37
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,6 +25,7 @@ async function journalBytes(root: string, runId: string): Promise<string> {
   return files.join("\n");
 }
 
+// QFAI:EX-0001-0185-37
 it("Built CLI", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);

@@ -11,8 +11,6 @@
  * the comparison semantics.
  */
 
-// QFAI:EX-0001-0130-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -110,6 +108,7 @@ async function seedMinimal(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0130-01
 describe("iterate --capture budget — over-budget emits soft warning, run continues", () => {
   it("emits warning when durationMs > captureBudgetMs but exits 0", async () => {
     const root = await newTempDir();

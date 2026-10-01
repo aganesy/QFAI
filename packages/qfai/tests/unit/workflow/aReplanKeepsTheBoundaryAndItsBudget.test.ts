@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0189-21
-// QFAI:EX-0001-0186-10
-// QFAI:EX-0001-0189-24
-
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -57,6 +53,9 @@ function narrowed() {
   return { run, facts, routing: run.snapshot.routingReceiptRef ?? "" };
 }
 
+// QFAI:EX-0001-0186-10
+// QFAI:EX-0001-0189-21
+// QFAI:EX-0001-0189-24
 it("next after a replan that narrowed the write scope, with a file changed under the earlier scope", () => {
   const { run, facts, routing } = narrowed();
   const valid = { [routing]: "valid" } as const;

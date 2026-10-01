@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-41
-
 import { expect, it } from "vitest";
 
 import { completion, finish, metFacts, readySnapshot } from "./finishFixture.js";
@@ -26,6 +24,7 @@ const uncommitted: [string, string][] = [
 ];
 
 for (const [title, path] of uncommitted) {
+  // QFAI:EX-0001-0185-41
   it(title, () => {
     expect(finishWithUncommitted(path)).toEqual({
       state: "ready",

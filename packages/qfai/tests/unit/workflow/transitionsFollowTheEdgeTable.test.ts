@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0189-16
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -177,6 +175,7 @@ function edge(decision: WorkflowDecision) {
   return { state: decision.verdict.run?.state, events: decision.events.map((event) => event.type) };
 }
 
+// QFAI:EX-0001-0189-16
 it("capture-request", () => {
   const started = decide(
     null,

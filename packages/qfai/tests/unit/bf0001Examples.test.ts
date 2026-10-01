@@ -82,8 +82,8 @@ async function put(root: string, relative: string, content: string): Promise<voi
 }
 
 describe("BF-0001 story-directory examples", () => {
+  // QFAI:EX-0001-0005-02
   it("resolves a custom contract layer outside the spec root", () => {
-    // QFAI:EX-0001-0005-02
     const config = structuredClone(defaultConfig);
     config.paths.specsDir = ".qfai/spec";
     config.paths.contractsDir = "docs/contracts";
@@ -95,8 +95,8 @@ describe("BF-0001 story-directory examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0005-04
   it("accepts exactly the three story files", async () => {
-    // QFAI:EX-0001-0005-04
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-story-"));
     roots.push(root);
     for (const [relative, content] of files()) {
@@ -124,18 +124,18 @@ describe("BF-0001 story-directory examples", () => {
     expect(issues[0]?.message).toContain(name);
   }
 
+  // QFAI:EX-0001-0005-05
   it("names an extra notes file", async () => {
-    // QFAI:EX-0001-0005-05
     await extra("notes.md", "file");
   });
 
+  // QFAI:EX-0001-0005-06
   it("names an extra fixtures directory", async () => {
-    // QFAI:EX-0001-0005-06
     await extra("fixtures", "directory");
   });
 
+  // QFAI:EX-0001-0005-07
   it("names a missing example file", async () => {
-    // QFAI:EX-0001-0005-07
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-missing-"));
     roots.push(root);
     for (const [relative, content] of files()) {
@@ -151,8 +151,8 @@ describe("BF-0001 story-directory examples", () => {
 });
 
 describe("BF-0001 ID examples", () => {
+  // QFAI:EX-0001-0051-03
   it("accepts one declaration of every story-tree ID shape", () => {
-    // QFAI:EX-0001-0051-03
     const contents = files();
     contents.set(`${spec}/decisions.md`, table(["| DEC-0001 | Accepted choice | Reason | DONE |"]));
     contents.set(
@@ -174,13 +174,13 @@ describe("BF-0001 ID examples", () => {
     ).toEqual([]);
   });
 
+  // QFAI:EX-0001-0008-02
   it("allocates the next story ID after a gap without reusing the gap", () => {
-    // QFAI:EX-0001-0008-02
     expect(nextId("US", ["US-0001-0001", "US-0001-0003"], "BF-0001")).toBe("US-0001-0004");
   });
 
+  // QFAI:EX-0001-0008-03
   it("treats flow and story IDs in indexes and policy prose as citations", () => {
-    // QFAI:EX-0001-0008-03
     const contents = files();
     contents.set(
       `${spec}/02_business-flow/business-flows.md`,
@@ -200,8 +200,8 @@ describe("BF-0001 ID examples", () => {
     expect(findings(contents, "QFAI-STORY-002")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0051-03
   it("rejects an AC with a three-digit tail and names its file", () => {
-    // QFAI:EX-0001-0051-03
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -217,8 +217,8 @@ describe("BF-0001 ID examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0051-04
   it("reports both files that declare one US ID", () => {
-    // QFAI:EX-0001-0051-04
     const contents = files();
     contents.set(`${secondStory}/01_User-story.md`, "# US-0001-0001: Duplicate\n");
     const duplicates = findings(contents, "QFAI-STORY-002").filter((entry) =>
@@ -251,14 +251,14 @@ describe("BF-0001 ID examples", () => {
     expect(duplicates[0]?.message).toContain(sql);
   });
 
+  // QFAI:EX-0001-0008-01
+  // QFAI:EX-0001-0051-05
   it("accepts matching flow, story, AC and EX IDs", () => {
-    // QFAI:EX-0001-0008-01
-    // QFAI:EX-0001-0051-05
     expect(findings(files(), "QFAI-STORY-002")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0051-05
   it("rejects a story numbered for another flow", () => {
-    // QFAI:EX-0001-0051-05
     const contents = files();
     contents.set(`${story}/01_User-story.md`, "# US-0002-0001: Wrong flow\n");
     expect(findings(contents, "QFAI-STORY-002")).toEqual(
@@ -271,8 +271,8 @@ describe("BF-0001 ID examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0051-05
   it("rejects a story directory numbered differently from its ID", () => {
-    // QFAI:EX-0001-0051-05
     const contents = files();
     contents.set(
       `${secondStory}/01_User-story.md`,
@@ -289,8 +289,8 @@ describe("BF-0001 ID examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0051-05
   it("rejects an EX numbered for another story and a flow directory named for another flow", () => {
-    // QFAI:EX-0001-0051-05
     const contents = files();
     contents.set(
       `${story}/03_Example.md`,
@@ -313,8 +313,8 @@ describe("BF-0001 ID examples", () => {
 });
 
 describe("BF-0001 EX and BR reference examples", () => {
+  // QFAI:EX-0001-0009-04
   it("reads a YAML rule with its statement and example", () => {
-    // QFAI:EX-0001-0009-04
     const contents = files();
     contents.delete(`${spec}/03_contract/cli/check.md`);
     contents.set(
@@ -333,8 +333,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0009-05
   it("reads a SQL rule with its adjacent examples line", () => {
-    // QFAI:EX-0001-0009-05
     const contents = files();
     contents.delete(`${spec}/03_contract/cli/check.md`);
     contents.set(
@@ -352,8 +352,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0009-06
   it("reads a Markdown Business rules table with its statement and example", () => {
-    // QFAI:EX-0001-0009-06
     const model = buildStoryTreeModel(files());
     expect(model.rules).toEqual([
       {
@@ -374,25 +374,25 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(issue?.message).toContain("EX-0001-0001-01");
   }
 
+  // QFAI:EX-0001-0009-01
+  // QFAI:EX-0001-0009-02
+  // QFAI:EX-0001-0055-01
   it("accepts one existing same-story AC reference", () => {
-    // QFAI:EX-0001-0009-01
-    // QFAI:EX-0001-0009-02
-    // QFAI:EX-0001-0055-01
     expect(findings(files(), "QFAI-STORY-004")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0055-01
   it("rejects an empty AC reference", () => {
-    // QFAI:EX-0001-0055-01
     invalidAcRef("");
   });
 
+  // QFAI:EX-0001-0055-01
   it("rejects two AC references", () => {
-    // QFAI:EX-0001-0055-01
     invalidAcRef("AC-0001-0001-01, AC-0001-0001-02");
   });
 
+  // QFAI:EX-0001-0055-02
   it("rejects an AC in another story", () => {
-    // QFAI:EX-0001-0055-02
     const contents = files("AC-0001-0002-01");
     contents.set(
       `${secondStory}/02_Acceptance-Criteria.md`,
@@ -405,13 +405,13 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(issue?.message).toContain("EX-0001-0001-01");
   });
 
+  // QFAI:EX-0001-0055-02
   it("rejects an undeclared AC", () => {
-    // QFAI:EX-0001-0055-02
     invalidAcRef("AC-0001-0001-02");
   });
 
+  // QFAI:EX-0001-0055-03
   it("names a criterion with no example", () => {
-    // QFAI:EX-0001-0055-03
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -427,8 +427,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0009-03
   it("accepts an EX cited by two rules", () => {
-    // QFAI:EX-0001-0009-03
     const contents = files();
     contents.set(
       `${story}/03_Example.md`,
@@ -441,8 +441,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0055-05
   it("names a rule with no examples", () => {
-    // QFAI:EX-0001-0055-05
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
@@ -481,8 +481,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0055-07
   it("names an example no rule cites", () => {
-    // QFAI:EX-0001-0055-07
     const contents = files();
     contents.delete(`${spec}/03_contract/cli/check.md`);
     expect(findings(contents, "QFAI-STORY-005")).toEqual(
@@ -498,8 +498,8 @@ describe("BF-0001 EX and BR reference examples", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0055-06
   it("names an unknown example and the contract that cites it", () => {
-    // QFAI:EX-0001-0055-06
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
@@ -517,8 +517,8 @@ describe("BF-0001 EX and BR reference examples", () => {
 });
 
 describe("BF-0001 decision and question examples", () => {
+  // QFAI:EX-0001-0053-02
   it("rejects malformed supersession and a question-only status", () => {
-    // QFAI:EX-0001-0053-02
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
@@ -550,8 +550,8 @@ describe("BF-0001 decision and question examples", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0053-03
   it("rejects a question ID declared in the decision table", () => {
-    // QFAI:EX-0001-0053-03
     const contents = files();
     contents.set(`${spec}/decisions.md`, table(["| OQ-0001 | Wrong ID kind | Reason | TODO |"]));
     expect(findings(contents, "QFAI-STORY-003")).toEqual(
@@ -564,8 +564,8 @@ describe("BF-0001 decision and question examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0053-04
   it("classifies test exceptions and change requests by status and references", () => {
-    // QFAI:EX-0001-0053-04
     const rows = parseRecordTable(
       table([
         "| DEC-0001 | Test exception: EX-0001-0001-01, AC-0001-0001-01 | Reason | DONE |",
@@ -588,8 +588,8 @@ describe("BF-0001 decision and question examples", () => {
     });
   });
 
+  // QFAI:EX-0001-0053-05
   it("blocks an unadjudicated WIP question and releases it at DONE", () => {
-    // QFAI:EX-0001-0053-05
     const contents = files();
     contents.set(
       `${spec}/open-questions.md`,
@@ -617,8 +617,8 @@ describe("BF-0001 decision and question examples", () => {
 });
 
 describe("BF-0001 layer and exception examples", () => {
+  // QFAI:EX-0001-0056-01
   it("requires an E2E annotation for a business flow", () => {
-    // QFAI:EX-0001-0056-01
     const model = buildStoryTreeModel(files());
     const integration = testFile(
       "tests/integration/flow.test.ts",
@@ -643,9 +643,9 @@ describe("BF-0001 layer and exception examples", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0056-02
+  // QFAI:EX-0001-0069-01
   it("requires integration or API for AC coverage", () => {
-    // QFAI:EX-0001-0056-02
-    // QFAI:EX-0001-0069-01
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -673,8 +673,8 @@ describe("BF-0001 layer and exception examples", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0056-03
   it("respects configured EX selection and does not credit an unselected annotation", () => {
-    // QFAI:EX-0001-0056-03
     const contents = files();
     contents.set(
       `${story}/03_Example.md`,
@@ -709,8 +709,8 @@ describe("BF-0001 layer and exception examples", () => {
     ).toBe(false);
   });
 
+  // QFAI:EX-0001-0056-04
   it("names BF and AC annotations in the wrong test layers", () => {
-    // QFAI:EX-0001-0056-04
     const model = buildStoryTreeModel(files());
     const tests = [
       testFile("tests/integration/flow.test.ts", "integration", annotation("BF", "0001")),
@@ -724,8 +724,8 @@ describe("BF-0001 layer and exception examples", () => {
     }
   });
 
+  // QFAI:EX-0001-0056-05
   it("names undeclared BF and EX annotations in both profiles", () => {
-    // QFAI:EX-0001-0056-05
     const model = buildStoryTreeModel(files());
     const tests = [
       testFile("tests/e2e/unknown-flow.test.ts", "e2e", annotation("BF", "9999")),
@@ -742,8 +742,8 @@ describe("BF-0001 layer and exception examples", () => {
     }
   });
 
+  // QFAI:EX-0001-0071-03
   it("names an undeclared AC annotation and accepts a defined EX annotation", () => {
-    // QFAI:EX-0001-0071-03
     const model = buildStoryTreeModel(files());
     const tests = [
       testFile(
@@ -761,8 +761,8 @@ describe("BF-0001 layer and exception examples", () => {
     ]);
   });
 
+  // QFAI:EX-0001-0056-06
   it("applies a DONE BF test exception without exempting its AC", () => {
-    // QFAI:EX-0001-0056-06
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
@@ -789,8 +789,8 @@ describe("BF-0001 layer and exception examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0056-06
   it("applies a DONE AC test exception without exempting its EX", () => {
-    // QFAI:EX-0001-0056-06
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
@@ -810,8 +810,8 @@ describe("BF-0001 layer and exception examples", () => {
     );
   });
 
+  // QFAI:EX-0001-0056-07
   it("does not apply a test exception to a misspelled EX", () => {
-    // QFAI:EX-0001-0056-07
     const contents = files();
     contents.set(
       `${story}/03_Example.md`,

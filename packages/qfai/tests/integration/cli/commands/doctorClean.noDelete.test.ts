@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0008-02
 //
 // Boundary: `qfai doctor --clean` is a move (never delete) operation;
 // re-running on an already-archived pack is a no-op. The
@@ -50,6 +49,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0008-02
 describe("doctor --clean never deletes; validate review excludes _archive", () => {
   it("second --clean run is a no-op after the first archived the pack", async () => {
     const root = await newTempDir("idempotent");

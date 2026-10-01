@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0189-21
-// QFAI:EX-0001-0189-22
-// QFAI:EX-0001-0189-23
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -31,6 +27,9 @@ function boundaryChecks(snapshot: Snapshot, changed: string[], facts: Facts = {}
   };
 }
 
+// QFAI:EX-0001-0189-21
+// QFAI:EX-0001-0189-22
+// QFAI:EX-0001-0189-23
 it("issued stage recordAreas pass later write and finish", () => {
   const snapshot = { ...readySnapshot(), issuedRecordAreas: [LEDGER, IMPLEMENT_EVIDENCE] };
 

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-10
-
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
@@ -72,6 +70,7 @@ function expectedOf(stages: Stages) {
 }
 
 for (const route of WORKFLOW_ROUTES) {
+  // QFAI:EX-0001-0185-10
   it(route, async () => {
     const stages = (await planFacts())[route]?.stages ?? [];
 

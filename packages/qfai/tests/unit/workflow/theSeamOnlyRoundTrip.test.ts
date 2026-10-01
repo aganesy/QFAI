@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-27
 // Fault seeds: FAULT-014
 
 import { expect, it } from "vitest";
@@ -60,6 +59,7 @@ function summary(workOrder: WorkOrder | null | undefined) {
 
 const stopped = { id: "run-seam", state: "stopped", sequence: -1 };
 
+// QFAI:EX-0001-0185-27
 it("An acceptance result with seamRequest and outcome needs_repair", () => {
   const targetTestId = "TC-0007-0003";
   const first = nextFrom({ ...base, run: { id: "run-seam", state: "ready", sequence: 6 } });

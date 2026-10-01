@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0190-02
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -71,6 +69,7 @@ function schemaFaults(requestKind: string) {
   return stageResultRefusals({ ...routingResult(requestKind) });
 }
 
+// QFAI:EX-0001-0190-02
 it("A request kind outside the closed set is refused as a shape", () => {
   expect({
     readOnly: schemaFaults("read_only"),

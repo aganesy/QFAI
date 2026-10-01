@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-04
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -63,6 +61,7 @@ const effects: [string, string, string, string[]][] = [
 ];
 
 for (const [title, optionId, state, events] of effects) {
+  // QFAI:EX-0001-0188-04
   it(title, () => {
     const effect = options.find((option) => option.optionId === optionId)?.effect;
 

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0192-07
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -75,6 +73,7 @@ const cancelled = {
   events: ["authorized-stop"],
 };
 
+// QFAI:EX-0001-0192-07
 it("ready-refused", () => {
   expect(outcome(ready, { operation: "next" })).toEqual(refused("ready"));
 });

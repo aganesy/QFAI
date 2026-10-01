@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0189-02
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -18,6 +16,7 @@ const harness = {
   },
 };
 
+// QFAI:EX-0001-0189-02
 it("Decide start", () => {
   const started = decide(
     null,

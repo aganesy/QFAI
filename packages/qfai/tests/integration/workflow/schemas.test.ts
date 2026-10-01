@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0194-05
-// QFAI:EX-0001-0194-19
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -89,6 +88,7 @@ function withReference(proposal: unknown, field: string, entry: unknown) {
   return { ...(typeof proposal === "object" ? proposal : {}), [field]: [entry] };
 }
 
+// QFAI:EX-0001-0194-19
 it("Validate every payload example and fixture with the parser and with the five schemas", async () => {
   const validate = await loadValidator();
   const examples = await payloadExamples();

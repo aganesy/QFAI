@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-22
-
 import { expect, it } from "vitest";
 
 import { RUN_ID, finish, metFacts, readySnapshot } from "./finishFixture.js";
@@ -198,6 +196,7 @@ const matrix: {
 ];
 
 for (const { title, plant, expected } of matrix) {
+  // QFAI:EX-0001-0185-22
   it(title, () => {
     const [snapshot, facts] = plant(readySnapshot(), metFacts());
     const decision = finish(snapshot, facts);

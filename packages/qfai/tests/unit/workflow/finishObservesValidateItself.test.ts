@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-19
 // Fault seeds: FAULT-008
 
 import { expect, it } from "vitest";
@@ -50,6 +49,7 @@ function acceptImplementClaimingValidatePass() {
   );
 }
 
+// QFAI:EX-0001-0185-19
 it("A result whose gateResults claims a PASS for a gate", () => {
   const accepted = acceptImplementClaimingValidatePass();
   const claims = accepted?.events[0]?.gateResults;

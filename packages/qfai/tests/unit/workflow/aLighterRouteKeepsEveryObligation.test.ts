@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-10
-
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
@@ -78,6 +76,7 @@ async function reclassified() {
   return { run, receipts: run.snapshot.receiptRefs ?? [] };
 }
 
+// QFAI:EX-0001-0186-10
 it("A run re-routed from fix-defect to decide-acceptance and then to add-feature, then next", async () => {
   const { run, receipts } = await reclassified();
   const routing = run.snapshot.routingReceiptRef ?? "";

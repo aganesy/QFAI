@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-11
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -30,6 +28,7 @@ const capabilities = Object.fromEntries(
   ].map((capability) => [capability, true]),
 );
 
+// QFAI:EX-0001-0185-11
 it("a start input carrying scope is refused schema", () => {
   const refused = decide(
     null,

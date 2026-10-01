@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0215-01
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -75,6 +73,7 @@ function taken(verdict: string): boolean {
   return stageResultRefusals({ ...result }).length === 0 && accepted.verdict.ok;
 }
 
+// QFAI:EX-0001-0215-01
 it("Diagnose results carrying each of the eleven verdicts, and one carrying wont-fix", () => {
   expect({
     accepted: ELEVEN.filter(taken),

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-24
-
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
@@ -14,6 +12,7 @@ function uncommittedFacts() {
 
 const uncommitted = { condition: "uncommitted", subject: "src/notify/email.ts", owner: "operator" };
 
+// QFAI:EX-0001-0185-24
 it("Decide finish on a working_tree run whose conditions hold except uncommitted", () => {
   const snapshot: ReturnType<typeof readySnapshot> = {
     ...readySnapshot(),

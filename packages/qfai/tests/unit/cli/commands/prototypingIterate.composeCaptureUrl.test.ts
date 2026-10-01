@@ -25,11 +25,11 @@
  *      `--target-url=` flag named (NOT the internal `targetUrl=`
  *      field name), pinning the operator surface of the catch branch.
  */
-// QFAI:EX-0001-0130-02
 import { describe, expect, it } from "vitest";
 
 import { composeCaptureUrl } from "../../../../src/cli/commands/prototypingIterate.js";
 
+// QFAI:EX-0001-0130-02
 describe("composeCaptureUrl — direct unit coverage", () => {
   it("forwards absolute https:// URLs verbatim (operator override wins over base)", () => {
     const result = composeCaptureUrl("https://example.com/page", "http://localhost:5173");

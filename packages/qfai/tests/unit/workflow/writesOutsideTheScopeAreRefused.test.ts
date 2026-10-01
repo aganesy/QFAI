@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-33
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -65,6 +63,7 @@ function refusal(decision: ReturnType<typeof decide>) {
 
 const digest = "0".repeat(64);
 
+// QFAI:EX-0001-0185-33
 it("outside-write-areas", () => {
   const decision = acceptChangedFiles(
     directPlan,

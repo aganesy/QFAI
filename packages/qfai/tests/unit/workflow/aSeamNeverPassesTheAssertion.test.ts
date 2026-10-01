@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-28
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -25,6 +23,7 @@ const base = {
 };
 const facts = { acceptanceObligationsUnmet: true };
 
+// QFAI:EX-0001-0185-28
 it("A seam-only result whose seam", () => {
   const issued = decide(
     { ...base, run: { id: "run-seam-pass", state: "ready", sequence: 8 } },

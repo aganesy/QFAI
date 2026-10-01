@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0194-07
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -46,6 +44,7 @@ function acceptMeasured(measurement: unknown) {
   );
 }
 
+// QFAI:EX-0001-0194-07
 it("A stage result whose measurement sets every field null, and one submitting 0 for a field", () => {
   const counted = { ...UNMEASURED, reworkCount: 0 };
   const recorded = [UNMEASURED, counted].map((measurement) => {

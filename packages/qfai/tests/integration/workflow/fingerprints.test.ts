@@ -1,6 +1,4 @@
 // QFAI:AC-0001-0189-03
-// QFAI:EX-0001-0189-06
-// QFAI:EX-0001-0189-07
 // Fault seeds: FAULT-017, FAULT-018, FAULT-019
 
 import { readFile, utimes } from "node:fs/promises";
@@ -36,6 +34,8 @@ function validities(receipts: Record<string, unknown>): unknown[] {
   return Object.values(receipts);
 }
 
+// QFAI:EX-0001-0189-06
+// QFAI:EX-0001-0189-07
 it("Git fixture with recorded receipts", async () => {
   // Inside the run's write scope, so the run change boundary admits it, and outside every file
   // and glob a receipt reads.

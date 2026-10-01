@@ -19,7 +19,6 @@
  * `node:fs/promises` is mocked here rather than in `state.test.ts` because
  * `vi.mock` is file-scoped and the rest of that suite needs the real module.
  */
-// QFAI:EX-0001-0090-01
 
 import type * as FsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
@@ -122,6 +121,7 @@ async function bumpCounter(target: string): Promise<number> {
   });
 }
 
+// QFAI:EX-0001-0090-01
 describe("TC-0010-0012: the state lock classifies a failed exclusive create", () => {
   it("takes the lock when the create raced an unlink (control: no fault)", async () => {
     await expect(bumpCounter(root)).resolves.toBe(1);

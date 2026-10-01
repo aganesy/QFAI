@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0192-01
-// QFAI:EX-0001-0192-01
 
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,6 +15,7 @@ const modes: [string, string][] = [
 ];
 
 for (const [title, mode] of modes) {
+  // QFAI:EX-0001-0192-01
   it(title, async () => {
     const root = await minimalProject(`workflow:\n  mode: ${mode}\n`);
     const runs = path.join(root, ".qfai", "run");

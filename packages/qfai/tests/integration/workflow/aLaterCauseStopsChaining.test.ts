@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0192-03
-// QFAI:EX-0001-0192-07
 
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -31,6 +30,7 @@ async function journalOf(root: string, runId: string): Promise<unknown[]> {
   );
 }
 
+// QFAI:EX-0001-0192-07
 it("A run in running", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   const config = await readFile(path.join(root, "qfai.config.yaml"));

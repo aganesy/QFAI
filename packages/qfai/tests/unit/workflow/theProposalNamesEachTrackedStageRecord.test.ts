@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-39
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -78,6 +76,7 @@ const records: [string, string][] = [
   ["run-state", ".qfai/run/**"],
 ];
 
+// QFAI:EX-0001-0185-39
 it("story-files-only", () => {
   expect(routeNaming()).toEqual({
     code: undefined,

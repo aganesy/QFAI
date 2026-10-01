@@ -9,7 +9,6 @@
  * catalog code in two variants (empty + filled justification) and
  * asserts the validator flags only the empty variants.
  */
-// QFAI:EX-0001-0172-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,6 +39,7 @@ async function writeReport(name: string, body: unknown): Promise<void> {
   await writeFile(path.join(dir, name), JSON.stringify(body, null, 2), "utf-8");
 }
 
+// QFAI:EX-0001-0172-01
 describe("TC-0015-0027: validateReviewerJustification rejects empty justification on catalog codes", () => {
   it("flags a finding with empty justification for every catalog code", async () => {
     const findings = JUSTIFICATION_CATALOG.map((entry) => ({

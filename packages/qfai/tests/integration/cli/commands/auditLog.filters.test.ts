@@ -7,7 +7,6 @@
  * - `--format json` emits JSON; `--format table` (default) emits a
  *   tab-separated table
  */
-// QFAI:EX-0001-0173-01
 
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-30
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -11,6 +9,7 @@ const plan = {
 };
 const flowBinding = { flowId: "BF-0007" };
 
+// QFAI:EX-0001-0185-30
 it("A result with outcome unrun", () => {
   const issued = decide(
     { run: { id: "run-unrun", state: "ready", sequence: 4 }, plan, flowBinding },

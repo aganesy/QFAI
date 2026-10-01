@@ -18,8 +18,6 @@
  * by absence of the scope-limited markers.
  */
 
-// QFAI:EX-0001-0160-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -227,6 +225,7 @@ async function seedSaasPackageGatesPassing(root: string): Promise<void> {
   await seedSaasPackageGatesPassingCanonical(root);
 }
 
+// QFAI:EX-0001-0160-01
 describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE", () => {
   it("refuses to upgrade while named gates are still missing; stderr names them", async () => {
     const root = await newTempDir();

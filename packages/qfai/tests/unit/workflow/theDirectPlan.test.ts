@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0191-01
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -150,6 +148,7 @@ function driveToFinish(record: (decision: WorkflowDecision) => Run, routed: Run,
   return issuedSteps;
 }
 
+// QFAI:EX-0001-0191-01
 it("Drive an edit-text run from start to finish with canned accepted results", async () => {
   const decisions: WorkflowDecision[] = [];
   const record = (decision: WorkflowDecision) => {

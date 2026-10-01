@@ -1,11 +1,11 @@
 // QFAI:AC-0001-0186-01
-// QFAI:EX-0001-0186-01
-// QFAI:EX-0001-0186-13
 
 import { expect, it } from "vitest";
 
 import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
 
+// QFAI:EX-0001-0186-01
+// QFAI:EX-0001-0186-13
 it("Load the shipped fix-defect", async () => {
   const fixDefect = (await loadBuiltInPlans()).find((plan) => plan.route === "fix-defect");
 

@@ -12,8 +12,6 @@
  * Playwright's own runtime style injections).
  */
 
-// QFAI:EX-0001-0130-01
-
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -113,6 +111,7 @@ async function seedMinimal(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0130-01
 describe("iterate --capture htmlSourceCopy byte-equivalent + zero injected <style>", () => {
   it("output html sha256 matches source AND has the same <style> tag count", async () => {
     const root = await newTempDir();

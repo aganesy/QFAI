@@ -1,10 +1,9 @@
-// QFAI:EX-0001-0189-15
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
 
+// QFAI:EX-0001-0189-15
 it("Decide resume on a run in running whose outstanding work order has no accepted result", () => {
   const outstanding = {
     workOrderId: "work-order-bounded-sdd-delta-1",

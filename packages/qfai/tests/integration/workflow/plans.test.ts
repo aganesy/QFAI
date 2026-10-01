@@ -8,13 +8,6 @@
 // QFAI:AC-0001-0218-03
 // QFAI:AC-0001-0218-04
 // QFAI:AC-0001-0218-05
-// QFAI:EX-0001-0185-13
-// QFAI:EX-0001-0185-14
-// QFAI:EX-0001-0188-08
-// QFAI:EX-0001-0191-01
-// QFAI:EX-0001-0192-08
-// QFAI:EX-0001-0192-09
-// QFAI:EX-0001-0210-08
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -128,6 +121,13 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
 
 const VERIFY = ["verify-change-note°", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
 
+// QFAI:EX-0001-0185-13
+// QFAI:EX-0001-0185-14
+// QFAI:EX-0001-0188-08
+// QFAI:EX-0001-0191-01
+// QFAI:EX-0001-0192-08
+// QFAI:EX-0001-0192-09
+// QFAI:EX-0001-0210-08
 it("The shipped add-feature and prototype-feature plans", async () => {
   const kinds = async (route: string) =>
     ((await planOf(route))?.stages ?? []).map((stage) => stage.kind);

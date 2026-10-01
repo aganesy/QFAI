@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-02
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -73,6 +71,7 @@ function routeRestoringACheck() {
   );
 }
 
+// QFAI:EX-0001-0188-02
 it("A bugfix routing result whose only risk signal is authorization-restored", () => {
   const routed = routeRestoringACheck();
   expect(routed.verdict.run?.state).toBe("ready");

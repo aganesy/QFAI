@@ -13,8 +13,6 @@
  * the flag plumbing + per-screen iteration + htmlSourceCopy byte-copy.
  */
 
-// QFAI:EX-0001-0130-01
-
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -116,6 +114,7 @@ async function seedMinimalProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0130-01
 describe("iterate --capture default OFF", () => {
   it("writes zero PNG/HTML when --capture is NOT passed", async () => {
     const root = await newTempDir();

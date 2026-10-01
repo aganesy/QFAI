@@ -14,9 +14,6 @@
  *       same reset fails (REQ-0174).
  */
 
-// QFAI:EX-0001-0136-01
-// QFAI:EX-0001-0136-02
-
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -216,6 +213,8 @@ function captureStderr(): string[] {
   return lines;
 }
 
+// QFAI:EX-0001-0136-01
+// QFAI:EX-0001-0136-02
 describe("iterate --cycle 0 destructive-rerun gate", () => {
   it("refuses without --force when iter-00 already exists (exit 2 + recovery hint)", async () => {
     const root = await newTempDir();

@@ -14,7 +14,6 @@
  * justification rejection on advisory-failing codes) is exercised
  * via the existing `validateReviewerJustification` validator.
  */
-// QFAI:EX-0001-0168-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -89,6 +88,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0168-01
 describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part justification", () => {
   it("does NOT emit drift when scanner and prompt both contain the contract clause tokens", async () => {
     await seedPair(root);

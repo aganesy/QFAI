@@ -1,4 +1,3 @@
-// QFAI:EX-0004-0001-02
 import { describe, expect, it } from "vitest";
 
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
@@ -23,6 +22,7 @@ function model(decisions?: string) {
   return buildStoryTreeModel(entries, { specsDir: specs, contractsDir: `${specs}/03_contract` });
 }
 
+// QFAI:EX-0004-0001-02
 describe("story-tree test obligations", () => {
   it("requires BF in E2E and AC in integration or API", () => {
     const findings = validateStoryTreeObligationsModel(
@@ -75,6 +75,27 @@ describe("story-tree test obligations", () => {
         (item) => item.code === "QFAI-STORY-008" && item.refs?.includes("EX-0001-0001-99"),
       ),
     ).toBe(true);
+  });
+
+  // QFAI:EX-0001-0056-14
+  it("counts an EX annotation only directly before a test declaration", () => {
+    const annotation = `// ${["QFAI", "EX-0001-0001-01"].join(":")}`;
+    const missing = (content: string) =>
+      validateStoryTreeObligationsModel(
+        model(),
+        [{ file: "tests/unit/checkout.test.ts", kind: null, selectedForExample: true, content }],
+        "tdd",
+      ).some((item) => item.code === "QFAI-STORY-006" && item.refs?.includes("EX-0001-0001-01"));
+
+    const header = `${annotation}\nimport { it } from "vitest";\n\nit("pays", () => {});\n`;
+    const inBody = `it("pays", () => {\n  ${annotation}\n  expect(1).toBe(1);\n});\n`;
+    const beforeIt = `import { it } from "vitest";\n\n${annotation}\nit("pays", () => {});\n`;
+    const beforeEach = `${annotation}\n// another comment\ndescribe.each([1])("%s", () => {});\n`;
+
+    expect(missing(header)).toBe(true);
+    expect(missing(inBody)).toBe(true);
+    expect(missing(beforeIt)).toBe(false);
+    expect(missing(beforeEach)).toBe(false);
   });
 
   it("rejects an EX annotation in E2E and keeps its test obligation open", () => {

@@ -131,8 +131,8 @@ function expectFinishLine(message: string): void {
 }
 
 describe("BF-0004 migration examples", () => {
+  // QFAI:EX-0004-0001-01
   it("installs a resolvable migration skill on both fresh and old-layout projects", async () => {
-    // QFAI:EX-0004-0001-01
     const fresh = await mkdtemp(path.join(tmpdir(), "qfai-bf4-fresh-"));
     const legacy = await mkdtemp(path.join(tmpdir(), "qfai-bf4-legacy-"));
     roots.push(fresh, legacy);
@@ -152,8 +152,8 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  // QFAI:EX-0004-0001-02
   it("delegates link and managed-ignore mutations to the init writers", async () => {
-    // QFAI:EX-0004-0001-02
     const source = path.resolve(getInitAssetsDir(), "../../src/migration/specToStory");
     const links = await readFile(path.join(source, "step09RepointLinks.ts"), "utf8");
     const ignore = await readFile(path.join(source, "step10UpdateGitignore.ts"), "utf8");
@@ -170,8 +170,8 @@ describe("BF-0004 migration examples", () => {
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });
 
+  // QFAI:EX-0004-0002-01
   it("reports only the old layout across every profile, ahead of a missing story file", async () => {
-    // QFAI:EX-0004-0002-01
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -217,8 +217,8 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  // QFAI:EX-0004-0002-02
   it("reports a policies-only old layout ahead of a missing story file", async () => {
-    // QFAI:EX-0004-0002-02
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -245,8 +245,8 @@ describe("BF-0004 migration examples", () => {
     expectFinishLine(message);
   });
 
+  // QFAI:EX-0004-0002-03
   it("reports the former default spec root when the new root is configured", async () => {
-    // QFAI:EX-0004-0002-03
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -273,8 +273,8 @@ describe("BF-0004 migration examples", () => {
     expectFinishLine(message);
   });
 
+  // QFAI:EX-0004-0003-06
   it("refuses a truncated migration ID map before step 5 changes any bytes", async () => {
-    // QFAI:EX-0004-0003-06
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -291,8 +291,8 @@ describe("BF-0004 migration examples", () => {
     expect(await treeHash(context.root)).toBe(before);
   });
 
+  // QFAI:EX-0004-0003-04
   it("requires a local package install when a copied script has no qfai dependency", async () => {
-    // QFAI:EX-0004-0003-04
     const context = await fixture();
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
     const installedSkill = path.join(context.root, ".qfai/assistant/skill/qfai-migration-v1-to-v2");
@@ -315,8 +315,8 @@ describe("BF-0004 migration examples", () => {
     expect(await treeHash(context.root)).toBe(before);
   });
 
+  // QFAI:EX-0004-0003-09
   it("runs step 5 after a valid ID map without demanding an earlier step", async () => {
-    // QFAI:EX-0004-0003-09
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -336,8 +336,8 @@ describe("BF-0004 migration examples", () => {
     expect(result.output).toContain("## Operations\nnone");
   });
 
+  // QFAI:EX-0004-0003-19
   it("archives pack decisions and questions after writing their new rows", async () => {
-    // QFAI:EX-0004-0003-19
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -373,8 +373,8 @@ describe("BF-0004 migration examples", () => {
       read(context.root, ".qfai/spec/spec-0001/08_Open-questions.md"),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
+  // QFAI:EX-0004-0004-01
   it("moves every present default directory and skips an absent prototype directory", async () => {
-    // QFAI:EX-0004-0004-01
     const context = await fixture();
     for (const [source] of STEP01_RENAMES) {
       if (source === ".qfai/prototypes") continue;
@@ -395,8 +395,8 @@ describe("BF-0004 migration examples", () => {
     expect(result.output).not.toContain(".qfai/prototypes");
   });
 
+  // QFAI:EX-0004-0004-02
   it("rewrites only present default config keys", async () => {
-    // QFAI:EX-0004-0004-02
     const context = await fixture("paths:\n  specsDir: .qfai/specs\n");
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "original");
     expect((await run(step01, context)).code).toBe(0);
@@ -407,8 +407,8 @@ describe("BF-0004 migration examples", () => {
     expect(paths).not.toHaveProperty("promptsDir");
   });
 
+  // QFAI:EX-0004-0004-03
   it("leaves a configured custom spec path and its bytes untouched", async () => {
-    // QFAI:EX-0004-0004-03
     const context = await fixture(
       "paths:\n  specsDir: docs/specs\n  contractsDir: .qfai/contracts\n",
     );
@@ -424,8 +424,8 @@ describe("BF-0004 migration examples", () => {
     expect(await readFile(target)).toEqual(original);
   });
 
+  // QFAI:EX-0004-0004-04
   it("preserves a current skill while archiving its colliding plural predecessor", async () => {
-    // QFAI:EX-0004-0004-04
     const context = await fixture();
     await put(context.root, ".qfai/assistant/skill/qfai-sdd/SKILL.md", "current");
     await put(context.root, ".qfai/assistant/skills/qfai-sdd/SKILL.md", "old");
@@ -446,8 +446,8 @@ describe("BF-0004 migration examples", () => {
     });
   });
 
+  // QFAI:EX-0004-0004-05
   it("moves local skills without changing their bytes", async () => {
-    // QFAI:EX-0004-0004-05
     const context = await fixture();
     const original = Buffer.from([0x23, 0x20, 0x53, 0x4b, 0x49, 0x4c, 0x4c, 0x0d, 0x0a]);
     const source = path.join(context.root, ".qfai/assistant/skills.local/house-style/SKILL.md");
@@ -462,9 +462,9 @@ describe("BF-0004 migration examples", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0005-01
+  // QFAI:EX-0004-0005-02
   it("merges all six decision origins into consecutive four-cell records", async () => {
-    // QFAI:EX-0004-0005-01
-    // QFAI:EX-0004-0005-02
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -511,8 +511,8 @@ describe("BF-0004 migration examples", () => {
     expect(request?.approach).toMatch(/^\.qfai\/decisions\/CR-20260101-0001\.md:/);
   });
 
+  // QFAI:EX-0004-0005-09
   it("appends after the rows decisions.md already holds without changing them", async () => {
-    // QFAI:EX-0004-0005-09
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -556,8 +556,8 @@ describe("BF-0004 migration examples", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0005-06
   it("maps question statuses while omitting the no-question row", async () => {
-    // QFAI:EX-0004-0005-06
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -582,8 +582,8 @@ describe("BF-0004 migration examples", () => {
     ).toBe(true);
   });
 
+  // QFAI:EX-0004-0005-07
   it("preserves an unadjudicated question as TODO with an origin", async () => {
-    // QFAI:EX-0004-0005-07
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -603,8 +603,8 @@ describe("BF-0004 migration examples", () => {
     expect(row?.approach).toContain("Needs review");
   });
 
+  // QFAI:EX-0004-0005-08
   it("reports both superseded decisions with unresolved successors", async () => {
-    // QFAI:EX-0004-0005-08
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -624,11 +624,11 @@ describe("BF-0004 migration examples", () => {
     expect(rows.map((row) => row.status)).toEqual(["TODO", "TODO"]);
   });
 
+  // QFAI:EX-0004-0010-01
+  // QFAI:EX-0004-0010-02
+  // QFAI:EX-0004-0010-03
+  // QFAI:EX-0004-0010-04
   it("rewrites mapped case and E2E story annotations but retains unsupported lines", async () => {
-    // QFAI:EX-0004-0010-01
-    // QFAI:EX-0004-0010-02
-    // QFAI:EX-0004-0010-03
-    // QFAI:EX-0004-0010-04
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -674,9 +674,9 @@ describe("BF-0004 migration examples", () => {
     expect(result.output).toContain("## For a person");
   });
 
+  // QFAI:EX-0004-0003-01
+  // QFAI:EX-0004-0003-03
   it("rejects an extra option and a missing root config before migration writes", async () => {
-    // QFAI:EX-0004-0003-01
-    // QFAI:EX-0004-0003-03
     const context = await fixture();
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "old");
     const before = await treeHash(context.root);
@@ -699,8 +699,8 @@ describe("BF-0004 migration examples", () => {
     expect(await treeHash(context.root)).toBe(before);
   });
 
+  // QFAI:EX-0004-0003-02
   it("reports step 1 on dry run without changing bytes, then performs the same rename", async () => {
-    // QFAI:EX-0004-0003-02
     const context = await fixture();
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "old");
     const before = await treeHash(context.root);
@@ -717,9 +717,9 @@ describe("BF-0004 migration examples", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-07
+  // QFAI:EX-0004-0003-08
   it("requires step 1 before step 2 and an ID map before step 5", async () => {
-    // QFAI:EX-0004-0003-07
-    // QFAI:EX-0004-0003-08
     const context = await fixture();
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "old");
     const before = await treeHash(context.root);
@@ -740,8 +740,8 @@ describe("BF-0004 migration examples", () => {
     expect(await treeHash(context.root)).toBe(noMapBefore);
   });
 
+  // QFAI:EX-0004-0012-01
   it("ships the plan, dry-run, report directory, deduplication and validation procedure in order", async () => {
-    // QFAI:EX-0004-0012-01
     const skill = await readFile(
       path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
@@ -764,8 +764,8 @@ describe("BF-0004 migration examples", () => {
     );
   });
 
+  // QFAI:EX-0004-0012-06
   it("names the run on a 1.x project and the run on a project an earlier 2.x release migrated", async () => {
-    // QFAI:EX-0004-0012-06
     const skillDir = path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2");
     for (const file of ["SKILL.md", "references/migration-guide.md"]) {
       const prose = (await readFile(path.join(skillDir, file), "utf8")).replace(/\s+/g, " ");
@@ -779,8 +779,8 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  // QFAI:EX-0004-0012-02
   it("reports no operations for all ten steps in an already migrated project", async () => {
-    // QFAI:EX-0004-0012-02
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -802,8 +802,8 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  // QFAI:EX-0004-0012-07
   it("ships a guide that says each checkout and worktree needs its own install", async () => {
-    // QFAI:EX-0004-0012-07
     const guide = await readFile(
       path.join(
         getInitAssetsDir(),
@@ -816,8 +816,8 @@ describe("BF-0004 migration examples", () => {
     );
   });
 
+  // QFAI:EX-0004-0012-04
   it("ships a guide that gives the exact release and old-layout support boundary", async () => {
-    // QFAI:EX-0004-0012-04
     const guide = await readFile(
       path.join(
         getInitAssetsDir(),

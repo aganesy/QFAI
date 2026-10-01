@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0189-19
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -10,6 +8,7 @@ const source = "src/notify/email.ts";
 const staleDigest = "1".repeat(64);
 const freshDigest = "2".repeat(64);
 
+// QFAI:EX-0001-0189-19
 it("A result whose submitted digest of an input differs from the digest in the facts", () => {
   const run = { id: "run-stale-input", state: "running", sequence: 8 };
   const implementOrder = {

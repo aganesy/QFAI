@@ -66,8 +66,8 @@ async function withPath<T>(value: string, task: () => Promise<T>): Promise<T> {
 }
 
 describe("BF-0003 configuration discovery and loading", () => {
+  // QFAI:EX-0003-0001-01
   it("prints root, config, checks and summary as text and names the found config", async () => {
-    // QFAI:EX-0003-0001-01
     const root = await newTempDir("text");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const output = await captureStdout(async () => {
@@ -78,8 +78,8 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(output).toMatch(/^summary: ok=\d+ info=\d+ warning=\d+ error=\d+$/mu);
   });
 
+  // QFAI:EX-0003-0001-05
   it("reports a present config as found and names its path", async () => {
-    // QFAI:EX-0003-0001-05
     const root = await newTempDir("found");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const data = await doctorJson(root);
@@ -88,8 +88,8 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(check(data, "config.search")?.severity).toBe("ok");
   });
 
+  // QFAI:EX-0003-0001-06
   it("finds the root in an ancestor when --root is not given", async () => {
-    // QFAI:EX-0003-0001-06
     const root = await newTempDir("ancestor");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const nested = path.join(root, "a", "b");
@@ -99,9 +99,9 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(data.config.found).toBe(true);
   });
 
+  // QFAI:EX-0003-0001-07
   it("grades an invalid config as an error naming the offending key", async () => {
     // QFAI:AC-0003-0001-03
-    // QFAI:EX-0003-0001-07
     const root = await newTempDir("invalid");
     await put(root, "qfai.config.yaml", "paths:\n  - .qfai/spec\n");
     const data = await doctorJson(root);
@@ -111,8 +111,8 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(issues?.some((issue) => issue.message.includes("paths"))).toBe(true);
   });
 
+  // QFAI:EX-0003-0002-01
   it("warns about a missing non-default specs directory and names it", async () => {
-    // QFAI:EX-0003-0002-01
     const root = await newTempDir("specs");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: specs-custom\n");
     const data = await doctorJson(root);
@@ -123,8 +123,8 @@ describe("BF-0003 configuration discovery and loading", () => {
     );
   });
 
+  // QFAI:EX-0003-0004-04
   it("does not warn when the default prompt directory is absent", async () => {
-    // QFAI:EX-0003-0004-04
     const root = await newTempDir("prompts");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await rm(path.join(root, ".qfai", "assistant", "prompt"), { recursive: true, force: true });
@@ -134,8 +134,8 @@ describe("BF-0003 configuration discovery and loading", () => {
 });
 
 describe("BF-0003 output routing", () => {
+  // QFAI:EX-0003-0005-01
   it("prints root, config, checks and summary as JSON", async () => {
-    // QFAI:EX-0003-0005-01
     const root = await newTempDir("json");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const data = await doctorJson(root);
@@ -144,8 +144,8 @@ describe("BF-0003 output routing", () => {
     );
   });
 
+  // QFAI:EX-0003-0005-02
   it("writes the report to --out and prints only the wrote line", async () => {
-    // QFAI:EX-0003-0005-02
     const root = await newTempDir("out");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const outPath = path.join(root, "doctor.json");
@@ -157,8 +157,8 @@ describe("BF-0003 output routing", () => {
     expect(written.summary).toBeDefined();
   });
 
+  // QFAI:EX-0003-0005-04
   it("prints an absolute path for a relative --out", async () => {
-    // QFAI:EX-0003-0005-04
     const root = await newTempDir("relative");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const stdout = await captureStdout(async () => {
@@ -177,8 +177,8 @@ describe("BF-0003 output routing", () => {
     expect(written.summary).toBeDefined();
   });
 
+  // QFAI:EX-0003-0005-03
   it("creates missing parent directories of --out", async () => {
-    // QFAI:EX-0003-0005-03
     const root = await newTempDir("nested");
     await put(root, "qfai.config.yaml", "paths:\n  specsDir: .qfai/spec\n");
     const outPath = path.join(root, "missing", "nested", "doctor.json");
@@ -203,8 +203,8 @@ async function seedShim(dir: string, name: string): Promise<void> {
 }
 
 describe("BF-0003 Playwright npx fallback", () => {
+  // QFAI:EX-0003-0006-05
   it("resolves playwright through npx when no local launcher exists", async () => {
-    // QFAI:EX-0003-0006-05
     const root = await newTempDir("npx");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedShim(path.join(root, "node_modules", ".bin"), "playwright-cli");
@@ -230,8 +230,8 @@ describe("BF-0003 Playwright npx fallback", () => {
 });
 
 describe("BF-0003 skill manifest location", () => {
+  // QFAI:EX-0003-0010-03
   it("reads the manifest from a configured skills directory", async () => {
-    // QFAI:EX-0003-0010-03
     const root = await newTempDir("skills-dir");
     await put(root, "qfai.config.yaml", "paths:\n  skillsDir: .qfai/assistant/skill-custom\n");
     await put(
@@ -263,8 +263,8 @@ async function mutateSkill(root: string): Promise<void> {
 }
 
 describe("BF-0003 advisory grouping", () => {
+  // QFAI:EX-0003-0007-02
   it("keeps the prototyping error blocking and routes drift warnings to the advisory group", async () => {
-    // QFAI:EX-0003-0007-02
     const root = await newTempDir("groups");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await mutateSkill(root);
@@ -284,8 +284,8 @@ describe("BF-0003 advisory grouping", () => {
     expect(advisory).toMatch(/^\[warning\] paths\.specsDir: /mu);
   });
 
+  // QFAI:EX-0003-0007-03
   it("fails --fail-on warning on skills.integrity drift alone", async () => {
-    // QFAI:EX-0003-0007-03
     const root = await newTempDir("skills-warning");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await quietUnrelatedWarnings(root);
@@ -323,9 +323,9 @@ async function treeWithOneError(): Promise<string> {
 }
 
 describe("BF-0003 failure threshold", () => {
+  // QFAI:EX-0003-0012-04
   it("follows validation.failOn when --fail-on is omitted, and never opts out", async () => {
     // QFAI:AC-0003-0012-04
-    // QFAI:EX-0003-0012-04
     const dir = await treeWithOneError();
     const config = await readFile(path.join(dir, "qfai.config.yaml"), "utf-8");
     expect(config).not.toMatch(/failOn:\s*(?:warning|never)/u);
@@ -344,9 +344,9 @@ describe("BF-0003 failure threshold", () => {
     expect(never).toBe(0);
   });
 
+  // QFAI:EX-0003-0012-03
   it("fails --fail-on warning on an error alone", async () => {
     // QFAI:AC-0003-0012-03
-    // QFAI:EX-0003-0012-03
     const dir = await treeWithOneError();
     const data = await createDoctorData({ startDir: dir, rootExplicit: true });
     expect(data.summary.warning).toBe(0);
@@ -377,8 +377,8 @@ describe("BF-0003 review-pack TTL", () => {
     return { pack, archived: path.join(root, ".qfai", "review", "_archive", name) };
   }
 
+  // QFAI:EX-0003-0008-03
   it("keeps a 26-day-old pack when review.staleTtlDays is 30", async () => {
-    // QFAI:EX-0003-0008-03
     const kept = await cleanAgedPack("review:\n  staleTtlDays: 30\n");
     await expect(readFile(path.join(kept.pack, "summary.md"), "utf-8")).resolves.toContain(
       "Review",
@@ -392,8 +392,8 @@ describe("BF-0003 review-pack TTL", () => {
 });
 
 describe("BF-0003 workflows.integrity line-ending basis", () => {
+  // QFAI:EX-0003-0011-12
   it("treats a line-ending-only difference as no drift", async () => {
-    // QFAI:EX-0003-0011-12
     const dir = await pool.seedAdopterTree();
     const file = adopterWorkflowPath(dir, "qfai-tests.yml");
     const body = await readFile(file, "utf-8");

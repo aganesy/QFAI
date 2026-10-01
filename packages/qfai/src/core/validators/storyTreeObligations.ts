@@ -4,7 +4,7 @@ import path from "node:path";
 import { createTestLayerRoots, resolveTestKind, type AtddTestKind } from "../atddTraceability.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { parseStoryTestAnnotations } from "../storyTree/ids.js";
+import { parseCountedExampleAnnotations, parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
@@ -94,6 +94,7 @@ export function validateStoryTreeObligationsModel(
       }
       if (file.kind === "integration" || file.kind === "api") covered.AC.add(id);
     }
+    const counted = new Set(parseCountedExampleAnnotations(file.content));
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {
         issues.push(
@@ -119,7 +120,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (countsForExample(file)) covered.EX.add(id);
+      if (countsForExample(file) && counted.has(id)) covered.EX.add(id);
     }
   }
 

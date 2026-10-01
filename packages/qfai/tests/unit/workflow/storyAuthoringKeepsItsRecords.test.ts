@@ -1,9 +1,3 @@
-// QFAI:EX-0001-0185-46
-// QFAI:EX-0001-0185-47
-// QFAI:EX-0001-0185-50
-// QFAI:EX-0001-0188-13
-// QFAI:EX-0001-0188-14
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -160,6 +154,11 @@ const refused = (reason: string, subject: string) => ({
 const NEW_STORY = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0006";
 const storyFiles = [`${NEW_STORY}/01_User-story.md`, `${NEW_STORY}/03_Example.md`];
 
+// QFAI:EX-0001-0185-46
+// QFAI:EX-0001-0185-47
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0188-13
+// QFAI:EX-0001-0188-14
 it("An sdd result appending a cited CREATE row and a cited change request, each at WIP", () => {
   expect(
     accept({

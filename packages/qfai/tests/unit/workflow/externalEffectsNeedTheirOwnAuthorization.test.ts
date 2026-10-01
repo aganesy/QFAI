@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-03
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -42,6 +40,7 @@ const undeclaredByPolicy: [string, string][] = [
 ];
 
 for (const [title, effect] of undeclaredByPolicy) {
+  // QFAI:EX-0001-0188-03
   it(title, () => {
     expect(allowedEffects(effect)).toEqual([]);
   });

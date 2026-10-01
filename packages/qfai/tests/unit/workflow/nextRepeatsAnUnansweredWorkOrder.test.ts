@@ -1,10 +1,9 @@
-// QFAI:EX-0001-0185-12
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
+// QFAI:EX-0001-0185-12
 it("next twice on a run in running, then resume twice, with no result between", () => {
   const plan = {
     route: "edit-text",

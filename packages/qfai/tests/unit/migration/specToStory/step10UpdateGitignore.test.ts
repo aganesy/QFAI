@@ -74,8 +74,8 @@ describe("migration managed gitignore update", () => {
     expect(await readFile(gitignore, "utf8")).toBe(updated);
   });
 
+  // QFAI:EX-0004-0003-27
   it("reclaims an authenticated half-state when the managed block is current", async () => {
-    // QFAI:EX-0004-0003-27
     const root = await mkdtemp(path.join(tmpdir(), "qfai-migration-gitignore-"));
     roots.push(root);
     const context: MigrationContext = {

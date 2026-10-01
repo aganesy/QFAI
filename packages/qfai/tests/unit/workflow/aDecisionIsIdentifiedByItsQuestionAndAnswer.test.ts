@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-10
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -74,6 +72,7 @@ function isReplay({ recorded, repeated }: ReturnType<typeof answerTwice>) {
   };
 }
 
+// QFAI:EX-0001-0188-10
 it("The same question and the same answer submitted twice", () => {
   const twice = answerTwice(choice, { optionIds: ["csv"] }, { optionIds: ["csv"] });
   expect({

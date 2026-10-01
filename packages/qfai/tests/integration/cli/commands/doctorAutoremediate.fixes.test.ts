@@ -1,6 +1,3 @@
-// QFAI:EX-0003-0009-01
-// QFAI:EX-0003-0009-08
-// QFAI:EX-0003-0009-09
 //
 // Integration: `qfai doctor --autoremediate --yes` orchestrates three
 // remediations: install missing runtimeDependencies, archive stale
@@ -42,6 +39,9 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0009-01
+// QFAI:EX-0003-0009-08
+// QFAI:EX-0003-0009-09
 describe("doctor --autoremediate fixes install + clean + config", () => {
   it("invokes install runner for missing deps, archives stale packs, writes default-keyed config fields", async () => {
     const root = await newTempDir("fixes");

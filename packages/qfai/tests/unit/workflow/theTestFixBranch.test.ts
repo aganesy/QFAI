@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0187-01
-
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
@@ -59,6 +57,7 @@ const matrix: [string, string][] = [
 ];
 
 for (const [title, firstMatched] of matrix) {
+  // QFAI:EX-0001-0187-01
   it(title, async () => {
     const { run, fix } = await rerouted(firstMatched);
 

@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-05
-// QFAI:EX-0001-0185-11
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -23,6 +22,7 @@ async function eventOf(root: string, runId: string, name: string): Promise<unkno
   return field(JSON.parse(text), "event");
 }
 
+// QFAI:EX-0001-0185-11
 it("Built CLI start on a temp repo in mode active", async () => {
   const root = await minimalProject();
   const input = await inbox(root, null, "start", START_INPUT);

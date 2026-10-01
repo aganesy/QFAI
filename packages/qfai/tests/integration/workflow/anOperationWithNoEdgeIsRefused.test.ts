@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-10
-// QFAI:EX-0001-0189-16
 
 import { afterEach, expect, it } from "vitest";
 
@@ -20,6 +19,7 @@ const reasonsOf = (document: unknown) => {
   return Array.isArray(reasons) ? reasons.map((each) => field(each, "reason")) : [];
 };
 
+// QFAI:EX-0001-0189-16
 it("Built CLI accept on a run in ready, finish on a run in running, accept on a cancelled run", async () => {
   const root = await minimalProject();
   const { runId, routing, routed } = await routedRun(root);

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0193-01
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -57,6 +55,7 @@ const refused = {
   events: [],
 };
 
+// QFAI:EX-0001-0193-01
 it("host-copilot", () => {
   expect(refusal(start("copilot"))).toEqual(refused);
 });

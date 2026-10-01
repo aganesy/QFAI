@@ -103,9 +103,9 @@ async function run(context: MigrationContext): Promise<{ code: number; output: s
 }
 
 describe("migration catalog move", () => {
+  // QFAI:EX-0004-0006-02
+  // QFAI:EX-0004-0006-04
   it("reports a policy section with no place in the template and keeps the standard commands section", async () => {
-    // QFAI:EX-0004-0006-02
-    // QFAI:EX-0004-0006-04
     const context = await fixture();
     await put(
       context.root,
@@ -144,8 +144,8 @@ describe("migration catalog move", () => {
     expect(tech.match(/- Test: run test/g)).toHaveLength(1);
   });
 
+  // QFAI:EX-0004-0006-09
   it("writes every policy document in its template's shape from sections of the same kind", async () => {
-    // QFAI:EX-0004-0006-09
     const context = await fixture();
     await put(
       context.root,
@@ -203,8 +203,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-28
   it("numbers each constraint section from 01 and names every ID it changed", async () => {
-    // QFAI:EX-0004-0006-28
     const context = await fixture();
     await put(
       context.root,
@@ -246,8 +246,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-27
   it("drops the Impact column and sends a constraint that is not in plain words to a person", async () => {
-    // QFAI:EX-0004-0006-27
     const context = await fixture();
     await put(
       context.root,
@@ -291,9 +291,9 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-11
+  // QFAI:EX-0004-0006-29
   it("routes the structure catalog to Skeleton lines, architecture layers and the UI paths key", async () => {
-    // QFAI:EX-0004-0006-11
-    // QFAI:EX-0004-0006-29
     const context = await fixture();
     await put(
       context.root,
@@ -381,6 +381,7 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-29
   it.each([
     [
       "layers that depend on each other",
@@ -393,7 +394,6 @@ describe("migration catalog move", () => {
       "since the layer CLI depends on Core, which has no row",
     ],
   ])("leaves %s for a person to order", async (_label, rows, reason) => {
-    // QFAI:EX-0004-0006-29
     const context = await fixture();
     await put(
       context.root,
@@ -422,8 +422,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-11
   it("declares no UI surface when the structure catalog names none", async () => {
-    // QFAI:EX-0004-0006-11
     const context = await fixture();
     await put(
       context.root,
@@ -438,8 +438,8 @@ describe("migration catalog move", () => {
     expect(config).toMatchObject({ uiux: { surfacePaths: [] } });
   });
 
+  // QFAI:EX-0004-0006-10
   it("keeps the template's text where a section's content is of another kind", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -477,8 +477,8 @@ describe("migration catalog move", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-10
   it("moves an indented list and sends ragged, split and prefixed content to a person", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -515,8 +515,8 @@ describe("migration catalog move", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-17
   it("writes tech.md in its template's shape and its constraints to constraint.md", async () => {
-    // QFAI:EX-0004-0006-17
     const context = await fixture();
     await put(
       context.root,
@@ -583,8 +583,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-18
   it("sends the technology content tech.md cannot take to a person", async () => {
-    // QFAI:EX-0004-0006-18
     const context = await fixture();
     await put(
       context.root,
@@ -652,8 +652,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-10
   it("keeps a short continuation and reports an unused column or a short row", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -695,8 +695,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-10
   it("sends thematic breaks and HTML blocks to a person and names a section for old headings", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -725,8 +725,8 @@ describe("migration catalog move", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-10
   it("sends tab-indented lists and tables with a short delimiter row to a person", async () => {
-    // QFAI:EX-0004-0006-10
     const context = await fixture();
     await put(
       context.root,
@@ -749,8 +749,8 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-19
   it("moves a table written without its outer pipes and writes it with them", async () => {
-    // QFAI:EX-0004-0006-19
     const context = await fixture();
     await put(
       context.root,
@@ -778,8 +778,8 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-19
   it("sends a pipeless body that is not a table to a person", async () => {
-    // QFAI:EX-0004-0006-19
     const context = await fixture();
     await put(
       context.root,
@@ -793,9 +793,9 @@ describe("migration catalog move", () => {
     );
   });
 
+  // QFAI:EX-0004-0003-21
+  // QFAI:EX-0004-0006-03
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
-    // QFAI:EX-0004-0006-03
-    // QFAI:EX-0004-0003-21
     const context = await fixture();
     const original =
       "# Slice\n\n## Principle (read first)\n\nOld CAP/spec rule.\n\n## Triage operations (8 kinds)\n\nOld TC rule.\n\n## Project choice\n\nSpecific.\n";
@@ -849,8 +849,8 @@ describe("migration catalog move", () => {
     expect(second.output).toContain("## Operations\nnone");
   });
 
+  // QFAI:EX-0004-0006-06
   it("archives abolished directories and moves only overlays with a rule master", async () => {
-    // QFAI:EX-0004-0006-06
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/drift-protocol.md", "# Rule\n");
     await put(context.root, ".qfai/assistant/constitution/drift-protocol.local.md", "local rule\n");
@@ -889,8 +889,8 @@ describe("migration catalog move", () => {
     expect(second.output).toContain("## Operations\nnone");
   });
 
+  // QFAI:EX-0004-0006-07
   it("archives an overlay whose rule overlay already exists and leaves that overlay alone", async () => {
-    // QFAI:EX-0004-0006-07
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
     await put(context.root, ".qfai/assistant/rule/house.local.md", "current overlay\n");
@@ -917,8 +917,8 @@ describe("migration catalog move", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0006-08
   it("writes nothing and lists both overlays when constitution and catalog share one name", async () => {
-    // QFAI:EX-0004-0006-08
     const context = await fixture();
     await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
     await put(context.root, ".qfai/assistant/constitution/house.local.md", "constitution\n");
@@ -942,8 +942,8 @@ describe("migration catalog move", () => {
     expect(await tree()).toEqual(before);
   });
 
+  // QFAI:EX-0004-0003-24
   it("archives unconsumed files from all four retired assistant directories", async () => {
-    // QFAI:EX-0004-0003-24
     const context = await fixture();
     for (const directory of ["constitution", "catalog", "manifest", "process"]) {
       await put(context.root, `.qfai/assistant/${directory}/unconsumed.md`, `${directory}\r\n`);
@@ -986,8 +986,8 @@ describe("migration catalog move", () => {
     expect(await readFile(path.join(archive, "unused.md-1"), "utf8")).toBe("new source\n");
   });
 
+  // QFAI:EX-0004-0006-05
   it("writes only manifest entries that differ from built-in defaults", async () => {
-    // QFAI:EX-0004-0006-05
     const context = await fixture();
     const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
     const defaults = { routing: await defaultRoutingEntries() };

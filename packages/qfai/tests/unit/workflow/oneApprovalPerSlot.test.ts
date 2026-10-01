@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-03
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -10,6 +8,7 @@ import type {
 } from "../../../src/core/workflow/parse.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
+// QFAI:EX-0001-0185-03
 it("Two new stories open two CREATE questions in one routing round", () => {
   const snapshot = {
     run: { id: "run-two-stories", state: "routing", sequence: 2 },

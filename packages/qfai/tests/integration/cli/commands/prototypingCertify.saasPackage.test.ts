@@ -17,8 +17,6 @@
  * validate-side surfaces stay in lockstep.
  */
 
-// QFAI:EX-0001-0160-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -143,6 +141,7 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0160-01
 describe("certify --scope saas-package seals a scope-limited certificate", () => {
   it('writes scope="saas-package" and notes enumerating each skipped gate', async () => {
     const root = await newTempDir();

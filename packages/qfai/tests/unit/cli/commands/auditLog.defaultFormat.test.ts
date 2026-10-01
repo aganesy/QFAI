@@ -5,7 +5,6 @@
  * - empty / absent `.qfai/evidence/decision/` yields empty result,
  *   exit 0 (no error)
  */
-// QFAI:EX-0001-0173-01
 
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -26,6 +25,7 @@ afterEach(async () => {
 });
 
 // QFAI:EX-0001-0173-02
+// QFAI:EX-0001-0173-01
 describe("TC-0015-0029: runAuditLog default format + empty store", () => {
   it("returns 0 and writes a header-only TSV table when the directory is absent", async () => {
     const written: string[] = [];

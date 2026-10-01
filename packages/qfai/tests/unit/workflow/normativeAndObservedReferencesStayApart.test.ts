@@ -1,11 +1,10 @@
-// QFAI:EX-0001-0185-09
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
+// QFAI:EX-0001-0185-09
 it("Decide accept of a routing result with normative references, observed references and a new", () => {
   const expectedBehaviorRefs = [
     { kind: "request", ref: "request" },

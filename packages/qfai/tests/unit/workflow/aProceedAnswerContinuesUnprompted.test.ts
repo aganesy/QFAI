@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-05
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -29,6 +27,7 @@ const question: Question = {
 };
 const flowBinding = { flowId: "BF-0007" };
 
+// QFAI:EX-0001-0188-05
 it("A proceed answer to a material question, then next", () => {
   const answered = decide(
     {

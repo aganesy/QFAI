@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0189-09
-// QFAI:EX-0001-0192-03
-
 import { expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -15,6 +12,8 @@ const busy: [string, string][] = [
 ];
 
 for (const [title, code] of busy) {
+  // QFAI:EX-0001-0189-09
+  // QFAI:EX-0001-0192-03
   it(title, async () => {
     const calls: string[] = [];
     const write = (filePath: string) => {

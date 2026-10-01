@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0185-50
-// QFAI:EX-0001-0186-05
-// QFAI:EX-0001-0188-13
-
 import { expect, it } from "vitest";
 
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
@@ -124,6 +120,9 @@ const ANSWERED_AT = "2026-09-26T00:00:00.000Z";
 const approval = (who: string) => (id: string) =>
   `Answered ${RUN}/${id} by ${who} at ${ANSWERED_AT}: Apply it`;
 
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0188-13
 it("A change request citing the answer and the operator who gave it", () => {
   expect(seeded("operator-1", approval("operator-1"), withNewExample)).toBeUndefined();
 });

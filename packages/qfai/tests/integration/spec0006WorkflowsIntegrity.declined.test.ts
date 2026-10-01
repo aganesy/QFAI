@@ -51,8 +51,6 @@
  * The round-by-round derivation — RED output, the production change, mutations as
  * needle text — is in `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:EX-0003-0011-07
-// QFAI:EX-0003-0011-08
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -106,6 +104,8 @@ function sortedDetailsKeys(details: Record<string, unknown> | undefined): string
   return details === undefined ? undefined : Object.keys(details).sort();
 }
 
+// QFAI:EX-0003-0011-07
+// QFAI:EX-0003-0011-08
 describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", () => {
   it("carries workflowsDir, modified, declined and packagedDir while staying an info advisory", async () => {
     const dir = await pool.seedAdopterTree();

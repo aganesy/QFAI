@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0008-01
 //
 // Unit-level boundary check for the review-pack TTL helper. The helper
 // `isReviewPackArchiveEligible(mtimeMs, ttlDays, nowMs)` powers the
@@ -11,6 +10,7 @@ import { isReviewPackArchiveEligible } from "../../../../src/core/doctor/staleTt
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// QFAI:EX-0003-0008-01
 describe("isReviewPackArchiveEligible — review.staleTtlDays boundary semantics", () => {
   it("default 14 days leaves a 10-day-old pack in place", () => {
     const now = Date.UTC(2026, 4, 28);
@@ -24,8 +24,8 @@ describe("isReviewPackArchiveEligible — review.staleTtlDays boundary semantics
     expect(isReviewPackArchiveEligible(mtime, 7, now)).toBe(true);
   });
 
+  // QFAI:EX-0003-0008-04
   it("exactly TTL-old is not yet eligible (strict greater-than boundary)", () => {
-    // QFAI:EX-0003-0008-04
     const now = Date.UTC(2026, 4, 28);
     const mtime = now - 14 * DAY_MS;
     expect(isReviewPackArchiveEligible(mtime, 14, now)).toBe(false);

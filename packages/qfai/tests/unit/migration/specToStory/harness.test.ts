@@ -830,8 +830,8 @@ function lastLine(report: string): string | undefined {
 }
 
 describe("migration step: an invalid qfai.config.yaml", () => {
+  // QFAI:EX-0004-0003-33
   it("prints the sentence naming the file and then each loader issue, and writes nothing", async () => {
-    // QFAI:EX-0004-0003-33
     const root = await oldLayout();
     expect((await loadConfig(root)).issues).toEqual([]);
     await editConfig(root, (config) => {
@@ -860,8 +860,8 @@ describe("migration step: an invalid qfai.config.yaml", () => {
 });
 
 describe("migration step 1: the retired traceability keys", () => {
+  // QFAI:EX-0004-0004-06
   it("removes both keys, lists each, and leaves the other keys and a rerun alone", async () => {
-    // QFAI:EX-0004-0004-06
     const root = await oldLayout();
     await editConfig(root, (config) => {
       retiredKeys(config);
@@ -896,8 +896,8 @@ describe("migration step 1: the retired traceability keys", () => {
     expect(again.output).toContain("## Operations\nnone\n");
   });
 
+  // QFAI:EX-0004-0004-06
   it("removes a validation mapping the removal leaves empty, so the file raises no issue for either key", async () => {
-    // QFAI:EX-0004-0004-06
     const { root } = await context();
     await put(
       root,
@@ -924,8 +924,8 @@ describe("migration step 1: the retired traceability keys", () => {
 });
 
 describe("migration step report files", () => {
+  // QFAI:EX-0004-0003-36
   it("keeps each run's report in the dry-run or run directory, numbered and never reused", async () => {
-    // QFAI:EX-0004-0003-36
     const root = await oldLayout();
     for (const step of [1, 2]) expect((await stepIn(root, step)).code).not.toBe(2);
     const dryFile = `${MIGRATION_REPORT_DIR}/dry-run/step-03-001.md`;
@@ -963,8 +963,8 @@ describe("migration step report files", () => {
     }
   });
 
+  // QFAI:EX-0004-0003-36
   it("runs step 3 on a story-tree project that still holds a retired config key", async () => {
-    // QFAI:EX-0004-0003-36
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-retired-key-"));
     roots.push(root);
     await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
@@ -981,8 +981,8 @@ describe("migration step report files", () => {
     );
   });
 
+  // QFAI:EX-0004-0003-36
   it("writes no report through a symbolic link below the project root", async () => {
-    // QFAI:EX-0004-0003-36
     const root = await oldLayout();
     const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-report-outside-"));
     roots.push(outside);
@@ -995,8 +995,8 @@ describe("migration step report files", () => {
     expect(await readdir(outside)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0003-37
   it("keeps the report of a refusal once the arguments and the config are found, and of nothing before", async () => {
-    // QFAI:EX-0004-0003-37
     const root = await oldLayout();
     const refused = await stepIn(root, 2);
     expect(refused.code).toBe(2);

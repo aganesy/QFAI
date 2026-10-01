@@ -1,7 +1,3 @@
-// QFAI:EX-0001-0021-03
-// QFAI:EX-0001-0021-04
-// QFAI:EX-0001-0021-05
-// QFAI:EX-0001-0021-06
 /** Init adds canonical guidance without replacing project text or deleted rule citations. */
 
 import {
@@ -142,6 +138,10 @@ async function initCapturingStderr(root: string): Promise<string> {
   return chunks.join("");
 }
 
+// QFAI:EX-0001-0021-03
+// QFAI:EX-0001-0021-04
+// QFAI:EX-0001-0021-05
+// QFAI:EX-0001-0021-06
 describe("qfai init connects a pre-existing agent entry point to the rule masters", () => {
   it.each([false, true])("reports only instruction updates with dryRun %j", async (dryRun) => {
     for (const handWired of [false, true]) {

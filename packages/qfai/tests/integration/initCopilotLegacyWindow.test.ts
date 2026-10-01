@@ -6,7 +6,6 @@
  * itself reports it: past the compatibility window, as an error on stderr.
  */
 // QFAI:AC-0001-0029-03
-// QFAI:EX-0001-0029-03
 import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -16,6 +15,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
+// QFAI:EX-0001-0029-03
 describe("generated Copilot instructions state the closed legacy window", () => {
   let dir = "";
   let text = "";

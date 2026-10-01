@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-15
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -46,6 +44,7 @@ function acceptSkipped(notRun: AcceptResult["notRun"], facts: Facts = {}) {
   };
 }
 
+// QFAI:EX-0001-0185-15
 it("Decide accept of a result with notRun", () => {
   const notRun: AcceptResult["notRun"] = {
     kind: "not_applicable",

@@ -12,8 +12,6 @@
  *       preserved end-to-end).
  */
 
-// QFAI:EX-0001-0135-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -111,6 +109,7 @@ async function seedProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0135-01
 describe("iterate --capture aggregate-mirror (underscore casing)", () => {
   it("mirrors home_page.png and settings_panel.html into screenshots/ and html/ aggregate dirs", async () => {
     const root = await newTempDir();

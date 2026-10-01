@@ -6,8 +6,6 @@
  * that the CLI emits each one at its appropriate gate.
  */
 
-// QFAI:EX-0001-0132-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -106,6 +104,7 @@ async function seedProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0132-01
 describe("stopReason enum: 4 values, validator accepts each", () => {
   it("STOP_REASONS pins the 4-value enum", () => {
     expect([...STOP_REASONS]).toEqual([

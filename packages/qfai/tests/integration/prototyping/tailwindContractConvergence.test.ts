@@ -13,7 +13,6 @@
  * `shouldStop`) without requiring the CLI harness, so the assertion
  * surface stays integration-level but execution stays in-process.
  */
-// QFAI:EX-0001-0124-01
 
 import { describe, expect, it } from "vitest";
 
@@ -108,6 +107,7 @@ const convergedIteration = (index: number): Iteration => ({
   ],
 });
 
+// QFAI:EX-0001-0124-01
 describe("TC-0012-0434: Tailwind contract convergence within 3 cycles", () => {
   it("canonical Tailwind-faithful fixture produces zero designMdViolations across all scanners", () => {
     const out = findDesignMdViolations(FAITHFUL_HTML, dm);

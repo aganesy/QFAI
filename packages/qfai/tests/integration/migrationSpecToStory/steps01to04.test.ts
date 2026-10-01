@@ -352,8 +352,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-18
   it("writes the old section's prose as the flow's purpose and lists the flow for a person", async () => {
-    // QFAI:EX-0004-0007-18
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -399,10 +399,10 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-14
+  // QFAI:EX-0004-0007-15
+  // QFAI:EX-0004-0007-19
   it("writes a stable ID map and story files from the plan", async () => {
-    // QFAI:EX-0004-0007-14
-    // QFAI:EX-0004-0007-15
-    // QFAI:EX-0004-0007-19
     await withProject(async (root) => {
       await put(
         root,
@@ -640,8 +640,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-16
   it("writes a story block that is not one story sentence as it stands, for a person", async () => {
-    // QFAI:EX-0004-0007-16
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -676,9 +676,9 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-14
+  // QFAI:EX-0004-0007-15
   it("keeps the whitespace inside a story sentence and a scenario line", async () => {
-    // QFAI:EX-0004-0007-14
-    // QFAI:EX-0004-0007-15
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -704,8 +704,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-15
   it("indents each step and Examples line to the template and shifts what sits under it", async () => {
-    // QFAI:EX-0004-0007-15
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -727,8 +727,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-16
   it("sends a story block with more than its sentence to a person, as written", async () => {
-    // QFAI:EX-0004-0007-16
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -747,9 +747,9 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-14
+  // QFAI:EX-0004-0007-16
   it("keeps plus-marked non-goals apart and sends a story with a subheading to a person", async () => {
-    // QFAI:EX-0004-0007-14
-    // QFAI:EX-0004-0007-16
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -820,8 +820,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-17
   it("keeps prose criteria for a person instead of writing invalid Gherkin", async () => {
-    // QFAI:EX-0004-0007-17
     await withProject(async (root) => {
       await put(
         root,
@@ -972,9 +972,9 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-20
   it("keeps a criterion's first named scenario and lists what it does not write", async () => {
     // QFAI:AC-0004-0007-03
-    // QFAI:EX-0004-0007-20
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1013,8 +1013,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-21
   it("writes a placeholder scenario for an outline and an ID-named scenario", async () => {
-    // QFAI:EX-0004-0007-21
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1064,8 +1064,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-22
   it("lists a Background that lies outside every criterion", async () => {
-    // QFAI:EX-0004-0007-22
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1084,8 +1084,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-23
   it("writes an example's single step as a plain value and lists a cell holding several", async () => {
-    // QFAI:EX-0004-0007-23
     await withProject(async (root) => {
       await putMinimalPack(
         root,
@@ -1157,8 +1157,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-38
   it("refuses each invalid plan key before writing and names the entry", async () => {
-    // QFAI:EX-0004-0003-38
     await withProject(async (root) => {
       await putPlanPack(root);
       const control = await run(step04, await context(root));
@@ -1222,8 +1222,8 @@ describe("migration steps 1 to 4", () => {
     }
   });
 
+  // QFAI:EX-0004-0003-39
   it("accepts a mark on an unplaced rule and refuses an entry the ID map does not hold", async () => {
-    // QFAI:EX-0004-0003-39
     const prepared = async (root: string, plan: string): Promise<void> => {
       await putPlanPack(root);
       expect((await run(step04, await context(root))).code).toBe(3);
@@ -1274,8 +1274,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-39
   it("refuses a rerun whose plan no longer places an example the ID map holds", async () => {
-    // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
       await putPlanPack(
         root,
@@ -1292,8 +1292,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-39
   it("refuses a step 7 rerun whose plan marks a rule no pack holds", async () => {
-    // QFAI:EX-0004-0003-39
     for (const missing of ["BR-0001-0099", "BR-9999-0001"]) {
       await withProject(async (root) => {
         await putPlanPack(root);
@@ -1312,8 +1312,8 @@ describe("migration steps 1 to 4", () => {
     }
   });
 
+  // QFAI:EX-0004-0003-39
   it("accepts binds none only where the rule's Contract-Refs is a literal dash", async () => {
-    // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
       await putPlanPack(root);
       await put(
@@ -1334,8 +1334,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-39
   it("refuses an examples entry added after every pack is retired", async () => {
-    // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
       await putPlanPack(root);
       expect((await run(step04, await context(root))).code).toBe(3);
@@ -1355,8 +1355,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0003-39
   it("accepts a retire mark on a rule whose own status is retired and removes it in step 7", async () => {
-    // QFAI:EX-0004-0003-39
     await withProject(async (root) => {
       await putPlanPack(root);
       await put(
@@ -1380,8 +1380,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-30
   it("leaves a criterion unresolved when its Parent line names a story that does not exist", async () => {
-    // QFAI:EX-0004-0007-30
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1416,8 +1416,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-28
   it("selects each flow's old section by its exact H2 title", async () => {
-    // QFAI:EX-0004-0007-28
     const policy = (second: string): string =>
       `# Business Flow\n\n## Order flow\n\nBuyers place orders.\n\n\`\`\`mermaid\nflowchart LR\n  Cart --> Order\n\`\`\`\n\n## ${second}\n\nBuyers follow parcels.\n\n\`\`\`mermaid\nflowchart LR\n  Order --> Parcel\n\`\`\`\n`;
     const plan = (first: string, second: string): string =>
@@ -1460,8 +1460,8 @@ describe("migration steps 1 to 4", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-29
   it("takes a criterion's story from its catalog row when it has no Parent line", async () => {
-    // QFAI:EX-0004-0007-29
     const criteria = (column: string, parentLine: string): string =>
       `# Criteria\n\n## Catalog\n\n| AC-ID | ${column} |\n| --- | --- |\n| AC-0001-0001 | US-0001-0001 |\n\n\`\`\`gherkin\n# AC-0001-0001\n${parentLine}Scenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\`\`\`\n`;
     await withProject(async (root) => {
@@ -1490,8 +1490,8 @@ describe("migration steps 1 to 4", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-30
   it("keeps a criterion whose Parent line and catalog row disagree until a story lists it", async () => {
-    // QFAI:EX-0004-0007-30
     const criteria = (parentLine: string, cell: string): string =>
       `# Criteria\n\n## Catalog\n\n| AC-ID | US Ref |\n| --- | --- |\n| AC-0001-0001 | ${cell} |\n\n\`\`\`gherkin\n# AC-0001-0001\n${parentLine}Scenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\`\`\`\n`;
     const stories =
@@ -1554,8 +1554,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-31
   it("writes a story sentence from the fields of a block, each bold or plain", async () => {
-    // QFAI:EX-0004-0007-31
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1580,8 +1580,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-31
   it("drops the closing marker of a story field written entirely in bold", async () => {
-    // QFAI:EX-0004-0007-31
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1598,8 +1598,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-31
   it("keeps the article a story block's As an field was written with", async () => {
-    // QFAI:EX-0004-0007-31
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1616,8 +1616,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-29
   it("leaves a criterion unresolved when its catalog row names a story that does not exist", async () => {
-    // QFAI:EX-0004-0007-29
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1636,8 +1636,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-32
   it("writes a story block missing a part as it stands and names the missing part", async () => {
-    // QFAI:EX-0004-0007-32
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -1660,8 +1660,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-33
   it("converts indented Scenario, Scenario Outline and Background keywords as unindented ones", async () => {
-    // QFAI:EX-0004-0007-33
     const criteria = (indent: string): string =>
       `# Criteria\n\n\`\`\`gherkin\n${indent === "" ? "" : "Feature: Orders\n"}# AC-0001-0001\n# Parent: US-0001-0001\n${indent}Scenario: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n\n# AC-0001-0002\n# Parent: US-0001-0001\n${indent}Background:\n  Given a signed-in buyer\n\n${indent}Scenario: Place one order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\n@later\n${indent}Scenario: Place two orders\n  Given two carts\n  When both orders are placed\n  Then both are accepted\n\n# AC-0001-0003\n# Parent: US-0001-0001\n${indent}Scenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    | count |\n    | 2     |\n\`\`\`\n`;
     const converted = async (indent: string) => {
@@ -1688,8 +1688,8 @@ describe("migration steps 1 to 4", () => {
     expect(indented.output).toBe(plain.output);
   });
 
+  // QFAI:EX-0004-0007-34
   it("places an example under the criterion its plan entry names", async () => {
-    // QFAI:EX-0004-0007-34
     await withProject(async (root) => {
       await putPlanPack(root);
       const result = await run(step04, await context(root));
@@ -1726,8 +1726,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-35
   it("reads an example's index table row and heading section as one example", async () => {
-    // QFAI:EX-0004-0007-35
     await withProject(async (root) => {
       await putMinimalPack(
         root,
@@ -1750,8 +1750,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  // QFAI:EX-0004-0007-36
   it("refuses an example whose row and section disagree, naming both locations", async () => {
-    // QFAI:EX-0004-0007-36
     await withProject(async (root) => {
       await putMinimalPack(
         root,

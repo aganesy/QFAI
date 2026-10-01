@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-04
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -79,6 +77,7 @@ const refused = {
   events: [],
 };
 
+// QFAI:EX-0001-0186-04
 it("A regression_fix result with the same test's GREEN re-run receipt and an independent review receipt", () => {
   const decision = acceptRegressionFix(fullReceipt);
 

@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0008-01
 //
 // Integration: `qfai doctor --clean` archives by RENAMING a stale pack into
 // `.qfai/review/_archive/`. On a repository that COMMITS its review packs and
@@ -88,10 +87,11 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0008-01
 describe("doctor --clean does not archive a tracked pack into an ignored directory", () => {
+  // QFAI:EX-0003-0008-05
   it("keeps a committed pack in place and says why", async () => {
     // QFAI:AC-0003-0008-03
-    // QFAI:EX-0003-0008-05
     const { root, packName } = await seedRepo(true);
 
     const result = await cleanStaleReviewPacks(root);

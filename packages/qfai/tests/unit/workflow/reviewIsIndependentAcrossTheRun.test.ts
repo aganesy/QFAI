@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0187-03
-// QFAI:EX-0001-0187-08
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -26,6 +23,8 @@ const firstAccepted = [
   { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
+// QFAI:EX-0001-0187-03
+// QFAI:EX-0001-0187-08
 it("Issue work orders across a run with an author, a recommender and a reviewer recorded", () => {
   const first = decide(
     {

@@ -7,8 +7,6 @@
  * Deletion / modification patches are rejected with exit 2.
  */
 
-// QFAI:EX-0001-0140-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

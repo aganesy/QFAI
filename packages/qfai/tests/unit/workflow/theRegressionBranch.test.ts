@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-03
-
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
@@ -55,6 +53,7 @@ function fieldsFor(workOrder: WorkOrder): Record<string, unknown> {
   return { regressionFix };
 }
 
+// QFAI:EX-0001-0186-03
 it("A diagnose result regression for an annotated example", async () => {
   const plans = await planFacts();
   const run = new JournalRun(

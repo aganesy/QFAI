@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-12
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -84,6 +82,7 @@ function outcomeOf(decision: ReturnType<typeof decide>) {
   };
 }
 
+// QFAI:EX-0001-0188-12
 it("blocked debts outside the scope name scope-dependency and every finding", () => {
   const verifying = issued(2);
   const shared = outcomeOf(

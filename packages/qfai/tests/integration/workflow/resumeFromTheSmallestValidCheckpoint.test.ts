@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-02
-// QFAI:EX-0001-0189-04
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -25,6 +24,7 @@ async function readRecords(root: string): Promise<Buffer[]> {
   );
 }
 
+// QFAI:EX-0001-0189-04
 it("Built CLI", async () => {
   const root = await receiptProject();
   const { runId } = await runWithReceipts(root, false);

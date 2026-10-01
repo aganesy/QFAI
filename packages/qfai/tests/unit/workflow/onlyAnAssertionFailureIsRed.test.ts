@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-29
 // Fault seeds: FAULT-012, FAULT-013
 
 import { expect, it } from "vitest";
@@ -89,6 +88,7 @@ function redNotAssertion() {
   };
 }
 
+// QFAI:EX-0001-0185-29
 it("An acceptance result with testObservation", () => {
   const { accepted, next } = acceptRed({ testId: "TC-0007-0003", failureKind: "assertion" });
   expect({

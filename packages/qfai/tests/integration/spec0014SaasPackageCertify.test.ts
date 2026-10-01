@@ -7,8 +7,6 @@
  * stopped forwarding either flag would leave them all passing. These cases run
  * the same argv an operator types.
  */
-// QFAI:EX-0001-0160-01
-// QFAI:EX-0001-0160-01
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -72,6 +70,7 @@ async function certificate(root: string): Promise<Record<string, unknown>> {
   return Object.fromEntries(Object.entries(parsed));
 }
 
+// QFAI:EX-0001-0160-01
 describe("TC-0014-0035: certify --scope saas-package from the command line", () => {
   it("seals a certificate scoped to saas-package whose notes name every skipped gate", async () => {
     const root = await newProject();

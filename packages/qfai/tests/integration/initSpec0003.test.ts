@@ -1,5 +1,4 @@
 /** Init integration traceability and assistant-tree wiring. */
-// QFAI:EX-0001-0020-01
 import { lstat, mkdtemp, readdir, readFile, readlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -22,6 +21,7 @@ const ROOT_GITIGNORE_WRITER = path.resolve(
 );
 
 // TC-0003-0001: Empty directory initialization
+// QFAI:EX-0001-0020-01
 describe("TC-0003-0001: Empty directory initialization", () => {
   const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review", "report"];
   const SKILL_LINK_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];

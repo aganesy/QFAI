@@ -1,10 +1,9 @@
-// QFAI:EX-0001-0185-04
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
+// QFAI:EX-0001-0185-04
 it("Issue the SDD work order, then accept an SDD result reporting bindings for the slot", () => {
   const plan = {
     route: "add-feature",

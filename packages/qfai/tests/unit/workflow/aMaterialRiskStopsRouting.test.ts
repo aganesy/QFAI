@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-01
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -97,6 +95,7 @@ const signals: [string, string][] = [
 ];
 
 for (const [title, signal] of signals) {
+  // QFAI:EX-0001-0188-01
   it(title, () => {
     const { expectedText, ...actual } = routeWithRisk(signal);
 

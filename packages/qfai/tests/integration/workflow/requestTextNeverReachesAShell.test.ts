@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0190-02
-// QFAI:EX-0001-0190-05
 
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,6 +32,7 @@ async function namesUnder(dir: string): Promise<string[]> {
   return entries.map((entry) => entry.name);
 }
 
+// QFAI:EX-0001-0190-05
 it("Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job", async () => {
   const root = await minimalProject();
   const text =

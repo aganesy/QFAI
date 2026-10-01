@@ -5,36 +5,6 @@
 // QFAI:AC-0001-0221-03
 // QFAI:AC-0001-0221-04
 // QFAI:AC-0001-0221-05
-// QFAI:EX-0001-0186-09
-// QFAI:EX-0001-0190-03
-// QFAI:EX-0001-0190-04
-// QFAI:EX-0001-0191-03
-// QFAI:EX-0001-0194-01
-// QFAI:EX-0001-0194-02
-// QFAI:EX-0001-0194-03
-// QFAI:EX-0001-0194-04
-// QFAI:EX-0001-0194-21
-// QFAI:EX-0001-0194-22
-// QFAI:EX-0001-0194-23
-// QFAI:EX-0001-0194-24
-// QFAI:EX-0001-0194-25
-// QFAI:EX-0001-0194-26
-// QFAI:EX-0001-0194-27
-// QFAI:EX-0001-0194-28
-// QFAI:EX-0001-0194-29
-// QFAI:EX-0001-0194-30
-// QFAI:EX-0001-0194-31
-// QFAI:EX-0001-0194-32
-// QFAI:EX-0001-0194-33
-// QFAI:EX-0001-0194-34
-// QFAI:EX-0001-0194-35
-// QFAI:EX-0001-0194-36
-// QFAI:EX-0001-0194-37
-// QFAI:EX-0001-0194-38
-// QFAI:EX-0001-0221-01
-// QFAI:EX-0001-0221-02
-// QFAI:EX-0001-0221-04
-// QFAI:EX-0001-0221-06
 
 import { cp, mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
@@ -114,6 +84,36 @@ async function scored(id: string) {
   return found && { userPrompt: found.userPrompt, repoFacts: found.repoFacts, ...found.expected };
 }
 
+// QFAI:EX-0001-0186-09
+// QFAI:EX-0001-0190-03
+// QFAI:EX-0001-0190-04
+// QFAI:EX-0001-0191-03
+// QFAI:EX-0001-0194-01
+// QFAI:EX-0001-0194-02
+// QFAI:EX-0001-0194-03
+// QFAI:EX-0001-0194-04
+// QFAI:EX-0001-0194-21
+// QFAI:EX-0001-0194-22
+// QFAI:EX-0001-0194-23
+// QFAI:EX-0001-0194-24
+// QFAI:EX-0001-0194-25
+// QFAI:EX-0001-0194-26
+// QFAI:EX-0001-0194-27
+// QFAI:EX-0001-0194-28
+// QFAI:EX-0001-0194-29
+// QFAI:EX-0001-0194-30
+// QFAI:EX-0001-0194-31
+// QFAI:EX-0001-0194-32
+// QFAI:EX-0001-0194-33
+// QFAI:EX-0001-0194-34
+// QFAI:EX-0001-0194-35
+// QFAI:EX-0001-0194-36
+// QFAI:EX-0001-0194-37
+// QFAI:EX-0001-0194-38
+// QFAI:EX-0001-0221-01
+// QFAI:EX-0001-0221-02
+// QFAI:EX-0001-0221-04
+// QFAI:EX-0001-0221-06
 it("A seed where no story covers the behaviour and the operator states the result allows add-feature and decide-acceptance, not fix-defect", async () => {
   const uncovered = (await routingSeeds()).filter(
     (each) => each.repoFacts.storyMissing === true && "userExpectedStatus" in each.repoFacts,

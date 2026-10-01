@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-34
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -50,6 +48,7 @@ function acceptSddBindings(bindings: NonNullable<AcceptResult["bindings"]>) {
   );
 }
 
+// QFAI:EX-0001-0185-34
 it("An SDD result binding the spec it created to the goal's slot", () => {
   const binding = { slotId: "slot-3-1", flowId: "BF-0007", storyIds: ["US-0007-0001"] };
   const decision = acceptSddBindings([binding]);

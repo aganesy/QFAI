@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-07
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -21,6 +19,7 @@ const obligations = {
   digest: "1".repeat(64),
 };
 
+// QFAI:EX-0001-0186-07
 it("Issue an implement work order bound to a flow", () => {
   const decision = decide(
     {
