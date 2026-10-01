@@ -28,6 +28,9 @@ type Guard = {
     over: Array<[string, number]>;
     improved: Array<[string, number]>;
   };
+  diffDependentErrors: (report: {
+    issues?: Array<{ code?: string; file?: string; message?: string; severity: string }>;
+  }) => Array<{ code?: string; file: string; message?: string }>;
   errorsByFile: (report: unknown) => Map<string, number>;
   errorsForFile: (
     report: {
@@ -49,7 +52,7 @@ async function load(): Promise<Guard> {
 const LEDGER = ".qfai/specs/spec-0002/tdd/test-list.md";
 const CLEAN = ".qfai/specs/spec-0001/tdd/test-list.md";
 
-function report(...issues: Array<{ file?: string; severity: string }>): unknown {
+function report(...issues: Array<{ code?: string; file?: string; severity: string }>): unknown {
   return { issues };
 }
 
@@ -82,6 +85,46 @@ describe("errorsByFile", () => {
     const { errorsByFile } = await load();
 
     expect([...errorsByFile({})]).toEqual([]);
+  });
+});
+
+describe("diff-dependent findings", () => {
+  // A drift error exists only while a protected file differs from the base
+  // without a change request. Pinned, it reads one less on every later branch
+  // and fails the ratchet there, on work that never touched the file.
+  const PROTECTED =
+    ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/03_Example.md";
+
+  it("leaves every diff-dependent code out of the count a pin records", async () => {
+    const { errorsByFile } = await load();
+
+    const counts = errorsByFile(
+      report(
+        { code: "QFAI-DRIFT-001", file: PROTECTED, severity: "error" },
+        { code: "QFAI-STORY-010", severity: "error" },
+        { code: "QFAI-STORY-006", file: PROTECTED, severity: "error" },
+      ),
+    );
+
+    expect([...counts]).toEqual([[PROTECTED, 1]]);
+  });
+
+  it("returns those errors separately, so the lane still fails on them", async () => {
+    const { diffDependentErrors } = await load();
+
+    const errors = diffDependentErrors({
+      issues: [
+        { code: "QFAI-DRIFT-001", file: PROTECTED, severity: "error", message: "no request" },
+        { code: "QFAI-DRIFT-001", file: PROTECTED, severity: "warning", message: "no request" },
+        { code: "QFAI-STORY-010", severity: "error", message: "drift" },
+        { code: "QFAI-STORY-006", file: PROTECTED, severity: "error", message: "untested" },
+      ],
+    });
+
+    expect(errors).toEqual([
+      { code: "QFAI-DRIFT-001", file: PROTECTED, message: "no request" },
+      { code: "QFAI-STORY-010", file: "(no file)", message: "drift" },
+    ]);
   });
 });
 
