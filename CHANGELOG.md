@@ -110,6 +110,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The verify-stage output and repair-routing tests check the whole set.** The
+  `verify.json` example now reads the output contract: the six fields, the
+  closed `PASS`/`FAIL` status and the three `scope` values. The repair-routing
+  example compares every row of its table, so a fourth repair kind fails it.
+  (#2294)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
