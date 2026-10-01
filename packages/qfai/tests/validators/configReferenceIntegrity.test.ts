@@ -3,7 +3,7 @@
  *
  * Verifies the three QFAI-CFG-LINK-* codes:
  *   001: primarySpecId points to a missing spec dir
- *   002: paths.* points to a missing directory (warning)
+ *   002: paths.* points to a missing directory (warning; info when it is a shipped default that is absent)
  *   003: calibration.packPath points to a missing dir
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -117,11 +117,15 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(linkIssue?.message).toMatch(/9999/);
   });
 
-  it("emits QFAI-CFG-LINK-002 (warning) for missing non-default generated paths", async () => {
+  // QFAI:EX-0003-0003-03
+  it("emits QFAI-CFG-LINK-002 (warning) for missing non-default paths", async () => {
     const root = await newTempDir();
     // specs/contracts/discussion use default skill-created paths, so their
     // absence is no longer a config-reference warning after clean init.
-    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const config = makeConfig();
+    config.paths.srcDir = "lib";
+    config.paths.testsDir = "spec";
+    const issues = await validateConfigReferenceIntegrity(root, config);
     const warningIssues = issues.filter((i) => i.code === "QFAI-CFG-LINK-002");
     expect(warningIssues.map((i) => i.rule).sort()).toEqual([
       "config.paths.skillsDir.reality",
@@ -131,6 +135,52 @@ describe("validateConfigReferenceIntegrity", () => {
     for (const i of warningIssues) {
       expect(i.severity).toBe("warning");
     }
+  });
+
+  // QFAI:EX-0003-0003-03
+  it("reads a shipped default spelled with a leading ./ as the default", async () => {
+    const root = await newTempDir();
+    const base = makeConfig();
+    const issues = await validateConfigReferenceIntegrity(root, {
+      ...base,
+      paths: { ...base.paths, srcDir: "./src" },
+    });
+    const srcIssue = issues.find((i) => i.rule === "config.paths.srcDir.reality");
+
+    expect(srcIssue?.severity).toBe("info");
+  });
+
+  // QFAI:EX-0003-0003-03
+  it("reports an absent shipped-default source and test directories at info", async () => {
+    const root = await newTempDir();
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const byRule = new Map(
+      issues.filter((i) => i.code === "QFAI-CFG-LINK-002").map((i) => [i.rule, i]),
+    );
+
+    expect(byRule.get("config.paths.srcDir.reality")?.severity).toBe("info");
+    expect(byRule.get("config.paths.srcDir.reality")?.message).toContain(
+      "the project has no source yet",
+    );
+    expect(byRule.get("config.paths.testsDir.reality")?.severity).toBe("info");
+    expect(byRule.get("config.paths.testsDir.reality")?.message).toContain(
+      "the project has no tests yet",
+    );
+    expect(byRule.get("config.paths.skillsDir.reality")?.severity).toBe("warning");
+    // A benign absence prescribes no repair.
+    expect(byRule.get("config.paths.srcDir.reality")?.suggested_action).toBeUndefined();
+  });
+
+  // QFAI:EX-0003-0003-04
+  it("still warns when the shipped-default directory is a file", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "src"), "not a directory", "utf-8");
+
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const srcIssue = issues.find((i) => i.rule === "config.paths.srcDir.reality");
+
+    expect(srcIssue?.severity).toBe("warning");
+    expect(srcIssue?.suggested_action).toBeDefined();
   });
 
   it("still warns when a custom workflow artifact path is missing", async () => {

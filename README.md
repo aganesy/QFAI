@@ -720,9 +720,6 @@ commit that bumps the package, and to keep the two from being merged separately.
 └── qfai.config.yaml
 ```
 
-`AGENTS.md` and `CLAUDE.md` open with the line that sends your first
-free-text change request to `qfai-run`.
-
 `qfai init` writes policy templates and the flow and contract indexes with
 no item rows. It creates no `business-flow-NNNN/` or
 `user-story-NNNN-NNNN/` instance, so a fresh tree has no BF, AC or EX test

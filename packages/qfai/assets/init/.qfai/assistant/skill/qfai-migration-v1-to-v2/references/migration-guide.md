@@ -305,7 +305,7 @@ line `Exit code: N`. Read every report from that directory. No step reads them.
 | 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git: the managed block, its re-include lines and the git index.           |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, entry directive, `.gitignore` lines and hooks.   |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, `.gitignore` lines and hooks.                    |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project.                        |
 
 Run a row from the project root in this form:
@@ -353,7 +353,6 @@ network call. The scripts write only these targets:
 | `.qfai/evidence/.gitignore`, deleted                                                                                                                        | 10                                   |
 | Git index entries under `.qfai/evidence/`, removed; the files stay on disk                                                                                  | 10                                   |
 | Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
-| `AGENTS.md` and `CLAUDE.md`, only to add the entry directive, with a staging file beside each                                                               | 11                                   |
 | `.claude/settings.json` and `.codex/hooks.json`, only to add the reminder hooks                                                                             | 11                                   |
 | `.agents/rules/reminders.json` and its entry in `.agents/rules/.qfai-rules.lock.json`, with a staging file beside it                                        | 11                                   |
 | A report file of each run, under `.qfai/evidence/migration-spec-to-story/report/`                                                                           | 1–12                                 |
@@ -461,9 +460,9 @@ deleted. Where that archive already holds a different copy, both stay as they
 are and the pair is reported for a person: keep the copy you need, delete the
 other, and run step 11 again. A skill the package does not ship and
 `.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
-host skill link, the entry directive at the top of `AGENTS.md` and `CLAUDE.md`,
-and the `.qfai/run/` line of the managed `.gitignore` block. A path it cannot
-write is reported with the reason.
+host skill link and the `.qfai/run/` line of the managed `.gitignore` block. A
+path it cannot write is reported with the reason. It leaves `AGENTS.md` and
+`CLAUDE.md` as they are, a line an earlier `npx qfai init` wrote included.
 
 Step 11 also installs the reminder hooks `npx qfai init` installs, through the
 same merge, into `.claude/settings.json` and `.codex/hooks.json`:
@@ -492,7 +491,6 @@ reported by name:
 | `contract-undeclared` | A step a built-in plan runs is not installed under `.qfai/assistant/step/`                       |
 | `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
 | `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
-| `entry-directive`     | `AGENTS.md` or `CLAUDE.md` lacks the entry directive                                             |
 | `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`, or a line re-includes `.qfai/evidence/`       |
 | `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
 | `evidence-tracked`    | Git tracks a path under `.qfai/evidence/`                                                        |
@@ -510,7 +508,7 @@ cover examples. Record a permitted exception in `decisions.md` when a test is
 intentionally absent.
 
 Then send the project's first free-text change request to the `qfai-run`
-skill. The entry directive step 11 added points agents there.
+skill. The prompt-time hook step 11 installed points agents there.
 
 The plan, the ID map and the `legacy/` and `retired/` archives under
 `.qfai/evidence/migration-spec-to-story/` exist only in this working copy,

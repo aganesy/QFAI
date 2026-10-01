@@ -35,6 +35,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
+  `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
+  open with their heading, and an existing file gains no such line. A line an
+  earlier init wrote is kept as written; init never removes or edits it.
+  Migration step 11 leaves both files as they are, and step 12 no longer checks
+  for the line or reports `entry-directive`. The review directive is still
+  prepended where `REVIEW.md` exists.
 - **Migration now removes the retired configuration keys.** This reverses the
   2.0.0 statement that migration leaves them in place. Step 1 removes
   `validation.traceability.scMustHaveTest` and
@@ -49,6 +56,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under the `spec-*/` and `_policies/` directories, and ends with a line that
   names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
   in before it is deleted.
+- **A fresh `qfai init` no longer leaves false warnings in `qfai doctor` and
+  `qfai validate`.** An absent `paths.srcDir`, `paths.testsDir` or
+  `paths.outDir` that is still the shipped default is now an `info` check with
+  one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
+  `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
 - **Step 3 rewrites the `CON-*` IDs its contract map translates in the
   contract files it writes,** wherever they stand in the file, instead of
   listing each one for a person. An ID no contract declared, or that more than
@@ -65,8 +81,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   removed when a step moves it.
 - **The free-text entry names one set of requests.** The prompt-time reminder and the
   `qfai-run` description both say a change, a fix, an investigation of the
-  codebase or a question about the project. The entry line `qfai init` writes
-  into `AGENTS.md` and `CLAUDE.md` is unchanged.
+  codebase or a question about the project.
 - **A question that one command answers needs no run, and a run ends on purpose.** The
   free-text reminder and the `qfai-run` description say a question that one command or one file
   read answers is answered directly. The
