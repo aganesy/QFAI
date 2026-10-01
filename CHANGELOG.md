@@ -135,6 +135,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   installs without a script; the package's install script only downloads a
   binary when that platform package is missing. The lane therefore does not
   depend on a policy for install scripts that it does not manage.
+- **A fresh clone of a just-initialised project no longer fails
+  `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
+  `03_contract/` are not in a clone, and the check for an untouched seed
+  treated a missing one as an edited seed. It now reads the files and ignores
+  an absent empty directory, so the clone and the directory `init` ran in give
+  the same result.
+- **The managed `.gitignore` block no longer repeats a line the project
+  already has.** When the file has no block yet and its own lines already
+  ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
+  leaves `/tmp/` out of the block and prints one line naming what it left out.
+  A block already in the file is rebuilt as before.
+- **`qfai init` detects a missing Windows Developer Mode before it writes
+  anything.** It creates and removes one symlink in a scratch directory under
+  the system temporary directory, and when Windows refuses it with EPERM it stops
+  with the Developer Mode instruction instead of failing partway through the
+  tree. Any other failure of that attempt is ignored. `--dry-run` makes no
+  attempt.
+- **`qfai init` says when the config file it changes is shared.** Run from a
+  linked worktree, the `core.symlinks` line names the repository's common
+  config file and adds one line saying every worktree reads it, the main
+  checkout included. The setting itself stays `--local`: scoping it to the
+  worktree needs `extensions.worktreeConfig`, which changes the same shared
+  file.
 
 ## [2.0.1] - 2026-09-30
 

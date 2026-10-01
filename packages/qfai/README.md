@@ -64,6 +64,8 @@ fixes, when the binary does not start.
 > **Windows users:** `qfai init` creates symlinks internally.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
 > before running `npx qfai init`, otherwise symlink creation will fail due to insufficient privileges.
+> Init tries one symlink before it writes anything and stops with this instruction when Windows
+> refuses it. `--dry-run` does not try it.
 
 Creating missing governed assistant assets requires filesystem support and
 permission for hard links. Init checks this before copying or migrating assets
