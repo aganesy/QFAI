@@ -29,9 +29,9 @@ it is not authoritative.
 ## P3. Package self-containment
 
 QFAI is a package that gets installed into user repositories. Shipped
-templates MUST NOT hardcode user-side specific spec / AC / TC / REQ IDs or
-paths. The user's repo may have spec-0001, spec-0099, or no spec at all —
-shipped templates must work for any state.
+templates MUST NOT hardcode user-side story-tree IDs or paths. The user's
+repo may have one business flow, many, or none at all — shipped templates
+must work for any state.
 
 Enforcement: `npm run lint:shipping` (added in Phase 6) blocks
 `\bspec-\d{4}\b`, `\.qfai/specs/spec-\d{4}/`,

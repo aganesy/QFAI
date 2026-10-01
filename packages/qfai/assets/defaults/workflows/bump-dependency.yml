@@ -1,0 +1,17 @@
+route: bump-dependency
+family: upkeep
+stages:
+  - id: bump
+    kind: implement
+    steps: [implement-dep-bump]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [bump]
+defaultModifiers: []
+decisionPoints: []
+branchPoints: []

@@ -339,7 +339,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
 
   it("visual.typography.scale as a scalar string is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(scale))` silently skipped a non-mapping
-    // value, so `scale: "1rem"` hashed into DESIGN.md.lock while
+    // value, so `scale: "1rem"` hashed into the recorded DESIGN.md hash while
     // designTokens.typography.scale stayed missing for downstream
     // consumers.
     const familyMonoLine = '    family_mono:    "JetBrains Mono, ui-monospace, monospace"';
@@ -403,7 +403,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   it("accessibility as a scalar is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(raw.accessibility))` silently skipped a
     // present-but-non-record value, so `accessibility: false` hashed
-    // into DESIGN.md.lock while downstream consumers got
+    // into the recorded DESIGN.md hash while downstream consumers got
     // `accessibility: undefined` and lost the contrast/motion gates.
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
@@ -420,9 +420,8 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   it("visual.spacing as a scalar is rejected at parse-time", () => {
     // Pre-fix `if (isRecord(raw.spacing))` silently skipped a
     // present-but-non-record value, so `spacing: "0.25rem"` hashed
-    // into DESIGN.md.lock while downstream consumers got no spacing
-    // tokens and the mirror cross-check would accept a handoff that
-    // omitted spacing entirely.
+    // into the recorded DESIGN.md hash while downstream consumers got no spacing
+    // tokens.
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
       lastShadowLine,
@@ -537,7 +536,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     // Pre-fix, only `Array.isArray` gated assignment, so
     // a scalar value silently dropped. Post-fix this returns
     // invalid-type so the brand SSOT enforces the contract upstream
-    // of DESIGN.md.lock hashing.
+    // of any hashing of DESIGN.md.
     const text = VALID_FRONT_MATTER.replace(
       '  emotion: ["confident comparison"]',
       '  emotion: "confident comparison"',
@@ -719,9 +718,7 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   it("visual.typography.weight with non-number value (string '400') is rejected at parse-time", () => {
     // Pre-fix, `parseDesignMd` silently dropped
     // non-number weight entries, leaving the resulting weight
-    // record empty/partial. The mirror cross-check would then
-    // accept a handoff that lost authored weight tokens (because
-    // expected would also be empty). Now rejected with
+    // record empty/partial. Now rejected with
     // invalid-type so the brand SSOT enforces the numeric
     // contract.
     const text = VALID_FRONT_MATTER.replace(
@@ -750,8 +747,8 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
     // `" 0.25rem "` is structurally a CSS-invalid token
     // (every CSS engine rejects `padding: " 0.25rem ";`). Catching
-    // the padding here prevents an invalid value from freezing into
-    // DESIGN.md.lock and design-system.yaml mirror.
+    // the padding here prevents an invalid value from reaching a
+    // token reader.
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
       lastShadowLine,
@@ -779,8 +776,8 @@ describe("parseDesignMd (TC-1.1.x)", () => {
 
   it("visual.spacing.scale with mixed number/string entries is rejected", () => {
     // design-md-spec.md declares `spacing.scale: number[]`.
-    // Mixed-type arrays (`[0, "wide"]`) cannot freeze through to the
-    // mirror as validated content.
+    // Mixed-type arrays (`[0, "wide"]`) cannot reach a token reader
+    // as validated content.
     const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
     const text = VALID_FRONT_MATTER.replace(
       lastShadowLine,
@@ -1212,7 +1209,7 @@ const SHIPPED_DESIGN_MD_SAMPLE = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-prototyping",
   "templates",
   "DESIGN.md.sample",
