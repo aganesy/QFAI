@@ -101,7 +101,23 @@ export async function validateCompletionCertificateIssues(
       "prototyping.completionCertificate.digest",
       undefined,
       "canonical",
-      "If the evidence changed, rerun `qfai prototyping certify` to refresh the certificate.",
+      remediationFor(result.reasons),
     ),
   ];
+}
+
+/**
+ * What clears the finding. A changed `DESIGN.md` is not cleared by `certify`
+ * alone, which refuses a file that differs from the frozen hash, so that case
+ * names the command that re-takes the hash first.
+ */
+function remediationFor(reasons: readonly string[]): string {
+  if (reasons.some((reason) => reason.startsWith("DESIGN.md sha256 mismatch"))) {
+    return (
+      "DESIGN.md changed since certify. If only its prose changed, run " +
+      "`qfai prototyping refreeze` and then `qfai prototyping certify`; a token change " +
+      "needs a prototyping re-run from cycle 0."
+    );
+  }
+  return "If the evidence changed, rerun `qfai prototyping certify` to refresh the certificate.";
 }

@@ -144,7 +144,17 @@ Validators emit `code` values in stable categories: `missing-key`,
 
 ## Hash
 
-`hashDesignMd(text)` returns `sha256(text)` over the raw UTF-8 bytes,
-including front-matter delimiters. Any change to the file — including
-whitespace inside the body — produces a new hash, which a prototyping
-loop past cycle 0 refuses.
+Cycle 0 records two hashes in `prototyping.json#designMd`:
+
+- `sha256`: the raw UTF-8 bytes of the file, front-matter delimiters and body
+  prose included.
+- `tokensSha256`: the parsed front-matter tokens with keys sorted, so neither
+  layout nor prose counts.
+
+Every later cycle and `certify` compare the live file with `sha256`, so any
+change to the file stops the loop.
+
+A change that leaves `tokensSha256` the same changed only prose.
+`npx qfai prototyping refreeze` records the new `sha256` and the loop goes on;
+a certified loop then runs `certify` again. A change to a token is refused
+there and needs a new loop from cycle 0.

@@ -5,7 +5,11 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../../src/cli/commands/prototypingIterate.js";
-import { hashDesignMd } from "../../../src/core/design/designMd.js";
+import {
+  hashDesignMd,
+  hashDesignMdTokens,
+  parseDesignMd,
+} from "../../../src/core/design/designMd.js";
 
 const EXCEPTIONAL_SCORES = {
   informationArchitecture: "exceptional",
@@ -645,10 +649,13 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(exit).toBe(0);
     const protoBody = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
-    ) as { designMd: { path: string; sha256: string } };
+    ) as { designMd: { path: string; sha256: string; tokensSha256?: string } };
     expect(protoBody.designMd.path).toBe("DESIGN.md");
     expect(protoBody.designMd.sha256).toBe(hashDesignMd(CANONICAL_DESIGN_MD));
     expect(protoBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
+    const parsed = parseDesignMd(CANONICAL_DESIGN_MD);
+    if ("error" in parsed) throw new Error(parsed.error.message);
+    expect(protoBody.designMd.tokensSha256).toBe(hashDesignMdTokens(parsed.data));
   });
 
   it("TC-3.5.2: missing DESIGN.md → exit 2 with message", async () => {

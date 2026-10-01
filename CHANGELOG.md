@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai prototyping refreeze` re-freezes `DESIGN.md` after a prose-only
+  edit.** Cycle 0 now also records the SHA-256 of the parsed tokens at
+  `prototyping.json#designMd.tokensSha256`. When the tokens still match,
+  `refreeze` replaces the frozen byte hash, appends the change to
+  `designMdRefreezeLog` and keeps the loop at its cycle; a token change, a loop
+  seeded without the token hash and an unparsable file exit 2 and change
+  nothing. `--dry-run` writes nothing. The hash-mismatch messages of `iterate`
+  and `certify` name it, and `QFAI-PROT-336` raised for a changed `DESIGN.md`
+  now suggests `refreeze` and then `certify`, or a re-run from cycle 0 for a
+  token change, instead of `certify` alone, which refuses that file. Fixes
+  #2267.
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then

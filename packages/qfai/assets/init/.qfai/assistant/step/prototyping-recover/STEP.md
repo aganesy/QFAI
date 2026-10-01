@@ -42,7 +42,10 @@ Exit `2` on drift covers a `DESIGN.md` whose sha256 no longer matches
 `prototyping.json#designMd.sha256`, the hash cycle 0 recorded, and
 `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1.
 
-To change `DESIGN.md`, edit it and re-run prototyping from cycle 0. Which side
+To change a `DESIGN.md` token, edit it and re-run prototyping from cycle 0.
+After an edit to its prose alone, run `npx qfai prototyping refreeze`: it
+records the new hash when the parsed tokens are unchanged and refuses
+otherwise. A certified loop then runs `certify` again. Which side
 of a drift or conflict wins — the edit or the recorded state — is the user's
 decision: ask it, and under a no-question mode stop and report the drift.
 

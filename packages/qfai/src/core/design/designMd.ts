@@ -1247,6 +1247,30 @@ export function hashDesignMd(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+/**
+ * SHA-256 of the tokens `parseDesignMd` returns, independent of the prose body
+ * and of how the front matter is laid out: keys are sorted and absent fields
+ * are dropped. Two files with the same tokens and different prose hash alike,
+ * which is what lets a prose-only edit be re-frozen without a new loop.
+ */
+export function hashDesignMdTokens(data: DesignMd): string {
+  return createHash("sha256").update(canonicalJson(data), "utf8").digest("hex");
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (typeof value === "object" && value !== null) {
+    const entries = Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    const fields = entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`);
+    return `{${fields.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 // ---------------------------------------------------------------------------
 // Unreplaced-sample detection
 // ---------------------------------------------------------------------------

@@ -50,7 +50,12 @@ import path from "node:path";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../../core/logger.js";
 import { loadConfig, readRejectedPrimaryUiContract, type QfaiConfig } from "../../core/config.js";
-import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
+import {
+  hashDesignMd,
+  hashDesignMdTokens,
+  parseDesignMd,
+  type DesignMd,
+} from "../../core/design/designMd.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import type { LoggedMoves } from "../../core/prototyping/mutationLog.js";
@@ -351,6 +356,12 @@ const LEGACY_SPEC_EVIDENCE_DIR = /^spec-\d{4}$/u;
 type DesignMdRecord = {
   path: string;
   sha256: string;
+  /**
+   * Hash of the parsed tokens, so `qfai prototyping refreeze` can tell a
+   * prose-only edit from a token edit. Absent on a loop seeded before it
+   * was recorded.
+   */
+  tokensSha256?: string;
 };
 
 type PrototypingJsonShape = {
@@ -949,7 +960,11 @@ export async function runPrototypingIterate(
     // captures in a backup directory nothing would move back, so the next run
     // read an evidence tree neither loop had written.
     const seeded = await writeSeedMetadata(protoJsonAbs, {
-      designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
+      designMd: {
+        path: ROOT_DESIGN_MD_REL,
+        sha256: currentSha,
+        tokensSha256: hashDesignMdTokens(designMd),
+      },
       runId: buildRunId(currentSha),
       uiContractsCovered: specs,
       // The same complete set anchors cycle drift and certification.
@@ -3546,7 +3561,8 @@ async function evaluateCycleGteOneGate(
     error(
       "qfai prototyping iterate: DESIGN.md hash mismatch — root DESIGN.md sha256 differs from " +
         `the cycle-0 frozen value (frozen=${protoRecord.designMd.sha256} current=${input.currentSha}). ` +
-        "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze.",
+        "DESIGN.md was edited mid-loop; re-run from cycle 0 to refreeze. If only its prose " +
+          "changed, `qfai prototyping refreeze` records the new hash and the loop continues.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }
