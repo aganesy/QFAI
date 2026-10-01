@@ -110,6 +110,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

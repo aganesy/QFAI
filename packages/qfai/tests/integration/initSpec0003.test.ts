@@ -1,6 +1,6 @@
 /** Init integration traceability and assistant-tree wiring. */
 // QFAI:EX-0001-0020-01
-import { lstat, mkdtemp, readdir, readFile, readlink } from "node:fs/promises";
+import { lstat, mkdtemp, readdir, readFile, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -64,14 +64,17 @@ describe("TC-0003-0001: Empty directory initialization", () => {
         .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
         .map((entry) => entry.name);
       expect(skills.length, "init wrote no qfai-* skill").toBeGreaterThan(0);
+      // Compared by where the link resolves, not by the text of its target: a
+      // dangling link, or one into a copy outside the project, can end in the
+      // same characters.
       const unlinked: string[] = [];
       for (const linkDir of SKILL_LINK_DIRS) {
         for (const skill of skills) {
           const link = path.join(dir, linkDir, skill);
-          const target =
-            (await kindOf(link)) === "symlink" ? (await readlink(link)).replace(/\\/g, "/") : "";
-          if (!target.endsWith(`.qfai/assistant/skill/${skill}`))
-            unlinked.push(`${linkDir}/${skill}`);
+          const canonical = await realpath(path.join(dir, ".qfai", "assistant", "skill", skill));
+          const resolved =
+            (await kindOf(link)) === "symlink" ? await realpath(link).catch(() => "") : "";
+          if (resolved !== canonical) unlinked.push(`${linkDir}/${skill}`);
         }
       }
       expect(unlinked, "a skill is not linked to its canonical directory").toEqual([]);
