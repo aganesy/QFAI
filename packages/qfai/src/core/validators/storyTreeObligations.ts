@@ -9,6 +9,7 @@ import { classifyRecordRow } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import type { Issue } from "../types.js";
+import { unreadTraceMarks } from "./unreadTraceMarks.js";
 import { issue } from "./utils.js";
 
 export type StoryTestFile = {
@@ -39,6 +40,9 @@ export function validateStoryTreeObligationsModel(
   };
   const covered = { BF: new Set<string>(), AC: new Set<string>(), EX: new Set<string>() };
   for (const file of files) {
+    if (profile === "tdd" && file.selectedForExample) {
+      issues.push(...unreadTraceMarks(file.file, file.content));
+    }
     const annotations = parseStoryTestAnnotations(file.content);
     for (const id of annotations.BF) {
       if (!known.BF.has(id)) {

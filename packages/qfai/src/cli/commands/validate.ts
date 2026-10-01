@@ -440,6 +440,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-007",
     "QFAI-STORY-008",
     "QFAI-STORY-009",
+    "QFAI-STORY-014",
     "QFAI-SCAN-002",
   ],
   sdd: [
@@ -1171,6 +1172,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
   "QFAI-STORY-013":
     "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
+  "QFAI-STORY-014":
+    "A test file records its trace only as `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotations, the shapes a check reads.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1407,6 +1410,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
   "QFAI-STORY-013":
     "Order the Architecture rows from the uppermost layer down, so each Depends on names only rows below it, and give the diagram one node per layer and one Upper --> Lower edge per Depends on entry, nothing more.",
+  "QFAI-STORY-014":
+    "Replace the named mark with the `QFAI:BF-`, `QFAI:AC-` or `QFAI:EX-` annotation the test proves, or delete it.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":
