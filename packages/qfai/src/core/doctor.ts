@@ -1,8 +1,9 @@
 import type { Dirent } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { isEnoent } from "./fs/errno.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -96,12 +97,23 @@ type CreateDoctorDataOptions = {
   targetUrl?: string;
 };
 
+/** Follows links on every platform, so a broken link does not exist; `access` succeeds on one on Windows. */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await stat(target);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error: unknown) {
+    return isEnoent(error);
   }
 }
 
@@ -263,7 +275,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
-    const absentNote = ok ? undefined : defaultAbsentNote(key, config.paths[key]);
+    const absentNote =
+      ok || !(await isAbsent(resolved)) ? undefined : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
       severity: ok

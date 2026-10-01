@@ -108,7 +108,7 @@ export async function validateConfigReferenceIntegrity(
     }
   }
 
-  // ─── QFAI-CFG-LINK-002: paths.* directory existence (warning) ────────────
+  // ─── QFAI-CFG-LINK-002: paths.* directory existence ───────────────────────
   for (const key of VERIFIED_PATH_KEYS) {
     const relPath = config.paths[key];
     const absolutePath = path.resolve(root, relPath);

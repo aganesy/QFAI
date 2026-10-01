@@ -195,7 +195,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
 
     // CLAIM 3 — "`summary.info` is 1 or more". Asserted because the TC asks
     // for it; recorded in the header as non-discriminating, because the bare
-    // install already contributes four.
+    // install already contributes info checks.
     expect
       .soft(
         data.summary.info,

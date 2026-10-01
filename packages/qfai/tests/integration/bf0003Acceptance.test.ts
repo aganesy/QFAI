@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -123,6 +123,36 @@ describe("BF-0003 doctor acceptance", () => {
         linkIssues.find((found) => found.rule === "config.paths.testsDir.reality"),
       ).toMatchObject({ severity: "info" });
       expect(linkIssues.some((found) => found.rule === "config.paths.outDir.reality")).toBe(false);
+    });
+  });
+
+  // QFAI:AC-0003-0003-03
+  // QFAI:EX-0003-0003-04
+  it("keeps a warning where a file (validate) or a broken link (doctor and validate) stands at the shipped-default source path", async () => {
+    await withWorkspace(async (root) => {
+      const srcPath = path.join(root, "src");
+      await writeFile(srcPath, "not a directory", "utf-8");
+      const fileIssues = await validateConfigReferenceIntegrity(root, defaultConfig);
+      expect(
+        fileIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
+      ).toMatchObject({ severity: "warning" });
+
+      await rm(srcPath);
+      try {
+        await symlink(path.join(root, "missing-target"), srcPath);
+      } catch (error: unknown) {
+        // Creating a symbolic link needs a privilege on some Windows hosts; that is the only skip.
+        if (process.platform === "win32" && (error as NodeJS.ErrnoException).code === "EPERM") {
+          return;
+        }
+        throw error;
+      }
+      const asLink = await createDoctorData({ startDir: root, rootExplicit: true });
+      expect(check(asLink, "paths.srcDir")).toMatchObject({ severity: "warning" });
+      const linkIssues = await validateConfigReferenceIntegrity(root, defaultConfig);
+      expect(
+        linkIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
+      ).toMatchObject({ severity: "warning" });
     });
   });
 

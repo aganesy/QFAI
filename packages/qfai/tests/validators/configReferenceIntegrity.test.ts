@@ -3,7 +3,7 @@
  *
  * Verifies the three QFAI-CFG-LINK-* codes:
  *   001: primarySpecId points to a missing spec dir
- *   002: paths.* points to a missing directory (warning)
+ *   002: paths.* points to a missing directory (warning; info when it is a shipped default that is absent)
  *   003: calibration.packPath points to a missing dir
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
