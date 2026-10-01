@@ -69,6 +69,7 @@ afterEach(async () => {
 
 describe("an example rewritten on the branch", () => {
   // QFAI:EX-0001-0054-12
+  // QFAI:AC-0001-0054-07
   it("warns until a test annotating the example changes too", async () => {
     await put(examples, `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`);
     commit("rewrite the example");
