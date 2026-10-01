@@ -38,8 +38,8 @@ Feature: Append-only drift and change-request authorization
 
   # AC-0001-0054-07
   Scenario: An example rewritten with no test change is reported
-  Given the story tree, a base that holds `decisions.md`, and an EX row of a `03_Example.md` whose text changed since the base
-  When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
-  Then a warning names the EX ID and its `03_Example.md` unless a test file annotating that EX also changed since the base
-  And an EX row whose cells are unchanged raises no such warning
+    Given the story tree, a base that holds `decisions.md`, and an EX row of a `03_Example.md` whose text changed since the base
+    When `qfai validate --profile tdd` or `qfai validate --profile drift` runs
+    Then a warning names the EX ID and its `03_Example.md` unless a test file annotating that EX also changed since the base
+    And an EX row whose cells are unchanged raises no such warning
 ```
