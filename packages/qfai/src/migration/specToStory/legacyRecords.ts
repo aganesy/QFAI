@@ -185,6 +185,14 @@ function stepWording(value: string): string {
     .trim();
 }
 
+/** The wording of a rule: every word kept, without case, bold markers or punctuation. */
+function ruleWording(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 /**
  * The fields whose text both forms hold. A TC heading's `Expected` falls back to its whole body
  * when no `Expected` or `Verify` line is written, so it is compared only where one is.
@@ -209,8 +217,9 @@ function mergeRecords(table: LegacyRecord, heading: LegacyRecord, file: string):
     if (!fromHeading.trim()) continue;
     const match = Object.entries(table.cells).find(([name]) => fieldKey(name) === fieldKey(column));
     if (!match?.[1].trim()) continue;
+    const wordingOf = column === "Rule" ? ruleWording : stepWording;
     const same = byWording
-      ? stepWording(match[1]) === stepWording(fromHeading)
+      ? wordingOf(match[1]) === wordingOf(fromHeading)
       : sameFieldValue(match[1], fromHeading);
     if (same) continue;
     throw new MigrationInputError(

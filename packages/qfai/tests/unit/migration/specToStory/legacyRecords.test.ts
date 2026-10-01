@@ -81,6 +81,14 @@ describe("legacy migration records", () => {
     ).toThrow(/BR-0011-0010 holds a different Rule in its table row and in its heading section/);
     const equal = parseLegacyRecords(markdown("Tax is  added"), "BR", "04_Business-Rules.md");
     expect(equal.map((record) => record.id)).toEqual(["BR-0011-0010"]);
+    // Ordinary words count: "given" is not a Gherkin keyword in a rule.
+    expect(() =>
+      parseLegacyRecords(
+        "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0011-0011 | Orders are given refunds. |\n\n## BR-0011-0011: Refunds\n\n- Rule: Orders are refunds.\n",
+        "BR",
+        "04_Business-Rules.md",
+      ),
+    ).toThrow(/holds a different Rule/);
   });
 
   it("keeps the bold inside a section's Rule value", () => {
