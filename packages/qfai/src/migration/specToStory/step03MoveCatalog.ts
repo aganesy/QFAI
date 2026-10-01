@@ -10,6 +10,7 @@ import { readRoutingDefaultsFiles } from "../../core/routingDefaults.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { OLD_CONTRACT_TOKEN, planContracts, type ContractPlan } from "./contractIds.js";
 import { renderContractIndex } from "./contractIndex.js";
+import { readLegacyRoutingDigests, routingEntryDigest } from "./legacyRoutingDigests.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -278,6 +279,40 @@ async function replacePrimarySpec(
   return replacement;
 }
 
+/**
+ * The entries of a project's routing manifest that differ from the installed
+ * default of the same name and from every entry the 1.x releases shipped. Each is
+ * kept as a configuration override and listed for a person, because an entry
+ * copied from a 1.x manifest hides the roles the 2.x skills declare.
+ */
+async function planRoutingOverrides(
+  routing: unknown[],
+): Promise<{ overrides: unknown[]; forAPerson: string[] }> {
+  const defaultByName = new Map(
+    (await defaultRoutingEntries()).map((entry) => {
+      const name = routingEntryName(asRecord(entry, "default routing entry"));
+      if (name === undefined)
+        throw new MigrationInputError("Default routing entry needs a step or a skill.");
+      return [name, entry] as const;
+    }),
+  );
+  const legacy = await readLegacyRoutingDigests();
+  const overrides: unknown[] = [];
+  const forAPerson: string[] = [];
+  for (const entry of routing) {
+    const name = routingEntryName(asRecord(entry, "project routing entry"));
+    if (name === undefined)
+      throw new MigrationInputError("Project routing entry needs a step or a skill.");
+    if (isDeepStrictEqual(entry, defaultByName.get(name))) continue;
+    if (legacy.has(routingEntryDigest(entry))) continue;
+    overrides.push(entry);
+    forAPerson.push(
+      `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; delete it from routing to use the installed one, or keep it to override.`,
+    );
+  }
+  return { overrides, forAPerson };
+}
+
 async function planOverrides(
   context: MigrationContext,
   contractMap: ContractMap,
@@ -286,6 +321,7 @@ async function planOverrides(
   const root = context.root;
   const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
   const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
+  const forAPerson: string[] = [];
   const hasRouting = await exists(routingPath);
   const hasReview = await exists(reviewPath);
   const configPath = path.join(root, "qfai.config.yaml");
@@ -307,24 +343,12 @@ async function planOverrides(
       routingPath,
     );
     if (!Array.isArray(project.routing)) throw new MigrationInputError("Routing must be a list.");
-    const defaultByName = new Map(
-      (await defaultRoutingEntries()).map((entry) => {
-        const name = routingEntryName(asRecord(entry, "default routing entry"));
-        if (name === undefined)
-          throw new MigrationInputError("Default routing entry needs a step or a skill.");
-        return [name, entry] as const;
-      }),
-    );
-    const overrides = project.routing.filter((entry) => {
-      const name = routingEntryName(asRecord(entry, "project routing entry"));
-      if (name === undefined)
-        throw new MigrationInputError("Project routing entry needs a step or a skill.");
-      return !isDeepStrictEqual(entry, defaultByName.get(name));
-    });
-    if (overrides.length > 0) {
-      config.set("routing", overrides);
+    const planned = await planRoutingOverrides(project.routing);
+    if (planned.overrides.length > 0) {
+      config.set("routing", planned.overrides);
       changed = true;
     }
+    forAPerson.push(...planned.forAPerson);
   }
   if (hasReview) {
     const project = asRecord(parseYamlInput(await readInput(reviewPath), reviewPath), reviewPath);
@@ -348,7 +372,7 @@ async function planOverrides(
     operation: changed
       ? { kind: "write", target: "qfai.config.yaml", content: String(config), notes: primary.notes }
       : null,
-    forAPerson: primary.forAPerson,
+    forAPerson: [...primary.forAPerson, ...forAPerson],
   };
 }
 
