@@ -1,7 +1,7 @@
 /**
  * Integration: init writes no line into `AGENTS.md` or `CLAUDE.md` that sends a request to
- * `qfai-run`, whether it seeds the file or edits one the project owns, and leaves a line an earlier
- * init wrote exactly where it is. The review directive is the only line init still prepends.
+ * `qfai-run`, whether it seeds the file or edits one the project owns, and keeps a line an earlier
+ * init wrote as written, without removing or editing it. The review directive is the only line init still prepends.
  */
 // QFAI:AC-0001-0196-03
 // QFAI:EX-0001-0196-05
