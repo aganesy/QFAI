@@ -1,40 +1,21 @@
-// QFAI:SPEC-0018:TC-0018-0046
+// QFAI:EX-0001-0185-28
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 const base = {
   plan: {
-    route: "bounded-change",
+    route: "add-feature",
     stages: [
-      {
-        stageInstanceId: "bounded-sdd-delta",
-        stageKind: "sdd_delta",
-        skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
-        when: "always",
-      },
-      {
-        stageInstanceId: "bounded-acceptance",
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        when: "acceptance_obligations_unmet",
-      },
-      {
-        stageInstanceId: "bounded-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("bounded-sdd-delta", "sdd"),
+      planStage("bounded-acceptance", "acceptance"),
+      planStage("bounded-verify", "verify"),
     ],
   },
-  specBinding: { specId: "spec-0007" },
-  acceptedStages: [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
-  ],
+  flowBinding: { flowId: "BF-0007" },
+  acceptedStages: [{ stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" }],
   seamRequest: {
     parentWorkOrderId: "work-order-bounded-acceptance-1",
     stageInstanceId: "bounded-acceptance",
@@ -44,7 +25,7 @@ const base = {
 };
 const facts = { acceptanceObligationsUnmet: true };
 
-it("TC-0018-0046 (TDD-0058): A seam-only result whose seam", () => {
+it("A seam-only result whose seam", () => {
   const issued = decide(
     { ...base, run: { id: "run-seam-pass", state: "ready", sequence: 8 } },
     { operation: "next" },
