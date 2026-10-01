@@ -108,6 +108,19 @@ describe("the entry line", () => {
     });
   });
 
+  it("An earlier line is kept once when REVIEW.md makes init prepend the review directive", async () => {
+    await withEmptyRepo(async (root) => {
+      await writeFile(path.join(root, "REVIEW.md"), "# Review\n", "utf-8");
+      const text = `${EARLIER_LINE}\n${PROJECT_TEXT}`;
+      for (const after of await entryPointsAfterInit(root, text)) {
+        const lines = after.split("\n");
+        expect(lines.filter(isReviewDirective)).toHaveLength(1);
+        expect(lines.filter((line) => line === EARLIER_LINE)).toHaveLength(1);
+        expect(after.includes(`${EARLIER_LINE}\n${PROJECT_TEXT}`), "kept as written").toBe(true);
+      }
+    });
+  });
+
   it("A symlinked AGENTS.md is refused and its target gains no line", async () => {
     await withEmptyRepo(async (root) => {
       const target = path.join(root, "shared.md");

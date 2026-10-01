@@ -28,7 +28,7 @@ Feature: Install or upgrade and get the free-text entry
     When `qfai init` runs
     Then the seeded files open with their heading and carry no line that sends a request to `qfai-run`
     And an existing file gains no such line, and its text and line endings are kept
-    And a line an earlier init wrote stays where it is, once, and is never removed
+    And a line an earlier init wrote is kept as written, once, and is never removed or edited
     And `.github/copilot-instructions.md` carries no such line
     And the review directive is still prepended, only where `REVIEW.md` exists
     And a rerun adds nothing
