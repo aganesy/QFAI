@@ -110,6 +110,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A BF or AC annotation counts only in a test file.** The `atdd` profile of
+  `qfai validate` credited a `QFAI:BF-` or `QFAI:AC-` annotation in any file under the
+  E2E, integration or API layer, so a Markdown list of annotations cleared
+  `QFAI-STORY-006` with no test behind it. The file now also has to match
+  `validation.traceability.testFileGlobs`, as an EX annotation already did.
+  The two annotation lists this repository kept under `tests/` are removed
+  (#2160).
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
