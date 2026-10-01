@@ -9,6 +9,8 @@ Find every consumer by reading imports and fixture declarations, not by
 assuming the editing flow owns the artifact. Rerun each affected selector
 against the changed tree, retake its falsifiability proof where needed, and
 record the new manifest, hash, command and result in that flow's evidence.
+Where a consumer cannot be found by reading, follow
+`.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md#when-the-search-cannot-finish`.
 Where a consumer cannot be run, report it as an unresolved cross-flow
 obligation. Do not claim the editing flow's completion as proof for another
 flow, and do not alter an existing sealed review pack. A new review response
