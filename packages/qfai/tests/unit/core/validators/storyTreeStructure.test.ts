@@ -297,6 +297,37 @@ describe("story-tree structure", () => {
     expect(validateStoryTreeStructureModel(model())).toEqual([]);
   });
 
+  // QFAI:AC-0001-0053-06
+  // QFAI:EX-0001-0053-07
+  it("reports a cited decision or successor that no row declares", () => {
+    const rule = (statement: string) =>
+      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
+    const register = (rows: string) =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    const dangling = validateStoryTreeStructureModel(
+      model({
+        [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008, not DEC-0001-0002"),
+        [`${specs}/decisions.md`]: register("| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |"),
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-003");
+    expect(dangling.map((item) => item.refs)).toEqual([
+      ["BR-0001-0001", "DEC-0008"],
+      ["DEC-0001", "DEC-0009"],
+    ]);
+    expect(dangling.every((item) => item.severity === "error")).toBe(true);
+
+    const declared = validateStoryTreeStructureModel(
+      model({
+        [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008 and OQ-0001"),
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
+        ),
+        [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A | DEFERRED |"),
+      }),
+    );
+    expect(declared).toEqual([]);
+  });
+
   it("checks flow and story index membership against declarations", () => {
     const findings = validateStoryTreeStructureModel(
       model({
