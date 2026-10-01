@@ -122,9 +122,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the fix.
 - **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
   new `workflows.mdschemaBinary` check runs `mdschema --help` from the
-  installation the QFAI package depends on, never one the inspected project
-  supplies, and is an error that names the reason and the fix when the binary
-  does not start. Until now
+  installation found from where the QFAI package sits, not from the inspected
+  project's root, and is an error that names the reason and the fix when the
+  binary does not start. Until now
   `workflows.docsLane` read `ok` for a project with no binary. The README now
   says that the package's install script is not needed while the platform
   package installs, and how to approve it with `npm approve-scripts` (npm 11.16

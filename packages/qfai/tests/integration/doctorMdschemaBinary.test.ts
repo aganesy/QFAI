@@ -135,7 +135,7 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.message).toContain("the packaged init assets cannot be resolved");
   });
 
-  it("starts no binary the inspected project supplies", async () => {
+  it("does not start a binary found from the inspected project's root", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-22
     const root = await tempDir();

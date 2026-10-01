@@ -682,6 +682,24 @@ describe("check-mdschema command resolution", () => {
     expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
   });
 
+  // QFAI:EX-0002-0003-08
+  it("ignores a bin that points outside its own package", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(packageDir, { recursive: true });
+    const outside = path.join(tools, "node_modules", "@jackchuka", "outside.js");
+    await writeFile(outside, "", "utf-8");
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "../outside.js" } }),
+      "utf-8",
+    );
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
+  });
+
   it.each([
     ["a manifest that is not JSON", "{"],
     ["a manifest declaring no bin", JSON.stringify({ name: "@jackchuka/mdschema" })],

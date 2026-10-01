@@ -28,9 +28,10 @@ type Finder = { find: (from: string) => unknown; from: string };
 /**
  * The resolver the shipped checker script uses, with the directory it sits in.
  *
- * Doctor asks for the installation the QFAI package itself depends on, so the
- * search starts at the package and never at the inspected project: a project
- * can carry any `node_modules` it likes, and doctor must not run it.
+ * The search starts where the QFAI package sits rather than at the inspected
+ * project's root: a checkout can track a `node_modules` of its own, and doctor
+ * must not run what it finds there. With QFAI installed under the project, the
+ * package's own dependency is found where the package manager placed it.
  */
 async function loadFinder(): Promise<Finder | string> {
   let file = "the packaged checker";
@@ -103,7 +104,7 @@ const INSTALL_FIX =
  * `qfai validate` runs `mdschema`. A present workflow file says nothing about
  * whether the program behind it can start, so this runs `mdschema --help`,
  * which reads no document and changes nothing. The installation checked is the
- * one the QFAI package depends on, not one the inspected project supplies.
+ * one found from the QFAI package, not from the inspected project's root.
  */
 export async function checkMdschemaBinary(
   timeoutMs: number = PROBE_TIMEOUT_MS,

@@ -215,6 +215,11 @@ function mdschemaEntryPoint(packageDir) {
     return null;
   }
   const entry = path.resolve(packageDir, relative);
+  // A `bin` that points outside its own package is not an entry point of it.
+  const inside = path.relative(packageDir, entry);
+  if (inside.startsWith("..") || path.isAbsolute(inside)) {
+    return null;
+  }
   return existsSync(entry) ? entry : null;
 }
 
