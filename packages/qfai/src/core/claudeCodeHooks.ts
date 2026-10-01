@@ -77,8 +77,8 @@ export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminde
  * to `qfai-run`.
  *
  * The host picks a skill from the request's wording, and may pick another one
- * or none. The line at the top of `AGENTS.md` and `CLAUDE.md` is read once and
- * fades as a session grows; this restates it with each message.
+ * or none. The hook is the one place the rule is stated, and it states it with
+ * each message so that it does not fade as a session grows.
  */
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
