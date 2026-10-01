@@ -189,16 +189,32 @@ describe("BF-0003 doctor acceptance", () => {
 
   // QFAI:AC-0003-0003-02
   // QFAI:EX-0003-0003-06
-  it("keeps the doctor warning where a broken link stands at the validate.json path", async () => {
+  it("keeps the doctor warning where a directory or a broken link stands at the validate.json path", async () => {
     await withWorkspace(async (root) => {
       const reportDir = path.join(root, ".qfai", "report");
-      await mkdir(reportDir, { recursive: true });
-      if (!(await tryBrokenLink(root, path.join(reportDir, "validate.json")))) {
+      const reportPath = path.join(reportDir, "validate.json");
+      await mkdir(reportPath, { recursive: true });
+      const asDirectory = await createDoctorData({ startDir: root, rootExplicit: true });
+      expect(check(asDirectory, "output.validateJson")).toMatchObject({ severity: "warning" });
+
+      await rm(reportPath, { recursive: true });
+      if (!(await tryBrokenLink(root, reportPath))) {
         return;
       }
+      const asLink = await createDoctorData({ startDir: root, rootExplicit: true });
+      expect(check(asLink, "output.validateJson")).toMatchObject({ severity: "warning" });
+    });
+  });
+
+  // QFAI:AC-0003-0003-02
+  // QFAI:EX-0003-0003-02
+  it("reads a shipped default spelled with a leading ./ as the default", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  srcDir: ./src\n");
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
 
-      expect(check(data, "output.validateJson")).toMatchObject({ severity: "warning" });
+      expect(check(data, "paths.srcDir")).toMatchObject({ severity: "info" });
+      expect(check(data, "paths.srcDir")?.message).toContain("no source yet");
     });
   });
 

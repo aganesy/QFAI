@@ -1,5 +1,5 @@
-import type { Dirent } from "node:fs";
-import { lstat, readdir, readFile, stat } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
@@ -107,6 +107,19 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+/** True when the path is a regular file the process may read, which is what `qfai report` needs of validate.json. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
 async function isAbsent(target: string): Promise<boolean> {
   try {
@@ -185,7 +198,9 @@ const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
 
 /** What an absent directory at its shipped default means, or undefined where it is a fault. */
 function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
-  return relPath === defaultConfig.paths[key] ? DEFAULT_ABSENT_NOTES[key] : undefined;
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
 }
 
 /**
@@ -276,7 +291,9 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
     const absentNote =
-      ok || !(await isAbsent(resolved)) ? undefined : defaultAbsentNote(key, config.paths[key]);
+      ok || missingDefaultSkillCreatedPath || !(await isAbsent(resolved))
+        ? undefined
+        : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
       severity: ok
@@ -736,7 +753,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
-  const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonExists = await isReadableFile(validateJsonAbs);
   const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
@@ -746,7 +763,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       ? "validate.json exists (report can run)"
       : validateJsonAbsent
         ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
-        : "validate.json cannot be read (a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
+        : "validate.json is not a readable file (a directory, a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 

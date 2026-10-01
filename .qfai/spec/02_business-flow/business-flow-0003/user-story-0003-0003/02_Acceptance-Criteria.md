@@ -17,7 +17,7 @@ Feature: Path resolution diagnosis
     Then the `paths.srcDir`, `paths.testsDir` and `paths.outDir` checks are reported at info, each with one line saying why
     And the `output.validateJson` check is reported at info
     And a `srcDir`, `testsDir` or `outDir` that is not the shipped default and does not exist is still reported as a warning
-    And a shipped-default `srcDir`, `testsDir` or `outDir` that is a broken link, and a `validate.json` that is a broken link, are reported as a warning
+    And a shipped-default `srcDir`, `testsDir` or `outDir` that is a broken link, and a `validate.json` that is not a readable file, are reported as a warning
 
   # AC-0003-0003-03
   Scenario: Validate reports an absent shipped-default source or tests directory at info

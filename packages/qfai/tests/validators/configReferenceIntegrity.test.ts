@@ -138,6 +138,20 @@ describe("validateConfigReferenceIntegrity", () => {
   });
 
   // QFAI:EX-0003-0003-03
+  // QFAI:EX-0003-0003-03
+  it("reads a shipped default spelled with a leading ./ as the default", async () => {
+    const root = await newTempDir();
+    const base = makeConfig();
+    const issues = await validateConfigReferenceIntegrity(root, {
+      ...base,
+      paths: { ...base.paths, srcDir: "./src" },
+    });
+    const srcIssue = issues.find((i) => i.rule === "config.paths.srcDir.reality");
+
+    expect(srcIssue?.severity).toBe("info");
+  });
+
+  // QFAI:EX-0003-0003-03
   it("reports an absent shipped-default source and test directories at info", async () => {
     const root = await newTempDir();
     const issues = await validateConfigReferenceIntegrity(root, makeConfig());

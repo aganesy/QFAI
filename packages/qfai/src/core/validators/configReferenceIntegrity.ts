@@ -79,7 +79,9 @@ const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
 
 /** What an absent directory at its shipped default means, or undefined where it is a fault. */
 function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
-  return relPath === defaultConfig.paths[key] ? DEFAULT_ABSENT_NOTES[key] : undefined;
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
 }
 
 export async function validateConfigReferenceIntegrity(
