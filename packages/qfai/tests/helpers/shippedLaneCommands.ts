@@ -1126,6 +1126,12 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // program under a path an adopter controls, still fails this list.
   "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
   "node node_modules/qfai/assets/scripts/check-mermaid.mjs",
+  // The same two files, from the directory the lane installs its tools into. A project that does
+  // not depend on QFAI gets the package there instead of in its own `node_modules`, which npm
+  // cannot install into when another package manager laid the tree out. The directory is fixed and
+  // under `tmp/`, so it is still a path inside an installed package and never one an adopter owns.
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -1237,7 +1243,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "a85981ec0e0abce435c2b436ac05f7890475fe1ed5d7741740bf13a270557525"],
+  ["qfai-docs.yml", "b2cf5599773c7bba3037262d8ff4280221bb1490fe19f6846c29c5f8b4863d4f"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -1295,12 +1301,16 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
  * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
  * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
- * rather than drift.
+ * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
+ * joined the ignore lines and `!.qfai/evidence/workflow/` the governance negations, and those two
+ * lines are the whole delta.
  *
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
- * so their bytes are the reviewed surface.
+ * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
+ * sent a first free-text change request to `qfai-run` is gone, because the prompt-time hook is the
+ * one place that rule is stated.
  *
  * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
  * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
@@ -1352,13 +1362,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the legacy-layout item, which now says the `steering/` and `instructions/`
     // layout is past its compatibility window and that `qfai init` reports it on stderr as a
     // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
-    // into a temp root; restoring the old item reproduces `754c7708…` byte for byte.
+    // into a temp root; restoring the old item reproduces `12e26902…` byte for byte.
     //
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
-    // that one item reproduces `cac822f9…` byte for byte.
+    // that one item reproduces `be3d8ce2…` byte for byte.
+    //
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/document-schema.md`,
+    // the rule master the run now seeds. Derived by running `qfai init` into a temp root; dropping
+    // that one bullet reproduces `977424d0…` byte for byte.
+    //
+    // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
+    // ends with a question listing the next actions. Derived by running `qfai init` into a temp
+    // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     ".github/copilot-instructions.md",
-    "b786f88e7f0ffa81f6cd48808656031968028d3a01cbd5480854810c6c3b2e66",
+    "dfa370bc935f988bf29374437af39a24cba55aacf178387e82e5a9f982869b0c",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1377,104 +1395,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The comment block is the whole delta: the rule lines are byte-identical to
   // the ones `c428b147…` covered.
   [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
-  // The shipped `.gitignore` IS the generated managed block, so every governance
-  // negation moves this digest by construction. Four of them are why it stands
-  // where it does:
+  // The shipped `.gitignore` IS the generated managed block, so every line of it
+  // moves this digest by construction. The block ignores `.qfai/evidence/` whole
+  // and re-includes nothing under it; its only negations are `!.qfai/` and the
+  // four that keep the assistant tree and the install-provenance record
+  // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
-  // - `!.qfai/assistant/`, `!.qfai/assistant/**` and
-  //   `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
-  //   `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
-  //   (`git status --ignored`): without them the provenance record never reaches
-  //   a fresh clone, and every untouched governed file from an older release
-  //   then reads as a local fork; without the recursive one the record arrives
-  //   and the rules it vouches for do not.
-  // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
-  //   `Skeleton debt` into that file, and every later invocation reads the
-  //   record to find the entrypoint's smoke command, re-runs it, and decides
-  //   from THAT exit status whether the entrypoint is still proven.
-  //   Ignored, both the debt and the command exist only in the working
-  //   directory that ran the phase.
-  //
-  // Derived by running `qfai init` into a temp root and reading what it wrote,
-  // which is how every predecessor was derived — not copied off a failure
-  // message. Those three lines are the whole delta: dropping exactly them from
-  // the file init writes today reproduces the previous digest
-  // `f35a2624…` byte for byte, which is what makes this a review of three lines
-  // rather than a re-blessing of the block.
-  //
-  // Re-pinned again for the two `import-lite` negations. The evidence
-  // directory is ignored wholesale, so the file recording where an imported
-  // spec set's requirements came from never reached a commit — and the warning
-  // that asks for it reads the committed tree. Two lines, for the two names
-  // the check accepts:
-  //
-  //     !.qfai/evidence/import-lite.md
-  //     !.qfai/evidence/import-lite-<17 digits>.md
-  //
-  // the copy an operator kept under the shipped template's own name, and the
-  // run-stamped one. The second line is written as `[0-9]` once per digit,
-  // which is what fixes the width: a shorthand for the repeat is not gitignore
-  // syntax, and anything wider commits a name the check rejects outright —
-  // a file in the repository that nothing reads.
-  //
-  // Derived the same way as its predecessors — `qfai init` into a temp root,
-  // then reading what it wrote — not copied off a failure message. Those two
-  // lines are the whole delta: dropping them from the file init writes today
-  // reproduces `4e72a478…` byte for byte.
-  // The skeleton evidence negation is a fourth line on the same footing: the
-  // phase that proves an entrypoint starts writes it, and the evidence
-  // directory is ignored wholesale, so without the negation the proof never
-  // reaches a commit either.
-  //
-  //     !.qfai/evidence/skeleton.md
-  //
-  // Re-pinned for the review tree as well. Nothing under `.qfai/review/` is
-  // tracked, so the two lines that carved an exception out of `.qfai/review/*`
-  // are gone:
-  //
-  //     !.qfai/review/
-  //     !.qfai/review/.legacy-packs
-  //
-  // and one ignore joined the block, for the archive location packs were moved
-  // to before the archive moved under `.qfai/review/` itself:
-  //
-  //     .qfai/review_archive/*
-  //
-  // Re-pinned again for the spec stage's evidence, which `QFAI-GRILL-001` reads:
-  //
-  //     !.qfai/evidence/sdd-*.md
-  //
-  // Re-pinned again for the prototyping session record, which is a user decision
-  // rather than regenerable stage evidence — three lines, in the order git reads
-  // them, because the last matching pattern is what decides:
-  //
-  //     .qfai/evidence/prototyping/*
-  //     !.qfai/evidence/prototyping/
-  //     !.qfai/evidence/prototyping/grilling.md
-  //
-  // Derived the way its predecessors were — `qfai init` into a temp root, then
-  // reading what it wrote.
-  //
-  // Re-pinned again for the discussion stage's evidence, which the same rule
-  // reads for its `## Grilling Session` section. The stamp is spelled out to
-  // its full width, as the import-lite negation spells out its own:
-  //
-  //     !.qfai/evidence/discussion-[0-9]…[0-9].md
-  //
-  // Derived the same way, and checked the way the note below asks: removing
-  // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
-  // which is what makes this a review of one line.
-  //
-  // Re-pinned for the workflow run's state and evidence, two lines:
-  //
-  //     .qfai/runs/
-  //     !.qfai/evidence/workflow/
-  //
-  // the per-checkout run state, which never belongs in a commit, and the
-  // tracked summary and authorization records `qfai validate` reads from a
-  // fresh clone. Derived the same way; removing those two lines from what the
-  // run wrote reproduces `c208ecdc…` byte for byte.
-  [".gitignore", "00125b9c9559b6886ad4b17da6ea74d6e96741ae828617f42447cf7f5ad08e17"],
+  // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
+  // wrote — never copy a value out of a failure message.
+  [".gitignore", "b7773796163f4f2fa0c9179eb8f4d54ebfdd35a9faf7d7b187b552b5925a919d"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1523,12 +1452,20 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
   //
-  // Re-pinned for the entry directive both files now open with: one line sending a first
-  // free-text change request to the `qfai-run` skill, and the blank line after it. Derived by
-  // running `qfai init` into a temp root; removing those two lines from both written files
-  // reproduces `6083825b…` and `fe88c122…` byte for byte.
-  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
-  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/document-schema.md`,
+  // the rule master the run now seeds. Dropping that one bullet from both written files
+  // reproduces `51e3e03e…` and `07350d6a…` byte for byte.
+  //
+  // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
+  // ends with a question listing the next actions. Derived by running `qfai init` into a temp
+  // root; restoring the old wording in both written files reproduces `837a2663…` and
+  // `85cd31b5…` byte for byte.
+  //
+  // Re-pinned for the removal of the opening line that sent a first free-text change request to
+  // `qfai-run`, and the blank line after it. Putting both back at the top of the two written files
+  // reproduces `6d12562c…` and `1832d267…` byte for byte.
+  ["AGENTS.md", "ec22cd82c8c97e0b42517127b7f7a8e531d4691ee8882953dda511c134cc0984"],
+  ["CLAUDE.md", "8d7086b0adc28b94074bba2b32c59d6511a3dcc5bac211943b89b87f0c26a3ae"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1569,7 +1506,47 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reader, the `reminders.json` path and one message key, no shell and no network. Derived by
   // running `qfai init` into a temp root and hashing what it wrote; dropping that one group
   // reproduces `a7547fbe…` byte for byte.
-  [".claude/settings.json", "65be5439b8425a2bec1e68e7084263c25abb82fb0b396dd6583116764bcca665"],
+  //
+  // Re-pinned for a second `UserPromptSubmit` group, which sends a request naming no skill to
+  // `qfai-run` on every prompt. Same shape as the structured-question group: one `node -e` reader,
+  // the `reminders.json` path and the key `free-text-entry`. Derived by running `qfai init` into a
+  // temp root and hashing what it wrote; dropping that one group reproduces `65be5439…` byte for
+  // byte.
+  //
+  // Re-pinned for three more changes, each a reviewed delta. A `permissions.allow` list names one
+  // `Skill(<name>)` entry for each shipped skill and the three launcher spellings. The grilling
+  // reminder before a write and the documentation-clarity and minimal-implementation reminders
+  // after one read the tool call and print nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
+  // looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // the project up to its git root and prints only where there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  [".claude/settings.json", "87ae0f312dfbfaa49c5bdb665287ad8e9e9d692f2c43d614b0be5e54162ab78d"],
+  // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
+  // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
+  // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
+  // through the session's shell over `$(git rev-parse --show-toplevel)/.agents/rules/reminders.json`;
+  // a shell that does not expand `$(...)` names a path that does not exist, and the reader prints
+  // nothing. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  //
+  // Re-pinned for the tool-time groups: four under `PreToolUse` and two under `PostToolUse`,
+  // matched on Codex's tool names. Each runs the same reader over the same path and one message
+  // key; the API-budget and Markdown entries first read the tool call from stdin and print only
+  // when it matches. Every entry also has a `commandWindows` line, which Codex runs through
+  // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
+  // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
+  // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
+  //
+  // Re-pinned for one line per entry that every hook shell runs alike: `sh`, `cmd.exe /C` and
+  // PowerShell. Each entry is `node -e "<program>" <key>`; the program finds
+  // `.agents/rules/reminders.json` by looking upward from where it runs, stopping after the
+  // first directory that holds `.git`, and holds no character any of those shells expands. No
+  // entry has a `commandWindows`. Derived the same way; the file an earlier release wrote,
+  // `4c710d7e…`, is kept as a fixture the merge test upgrades.
+  //
+  // Re-pinned for the install check, a third `UserPromptSubmit` group. Its line finds the message
+  // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // that project up to the first directory that holds `.git`, and holds no character those shells
+  // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
+  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1601,7 +1578,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "543f96466f42d2060c7ff63941b9036bc5694ab6d58b579c6a1a8af08fab6e1b"],
+  //
+  // Re-pinned for the commented `uiux.surfacePaths` entry, which names the
+  // paths that render a user-visible surface. The whole delta is that comment:
+  // every key the file sets is unchanged, and deleting it reproduces
+  // `a6b03c7a…` byte for byte.
+  //
+  // Re-pinned for the removal of `validation.require.specSections`, which nothing read: the
+  // sections of a story-tree document come from the shipped schemas. Restoring the two lines
+  // `require:` and `specSections: []` reproduces `41b0a60e…` byte for byte.
+  //
+  // Re-pinned for the commented `uiux.registries` block, which now names the
+  // `Component catalogue` row of the Stack table in `tech.md` as the place that
+  // says which registry is primary. The whole delta is those two comment lines:
+  // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
+  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
 ]);
 
 /**
@@ -1704,17 +1695,14 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * `.github/instructions/`, and no pin walked it. Two files. Enumerating them costs nothing and the
  * absence of the enumeration cost a round.
  *
- * **`.qfai/**` is deliberately not here, and that is a residual rather than a decision to be proud
- * of.** Its 169 entries are mirrored from this repository's own `.qfai/` by `pnpm sync:ssot`, they
- * belong to other specs, and they change on that schedule — a path pin over them would redden on
- * every skill edit, which is the "guard that reddens on the honest edit" hazard this record has been
- * tracking since round 10. What guards them is mirror parity plus the kind rule below. Round 20's
- * gate defeated that pair with a file carrying no shebang, no executable bit and no known name, run
- * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
+ * `.qfai/**` is mirrored by `pnpm sync:ssot`. Its instructions change with the shipped skills, so
+ * the path set excludes them. The kind guard checks every mirrored file, and the migration programs
+ * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
@@ -1732,6 +1720,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/CLAUDE.md",
   "root/qfai.config.yaml",
   ".claude/settings.json",
+  ".codex/hooks.json",
   ".github/instructions/code-review.instructions.md",
   ".github/instructions/principles.instructions.md",
 ]);
@@ -1740,7 +1729,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
 export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
 
 /**
- * The file extensions `qfai init` may ship, which is the fourth question about who runs a file.
+ * The data extensions `qfai init` may ship. Reviewed migration programs are pinned separately.
  *
  * The other three ask what the bytes say (a shebang), what the filesystem says (an executable bit)
  * and what a tool would know the name for. Round 20's gate beat all three with a file carrying none
@@ -1758,7 +1747,7 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * built on. The dangerous side cannot be enumerated: every extension left off such a list ships
  * unreviewed, and nothing says when the list is finished.
  *
- * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
+ * A legitimate data file with a new extension reddens and is a one-line review. That is the intended cost,
  * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
  * the init payload so the paths its SKILL.md cites resolve in a consumer root, and a TOML config table
  * is read by an MCP host, not executed. Adding one here also means adding it to the leakage smoke
@@ -1791,8 +1780,71 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".gitattributes"]);
 
+const ALLOWED_INIT_MARKERS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/prompt/.gitkeep",
+    "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+  ],
+]);
+
+/** Migration programs shipped for an explicit user-run migration, pinned by path and bytes. */
+export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/_step.mjs",
+    "77b7286587d152c11456bb339be3414b9be65d554ba387e1008aea587b04a3af",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs",
+    "4fd302a1a2e8a352dec294da0373c9bae3300f1d8f7ebafb51758c5fe1bf8fea",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/02-merge-tables.mjs",
+    "e8fa75cb225fdc105143887e93582c9f164106a20b841d8be052cb0d99916e12",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/03-move-catalog.mjs",
+    "016778585862b90683333ced79608aa3717c9731b2932c14b45cf19c91f94a92",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/04-renumber-ids.mjs",
+    "6fd5b63fcfb2a2ab616e90d4e5a03908ce7770bfde4689060ffffeb91e6571be",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/05-cases-to-examples.mjs",
+    "719621709568dbbdc3aad1c069c02153c4df251297a26356902aea1aff45c466",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/06-derive-ac-refs.mjs",
+    "c990cbe393bbb7638c7873e461e165f957bad34503c60f24a08c92543be4994b",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/07-rules-to-contracts.mjs",
+    "2f803f507b74c4179905735a2ebaeb3c2f65532d13c1103092f0a216bd2321a9",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/08-rewrite-annotations.mjs",
+    "2d06b5b9633dbf638dc1d528fbef85162ad5bd4f755cb902ca7755b9b22c0648",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/09-repoint-links.mjs",
+    "6d45380e132bfd0c8811a1996dc24135a6d967c1d234b4cc5f118da3c7f076a3",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/10-update-gitignore.mjs",
+    "209fc3d2f4b7caaf33cba217d20573ad30eab897f1bf4cfbd48ef716a41a5641",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/11-install-entry.mjs",
+    "3f1db593faa41352c289ae039c36d69895878fcfc6cf0b48d1d3089dfb07f03c",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/12-check-entry.mjs",
+    "cada6bd144e55e06155424500416e5ab227194ebde975285f5d1a394d9f31eec",
+  ],
+]);
+
 /**
- * Whether an init-source file ships as data — the two sets above asked as one question.
+ * Whether an init-source file is a supported data format or a reviewed migration program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1800,6 +1852,8 @@ export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".git
  */
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
+    ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
   );
@@ -1853,6 +1907,7 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  *
  * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
+ * The migration programs are the sole exception, with exact path and byte pins.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
  *
@@ -1942,6 +1997,14 @@ export function initMustNotShip(
   // real. What changed is the claim: on a developer's Windows machine this line is inert, and the
   // shebang question is the one carrying the load. Do not cite a local run as evidence it works.
   if ((mode & 0o100) !== 0) return "arrives executable";
+  const reviewedMarker = ALLOWED_INIT_MARKERS.get(relativePath);
+  if (reviewedMarker !== undefined) {
+    return fileDigest(contents) === reviewedMarker ? undefined : "init marker content differs";
+  }
+  const reviewedScript = ALLOWED_MIGRATION_SCRIPTS.get(relativePath);
+  if (reviewedScript !== undefined) {
+    return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
+  }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;
 }
@@ -2001,15 +2064,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 51b5b26d3613f7250e7e16d2a696da10dab52e0df5f5901c423d292c0ccc9ff0>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 2b158e79aad529228eb30165f5a496b4677daf6fb8bd609bb4ac9661449e8c79>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -2289,8 +2352,8 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1",
-  "qfai",
+  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
+  "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
@@ -2320,7 +2383,27 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // nothing in the adopter's manifest — and `--registry` names WHERE the pinned
   // versions come from, which a version alone does not say: npm resolves its
   // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc` otherwise.
-  ["npm install", new Set(["--no-audit", "--no-fund", "--no-save", "--registry"])],
+  //
+  // `--prefix` is what keeps that install away from the project's own dependency tree: npm cannot
+  // read a `node_modules` another package manager laid out. Its value is pinned by the test that
+  // executes the delivered step, so the flag can only ever name the lane's own directory.
+  //
+  // `--ignore-scripts` keeps the tool install from running any package's install script. The
+  // schema checker's platform binary arrives as an optional dependency, which installs without
+  // one, so the lane does not depend on the script. `--include=optional` keeps a user-level npm
+  // setting that omits optional dependencies from dropping that platform package.
+  [
+    "npm install",
+    new Set([
+      "--no-audit",
+      "--no-fund",
+      "--no-save",
+      "--registry",
+      "--prefix",
+      "--ignore-scripts",
+      "--include",
+    ]),
+  ],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],
@@ -2329,8 +2412,19 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // The document lane's checkers. `--scope all` is what makes the lane check the
   // whole tree rather than a diff (an adopter's CI has no ratchet to apply), and
   // `--summary` prints the per-document-type result the lane's log is read for.
-  ["node node_modules/qfai/assets/scripts/check-mdschema.mjs", new Set(["--scope", "--summary"])],
-  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set<string>()],
+  [
+    "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set(["--tools"])],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
+    new Set(["--tools"]),
+  ],
   // `--no-renames` joins `--name-only` because the shipped detection lane needs both: with rename
   // detection ON git reports only the DESTINATION of a move, so `src/x.ts` -> `docs/x.md` arrives as
   // one documentation path and the source half selects no lane. It is a reporting flag — it cannot

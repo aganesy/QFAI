@@ -6,7 +6,7 @@
  * Needs `pnpm -C packages/qfai build` first. Without a build the binary is
  * absent and the first case fails on it rather than passing without running.
  */
-// QFAI:SPEC-0014:US-0014-0020
+// QFAI:BF-0001
 
 import { execFile } from "node:child_process";
 import { access, mkdtemp, readFile, rm } from "node:fs/promises";

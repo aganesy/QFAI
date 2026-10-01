@@ -14,7 +14,7 @@ describe("uiux sidecar templates", () => {
     "init",
     ".qfai",
     "assistant",
-    "skills",
+    "skill",
     "qfai-discussion",
     "templates",
   );
@@ -61,7 +61,7 @@ describe("uiux sidecar templates", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
       "uiux",
@@ -77,8 +77,8 @@ describe("uiux sidecar templates", () => {
     expect(unexpected).toEqual([]);
   });
 
-  // QFAI:SPEC-0010:TC-0010-0001
-  it("UI-bearing sidecar family を配布する (brand SSOT は root DESIGN.md)", async () => {
+  // QFAI:EX-0001-0085-01
+  it("ships the UI-bearing sidecar family (the brand SSOT is the root DESIGN.md)", async () => {
     const files = await fg(["*.md"], { cwd: uiuxDir, absolute: false });
     // Brand-level inputs moved to root DESIGN.md; only screen-level
     // sidecars remain.
@@ -88,7 +88,7 @@ describe("uiux sidecar templates", () => {
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
-  it("40_screen_contracts.md は screen contract 強スキーマを維持する", async () => {
+  it("40_screen_contracts.md keeps the strong screen-contract schema", async () => {
     const content = await readTemplate("40_screen_contracts.md");
     expect(content).toContain("### Screen:");
     expect(content).toMatch(/- screen_id:/);
@@ -99,51 +99,51 @@ describe("uiux sidecar templates", () => {
     expect(content).toMatch(/- required_states:/);
   });
 
-  // QFAI:SPEC-0010:TC-0010-0005
-  it("50_review_input_bundle.md が best-of-history を明記する", async () => {
+  // QFAI:EX-0001-0086-01
+  it("50_review_input_bundle.md states best-of-history explicitly", async () => {
     const content = await readTemplate("50_review_input_bundle.md");
     expect(content).toMatch(/best-of-history/i);
   });
 
-  it("SKILL.md が UI-bearing completion condition を説明している", async () => {
+  it("SKILL.md explains the UI-bearing completion condition", async () => {
     const content = await readFile(skillMdPath, "utf-8");
     // Brand SSOT is root DESIGN.md, frozen by /qfai-sdd Phase 0.
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/non-ui|skip/i);
   });
 
-  it("03_Story-Workshop.md は optional fallback と Behavior Obligations を維持する", async () => {
+  it("03_Story-Workshop.md keeps the optional fallback and Behavior Obligations", async () => {
     const content = await readCoreTemplate("03_Story-Workshop.md");
     expect(content).toMatch(/Behavior Obligations/i);
     expect(content).toMatch(/optional fallback/i);
   });
 
-  it("04_Sources.md は reference translation schema を持つ", async () => {
+  it("04_Sources.md has the reference translation schema", async () => {
     const content = await readCoreTemplate("04_Sources.md");
     expect(content).toContain("adopted_points");
     expect(content).toContain("rejected_points");
     expect(content).toContain("local_translation");
   });
 
-  it("04_Sources.md は既定の competitive_refs_min 件分の参照ブロックを備える", async () => {
+  it("04_Sources.md carries as many reference blocks as the default competitive_refs_min", async () => {
     const content = await readCoreTemplate("04_Sources.md");
     const blocks = content.match(/^###\s+Reference:/gim) ?? [];
     expect(blocks.length).toBeGreaterThanOrEqual(3);
     expect(content).toContain("uiux.competitive_refs_min");
   });
 
-  it("04_Sources.md の Trend Scan は廃止済み TRD-XX / 未採番 UIX-VAL-T01 を要求しない", async () => {
-    // Trend Scan は `uiux/20_trend_scan.md` から 04_Sources.md へ移設され、
-    // 同じ recut で `TRD-XX` 評価軸スキームは廃止された
-    // (references/ui-bearing-playbook.md の 'Trend Scan SSOT')。
-    // `UIX-VAL-T01` はどの validator も emit しないため、空欄にしても
-    // 指摘は返らない。テンプレートが存在しない挙動を約束しないこと。
+  it("the Trend Scan in 04_Sources.md does not require the retired TRD-XX or the unnumbered UIX-VAL-T01", async () => {
+    // The Trend Scan moved from `uiux/20_trend_scan.md` to 04_Sources.md, and
+    // the same recut retired the `TRD-XX` evaluation-axis scheme
+    // (see 'Trend Scan SSOT' in references/ui-bearing-playbook.md).
+    // No validator emits `UIX-VAL-T01`, so leaving it blank raises no
+    // finding. The template must not promise behavior that does not exist.
     const content = await readCoreTemplate("04_Sources.md");
     expect(content).not.toMatch(/TRD-/);
     expect(content).not.toMatch(/UIX-VAL-T01/);
 
-    // 全 evaluation_connection が「design review でどう評価するか」を問う
-    // 同一形式に揃っていること (color/typography など 6 分類も例外にしない)。
+    // Every evaluation_connection must ask "how is this evaluated in the design review?"
+    // in the same form (the six categories such as color/typography are no exception).
     const evaluationLines = content
       .split("\n")
       .map((line) => line.trim())

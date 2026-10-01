@@ -1,19 +1,19 @@
 /**
- * Unit: saas-package profile DCON-005 attestation gate
+ * Unit: saas-package profile design-system attestation gate
  * (TC-0004-0068 / TDD-0048).
  *
  * - Given a repo where the prototyping-profile findings PASS (no
- *   error-severity issues), but `.qfai/contracts/design/design-system.yaml`
- *   is REMOVED, the saas-package profile MUST fail and the failure
- *   message MUST name the absent attestation.
- * - When the attestation is present, the saas-package profile emits
+ *   error-severity issues), but root `DESIGN.md` is absent or does not
+ *   parse, the saas-package profile MUST fail and the failure message
+ *   MUST name the attestation.
+ * - When the attestation parses, the saas-package profile emits
  *   the standard `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings and
  *   does NOT contribute an attestation-missing error.
  *
  * Exercises `runSaasPackageProfile` directly (unit-level) without
  * shelling out to the CLI.
  */
-// QFAI:SPEC-0004:TC-0004-0068
+// QFAI:EX-0001-0049-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -21,9 +21,11 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../../../src/core/config.js";
 import { runSaasPackageProfile } from "../../../../src/core/saasPackage/profile.js";
-import { SAAS_PACKAGE_SKIPPED_GATES } from "../../../../src/core/saasPackage/skippedGates.js";
+import {
+  SAAS_PACKAGE_SKIPPED_GATES,
+  saasPackageSkippedGateFamilies,
+} from "../../../../src/core/saasPackage/skippedGates.js";
 
 let root: string;
 
@@ -35,44 +37,100 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+const DESIGN_MD = [
+  "---",
+  "brand:",
+  '  name: "Acme Ledger"',
+  "  archetype: tech",
+  "visual:",
+  "  colors:",
+  '    primary: "#1F2937"',
+  '    secondary: "#6366F1"',
+  '    accent: "#D97706"',
+  '    surface: "#FFFFFF"',
+  '    surface_muted: "#F3F4F6"',
+  '    text: "#111827"',
+  '    text_muted: "#6B7280"',
+  '    danger: "#DC2626"',
+  '    warning: "#F59E0B"',
+  '    success: "#10B981"',
+  '    border: "#E5E7EB"',
+  '    overlay: "rgba(0,0,0,0.5)"',
+  "  typography:",
+  '    family_sans: "Inter, system-ui, sans-serif"',
+  '    family_display: "Inter, system-ui, sans-serif"',
+  '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
+  "  radius:",
+  '    sm: "0.25rem"',
+  '    md: "0.5rem"',
+  '    lg: "0.75rem"',
+  '    full: "9999px"',
+  "  shadow:",
+  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
+  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
+  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+  "---",
+  "",
+  "# Brand Philosophy",
+  "",
+].join("\n");
+
 async function seedAttestation(): Promise<void> {
-  const dir = path.join(root, ".qfai", "contracts", "design");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "design-system.yaml"),
-    ["surfaces: []", "tokens: {}", ""].join("\n"),
-    "utf-8",
-  );
+  await writeFile(path.join(root, "DESIGN.md"), DESIGN_MD, "utf-8");
 }
 
-describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestation", () => {
-  it("fails (error severity) when .qfai/contracts/design/design-system.yaml is absent — failure names the attestation", async () => {
+describe("TC-0004-0068: saas-package profile rejects a missing design-system attestation", () => {
+  it("names current story-tree stage gates in its skip notice", () => {
+    expect(SAAS_PACKAGE_SKIPPED_GATES).toEqual([
+      "validateStoryTreeObligations",
+      "validateTestTodoStubs",
+      "validateStoryTreeDrift",
+    ]);
+    expect(saasPackageSkippedGateFamilies()).toEqual([
+      "QFAI-STORY-006",
+      "QFAI-STORY-007",
+      "QFAI-STORY-008",
+      "QFAI-STORY-009",
+      "QFAI-SCAN-002",
+      "QFAI-TEST-*",
+      "QFAI-DRIFT-001",
+      "QFAI-STORY-010",
+    ]);
+  });
+  // QFAI:EX-0001-0049-01
+  it("fails (error severity) when root DESIGN.md is absent — failure names the attestation", async () => {
     // No attestation seeded. Prototyping issues are passed as an empty
     // list (clean prototyping pipeline) so the only failure source is
     // the attestation gate.
-    const issues = await runSaasPackageProfile(root, defaultConfig, []);
+    const issues = await runSaasPackageProfile(root, []);
     const errors = issues.filter((i) => i.severity === "error");
-    expect(errors.length).toBeGreaterThan(0);
-    const attestationError = errors.find((i) => (i.message ?? "").includes("design-system.yaml"));
-    expect(
-      attestationError,
-      "expected an error finding that names the absent design-system.yaml attestation",
-    ).toBeDefined();
-    expect(attestationError?.message ?? "").toContain(".qfai/contracts/design/design-system.yaml");
+    expect(errors.map((i) => [i.code, i.file, i.message])).toEqual([
+      [
+        "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+        "DESIGN.md",
+        "Design-system attestation DESIGN.md is absent. The saas-package profile requires this attestation to PASS.",
+      ],
+    ]);
   });
 
-  it("does NOT emit the attestation-missing finding when the file is present", async () => {
+  // QFAI:EX-0001-0049-01
+  it("fails when root DESIGN.md does not parse", async () => {
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
+    const issues = await runSaasPackageProfile(root, []);
+    const attestationError = issues.find((i) => i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING");
+    expect(attestationError?.severity).toBe("error");
+    expect(attestationError?.message).toContain("DESIGN.md does not parse as DESIGN.md");
+  });
+
+  it("does NOT emit the attestation-missing finding when root DESIGN.md parses", async () => {
     await seedAttestation();
-    const issues = await runSaasPackageProfile(root, defaultConfig, []);
-    const attestationError = issues.find(
-      (i) => i.severity === "error" && (i.message ?? "").includes("design-system.yaml"),
-    );
-    expect(attestationError).toBeUndefined();
+    const issues = await runSaasPackageProfile(root, []);
+    expect(issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 
   it("always surfaces one D-SAAS-PACKAGE-VERIFY-SKIPPED (info) finding per skipped gate", async () => {
     await seedAttestation();
-    const issues = await runSaasPackageProfile(root, defaultConfig, []);
+    const issues = await runSaasPackageProfile(root, []);
     const skips = issues.filter((i) => i.code === "D-SAAS-PACKAGE-VERIFY-SKIPPED");
     expect(skips.length).toBe(SAAS_PACKAGE_SKIPPED_GATES.length);
     expect(skips.every((i) => i.severity === "info")).toBe(true);
@@ -93,69 +151,37 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
         message: "synthetic prototyping warning",
       },
     ];
-    const issues = await runSaasPackageProfile(root, defaultConfig, prototypingIssues);
+    const issues = await runSaasPackageProfile(root, prototypingIssues);
     const carried = issues.find((i) => i.code === "QFAI-FAKE-001");
     expect(carried).toBeDefined();
     expect(carried?.severity).toBe("warning");
   });
 
-  // Pin the outside-root absolute-path fallback for the rel display.
-  // When `config.paths.contractsDir` is an absolute path that resolves
-  // OUTSIDE `root`, the `D-SAAS-PACKAGE-ATTESTATION-MISSING` message
-  // must name the resolved absolute path (forward-slash normalized)
-  // rather than the prior `..`-stripped dangling string that pointed
-  // at a non-existent middle-of-tree location. This guards against a
-  // regression that re-introduces the `replace(/^(\.\.\/)+/, "")`
-  // cleanup that mangled the rel when `path.relative(root, abs)` had
-  // to traverse upward.
-  it("names the absolute resolved path when contractsDir is configured outside root", async () => {
-    // Outside-root contractsDir: place it as a sibling of `root`.
-    const outsideContracts = await mkdtemp(path.join(os.tmpdir(), "qfai-saas-outside-"));
-    try {
-      // Do NOT seed the attestation under outsideContracts — we want
-      // the missing-attestation branch to fire so we can assert the
-      // message text.
-      const customConfig = {
-        ...defaultConfig,
-        paths: { ...defaultConfig.paths, contractsDir: outsideContracts },
-      };
-      const issues = await runSaasPackageProfile(root, customConfig, []);
-      const attestationError = issues.find(
-        (i) => i.severity === "error" && i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING",
-      );
-      expect(attestationError).toBeDefined();
-      const expectedAbs = path
-        .join(outsideContracts, "design", "design-system.yaml")
-        .replace(/\\/g, "/");
-      // Primary assertion: the message MUST name the navigable
-      // resolved absolute path (forward-slash normalized). This alone
-      // catches a regression to the `..`-stripped form, because
-      // re-introducing the `replace(/^(\.\.\/)+/, "")` cleanup would
-      // emit `<outsideName>/design/design-system.yaml` (the absolute
-      // path's last directory + leaf, missing the project anchor)
-      // rather than the resolved absolute path, so the
-      // `toContain(expectedAbs)` check fails.
-      expect(attestationError?.message ?? "").toContain(expectedAbs);
-      // Secondary regression guard: directly assert the resolved
-      // absolute path is NOT relativized into a middle-of-tree
-      // string. The buggy `..`-stripped form would emit
-      // `<outsideName>/design/design-system.yaml` (no project anchor,
-      // no `os.tmpdir()` prefix); the fixed form keeps the full
-      // absolute path. Check the message does NOT contain the
-      // expectation-without-tmpdir-prefix shape that the old cleanup
-      // produced.
-      const outsideName = path.basename(outsideContracts);
-      const buggyRel = `${outsideName}/design/design-system.yaml`;
-      // The bare relative shape (without the os.tmpdir() prefix)
-      // would surface only under the old cleanup; the absolute form
-      // contains it as a suffix but also has the full path prefix,
-      // so we check for "absent: <bareRel>" (the operator-facing
-      // anchor where the old form would emerge).
-      expect(attestationError?.message ?? "").not.toMatch(
-        new RegExp(`absent:\\s+${buggyRel.replace(/[.]/g, "\\.")}\\.`),
-      );
-    } finally {
-      await rm(outsideContracts, { recursive: true, force: true });
-    }
+  // QFAI:EX-0001-0049-01
+  it("does not pass when the prototyping-profile validate fails", async () => {
+    await seedAttestation();
+    const prototypingIssues = [
+      {
+        code: "QFAI-FAKE-002",
+        severity: "error" as const,
+        category: "canonical" as const,
+        message: "synthetic prototyping failure",
+      },
+    ];
+    const issues = await runSaasPackageProfile(root, prototypingIssues);
+    expect(issues.find((i) => i.code === "QFAI-FAKE-002")?.severity).toBe("error");
+  });
+
+  // QFAI:EX-0001-0049-01
+  it("does not pass with a malformed CLI-HANDOFF handoff", async () => {
+    await seedAttestation();
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "just a string\n", "utf-8");
+    const issues = await runSaasPackageProfile(root, []);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "D-SAAS-PACKAGE-HANDOFF-SCHEMA", severity: "error" }),
+      ]),
+    );
   });
 });
