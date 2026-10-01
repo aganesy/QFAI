@@ -234,7 +234,7 @@ describe("a host directory reached through a link", () => {
           "skip: .github/copilot-instructions.md is under .github, which is a symlink, so nothing is written there",
         );
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
     } finally {

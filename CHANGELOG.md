@@ -21,9 +21,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a reason in place of `contract`; step 7 removes it from
   `04_Business-Rules.md`, writes it to no contract and lists it under
   `## Operations`. Both are read before the ID map is written.
+- **`qfai doctor` warns when a shipped workflow's preconditions are not met.**
+  Four warnings, never errors, so a project without CI is not blocked:
+  `workflows.packageManager` (`pnpm-lock.yaml` without a valid `packageManager`
+  in `package.json`, where the workflows stop before installing),
+  `workflows.lockfiles` (two lockfiles present, naming the one the workflows
+  install with and the one they ignore), `workflows.nodeVersionFile`
+  (`engines.node` declared, no `.nvmrc` or `.node-version`, so the workflows use
+  Node 20) and `workflows.nodePin` (a workflow under `.github/workflows/` pins a
+  Node below `engines.node`). Nothing is reported for a fact that is met.
+  `qfai init` prints one `Shipped workflows:` line with the count when any is
+  unmet. Fixes #2725.
 
 ### Changed
 
+- **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
+  `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
+  open with their heading, and an existing file gains no such line. A line an
+  earlier init wrote is kept as written; init never removes or edits it.
+  Migration step 11 leaves both files as they are, and step 12 no longer checks
+  for the line or reports `entry-directive`. The review directive is still
+  prepended where `REVIEW.md` exists.
 - **Migration now removes the retired configuration keys.** This reverses the
   2.0.0 statement that migration leaves them in place. Step 1 removes
   `validation.traceability.scMustHaveTest` and
@@ -38,6 +56,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under the `spec-*/` and `_policies/` directories, and ends with a line that
   names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
   in before it is deleted.
+- **A fresh `qfai init` no longer leaves false warnings in `qfai doctor` and
+  `qfai validate`.** An absent `paths.srcDir`, `paths.testsDir` or
+  `paths.outDir` that is still the shipped default is now an `info` check with
+  one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
+  `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
 - **Step 3 rewrites the `CON-*` IDs its contract map translates in the
   contract files it writes,** wherever they stand in the file, instead of
   listing each one for a person. An ID no contract declared, or that more than
@@ -52,6 +79,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   sentence. An ID written both as an index table row and as a heading section
   is one record for every kind of record, and only that record's own lines are
   removed when a step moves it.
+- **The free-text entry names one set of requests.** The prompt-time reminder and the
+  `qfai-run` description both say a change, a fix, an investigation of the
+  codebase or a question about the project.
+- **A question that one command answers needs no run, and a run ends on purpose.** The
+  free-text reminder and the `qfai-run` description say a question that one command or one file
+  read answers is answered directly. The
+  `qfai-run` skill says a run ends at `finish` or at `decision` with `stop`, and that
+  an answer already given does not end it. In Claude Code the reminders before and
+  after a file write, and the minimal-implementation one, print nothing for a file under
+  `.qfai/run/`.
+- **A question that changes no file is answered in one stage by one sub-agent, with no separate
+  reviewer.** `answer-question` and `investigate-question` are one stage each, which runs every step of
+  the route down to `triage-close`, and `finish` follows its acceptance. A plan marks such a
+  stage `review: none`, which is admitted only on a triage stage and gives its work order no step
+  reviewer; a run carrying `review:heavy` still adds the heavy reviewers. A defect found while
+  investigating still re-routes by the decision rules. This replaces the earlier multi-stage
+  question routes (investigate, answer, close) and their reviews. Fixes #2730.
+- **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
+  entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`
+  and `Bash(yarn qfai:*)`) into `permissions.allow` of
+  `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
+  refused the skills without them. The free-text reminder now tells the agent to stop and say so
+  when `qfai-run` cannot start.
+- **A checkout with no install is named at every prompt.** A new hook group, for Claude Code and
+  for Codex, looks for `node_modules/.bin/qfai` from the project up to its git root and, when there
+  is none, says to run the project's install command, or `npm i -D qfai` when `package.json` does not
+  list `qfai`. The launcher preflight in the shared operating baseline separates the same two cases,
+  and the migration guide says each checkout and worktree needs its own install.
 
 ### Fixed
 
@@ -91,6 +146,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/install-provenance.json` records it, and a 1.x project has no record
   before its first `init`. Delete the workflow after that run and commit the
   record; deleting it before that run lets the next `init` write it again.
+- **`qfai doctor` names the config issues, not only their count.** The
+  `config.load` line said how many issues the loader returned and named no
+  key. It now ends with the message of every issue, on the same line, without
+  the source excerpt a YAML parse error appends, each issue cut to 500
+  characters. Under
+  `--format json` the same longer text is the check's `message`; `details.issues`
+  is unchanged.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
@@ -114,6 +176,53 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   presence checks while that directory does not exist. The `prototyping` and
   `saas-package` profiles still run them, and so do `full` and `verify` once
   the directory exists.
+- **The shipped `qfai-docs.yml` installs its checkers outside the project's
+  dependency tree.** It ran `npm install --no-save` into the project's own
+  `node_modules`, which npm cannot read after a pnpm install, so both document
+  checks stopped at that step in every pnpm project. The checkers
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself, with the schema
+  checker it depends on, when the project has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  and the schema and Mermaid scripts take `--tools <dir>` to find them. An
+  installed copy of the workflow is not replaced; copy the packaged file to take
+  the fix.
+- **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
+  new `workflows.mdschemaBinary` check runs `mdschema --help` from the
+  installation found from where the QFAI package sits, not from the inspected
+  project's root, and is an error that names the reason and the fix when the
+  binary does not start. Until now
+  `workflows.docsLane` read `ok` for a project with no binary. The README now
+  says that the package's install script is not needed while the platform
+  package installs, and how to approve it with `npm approve-scripts` (npm 11.16
+  or later) or `pnpm approve-builds` where it is.
+- **The shipped `qfai-docs.yml` installs its checkers with `--ignore-scripts` and `--include=optional`,
+  and its comment no longer says the install script is required.** The
+  `@jackchuka/mdschema` platform binary arrives as an optional dependency, which
+  installs without a script; the package's install script only downloads a
+  binary when that platform package is missing. The lane therefore does not
+  depend on a policy for install scripts that it does not manage.
+- **A fresh clone of a just-initialised project no longer fails
+  `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
+  `03_contract/` are not in a clone, and the check for an untouched seed
+  treated a missing one as an edited seed. It now reads the files and ignores
+  an absent empty directory, so the clone and the directory `init` ran in give
+  the same result.
+- **The managed `.gitignore` block no longer repeats a line the project
+  already has.** When the file has no block yet and its own lines already
+  ignore the repository-root `tmp/` directory, as `/tmp/` or as `tmp/`, init
+  leaves `/tmp/` out of the block and prints one line naming what it left out.
+  A block already in the file is rebuilt as before.
+- **`qfai init` detects a missing Windows Developer Mode before it writes
+  anything.** It creates and removes one symlink in a scratch directory under
+  the system temporary directory, and when Windows refuses it with EPERM it stops
+  with the Developer Mode instruction instead of failing partway through the
+  tree. Any other failure of that attempt is ignored. `--dry-run` makes no
+  attempt.
+- **`qfai init` says when the config file it changes is shared.** Run from a
+  linked worktree, the `core.symlinks` line names the repository's common
+  config file and adds one line saying every worktree reads it, the main
+  checkout included. The setting itself stays `--local`: scoping it to the
+  worktree needs `extensions.worktreeConfig`, which changes the same shared
+  file.
 
 ## [2.0.1] - 2026-09-30
 

@@ -802,6 +802,20 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  it("ships a guide that says each checkout and worktree needs its own install", async () => {
+    // QFAI:EX-0004-0012-07
+    const guide = await readFile(
+      path.join(
+        getInitAssetsDir(),
+        ".qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
+      ),
+      "utf8",
+    );
+    expect(guide.replace(/\s+/g, " ")).toContain(
+      "Each checkout and each git worktree needs its own install before `npx qfai` resolves 2.x",
+    );
+  });
+
   it("ships a guide that gives the exact release and old-layout support boundary", async () => {
     // QFAI:EX-0004-0012-04
     const guide = await readFile(

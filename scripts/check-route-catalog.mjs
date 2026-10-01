@@ -150,7 +150,8 @@ function stageText(stage) {
   const macro = Object.entries(MACROS).find(
     ([, block]) => block.id === stage.id && block.steps.map(stepText).join() === steps.join(),
   );
-  return macro ? macro[0] : `${stage.id}[${steps.join(" → ")}]`;
+  if (macro) return macro[0];
+  return `${stage.id}[${steps.join(" → ")}${stage.review === "none" ? "; no review" : ""}]`;
 }
 
 /** A plan file as its route row states it. */

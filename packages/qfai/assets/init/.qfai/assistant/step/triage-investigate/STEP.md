@@ -28,7 +28,8 @@ code behaves as it does, when it changed, or what an outside source says.
 3. Hand the facts, with their sources, to `triage-answer`.
 4. Where the facts show a defect rather than an answer, report the outcome
    `defect-found` with an extraction of the request as a defect report, so the
-   decision rules route it again.
+   decision rules route it again. The stage ends there: `triage-answer` and
+   `triage-close` do not run, and the result carries no `closure`.
 
 ## What it writes
 
@@ -39,5 +40,5 @@ code behaves as it does, when it changed, or what an outside source says.
 
 ## Gate
 
-The reviewer confirms each fact names where it was read, nothing was changed
+The reviewer, or the stage worker where the work order names none, confirms each fact names where it was read, nothing was changed
 to learn it, and a defect found is reported rather than fixed.

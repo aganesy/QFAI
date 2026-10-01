@@ -135,7 +135,7 @@ keep authors separate from reviewers.
 | 8    | `08-rewrite-annotations.mjs` | Rewrite resolvable test annotations.                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host integration links only.                           |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git.                             |
-| 11   | `11-install-entry.mjs`       | Install skills, links, entry directive, ignores and hooks.     |
+| 11   | `11-install-entry.mjs`       | Install skills, links, ignores and hooks.                      |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that a free-text run can start.        |
 
 Each script is invoked as

@@ -55,15 +55,16 @@ const SKILL_ASSETS = path.join(ASSISTANT_ASSETS, "skill");
 const STEP_ASSETS = path.join(ASSISTANT_ASSETS, "step");
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const ARCHIVE = ".qfai/evidence/migration-spec-to-story/legacy/skill";
-const DIRECTIVE =
+// The line that earlier releases seeded; step 11 neither adds nor removes it.
+const EARLIER_LINE =
   "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
+const AGENTS_TEXT = "# Our agents\n\nProject text.\n";
+const CLAUDE_TEXT = "# Our Claude\n\nProject text.\n";
 const STEP11_WRITE_SET = [
   ".qfai/assistant/skill/",
   ".qfai/assistant/step/",
   `${ARCHIVE}/`,
   ...HOST_SKILL_DIRS.map((dir) => `${dir}/`),
-  "AGENTS.md",
-  "CLAUDE.md",
   ".gitignore",
   ".claude/settings.json",
   ".codex/hooks.json",
@@ -187,8 +188,8 @@ async function oldProject(): Promise<string> {
     path.join(root, ".qfai/assistant/skill-local.input"),
     path.join(root, ".qfai/assistant/skills.local"),
   );
-  await writeFile(path.join(root, "AGENTS.md"), "# Our agents\n\nProject text.\n");
-  await writeFile(path.join(root, "CLAUDE.md"), "# Our Claude\n\nProject text.\n");
+  await writeFile(path.join(root, "AGENTS.md"), AGENTS_TEXT);
+  await writeFile(path.join(root, "CLAUDE.md"), CLAUDE_TEXT);
   for (const dir of HOST_SKILL_DIRS) {
     await mkdir(path.join(root, dir), { recursive: true });
     await symlink("../../.qfai/assistant/skills/qfai-sdd", path.join(root, dir, "qfai-sdd"), "dir");
@@ -581,10 +582,11 @@ describe("migration step 10: the evidence directory stays local", () => {
 
 describe("migration steps 11 and 12: the free-text entry", () => {
   // QFAI:AC-0004-0013-01
-  it("installs the skills, host links, entry directive and ignore lines", async () => {
+  it("installs the skills, host links and ignore lines, and leaves the entry points alone", async () => {
     // QFAI:EX-0004-0013-01
     // QFAI:EX-0004-0013-11
     const root = await clone(migrated10);
+    await writeFile(path.join(root, "CLAUDE.md"), `${EARLIER_LINE}\n${CLAUDE_TEXT}`);
     const before = await entries(root);
     const preview = await stepIn(root, 11, ["--dry-run"]);
     expect(await entries(root)).toEqual(before);
@@ -613,13 +615,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
         expect(await lstat(path.join(root, dir, id)).catch(() => null), `${dir}/${id}`).toBeNull();
       }
     }
-    for (const [name, heading] of [
-      ["AGENTS.md", "# Our agents"],
-      ["CLAUDE.md", "# Our Claude"],
-    ] as const) {
-      const text = await readFile(path.join(root, name), "utf8");
-      expect(text).toBe(`${DIRECTIVE}\n${heading}\n\nProject text.\n`);
-    }
+    expect(await readFile(path.join(root, "AGENTS.md"), "utf8")).toBe(AGENTS_TEXT);
+    expect(await readFile(path.join(root, "CLAUDE.md"), "utf8")).toBe(
+      `${EARLIER_LINE}\n${CLAUDE_TEXT}`,
+    );
     const ignore = await readFile(path.join(root, ".gitignore"), "utf8");
     expect(ignore).toContain(".qfai/run/\n");
     expect(ignore).not.toContain("!.qfai/evidence/");
@@ -633,7 +632,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-01
-  it("leaves an occupied link path or a linked entry point for a person", async () => {
+  it("leaves an occupied link path for a person and a linked entry point alone", async () => {
     // QFAI:EX-0004-0013-02
     const occupied = await clone(migrated10);
     await mkdir(path.join(occupied, ".claude/skills/qfai-run"), { recursive: true });
@@ -646,19 +645,17 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(await readFile(path.join(occupied, ".claude/skills/qfai-run/notes.md"), "utf8")).toBe(
       "ours\n",
     );
-    expect(await readFile(path.join(occupied, "AGENTS.md"), "utf8")).toContain(DIRECTIVE);
+    expect(await readFile(path.join(occupied, "AGENTS.md"), "utf8")).toBe(AGENTS_TEXT);
 
     const linked = await clone(migrated10);
     await rename(path.join(linked, "AGENTS.md"), path.join(linked, "shared-agents.md"));
     await symlink("shared-agents.md", path.join(linked, "AGENTS.md"), "file");
     const second = await stepIn(linked, 11);
-    expect(second.code).toBe(3);
-    expect(section(second.output, "For a person")).toEqual([
-      expect.stringMatching(/^AGENTS\.md: the entry directive was not added\..*symbolic link/),
-    ]);
+    expect(second.code).toBe(0);
+    expect(section(second.output, "For a person")).toEqual([]);
     expect(await readlink(path.join(linked, "AGENTS.md"))).toBe("shared-agents.md");
-    expect(await readFile(path.join(linked, "shared-agents.md"), "utf8")).not.toContain(DIRECTIVE);
-    expect(await readFile(path.join(linked, "CLAUDE.md"), "utf8")).toContain(DIRECTIVE);
+    expect(await readFile(path.join(linked, "shared-agents.md"), "utf8")).toBe(AGENTS_TEXT);
+    expect(await readFile(path.join(linked, "CLAUDE.md"), "utf8")).toBe(CLAUDE_TEXT);
     expect(
       await linkReaches(
         path.join(linked, ".codex/skills/qfai-run"),
@@ -757,17 +754,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   });
 
   // QFAI:AC-0004-0013-04
-  it("names a lost entry directive, ignore line or qfai-run link", async () => {
+  it("names a lost ignore line or qfai-run link", async () => {
     // QFAI:EX-0004-0013-09
     const cases: Array<[string, (root: string) => Promise<void>, string]> = [
-      [
-        "entry-directive",
-        async (root) => {
-          const file = path.join(root, "CLAUDE.md");
-          await writeFile(file, (await readFile(file, "utf8")).replace(`${DIRECTIVE}\n`, ""));
-        },
-        "entry-directive: CLAUDE.md: it carries no operative entry directive",
-      ],
       [
         "gitignore",
         async (root) => {
@@ -793,6 +782,19 @@ describe("migration steps 11 and 12: the free-text entry", () => {
       expect(section(result.output, "For a person"), name).toEqual([item]);
       expect(await fingerprint(root), name).toBe(before);
     }
+  });
+
+  // QFAI:AC-0004-0013-03
+  it("neither requires nor lists an entry line, with or without the earlier one", async () => {
+    // QFAI:EX-0004-0013-23
+    const root = await clone(migrated11);
+    await writeFile(path.join(root, "CLAUDE.md"), `${EARLIER_LINE}\n${CLAUDE_TEXT}`);
+    const before = await fingerprint(root);
+    const result = await stepIn(root, 12);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(await readFile(path.join(root, "AGENTS.md"), "utf8")).toBe(AGENTS_TEXT);
+    expect(await fingerprint(root)).toBe(before);
   });
 
   // QFAI:AC-0004-0013-05
@@ -979,7 +981,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const first = await stepIn(root, 11);
     expect(first.code).toBe(0);
     expect(section(first.output, "Operations")).toContain(
-      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; existing settings kept)",
+      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; permission entries; existing settings kept)",
     );
     expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
@@ -1037,9 +1039,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
         true,
       );
     }
-    expect(
-      (await readFile(path.join(root, "AGENTS.md"), "utf8")).startsWith(`${DIRECTIVE}\n`),
-    ).toBe(true);
+    expect(await readFile(path.join(root, "AGENTS.md"), "utf8")).toBe(AGENTS_TEXT);
     expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain(".qfai/run/\n");
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
