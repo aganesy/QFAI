@@ -2692,7 +2692,7 @@ async function ensureReminderHooks(
     return { copied: [], skipped: [target] };
   }
 
-  const detail = reminderHooksUpdateDetail(plan.events);
+  const detail = reminderHooksUpdateDetail(plan.events, plan.permissionsAdded);
   if (dryRun) {
     info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };

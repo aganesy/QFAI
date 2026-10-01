@@ -33,6 +33,7 @@ import {
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
+  INSTALL_CHECK_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
@@ -76,6 +77,7 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [API_BUDGET_HOOK_MARKER, "api-budget.md"],
   // A skill rather than a rule master: the entry the request is sent to.
   [FREE_TEXT_ENTRY_HOOK_MARKER, "qfai-run"],
+  [INSTALL_CHECK_HOOK_MARKER, "npm i -D qfai"],
 ]);
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -223,11 +225,14 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Two readers. One prints the named message; the other reads the hook's own
+    // Four readers. One prints the named message. One looks for this checkout's
+    // launcher first and prints only where there is none. One reads the hook's own
     // input first and prints only for a command that names the forge, which is
-    // what lets a `Bash` matcher exist at all. A third would mean a reminder had
-    // grown logic of its own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the two pinned readers").toBe(2);
+    // what lets a `Bash` matcher exist at all. One reads the input and prints
+    // unless the file written is one of the run's own records. A fifth would
+    // mean a reminder had grown logic of its own, which is the thing kept out of
+    // this file.
+    expect(readers.size, "a reminder runs one of the four pinned readers").toBe(4);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -272,6 +277,47 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     const project = projectDirOf(repoRoot, rel);
     for (const input of ["", "{ not json", "{}", JSON.stringify({ tool_name: "Bash" })]) {
       await expect(runReminderHook(entry, project, input)).resolves.toBe("");
+    }
+  });
+
+  // The run's own records are written by the run, so a reminder about how the
+  // text reads or which decision is being fixed has nothing to say about them.
+  // QFAI:EX-0001-0196-45
+  it("prints the write-time reminders for every file except the run's own records", async () => {
+    const project = projectDirOf(repoRoot, rel);
+    const writeTime = [
+      ...(hooks.get("PreToolUse") ?? []).filter((group) => group.matcher === "Write|Edit"),
+      ...(hooks.get("PostToolUse") ?? []),
+    ].flatMap((group) => group.hooks);
+    expect(writeTime.map((entry) => entry.statusMessage)).toEqual([
+      GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
+      DOCUMENTATION_CLARITY_HOOK_MARKER,
+      DOCUMENTATION_CLARITY_HOOK_MARKER,
+      MINIMAL_IMPLEMENTATION_HOOK_MARKER,
+    ]);
+    const written = (filePath: string): string =>
+      JSON.stringify({ tool_name: "Write", tool_input: { file_path: filePath } });
+    for (const entry of writeTime) {
+      for (const filePath of [
+        path.join(project, ".qfai", "run", "inbox", "start.json"),
+        path.join(project, ".qfai", "run", "run-1", "inbox", "result.md"),
+        "C:\\work\\app\\.qfai\\run\\inbox\\start.json",
+      ]) {
+        await expect(runReminderHook(entry, project, written(filePath))).resolves.toBe("");
+      }
+      for (const filePath of [
+        path.join(project, "docs", "guide.md"),
+        path.join(project, ".qfai", "spec", "decisions.md"),
+        path.join(project, "runbook", "notes.md"),
+      ]) {
+        expect(await runReminderHook(entry, project, written(filePath))).toContain(
+          "additionalContext",
+        );
+      }
+      // Input the host did not shape as a file write still gets the reminder.
+      for (const input of ["", "{ not json", "{}"]) {
+        expect(await runReminderHook(entry, project, input)).toContain("additionalContext");
+      }
     }
   });
 
@@ -334,6 +380,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     for (const [event, groups] of hooks) {
       for (const group of groups) {
         for (const entry of group.hooks) {
+          // Prints only where this checkout has no launcher, which the checkout
+          // running the suite usually has; its own test builds a project with none.
+          if (entry.statusMessage === INSTALL_CHECK_HOOK_MARKER) continue;
           const stdout = await runReminderHook(entry, projectDirOf(repoRoot, rel));
           const payload: unknown = JSON.parse(stdout);
           if (typeof payload !== "object" || payload === null) {
