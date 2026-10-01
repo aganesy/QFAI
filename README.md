@@ -99,7 +99,8 @@ You type no stage name.
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
 Each stage of a run is a sub-agent, so a question that one command or one file read answers
-is answered directly, with no run.
+is answered directly, with no run. Any other question about the project that changes no file runs one
+stage, in one sub-agent, with no separate reviewer unless the run carries `review:heavy`.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
