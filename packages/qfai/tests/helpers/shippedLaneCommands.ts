@@ -1243,7 +1243,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "dccbc987462e5c77691c6cf23d064af3632eac3feb9de9c79205609e79e0d3ff"],
+  ["qfai-docs.yml", "b2cf5599773c7bba3037262d8ff4280221bb1490fe19f6846c29c5f8b4863d4f"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -2047,7 +2047,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 11610951f9a0c91cac26deed2fe0581220e68c777fab5d11b122f50d8bf04541>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2373,10 +2373,19 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   //
   // `--ignore-scripts` keeps the tool install from running any package's install script. The
   // schema checker's platform binary arrives as an optional dependency, which installs without
-  // one, so the lane does not depend on the script.
+  // one, so the lane does not depend on the script. `--include=optional` keeps a user-level npm
+  // setting that omits optional dependencies from dropping that platform package.
   [
     "npm install",
-    new Set(["--no-audit", "--no-fund", "--no-save", "--registry", "--prefix", "--ignore-scripts"]),
+    new Set([
+      "--no-audit",
+      "--no-fund",
+      "--no-save",
+      "--registry",
+      "--prefix",
+      "--ignore-scripts",
+      "--include",
+    ]),
   ],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],

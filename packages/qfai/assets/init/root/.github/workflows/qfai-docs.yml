@@ -555,8 +555,10 @@ jobs:
           # without running a script, and its launcher finds the binary there.
           # The package's postinstall only downloads a binary when that platform
           # package is missing, as on an unsupported platform or under
-          # `--omit=optional`. Without a binary the shape check fails instead of
-          # passing.
+          # `--omit=optional`. `--include=optional` keeps a user-level npm
+          # setting that omits optional dependencies, as a self-hosted runner may
+          # carry, from dropping that platform package. Without a binary the shape
+          # check fails instead of passing.
           #
           # QFAI itself joins the same install, but only when your install did
           # not already provide it.
@@ -581,9 +583,9 @@ jobs:
           # because a second `--no-save` install into the same prefix removes
           # what the first one added.
           if [ -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
           else
-            npm install --no-save --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi
       - name: Check SDD document shape
         if: matrix.check == 'shape'

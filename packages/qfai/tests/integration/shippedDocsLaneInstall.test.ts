@@ -117,6 +117,7 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(call).toContain("--no-save");
     expect(call).toContain("--registry=https://registry.npmjs.org/");
     expect(call).toContain("--ignore-scripts");
+    expect(call).toContain("--include=optional");
     const packages = call.filter((argument) => !argument.startsWith("-") && argument !== "install");
     // With no QFAI of its own the project gets the newest one, and the schema checker comes with
     // it at the version that release depends on, so its schemas and their checker stay one release.
@@ -140,6 +141,7 @@ describe("the delivered document lane installs its checkers outside the project'
     for (const line of installs) {
       expect(line).toContain(`--prefix=${TOOLS_DIR}`);
       expect(line).toContain("--ignore-scripts");
+      expect(line).toContain("--include=optional");
     }
   });
 

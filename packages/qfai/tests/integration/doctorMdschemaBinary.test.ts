@@ -113,6 +113,17 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     },
   );
 
+  it("stops a binary that ignores SIGTERM at the deadline and reports it", async () => {
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-23
+    await packagedChecker(`process.on("SIGTERM", () => {});\nsetInterval(() => {}, 1000);\n`);
+
+    const check = await checkMdschemaBinary(500);
+
+    expect(check.severity).toBe("error");
+    expect(check.details["reason"]).toMatch(/ETIMEDOUT/);
+  });
+
   it("is an error rather than a crash when the packaged checker cannot be located", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-23

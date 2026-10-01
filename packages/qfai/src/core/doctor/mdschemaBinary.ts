@@ -7,7 +7,11 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 const CHECK_ID = "workflows.mdschemaBinary";
 const TITLE = "Document-schema checker (@jackchuka/mdschema)";
 
-/** How long the probe waits for `mdschema --help` before calling the binary unusable. */
+/**
+ * How long the probe waits for `mdschema --help` before it stops the binary and
+ * calls it unusable. The stop is `SIGKILL`: a binary that ignores `SIGTERM`
+ * would otherwise keep the probe waiting for ever.
+ */
 const PROBE_TIMEOUT_MS = 15_000;
 
 export type MdschemaBinaryCheck = {
@@ -101,7 +105,9 @@ const INSTALL_FIX =
  * which reads no document and changes nothing. The installation checked is the
  * one the QFAI package depends on, not one the inspected project supplies.
  */
-export async function checkMdschemaBinary(): Promise<MdschemaBinaryCheck> {
+export async function checkMdschemaBinary(
+  timeoutMs: number = PROBE_TIMEOUT_MS,
+): Promise<MdschemaBinaryCheck> {
   const finder = await loadFinder();
   if (typeof finder === "string") {
     return failure(finder, INSTALL_FIX);
@@ -115,7 +121,8 @@ export async function checkMdschemaBinary(): Promise<MdschemaBinaryCheck> {
   }
   const result = spawnSync(command.command, [...command.args, "--help"], {
     encoding: "utf-8",
-    timeout: PROBE_TIMEOUT_MS,
+    timeout: timeoutMs,
+    killSignal: "SIGKILL",
     stdio: ["ignore", "pipe", "pipe"],
   });
   if (result.error !== undefined || result.status !== 0) {
