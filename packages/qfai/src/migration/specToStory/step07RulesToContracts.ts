@@ -119,7 +119,7 @@ function sqlRules(original: string): Map<string, Rule | null> {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = oneLine([header[2], ...lines].join(" "));
+    const statement = oneLine([header[2], ...lines].join("\n"));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
@@ -147,7 +147,7 @@ function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): st
     const continuations = block.slice(1, examplesIndex);
     if (examplesIndex < 2 || !continuations.every((line) => line.startsWith("-- "))) continue;
     const statement = oneLine(
-      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join(" "),
+      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join("\n"),
     );
     const lines = [`-- Rule ${id}: ${statement}`, ...block.slice(examplesIndex)];
     repaired = `${repaired.slice(0, header.index)}${lines.join(newline)}${repaired.slice(

@@ -1442,7 +1442,7 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
     await put(
       context.root,
       path.relative(context.root, target),
-      `CREATE TABLE orders (id INT);\n\n-- Rule BR-0002-0001: ${words.slice(0, half).join(" ")}\n-- ${words.slice(half).join(" ")}\n-- Examples: EX-0001-0001-01\n`,
+      `CREATE TABLE orders (id INT);\n\n-- Rule BR-0002-0001: ${words.slice(0, half).join(" ")}\n--   ${words.slice(half).join(" ")}\n-- Examples: EX-0001-0001-01\n`,
     );
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     expect(ruleComment(await readFile(target, "utf8"), "BR-0002-0001")).toEqual([
