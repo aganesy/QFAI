@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { defaultConfig } from "../../src/core/config.js";
 import { createDoctorData } from "../../src/core/doctor.js";
 import { isEperm } from "../../src/core/fs/errno.js";
 import { captureStdout } from "../helpers/stdout.js";
