@@ -146,6 +146,7 @@ import {
   collectCanonicalAgentNames,
   collectCanonicalSkillIds,
 } from "../../core/init/integrationDirs.js";
+import { checkWorkflowPreconditions } from "../../core/doctor/workflowPreconditions.js";
 import { ensureSymlink, requireSymlinkCreation } from "../../core/init/managedLink.js";
 import type { WrapperSyncOptions } from "../../core/init/managedLink.js";
 import { formatReportPath } from "../../core/init/reportPath.js";
@@ -789,6 +790,13 @@ export async function runInit(
   }
 
   info(await workflowModeLine(destRoot));
+  const unmet = (await checkWorkflowPreconditions(destRoot)).length;
+  if (unmet > 0) {
+    info(
+      `Shipped workflows: ${unmet} repository fact${unmet === 1 ? " they rely" : "s they rely"} on ` +
+        `${unmet === 1 ? "is" : "are"} not met. Run qfai doctor for what to change.`,
+    );
+  }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
   }
