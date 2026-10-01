@@ -1115,6 +1115,9 @@ describe("migration steps 1 to 4", () => {
         /no criterion that takes a new ID/,
         /AC-0001-0001/,
       ]);
+      // The plan, not the old file, placed that criterion, and the item says so.
+      expect(result.output).toContain("placed under it by plan.yaml: AC-0001-0001");
+      expect(result.output).not.toContain("named by AC-0001-0001 in 03_Acceptance-Criteria.md");
     });
   });
 

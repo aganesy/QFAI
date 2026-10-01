@@ -1192,9 +1192,15 @@ function criteriaForAPerson(
 /** The old criteria whose `Parent:` line, catalog row or plan entry named the story, as an item tail. */
 function namedByNote(pack: OldPack, planned: PlannedStory): string {
   const named = pack.criteria
-    .filter((item) => planned.criteria.includes(item.id) || item.named.includes(planned.id))
+    .filter((item) => item.named.includes(planned.id))
     .map((item) => item.id);
-  return named.length === 0 ? "" : `; named by ${named.join(", ")} in 03_Acceptance-Criteria.md`;
+  const placed = pack.criteria
+    .filter((item) => planned.criteria.includes(item.id) && !item.named.includes(planned.id))
+    .map((item) => item.id);
+  return [
+    named.length === 0 ? "" : `; named by ${named.join(", ")} in 03_Acceptance-Criteria.md`,
+    placed.length === 0 ? "" : `; placed under it by plan.yaml: ${placed.join(", ")}`,
+  ].join("");
 }
 
 function outputExamples(
