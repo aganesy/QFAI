@@ -35,6 +35,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A DONE change request authorises only the branch that applies it**
+  (#2251). The drift check used to accept any edit to a path that some DONE
+  `Change request:` row named, however long ago, so a protected file could change
+  with no new row. Now a WIP row authorises as before, and a DONE row authorises
+  only where the base lacks it or holds it at WIP. A later edit to the same path
+  needs a row of its own. The shipped drift protocol and change-request template
+  now say a row names repository-relative paths, which is all the check reads; an
+  ID in the row authorises nothing.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
