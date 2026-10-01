@@ -110,6 +110,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Examples migrated without their reviews are recorded as open** (#2300).
+  Three examples of the workflow's routing approval reached the story tree from
+  rows whose required reviews were never recorded, and their test annotations
+  hid the gap. `decisions.md` now lists them in a TODO row that closes once each
+  has a passing review.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
