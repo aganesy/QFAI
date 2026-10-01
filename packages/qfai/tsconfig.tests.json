@@ -395,6 +395,7 @@
     "tests/unit/migration/specToStory/harness.test.ts",
     "tests/unit/migration/specToStory/idMap.test.ts",
     "tests/unit/migration/specToStory/legacyRecords.test.ts",
+    "tests/unit/migration/specToStory/legacyRoutingDigests.test.ts",
     "tests/unit/migration/specToStory/step03MoveCatalog.test.ts",
     "tests/unit/migration/specToStory/step09RepointLinks.test.ts",
     "tests/unit/migration/specToStory/step10UpdateGitignore.test.ts",
