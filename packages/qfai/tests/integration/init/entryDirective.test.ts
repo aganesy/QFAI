@@ -1,8 +1,7 @@
 /**
- * Integration: init prepends the entry directive, which sends a first free-text change request to
- * `qfai-run`, to `AGENTS.md` and `CLAUDE.md` when no operative copy exists, and never to the
- * Copilot instructions. The oracle is the directive's place and the skill it names, never its
- * wording.
+ * Integration: init writes no line into `AGENTS.md` or `CLAUDE.md` that sends a request to
+ * `qfai-run`, whether it seeds the file or edits one the project owns, and leaves a line an earlier
+ * init wrote exactly where it is. The review directive is the only line init still prepends.
  */
 // QFAI:AC-0001-0196-03
 // QFAI:EX-0001-0196-05
@@ -15,24 +14,18 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getInitAssetsDir } from "../../../src/cli/lib/assets.js";
-import { initQuietly, withEmptyRepo, withInstall } from "./upgradeStates.js";
+import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 
 const ENTRY_POINTS = ["AGENTS.md", "CLAUDE.md"];
 const COPILOT = ".github/copilot-instructions.md";
 const PROJECT_TEXT = "# Project rules\n\nKeep every original byte.\n";
+// The line a release before this change seeded, kept as it was written.
+const EARLIER_LINE =
+  "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
 
 const namesRun = (line: string): boolean => line.includes("`qfai-run`");
 const isReviewDirective = (line: string): boolean =>
   line.startsWith("Read `REVIEW.md` before reviewing a pull request");
-
-/** The directive line as the release ships it, for a fixture that must hold a copy. */
-async function shippedDirective(): Promise<string> {
-  const template = await readFile(path.join(getInitAssetsDir(), "root", "AGENTS.md"), "utf-8");
-  const line = template.split(/\r?\n/).find(namesRun);
-  expect(line, "the shipped AGENTS.md carries the entry directive").toBeDefined();
-  return line ?? "";
-}
 
 async function read(root: string, name: string): Promise<string> {
   return readFile(path.join(root, name), "utf-8");
@@ -42,35 +35,39 @@ async function writeEntryPoints(root: string, text: string): Promise<void> {
   for (const name of ENTRY_POINTS) await writeFile(path.join(root, name), text, "utf-8");
 }
 
-describe("the entry directive", () => {
-  it("Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot", async () => {
+/** Plain init over entry points holding `text`; what each file holds afterwards. */
+async function entryPointsAfterInit(root: string, text: string): Promise<string[]> {
+  await writeEntryPoints(root, text);
+  await initQuietly(root);
+  return Promise.all(ENTRY_POINTS.map((name) => read(root, name)));
+}
+
+describe("the entry line", () => {
+  it("Fresh init: no line naming qfai-run in AGENTS.md, CLAUDE.md or Copilot", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      for (const name of ENTRY_POINTS) {
+      for (const name of [...ENTRY_POINTS, COPILOT]) {
         const lines = (await read(root, name)).split(/\r?\n/);
-        expect(namesRun(lines[0] ?? ""), `${name} begins with the directive`).toBe(true);
-        expect(lines.filter(namesRun), `${name} holds one directive`).toHaveLength(1);
+        expect(lines.filter(namesRun), `${name} holds no such line`).toEqual([]);
       }
-      const copilot = (await read(root, COPILOT)).split(/\r?\n/);
-      expect(copilot.filter(namesRun), "the Copilot instructions hold none").toEqual([]);
+      for (const name of ENTRY_POINTS) {
+        const first = (await read(root, name)).split(/\r?\n/)[0] ?? "";
+        expect(first.startsWith("# "), `${name} opens with its heading`).toBe(true);
+      }
     });
   });
 
-  it("Directive prepended to existing CRLF entry points, bytes kept", async () => {
+  it("Existing CRLF entry points keep every byte", async () => {
     await withEmptyRepo(async (root) => {
       const original = PROJECT_TEXT.replace(/\n/g, "\r\n");
-      await writeEntryPoints(root, original);
-      await initQuietly(root);
-      for (const name of ENTRY_POINTS) {
-        const after = await read(root, name);
-        const first = after.slice(0, after.indexOf("\r\n"));
-        expect(namesRun(first), `${name} begins with the directive`).toBe(true);
-        expect(after.startsWith(`${first}\r\n${original}`), `${name} keeps its bytes`).toBe(true);
+      for (const after of await entryPointsAfterInit(root, original)) {
+        expect(after.startsWith(original), "the project's bytes stay first").toBe(true);
+        expect(after.split(/\r?\n/).filter(namesRun)).toEqual([]);
       }
     });
   });
 
-  it("Entry directive with and without REVIEW.md", async () => {
+  it("No entry line with or without REVIEW.md; the review directive only with it", async () => {
     for (const withReview of [false, true]) {
       await withEmptyRepo(async (root) => {
         await writeEntryPoints(root, PROJECT_TEXT);
@@ -78,7 +75,7 @@ describe("the entry directive", () => {
         await initQuietly(root);
         for (const name of ENTRY_POINTS) {
           const lines = (await read(root, name)).split(/\r?\n/);
-          expect(lines.filter(namesRun), `${name} carries the entry directive`).toHaveLength(1);
+          expect(lines.filter(namesRun), `${name} carries no entry line`).toEqual([]);
           expect(
             lines.filter(isReviewDirective),
             `${name} carries the review directive only with REVIEW.md`,
@@ -88,24 +85,30 @@ describe("the entry directive", () => {
     }
   });
 
-  it("Operative copy on a rerun, and a copy only inside a fence", async () => {
-    await withInstall([], async (root) => {
-      const before = await Promise.all(ENTRY_POINTS.map((name) => read(root, name)));
+  it("A line an earlier init wrote stays as it is, on top or inside a fence", async () => {
+    await withEmptyRepo(async (root) => {
+      const text = `${EARLIER_LINE}\n${PROJECT_TEXT}`;
+      for (const after of await entryPointsAfterInit(root, text)) {
+        expect(after.startsWith(text), "the earlier line and the project text stay first").toBe(
+          true,
+        );
+        expect(after.split("\n").filter(namesRun)).toHaveLength(1);
+      }
+      const again = await Promise.all(ENTRY_POINTS.map((name) => read(root, name)));
       await initQuietly(root);
-      expect(await Promise.all(ENTRY_POINTS.map((name) => read(root, name)))).toEqual(before);
+      expect(await Promise.all(ENTRY_POINTS.map((name) => read(root, name)))).toEqual(again);
     });
     await withEmptyRepo(async (root) => {
-      const fence = `\`\`\`md\n${await shippedDirective()}\n\`\`\`\n`;
+      const fence = `\`\`\`md\n${EARLIER_LINE}\n\`\`\`\n`;
       await writeFile(path.join(root, "AGENTS.md"), `# Notes\n\n${fence}`, "utf-8");
       await initQuietly(root);
       const after = await read(root, "AGENTS.md");
-      expect(namesRun(after.split("\n")[0] ?? ""), "one directive is prepended").toBe(true);
-      expect(after.split("\n").filter(namesRun)).toHaveLength(2);
-      expect(after, "the fence is unchanged").toContain(`# Notes\n\n${fence}`);
+      expect(after.startsWith(`# Notes\n\n${fence}`), "the fenced copy is unchanged").toBe(true);
+      expect(after.split("\n").filter(namesRun)).toHaveLength(1);
     });
   });
 
-  it("A symlinked AGENTS.md is refused", async () => {
+  it("A symlinked AGENTS.md is refused and its target gains no line", async () => {
     await withEmptyRepo(async (root) => {
       const target = path.join(root, "shared.md");
       await writeFile(target, PROJECT_TEXT, "utf-8");

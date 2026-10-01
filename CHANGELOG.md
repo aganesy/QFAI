@@ -35,6 +35,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
+  `CLAUDE.md`.** The prompt-time hook is the one statement of the rule, so the
+  seeded files open with their heading, and an existing file gains no such
+  line. A line an earlier init wrote stays where it is; init never deletes it.
+  Migration step 11 leaves both files as they are, and step 12 no longer checks
+  for the line or reports `entry-directive`. The review directive is still
+  prepended where `REVIEW.md` exists.
 - **Migration now removes the retired configuration keys.** This reverses the
   2.0.0 statement that migration leaves them in place. Step 1 removes
   `validation.traceability.scMustHaveTest` and

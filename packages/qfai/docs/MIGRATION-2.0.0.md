@@ -100,20 +100,20 @@ Run each script from the project root with `--dry-run`, inspect its complete
 report and write targets, then run it without the flag. Save both reports and
 exit codes. Run the next step only after the preceding one has completed.
 
-| Step | Script                       | Result                                                                                   |
-| ---- | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| 1    | `01-rename-directories.mjs`  | Move owned directories and update old default paths.                                     |
-| 2    | `02-merge-tables.mjs`        | Combine decisions, questions and change records.                                         |
-| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; number and rename the contracts.                      |
-| 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the ID map.                                      |
-| 5    | `05-cases-to-examples.mjs`   | Preserve test-case-only behavior as examples.                                            |
-| 6    | `06-derive-ac-refs.mjs`      | Link examples to acceptance criteria when the source establishes one.                    |
-| 7    | `07-rules-to-contracts.mjs`  | Place rules in the planned enforcing contracts.                                          |
-| 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                                       |
-| 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                                       |
-| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`.              |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, links, entry directive, `.gitignore` and the hooks. |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.                        |
+| Step | Script                       | Result                                                                      |
+| ---- | ---------------------------- | --------------------------------------------------------------------------- |
+| 1    | `01-rename-directories.mjs`  | Move owned directories and update old default paths.                        |
+| 2    | `02-merge-tables.mjs`        | Combine decisions, questions and change records.                            |
+| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; number and rename the contracts.         |
+| 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the ID map.                         |
+| 5    | `05-cases-to-examples.mjs`   | Preserve test-case-only behavior as examples.                               |
+| 6    | `06-derive-ac-refs.mjs`      | Link examples to acceptance criteria when the source establishes one.       |
+| 7    | `07-rules-to-contracts.mjs`  | Place rules in the planned enforcing contracts.                             |
+| 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                          |
+| 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                          |
+| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`. |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, links, `.gitignore` and the hooks.     |
+| 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.           |
 
 For example:
 
@@ -212,8 +212,8 @@ complete run, rerun the steps and confirm that they change no files.
 ## Start with a free-text request
 
 Once step 12 exits 0 and validation passes, send the project's first
-free-text change request to `qfai-run`. The entry directive step 11 added to
-`AGENTS.md` and `CLAUDE.md` points agents there.
+free-text change request to `qfai-run`. The prompt-time hook step 11 installed
+points agents there.
 
 ## Workflow routes and payloads
 
