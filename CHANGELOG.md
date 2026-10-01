@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` resolves the decisions and open questions a contract
+  cites.** A `DEC-NNNN` or `OQ-NNNN` in a contract rule's statement, and the
+  successor a `SUPERSEDED (by DEC-NNNN)` status names, must now be declared by a
+  row of `decisions.md` or `open-questions.md`. An undeclared one is a
+  `QFAI-STORY-003` error naming the citing rule or row and the missing ID.
+  Example narratives are not read, since they quote hypothetical IDs on
+  purpose. Fixes #2410.
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
