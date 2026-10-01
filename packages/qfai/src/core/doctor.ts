@@ -53,6 +53,8 @@ import {
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -661,6 +663,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await checkDocsLane(root));
+  addCheck(checks, await checkMdschemaBinary());
+  for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);

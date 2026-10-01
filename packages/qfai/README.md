@@ -39,11 +39,33 @@ here: `package.json#version` in the published package is the only version source
 > Standalone CLI inspection can use `npx qfai@latest <command>`;
 > agent skills need a local installation for their routing defaults.
 
+### The install script of `@jackchuka/mdschema`
+
+`qfai` depends on `@jackchuka/mdschema`, the document-schema checker, which
+declares a `postinstall` script. Recent npm and pnpm 10 report it as unapproved
+on every install. QFAI does not need it to run where the checker's platform package installs: the
+platform binary arrives as an optional dependency, which installs without any
+script. The script only downloads a binary when that platform package is missing,
+for example after `--omit=optional` or on a platform the package does not cover.
+There, the checker cannot run until the script is approved.
+
+To let the script run anyway, approve it:
+
+```bash
+npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
+pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
+```
+
+`npx qfai doctor` runs `mdschema --help` and reports an error, naming these
+fixes, when the binary does not start.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
 > before running `npx qfai init`, otherwise symlink creation will fail due to insufficient privileges.
+> Init tries one symlink before it writes anything and stops with this instruction when Windows
+> refuses it. `--dry-run` does not try it.
 
 Creating missing governed assistant assets requires filesystem support and
 permission for hard links. Init checks this before copying or migrating assets
@@ -76,8 +98,22 @@ You type no stage name.
 
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
+Each stage of a run is a sub-agent, so a question that one command or one file read answers
+is answered directly, with no run. Any other question about the project that changes no file runs one
+stage, in one sub-agent, with no separate reviewer unless the run carries `review:heavy`.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
+
+It also adds `permissions.allow` entries to `.claude/settings.json`: one `Skill(<name>)` for each
+shipped skill, and the launcher as `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and
+`Bash(yarn qfai:*)`. They trust the launcher the project installs. Without them a non-interactive Claude Code run refuses the
+skills. Claude Code accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each
+name is listed. Remove an entry you do not want; the next `npx qfai init` adds it again.
+
+A third hook checks that this checkout has its own `node_modules/.bin/qfai`, or `.pnp.cjs` beside a
+`package.json` that lists `qfai`, looking up to the git root only. A fresh clone or a new worktree has no install, and `npx qfai` would then run the copy of a
+parent directory. Where it is missing the hook says to run the project's install command, or
+`npm i -D qfai` when `package.json` does not list `qfai`.
 
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
@@ -504,7 +540,10 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   of the QFAI package rather than the `qfai` bin, so it needs the package on
   disk: when your install has not already put one there it fetches QFAI itself,
   saving nothing to your manifest. If you do depend on QFAI, the lane reports the
-  rules of the version you pinned and never replaces it.
+  rules of the version you pinned and never replaces it. The checkers it runs go
+  into a directory of their own under `tmp/`, never into your `node_modules`, so
+  the lane works with whichever package manager laid that tree out. It installs
+  them with `--ignore-scripts`.
 
 A push to `main` or `master` runs the test lanes and the document checks again by
 default, because nothing in the files can tell whether that commit passed a pull

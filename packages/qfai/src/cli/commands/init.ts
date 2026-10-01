@@ -146,7 +146,8 @@ import {
   collectCanonicalAgentNames,
   collectCanonicalSkillIds,
 } from "../../core/init/integrationDirs.js";
-import { ensureSymlink } from "../../core/init/managedLink.js";
+import { checkWorkflowPreconditions } from "../../core/doctor/workflowPreconditions.js";
+import { ensureSymlink, requireSymlinkCreation } from "../../core/init/managedLink.js";
 import type { WrapperSyncOptions } from "../../core/init/managedLink.js";
 import { formatReportPath } from "../../core/init/reportPath.js";
 import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
@@ -347,6 +348,7 @@ export async function runInit(
   }
 
   if (!options.dryRun) {
+    await requireSymlinkCreation(symlinkRuntime);
     await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
 
@@ -788,6 +790,13 @@ export async function runInit(
   }
 
   info(await workflowModeLine(destRoot));
+  const unmet = (await checkWorkflowPreconditions(destRoot)).length;
+  if (unmet > 0) {
+    info(
+      `Shipped workflows: ${unmet} repository fact${unmet === 1 ? " they rely" : "s they rely"} on ` +
+        `${unmet === 1 ? "is" : "are"} not met. Run qfai doctor for what to change.`,
+    );
+  }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
   }
@@ -2683,7 +2692,7 @@ async function ensureReminderHooks(
     return { copied: [], skipped: [target] };
   }
 
-  const detail = reminderHooksUpdateDetail(plan.events);
+  const detail = reminderHooksUpdateDetail(plan.events, plan.permissionsAdded);
   if (dryRun) {
     info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };
@@ -3033,6 +3042,30 @@ async function gitSymlinksEnabled(
   }
 }
 
+/**
+ * True inside a linked worktree, where the git dir of the working tree differs
+ * from the common one that holds the `config` file `--local` writes.
+ */
+async function inLinkedWorktree(probeDir: string): Promise<boolean> {
+  const [gitDir, commonDir] = await Promise.all([
+    runGitRevParse("git rev-parse --git-dir", probeDir),
+    runGitRevParse("git rev-parse --git-common-dir", probeDir),
+  ]);
+  return (
+    gitDir !== null &&
+    commonDir !== null &&
+    path.resolve(probeDir, gitDir) !== path.resolve(probeDir, commonDir)
+  );
+}
+
+/**
+ * Said beside a `--local` write made from a linked worktree. The setting is not
+ * scoped to `--worktree`, which needs `extensions.worktreeConfig`, itself a
+ * change to the same shared file that alters how every worktree reads config.
+ */
+const SHARED_CONFIG_NOTE =
+  "  note: that file is shared by every worktree of this repository, the main checkout included.";
+
 /** Disclosed when the local pin is in place but something outranks it. */
 const WORKTREE_OVERRIDE_NOTE =
   "  warning: the effective value of core.symlinks is still false (a worktree-scope override). " +
@@ -3063,8 +3096,9 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     return lines;
   }
 
+  const sharedNote = (await inLinkedWorktree(probeDir)) ? [SHARED_CONFIG_NOTE] : [];
   if (dryRun) {
-    return [`  would set: git config --local core.symlinks true (${configPath})`];
+    return [`  would set: git config --local core.symlinks true (${configPath})`, ...sharedNote];
   }
 
   try {
@@ -3085,7 +3119,7 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     );
   }
 
-  const lines = [`  git config: core.symlinks=true (${configPath})`];
+  const lines = [`  git config: core.symlinks=true (${configPath})`, ...sharedNote];
   if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
     // The write landed in the common config but does not govern: only a
     // higher-precedence scope can do that, and per-worktree config is the one

@@ -977,7 +977,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const first = await stepIn(root, 11);
     expect(first.code).toBe(0);
     expect(section(first.output, "Operations")).toContain(
-      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; existing settings kept)",
+      ".claude/settings.json: update (reminder hooks: UserPromptSubmit; permission entries; existing settings kept)",
     );
     expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");

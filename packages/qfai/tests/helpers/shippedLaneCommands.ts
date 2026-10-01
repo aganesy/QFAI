@@ -1126,6 +1126,12 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // program under a path an adopter controls, still fails this list.
   "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
   "node node_modules/qfai/assets/scripts/check-mermaid.mjs",
+  // The same two files, from the directory the lane installs its tools into. A project that does
+  // not depend on QFAI gets the package there instead of in its own `node_modules`, which npm
+  // cannot install into when another package manager laid the tree out. The directory is fixed and
+  // under `tmp/`, so it is still a path inside an installed package and never one an adopter owns.
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -1237,7 +1243,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "2ad1523e42db03cf08b832076ef88c158aff7cc4f6933bd8ba2bd1fc720f98ba"],
+  ["qfai-docs.yml", "b2cf5599773c7bba3037262d8ff4280221bb1490fe19f6846c29c5f8b4863d4f"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -1501,7 +1507,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the `reminders.json` path and the key `free-text-entry`. Derived by running `qfai init` into a
   // temp root and hashing what it wrote; dropping that one group reproduces `65be5439…` byte for
   // byte.
-  [".claude/settings.json", "7662f70056f52555e0c4dd5b8fdfec9461e93d5c4b876df2a61d742bd6acbef6"],
+  //
+  // Re-pinned for three more changes, each a reviewed delta. A `permissions.allow` list names one
+  // `Skill(<name>)` entry for each shipped skill and the three launcher spellings. The grilling
+  // reminder before a write and the documentation-clarity and minimal-implementation reminders
+  // after one read the tool call and print nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
+  // looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // the project up to its git root and prints only where there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  [".claude/settings.json", "87ae0f312dfbfaa49c5bdb665287ad8e9e9d692f2c43d614b0be5e54162ab78d"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1523,7 +1536,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // first directory that holds `.git`, and holds no character any of those shells expands. No
   // entry has a `commandWindows`. Derived the same way; the file an earlier release wrote,
   // `4c710d7e…`, is kept as a fixture the merge test upgrades.
-  [".codex/hooks.json", "d48bbc58bb372751195fb1023af42b646863eae8c4c3055c71880bcd26555d52"],
+  //
+  // Re-pinned for the install check, a third `UserPromptSubmit` group. Its line finds the message
+  // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // that project up to the first directory that holds `.git`, and holds no character those shells
+  // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
+  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -2041,15 +2059,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body befb43afc6800850d3a14c00df4ffb4d6d3c7a310b2659cf3c3a43b86a0066fb>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body dc64220796b9ca5fa999241442d70074d186b93894b92b6626b3bb4097d884cb>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 51b5b26d3613f7250e7e16d2a696da10dab52e0df5f5901c423d292c0ccc9ff0>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 2b158e79aad529228eb30165f5a496b4677daf6fb8bd609bb4ac9661449e8c79>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -2330,7 +2348,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
   "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
-  "qfai",
+  "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
@@ -2360,7 +2378,27 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // nothing in the adopter's manifest — and `--registry` names WHERE the pinned
   // versions come from, which a version alone does not say: npm resolves its
   // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc` otherwise.
-  ["npm install", new Set(["--no-audit", "--no-fund", "--no-save", "--registry"])],
+  //
+  // `--prefix` is what keeps that install away from the project's own dependency tree: npm cannot
+  // read a `node_modules` another package manager laid out. Its value is pinned by the test that
+  // executes the delivered step, so the flag can only ever name the lane's own directory.
+  //
+  // `--ignore-scripts` keeps the tool install from running any package's install script. The
+  // schema checker's platform binary arrives as an optional dependency, which installs without
+  // one, so the lane does not depend on the script. `--include=optional` keeps a user-level npm
+  // setting that omits optional dependencies from dropping that platform package.
+  [
+    "npm install",
+    new Set([
+      "--no-audit",
+      "--no-fund",
+      "--no-save",
+      "--registry",
+      "--prefix",
+      "--ignore-scripts",
+      "--include",
+    ]),
+  ],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],
@@ -2369,8 +2407,19 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // The document lane's checkers. `--scope all` is what makes the lane check the
   // whole tree rather than a diff (an adopter's CI has no ratchet to apply), and
   // `--summary` prints the per-document-type result the lane's log is read for.
-  ["node node_modules/qfai/assets/scripts/check-mdschema.mjs", new Set(["--scope", "--summary"])],
-  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set<string>()],
+  [
+    "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set(["--tools"])],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
+    new Set(["--tools"]),
+  ],
   // `--no-renames` joins `--name-only` because the shipped detection lane needs both: with rename
   // detection ON git reports only the DESTINATION of a move, so `src/x.ts` -> `docs/x.md` arrives as
   // one documentation path and the source half selects no lane. It is a reporting flag — it cannot
