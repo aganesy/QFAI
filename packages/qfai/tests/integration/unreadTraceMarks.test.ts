@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
+import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import {
   validateStoryTreeObligationsModel,
   type StoryTestFile,
-} from "../../../../src/core/validators/storyTreeObligations.js";
+} from "../../src/core/validators/storyTreeObligations.js";
 
 const story = ["QFAI", "US-0001-0001"].join(":");
 const retired = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
@@ -21,6 +21,7 @@ function unread(files: StoryTestFile[], profile: "atdd" | "tdd" = "tdd") {
 
 describe("a trace mark no check reads", () => {
   // QFAI:EX-0001-0056-13
+  // QFAI:AC-0001-0056-07
   it("warns on each mark on a comment line, not inside a string literal", () => {
     const comments = selected(
       "tests/unit/order.test.ts",
