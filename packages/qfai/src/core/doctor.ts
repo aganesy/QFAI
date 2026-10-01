@@ -53,6 +53,7 @@ import {
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
 import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 
@@ -707,6 +708,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await checkDocsLane(root));
+  const mutationProofs = await checkMutationProofs(root, config);
+  if (mutationProofs) addCheck(checks, mutationProofs);
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 

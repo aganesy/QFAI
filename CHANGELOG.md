@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A mutation proof is kept in the test, and `qfai doctor` checks it**
+  (#2419). Evidence stays local, so once a change merged nobody could replay the
+  mutation that proved an example test. The `qfai-implement` oracle-strength
+  reference now has the proof written as one comment line directly under the
+  test's EX annotation:
+  ``// Mutation: <path> `<original>` -> `<substitute>` fails <assertion>``.
+  `qfai doctor` reports a `tests.mutationProofs` warning naming each proof whose
+  file is gone or no longer holds the original text.
+
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
