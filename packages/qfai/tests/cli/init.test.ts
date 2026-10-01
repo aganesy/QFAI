@@ -1794,6 +1794,29 @@ describe("qfai init", () => {
   });
 
   // QFAI:EX-0001-0028-04
+  it("makes no symlink attempt on --dry-run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dry-probe-"));
+    let attempts = 0;
+    try {
+      await captureStdout(async () => {
+        await runInit(
+          { dir: root, force: false, dryRun: true, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+            },
+          },
+        );
+      });
+
+      expect(attempts).toBe(0);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
   it("goes ahead when the symlink probe succeeds or fails for another reason", async () => {
     for (const failure of [undefined, Object.assign(new Error("read-only"), { code: "EROFS" })]) {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-probe-"));

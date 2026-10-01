@@ -1,8 +1,9 @@
 /**
- * Acceptance of three `qfai init` behaviours at the layer that runs the command:
+ * Acceptance of four `qfai init` behaviours at the layer that runs the command:
  * a clone of a fresh project is still the untouched seed, the managed
- * `.gitignore` block does not repeat a line the project has, and a symlink that
- * cannot be created stops the run before anything is written.
+ * `.gitignore` block does not repeat a line the project has, a symlink that
+ * cannot be created stops the run before anything is written, and a linked
+ * worktree is told that the config file init changes is shared.
  */
 
 import { execFile as execFileCb } from "node:child_process";

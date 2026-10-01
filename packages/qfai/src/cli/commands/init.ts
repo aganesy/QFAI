@@ -3048,8 +3048,8 @@ async function gitSymlinksEnabled(
  */
 async function inLinkedWorktree(probeDir: string): Promise<boolean> {
   const [gitDir, commonDir] = await Promise.all([
-    runGitRevParse("git rev-parse --path-format=absolute --git-dir", probeDir),
-    runGitRevParse("git rev-parse --path-format=absolute --git-common-dir", probeDir),
+    runGitRevParse("git rev-parse --git-dir", probeDir),
+    runGitRevParse("git rev-parse --git-common-dir", probeDir),
   ]);
   return (
     gitDir !== null &&

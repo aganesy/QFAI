@@ -675,6 +675,18 @@ describe("the managed block does not repeat a line the project already has", () 
   });
 
   // QFAI:EX-0001-0033-10
+  it("does not count a project line that starts with whitespace", async () => {
+    // Git reads the leading space as part of the pattern, so ` /tmp/` ignores nothing.
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), ` /tmp/${NL}`, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await readGitignore(root)).split(NL)).toContain("/tmp/");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
   it("settles on identical bytes when init runs again", async () => {
     await withProject(async (root) => {
       await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");

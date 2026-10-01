@@ -452,14 +452,16 @@ function demotedProjectNegations(before: string, after: string): string[] {
  * The Article XI `/tmp/` line is judged by what git does with the staging
  * area, so a project's unanchored `tmp/` counts; every other line must match
  * exactly. A negation is never left out, since it is only meaningful below the
- * ignore it undoes.
+ * ignore it undoes. A line with leading whitespace is a different pattern in
+ * git, so it never counts.
  */
 function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
-  const own = new Set(projectLines.map((line) => line.trim()));
+  const significant = projectLines.filter((line) => !/^\s/.test(line));
+  const own = new Set(significant);
   return QFAI_GITIGNORE_BLOCK.split("\n").filter((line) => {
     if (line === "" || line.startsWith("#") || line.startsWith("!")) return false;
     return line === "/tmp/"
-      ? effectivelyIgnores(projectLines, ARTICLE_XI_TMP_SAMPLE_PATH)
+      ? effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH)
       : own.has(line);
   });
 }
@@ -478,7 +480,8 @@ function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
  *
  * So an existing block keeps its own ignore lines and only gains the governance
  * negations it is missing (appended last, because git applies the last matching
- * pattern). A project with no managed block still gets the full canonical one.
+ * pattern). A project with no managed block gets the canonical one, less the
+ * lines named in `omit`.
  */
 function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): string {
   if (existingBlock.length === 0) {

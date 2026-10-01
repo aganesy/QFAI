@@ -9,7 +9,6 @@ import {
   stat,
   symlink,
   unlink,
-  writeFile,
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -638,19 +637,24 @@ async function writeManagedLink(
 export async function requireSymlinkCreation(
   options: Pick<WrapperSyncOptions, "createSymlink" | "platform"> = {},
 ): Promise<void> {
-  const scratch = await mkdtemp(path.join(os.tmpdir(), "qfai-symlink-probe-"));
+  let scratch: string;
   try {
-    const target = path.join(scratch, "target");
-    await writeFile(target, "");
+    scratch = await mkdtemp(path.join(os.tmpdir(), "qfai-symlink-probe-"));
+  } catch {
+    return;
+  }
+  try {
+    // The target need not exist: creating the link is the whole probe.
     await (options.createSymlink ?? symlink)(
-      target,
+      path.join(scratch, "target"),
       path.join(scratch, "qfai-symlink-probe"),
       "file",
     );
   } catch (err: unknown) {
     if (isEpermOnWindows(err, options.platform)) throw symlinkFailure(err, options.platform);
   } finally {
-    await rm(scratch, { recursive: true, force: true });
+    // A scratch directory left in the temp area is harmless and not worth a failed init.
+    await rm(scratch, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 
