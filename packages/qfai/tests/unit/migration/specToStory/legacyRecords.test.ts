@@ -53,6 +53,17 @@ describe("legacy migration records", () => {
     expect(rule?.cells.Status).toBe("Approved");
   });
 
+  it("reads a table whose BR ID column is not the first", () => {
+    const records = parseLegacyRecords(
+      "# Rules\n\n| Description | BR ID | Rule |\n| --- | --- | --- |\n| Totals | BR-0011-0006 | Tax is added. |\n",
+      "BR",
+      "04_Business-Rules.md",
+    );
+    expect(records.map((record) => record.id)).toEqual(["BR-0011-0006"]);
+    expect(records[0]?.source.startLine).toBe(5);
+    expect(records[0]?.cells.Rule).toBe("Tax is added.");
+  });
+
   it("ends a section's Rule value at a plain Contracts, Notes or NFRs field", () => {
     const rule = parseLegacyRecords(
       "# Rules\n\n## BR-0011-0005: Totals\n\n- Rule: An order total MUST\n  include tax.\nContracts: API-0001\nNotes: Rounded per line.\nNFRs: Under 50 ms.\n",

@@ -274,15 +274,16 @@ function tableRecords(
         );
       continue;
     }
-    for (const row of table.rows) {
+    for (const [rowIndex, row] of table.rows.entries()) {
       const id = row[idColumn]?.trim() ?? "";
-      const lineIndex = lines.findIndex((line) =>
-        new RegExp(`^\\|\\s*${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|`).test(line),
-      );
+      // The header line, the separator line, then the rows: the position holds whichever column
+      // carries the ID.
+      const lineIndex = (headerAt[tableIndex] ?? 0) + 1 + rowIndex;
       const line = lineIndex + 1;
       if (!idPattern.test(id))
         throw new MigrationInputError(`${file}:${line}: invalid ${kind} ID ${id}`);
-      if (lineIndex < 0) throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
+      if (splitMarkdownRow(lines[lineIndex] ?? "")[idColumn]?.trim() !== id)
+        throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
       const cells = Object.fromEntries(
         headers.map((header, column) => [header, row[column] ?? ""]),
       );
