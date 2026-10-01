@@ -57,7 +57,7 @@ describe("reviewerJustification validator", () => {
   // Regression: R-AUTOPILOT-POLICY-WIDENED is an auxiliary warning-class
   // code OUTSIDE the mandatory-justification catalog. An empty
   // `justification:` on WIDENED must NOT trigger the advisory-failing
-  // rejection — only the closed 8-code catalog (plus `R-REJECTED-READOPT` and
+  // rejection — only the closed 7-code catalog (plus `R-REJECTED-READOPT` and
   // the second-wave codes) participates in that contract.
   it("does not fire on R-AUTOPILOT-POLICY-WIDENED with empty justification (auxiliary warning-class)", async () => {
     const root = await newRoot("revjust-widened");

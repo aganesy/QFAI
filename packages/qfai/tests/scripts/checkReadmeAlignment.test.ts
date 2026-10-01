@@ -172,7 +172,7 @@ describe("README content the guard now keeps in sync", () => {
       readFile(path.join(REPO_ROOT, "packages/qfai/README.md"), "utf-8"),
     ]);
     for (const body of [root, pkg]) {
-      expect(body).toMatch(/66 license-verify failure/);
+      expect(body).toMatch(/66 \(license-verify failure\)/);
       expect(body).toMatch(/<screen>\.review\.json/);
     }
     // The stale root README promised artifacts the CLI never writes.

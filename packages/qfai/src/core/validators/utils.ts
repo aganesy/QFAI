@@ -43,7 +43,6 @@ export function issue(
   category: IssueCategory = "canonical",
   suggested_action?: string,
   details?: {
-    dl_id?: string;
     /** Other files this finding implicates when `file` is a representative. */
     relatedFiles?: string[];
     /** The CI job the producer reported, for a finding ingested from a lane. */
@@ -68,9 +67,6 @@ export function issue(
   }
   if (refs && refs.length > 0) {
     issue.refs = refs;
-  }
-  if (details?.dl_id) {
-    issue.dl_id = details.dl_id;
   }
   if (details?.relatedFiles && details.relatedFiles.length > 0) {
     issue.relatedFiles = details.relatedFiles;

@@ -55,7 +55,7 @@ export async function captureRenderEvidence(
       if (captureOne) {
         captured.push(await captureOne(target));
       } else {
-        // WS-C: No captureOne adapter and no placeholder - skip truthfully
+        // No captureOne adapter and no placeholder - skip truthfully
         captured.push({
           viewport: target.viewport,
           status: "skipped",

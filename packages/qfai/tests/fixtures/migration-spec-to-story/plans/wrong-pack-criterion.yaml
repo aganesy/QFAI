@@ -1,0 +1,7 @@
+flows:
+  - title: Place an order
+    stories:
+      - id: US-0001-0001
+        criteria:
+          - AC-0002-0001
+rules: []

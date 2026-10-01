@@ -7,7 +7,7 @@ scripts, captured command output, downloaded samples, intermediate data)
 ## Rules
 
 1. **Never** create such a scratch file in the repository root, in source
-   directories, under `.qfai/specs/`, or in any other production or artifact
+   directories, under `.qfai/spec/`, or in any other production or artifact
    directory.
 2. Use `tmp/` at the repository root as the sole staging area. Create
    subdirectories as needed (for example `tmp/notes/`, `tmp/capture/`).

@@ -1,0 +1,13 @@
+# QFAI-CONTRACT-ID: CON-API-0001
+openapi: 3.1.0
+x-qfai-depends-on: []
+info:
+  title: Order API
+  version: 1.0.0
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      responses:
+        "201":
+          description: Order accepted
