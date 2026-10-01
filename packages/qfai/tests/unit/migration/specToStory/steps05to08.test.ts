@@ -1505,6 +1505,35 @@ describe("migration step 7 keeps the declarations of a YAML contract", () => {
     expect(written.split("\n")[0]).toBe("# QFAI-CONTRACT-ID: API-0001");
     expect(dependsOnList(written)).toEqual(dependencies);
   });
+
+  it("puts a dependency list an earlier step 7 folded back on one line when it rewrites nothing else", async () => {
+    // QFAI:EX-0004-0009-19
+    const context = await ruleProject(tableRules);
+    // The second rule names a contract that does not exist, so the rule file stays and a rerun
+    // meets the first rule again in the contract it was written to.
+    await put(
+      context.root,
+      planFile,
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: api/later.yaml\n",
+    );
+    const contract = `# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n${longDependsOn}\ninfo:\n  title: Orders API\n`;
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", contract);
+    expect(await executePlannedStep(step07, context, false, capture().io)).toBe(3);
+    const target = path.join(context.contractsDir, "api/orders.yaml");
+    const written = await readFile(target, "utf8");
+    const folded = written.replace(
+      /^x-qfai-depends-on:.*$/m,
+      `x-qfai-depends-on:\n  [\n${dependencies.map((id) => `    ${id},`).join("\n")}\n  ]`,
+    );
+    expect(folded).not.toBe(written);
+    await put(context.root, path.relative(context.root, target), folded);
+    // The earlier release stopped before it removed the rules it had written from their source.
+    await put(context.root, `${packDir}/04_Business-Rules.md`, tableRules);
+    expect(await executePlannedStep(step07, context, false, capture().io)).toBe(3);
+    const again = await readFile(target, "utf8");
+    expect(dependsOnList(again)).toEqual(dependencies);
+    expect(again.match(/- id: BR-/g)).toHaveLength(written.match(/- id: BR-/g)?.length ?? -1);
+  });
 });
 
 describe("migration step 8 leaves a test-case annotation in an E2E file", () => {

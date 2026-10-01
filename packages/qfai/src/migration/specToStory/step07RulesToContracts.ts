@@ -199,7 +199,17 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     }
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
     const additional = pendingRules(structuredRules(current), rules, file);
-    if (additional.length === 0) return original;
+    if (additional.length === 0) {
+      // An earlier step 7 folded a long dependency list over several lines, which
+      // `QFAI-CONTRACT-015` does not read: written again, it stays on one line.
+      const folded = /^x-qfai-depends-on:\s*\[[^\]]*\n[^\]]*\]/m.test(original);
+      const dependsOn = (parsed as Record<string, unknown>)["x-qfai-depends-on"];
+      if (!folded || !Array.isArray(dependsOn)) return original;
+      const flat = document.createNode(dependsOn);
+      flat.flow = true;
+      document.set("x-qfai-depends-on", flat);
+      return document.toString({ lineWidth: 0 });
+    }
     document.set("x-qfai-rules", [...current, ...additional]);
     return document.toString({ lineWidth: 0 });
   }
