@@ -226,8 +226,13 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
     // The text formatter prints only `message`, so the issues the loader
-    // returned are listed there, one line, `; `-joined.
-    const listed = issues.map((issue) => escapeForMessage(issue.message)).join("; ");
+    // returned are listed there, one line, `; `-joined. A YAML parse error
+    // carries an excerpt of the offending source after its first line, and that
+    // excerpt can hold any value the file holds, so only the first line
+    // (the cause and its position) is rendered; `details.issues` keeps the text.
+    const listed = issues
+      .map((issue) => escapeForMessage(issue.message.split("\n", 1)[0] ?? ""))
+      .join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",

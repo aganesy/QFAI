@@ -133,6 +133,17 @@ describe("BF-0003 configuration discovery and loading", () => {
     }
   });
 
+  it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
+    // QFAI:AC-0003-0001-03
+    // QFAI:EX-0003-0001-08
+    const root = await newTempDir("invalid-excerpt");
+    await put(root, "qfai.config.yaml", "paths: {specsDir: topsecret-value\n");
+    const load = check(await doctorJson(root), "config.load");
+    const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
+    expect(issues?.some((issue) => issue.message.includes("topsecret-value"))).toBe(true);
+    expect(load?.message).not.toContain("topsecret-value");
+  });
+
   it("warns about a missing non-default specs directory and names it", async () => {
     // QFAI:EX-0003-0002-01
     const root = await newTempDir("specs");
