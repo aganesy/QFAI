@@ -307,7 +307,9 @@ async function planRoutingOverrides(
     if (legacy.has(routingEntryDigest(entry))) continue;
     overrides.push(entry);
     forAPerson.push(
-      `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; delete it from routing to use the installed one, or keep it to override.`,
+      defaultByName.has(name)
+        ? `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; delete it from routing to use the installed one, or keep it to override.`
+        : `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; no installed entry has this name, so it is kept as written and deleting it removes the route.`,
     );
   }
   return { overrides, forAPerson };

@@ -1120,6 +1120,9 @@ describe("migration catalog move", () => {
     expect(item).toMatch(/1\.x/);
     expect(item).toMatch(/hides/i);
     expect(item).toMatch(/roles/i);
+    // No installed entry has this name, so deleting it would not switch to an installed one.
+    expect(item).not.toMatch(/to use the installed one/);
+    expect(item).toMatch(/no installed entry has this name/);
     expect(result.code).toBe(3);
   });
 
