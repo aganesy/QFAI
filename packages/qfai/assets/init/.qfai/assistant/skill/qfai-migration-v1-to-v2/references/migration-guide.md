@@ -15,6 +15,7 @@ the 2.x validation and authoring workflow.
    version control does not hold them.
 2. Install a QFAI 2.x release as a local project dependency with the project's
    package manager. A copy available only through `npx` is insufficient.
+   Each checkout and each git worktree needs its own install before `npx qfai` resolves 2.x.
    Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`:
    confirm the local binary or the Plug'n'Play package and loader before invoking the CLI.
 3. Run `npx qfai init` from the local dependency (or `yarn exec qfai init` for Plug'n'Play), without `--force`. On an old-layout

@@ -26,6 +26,7 @@ export type ReminderHooksPlan =
       readonly target: string;
       readonly text: string;
       readonly events: readonly string[];
+      readonly permissionsAdded: boolean;
       readonly edited: readonly string[];
     }
   /** The file already carries every group the template declares. */
@@ -43,8 +44,13 @@ export function keptHookGroupNote(relativePath: string, group: string): string {
 }
 
 /** What an update adds, as the run reports it. */
-export function reminderHooksUpdateDetail(events: readonly string[]): string {
-  return `reminder hooks: ${events.join(", ")}`;
+export function reminderHooksUpdateDetail(
+  events: readonly string[],
+  permissionsAdded: boolean,
+): string {
+  const parts = events.length > 0 ? [`reminder hooks: ${events.join(", ")}`] : [];
+  if (permissionsAdded) parts.push("permission entries");
+  return parts.join("; ");
 }
 
 /**
@@ -73,6 +79,14 @@ async function readSettingsText(target: string): Promise<SettingsRead> {
 }
 
 function copyByHand(relativePath: string, reason: string): ReminderHooksPlan {
+  if (reason.startsWith("`permissions")) {
+    return {
+      kind: "refused",
+      message:
+        `${relativePath} was left unchanged (${reason}). Make \`permissions.allow\` an array, or add the ` +
+        `shipped \`permissions.allow\` entries by hand, then run init again.`,
+    };
+  }
   return {
     kind: "refused",
     message:
@@ -141,6 +155,7 @@ export async function planReminderHooks(
     target,
     text: serializeClaudeSettings(merged.settings),
     events: merged.events,
+    permissionsAdded: merged.permissionsAdded,
     edited: merged.edited,
   };
 }

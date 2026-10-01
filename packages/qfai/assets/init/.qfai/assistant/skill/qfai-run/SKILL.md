@@ -1,7 +1,7 @@
 ---
 name: qfai-run
 title: QFAI Run (Change request entry)
-description: "Use when the operator states a change, a fix or a question about the project in plain words and names no stage skill. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
+description: "Use when the operator asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. A question that one command or one file read answers needs no run. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
@@ -78,7 +78,7 @@ Classify the request before any write call. Only `routed` calls `start`.
    - `blocked`: give the halt notice and stop.
    - `ready` with every stage accepted: go to step 6.
 6. **Finish.** For `qfai_done`, commit the run's changes first. Then call
-   `finish` and give the completion report.
+   `finish` and give the completion report. A run ends at `finish`, or at `decision` with `stop`: an answer already given does not end it, so keep calling `next` through the last stage, and when the session must end first, stop the run and say so.
 
 ## User Questions (AskUserQuestion Protocol)
 

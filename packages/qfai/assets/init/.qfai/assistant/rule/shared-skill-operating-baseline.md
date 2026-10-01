@@ -160,7 +160,9 @@ including its `--auto` rule. What each bucket needs inside a workflow run is
   - **A Plug'n'Play install.** Yarn Berry's default `nodeLinker: pnp` writes no `node_modules/.bin`, so the file check alone would report a correctly installed project as UNRUN forever. Accept it when the project has a `.pnp.cjs` / `.pnp.loader.mjs` at its root and lists `qfai` in `package.json` `dependencies` / `devDependencies`; `yarn exec qfai --help` exiting 0 is the direct
     confirmation.
 
-  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. The fix is to install the dependency (`npm i -D qfai`, or the pnpm / yarn equivalent). `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
+  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. `package.json` says which fix applies:
+  - **`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.** A fresh clone or a new worktree has no `node_modules`, and `npx qfai` then resolves the copy of a parent directory, which may be an older version of another checkout. Run the project's install command in this checkout, then run the preflight again.
+  - **`qfai` is not listed.** Install the dependency: `npm i -D qfai`, or the pnpm / yarn equivalent. `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
 
 - Once the preflight passes, invoke every gate through the launcher that proof established:
   - local binary -> `npx qfai …`, which resolves to it. `node_modules/.bin/qfai …` is the same thing spelled out; prefer it when PATH reachability is uncertain.

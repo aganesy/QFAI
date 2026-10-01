@@ -326,7 +326,7 @@ async function planReminderHookFiles(context: MigrationContext, plan: StepPlan):
       description:
         hooks.kind === "create"
           ? "write from the package's hook template"
-          : `update (${reminderHooksUpdateDetail(hooks.events)}; existing settings kept)`,
+          : `update (${reminderHooksUpdateDetail(hooks.events, hooks.permissionsAdded)}; existing settings kept)`,
       apply: () => writeReminderHooks(hooks),
     });
     if (relativePath === CODEX_HOOKS_RELATIVE_PATH) {
