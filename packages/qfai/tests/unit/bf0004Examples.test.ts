@@ -803,7 +803,6 @@ describe("BF-0004 migration examples", () => {
   });
 
   it("ships a guide that says each checkout and worktree needs its own install", async () => {
-    // QFAI:AC-0004-0012-03
     // QFAI:EX-0004-0012-07
     const guide = await readFile(
       path.join(

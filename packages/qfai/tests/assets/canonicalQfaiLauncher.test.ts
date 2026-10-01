@@ -138,7 +138,6 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
 
   // A fresh clone or a new worktree has no install, and `npx` then walks up to a parent
   // directory's copy. Declared-but-not-installed and not-declared are different fixes.
-  // QFAI:AC-0001-0194-05
   // QFAI:EX-0001-0194-42
   it("the preflight tells a declared dependency with no install here from no dependency", async () => {
     for (const baseline of BASELINE_PATHS) {
