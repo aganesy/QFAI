@@ -1100,18 +1100,29 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
   /**
    * Extracts a function's body text by brace counting from the
    * `function <name>(` definition marker (call sites never match: they
-   * are not preceded by `function `). Returns undefined when absent so
-   * the caller's assertion is what fails.
+   * are not preceded by `function `). The body opens at the first `{`
+   * that ends a line after the parameter list closes, so a type literal
+   * among the parameters or in the return type is never taken for it.
+   * Returns undefined when absent so the caller's assertion is what fails.
    */
   function extractFunctionBody(source: string, name: string): string | undefined {
     const idx = source.indexOf(`function ${name}(`);
     if (idx === -1) {
       return undefined;
     }
-    const braceStart = source.indexOf("{", idx);
-    if (braceStart === -1) {
+    let parens = 0;
+    let paramsEnd = idx + `function ${name}`.length;
+    do {
+      const ch = source.charAt(paramsEnd);
+      if (ch === "(") parens += 1;
+      if (ch === ")") parens -= 1;
+      paramsEnd += 1;
+    } while (paramsEnd < source.length && parens > 0);
+    const opening = /\{[ \t]*\r?\n/.exec(source.slice(paramsEnd));
+    if (!opening) {
       return undefined;
     }
+    const braceStart = paramsEnd + opening.index;
     let depth = 1;
     let end = braceStart + 1;
     while (end < source.length && depth > 0) {
@@ -1211,6 +1222,9 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
         `${fnName} must contain no copyFile/writeFile/rm/unlink call of its own`,
       ).toEqual([]);
     }
+    // The scan reads the body, not a type literal among the parameters.
+    expect(extractFunctionBody(source, "recordInstalledWorkflows")).toContain("if (dryRun)");
+    expect(extractFunctionBody(source, "recordInstalledWorkflows")).not.toContain("ino: number");
 
     // The runInit workflows segment: from the pre-init capture through
     // the retired-name prune (ending at the removals aggregation).

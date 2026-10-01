@@ -110,6 +110,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The workflow-ownership test reads the function body it claims to scan**
+  (#2417). The check that the workflow-path functions of `qfai init` make no
+  filesystem call of their own took the first `{` after the function name as
+  the body. In `recordInstalledWorkflows` that brace opens a type literal among
+  the parameters, so the check read two field types and passed whatever the body
+  did. It now takes the `{` that opens the body after the parameter list.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
