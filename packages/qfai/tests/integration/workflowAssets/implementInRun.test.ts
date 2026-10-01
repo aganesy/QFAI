@@ -73,7 +73,10 @@ describe("qfai-implement in a workflow run", () => {
 
   // QFAI:EX-0001-0200-07
   it("blocks on a cause outside its write areas and repairs one inside them", async () => {
-    const text = await step(SEAM);
+    const text = flat(
+      sectionOf(await readShipped(SEAM), "## When the seam cannot be landed or observed"),
+    );
+    expect(text).not.toBe("");
     expect(text).toMatch(
       /a cause outside the stage's write areas, such as a missing environment, is returned `blocked`/i,
     );
