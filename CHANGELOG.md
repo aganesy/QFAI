@@ -35,6 +35,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The repository's scans lane refuses a tracked file under `.qfai/report/`,
+  `.qfai/evidence/`, `.qfai/review/` or `.qfai/output/`.** The managed
+  `.gitignore` block ignores those directories whole, but an ignore entry does
+  not untrack a file added before it or with `git add -f`, and every later
+  `qfai validate` then dirtied the tree. The guard that already refused a
+  tracked file under `tmp/` now checks these directories too, and a test holds
+  its list to the `.gitignore` entries. Fixes #2356.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
