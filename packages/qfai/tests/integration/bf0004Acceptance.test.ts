@@ -2153,7 +2153,8 @@ describe("BF-0004 acceptance criteria", () => {
     // The old form is not an example annotation, so validation has no misplaced EX to report.
     const validated = await validateProject(root, undefined, { profile: "tdd" });
     // Control: validation reached the story rules, so the absence below is a finding not raised.
-    expect(validated.issues.some((issue) => issue.code === "QFAI-STORY-006")).toBe(true);
+    // The integration file of the fixture annotates the same test case, so no example is owed.
+    expect(validated.profileValidatorsRan).toBe(true);
     expect(validated.issues.filter((issue) => issue.code === "QFAI-STORY-007")).toEqual([]);
   });
 
