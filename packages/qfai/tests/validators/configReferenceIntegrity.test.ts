@@ -118,7 +118,7 @@ describe("validateConfigReferenceIntegrity", () => {
   });
 
   // QFAI:EX-0003-0003-03
-  it("emits QFAI-CFG-LINK-002 (warning) for missing non-default generated paths", async () => {
+  it("emits QFAI-CFG-LINK-002 (warning) for missing non-default paths", async () => {
     const root = await newTempDir();
     // specs/contracts/discussion use default skill-created paths, so their
     // absence is no longer a config-reference warning after clean init.
@@ -138,7 +138,7 @@ describe("validateConfigReferenceIntegrity", () => {
   });
 
   // QFAI:EX-0003-0003-03
-  it("reports an absent shipped-default source and tests directory at info", async () => {
+  it("reports an absent shipped-default source and test directories at info", async () => {
     const root = await newTempDir();
     const issues = await validateConfigReferenceIntegrity(root, makeConfig());
     const byRule = new Map(

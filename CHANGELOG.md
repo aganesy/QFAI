@@ -54,9 +54,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `paths.outDir` that is still the shipped default is now an `info` check with
   one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
   `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
-  not the default and does not exist is still a warning, and so is a default
-  name taken by a file. `qfai.config.yaml` is not rewritten, and the warning
-  for an empty `testFileGlobs` is unchanged. Fixes #2732.
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
 - **Step 3 rewrites the `CON-*` IDs its contract map translates in the
   contract files it writes,** wherever they stand in the file, instead of
   listing each one for a person. An ID no contract declared, or that more than

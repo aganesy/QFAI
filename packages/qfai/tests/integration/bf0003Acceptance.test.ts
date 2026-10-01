@@ -111,7 +111,7 @@ describe("BF-0003 doctor acceptance", () => {
 
   // QFAI:AC-0003-0003-03
   // QFAI:EX-0003-0003-03
-  it("raises QFAI-CFG-LINK-002 at info for an absent shipped-default source and tests directory", async () => {
+  it("raises QFAI-CFG-LINK-002 at info for an absent shipped-default source and test directories", async () => {
     await withWorkspace(async (root) => {
       const issues = await validateConfigReferenceIntegrity(root, defaultConfig);
       const linkIssues = issues.filter((found) => found.code === "QFAI-CFG-LINK-002");
