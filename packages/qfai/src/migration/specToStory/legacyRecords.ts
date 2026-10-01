@@ -185,12 +185,12 @@ function stepWording(value: string): string {
     .trim();
 }
 
-/** The wording of a rule: every word kept, in any script, without case, bold markers or punctuation. */
+/**
+ * The wording of a rule: every character kept, so a sign, an operator or a unit still tells two
+ * rules apart. Only case, bold markers, runs of whitespace and a closing full stop are ignored.
+ */
 function ruleWording(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+  return value.toLowerCase().replace(/\*\*/g, "").replace(/\s+/g, " ").trim().replace(/\.+$/, "");
 }
 
 /**

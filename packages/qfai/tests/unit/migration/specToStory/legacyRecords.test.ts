@@ -91,6 +91,23 @@ describe("legacy migration records", () => {
     ).toThrow(/holds a different Rule/);
   });
 
+  it("tells rules apart by an operator, a sign or a unit", () => {
+    const markdown = (tableRule: string, headingRule: string) =>
+      `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0011-0013 | ${tableRule} |\n\n## BR-0011-0013: Totals\n\n- Rule: ${headingRule}\n`;
+    for (const [tableRule, headingRule] of [
+      ["The total is < 10", "The total is > 10"],
+      ["The fee is -5%", "The fee is 5%"],
+      ["The fee is 5%", "The fee is 5 USD"],
+    ] as const) {
+      expect(() =>
+        parseLegacyRecords(markdown(tableRule, headingRule), "BR", "04_Business-Rules.md"),
+      ).toThrow(/holds a different Rule/);
+    }
+    expect(
+      parseLegacyRecords(markdown("The fee is **5%**.", "The fee  is 5%"), "BR", "r.md"),
+    ).toHaveLength(1);
+  });
+
   it("compares Rule values written in a script other than Latin", () => {
     // Greek letters, built from code points: two different rules that share no Latin letter.
     const table = String.fromCodePoint(0x3b1, 0x3b2, 0x3b3, 0x20, 0x3b4, 0x3b5);
