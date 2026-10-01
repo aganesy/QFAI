@@ -191,6 +191,11 @@ function stepWording(value: string): string {
  */
 function wordingFields(heading: LegacyRecord): string[] {
   if (heading.cells["EX-ID"] !== undefined) return ["Input", "Expected"];
+  // A BR heading's `Rule` falls back to its whole section, so it is compared only where written.
+  if (heading.cells["BR-ID"] !== undefined)
+    return /^\s*(?:-\s*)?(?:\*\*Rule:\*\*|\*\*Rule\*\*\s*:|Rule\s*:)/im.test(heading.source.raw)
+      ? ["Rule"]
+      : [];
   const written = /^\s*(?:-\s*)?\**(?:Expected|Verify)\**\s*:/im.test(heading.source.raw);
   return written ? ["Expected"] : [];
 }

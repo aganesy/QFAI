@@ -73,6 +73,16 @@ describe("legacy migration records", () => {
     ).toThrow("04_Business-Rules.md:5:");
   });
 
+  it("ends the run when a table row and a heading hold different Rule values", () => {
+    const markdown = (headingRule: string) =>
+      `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0011-0010 | Tax is added. |\n\n## BR-0011-0010: Totals\n\n- Rule: ${headingRule}\n`;
+    expect(() =>
+      parseLegacyRecords(markdown("Tax is removed."), "BR", "04_Business-Rules.md"),
+    ).toThrow(/BR-0011-0010 holds a different Rule in its table row and in its heading section/);
+    const equal = parseLegacyRecords(markdown("Tax is  added"), "BR", "04_Business-Rules.md");
+    expect(equal.map((record) => record.id)).toEqual(["BR-0011-0010"]);
+  });
+
   it("keeps the bold inside a section's Rule value", () => {
     const rule = parseLegacyRecords(
       "# Rules\n\n## BR-0011-0009: Audit\n\n- **Rule**: Orders are **audited**,\n  and **kept**.\n",
