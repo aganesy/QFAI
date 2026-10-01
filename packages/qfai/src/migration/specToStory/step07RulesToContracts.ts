@@ -130,6 +130,33 @@ function sqlRules(original: string): Map<string, Rule | null> {
   return current;
 }
 
+/**
+ * An SQL rule an earlier step 7 wrote over several comment lines, for each of `ids`, written
+ * as the one-line block `qfai validate` reads: `-- Rule` and, on the next line, `-- Examples:`.
+ */
+function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): string {
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4}):([^\r\n]*)/gm)];
+  let repaired = original;
+  for (const [index, header] of [...headers.entries()].reverse()) {
+    const id = header[1] ?? "";
+    if (!ids.has(id)) continue;
+    const end = headers[index + 1]?.index ?? original.length;
+    const block = original.slice(header.index, end).split(/\r?\n/);
+    const examplesIndex = block.findIndex((line) => line.startsWith("-- Examples:"));
+    const continuations = block.slice(1, examplesIndex);
+    if (examplesIndex < 2 || !continuations.every((line) => line.startsWith("-- "))) continue;
+    const statement = oneLine(
+      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join(" "),
+    );
+    const lines = [`-- Rule ${id}: ${statement}`, ...block.slice(examplesIndex)];
+    repaired = `${repaired.slice(0, header.index)}${lines.join(newline)}${repaired.slice(
+      header.index + original.slice(header.index, end).length,
+    )}`;
+  }
+  return repaired;
+}
+
 function markdownRules(original: string): Map<string, Rule | null> {
   const current = new Map<string, Rule | null>();
   for (const line of original.split(/\r?\n/)) {
@@ -199,14 +226,15 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
+    const repaired = repairMultiLineSqlRules(original, new Set(rules.map((rule) => rule.id)));
     const additional = pendingRules(
-      sqlRules(original),
+      sqlRules(repaired),
       rules.map((rule) => ({ ...rule, statement: oneLine(rule.statement) })),
       file,
     );
     return additional.length === 0
-      ? original
-      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
+      ? repaired
+      : `${repaired.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
     const additional = pendingRules(
