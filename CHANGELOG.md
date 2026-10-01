@@ -144,8 +144,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The migration guide says how to keep a shipped workflow deleted (#2711).**
   `npx qfai init` already leaves a workflow deleted once
   `.qfai/install-provenance.json` records it, and a 1.x project has no record
-  before its first `init`. Delete the workflow after that run and commit the
-  record; deleting it before that run lets the next `init` write it again.
+  before its first `init`, which records only the files it writes. Delete the
+  workflow after that run and commit the record; for a workflow already in the
+  tree, delete it, let `init` write and record it, then delete it again.
 - **`qfai doctor` names the config issues, not only their count.** The
   `config.load` line said how many issues the loader returned and named no
   key. It now ends with the message of every issue, on the same line, without

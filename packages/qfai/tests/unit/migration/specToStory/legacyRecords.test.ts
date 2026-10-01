@@ -73,6 +73,15 @@ describe("legacy migration records", () => {
     ).toThrow("04_Business-Rules.md:5:");
   });
 
+  it("keeps the bold inside a section's Rule value", () => {
+    const rule = parseLegacyRecords(
+      "# Rules\n\n## BR-0011-0009: Audit\n\n- **Rule**: Orders are **audited**,\n  and **kept**.\n",
+      "BR",
+      "04_Business-Rules.md",
+    )[0];
+    expect(rule?.cells.Rule).toBe("Orders are **audited**, and **kept**.");
+  });
+
   it("reads a table whose BR ID column is not the first", () => {
     const records = parseLegacyRecords(
       "# Rules\n\n| Description | BR ID | Rule |\n| --- | --- | --- |\n| Totals | BR-0011-0006 | Tax is added. |\n",

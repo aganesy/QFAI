@@ -88,7 +88,13 @@ function ruleField(body: string): string {
   const lines = body.split("\n");
   const start = lines.findIndex((line) => /^Rule\s*:/i.test(cleanLine(line)));
   if (start < 0) return "";
-  const parts = [cleanLine(lines[start] ?? "").replace(/^Rule\s*:\s*/i, "")];
+  // Only the bullet and the label's own bold markers go; the value keeps its own formatting.
+  const parts = [
+    (lines[start] ?? "").replace(
+      /^\s*(?:-\s*)?(?:\*\*Rule:\*\*|\*\*Rule\*\*\s*:|Rule\s*:)\s*/i,
+      "",
+    ),
+  ];
   for (const line of lines.slice(start + 1)) {
     if (
       line.trim() === "" ||
@@ -97,7 +103,7 @@ function ruleField(body: string): string {
       OTHER_FIELD.test(cleanLine(line))
     )
       break;
-    parts.push(cleanLine(line));
+    parts.push(line.trim());
   }
   return parts.join(" ").trim();
 }
