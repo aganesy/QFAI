@@ -4,7 +4,10 @@ import {
   readLegacyRoutingDigests,
   routingEntryDigest,
 } from "../../../../src/migration/specToStory/legacyRoutingDigests.js";
-import { legacyRoutingEntries } from "../../../helpers/legacyRouting.js";
+import {
+  earlierLegacyRoutingEntries,
+  legacyRoutingEntries,
+} from "../../../helpers/legacyRouting.js";
 
 describe("legacy routing digests", () => {
   it("gives one digest to entries that differ only in key order", () => {
@@ -26,5 +29,11 @@ describe("legacy routing digests", () => {
     for (const digest of digests) expect(digest).toMatch(/^[0-9a-f]{64}$/);
     for (const entry of await legacyRoutingEntries())
       expect(digests.has(routingEntryDigest(entry))).toBe(true);
+  });
+
+  it("holds exactly the digests of every entry the 1.x releases shipped", async () => {
+    const shipped = [...(await legacyRoutingEntries()), ...(await earlierLegacyRoutingEntries())];
+    const recomputed = new Set(shipped.map(routingEntryDigest));
+    expect([...(await readLegacyRoutingDigests())].sort()).toEqual([...recomputed].sort());
   });
 });
