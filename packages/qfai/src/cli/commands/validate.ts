@@ -1254,9 +1254,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CFG-LINK-003":
     "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
   "QFAI-UIE-001":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
+    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/iter-NN/<screen-id>.png`, in an iteration directory at the top of the prototyping root.",
   "QFAI-UIE-002":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/iter-NN/<screen-id>.html`, in an iteration directory at the top of the prototyping root.",
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",

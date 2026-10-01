@@ -1,7 +1,6 @@
 /**
  * verify semantics audit tests — spec-0014 migration / compatibility alignment
  *
- * QFAI:EX-0001-0157-01
  * QFAI:EX-0001-0156-03
  * QFAI:EX-0001-0156-02
  */
@@ -40,7 +39,6 @@ afterEach(async () => {
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-// QFAI:EX-0001-0157-01
 describe("TC-0014-0009: stale sidecar migration guidance", () => {
   it("legacy strategy-style filename is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();
@@ -240,7 +238,6 @@ describe("TC-0014-0019: removed compatibility surface", () => {
   });
 });
 
-// QFAI:EX-0001-0157-01
 describe("TC-0014-0009: stale sidecar migration errors", () => {
   it("legacy evaluation content is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();

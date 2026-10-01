@@ -110,6 +110,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Migration keeps an approved but unapplied change request in progress**
+  (#2425). Step 2 of `qfai-migration-v1-to-v2` gave every `approved` change
+  request the Status DONE, recording a change as made when only its approval
+  was. A request whose `Applied at` is empty or `-` now becomes WIP.
+- **Screenshot and HTML evidence is read only from the capture's iteration
+  directory** (#2425). `QFAI-UIE-001` and `QFAI-UIE-002` accepted the aggregate
+  `screenshots/` and `html/` copies, which `iterate` writes for handoff, and a
+  copy in an `iter-NN` directory nested anywhere below the prototyping root.
+  They now accept only `<screen-id>.png` and `<screen-id>.html` in an `iter-NN`
+  directory at the top of `.qfai/evidence/prototyping/`, and name that path in
+  the finding. A project whose captures exist only as aggregate copies reruns
+  `qfai prototyping iterate --capture`.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

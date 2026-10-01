@@ -53,7 +53,8 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues.every((issue) => issue.severity === "error")).toBe(true);
   });
 
-  it("returns no issue when a declared screen has both its screenshot and its HTML", async () => {
+  // QFAI:EX-0001-0157-03
+  it("does not accept the aggregate handoff copies as evidence", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -66,9 +67,37 @@ describe("validateUiEvidenceArtifacts", () => {
 
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
 
-    expect(issues).toEqual([]);
+    expect(issues.map((found) => found.code).sort()).toEqual(["QFAI-UIE-001", "QFAI-UIE-002"]);
+    const screenshot = issues.find((found) => found.code === "QFAI-UIE-001");
+    const html = issues.find((found) => found.code === "QFAI-UIE-002");
+    expect(screenshot?.file).toBe(".qfai/evidence/prototyping/iter-NN/orders-dashboard.png");
+    expect(screenshot?.suggested_action).toContain(
+      ".qfai/evidence/prototyping/iter-NN/<screen-id>.png",
+    );
+    expect(screenshot?.suggested_action).not.toContain("screenshots/");
+    expect(html?.file).toBe(".qfai/evidence/prototyping/iter-NN/orders-dashboard.html");
+    expect(html?.suggested_action).toContain(
+      ".qfai/evidence/prototyping/iter-NN/<screen-id>.html",
+    );
+    expect(html?.suggested_action).not.toContain("html/<screen-id>");
   });
 
+  // QFAI:EX-0001-0157-04
+  it("does not accept a copy in an iter-NN directory nested below the root", async () => {
+    const root = await newTempRoot();
+    await seedUiContracts(root);
+
+    const nested = path.join(root, ".qfai", "evidence", "prototyping", "archive", "iter-03");
+    await mkdir(nested, { recursive: true });
+    await writeFile(path.join(nested, "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(path.join(nested, "orders-dashboard.html"), "<html></html>", "utf-8");
+
+    const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
+
+    expect(issues.map((found) => found.code).sort()).toEqual(["QFAI-UIE-001", "QFAI-UIE-002"]);
+  });
+
+  // QFAI:EX-0001-0157-02
   it("returns no issue when the v2 screenshot and HTML under iter-NN are both present", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
@@ -114,12 +143,10 @@ describe("validateUiEvidenceArtifacts", () => {
       "utf-8",
     );
 
-    const screenshotDir = path.join(root, ".qfai", "evidence", "prototyping", "screenshots");
-    const htmlDir = path.join(root, ".qfai", "evidence", "prototyping", "html");
-    await mkdir(screenshotDir, { recursive: true });
-    await mkdir(htmlDir, { recursive: true });
-    await writeFile(path.join(screenshotDir, "orders-dashboard.png"), "png", "utf-8");
-    await writeFile(path.join(htmlDir, "orders-dashboard.html"), "<html></html>", "utf-8");
+    const iterDir = path.join(root, ".qfai", "evidence", "prototyping", "iter-01");
+    await mkdir(iterDir, { recursive: true });
+    await writeFile(path.join(iterDir, "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(path.join(iterDir, "orders-dashboard.html"), "<html></html>", "utf-8");
 
     const issues = await validateUiEvidenceArtifacts(root, config);
 
@@ -164,10 +191,13 @@ describe("validateUiEvidenceArtifacts", () => {
       "utf-8",
     );
     const written = path.join(root, ".qfai", "evidence", "prototyping");
-    await mkdir(path.join(written, "screenshots"), { recursive: true });
-    await mkdir(path.join(written, "html"), { recursive: true });
-    await writeFile(path.join(written, "screenshots", "orders-dashboard.png"), "png", "utf-8");
-    await writeFile(path.join(written, "html", "orders-dashboard.html"), "<html></html>", "utf-8");
+    await mkdir(path.join(written, "iter-01"), { recursive: true });
+    await writeFile(path.join(written, "iter-01", "orders-dashboard.png"), "png", "utf-8");
+    await writeFile(
+      path.join(written, "iter-01", "orders-dashboard.html"),
+      "<html></html>",
+      "utf-8",
+    );
 
     expect(await validateUiEvidenceArtifacts(root, config)).toEqual([]);
 
@@ -180,8 +210,8 @@ describe("validateUiEvidenceArtifacts", () => {
       "utf-8",
     );
     const elsewhere = path.join(beside, "workspace", "evidence", "prototyping");
-    await mkdir(path.join(elsewhere, "screenshots"), { recursive: true });
-    await writeFile(path.join(elsewhere, "screenshots", "orders-dashboard.png"), "png", "utf-8");
+    await mkdir(path.join(elsewhere, "iter-01"), { recursive: true });
+    await writeFile(path.join(elsewhere, "iter-01", "orders-dashboard.png"), "png", "utf-8");
     const codes = (await validateUiEvidenceArtifacts(beside, config)).map((found) => found.code);
     expect(codes).toContain("QFAI-UIE-001");
   });

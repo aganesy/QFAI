@@ -85,6 +85,33 @@ describe("migration decision table merge", () => {
     expect(await readFile(target, "utf8")).toBe(original);
   });
 
+  // QFAI:EX-0004-0005-11
+  it("keeps an approved change request that was never applied in progress", async () => {
+    const context = await fixture();
+    const requests = path.join(context.root, ".qfai", "decisions");
+    await mkdir(requests, { recursive: true });
+    const request = (id: string, appliedAt: string): string =>
+      `# Change Request\n\n- ID: \`${id}\`\n- Title: \`${id} title\`\n- Status: \`approved\`\n- Applied at: \`${appliedAt}\`\n`;
+    await writeFile(
+      path.join(requests, "CR-20260101-0001-unapplied.md"),
+      request("CR-20260101-0001", "-"),
+    );
+    await writeFile(
+      path.join(requests, "CR-20260101-0002-applied.md"),
+      request("CR-20260101-0002", "2026-01-02"),
+    );
+
+    expect((await run(context)).code).toBe(0);
+    const rows = parseRecordTable(
+      await readFile(path.join(context.specsDir, "decisions.md"), "utf8"),
+      "decisions",
+    ).rows;
+    const statusOf = (id: string): string | undefined =>
+      rows.find((row) => row.content.includes(`#${id}`))?.status;
+    expect(statusOf("CR-20260101-0001")).toBe("WIP");
+    expect(statusOf("CR-20260101-0002")).toBe("DONE");
+  });
+
   it("names an invalid existing row before writing", async () => {
     const context = await fixture();
     await writeFile(

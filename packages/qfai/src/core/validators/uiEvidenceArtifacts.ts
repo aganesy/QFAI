@@ -1,8 +1,8 @@
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
-import { collectFiles } from "../fs.js";
 import { PROTOTYPING_EVIDENCE_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -27,22 +27,25 @@ function toPosixRelative(root: string, targetPath: string): string {
 export const SAFE_SCREEN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const ITERATION_DIR_PATTERN = /^iter-\d{2}$/u;
 
-async function hasEvidenceFile(
-  prototypingRoot: string,
-  canonicalPath: string,
-  screenId: string,
-  extension: ".html" | ".png",
-): Promise<boolean> {
-  if (await exists(canonicalPath)) {
-    return true;
+/**
+ * Evidence is the file a capture pass writes into an `iter-NN` directory at the
+ * top of the prototyping root. The aggregate `screenshots/` and `html/` copies
+ * are a handoff output, and a copy in a nested `iter-NN` directory is one a
+ * cycle-0 reset does not clear, so neither counts.
+ */
+async function hasEvidenceFile(prototypingRoot: string, fileName: string): Promise<boolean> {
+  let entries: string[];
+  try {
+    entries = await readdir(prototypingRoot);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    throw error;
   }
-  const files = await collectFiles(prototypingRoot, { extensions: [extension] });
-  const expectedFileName = `${screenId}${extension}`;
-  return files.some(
-    (file) =>
-      path.basename(file) === expectedFileName &&
-      ITERATION_DIR_PATTERN.test(path.basename(path.dirname(file))),
-  );
+  for (const entry of entries) {
+    if (!ITERATION_DIR_PATTERN.test(entry)) continue;
+    if (await exists(path.join(prototypingRoot, entry, fileName))) return true;
+  }
+  return false;
 }
 
 export async function validateUiEvidenceArtifacts(
@@ -56,12 +59,11 @@ export async function validateUiEvidenceArtifacts(
     return issues;
   }
 
-  // Where `qfai prototyping iterate` writes the captures and mirrors them,
-  // whatever `paths.specsDir` says: read beside a moved specs directory, the
-  // check found none of them.
+  // Where `qfai prototyping iterate` writes the captures, whatever
+  // `paths.specsDir` says: read beside a moved specs directory, the check found
+  // none of them.
   const prototypingRoot = path.join(root, PROTOTYPING_EVIDENCE_REL);
-  const screenshotRoot = path.join(prototypingRoot, "screenshots");
-  const htmlRoot = path.join(prototypingRoot, "html");
+  const iterationRoot = `${toPosixRelative(root, prototypingRoot)}/iter-NN`;
 
   for (const screen of screens) {
     if (!SAFE_SCREEN_ID_PATTERN.test(screen.screenId)) {
@@ -80,40 +82,32 @@ export async function validateUiEvidenceArtifacts(
       continue;
     }
 
-    const screenshotPath = path.join(screenshotRoot, `${screen.screenId}.png`);
-    const htmlPath = path.join(htmlRoot, `${screen.screenId}.html`);
-
-    if (!(await hasEvidenceFile(prototypingRoot, screenshotPath, screen.screenId, ".png"))) {
-      const screenshotPattern = path.posix.join(
-        toPosixRelative(root, screenshotRoot),
-        "<screen-id>.png",
-      );
+    if (!(await hasEvidenceFile(prototypingRoot, `${screen.screenId}.png`))) {
       issues.push(
         issue(
           "QFAI-UIE-001",
           `Missing screenshot evidence for declared screen "${screen.screenId}".`,
           "error",
-          toPosixRelative(root, screenshotPath),
+          `${iterationRoot}/${screen.screenId}.png`,
           "uiEvidenceArtifacts.screenshotRequired",
           [screen.sourceRef],
           "canonical",
-          `Generate \`${screenshotPattern}\` or \`${toPosixRelative(root, prototypingRoot)}/iter-NN/<screen-id>.png\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
+          `Capture \`${iterationRoot}/<screen-id>.png\` with \`qfai prototyping iterate --capture\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
         ),
       );
     }
 
-    if (!(await hasEvidenceFile(prototypingRoot, htmlPath, screen.screenId, ".html"))) {
-      const htmlPattern = path.posix.join(toPosixRelative(root, htmlRoot), "<screen-id>.html");
+    if (!(await hasEvidenceFile(prototypingRoot, `${screen.screenId}.html`))) {
       issues.push(
         issue(
           "QFAI-UIE-002",
           `Missing HTML snapshot evidence for declared screen "${screen.screenId}".`,
           "error",
-          toPosixRelative(root, htmlPath),
+          `${iterationRoot}/${screen.screenId}.html`,
           "uiEvidenceArtifacts.htmlRequired",
           [screen.sourceRef],
           "canonical",
-          `Generate \`${htmlPattern}\` or \`${toPosixRelative(root, prototypingRoot)}/iter-NN/<screen-id>.html\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
+          `Capture \`${iterationRoot}/<screen-id>.html\` with \`qfai prototyping iterate --capture\` for every declared screen in \`${config.paths.contractsDir}/ui/*.yaml\` before rerunning validate.`,
         ),
       );
     }
