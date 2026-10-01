@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FREE_TEXT_ENTRY_HOOK_MARKER,
+  INSTALL_CHECK_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
 import { projectDirOf, runReminderHook } from "../helpers/reminderHooks.js";
@@ -205,13 +206,17 @@ describe("the Codex hook file", () => {
     expect(own).toBe(shipped);
   });
 
-  it("carries the two prompt-time reminders", async () => {
+  it("carries the three prompt-time reminders", async () => {
     const groups = await readGroups(SHIPPED_CODEX);
     expect([...groups.keys()]).toEqual(["UserPromptSubmit", "PreToolUse", "PostToolUse"]);
     const markers = (groups.get("UserPromptSubmit") ?? []).map((group) =>
       group.hooks.map((entry) => entry.statusMessage),
     );
-    expect(markers).toEqual([[STRUCTURED_QUESTION_HOOK_MARKER], [FREE_TEXT_ENTRY_HOOK_MARKER]]);
+    expect(markers).toEqual([
+      [STRUCTURED_QUESTION_HOOK_MARKER],
+      [FREE_TEXT_ENTRY_HOOK_MARKER],
+      [INSTALL_CHECK_HOOK_MARKER],
+    ]);
   });
 
   it("runs one command string naming a message key, with a short timeout", async () => {

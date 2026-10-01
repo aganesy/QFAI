@@ -83,6 +83,18 @@ export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminde
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
 /**
+ * Identity of the group that says, on every turn, that qfai is not installed in
+ * this checkout.
+ *
+ * `npx qfai` walks up from the project, so a fresh clone or a nested worktree
+ * with no install of its own resolves the copy a parent directory holds, which
+ * may be an older version, or fetches one. The group's program looks for this
+ * checkout's own launcher, up to its git root and no further, and prints the
+ * remedy only where there is none.
+ */
+export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
+
+/**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * It is the one entry whose program decides whether to print: it reads the

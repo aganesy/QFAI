@@ -136,6 +136,25 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
     }
   });
 
+  // A fresh clone or a new worktree has no install, and `npx` then walks up to a parent
+  // directory's copy. Declared-but-not-installed and not-declared are different fixes.
+  // QFAI:AC-0001-0194-05
+  // QFAI:EX-0001-0194-42
+  it("the preflight tells a declared dependency with no install here from no dependency", async () => {
+    for (const baseline of BASELINE_PATHS) {
+      const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
+      expect(content).toContain("the project's install command in this checkout");
+      expect(content).toContain(
+        "**`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.**",
+      );
+      expect(content).toContain(
+        "a parent directory, which may be an older version of another checkout",
+      );
+      expect(content).toContain("**`qfai` is not listed.**");
+      expect(content).toContain("`npm i -D qfai`");
+    }
+  });
+
   // Yarn Berry defaults to `nodeLinker: pnp`, which writes no
   // `node_modules/.bin` even for a correctly installed dependency. Gating on
   // that file alone would report every PnP project as UNRUN forever, and the

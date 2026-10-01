@@ -22,6 +22,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   FREE_TEXT_ENTRY_HOOK_MARKER,
+  INSTALL_CHECK_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../../src/core/claudeCodeHooks.js";
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
@@ -106,6 +107,7 @@ describe("the prompt-time reminder hooks", () => {
       expect(await promptMarkers(root, CODEX)).toEqual([
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       expect(await promptMarkers(root, CLAUDE)).toContainEqual([FREE_TEXT_ENTRY_HOOK_MARKER]);
       for (const rel of [CODEX, CLAUDE]) {
@@ -142,6 +144,7 @@ describe("the prompt-time reminder hooks", () => {
       expect(await promptMarkers(root, CLAUDE)).toEqual([
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       const codex: unknown = JSON.parse(await readFile(path.join(root, CODEX), "utf-8"));
       expect(codex).toMatchObject({ model: "kept" });
@@ -150,6 +153,7 @@ describe("the prompt-time reminder hooks", () => {
         [undefined],
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       expect(trustLines(first)).toEqual([TRUST_LINE]);
 

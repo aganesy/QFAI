@@ -1501,7 +1501,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the `reminders.json` path and the key `free-text-entry`. Derived by running `qfai init` into a
   // temp root and hashing what it wrote; dropping that one group reproduces `65be5439…` byte for
   // byte.
-  [".claude/settings.json", "7662f70056f52555e0c4dd5b8fdfec9461e93d5c4b876df2a61d742bd6acbef6"],
+  //
+  // Re-pinned for three more changes, each a reviewed delta. A `permissions.allow` list names one
+  // `Skill(<name>)` entry for each shipped skill and `Bash(npx qfai:*)`. The grilling reminder
+  // before a write and the documentation-clarity reminders after one read the tool call and print
+  // nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
+  // looks for `node_modules/.bin/qfai` from the project up to its git root and prints only where
+  // there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  [".claude/settings.json", "719b7b1f29df22d267807631595f0af96a24a4c14df5653bc0d0b5ac02df21d6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1523,7 +1530,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // first directory that holds `.git`, and holds no character any of those shells expands. No
   // entry has a `commandWindows`. Derived the same way; the file an earlier release wrote,
   // `4c710d7e…`, is kept as a fixture the merge test upgrades.
-  [".codex/hooks.json", "d48bbc58bb372751195fb1023af42b646863eae8c4c3055c71880bcd26555d52"],
+  //
+  // Re-pinned for the install check, a third `UserPromptSubmit` group. Its line finds the message
+  // file as every other line does, then looks for `node_modules/.bin/qfai` or `.pnp.cjs` from that
+  // project up to the first directory that holds `.git`, and holds no character those shells
+  // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
+  [".codex/hooks.json", "c97308a314ba050a6c6742c7a3f1b9d63df2eb2f711bf4ab012686f2b8abdf43"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

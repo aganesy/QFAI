@@ -86,6 +86,11 @@ shipped skill and `Bash(npx qfai:*)`. Without them a non-interactive Claude Code
 skills. Claude Code accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each
 name is listed. Remove an entry you do not want; the next `npx qfai init` adds it again.
 
+A third hook checks that this checkout has its own `node_modules/.bin/qfai`, looking up to the git
+root only. A fresh clone or a new worktree has no install, and `npx qfai` would then run the copy of a
+parent directory. Where it is missing the hook says to run the project's install command, or
+`npm i -D qfai` when `package.json` does not list `qfai`.
+
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
   stop for your approval. They never change the steps, and a run never loses one.

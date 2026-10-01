@@ -66,6 +66,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
   refused the skills without them. The free-text reminder now tells the agent to stop and say so
   when `qfai-run` cannot start.
+- **A checkout with no install is named at every prompt.** A new hook group, for Claude Code and
+  for Codex, looks for `node_modules/.bin/qfai` from the project up to its git root and, when there
+  is none, says to run the project's install command, or `npm i -D qfai` when `package.json` does not
+  list `qfai`. The launcher preflight in the shared operating baseline separates the same two cases,
+  and the migration guide says each checkout and worktree needs its own install.
 
 ### Fixed
 

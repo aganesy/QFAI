@@ -51,6 +51,22 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI install check reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const f=require('fs'),p=require('path');let e=p.dirname(p.dirname(p.dirname(process.argv[1]))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))||f.existsSync(p.join(e,'.pnp.cjs'))){ok=1;break}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "qfai-not-installed"
+            ]
+          }
+        ]
       }
     ],
     "PreToolUse": [

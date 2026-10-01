@@ -33,6 +33,7 @@ import {
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
   GRILLING_PLAN_HOOK_MARKER,
+  INSTALL_CHECK_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../src/core/claudeCodeHooks.js";
@@ -76,6 +77,7 @@ const RESTATES: ReadonlyMap<string, string> = new Map([
   [API_BUDGET_HOOK_MARKER, "api-budget.md"],
   // A skill rather than a rule master: the entry the request is sent to.
   [FREE_TEXT_ENTRY_HOOK_MARKER, "qfai-run"],
+  [INSTALL_CHECK_HOOK_MARKER, "npm i -D qfai"],
 ]);
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -223,13 +225,14 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Three readers. One prints the named message. One reads the hook's own
+    // Four readers. One prints the named message. One looks for this checkout's
+    // launcher first and prints only where there is none. One reads the hook's own
     // input first and prints only for a command that names the forge, which is
     // what lets a `Bash` matcher exist at all. One reads the input and prints
-    // unless the file written is one of the run's own records. A fourth would
+    // unless the file written is one of the run's own records. A fifth would
     // mean a reminder had grown logic of its own, which is the thing kept out of
     // this file.
-    expect(readers.size, "a reminder runs one of the three pinned readers").toBe(3);
+    expect(readers.size, "a reminder runs one of the four pinned readers").toBe(4);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -376,6 +379,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     for (const [event, groups] of hooks) {
       for (const group of groups) {
         for (const entry of group.hooks) {
+          // Prints only where this checkout has no launcher, which the checkout
+          // running the suite usually has; its own test builds a project with none.
+          if (entry.statusMessage === INSTALL_CHECK_HOOK_MARKER) continue;
           const stdout = await runReminderHook(entry, projectDirOf(repoRoot, rel));
           const payload: unknown = JSON.parse(stdout);
           if (typeof payload !== "object" || payload === null) {
