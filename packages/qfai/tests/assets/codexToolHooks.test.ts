@@ -239,11 +239,18 @@ describe("the Codex tool-time reminders", () => {
     for (const entry of entries) expect(entry.commandWindows).toBeUndefined();
 
     const programs = entries.map((entry) => partsOf(entry).program);
-    const unfiltered = new Set(programs.filter((program) => !program.includes("readFileSync(0")));
+    // The filtered readers read the tool call first; the install check looks for the launcher.
+    const unfiltered = new Set(
+      programs.filter(
+        (program) => !program.includes("readFileSync(0") && !program.includes("'.bin'"),
+      ),
+    );
     expect(unfiltered.size).toBe(1);
     const reader = [...unfiltered][0] ?? "";
     expect(reader.startsWith("try{") && reader.endsWith("}catch{}")).toBe(true);
-    const locate = reader.slice("try{".length, -"}catch{}".length);
+    // The walk that finds the message file, up to where each program decides what to print.
+    const locate = reader.slice("try{".length, reader.indexOf("if(r){"));
+    expect(locate.length).toBeGreaterThan(100);
     for (const program of programs) expect(program).toContain(locate);
   });
 

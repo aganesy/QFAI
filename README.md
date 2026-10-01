@@ -76,8 +76,21 @@ You type no stage name.
 
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
+Each stage of a run is a sub-agent, so a question that one command or one file read answers
+is answered directly, with no run.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
+
+It also adds `permissions.allow` entries to `.claude/settings.json`: one `Skill(<name>)` for each
+shipped skill, and the launcher as `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and
+`Bash(yarn qfai:*)`. They trust the launcher the project installs. Without them a non-interactive Claude Code run refuses the
+skills. Claude Code accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each
+name is listed. Remove an entry you do not want; the next `npx qfai init` adds it again.
+
+A third hook checks that this checkout has its own `node_modules/.bin/qfai`, or `.pnp.cjs` beside a
+`package.json` that lists `qfai`, looking up to the git root only. A fresh clone or a new worktree has no install, and `npx qfai` would then run the copy of a
+parent directory. Where it is missing the hook says to run the project's install command, or
+`npm i -D qfai` when `package.json` does not list `qfai`.
 
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
 - Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a

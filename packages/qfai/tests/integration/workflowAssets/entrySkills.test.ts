@@ -393,6 +393,15 @@ describe("qfai-run", () => {
     expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/it asks nothing/i);
   });
 
+  // QFAI:AC-0001-0185-05
+  // QFAI:EX-0001-0185-55
+  it("ends a run at finish or at a stop, and never on an answer already given", async () => {
+    const text = flat(sectionOf(await readShipped(RUN), "## The run"));
+    expect(text).toMatch(/a run ends at `finish`, or at `decision` with `stop`/i);
+    expect(text).toMatch(/an answer already given does not end it/i);
+    expect(text).toMatch(/when the session must end first, stop the run and say so/i);
+  });
+
   // QFAI:AC-0001-0185-17
   // QFAI:EX-0001-0185-54
   it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {
