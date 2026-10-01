@@ -445,28 +445,18 @@ function demotedProjectNegations(before: string, after: string): string[] {
 }
 
 /**
- * The ignore lines of a fresh managed block that the project's own lines,
- * outside the block, already give.
+ * The Article XI `/tmp/` line, when the project's own lines outside the block
+ * already ignore the repository-root staging area.
  *
  * Two owners of one line leave the next edit ambiguous: which one is removed?
- * The Article XI `/tmp/` line is judged by what git does with the staging
- * area, so a project's unanchored `tmp/` counts; every other line must match
- * exactly. A negation is never left out, since it is only meaningful below the
- * ignore it undoes. A line with leading whitespace is a different pattern in
- * git, so it never counts.
+ * The question is what git does with the staging area, so a project's
+ * unanchored `tmp/` counts and a later `!/tmp/` does not. A line with leading
+ * whitespace is a different pattern in git, so it never counts. Every other
+ * line of the block stays, because the contract names them as the block's.
  */
 function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
   const significant = projectLines.filter((line) => !/^\s/.test(line));
-  const own = new Set(significant);
-  return QFAI_GITIGNORE_BLOCK.split("\n").filter((line) => {
-    if (line === "" || line.startsWith("#") || line.startsWith("!")) return false;
-    // The freshness check reads the run-state line from the block itself, so a
-    // block without it would be rebuilt on every run.
-    if (line === QFAI_RUN_STATE_IGNORE) return false;
-    return line === "/tmp/"
-      ? effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH)
-      : own.has(line);
-  });
+  return effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH) ? ["/tmp/"] : [];
 }
 
 /**

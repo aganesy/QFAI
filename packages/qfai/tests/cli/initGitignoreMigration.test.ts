@@ -675,17 +675,23 @@ describe("the managed block does not repeat a line the project already has", () 
   });
 
   // QFAI:EX-0001-0033-10
-  it("leaves out any other exact-match ignore line and names it", async () => {
+  it("keeps every other ignore line in the block, even one the project has", async () => {
+    // The contract names these as the block's own lines.
     await withProject(async (root) => {
-      await writeFile(path.join(root, ".gitignore"), `.qfai/state.json${NL}`, "utf-8");
+      await writeFile(
+        path.join(root, ".gitignore"),
+        `.qfai/state.json${NL}.qfai/report/*${NL}`,
+        "utf-8",
+      );
 
       const output = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
 
       const lines = (await readGitignore(root)).split(NL);
-      expect(lines.filter((line) => line === ".qfai/state.json")).toHaveLength(1);
-      expect(output).toContain("left out of the QFAI entries: .qfai/state.json");
+      expect(lines.filter((line) => line === ".qfai/state.json")).toHaveLength(2);
+      expect(lines.filter((line) => line === ".qfai/report/*")).toHaveLength(2);
+      expect(output).not.toContain("left out of the QFAI entries");
     });
   });
 
