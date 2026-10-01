@@ -266,7 +266,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // The text formatter prints only `message`, so the issues the loader
     // returned are listed there, one line, `; `-joined.
     const listed = issues
-      .map((issue) => boundForMessage(escapeForMessage(withoutYamlExcerpt(issue.message))))
+      .map((issue) => escapeForMessage(boundForMessage(withoutYamlExcerpt(issue.message))))
       .join("; ");
     addCheck(checks, {
       id: "config.load",
@@ -1016,12 +1016,14 @@ const CUT_MARKER = " ... ";
  * both stay, and the result is exactly `MAX_LISTED_ISSUE_LENGTH` long.
  */
 function boundForMessage(value: string): string {
-  if (value.length <= MAX_LISTED_ISSUE_LENGTH) {
+  const characters = Array.from(value);
+  if (characters.length <= MAX_LISTED_ISSUE_LENGTH) {
     return value;
   }
   const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
   const head = Math.ceil(kept / 2);
-  return `${value.slice(0, head)}${CUT_MARKER}${value.slice(value.length - (kept - head))}`;
+  const tail = kept - head;
+  return `${characters.slice(0, head).join("")}${CUT_MARKER}${characters.slice(characters.length - tail).join("")}`;
 }
 
 /**
@@ -1030,7 +1032,7 @@ function boundForMessage(value: string): string {
  * and its position and drops the excerpt; any other issue is returned whole.
  */
 function withoutYamlExcerpt(message: string): string {
-  return message.replace(/^([^\n]* at line \d+, column \d+:)\n\n[\s\S]*$/, "$1");
+  return message.replace(/^([^\r\n]* at line \d+, column \d+:)\r?\n\r?\n[\s\S]*$/, "$1");
 }
 
 /**

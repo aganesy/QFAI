@@ -181,6 +181,14 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(listedMode?.endsWith('x"')).toBe(true);
   });
 
+  it("keeps the source excerpt out of the message for a config with CRLF line endings", async () => {
+    // QFAI:AC-0003-0001-03
+    const root = await newTempDir("invalid-crlf");
+    await put(root, "qfai.config.yaml", "paths: {specsDir: topsecret-value\r\n");
+    const load = check(await doctorJson(root), "config.load");
+    expect(load?.message).not.toContain("topsecret-value");
+  });
+
   it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-excerpt");
