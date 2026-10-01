@@ -30,7 +30,7 @@ Feature: A layer-separated, credential-free shipped workflow set
     Given a project whose dependencies a package manager other than npm installed
     When the delivered document lane installs the checkers it runs
     Then they go into a directory of its own under `tmp/` through `npm install --prefix`, at exact pinned versions, and npm installs nothing into the project's own `node_modules`
-    And a project that depends on QFAI keeps the copy it installed, which supplies the schemas, and a project that does not gets QFAI in that same directory by the same install
+    And a project with its own `node_modules/qfai` keeps that copy, which supplies the schemas, and a project without one gets QFAI in that same directory by the same install, with the schema checker that release depends on
     And the install runs no package's install script, because the schema checker's platform binary arrives as an optional dependency
     And each checker script takes the directory as `--tools` and resolves its tools from it first, then the way it resolved them before
 ```

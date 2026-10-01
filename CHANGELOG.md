@@ -21,6 +21,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with a reason in place of `contract`; step 7 removes it from
   `04_Business-Rules.md`, writes it to no contract and lists it under
   `## Operations`. Both are read before the ID map is written.
+- **`qfai doctor` warns when a shipped workflow's preconditions are not met.**
+  Four warnings, never errors, so a project without CI is not blocked:
+  `workflows.packageManager` (`pnpm-lock.yaml` without a valid `packageManager`
+  in `package.json`, where the workflows stop before installing),
+  `workflows.lockfiles` (two lockfiles present, naming the one the workflows
+  install with and the one they ignore), `workflows.nodeVersionFile`
+  (`engines.node` declared, no `.nvmrc` or `.node-version`, so the workflows use
+  Node 20) and `workflows.nodePin` (a workflow under `.github/workflows/` pins a
+  Node below `engines.node`). Nothing is reported for a fact that is met.
+  `qfai init` prints one `Shipped workflows:` line with the count when any is
+  unmet. Fixes #2725.
 
 ### Changed
 
@@ -82,15 +93,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dependency tree.** It ran `npm install --no-save` into the project's own
   `node_modules`, which npm cannot read after a pnpm install, so both document
   checks stopped at that step in every pnpm project. The checkers
-  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself when the project
-  has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself, with the schema
+  checker it depends on, when the project has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
   and the schema and Mermaid scripts take `--tools <dir>` to find them. An
   installed copy of the workflow is not replaced; copy the packaged file to take
   the fix.
 - **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
   new `workflows.mdschemaBinary` check runs `mdschema --help` from the
-  installation the document lane and `qfai validate` use, and is an error that
-  names the reason and the fix when the binary does not start. Until now
+  installation the QFAI package depends on, never one the inspected project
+  supplies, and is an error that names the reason and the fix when the binary
+  does not start. Until now
   `workflows.docsLane` read `ok` for a project with no binary. The README now
   says that the package's install script is not needed while the platform
   package installs, and how to approve it with `npm approve-scripts` (npm 11.16

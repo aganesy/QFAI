@@ -19,13 +19,16 @@ export type MdschemaBinaryCheck = {
 };
 
 type MdschemaCommand = { command: string; args: string[] };
-type FindCommand = (from: string) => unknown;
+type Finder = { find: (from: string) => unknown; from: string };
 
 /**
- * The resolver the shipped checker script uses, so doctor asks for the binary
- * the lane and `qfai validate` would run rather than a path of its own.
+ * The resolver the shipped checker script uses, with the directory it sits in.
+ *
+ * Doctor asks for the installation the QFAI package itself depends on, so the
+ * search starts at the package and never at the inspected project: a project
+ * can carry any `node_modules` it likes, and doctor must not run it.
  */
-async function loadFindCommand(): Promise<FindCommand | string> {
+async function loadFinder(): Promise<Finder | string> {
   let file = "the packaged checker";
   let loaded: unknown;
   try {
@@ -37,7 +40,10 @@ async function loadFindCommand(): Promise<FindCommand | string> {
   if (typeof loaded === "object" && loaded !== null && "findMdschemaCommand" in loaded) {
     const find = loaded.findMdschemaCommand;
     if (typeof find === "function") {
-      return (from): unknown => Reflect.apply(find, undefined, [from]);
+      return {
+        find: (from): unknown => Reflect.apply(find, undefined, [from]),
+        from: path.dirname(file),
+      };
     }
   }
   return `${file} exports no findMdschemaCommand function`;
@@ -55,7 +61,7 @@ function isCommand(value: unknown): value is MdschemaCommand {
   );
 }
 
-/** The first line the binary printed, or why it could not be started at all. */
+/** The first line the binary printed, or why it could not be started or kept running. */
 function failureReason(result: ReturnType<typeof spawnSync>): string {
   if (result.error !== undefined) {
     return result.error.message;
@@ -64,7 +70,12 @@ function failureReason(result: ReturnType<typeof spawnSync>): string {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find((line) => line !== "");
-  return printed ?? `it exited with status ${String(result.status)}`;
+  if (printed !== undefined) {
+    return printed;
+  }
+  return result.signal === null
+    ? `it exited with status ${String(result.status)}`
+    : `it was stopped by ${result.signal}`;
 }
 
 function failure(reason: string, fix: string): MdschemaBinaryCheck {
@@ -85,16 +96,17 @@ const INSTALL_FIX =
 /**
  * Whether the document-schema checker's binary resolves and runs.
  *
- * The document-schema lane and `qfai validate` both run `mdschema`. A present
- * workflow file says nothing about whether the program behind it can start, so
- * this runs `mdschema --help`, which reads no document and changes nothing.
+ * `qfai validate` runs `mdschema`. A present workflow file says nothing about
+ * whether the program behind it can start, so this runs `mdschema --help`,
+ * which reads no document and changes nothing. The installation checked is the
+ * one the QFAI package depends on, not one the inspected project supplies.
  */
-export async function checkMdschemaBinary(root: string): Promise<MdschemaBinaryCheck> {
-  const find = await loadFindCommand();
-  if (typeof find === "string") {
-    return failure(find, INSTALL_FIX);
+export async function checkMdschemaBinary(): Promise<MdschemaBinaryCheck> {
+  const finder = await loadFinder();
+  if (typeof finder === "string") {
+    return failure(finder, INSTALL_FIX);
   }
-  const command = find(root);
+  const command = finder.find(finder.from);
   if (!isCommand(command)) {
     return failure(
       "no @jackchuka/mdschema installation was found",

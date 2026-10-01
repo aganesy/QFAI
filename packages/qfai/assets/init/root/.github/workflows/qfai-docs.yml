@@ -574,13 +574,16 @@ jobs:
           # with the newest one. Unpinned in the bootstrap case for the same
           # reason a bare `npx qfai` is: with nothing in the manifest there is no
           # version to honour, and pinning one here would freeze every adopter's
-          # docs lane at whatever release generated this file. One install for
-          # both cases, because a second `--no-save` install into the same
-          # prefix removes what the first one added.
+          # docs lane at whatever release generated this file. For the same
+          # reason the bootstrap install leaves the schema checker to QFAI: the
+          # release it fetches depends on one version of that checker, and its
+          # schemas are written for that version. One install for both cases,
+          # because a second `--no-save` install into the same prefix removes
+          # what the first one added.
           if [ -d node_modules/qfai ]; then
             npm install --no-save --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1
           else
-            npm install --no-save --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1 qfai
+            npm install --no-save --no-audit --no-fund --ignore-scripts --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi
       - name: Check SDD document shape
         if: matrix.check == 'shape'

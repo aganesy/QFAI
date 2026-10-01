@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -5,12 +6,20 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
+import { checkMdschemaBinary } from "../../src/core/doctor/mdschemaBinary.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 import type * as AssetsModule from "../../src/shared/assets.js";
 
-/** The mock's switch; `vi.hoisted` because `vi.mock` runs above every import. */
-const packagedAssets = vi.hoisted(() => ({ unresolvable: false }));
+/**
+ * The mock's switches; `vi.hoisted` because `vi.mock` runs above every import.
+ * `dir` stands in for the packaged init assets, and `unresolvable` makes the
+ * resolver throw as a broken install does.
+ */
+const packagedAssets = vi.hoisted((): { dir: string | undefined; unresolvable: boolean } => ({
+  dir: undefined,
+  unresolvable: false,
+}));
 
 vi.mock("../../src/shared/assets.js", async (importOriginal) => {
   const actual = await importOriginal<typeof AssetsModule>();
@@ -20,7 +29,7 @@ vi.mock("../../src/shared/assets.js", async (importOriginal) => {
       if (packagedAssets.unresolvable) {
         throw new Error("test fixture: the packaged init assets cannot be resolved");
       }
-      return actual.getInitAssetsDir();
+      return packagedAssets.dir ?? actual.getInitAssetsDir();
     },
   };
 });
@@ -28,90 +37,120 @@ vi.mock("../../src/shared/assets.js", async (importOriginal) => {
 const roots: string[] = [];
 
 afterEach(async () => {
+  packagedAssets.dir = undefined;
   packagedAssets.unresolvable = false;
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-async function project(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-binary-"));
-  roots.push(root);
-  await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/spec\n", "utf-8");
-  return root;
+async function tempDir(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-binary-"));
+  roots.push(dir);
+  return dir;
 }
 
-/** An mdschema installation in the project whose entry point is `source`. */
-async function installMdschema(root: string, source: string): Promise<void> {
-  const packageDir = path.join(root, "node_modules", "@jackchuka", "mdschema");
-  await mkdir(path.join(packageDir, "bin"), { recursive: true });
+/**
+ * A packaged-assets stand-in whose checker resolves to a binary running `source`.
+ * The checker is the one file the probe loads from the package, so replacing it
+ * is how a case chooses which binary the package "depends on".
+ */
+async function packagedChecker(source: string): Promise<void> {
+  const base = await tempDir();
+  const binary = path.join(base, "fake-mdschema.cjs");
+  await writeFile(binary, source, "utf-8");
+  await mkdir(path.join(base, "assets", "init"), { recursive: true });
+  await mkdir(path.join(base, "assets", "scripts"), { recursive: true });
   await writeFile(
-    path.join(packageDir, "package.json"),
-    JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
+    path.join(base, "assets", "scripts", "check-mdschema.mjs"),
+    `export function findMdschemaCommand() {\n  return { command: process.execPath, args: [${JSON.stringify(binary)}] };\n}\n`,
     "utf-8",
   );
-  await writeFile(path.join(packageDir, "bin", "cli.js"), source, "utf-8");
-}
-
-async function binaryCheck(
-  root: string,
-): Promise<{ severity: string; message: string; details?: Record<string, unknown> } | undefined> {
-  const data = await createDoctorData({ startDir: root, rootExplicit: true });
-  return data.checks.find((check) => check.id === "workflows.mdschemaBinary");
+  packagedAssets.dir = path.join(base, "assets", "init");
 }
 
 describe("qfai doctor reports whether the mdschema binary runs", () => {
-  it("is ok when the installed binary answers --help", async () => {
+  it("is ok when the binary answers --help, and starts it with that and nothing else", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-22
-    const root = await project();
-    const log = path.join(root, "arguments.txt");
-    // A stand-in that records how it was started, so the case shows what doctor ran.
-    await installMdschema(
-      root,
+    const log = path.join(await tempDir(), "arguments.txt");
+    await packagedChecker(
       `require("node:fs").writeFileSync(${JSON.stringify(log)}, process.argv.slice(2).join(" "));\n`,
     );
 
-    const check = await binaryCheck(root);
+    const check = await checkMdschemaBinary();
 
-    expect(check?.severity).toBe("ok");
+    expect(check.severity).toBe("ok");
     expect(await readFile(log, "utf-8")).toBe("--help");
   });
 
-  it("is an error naming the fix when the binary cannot run", async () => {
+  it("is an error naming the reason and the fix when the binary cannot run", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-23
-    const root = await project();
-    await installMdschema(
-      root,
+    await packagedChecker(
       `console.error("mdschema binary not found at /nowhere");\nprocess.exit(1);\n`,
     );
 
-    const check = await binaryCheck(root);
+    const check = await checkMdschemaBinary();
 
-    expect(check?.severity).toBe("error");
-    expect(check?.message).toContain("mdschema binary not found at /nowhere");
-    expect(check?.message).toContain("optional dependenc");
-    expect(check?.message).toContain("npm approve-scripts");
-    expect(check?.message).toContain("onlyBuiltDependencies");
-    expect(check?.details?.["reason"]).toBe("mdschema binary not found at /nowhere");
+    expect(check.severity).toBe("error");
+    expect(check.message).toContain("mdschema binary not found at /nowhere");
+    expect(check.message).toContain("optional dependenc");
+    expect(check.message).toContain("npm approve-scripts");
+    expect(check.message).toContain("onlyBuiltDependencies");
+    expect(check.details["reason"]).toBe("mdschema binary not found at /nowhere");
   });
+
+  it.skipIf(process.platform === "win32")(
+    "names the signal when the binary is killed and prints nothing",
+    async () => {
+      // QFAI:AC-0003-0011-10
+      // QFAI:EX-0003-0011-23
+      await packagedChecker(`process.kill(process.pid, "SIGKILL");\n`);
+
+      const check = await checkMdschemaBinary();
+
+      expect(check.severity).toBe("error");
+      expect(check.details["reason"]).toBe("it was stopped by SIGKILL");
+    },
+  );
 
   it("is an error rather than a crash when the packaged checker cannot be located", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-23
-    const root = await project();
     packagedAssets.unresolvable = true;
 
-    const check = await binaryCheck(root);
+    const check = await checkMdschemaBinary();
 
-    expect(check?.severity).toBe("error");
-    expect(check?.message).toContain("the packaged init assets cannot be resolved");
+    expect(check.severity).toBe("error");
+    expect(check.message).toContain("the packaged init assets cannot be resolved");
   });
 
-  it("is ok for the package's own installation in a plain project", async () => {
+  it("starts no binary the inspected project supplies", async () => {
     // QFAI:AC-0003-0011-10
     // QFAI:EX-0003-0011-22
-    const root = await project();
+    const root = await tempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n",
+      "utf-8",
+    );
+    const marker = path.join(root, "started.txt");
+    const packageDir = path.join(root, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(path.join(packageDir, "bin"), { recursive: true });
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "bin/cli.js" } }),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(packageDir, "bin", "cli.js"),
+      `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "started");\n`,
+      "utf-8",
+    );
 
-    expect((await binaryCheck(root))?.severity).toBe("ok");
+    const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+    const check = data.checks.find((candidate) => candidate.id === "workflows.mdschemaBinary");
+    expect(check?.severity).toBe("ok");
+    expect(existsSync(marker)).toBe(false);
   });
 });

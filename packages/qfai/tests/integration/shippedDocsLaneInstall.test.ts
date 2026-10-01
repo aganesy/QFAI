@@ -118,12 +118,13 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(call).toContain("--registry=https://registry.npmjs.org/");
     expect(call).toContain("--ignore-scripts");
     const packages = call.filter((argument) => !argument.startsWith("-") && argument !== "install");
-    expect(packages).toEqual([
-      "@jackchuka/mdschema@0.15.4",
-      "mermaid@11.17.2",
-      "jsdom@29.1.1",
-      ...(withQfai ? [] : ["qfai"]),
-    ]);
+    // With no QFAI of its own the project gets the newest one, and the schema checker comes with
+    // it at the version that release depends on, so its schemas and their checker stay one release.
+    expect(packages).toEqual(
+      withQfai
+        ? ["@jackchuka/mdschema@0.15.4", "mermaid@11.17.2", "jsdom@29.1.1"]
+        : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
+    );
   });
 
   // QFAI:EX-0002-0003-07
