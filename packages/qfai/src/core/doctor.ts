@@ -1008,11 +1008,20 @@ function isControlCodePoint(code: number): boolean {
 /** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
 const MAX_LISTED_ISSUE_LENGTH = 500;
 
-/** Several loader messages quote the rejected value, so a very large value is cut here. */
+const CUT_MARKER = " ... ";
+
+/**
+ * Several loader messages quote the rejected value, so a very large value is cut
+ * here. The middle goes, so the start of the message and the diagnosis at its end
+ * both stay, and the result is exactly `MAX_LISTED_ISSUE_LENGTH` long.
+ */
 function boundForMessage(value: string): string {
-  return value.length > MAX_LISTED_ISSUE_LENGTH
-    ? `${value.slice(0, MAX_LISTED_ISSUE_LENGTH)}... (cut)`
-    : value;
+  if (value.length <= MAX_LISTED_ISSUE_LENGTH) {
+    return value;
+  }
+  const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
+  const head = Math.ceil(kept / 2);
+  return `${value.slice(0, head)}${CUT_MARKER}${value.slice(value.length - (kept - head))}`;
 }
 
 /**

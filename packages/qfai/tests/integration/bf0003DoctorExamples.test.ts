@@ -172,8 +172,13 @@ describe("BF-0003 configuration discovery and loading", () => {
     const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
     const modeIssue = issues?.find((issue) => issue.message.startsWith("prototyping.mode"));
     expect(modeIssue?.message.length).toBeGreaterThan(5000);
-    expect(load?.message).toContain("prototyping.mode must be");
-    expect(load?.message.length).toBeLessThan(2000);
+    const message = load?.message ?? "";
+    const listed = message.slice(message.indexOf(": ", message.indexOf("issue(s)")) + 2);
+    const listedMode = listed.split("; ").find((part) => part.startsWith("prototyping.mode"));
+    expect(listedMode).toHaveLength(500);
+    expect(listedMode).toContain("prototyping.mode must be");
+    expect(listedMode).toContain(" ... ");
+    expect(listedMode?.endsWith('x"')).toBe(true);
   });
 
   it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
