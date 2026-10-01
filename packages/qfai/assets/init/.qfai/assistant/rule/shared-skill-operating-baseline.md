@@ -312,12 +312,14 @@ names, in its `steps:` list, and no other.
 2. For each listed step, in order: read the `STEP.md` at its `path` and no
    other, run it, and pass its gate. A step the parent lists and the work order
    does not is not run. Where the work needs an unlisted step, return the
-   replan outcome rather than run it.
+   replan outcome rather than run it. A step that reports a `branch` ends the
+   work order there: the steps after it do not run, and the result carries the
+   `branch` and no `closure`.
 3. Take what the work order's `settled` field records as settled, and ask none
    of it again.
 4. Run one review through `common-review-cycle` at the end, with the work
-   order's `requiredReviewerRoles`. The run computed that set; do not recompute
-   it or drop a role from it.
+   order's `requiredReviewerRoles`, and none when it names none. The run
+   computed that set; do not recompute it or drop a role from it.
 5. Return the stage result the work order asks for. A finding another owner
    must repair is a debt naming that owner, not an edit made here.
 

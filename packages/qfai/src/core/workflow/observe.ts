@@ -170,6 +170,7 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
           stageKind: stage.kind,
           steps: markedSteps(plan, stage.steps),
           ...(stage.effects.length > 0 ? { effects: stage.effects } : {}),
+          ...(stage.review ? { review: stage.review } : {}),
         })),
       },
     ]),
