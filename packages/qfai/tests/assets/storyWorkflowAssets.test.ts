@@ -49,6 +49,11 @@ describe("story-tree acceptance and implementation assets", () => {
     );
     expect(ownership).toContain("Run the scoped validation gate for each affected BF ID");
     expect(ownership).toContain("does not authorize a downstream stage to rewrite the story tree");
+    expect(ownership).toContain("Search from the changed files outward");
+    expect(ownership).toContain("the dependent set is unknown, not empty");
+    expect(ownership).toContain("run the full test suite once on the");
+    const shared = await read("skill/qfai-atdd/references/shared-test-artifacts.md");
+    expect(shared).toContain("cross-spec-ownership.md#when-the-search-cannot-finish");
   });
 
   it("proves each runnable entrypoint through an observed smoke response", async () => {

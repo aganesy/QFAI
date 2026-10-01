@@ -35,6 +35,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped cross-flow guidance says how to find the flows a shared change
+  reaches, and what to do when that search cannot finish.**
+  `qfai-implement/references/cross-spec-ownership.md` now searches outward from
+  the changed files: follow the importers and literal reads until a test file is
+  reached, then read its `QFAI:` annotations to name the dependent flows. An edge
+  that cannot be followed by reading (a computed import path, a glob-loaded
+  fixture, a path built at run time) leaves the dependent set unknown: record it
+  and run the full test suite once on the integrated tree instead of re-proving
+  every flow. The acceptance-test guidance on shared artifacts points there.
+  Refs #2424.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
