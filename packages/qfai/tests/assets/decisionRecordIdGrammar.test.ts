@@ -33,6 +33,15 @@ describe("decision row identity", () => {
     }
   });
 
+  it("says how an ID two branches both took is renumbered", async () => {
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
+      expect(triage).toContain("renumber the one the later branch added");
+      expect(triage).toContain("state the old and new ID in the commit message");
+      expect(triage).toContain("A row already merged keeps its ID");
+    }
+  });
+
   it("rejects duplicate and legacy-shaped IDs", () => {
     const duplicate = parseRecordTable(
       table([
