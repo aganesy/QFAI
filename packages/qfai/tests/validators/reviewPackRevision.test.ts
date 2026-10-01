@@ -94,16 +94,9 @@ describe("review pack revision", () => {
     // omission visible rather than to invalidate history. A pack that declares
     // the current contract gets an error instead — see below.
     expect(found[0]?.severity).toBe("warning");
-    expect(found[0]?.suggested_action).toContain("evidence-revision.md");
-    expect(found[0]?.suggested_action).toContain(
-      ".qfai/assistant/skill/qfai-implement/references/evidence-revision.md",
-    );
-    // The remedy has to name the form the reference accepts. It said
-    // `working-tree+<porcelain digest>`, which that reference now forbids by
-    // name: porcelain gives paths and states, so re-editing the very file
-    // under review leaves it identical and a stale verdict reads as fresh.
-    expect(found[0]?.suggested_action).toContain("working-tree+<content hash>");
-    expect(found[0]?.suggested_action).not.toContain("porcelain");
+    // The remedy names the one form the gate reads: the commit under review.
+    expect(found[0]?.suggested_action).toContain("git rev-parse HEAD");
+    expect(found[0]?.suggested_action).not.toContain("working-tree");
   });
 
   it("accepts a git rev", async () => {
@@ -112,26 +105,26 @@ describe("review pack revision", () => {
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
   });
 
-  it("accepts the uncommitted-tree form", async () => {
+  // QFAI:EX-0001-0150-05
+  it("rejects a working-tree content hash: an uncommitted tree has no revision", async () => {
     const issues = await withPack({
       ...baseSummary(),
-      // The content hash the four-step procedure produces: SHA-256, 64 hex.
       revision: "working-tree+" + "a".repeat(64),
     });
+    const schema = issues.filter((i) => i.code === "QFAI-REVIEW-007");
 
-    expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
-    expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
+    expect(schema).toHaveLength(1);
+    expect(schema[0]?.severity).toBe("error");
+    expect(schema[0]?.message).toContain("an uncommitted tree has no revision");
+    expect(schema[0]?.suggested_action).toContain("git rev-parse HEAD");
   });
 
-  it("rejects the porcelain digest the reference forbids", async () => {
-    // It reads as a legitimate value while being exactly the digest that does
-    // not move when the file under review is edited, so a stale verdict passed
-    // the freshness check this field exists for.
+  it("rejects a porcelain digest", async () => {
     const issues = await withPack({ ...baseSummary(), revision: "working-tree+9f2c1ab" });
     const schema = issues.filter((i) => i.code === "QFAI-REVIEW-007");
 
     expect(schema).toHaveLength(1);
-    expect(schema[0]?.message).toContain("porcelain digest");
+    expect(schema[0]?.message).toContain("git rev (7-64 hex)");
   });
 
   it("reports a pack marked legacy as a warning", async () => {
@@ -151,7 +144,7 @@ describe("review pack revision", () => {
 
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
     const legacy = issues.filter(
-      (i) => i.code === "QFAI-REVIEW-009" && i.message.includes("porcelain digest"),
+      (i) => i.code === "QFAI-REVIEW-009" && i.message.includes("git rev (7-64 hex)"),
     );
     expect(legacy).toHaveLength(1);
     expect(legacy[0]?.severity).toBe("warning");
@@ -171,7 +164,7 @@ describe("review pack revision", () => {
     ]);
 
     const current = issues.filter(
-      (i) => i.code === "QFAI-REVIEW-007" && i.message.includes("porcelain digest"),
+      (i) => i.code === "QFAI-REVIEW-007" && i.message.includes("git rev (7-64 hex)"),
     );
     expect(current).toHaveLength(1);
     expect(current[0]?.severity).toBe("error");
@@ -194,7 +187,7 @@ describe("review pack revision", () => {
     // And the malformed value is an error too, not the warning an undeclared
     // pack used to get.
     expect(
-      issues.some((i) => i.code === "QFAI-REVIEW-009" && i.message.includes("porcelain digest")),
+      issues.some((i) => i.code === "QFAI-REVIEW-009" && i.message.includes("git rev (7-64 hex)")),
     ).toBe(false);
   });
 
@@ -233,7 +226,7 @@ describe("review pack revision", () => {
     ).toBe(true);
     // And the value it tried to excuse is judged as a current pack's.
     expect(
-      issues.some((i) => i.code === "QFAI-REVIEW-007" && i.message.includes("porcelain digest")),
+      issues.some((i) => i.code === "QFAI-REVIEW-007" && i.message.includes("git rev (7-64 hex)")),
     ).toBe(true);
   });
 
@@ -285,7 +278,7 @@ describe("review pack revision", () => {
     expect(issues.some((i) => i.code === "QFAI-REVIEW-007")).toBe(true);
   });
 
-  it("rejects a value that is neither a rev nor a content hash", async () => {
+  it("rejects a value that is not a rev", async () => {
     const issues = await withPack({ ...baseSummary(), revision: "yesterday" });
 
     expect(issues.some((i) => i.code === "QFAI-REVIEW-007")).toBe(true);

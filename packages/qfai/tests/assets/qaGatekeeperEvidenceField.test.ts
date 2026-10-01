@@ -30,9 +30,7 @@ describe("qa-gatekeeper evidence in the shipped implementation skill", () => {
 
   it("binds review verdicts to the evidence actually inspected", async () => {
     const reference = await readFile(path.join(skillDir, "references/round-evidence.md"), "utf-8");
-    expect(reference).toContain(
-      "Every reviewer verdict names its reviewed revision and audited evidence hash",
-    );
+    expect(reference).toContain("Every reviewer verdict names its reviewed revision.");
     expect(reference).toContain(
       "A review of a changed test, implementation, fixture, or capture is repeated",
     );

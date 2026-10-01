@@ -1,7 +1,7 @@
 ---
 name: common-review-cycle
 owner: common
-purpose: "Review what a stage wrote, once, after its last step: build the review pack, dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and seal the result."
+purpose: "Review what a stage wrote, once, after its last step: build the review pack, dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and record the result."
 requires: []
 roles: []
 ---
@@ -89,10 +89,8 @@ fields and the value its `version` takes are
    the invocation's run start. An agent that authored, edited or recommended a
    decision in the reviewed artifact is not its independent reviewer; inside a
    run, `actorHistory` says who that is. Require every field of the shared
-   reviewer response template. `Reviewed revision` follows
-   `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`, and
-   `Audited evidence hash` follows `.qfai/assistant/rule/audited-evidence-hash.md`
-   wherever ATDD or implementation evidence is audited.
+   reviewer response template; `Reviewed revision` is the commit the reviewer
+   read.
 4. **On a blocking REVISE**, fix the finding in its owning source with the
    smallest edit that resolves it, and leave unaffected content alone. An
    upstream finding is not repaired here: stop under
@@ -118,18 +116,16 @@ fields and the value its `version` takes are
   verdict does not clear a changed target.
 - Keep rerun history append-only.
 
-## Seal
+## A finished pack
 
-Once a pack has its final responses and `summary.json`, seal it as
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md#review-pack-seal`
-sets out, and record the pack path and seal **outside the pack**, in the stage
-evidence. The pack is immutable after sealing; a later attempt gets a new pack
-and a new seal.
+Once a pack has its final responses and `summary.json`, record the pack path
+**outside the pack**, in the stage evidence. The pack is not edited after
+that; a later attempt gets a new pack.
 
-Before reporting completion, recompute every recorded seal, and recompute the
-audited hash of the evidence subject the completion reviewer read. A mismatch
-means something moved after the verdict: request a fresh review of the current
-subject. A passing validate run does not replace this check.
+Before reporting completion, check that every verdict names the commit now
+under review. A verdict on an earlier commit whose subject has changed since
+is stale: request a fresh review of the current subject. A passing validate
+run does not replace this check.
 
 ## Rounds of tested evidence
 
@@ -138,7 +134,7 @@ a new round for the affected test.
 
 - Keep the earlier observation and the response that rejected it. Append the
   changed test, revision, command, result and review response.
-- Never rewrite a sealed pack, and never relabel an old result as current.
+- Never rewrite a finished pack, and never relabel an old result as current.
 - After changing a test or its fixture, verify its oracle again before asking
   for review. Where the behaviour already passes, use the owner's controlled
   falsifiability path; for an acceptance test that is
@@ -154,11 +150,11 @@ a new round for the affected test.
 
 - The pack, where the owner has a producer.
 - In the stage evidence: each reviewer's verdict and revision, the findings, the
-  repairs, the rerun commands, the pack path and seal, and the final blocking
+  repairs, the rerun commands, the pack path, and the final blocking
   verdicts.
 
 ## Gate
 
-Every routed blocking reviewer returned `PASS` on the final revision, the
-recorded seals recompute, and the evidence names each verdict. Anything short of
+Every routed blocking reviewer returned `PASS` on the final revision, and the
+evidence names each verdict. Anything short of
 that is reported with the open findings, not as a pass.

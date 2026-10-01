@@ -46,8 +46,7 @@ Summary. Evidence stays local and is never committed
   `Work resumed` empty.
 - **A free-form cell is one line, with `|` written `\|`.** A pipe or a line
   break adds cells and moves counts under the wrong headings.
-- **`Revision`** is a git revision or `working-tree+<hash>`, as
-  `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` defines.
+- **`Revision`** is the git revision of the clean tree the session read.
 
 ## Decision rows
 

@@ -82,7 +82,7 @@ A finding that changes an approved obligation follows When drift is detected. An
 
 A stage may classify a finding as a record defect only when its completion contract names a queue and requires it to be
 drained. The reviewer records the incorrect statement and the artifact that proves what happened. The orchestrator
-places it in the queue the stage names. Repair the record to match the run; re-attest any reviewed bytes in a new sealed
+places it in the queue the stage names. Repair the record to match the run; re-attest any reviewed bytes in a new
 review pack, leaving the earlier pack intact. If the run cannot be reconstructed honestly, treat the finding as a
 blocking evidence defect. Completion waits for the queue to drain.
 

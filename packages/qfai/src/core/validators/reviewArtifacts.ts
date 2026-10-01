@@ -268,9 +268,6 @@ async function readLegacyManifest(reviewRoot: string): Promise<ReadonlySet<strin
 
 const LEGACY_MANIFEST = ".legacy-packs";
 
-/** A `revision` that is a git rev rather than the uncommitted-tree form. */
-const GIT_REV_FORM = /^[0-9a-f]{7,64}$/i;
-
 /**
  * Whether a `rev` names a commit in the repository at `root`, asked once each.
  *
@@ -609,16 +606,13 @@ async function validateSummarySchema(
   if (revision !== undefined && !readString(revision)) {
     violations.push("`revision` must be a non-empty string (it may be omitted)");
   }
-  // Absence is a warning because existing packs predate the field; a value that
-  // is present is checked, because the form it takes is what makes the gate
-  // mechanical. `working-tree+<porcelain digest>` was the old spelling and
-  // reads as a legitimate value while being exactly the digest that does not
-  // move when the file under review is edited — a stale verdict passing the
-  // freshness check the field exists for.
+  // A value that is present is checked, because the form it takes is what makes
+  // the gate mechanical: a git rev names a commit anyone can check out, and
+  // nothing else names a tree that a later reader can rebuild.
   //
   // **Unless the pack does not declare the form** (`revision_form`). History
   // written before it cannot be migrated: the tree a past verdict described is
-  // not reconstructible, so there is no content hash to write instead, and an
+  // not reconstructible, so there is no commit to write instead, and an
   // error there would leave `--fail-on error` permanently red for a repository
   // that keeps its packs with nothing the operator could do. Those get the
   // finding as a `warning` so the state is still visible.
@@ -651,12 +645,9 @@ async function validateSummarySchema(
   // The form says the value is shaped like an address; this says it is one. A
   // placeholder, a truncated paste or a transposed digit passes the regex and
   // names no tree at all, so the verdict it carries cannot be reproduced by
-  // anyone. Only the git-rev form is checkable here: recomputing the
-  // uncommitted-tree hash would mean reimplementing the producer's four-step
-  // procedure in the validator, and a mismatch there is indistinguishable from
-  // the ordinary post-verdict drift the seals already cover.
+  // anyone.
   const unresolvableRevision =
-    revisionText !== null && GIT_REV_FORM.test(revisionText)
+    revisionText !== null && REVISION_FORM.test(revisionText)
       ? revisions.commitExists(revisionText) === false
         ? [
             issue(
@@ -677,18 +668,17 @@ async function validateSummarySchema(
       ? [
           issue(
             declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
-            "`revision` is not a form this gate reads. Give a git rev (7-64 hex) or " +
-              "`working-tree+<64 hex>` — a content hash, in lowercase hex. " +
-              "`working-tree+<porcelain digest>` is refused: it does not move when the contents do." +
+            "`revision` is not a form this gate reads. Give the git rev (7-64 hex) of the " +
+              "commit the verdicts describe; an uncommitted tree has no revision." +
               (declaresForm
                 ? ""
-                : ` This pack declares \`revision_form: "${REVISION_FORM_LEGACY}"\`, so it is a warning: the tree it was written against cannot be rebuilt, and there is no content hash to migrate the value to.`),
+                : ` This pack declares \`revision_form: "${REVISION_FORM_LEGACY}"\`, so it is a warning: the tree it was written against cannot be rebuilt, and there is no commit to migrate the value to.`),
             declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
-            "The two forms and the procedure behind the content hash are in `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`.",
+            "Commit the work under review and record `git rev-parse HEAD` as `revision`.",
           ),
         ]
       : [];
@@ -712,15 +702,7 @@ async function validateSummarySchema(
             "reviewArtifacts.summaryRevision",
             undefined,
             "canonical",
-            // `porcelain digest` was the old form and is now forbidden by the
-            // reference below: it names the changed paths and their states, so
-            // re-editing the very file under review leaves it identical and a
-            // stale verdict passes the freshness check this field exists for.
-            "Record the state under review in `revision`: a git rev, or " +
-              "`working-tree+<content hash>` while it is uncommitted. The procedure for that " +
-              "hash is in `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` " +
-              "and is not summarised here — a summary would be a second procedure, and two of " +
-              "them give one tree two addresses.",
+            "Commit the work under review and record `git rev-parse HEAD` as `revision`.",
           ),
         ]
       : [];
