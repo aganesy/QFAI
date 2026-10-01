@@ -115,10 +115,7 @@ export async function checkMdschemaBinary(
   }
   const command = finder.find(finder.from);
   if (!isCommand(command)) {
-    return failure(
-      "no @jackchuka/mdschema installation was found",
-      "qfai depends on it, so run your package manager's install",
-    );
+    return failure("no @jackchuka/mdschema installation was found", INSTALL_FIX);
   }
   const result = spawnSync(command.command, [...command.args, "--help"], {
     encoding: "utf-8",

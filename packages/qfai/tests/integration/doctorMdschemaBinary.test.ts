@@ -51,9 +51,10 @@ async function tempDir(): Promise<string> {
 /**
  * A packaged-assets stand-in whose checker resolves to a binary running `source`.
  * The checker is the one file the probe loads from the package, so replacing it
- * is how a case chooses which binary the package "depends on".
+ * is how a case chooses which binary the package "depends on". `found` replaces
+ * what the stand-in finder returns, as a JavaScript expression.
  */
-async function packagedChecker(source: string): Promise<void> {
+async function packagedChecker(source: string, found?: string): Promise<void> {
   const base = await tempDir();
   const binary = path.join(base, "fake-mdschema.cjs");
   await writeFile(binary, source, "utf-8");
@@ -61,7 +62,7 @@ async function packagedChecker(source: string): Promise<void> {
   await mkdir(path.join(base, "assets", "scripts"), { recursive: true });
   await writeFile(
     path.join(base, "assets", "scripts", "check-mdschema.mjs"),
-    `export function findMdschemaCommand() {\n  return { command: process.execPath, args: [${JSON.stringify(binary)}] };\n}\n`,
+    `export function findMdschemaCommand() {\n  return ${found ?? `{ command: process.execPath, args: [${JSON.stringify(binary)}] }`};\n}\n`,
     "utf-8",
   );
   packagedAssets.dir = path.join(base, "assets", "init");
@@ -122,6 +123,19 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
 
     expect(check.severity).toBe("error");
     expect(check.details["reason"]).toMatch(/ETIMEDOUT/);
+  });
+
+  it("names the same fixes when no installation is found at all", async () => {
+    // QFAI:AC-0003-0011-10
+    // QFAI:EX-0003-0011-23
+    await packagedChecker(``, "null");
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("error");
+    expect(check.message).toContain("no @jackchuka/mdschema installation was found");
+    expect(check.message).toContain("npm approve-scripts");
+    expect(check.message).toContain("onlyBuiltDependencies");
   });
 
   it("is an error rather than a crash when the packaged checker cannot be located", async () => {
