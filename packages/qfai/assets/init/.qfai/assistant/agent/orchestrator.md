@@ -43,11 +43,11 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - .qfai/assistant/rule/test-layers.md (SSOT for hard coverage obligations)
 - <paths.specsDir>/decisions.md and open-questions.md (DEC rows and unresolved questions)
-- The affected BF/US/AC/EX story files, active contracts, work-log entries, stage evidence and current review packs
+- The affected BF/US/AC/EX story files, active contracts, stage evidence and current review packs
 
 ## Deliverables (MANDATORY)
 
@@ -55,10 +55,8 @@ specialization_tags:
 - Work Orders for each subagent (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
-- Evidence summary for `.qfai/evidence/`. Commit the current BF stage evidence,
-  Coverage Depth Matrix and durable decision records; leave reproducible run logs
-  under their configured retention policy. See
-  `rule/drift-protocol.md#which-evidence-is-committed`.
+- Evidence summary for `.qfai/evidence/`. The evidence stays local and is never
+  committed; see `rule/drift-protocol.md#evidence-stays-local`.
 
 ## Stop conditions
 
@@ -71,7 +69,7 @@ specialization_tags:
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Required evidence is present and committed when the stage contract requires it
+- [ ] Required evidence is present in the working tree for the reviewers
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 

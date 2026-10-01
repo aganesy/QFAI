@@ -22,6 +22,11 @@ A new change-request row in decisions.md is permitted without an earlier change 
 
 These exceptions do not authorize a downstream stage to rewrite an upstream row or a vendored rule.
 
+A change that touches no protected file needs no change request. A bugfix whose
+diff changes no file under `01_policy/`, `02_business-flow/` or
+paths.contractsDir appends no `Change request:` row. A row naming a story file
+the bugfix did not touch would state an upstream change that did not happen.
+
 ## Drift classes
 
 Intent drift means an approved obligation should change. Record the current obligation, the proposed behavior, realistic
@@ -43,7 +48,9 @@ Both classes use the same approval and owner-rerun path.
    only when the proposed change and affected set are approved as written. If the answer changes either, append a
    replacement row and mark the earlier row SUPERSEDED (by DEC-NNNN). A declined request becomes REJECTED. A WIP or DONE
    Change request: row is the in-force authorization that the drift gate reads; TODO is not authorization.
-4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it. A contract with a CON ID is selected by its full ID; a contract without one is selected by its repository-relative path. The owner updates the specification and its tests together, then validates the relevant flow.
+4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
+   A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
+   The owner updates the specification and its tests together, then validates the relevant flow.
 5. Recheck every dependent BF, AC, and EX test obligation and every affected contract reference. Rewrite tests and evidence where their former expectation is invalid. Report any uncovered obligation. No execution ledger, TC row, or status reset substitutes for this check.
 6. Complete the decision row by changing Status from WIP to DONE only after the owner artifact and dependent checks are complete. Record immutable completion evidence in the stage evidence file and cite the DEC ID. A second open request on the same artifact waits for the first outcome and is restated if its premise changed.
 
@@ -63,9 +70,9 @@ New scope adds product behavior or a quality bar the approved story tree and con
 
 ### Provenance and routing
 
-Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,
-a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten CON-API, CON-DB,
-or CON-UI references. A finding against a record names the record and stays advisory when the product and its evidence
+Every reviewer finding names either the governing AC, BR, or full contract ID, a shared rule, a concrete deliverable defect,
+a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten API, DB,
+or UI references. A finding against a record names the record and stays advisory when the product and its evidence
 remain sound. A false claim that work ran, or that a reviewer independently checked it, is an evidence defect and
 remains blocking.
 
@@ -79,9 +86,9 @@ places it in the queue the stage names. Repair the record to match the run; re-a
 review pack, leaving the earlier pack intact. If the run cannot be reconstructed honestly, treat the finding as a
 blocking evidence defect. Completion waits for the queue to drain.
 
-## Which evidence is committed
+## Evidence stays local
 
-Commit durable decision rows, envelope-deviation records under .qfai/evidence/decision/, and the evidence files a stage's completion contract requires on a fresh clone. Run logs and reports that can be reproduced may remain ignored. A gitignore negation makes a path visible to Git; the owner still stages and commits the evidence.
+Write stage evidence, run records and decision records under `.qfai/evidence/`. Git ignores that directory; never commit anything in it. Reviewers read the evidence in the working tree while the work is under review. What has to outlast the work goes into the story tree, the `decisions.md` and `open-questions.md` rows, and the tests.
 
 ## Line endings in the artifacts under review
 

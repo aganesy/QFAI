@@ -44,7 +44,7 @@ const storyFiles = new Map([
   ],
   [
     ".qfai/spec/03_contract/api/pay.yaml",
-    "x-qfai-rules:\n  - id: BR-0001\n    statement: Payment succeeds\n    examples: [EX-0001-0001-01]\n",
+    "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Payment succeeds\n    examples: [EX-0001-0001-01]\n",
   ],
 ]);
 
@@ -63,8 +63,8 @@ describe("story-tree core", () => {
       "glossary.md",
       "constraint.md",
     ]);
-    expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md", "structure.md"]);
-    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli", "design"]);
+    expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md"]);
+    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli"]);
     expect(STORY_TREE_ROOT_ENTRIES).not.toContain(".qfai/decisions");
     expect(STORY_FILES).not.toContain("01_Spec-retired.md");
     expect(STORY_FILES).toEqual(["01_User-story.md", "02_Acceptance-Criteria.md", "03_Example.md"]);
@@ -76,7 +76,7 @@ describe("story-tree core", () => {
     expect(hasLegacySpecPackEntries(["spec-0001"])).toBe(true);
     expect(hasLegacySpecPackEntries(["_policies"])).toBe(true);
     expect(hasStoryTreeEntries(["01_policy"])).toBe(true);
-    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(16);
+    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(15);
     expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toContain(
       "docs/contracts/contracts.md",
     );
@@ -90,6 +90,13 @@ describe("story-tree core", () => {
     expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toContain(
       "docs/spec/02_business-flow/business-flow-*/user-stories.md",
     );
+  });
+
+  // QFAI:EX-0001-0008-06
+  it("counts only the parent flow's stories when allocating a story ID", () => {
+    expect(
+      nextId("US", ["US-0001-0001", "US-0001-0002", "US-0001-0003", "US-0002-0007"], "BF-0001"),
+    ).toBe("US-0001-0004");
   });
 
   it("checks exact shapes, parent prefixes, and never fills an ID gap", () => {
@@ -119,6 +126,7 @@ describe("story-tree core", () => {
     });
   });
 
+  // QFAI:EX-0001-0008-04
   it("reserves IDs named by decision rows when allocating a story ID", () => {
     const files = new Map(storyFiles);
     files.set(
@@ -138,24 +146,20 @@ describe("story-tree core", () => {
       ["EX-0001-0001-01", "AC-0001-0001-01"],
     ]);
     expect(model.rules.map((rule) => [rule.id, rule.examples])).toEqual([
-      ["BR-0001", ["EX-0001-0001-01"]],
+      ["BR-0001-0001", ["EX-0001-0001-01"]],
     ]);
   });
 
-  it("reads rules from the contract layer's tech and structure files", () => {
+  it("reads rules from the contract layer's tech file", () => {
     const files = new Map(storyFiles);
     files.delete(".qfai/spec/03_contract/api/pay.yaml");
     files.set(
-      ".qfai/spec/03_contract/structure.md",
-      "# Structure\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | Payment succeeds | EX-0001-0001-01 |\n",
-    );
-    files.set(
       ".qfai/spec/03_contract/tech.md",
-      "# Tech\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0002 | The CLI runs | EX-0001-0001-01 |\n",
+      "# Tech\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0002 | The CLI runs | EX-0001-0001-01 |\n",
     );
 
     const model = buildStoryTreeModel(files);
-    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0001", "BR-0002"]);
+    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0001-0002"]);
   });
 
   it("retains malformed declarations so the validator can report their source", () => {
@@ -170,42 +174,52 @@ describe("story-tree core", () => {
     expect(model.acceptanceCriteria[0]?.id).toBe("AC-0001-0001-1");
   });
 
-  it("reads YAML, SQL, and Markdown rule declarations and keeps refs separate", () => {
+  it("reads YAML, SQL, and Markdown rule declarations", () => {
     expect(
       parseContractRules(
         "a.yaml",
-        "x-qfai-rules:\n  - id: BR-0001\n    statement: Pay\n    examples: [EX-0001-0001-01]\nx-qfai-rule-refs: [BR-0002]\n",
-      ).refs,
-    ).toEqual(["BR-0002"]);
+        "x-qfai-rules:\n  - id: BR-0001-0001\n    statement: Pay\n    examples: [EX-0001-0001-01]\n",
+      ).rules.map((rule) => rule.id),
+    ).toEqual(["BR-0001-0001"]);
     expect(
-      parseContractRules(
-        "a.sql",
-        "-- Rule BR-0002: Save\n-- Examples: EX-0001-0001-01\n-- Rule refs: BR-0001\n",
-      ).rules,
-    ).toEqual([{ id: "BR-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" }]);
+      parseContractRules("a.sql", "-- Rule BR-0001-0002: Save\n-- Examples: EX-0001-0001-01\n")
+        .rules,
+    ).toEqual([
+      { id: "BR-0001-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" },
+    ]);
     expect(
       parseContractRules(
         "a.md",
-        "## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003 | Show | EX-0001-0001-01 |\n\nRule refs: BR-0001\n",
+        "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0003 | Show | EX-0001-0001-01 |\n",
       ),
     ).toMatchObject({
-      rules: [{ id: "BR-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
-      refs: ["BR-0001"],
+      rules: [{ id: "BR-0001-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
     });
     expect(
       parseContractRules(
         "a.json",
         JSON.stringify({
-          "x-qfai-rules": [{ id: "BR-0004", statement: "Keep", examples: ["EX-0001-0001-01"] }],
-          "x-qfai-rule-refs": ["BR-0003"],
+          "x-qfai-rules": [
+            { id: "BR-0001-0004", statement: "Keep", examples: ["EX-0001-0001-01"] },
+          ],
         }),
       ).rules.map((rule) => rule.id),
-    ).toEqual(["BR-0004"]);
+    ).toEqual(["BR-0001-0004"]);
     expect(
-      parseContractRules("a.sql", "-- Rule BR-0005: Missing examples\nSELECT 1;\n").rules[0]
+      parseContractRules("a.sql", "-- Rule BR-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
         ?.examples,
     ).toEqual([]);
-    expect(parseContractRules("a.md", "## Rules\n\nNo table.\n").errors).not.toEqual([]);
+    expect(parseContractRules("a.md", "## Business rules\n\nNo table.\n").errors).not.toEqual([]);
+  });
+
+  // QFAI:EX-0001-0007-11
+  it("reports a row inserted above an existing row as that row's ID cell rewritten", () => {
+    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    const base = `${header}| DEC-0001 | First | Keep | TODO |\n`;
+    const head = `${header}| DEC-0002 | Inserted | Keep | TODO |\n| DEC-0001 | First | Keep | TODO |\n`;
+    expect(diffRecordTables(base, head, "decisions").rewritten).toContainEqual(
+      expect.objectContaining({ id: "DEC-0001", cell: "id" }),
+    );
   });
 
   it("checks table shape, status vocabulary, keyword force, and append-only diff", () => {
@@ -295,7 +309,7 @@ describe("story-tree core", () => {
     );
     files.set(
       ".qfai/spec/03_contract/api/returns.yaml",
-      "x-qfai-rules:\n  - id: BR-0002\n    statement: Return succeeds\n    examples: [EX-0002-0001-01]\n",
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: Return succeeds\n    examples: [EX-0002-0001-01]\n",
     );
     const model = buildStoryTreeModel(files, { contractsDir: ".qfai/spec/03_contract" });
     expect(resolveFlowScope(["BF-0001", "BF-0002", "../bad"], model)).toMatchObject({
@@ -307,7 +321,7 @@ describe("story-tree core", () => {
       flowIds: ["BF-0001"],
       invalidValues: [],
       storyIds: ["US-0001-0001"],
-      ruleIds: ["BR-0001"],
+      ruleIds: ["BR-0001-0001"],
     });
   });
 });

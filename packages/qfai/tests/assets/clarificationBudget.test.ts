@@ -19,5 +19,21 @@ describe("clarification and approval remain separate", () => {
       expect(triage).toContain("do not consume that clarification budget");
       expect(triage).toContain("A pre-triage answer to continue is not approval");
     });
+
+    it(`${tree}: the next-action question does not consume clarification budget`, async () => {
+      // It ends a turn that waits on the user and resolves no ambiguity, so an
+      // exhausted budget would otherwise leave that turn ending on a report.
+      const constitution = (await read(tree, "assistant/rule/constitution.md")).replace(
+        /\s+/g,
+        " ",
+      );
+      const exempt = constitution.slice(
+        constitution.indexOf("### What does not count"),
+        constitution.indexOf("Stop conditions:"),
+      );
+      expect(exempt).toContain("**The next-action question is exempt.**");
+      expect(exempt).toContain("resolves no ambiguity, so it is not a clarification");
+      expect(exempt).toContain("still put after the budget is exhausted");
+    });
   }
 });

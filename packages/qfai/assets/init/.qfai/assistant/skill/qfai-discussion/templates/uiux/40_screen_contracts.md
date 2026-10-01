@@ -56,6 +56,7 @@ Use one convention per surface consistently across the whole file so downstream
 
 ## Cross-references
 
-- Design direction (product intent, brand signals, anti-goals): `../04_Sources.md` — visual-prototyping surfaces only; a cli-only pack records none
+- Brand direction the user chose: `../01_Context.md#Design Direction` — visual-prototyping surfaces only; a cli-only pack records none
+- Reference registries (product intent, brand signals, anti-goals): `../04_Sources.md`
 - Sidecar manifest: `00_index.md`
 - Review handoff: `50_review_input_bundle.md`

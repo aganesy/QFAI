@@ -24,7 +24,7 @@ Required files:
 - `14_Review-Request.md`
 - `99_delta.md`
 
-UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
+Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 
 ## Rules
 
@@ -43,7 +43,7 @@ For UI-bearing packs, use:
 - `04_Sources.md` for trend translation and both reference registries
 - `uiux/40_screen_contracts.md`
 
-Discussion is exploration-first and must not choose a single visual winner or final design system. It records the design direction; `/qfai-sdd`'s `03_contract` step turns that record into root `DESIGN.md` and freezes it into `<paths.contractsDir>/design/DESIGN.md.lock.yaml`, and prototyping then iterates under the frozen tokens.
+Discussion is exploration-first and must not choose a single visual winner or final design system. It records the design direction; `/qfai-sdd`'s `common-design-md` step turns that record into root `DESIGN.md`, and prototyping then iterates under its tokens.
 
 ## `prototyping.yaml`
 
@@ -56,4 +56,4 @@ prototyping:
 
 Mode-tier fields (`recommended_mode` / `allowed_modes` / `mode_expectations`)
 are not supported. The single-thread evolution loop owns its iteration
-budget; see `.qfai/assistant/skill/qfai-prototyping/SKILL.md`.
+budget; see `.qfai/assistant/step/prototyping-loop/STEP.md`.

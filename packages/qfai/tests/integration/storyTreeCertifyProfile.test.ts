@@ -26,15 +26,15 @@ async function project(configuredLatest = ".qfai/report/validate.json"): Promise
   await put(
     root,
     ".qfai/spec/03_contract/ui/home.yaml",
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: [{id: home}]\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens: [{id: home}]\n",
   );
   await put(
     root,
     ".qfai/evidence/prototyping/prototyping.json",
     JSON.stringify({
       runId: "run-profile-gate",
-      uiContractsCovered: ["CON-UI-0001"],
-      frozenSurfaceUnion: ["CON-UI-0001"],
+      uiContractsCovered: ["UI-0001"],
+      frozenSurfaceUnion: ["UI-0001"],
       iterations: [],
     }),
   );
@@ -60,8 +60,8 @@ afterEach(async () => {
 });
 
 describe("certify selects the prototyping validation result", () => {
-  // QFAI:AC-0001-0049-01
-  // QFAI:EX-0001-0049-04
+  // QFAI:AC-0001-0047-03
+  // QFAI:EX-0001-0047-04
   it("uses a passing prototyping report despite a newer failing default pointer", async () => {
     const root = await project();
     await put(
@@ -82,7 +82,7 @@ describe("certify selects the prototyping validation result", () => {
     expect(result.stderr).not.toContain("reports 1 error");
   });
 
-  // QFAI:AC-0001-0049-01
+  // QFAI:AC-0001-0047-03
   it("requires the dedicated result even when the latest pointer looks passing", async () => {
     const root = await project();
     await put(

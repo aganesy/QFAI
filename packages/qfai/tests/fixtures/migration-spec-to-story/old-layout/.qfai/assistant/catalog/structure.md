@@ -1,5 +1,7 @@
 # Structure
 
-## Storage
+## Architecture
 
-Order records are stored behind the order service.
+| Layer  | Responsibility                                       | Depends on |
+| ------ | ---------------------------------------------------- | ---------- |
+| Orders | Stores order records and serves them to other layers | -          |

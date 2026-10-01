@@ -165,15 +165,13 @@ describe("check-readme-alignment.mjs", () => {
 });
 
 describe("README content the guard now keeps in sync", () => {
-  it("documents the steering surface, exit code 66 and the review.json evidence in both files", async () => {
+  it("documents exit code 66 and the review.json evidence in both files", async () => {
     const { readFile } = await import("node:fs/promises");
     const [root, pkg] = await Promise.all([
       readFile(path.join(REPO_ROOT, "README.md"), "utf-8"),
       readFile(path.join(REPO_ROOT, "packages/qfai/README.md"), "utf-8"),
     ]);
     for (const body of [root, pkg]) {
-      expect(body).toMatch(/\.qfai\/steering\//);
-      expect(body).toMatch(/worklog-entry\.schema\.md/);
       expect(body).toMatch(/66 \(license-verify failure\)/);
       expect(body).toMatch(/<screen>\.review\.json/);
     }

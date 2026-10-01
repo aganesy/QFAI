@@ -51,7 +51,8 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([iter])).toBeNull();
   });
 
-  // AC-0001-0120-02 behavior is exercised here; acceptance coverage belongs to integration.
+  // AC-0001-0116-02 behavior is exercised here; acceptance coverage belongs to integration.
+  // QFAI:EX-0001-0109-03
   it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"] as const)(
     "does not converge when %s is only strong",
     (axis) => {
@@ -166,13 +167,13 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([{ index: 1, commitSha: "b".repeat(40) }])).toBeNull();
   });
 
-  // QFAI:EX-0001-0127-01
+  // QFAI:EX-0001-0123-01
   it("shouldStop boundary at index === 9", () => {
     expect(shouldStop([baseIter({ index: 9 })])).toBe("max-iterations");
     expect(shouldStop([baseIter({ index: 8 })])).toBeNull();
   });
 
-  // QFAI:EX-0001-0120-04
+  // QFAI:EX-0001-0116-03
   it("shouldStop ignores any quantitative pass-rate fields", () => {
     // Negative assertion: convergence logic must depend ONLY on the
     // ordinal axes + lap empty + designMdViolations empty. Synthesize an
@@ -238,36 +239,36 @@ describe("shouldStopAcrossSpecs — UI contract AND convergence", () => {
     blockingFindings: ["home: the empty state is not represented"],
   });
 
-  // QFAI:EX-0001-0120-03
+  // QFAI:EX-0001-0116-02
   it("returns null when 2/3 pairs are converged and the 3rd has a finding open", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
   });
 
-  // QFAI:EX-0001-0120-03
+  // QFAI:EX-0001-0116-02
   it("returns converged when all 3 pairs are converged", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: convergedIter },
     ]);
     expect(result.stopReason).toBe("converged");
     expect(result.laggingUiContracts).toEqual([]);
   });
 
-  // QFAI:EX-0001-0120-04
+  // QFAI:EX-0001-0116-03
   it("names every lagging UI contract when convergence is not achieved", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
-      { uiContractId: "CON-UI-0013", screen: "page", latestIteration: laggingIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "UI-0013", screen: "page", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
-    expect(result.laggingUiContracts).toEqual(["CON-UI-0011", "CON-UI-0013"]);
+    expect(result.laggingUiContracts).toEqual(["UI-0011", "UI-0013"]);
   });
 });
 
@@ -352,7 +353,7 @@ describe("type guards", () => {
 });
 
 describe("constants", () => {
-  // QFAI:EX-0001-0127-02
+  // QFAI:EX-0001-0123-02
   it("MAX_ITERATIONS === 10 and MAX_ITERATION_INDEX === 9", () => {
     expect(MAX_ITERATIONS).toBe(10);
     expect(MAX_ITERATION_INDEX).toBe(9);

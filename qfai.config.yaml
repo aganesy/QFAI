@@ -8,8 +8,6 @@ paths:
   testsDir: tests
 validation:
   failOn: error
-  require:
-    specSections: []
   testStrategy:
     # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
     # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
@@ -33,6 +31,10 @@ validation:
     testFileExcludeGlobs: []
 output:
   validateJsonPath: .qfai/report/validate.json
+uiux:
+  # QFAI ships a command-line tool and renders no surface. What may appear in
+  # terminal output is settled by `.agents/rules/interface-clarity.md`.
+  surfacePaths: []
 prototyping:
   calibration:
     packPath: .qfai/evidence/calibration.yaml

@@ -3,13 +3,12 @@
 ## Criteria
 
 ```gherkin
-Feature: validate.json 入力
-
-# AC-0001-0064-01
-# Parent: US-0001-0064
-Scenario: validate.json 不在時のエラー
-  Given validate.json が存在しない
-  When `qfai report` を実行する
-  Then "qfai report: input file not found" エラーメッセージが表示される
-  And exit code 2 で終了する
+Feature: Per-unit reports
+  # AC-0001-0064-01
+  Scenario: Per-unit reports
+    Given validate.json exists
+    When `qfai report` runs
+    Then in the spec-pack layout, a report per spec is written in addition to report.md
+    And on the story tree, a report per business flow is written under `<outDir>/business-flow-NNNN/` in addition to report.md
+    And each contract in a flow's graph is named by the contract ID its file declares
 ```

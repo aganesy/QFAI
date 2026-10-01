@@ -1,20 +1,35 @@
-# Document schema: 02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md
+# Document schema: <specsDir>/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# Examples$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: The concrete examples of this story's acceptance criteria.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## Examples$"
           regex: true
-        description: Examples section.
-        allow_additional: true
+        description: One row per example, in ID order, each citing exactly one criterion of this story.
+        allow_additional: false
         tables:
           - min: 1
-            required_headers:
-              - EX-ID
-              - AC-Ref
-              - Input
-              - Expected
+            max: 1
+            required_headers: [EX-ID, AC-Ref, Input, Expected]
+        forbidden_text:
+          - pattern: '(?m)^[^|\s#]'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          # Input and Expected are plain values, not Gherkin steps.
+          - pattern: '(?m)^\|[^|\n]*\|[^|\n]*\|\s*(Given|When)\s'
+            regex: true
+          - pattern: '(?m)^\|[^|\n]*\|[^|\n]*\|(?:[^|\n\\]|\\.)*\|\s*Then\s'
+            regex: true

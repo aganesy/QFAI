@@ -2,9 +2,9 @@
  * Whether the cycle-0 frozen scope still exists.
  *
  * Cycle 0 records the screen set in `prototyping.json#frozenSurfaceUnion`, and
- * every later edit to it is lock drift — `qfai-prototyping/SKILL.md:120-123`
- * makes that exit 2. Correct as a drift rule: nobody should quietly widen the
- * frozen surface mid-loop.
+ * every later edit to it is lock drift, which the exit codes of the
+ * `prototyping-loop` step make exit 2. Correct as a drift rule: nobody should
+ * quietly widen the frozen surface mid-loop.
  *
  * But it was the only rule, and it only fires when the loop tries to move.
  * A product decision that RETIRES a screen while the loop is open leaves the

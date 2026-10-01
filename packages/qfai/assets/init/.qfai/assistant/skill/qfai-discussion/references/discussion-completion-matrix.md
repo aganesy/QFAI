@@ -56,7 +56,7 @@ Completion is blocked until all are true:
    framed as **deviate-from** inputs. Required whenever any classified surface —
    `primary_surface` **or** an entry in `secondary_surfaces` — is `web`, `mobile`,
    `desktop` or `mixed`; these are the visual-prototyping surfaces. They are what
-   `/qfai-sdd`'s `03_contract` step authors root `DESIGN.md` from. See `## CLI Packs` below.
+   `/qfai-sdd`'s `common-design-md` step authors root `DESIGN.md` from. See `## CLI Packs` below.
 2. The canonical `uiux/` family is complete: `00_index.md`, `40_screen_contracts.md`,
    `50_review_input_bundle.md`.
 3. Every screen contract in `40_screen_contracts.md` carries the full template schema.
@@ -64,7 +64,7 @@ Completion is blocked until all are true:
    design system is not finalized here (discussion is planner-first).
 5. `01_Context.md#Design Direction` names an adopted theme, what departs from it, and what stays
    ordinary. This is the one visual decision made here, because no later stage asks the user for
-   it: `/qfai-sdd`'s `03_contract` step authors tokens from whatever is recorded. A direction taken without the
+   it: `/qfai-sdd`'s `common-design-md` step authors tokens from whatever is recorded. A direction taken without the
    user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
 6. No forbidden legacy sidecar exists under `uiux/` (see
    `templates/uiux/00_index.md#Forbidden Legacy Files`).
@@ -80,9 +80,9 @@ entry in `secondary_surfaces` — is UI-bearing but is not a visual-prototyping 
 so conditions 1 and 5 above do not apply to it:
 
 - No brand registries required, and no root `DESIGN.md` downstream. `/qfai-prototyping`
-  rejects `cli`, so nothing ever reads a `visual.*` token value. `/qfai-sdd`'s `03_contract` step
-  skips the DESIGN.md freeze for a cli-only project, and
-  `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-031` for it.
+  rejects `cli`, so nothing ever reads a `visual.*` token value. `/qfai-sdd`'s `common-design-md` step
+  writes no `DESIGN.md` for a cli-only project, and
+  `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-033`/`-034` for it.
 - No design direction either: nothing downstream reads a theme for a surface that renders
   no tokens.
 - Conditions 2, 3, 4, 6 and 7 apply unchanged: all three canonical `uiux/` sidecars, the

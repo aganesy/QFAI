@@ -11,7 +11,8 @@ The theme comes from a published theme. An agent choosing twelve colours
 produces a palette nobody designed; adopting one produces a palette someone
 did, and the brand accent is what departs from it.
 
-`<paths.contractsDir>/tech.md` names the CSS framework and component
+The `CSS framework` and `Component catalogue` rows of
+`<paths.contractsDir>/tech.md#stack` name the CSS framework and the primary
 catalogue. Root `DESIGN.md` owns the adopted theme. `qfai.config.yaml` carries
 `uiux.registries`, the name-to-URL map a tool resolves a component name against.
 

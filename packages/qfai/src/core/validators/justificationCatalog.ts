@@ -1,19 +1,19 @@
 /**
  * Reviewer-Gate finding-code justification catalog.
  *
- * The eight registered codes MUST carry a mandatory non-empty
+ * The seven registered codes MUST carry a mandatory non-empty
  * `justification:` field when emitted by a Reviewer subagent.
  * `qfai validate` ingestion rejects any catalog finding whose
  * `justification:` is empty / whitespace-only (advisory-failing,
- * mirrors the R-WORKLOG-DRIFT family pattern enforced by
- * `reviewerJustification.ts`).
+ * the same rule `reviewerJustification.ts` enforces for
+ * R-REJECTED-READOPT).
  *
- * IMPORTANT — catalog scope: this is the CLOSED 8-code mandatory-
+ * IMPORTANT — catalog scope: this is the CLOSED 7-code mandatory-
  * justification set. Warning-class auxiliary codes that share a name
  * prefix (e.g. `R-AUTOPILOT-POLICY-WIDENED` emitted by
  * `autopilotPolicy.ts`) are NOT part of this catalog: they are
  * advisory-only signals and do not participate in the empty-
- * justification advisory-failing contract. Adding a 9th code here is a
+ * justification advisory-failing contract. Adding an 8th code here is a
  * spec-governance change (extends the closed REQ contract) and MUST
  * be done in lockstep with the owning spec and reviewer SSOTs.
  *
@@ -42,9 +42,8 @@
  *
  * Notes:
  *   - The catalog STORES membership only, never severity. Each code's
- *     own severity belongs to the detector that emits it (e.g.
- *     `designMdPatchZone.ts` emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` at
- *     `warning`). The empty-`justification:` ingestion rejection in
+ *     own severity belongs to the detector that emits it. The
+ *     empty-`justification:` ingestion rejection in
  *     `reviewerJustification.ts` is ALWAYS `error` for every catalog
  *     code, because what it reports is the missing justification, not
  *     the underlying finding. Entries therefore carry no severity
@@ -60,7 +59,7 @@
  *     and a `Set<string>` (for O(1) membership checks).
  *
  * This SSOT is also referenced by `reviewerJustification.ts`, which
- * extends its existing `ADVISORY_FAILING_CODES` set with this 8-code
+ * extends its existing `ADVISORY_FAILING_CODES` set with this 7-code
  * catalog so the validate-ingestion rejection path covers every
  * catalog code uniformly.
  */
@@ -73,7 +72,7 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
   {
     code: "R-AUTOPILOT-POLICY-MISSING",
     description:
-      "SKILL.md is missing the `## Default Autopilot Policy` section required by the skill governance contract (3 named buckets: auto-decide / ask-user / hard-required).",
+      "The shared operating baseline is missing its `## Default Autopilot Policy (Shared)` section or one of its 3 named buckets (auto-decide / ask-user / hard-required), or a SKILL.md does not name a hard-required input declared for its skill.",
   },
   {
     code: "R-HANDOFF-SCHEMA-DRIFT",
@@ -84,11 +83,6 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-EVIDENCE-MUTATION-UNLOGGED",
     description:
       "An iter-NN evidence mutation call-site (rename / unlink / overwrite) is not paired with a mutation-log writer call (logEvidenceMove / logEvidenceDelete / logEvidenceOverwrite). Scope: repo-source — the detector ships in the published package but resolves `packages/qfai/**` paths under the validated root, so it returns an empty result in a consuming project's install (no package source there) and effectively fires only inside the QFAI repository. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract applies in full to a Reviewer subagent that reports it by hand.",
-  },
-  {
-    code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    description:
-      "A DESIGN.md patch was applied outside the declared patch zone. The detector emits this finding at warning severity; it still requires a non-empty justification, and an empty one is rejected at error like every other catalog code.",
   },
   {
     code: "R-PACK-LOCATION-DRIFT",

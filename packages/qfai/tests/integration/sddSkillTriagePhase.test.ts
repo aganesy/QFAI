@@ -33,7 +33,10 @@ describe("qfai-sdd triage surface", () => {
   });
 
   it("locates classification and decomposition at their shipped paths", async () => {
-    const content = await skill();
+    const content = await readFile(
+      path.join(skillRoot, "..", "..", "step", "sdd-triage", "STEP.md"),
+      "utf-8",
+    );
     expect(content).toContain(".qfai/assistant/rule/change-classification.md");
     expect(content).toContain("references/requirements-decomposition.md");
   });
@@ -55,7 +58,7 @@ describe("qfai-sdd triage surface", () => {
     }
     expect(content).toContain("In --auto, ask no question");
     expect(content).toContain("stop before their dependent writes");
-    expect(content).toContain("consultation-needed");
+    expect(content).toContain("report every pending row with its operation and target");
   });
 
   it("traces companion changes through contracts", async () => {

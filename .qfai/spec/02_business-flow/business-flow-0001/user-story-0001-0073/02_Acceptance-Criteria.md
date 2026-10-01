@@ -3,50 +3,34 @@
 ## Criteria
 
 ```gherkin
-Feature: ATDD Reviewer Gate
+Feature: ATDD Scaffold Bulk Skeleton Generation
+  # AC-0001-0073-01
+  Scenario: A story gets one skeleton per criterion
+    Given a story `US-NNNN-NNNN` with its ACs
+    When `qfai atdd scaffold --story US-NNNN-NNNN` runs with no pre-existing skeletons
+    Then for every AC of the story a file `<testsDir>/integration/<US-ID>/<AC-ID>.test.<ext>` is written carrying `QFAI:AC-NNNN-NNNN-NN`, and `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning), keyed by the AC ID, for each file whose placeholder is still present.
 
-# AC-0001-0073-01
-# Parent: US-0001-0073
-Scenario: Forbidden Reference Enforcement
-  Given generated E2E and API test files
-  When the Reviewer checks them
-  Then zero `QFAI:SPEC-XXXX:TC-YYYY` annotations exist in `tests/e2e/**` or `tests/api/**`.
+  # AC-0001-0073-02
+  Scenario: Re-running the scaffold overwrites nothing
+    Given a story or flow skeleton whose TODO marker has been replaced with a real assertion
+    When `qfai atdd scaffold --story US-NNNN-NNNN` or `--flow BF-NNNN` is re-run for that scope
+    Then the existing file is not overwritten and no new file is written
 
-# AC-0001-0073-02
-# Parent: US-0001-0073
-Scenario: Required acceptance-test gates and handoff
-  Given an ATDD run scoped to a business flow
-  When the run reaches completion review
-  Then preflight, test design, observable RED or falsifiability, scoped validation, and independent review have recorded evidence
-  And a missing required gate or unresolved coverage gap prevents a PASS handoff.
+  # AC-0001-0073-03
+  Scenario: ATDD Scaffold Emits a Business-Flow Skeleton
+    Given a project on the story tree and a business flow `BF-NNNN` it defines
+    When `qfai atdd scaffold --flow BF-NNNN` runs with no pre-existing skeleton for that flow
+    Then one file `<testsDir>/e2e/<BF-ID>.test.<ext>` is written carrying `QFAI:BF-NNNN`; `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning), keyed by the BF ID, while its placeholder is still present; and a second run writes nothing.
 
-# AC-0001-0073-03
-# Parent: US-0001-0073
-Scenario: Evidence File Completeness
-  Given ATDD completion
-  When the evidence file is checked
-  Then it contains all required sections: Objective, Inputs, Decisions, Work performed, Commands, Volume estimate, Coverage checklist, Work Orders, Execution logs, Gaps, Final status.
+  # AC-0001-0073-04
+  Scenario: Invalid scaffold targets write nothing
+    Given neither or both of `--story` and `--flow` are given, an ID is malformed, or an ID names nothing the tree defines
+    When `qfai atdd scaffold` runs
+    Then the command exits 2 and writes nothing, and `--spec` exits 2 with a message naming `--story` and `--flow`.
 
-# AC-0001-0073-04
-# Parent: US-0001-0073
-Scenario: Reviewer Independence
-  Given the ATDD workflow
-  When the Reviewer gate runs
-  Then the Reviewer is a different agent than the test implementers and returns only PASS or REVISE.
-  And it returns REVISE naming an in-scope BF that lacks an E2E test.
-
-# AC-0001-0073-05
-# Parent: US-0001-0073
-Scenario: Scoped Completion Gate Runs Per Business Flow
-  Given a project on the story tree
-  When `/qfai-atdd` reaches its completion gate
-  Then it runs `qfai validate --profile atdd --fail-on error --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
-
-# AC-0001-0073-06
-# Parent: US-0001-0073
-Scenario: Undeclared ATDD annotation is an error
-  Given a test annotation names a BF, AC, or EX ID absent from the story tree
-  When `qfai validate` scans the configured test files
-  Then it reports an error naming the undeclared ID and the file
-  And an annotation naming a defined ID raises no undeclared-reference finding.
+  # AC-0001-0073-05
+  Scenario: An unfilled placeholder escalates to an error
+    Given an AC or BF skeleton whose placeholder remains unremoved across 3 `qfai validate` cycles (the `atdd.scaffoldEscalateCycles` default)
+    When the 3rd validation cycle runs
+    Then `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error for that AC or BF ID (configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`).
 ```

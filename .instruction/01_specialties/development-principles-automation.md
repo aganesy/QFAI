@@ -5,18 +5,18 @@ dependencies: [development-principles-checklist.md, development-principles-metri
 version: 1.0.0
 ---
 
-# 品質自動化ガイド
+# Quality Automation Guide
 
-開発原則の測定・自動化で見るポイント。
+What to look at when measuring and automating the development principles.
 
-## 自動チェックの優先度
+## Priority of Automated Checks
 
-1. Lint/Format: ESLint・Prettier を必ず通す。
-2. 型: `pnpm check-types` でビルド前に型崩れを検知。
-3. テスト: 単体/統合/E2E を CI で分けて実行し、失敗時は原因特定まで止める。
-4. メトリクス: カバレッジ・パフォーマンス・バンドルサイズの変化を監視。
+1. Lint/Format: Always pass ESLint and Prettier.
+2. Types: Catch type breakage before the build with `pnpm check-types`.
+3. Tests: Run unit, integration and E2E tests as separate CI steps, and on failure stop until the cause is identified.
+4. Metrics: Watch changes in coverage, performance and bundle size.
 
-## 運用
+## Operation
 
-- 自動化で検知した問題はチケット化し、再発防止策（ルール化・サンプル化）を残す。
-- 長時間かかるジョブはキャッシュや差分実行を検討する。
+- Turn a problem caught by automation into a ticket, and leave a measure to prevent recurrence (a rule or an example).
+- For long-running jobs, consider caching or incremental execution.

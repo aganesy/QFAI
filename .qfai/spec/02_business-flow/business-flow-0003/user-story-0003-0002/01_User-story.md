@@ -1,17 +1,9 @@
-# US-0003-0002: ディレクトリ構造診断
+# US-0003-0002: Directory structure diagnosis
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: `qfai doctor` checks that the directories the configuration names exist, resolving each from its `paths.*` key in `qfai.config.yaml` — `paths.specsDir`, `paths.contractsDir` and `paths.discussionDir` among them
-- Non-goals: ディレクトリの自動作成
+As an operator, I want `qfai doctor` to check that each directory the configuration names exists, resolving it from its `paths.*` key in `qfai.config.yaml` (`paths.specsDir`, `paths.contractsDir` and `paths.discussionDir` among them), so that a missing directory is reported before a command that needs it fails.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0006/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0006/02_User-stories.md#us-0006-0002`
+- Creating missing directories automatically.

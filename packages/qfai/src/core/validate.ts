@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
@@ -8,14 +8,20 @@ import {
   flowScopeContainsId,
   type FlowScope,
 } from "./flowScope.js";
-import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
+import {
+  hasLegacySpecPackEntries,
+  listLegacySpecPackFiles,
+  oldLayoutMessage,
+} from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
+import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
+import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
 import { issue } from "./validators/utils.js";
 import type {
   Issue,
@@ -30,10 +36,10 @@ import { validateContracts, validateUiContractParse } from "./validators/contrac
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
-import { validateStoryTreeCoverageDepth } from "./validators/storyTreeCoverageDepth.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
+import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import {
@@ -49,8 +55,6 @@ import {
 import {
   detectPlatform,
   validateAgentDefinition,
-  validateBpApDb,
-  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -75,16 +79,13 @@ import {
   runCanonicalUixValidators,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
-  validateWorklogSurface,
   validateAssistantTreeMigration,
   validateSkillDocReferences,
   validateReviewerJustification,
   validateReviewerGate,
   detectMockHrefDrift,
-  validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
-  validateGrillingTrace,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   stubSourceFilePattern,
@@ -93,6 +94,7 @@ import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
 import { atddAcceptanceLayerFilter, atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
+import { isEnoent } from "./fs/errno.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
 const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
@@ -124,6 +126,7 @@ export async function validateProject(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
+  const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
     let entries: string[] = [];
     try {
@@ -132,14 +135,14 @@ export async function validateProject(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     if (hasLegacySpecPackEntries(entries)) {
-      oldLayoutRoot = candidate;
-      break;
+      oldLayoutRoot ??= candidate;
+      oldLayoutFiles.push(...(await listLegacySpecPackFiles(root, candidate, entries)));
     }
   }
   if (oldLayoutRoot) {
     const layoutIssue = issue(
       "QFAI-LAYOUT-001",
-      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-spec-to-story before validation.`,
+      oldLayoutMessage(oldLayoutRoot, oldLayoutFiles),
       "error",
       oldLayoutRoot,
       "storyTree.oldLayout",
@@ -201,7 +204,11 @@ export async function validateProject(
 
 function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
   if (!scope || finding.code === "QFAI-FLOW-005") return true;
-  if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
+  if (
+    !finding.code.startsWith("QFAI-STORY-") &&
+    finding.code !== "QFAI-CONTRACT-034" &&
+    finding.code !== "QFAI-DOCSCHEMA-001"
+  ) {
     return true;
   }
   if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
@@ -245,7 +252,7 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
       // the configured skills directory. Listing only the agents tree for them
       // left a FIFO at a routed `SKILL.md` blocking the run forever with the
       // `QFAI-LINK-001` that names it already in hand.
-      return [skillsRelative, AGENTS_RELATIVE];
+      return [skillsRelative, STEP_DIR_REL, AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
     default:
@@ -339,38 +346,45 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
     return [
       issue(
         "QFAI-TOOL-002",
-        `このプロジェクトは qfai を依存として宣言していますが、実行されているのは ` +
-          `${located.packageDir} の別の copy です。宣言が指すディレクトリの外から解決されて` +
-          `いるため、どの版が gate をかけたかはこのプロジェクトの lockfile が決めていません。` +
-          `npx が bare name を親ディレクトリ方向に探索した結果、別のチェックアウト ` +
-          `(別ブランチ・別 lockfile) の qfai か、npx が黙って取得した qfai@latest が` +
-          `走っています。`,
+        `This project declares qfai as a dependency, but the copy that is running is a ` +
+          `different one at ${located.packageDir}. It was resolved from outside the ` +
+          `directory the declaration points to, so this project's lockfile does not decide ` +
+          `which version gated the run. The copy is either the qfai of another checkout ` +
+          `(another branch or lockfile) or a qfai@latest that npx fetched silently. Another ` +
+          `checkout's copy is reached through a parent directory's node_modules, or through ` +
+          `a node_modules that is a link to that checkout's.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "この作業ツリーで `npm ci` / `pnpm install` を実行してから再実行してください。" +
-          "グローバルインストールを意図している場合は、そのプロジェクトから qfai の依存宣言を" +
-          "外してください — 宣言と実行の食い違いが、この finding が報告している状態です。",
+        "If this working tree's node_modules is a link to another checkout's, remove the " +
+          "link itself, not what it points to. Then run `npm ci` / `pnpm install` in this " +
+          "working tree and run again. " +
+          "If a global install is intended, remove the qfai dependency declaration from " +
+          "this project — a declaration that disagrees with the running copy is the " +
+          "state this finding reports.",
       ),
     ];
   }
   return [
     issue(
       "QFAI-TOOL-001",
-      `実行中の qfai (${located.packageDir}) は検証対象のプロジェクト root ` +
-        `(${root}) の外から解決されています。このプロジェクトは qfai を依存として` +
-        `宣言していないため、グローバルインストールか npx による取得が唯一の実行経路で、` +
-        `いずれも意図した選択です。宣言と実行が食い違う場合は別に QFAI-TOOL-002 で` +
-        `報告されます。`,
+      `The running qfai (${located.packageDir}) was resolved from outside the project root ` +
+        `being validated (${root}). No qfai dependency declaration of this project was ` +
+        `answered by another copy, so the copy was reached in a way the project allows: ` +
+        `a parent directory's node_modules, a global install or an npx fetch. A mismatch ` +
+        `between the declaration and the running copy is reported separately as ` +
+        `QFAI-TOOL-002.`,
       "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",
       [located.packageDir],
       "canonical",
-      "意図した解決であれば無視して構いません。そうでなければ、この作業ツリーで " +
-        "`npm ci` / `pnpm install` を実行してから再実行してください。",
+      "If this resolution is intended, ignore this finding. Otherwise, if this working " +
+        "tree's node_modules is a link to another checkout's, remove the link itself, not " +
+        "what it points to. Then run `npm ci` / `pnpm install` in this working tree and " +
+        "run again.",
     ),
   ];
 }
@@ -386,13 +400,13 @@ function buildUnusedPlatformIssues(
   return [
     issue(
       "QFAI-PLATFORM-003",
-      `--platform (${platformOption}) は profile "${profile}" では参照されません。`,
+      `--platform (${platformOption}) is not used by profile "${profile}".`,
       severity,
       undefined,
       "platformDetection.unusedPlatformOption",
       [platformOption],
       "canonical",
-      "platform 依存の検証が必要な場合は --profile prototyping / verify / full / saas-package を指定してください。不要であれば --platform を外してください。",
+      "If you need platform-dependent validation, pass --profile prototyping / verify / full / saas-package. Otherwise remove --platform.",
     ),
   ];
 }
@@ -506,16 +520,11 @@ async function runStoryProfileValidators(
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
+    ...(await validateDocumentSchema(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
     ...(await validateSddDesignContractReadiness(root, config)),
-    ...(await validateGrillingTrace(root, {
-      subjects: ["flow"],
-      flowScope: flowScope ? new Set(flowScope.flowIds) : undefined,
-    })),
-    ...(await validateContractSsotModules(root, config)),
-    ...(await validateWorklogSurface(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
@@ -532,12 +541,6 @@ async function runStoryProfileValidators(
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
-    ...(await validateStoryTreeCoverageDepth(
-      root,
-      model,
-      flowScope,
-      resolvePath(root, config, "testsDir"),
-    )),
     ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
     ...(await validateTestTodoStubs(root, config, {
       ...acceptanceStubScan(root, config),
@@ -549,7 +552,6 @@ async function runStoryProfileValidators(
     ...(includeDrift ? await validateStoryTreeDrift(root, config, "tdd") : []),
     ...(await validateTestTodoStubs(root, config)),
     ...(includeContracts ? await validateContracts(root, config) : []),
-    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
   switch (profile) {
     case "sdd":
@@ -566,10 +568,11 @@ async function runStoryProfileValidators(
         dedupeStoryFindings([
           ...(await validateRepositoryHygiene(root, config)),
           ...(await validateSkillsIntegrity(root, config)),
+          ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config, "all")),
           ...(await sdd(false)),
-          ...(await runPrototypingValidators(root, config, timings, platformOption)),
+          ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
           ...(await validatePrototypingSkill(root, config)),
@@ -612,7 +615,7 @@ async function runSaasPackage(
     timings,
     platformOption,
   );
-  return runSaasPackageProfile(root, config, prototypingIssues);
+  return runSaasPackageProfile(root, prototypingIssues);
 }
 
 async function runDiscussionValidators(
@@ -628,9 +631,7 @@ async function runDiscussionValidators(
     // from `npx qfai init`, from a hand-edit, or from an earlier pass of the
     // pipeline — and this is the earliest gate that can see whether it parses.
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
-    // Phase 0 authors or freezes anything. Only the parse half — the lock
-    // comparison is
-    // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
+    // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
@@ -639,14 +640,6 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
-    // `QFAI-GRILL-001` (warning) on this run's own session record. The stage
-    // names `--profile discussion` as its completion gate, so a run that wrote
-    // no record could otherwise finish its own gate without the finding. The
-    // The discussion profile and full run both inspect discussion evidence.
-    ...(await validateGrillingTrace(root, {
-      subjects: ["discussion"],
-      discussionDir: config.paths.discussionDir,
-    })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
@@ -684,8 +677,8 @@ function reviewArtifactsScope(
  * The prototyping issue set at its validators' declared severity.
  *
  * `full` / `verify` call this one. The exploration relaxation belongs to the
- * prototyping profile, not to this validator group: its trigger is a file
- * committed to the repository under test
+ * prototyping profile, not to this validator group: its trigger is a local
+ * file in the working tree under test
  * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
  * the project leaves the prototyping stage, and the last explicit mode is
  * inherited forward — so applying it here let an abandoned exploration loop
@@ -701,12 +694,9 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    // Second-wave reviewer-gate findings (prototyping
-    // surface). Both detectors no-op when their gating files are
-    // absent (consumer repo without the validator source / without a
-    // DESIGN.md.backup snapshot), so the prototyping profile stays
-    // safe to run on freshly-bootstrapped projects.
-    ...(await validateDesignMdPatchZone(root, config)),
+    // Reviewer-gate finding on the prototyping surface. The detector
+    // no-ops in a consumer repo without the validator source, so the
+    // prototyping profile stays safe to run on a fresh project.
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
@@ -715,7 +705,7 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDesignContractReadiness(root, config)),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validatePrototypingArtifactRefIntegrity(root)),
     ...(await validateSpecIdLinkage(root, config)),
     ...(await validateFrozenSurfaceReachability(root, config)),
     // `QFAI-PROT-311` — delegationMap entries must name a role from the
@@ -725,12 +715,53 @@ async function runPrototypingValidators(
   ];
 }
 
+/** The findings that say a prototyping output is missing from the checkout. */
+const EVIDENCE_PRESENCE_CODES: ReadonlySet<string> = new Set([
+  "QFAI-PROT-001",
+  "QFAI-UIE-001",
+  "QFAI-UIE-002",
+]);
+
+/**
+ * The prototyping issue set as `full` / `verify` report it.
+ *
+ * The prototyping outputs are local and untracked, so a fresh checkout, which
+ * is where CI runs, has no `.qfai/evidence/prototyping/`. With that directory
+ * absent, prototyping was not run in this checkout and the presence gates have
+ * nothing to check. The `prototyping` and `saas-package` profiles do not go
+ * through here and keep them.
+ */
+async function runPrototypingValidatorsForCi(
+  root: string,
+  config: ConfigLoadResult["config"],
+  timings: TimingsSink,
+  platformOption?: string,
+): Promise<Issue[]> {
+  const issues = await runPrototypingValidators(root, config, timings, platformOption);
+  if (await evidenceDirectoryExists(root)) return issues;
+  return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
+}
+
+/**
+ * Whether the prototyping evidence directory may hold output. Only a missing
+ * path counts as absent: one that cannot be read is treated as present, so the
+ * presence gates keep running rather than hide behind a permission error.
+ */
+async function evidenceDirectoryExists(root: string): Promise<boolean> {
+  try {
+    await stat(path.join(root, PROTOTYPING_EVIDENCE_REL));
+    return true;
+  } catch (error) {
+    return !isEnoent(error);
+  }
+}
+
 /**
  * The prototyping issue set as the `prototyping` (and `saas-package`) profile
  * reports it.
  *
  * Prototyping-mode relaxation: under `mode: exploration` the
- * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030) downgrade
  * error → warning. Schema / path / license gates stay hard error.
  * The mode is read from `prototyping.json#mode` written by iterate
  * at cycle 0 (absent → legacy "convergence" interpretation).
@@ -858,7 +889,6 @@ async function runUiuxValidators(
     () => validateDesignToken(root, config),
     () => validateHtmlMock(root, platform, config, htmlMockTiming),
     () => validateMermaidScreenFlow(root, config),
-    () => validateBpApDb(root, config),
     () => validateUiDefinitionConsistency(root, config),
     () => validateResearchSummary(root, config),
     () => validateAgentDefinition(root, config),
@@ -884,9 +914,31 @@ async function validatePrototypingSkill(
   const skillsDir = resolvePath(root, config, "skillsDir");
   const prototypingSkillPath = path.join(skillsDir, "qfai-prototyping", "SKILL.md");
   const prototypingSkillContent = await readSafe(prototypingSkillPath);
-  return prototypingSkillContent.length > 0
-    ? validatePrototypingSkillContent(prototypingSkillContent).issues
-    : [];
+  if (prototypingSkillContent.length === 0) {
+    return [];
+  }
+  const stepBodies = await readPrototypingStepBodies(root);
+  return validatePrototypingSkillContent([prototypingSkillContent, ...stepBodies].join("\n"))
+    .issues;
+}
+
+/**
+ * The bodies of the `prototyping-*` steps, in name order. The skill's procedure
+ * lives in its steps, so the content checks read the parent and its steps as
+ * one document. A missing step directory yields no bodies, and the checks then
+ * report what the parent alone lacks.
+ */
+async function readPrototypingStepBodies(root: string): Promise<string[]> {
+  const stepDir = path.join(root, ".qfai", "assistant", "step");
+  let names: string[];
+  try {
+    names = await readdir(stepDir);
+  } catch (error) {
+    if (isEnoent(error)) return [];
+    throw error;
+  }
+  const stepNames = names.filter((name) => name.startsWith("prototyping-")).sort();
+  return Promise.all(stepNames.map((name) => readSafe(path.join(stepDir, name, "STEP.md"))));
 }
 
 /**

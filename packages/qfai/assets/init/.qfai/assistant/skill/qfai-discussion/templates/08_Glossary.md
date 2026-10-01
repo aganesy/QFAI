@@ -4,9 +4,12 @@
 
 ## Term Definitions
 
-| Term     | Definition | Context | Source   |
-| -------- | ---------- | ------- | -------- |
-| TERM-001 | TBD        | <where> | SRC-0001 |
+> `/qfai-sdd` carries each term and abbreviation into the story tree's
+> `glossary.md` as a term and its definition; context and source stay here.
+
+| Term   | Definition | Context | Source   |
+| ------ | ---------- | ------- | -------- |
+| <term> | TBD        | <where> | SRC-0001 |
 
 ## Abbreviations
 

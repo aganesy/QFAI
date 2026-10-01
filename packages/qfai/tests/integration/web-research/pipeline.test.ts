@@ -26,7 +26,7 @@ async function readSkill(): Promise<string> {
 }
 
 describe("web-research pipeline", () => {
-  // QFAI:EX-0001-0183-01
+  // QFAI:EX-0001-0176-01
   it("defines 8 pipeline stages in order: search→rank→fetch→extract→sanitize→cache→verify→cite", async () => {
     const content = await readSkill();
     const stages = ["search", "rank", "fetch", "extract", "sanitize", "cache", "verify", "cite"];
@@ -54,33 +54,33 @@ describe("web-research pipeline", () => {
     expect(content).toMatch(/citation/i);
   });
 
-  // QFAI:EX-0001-0183-03
+  // QFAI:EX-0001-0176-03
   it("specifies zero-result handling when no web sources found", async () => {
     const content = await readSkill();
     expect(content).toMatch(/no\s+(web\s+)?sources?\s+found|zero[_\s-]?result/i);
   });
 
-  // QFAI:EX-0001-0183-02
+  // QFAI:EX-0001-0176-02
   it("specifies fetch failure isolation per URL", async () => {
     const content = await readSkill();
     expect(content).toMatch(/fetch\s+fail(ure)?/i);
     expect(content).toMatch(/partial\s+result|isolat/i);
   });
 
-  // QFAI:EX-0001-0184-01
+  // QFAI:EX-0001-0177-01
   it("references MCP stdio transport for Brave Search", async () => {
     const content = await readSkill();
     expect(content).toMatch(/brave\s+search/i);
     expect(content).toMatch(/stdio|mcp/i);
   });
 
-  // QFAI:EX-0001-0184-02
+  // QFAI:EX-0001-0177-02
   it("references MCP HTTP transport support", async () => {
     const content = await readSkill();
     expect(content).toMatch(/http\s+transport|http[_\s-]?based\s+mcp|streamable[_\s-]?http/i);
   });
 
-  // QFAI:EX-0001-0184-05
+  // QFAI:EX-0001-0177-05
   it("cross-agent MCP templates exist for at least 2 of 3 agent formats", async () => {
     const braveDir = path.join(mcpTemplateDir, "brave-search");
     const files = await fg(["**/*"], { cwd: braveDir, absolute: false }).catch(() => []);
@@ -91,25 +91,42 @@ describe("web-research pipeline", () => {
     expect(found.length).toBeGreaterThanOrEqual(2);
   });
 
-  // QFAI:EX-0001-0183-06
+  // QFAI:EX-0001-0177-07
+  it("configures no MCP template for SSE transport", async () => {
+    const files = await fg(["**/*"], { cwd: mcpTemplateDir, absolute: true, dot: true });
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(await readFile(file, "utf-8"), file).not.toMatch(/\bsse\b/i);
+    }
+  });
+
+  // QFAI:EX-0001-0176-06
   it("specifies conservative concurrency defaults max_threads=2", async () => {
     const content = await readSkill();
     expect(content).toMatch(/max[_\s-]?threads\s*[=:]\s*2/i);
+    expect(content).toMatch(/\|\s*max_depth\s*\|\s*2\s*\|/i);
   });
 
-  // QFAI:EX-0001-0183-04
+  // QFAI:EX-0001-0176-04
   it("specifies cache key derivation as hash(URL+etag)", async () => {
     const content = await readSkill();
     expect(content).toMatch(/hash\s*\(\s*url\s*\+\s*etag\s*\)|hash\(url\+etag\)/i);
   });
 
-  // QFAI:EX-0001-0183-05
+  // QFAI:EX-0001-0176-05
   it("specifies cache staleness with 24h default TTL", async () => {
     const content = await readSkill();
     expect(content).toMatch(/24\s*h(our)?|ttl.*24|staleness/i);
   });
 
-  // QFAI:EX-0001-0184-06
+  // QFAI:EX-0001-0176-07
+  it("re-fetches only entries older than the 24h default TTL", async () => {
+    const content = await readSkill();
+    expect(content).toContain("Default TTL: **24 hours**");
+    expect(content).toContain("Entries older than TTL are marked stale and re-fetched");
+  });
+
+  // QFAI:EX-0001-0177-06
   it("Firecrawl template documents both hosted and local npx modes", async () => {
     const firecrawlDir = path.join(mcpTemplateDir, "firecrawl");
     const files = await fg(["**/*"], { cwd: firecrawlDir, absolute: false }).catch(() => []);

@@ -5,8 +5,8 @@
  * sunset literal), TC-0004-0025 (W-USER-EDIT-PRESERVED info pass-through).
  */
 // QFAI:EX-0001-0043-01
-// QFAI:EX-0001-0047-01
-// QFAI:EX-0001-0048-02
+// QFAI:EX-0001-0045-01
+// QFAI:EX-0001-0046-02
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -20,7 +20,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seed4LayerTree(root: string): Promise<void> {
-  for (const layer of ["rule", "skill", "agent", "prompt"]) {
+  for (const layer of ["rule", "skill", "step", "agent", "prompt"]) {
     const dir = path.join(root, ".qfai", "assistant", layer);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, ".gitkeep"), `# ${layer}\n`, "utf-8");
@@ -44,6 +44,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0015: 4-layer enum guard
+  // QFAI:EX-0001-0012-05
   it("TC-0004-0015: reports a non-canonical layer dir", async () => {
     const root = await newRoot("treemig-enum");
     try {
@@ -101,6 +102,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
+  // QFAI:EX-0001-0043-01
   it("TC-0004-0022 (severity): D-DEPRECATED-PATH reports at error", async () => {
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
     const root = await newRoot("treemig-severity");
@@ -141,7 +143,8 @@ describe("assistantTreeMigration validator", () => {
     }
   });
 
-  it("allows skill.local and reports a legacy catalog directory", async () => {
+  // QFAI:EX-0001-0043-01
+  it("allows step and skill.local and reports a legacy catalog directory", async () => {
     const root = await newRoot("treemig-catalog");
     try {
       await seed4LayerTree(root);
@@ -155,6 +158,9 @@ describe("assistantTreeMigration validator", () => {
       expect(
         changed.filter((found) => found.code === "W-ASSISTANT-LAYOUT").map((found) => found.file),
       ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
+      const catalogIssue = changed.find((found) => found.file === ".qfai/assistant/catalog/");
+      expect(catalogIssue?.severity).toBe("warning");
+      expect(catalogIssue?.message).toContain("rule, skill, step, agent, prompt");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

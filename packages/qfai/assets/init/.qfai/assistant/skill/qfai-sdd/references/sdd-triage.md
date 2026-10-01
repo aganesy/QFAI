@@ -19,7 +19,7 @@ outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and requir
 requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
 second fictional flow.
 
-Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract; dependent contracts update rule refs.
+Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract, and no other contract cites it.
 
 ## Decision and question rows
 
@@ -37,13 +37,72 @@ An unanswered critical product decision opens its Content with Unadjudicated: an
 
 ## Approval and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, leave approval-required rows at TODO, stop before their dependent writes, and write a consultation-needed work-log entry. Approval-free changes may proceed only if they do not depend on a pending row.
+Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, leave approval-required rows at TODO, stop before their dependent writes, and report every pending row with its operation and target. Approval-free changes may proceed only if they do not depend on a pending row.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
 
+## Inside a workflow run
+
+Under a QFAI work order, Stage 1 asks the operator nothing itself. The approval
+pass changes by operation.
+
+- **CREATE.** Stage 1 checks the `human_decision` the work order's
+  `authorizationRefs` cite for its `new_story` slot, instead of asking. The
+  check passes only when the record exists, answers this slot and this
+  operation, and is not stale. An approval is stale when the scope digest it was
+  given under changes, when the approved story text changes, or when a replan
+  widens the scope. The clock alone never makes it stale.
+- **A passing CREATE.** The attempt that writes the stage's change appends the
+  triage row at TODO. Its Approach cites the record as
+  `<runId>/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and
+  the label of each chosen option exactly as the record holds them. The row is
+  then raised to WIP.
+- **A missing, mismatched or stale CREATE approval.** Stage 1 appends no triage
+  row and asks the operator nothing. The stage returns `awaiting_input` naming
+  the row and the reason.
+- **DELETE, SPLIT, MERGE, SUPERSEDE and UPDATE:REMOVE.** A routing-time CREATE
+  approval approves none of them. Stage 1 opens the row's approval question as
+  a `decision` question of its stage result, with outcome `awaiting_input`, and
+  appends no row. The attempt that receives the answer through
+  `authorizationRefs` appends the row at TODO, cites that `human_decision` the
+  same way, and raises it to WIP.
+- **An approval-free row**, such as an UPDATE:APPEND, cites no answer.
+
+The table keeps exactly its four columns. The citation lives in Approach.
+
+### A change to the story tree
+
+A story-tree or contract file changes only on the operator's answer, given in
+this run:
+
+1. The first attempt asks once and changes nothing. It opens one `decision`
+   question naming the files it would change and the proposed change, and
+   returns `awaiting_input`. The concrete-abstract cycle may add questions for
+   its findings beside it.
+2. The attempt that holds the answer, received through `authorizationRefs`,
+   makes the change. It appends one `decisions.md` row at WIP whose Content
+   opens `Change request:` and names every story-tree and contract file it
+   changed, and `decisions.md` when it appended any other row. The row's
+   Approach cites that answer as `<runId>/<authorizationId>` and writes its
+   `answeredBy`, its `recordedAt` and the label of each chosen option exactly
+   as the run's authorization record holds them.
+3. The same attempt moves the row to DONE once every change the row names is
+   written. The row stays at WIP only while changes it names remain for a later
+   attempt of this stage, which moves it to DONE once it writes them.
+4. A row that cites only the run's `request_scope` is refused. Leaving the row
+   at TODO does not avoid the refusal.
+
+A row present before the stage started keeps its ID, Content and Approach.
+Only a row this stage appended changes its Status.
+
+Upstream drift found outside the run's checked scope gets no `Change request:`
+row here. The stage returns `blocked`, with each finding listed in `debts`.
+
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US. BR spans all contracts. DEC and OQ each span their table. Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
+A contract number spans every contract kind, and a BR is numbered inside its contract. DEC and OQ each span their table.
+Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. Record the old IDs as retired, allocate new IDs in the destination scope, and update every citation before the move is complete.
 

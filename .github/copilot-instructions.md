@@ -14,11 +14,10 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - Story tree: `.qfai/spec/` (policy, four business flows, and contracts).
   - Skills and shared rules: `.qfai/assistant/skill/` and `.qfai/assistant/rule/`.
   - Agent cards and prompts: `.qfai/assistant/agent/` and `.qfai/assistant/prompt/`.
-  - AI work log: `.qfai/steering/` (schema: `.qfai/spec/03_contract/cli/worklog-entry.schema.md`).
   - Routing defaults: `packages/qfai/assets/defaults/` in this source repository.
 - Edit shipped assistant content under `packages/qfai/assets/init/.qfai/assistant/`;
   the matching `.qfai/assistant/` tree in this repository is generated.
-- Use `/qfai-migration-spec-to-story` to migrate a project with the former
+- Use `/qfai-migration-v1-to-v2` to migrate a project with the former
   `.qfai/specs/` layout. Validation reports that layout as an error.
 - When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.
   - These symlinks resolve to `.qfai/assistant/skill/<skill-name>/`.
@@ -49,3 +48,4 @@ Key rules to follow:
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
 - `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
+- `.agents/rules/document-schema.md` — every spec-tree document conforms to its closed schema: start from its template, write no history, and never opt out.

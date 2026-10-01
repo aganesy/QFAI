@@ -12,7 +12,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("optional discussion prototyping recommendation", () => {
   for (const tree of trees) {
     it(`${tree}: SDD reads the selected pack without requiring a recommendation artifact`, async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const playbook = await read(
         tree,
         "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",

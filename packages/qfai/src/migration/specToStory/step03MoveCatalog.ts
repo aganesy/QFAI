@@ -2,16 +2,32 @@ import { isDeepStrictEqual } from "node:util";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { parseDocument, parse as parseYaml } from "yaml";
+import { parseDocument, parse as parseYaml, type Document } from "yaml";
 
+import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
+import { readRoutingDefaultsFiles } from "../../core/routingDefaults.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { OLD_CONTRACT_TOKEN, planContracts, type ContractPlan } from "./contractIds.js";
+import { renderContractIndex } from "./contractIndex.js";
 import {
   MigrationInputError,
   type MigrationContext,
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
+import { oldContractIds, type ContractMap } from "./idMap.js";
+import {
+  isPolicyDocument,
+  movePolicySection,
+  newPolicyDraft,
+  renderPolicyDocument,
+  renumberConstraints,
+  type PolicyDraft,
+} from "./policyDocuments.js";
+import { readLegacyRows } from "./step05CasesToExamples.js";
+import { addTechCommands, moveTechSection, renderTechDocument } from "./techDocument.js";
+import { entrypointCommands, routeStructureCatalog } from "./structureCatalog.js";
 
 const POLICY_SOURCES = [
   ["01_Objective.md", "objective.md"],
@@ -64,12 +80,6 @@ function titleFor(target: string): string {
       return "Glossary";
     case "constraint.md":
       return "Constraints";
-    case "contracts.md":
-      return "Contracts";
-    case "tech.md":
-      return "Technology";
-    case "structure.md":
-      return "Structure";
     default:
       throw new Error(`Unknown catalog destination: ${target}`);
   }
@@ -146,8 +156,8 @@ function route(source: string, heading: string, context: MigrationContext): stri
   if (source.endsWith("/product.md"))
     return policy(/^Milestones$/i.test(heading) ? "initiative.md" : "objective.md");
   if (source.endsWith("/manifest.md")) return policy("principle.md");
-  if (source.endsWith("/tech.md")) return contract("tech.md");
-  if (source.endsWith("/structure.md")) return contract("structure.md");
+  if (source.endsWith("/tech.md"))
+    return /^Constraints$/i.test(heading) ? policy("constraint.md") : contract("tech.md");
   const policyName = path.posix.basename(source);
   const mapped = POLICY_SOURCES.find(([name]) => name === policyName)?.[1];
   if (!mapped) throw new Error(`No destination for ${source}`);
@@ -184,41 +194,132 @@ async function defaultsFile(name: string): Promise<string> {
   return readInput(absolute);
 }
 
-async function planOverrides(root: string): Promise<MigrationOperation | null> {
+/** The package's routing defaults, every file's `routing:` list joined in reading order. */
+async function defaultRoutingEntries(): Promise<unknown[]> {
+  const entries: unknown[] = [];
+  for (const file of await readRoutingDefaultsFiles()) {
+    const routing: unknown = asRecord(parseYamlInput(file.text, file.rel), file.rel).routing;
+    if (!Array.isArray(routing)) throw new MigrationInputError("Routing must be a list.");
+    const list: unknown[] = routing;
+    entries.push(...list);
+  }
+  return entries;
+}
+
+type PrimaryReplacement = { notes: string[]; forAPerson: string[] };
+
+/**
+ * The UI contracts a spec pack is tied to: the new IDs the `CON-UI-*` IDs in its
+ * rules' `Contract-Refs` translate to. The rules come from the pack, or from the
+ * archive step 7 moved them to.
+ */
+async function tiedUiContracts(
+  context: MigrationContext,
+  contractMap: ContractMap,
+  specId: string,
+): Promise<string[]> {
+  const translated = oldContractIds(contractMap);
+  const rows = [
+    ...(await readLegacyRows(context, "04_Business-Rules.md", false)),
+    ...(await readLegacyRows(context, "04_Business-Rules.md", true)),
+  ];
+  const tied = new Set<string>();
+  for (const row of rows) {
+    if (row.specId !== specId) continue;
+    const refs = Object.entries(row.cells).find(([name]) => /^contract-refs$/i.test(name))?.[1];
+    for (const token of refs?.match(OLD_CONTRACT_TOKEN) ?? []) {
+      const id = translated[token];
+      if (id?.startsWith("UI-")) tied.add(id);
+    }
+  }
+  return [...tied].sort();
+}
+
+/**
+ * Replaces `prototyping.primarySpecId` in the configuration by
+ * `prototyping.primaryUiContract` where exactly one UI contract is tied to that
+ * spec. Where the new key is already set, the old key is removed. In every
+ * other case the key stays and a person decides.
+ */
+async function replacePrimarySpec(
+  config: Document,
+  context: MigrationContext,
+  contractMap: ContractMap,
+): Promise<PrimaryReplacement> {
+  const key = ["prototyping", "primarySpecId"];
+  const replacement: PrimaryReplacement = { notes: [], forAPerson: [] };
+  if (!config.hasIn(key)) return replacement;
+  const specId = String(config.getIn(key));
+  const name = "qfai.config.yaml";
+  if (config.hasIn(["prototyping", "primaryUiContract"])) {
+    config.deleteIn(key);
+    replacement.notes.push(
+      `${name}: prototyping.primarySpecId removed; prototyping.primaryUiContract is already set`,
+    );
+    return replacement;
+  }
+  const tied = await tiedUiContracts(context, contractMap, specId);
+  const [only] = tied;
+  if (tied.length === 1 && only !== undefined) {
+    config.deleteIn(key);
+    config.setIn(["prototyping", "primaryUiContract"], only);
+    replacement.notes.push(
+      `${name}: prototyping.primarySpecId ${specId} replaced by prototyping.primaryUiContract ${only}`,
+    );
+    return replacement;
+  }
+  replacement.forAPerson.push(
+    `${name}: prototyping.primarySpecId is ${specId}, ${
+      tied.length === 0
+        ? "which no UI contract is tied to"
+        : `which ${tied.length} UI contracts are tied to (${tied.join(", ")})`
+    }; set prototyping.primaryUiContract to the UI contract ID and remove prototyping.primarySpecId`,
+  );
+  return replacement;
+}
+
+async function planOverrides(
+  context: MigrationContext,
+  contractMap: ContractMap,
+  surfacePaths: string[] | undefined,
+): Promise<{ operation: MigrationOperation | null; forAPerson: string[] }> {
+  const root = context.root;
   const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
   const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
   const hasRouting = await exists(routingPath);
   const hasReview = await exists(reviewPath);
-  if (!hasRouting && !hasReview) return null;
   const configPath = path.join(root, "qfai.config.yaml");
+  if (!hasRouting && !hasReview && surfacePaths === undefined && !(await exists(configPath)))
+    return { operation: null, forAPerson: [] };
   const config = parseDocument(await readInput(configPath), { keepSourceTokens: true });
   if (config.errors.length > 0)
     throw new MigrationInputError(`Cannot parse ${configPath}: ${config.errors[0]?.message}`);
-  let changed = false;
+  // A 1.x configuration has no `uiux.surfacePaths`, so a value already there was set
+  // by the project on purpose and is kept.
+  const primary = await replacePrimarySpec(config, context, contractMap);
+  let changed = primary.notes.length > 0;
+  if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"])) changed = true;
+  if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"]))
+    config.setIn(["uiux", "surfacePaths"], surfacePaths);
   if (hasRouting) {
     const project = asRecord(
       parseYamlInput(await readInput(routingPath), routingPath),
       routingPath,
     );
-    const defaults = asRecord(
-      parseYamlInput(await defaultsFile("agent-routing.yml"), "default agent-routing.yml"),
-      "default agent-routing.yml",
-    );
-    if (!Array.isArray(project.routing) || !Array.isArray(defaults.routing))
-      throw new MigrationInputError("Routing must be a list.");
-    const defaultBySkill = new Map(
-      defaults.routing.map((entry) => {
-        const record = asRecord(entry, "default routing entry");
-        if (typeof record.skill !== "string")
-          throw new MigrationInputError("Default routing entry needs a skill.");
-        return [record.skill, entry] as const;
+    if (!Array.isArray(project.routing)) throw new MigrationInputError("Routing must be a list.");
+    const defaultByName = new Map(
+      (await defaultRoutingEntries()).map((entry) => {
+        const name = routingEntryName(asRecord(entry, "default routing entry"));
+        if (name === undefined)
+          throw new MigrationInputError("Default routing entry needs a step or a skill.");
+        return [name, entry] as const;
       }),
     );
     const overrides = project.routing.filter((entry) => {
-      const record = asRecord(entry, "project routing entry");
-      if (typeof record.skill !== "string")
-        throw new MigrationInputError("Project routing entry needs a skill.");
-      return !isDeepStrictEqual(entry, defaultBySkill.get(record.skill));
+      const name = routingEntryName(asRecord(entry, "project routing entry"));
+      if (name === undefined)
+        throw new MigrationInputError("Project routing entry needs a step or a skill.");
+      return !isDeepStrictEqual(entry, defaultByName.get(name));
     });
     if (overrides.length > 0) {
       config.set("routing", overrides);
@@ -243,7 +344,93 @@ async function planOverrides(root: string): Promise<MigrationOperation | null> {
       changed = true;
     }
   }
-  return changed ? { kind: "write", target: "qfai.config.yaml", content: String(config) } : null;
+  return {
+    operation: changed
+      ? { kind: "write", target: "qfai.config.yaml", content: String(config), notes: primary.notes }
+      : null,
+    forAPerson: primary.forAPerson,
+  };
+}
+
+/**
+ * Overlays of one name under both `constitution/` and `catalog/` whose master is
+ * under `rule/` and whose place beside it is free. Either could take that place,
+ * so a person chooses before step 3 writes anything.
+ */
+async function contestedOverlays(root: string): Promise<string[]> {
+  const names = async (directory: string): Promise<Set<string>> => {
+    const absolute = path.join(root, ".qfai/assistant", directory);
+    if (!(await exists(absolute))) return new Set();
+    const entries = await readdir(absolute, { withFileTypes: true });
+    return new Set(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".local.md"))
+        .map((entry) => entry.name),
+    );
+  };
+  const catalog = await names("catalog");
+  const contested: string[] = [];
+  for (const name of [...(await names("constitution"))].sort()) {
+    if (!catalog.has(name)) continue;
+    const rule = path.join(root, ".qfai/assistant/rule");
+    if (!(await exists(path.join(rule, name.replace(/\.local\.md$/, ".md"))))) continue;
+    if (await exists(path.join(rule, name))) continue;
+    for (const directory of ["constitution", "catalog"]) {
+      contested.push(
+        `.qfai/assistant/${directory}/${name}: another overlay of this name would take .qfai/assistant/rule/${name}; keep one and run step 3 again.`,
+      );
+    }
+  }
+  return contested;
+}
+
+/**
+ * Puts the new `contracts.md` among the documents step 3 writes, and returns what
+ * a person carries by hand. An existing file that differs is left as it is.
+ */
+async function writeContractIndex(
+  context: MigrationContext,
+  old: { source: string; content: string; archive: string; target: string },
+  contracts: ContractPlan,
+  documents: Map<string, string>,
+): Promise<string[]> {
+  const index = renderContractIndex({
+    source: old.content,
+    sourcePath: old.source,
+    archive: old.archive,
+    target: old.target,
+    contractsDir: relative(context.root, context.contractsDir),
+    contracts: contracts.contracts,
+    oldIds: oldContractIds(contracts.map),
+  });
+  const absolute = path.join(context.root, old.target);
+  if (!(await exists(absolute))) documents.set(old.target, index.content);
+  else if ((await readInput(absolute)) !== index.content)
+    index.forAPerson.push(
+      `${old.target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
+    );
+  return index.forAPerson;
+}
+
+/** Routes an old `catalog/structure.md`, reading the entrypoint commands its `tech.md` gives. */
+async function routeStructure(
+  context: MigrationContext,
+  parts: {
+    source: string;
+    archive: string;
+    preamble: string;
+    sections: { heading: string; body: string }[];
+  },
+  draftFor: (target: string) => PolicyDraft,
+): Promise<ReturnType<typeof routeStructureCatalog>> {
+  const techSource = path.join(context.root, ".qfai/assistant/catalog/tech.md");
+  const techTarget = relative(context.root, path.join(context.contractsDir, "tech.md"));
+  return routeStructureCatalog({
+    ...parts,
+    commands: entrypointCommands((await exists(techSource)) ? await readInput(techSource) : ""),
+    tech: () => draftFor(techTarget),
+    techTarget,
+  });
 }
 
 export const step03: MigrationStep = {
@@ -251,27 +438,95 @@ export const step03: MigrationStep = {
   writeSet: ["qfai", "specs", "contracts", "config"],
   sections: ["For a person"],
   async plan(context) {
+    const contested = await contestedOverlays(context.root);
+    if (contested.length > 0)
+      return { operations: [], forAPerson: contested, forAPersonIdentifiers: [] };
     const operations: MigrationOperation[] = [];
-    const forAPerson: string[] = [];
+    const contracts = await planContracts(context);
+    const forAPerson: string[] = [...contracts.forAPerson];
+    const identifiers: string[] = [];
     const reserved = new Set<string>();
     const documents = new Map<string, string>();
+    let surfacePaths: string[] | undefined;
     const policies = relative(context.root, path.join(context.specsDir, "_policies"));
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
     sources.push(...CATALOG_FILES.map((name) => `.qfai/assistant/catalog/${name}`));
 
+    const tech = relative(context.root, path.join(context.contractsDir, "tech.md"));
+    const shaped = (target: string): boolean => target === tech || isPolicyDocument(target);
+    const drafts = new Map<string, PolicyDraft>();
+    const draftFor = (target: string): PolicyDraft => {
+      const draft = drafts.get(target) ?? newPolicyDraft(target);
+      drafts.set(target, draft);
+      return draft;
+    };
     for (const source of sources) {
       const absolute = path.join(context.root, source);
       if (!(await exists(absolute))) continue;
       const content = await readInput(absolute);
       const { preamble, sections } = sectionParts(content);
-      const fallback = route(source, "", context);
-      if (!documents.has(fallback)) {
-        documents.set(fallback, await readDestination(context, fallback));
+      const archive = await uniqueRetired(
+        context.root,
+        `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
+        reserved,
+      );
+      if (source.endsWith("/structure.md")) {
+        const routed = await routeStructure(
+          context,
+          { source, archive, preamble, sections },
+          draftFor,
+        );
+        forAPerson.push(...routed.forAPerson);
+        surfacePaths = routed.surfacePaths;
+        if (routed.skeletonLines.length > 0) addTechCommands(draftFor(tech), routed.skeletonLines);
+        operations.push({ kind: "move", source, target: archive });
+        continue;
       }
-      if (preamble)
-        documents.set(fallback, addDistinctParagraphs(documents.get(fallback) ?? "", preamble));
+      const fallback = route(source, "", context);
+      if (path.posix.basename(fallback) === "contracts.md") {
+        forAPerson.push(
+          ...(await writeContractIndex(
+            context,
+            { source, content, archive, target: fallback },
+            contracts,
+            documents,
+          )),
+        );
+        operations.push({ kind: "move", source, target: archive });
+        continue;
+      }
+      if (shaped(fallback)) {
+        draftFor(fallback);
+        const h1 = parseHeadings(content).find((item) => item.level === 1);
+        if (
+          h1 &&
+          content
+            .split(/\r?\n/)
+            .slice(0, h1.line - 1)
+            .join("\n")
+            .trim() !== ""
+        )
+          forAPerson.push(
+            `${fallback}: rewrite the text before the title of ${source} by hand (kept at ${archive})`,
+          );
+        if (preamble)
+          forAPerson.push(
+            `${fallback}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,
+          );
+      } else {
+        if (!documents.has(fallback)) {
+          documents.set(fallback, await readDestination(context, fallback));
+        }
+        if (preamble)
+          documents.set(fallback, addDistinctParagraphs(documents.get(fallback) ?? "", preamble));
+      }
       for (const section of sections) {
         const target = route(source, section.heading, context);
+        if (shaped(target)) {
+          const move = target === tech ? moveTechSection : movePolicySection;
+          forAPerson.push(...move(draftFor(target), { ...section, source, archive }));
+          continue;
+        }
         if (!documents.has(target)) {
           documents.set(target, await readDestination(context, target));
         }
@@ -280,12 +535,19 @@ export const step03: MigrationStep = {
           appendSection(documents.get(target) ?? "", section.heading, section.body),
         );
       }
-      const archive = await uniqueRetired(
-        context.root,
-        `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
-        reserved,
-      );
       operations.push({ kind: "move", source, target: archive });
+    }
+    for (const [target, draft] of drafts) {
+      if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
+        identifiers.push(...renumberConstraints(draft));
+      const content =
+        target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
+      const absolute = path.join(context.root, target);
+      if (!(await exists(absolute))) documents.set(target, content);
+      else if ((await readInput(absolute)) !== content)
+        forAPerson.push(
+          `${target}: the file already exists, so step 3 did not write it; carry its sources from ${RETIRED} by hand`,
+        );
     }
 
     const sliceSource = `${policies}/11_Slice-Policy.md`;
@@ -299,8 +561,9 @@ export const step03: MigrationStep = {
       operations.push({ kind: "move", source: sliceSource, target: archive });
     }
 
-    const override = await planOverrides(context.root);
-    if (override) operations.push(override);
+    const overrides = await planOverrides(context, contracts.map, surfacePaths);
+    if (overrides.operation) operations.push(overrides.operation);
+    forAPerson.push(...overrides.forAPerson);
 
     for (const directory of ASSISTANT_DIRS) {
       const dir = `.qfai/assistant/${directory}`;
@@ -353,6 +616,11 @@ export const step03: MigrationStep = {
     }
     for (const [target, content] of documents)
       operations.unshift({ kind: "write", target, content });
-    return { operations, forAPerson };
+    operations.unshift(...contracts.operations);
+    return {
+      operations,
+      forAPerson: [...forAPerson, ...identifiers],
+      forAPersonIdentifiers: identifiers,
+    };
   },
 };

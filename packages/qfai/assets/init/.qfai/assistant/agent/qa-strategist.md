@@ -44,12 +44,13 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md
 - <paths.specsDir>/02_business-flow/** (affected flow and stories)
-- <paths.contractsDir>/db/\*\* (default `.qfai/spec/03_contract/db/**`) — **conditional**: only where the affected story or enforcing contract references `CON-DB-*`; otherwise its absence is not a gap
+- <paths.contractsDir>/db/\*\* (default `.qfai/spec/03_contract/db/**`) — **conditional**: only where a
+  `DB-*` contract holds a business rule that cites an affected example; otherwise its absence is not a gap
 - QA evidence, coverage tooling outputs, and test plans
 
 ## Deliverables

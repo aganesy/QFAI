@@ -11,8 +11,7 @@ old-to-new ID record.
 ```mermaid
 flowchart TD
   Inventory[Inventory old packs and contracts] --> Plan[Approve flows, stories, criteria and rule destinations]
-  Plan --> Fixture[Pass migration fixture and independent review]
-  Fixture --> Dry[Dry-run each of ten ordered steps]
+  Plan --> Dry[Dry-run each of the ten migration steps]
   Dry --> Apply[Run step and retain report]
   Apply --> Check{Step result}
   Check -->|Exit 2| Correct[Correct plan or source before first write]
@@ -23,24 +22,30 @@ flowchart TD
   Verify --> More{Steps remain?}
   More -->|Yes| Dry
   More -->|No| Recheck[Repeat steps and confirm zero-file change]
-  Recheck --> Cutover[Validate story tree and retire old reader]
+  Recheck --> Entry[Install, then check, the free-text entry: steps 11 and 12]
+  Entry --> EntryCheck{Step 12 result}
+  EntryCheck -->|Exit 3| Resolve[Resolve each listed item]
+  Resolve --> Entry
+  EntryCheck -->|Exit 0| Validate[Validate the story tree]
+  Validate --> Handover[Hand the first free-text change request to qfai-run]
 ```
 
 ## Alternate and exception paths
 
-- A dry run writes no files. Exit 2 identifies a blocked operation and stops
-  before the step's first write.
+- A dry run writes no files but its report file. Exit 2 identifies a blocked
+  operation and stops before the step's first write.
 - Exit 3 lists source paths and unresolved items under `For a person`. The
   source stays in the old pack or retired archive until a person resolves it.
 - Step 4 writes the ID map once. A later plan cannot move or add an item that
   disagrees with that map; resolution proceeds in the migrated tree through
   SDD, with the old source retained as evidence.
-- Re-running any completed step changes zero files. A partial run resumes
-  under the same plan and retained report.
-- Cutover requires the fixture DSC-003/004 gates, independent reviewer GO,
-  resolved active items, and the final story-tree validation.
-
-The ordered steps are directory rename, decision-table merge, catalog move,
-ID renumbering, TC-only case conversion, EX criterion derivation, rule move,
-test-annotation rewrite, host-link repointing and gitignore update. The
-step-4 ID map binds every later step to the approved plan.
+- Re-running any completed step changes zero files but its report file. A
+  partial run resumes under the same plan and retained report.
+- The migration ends when `qfai validate` on the story tree reports no
+  layout or chain error, with every item listed for a person resolved.
+- Step 11 moves a customised skill or step into the migration archive before
+  replacing it. A host link path it does not own stays as it was and is listed
+  for a person.
+- Step 12 writes nothing but its report file and lists for a person every check
+  `npx qfai workflow start` would fail. The first free-text change request goes
+  to `qfai-run` once none is left.

@@ -28,7 +28,7 @@ const seedPaths = [
   "02_business-flow/business-flows.md",
   "03_contract/contracts.md",
 ] as const;
-const contractKinds = ["api", "db", "ui", "cli", "design"] as const;
+const contractKinds = ["api", "db", "ui", "cli"] as const;
 const templateRoot = path.join(
   getInitAssetsDir(),
   ".qfai",
@@ -130,6 +130,16 @@ describe("story-tree initialization", () => {
     expect(config).toContain("contractsDir: .qfai/spec/03_contract\n");
   });
 
+  it("writes no validation.require section into the project config", async () => {
+    // QFAI:EX-0001-0038-09
+    const root = await sandbox();
+    await init(root);
+    const config = await readFile(path.join(root, "qfai.config.yaml"), "utf-8");
+    expect(config).toContain("validation:\n");
+    expect(config).not.toMatch(/^\s+require:/m);
+    expect(config).not.toContain("specSections");
+  });
+
   it.each(["spec-0001", "_policies"])(
     "skips the new seed when the configured specs directory has %s",
     async (legacyName) => {
@@ -144,7 +154,7 @@ describe("story-tree initialization", () => {
 
       expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
       expect(await isPresent(path.join(root, ".qfai", "assistant", "skill"))).toBe(true);
-      expect(output).toContain("/qfai-migration-spec-to-story");
+      expect(output).toContain("/qfai-migration-v1-to-v2");
       expect(output).toContain(legacyName);
     },
   );
@@ -155,7 +165,7 @@ describe("story-tree initialization", () => {
     const output = await init(root);
 
     expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
-    expect(output).toContain("/qfai-migration-spec-to-story");
+    expect(output).toContain("/qfai-migration-v1-to-v2");
     expect(output).toContain(path.join(".qfai", "contracts"));
   });
 });

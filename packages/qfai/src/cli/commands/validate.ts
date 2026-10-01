@@ -1,11 +1,10 @@
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { FailOn, OutputFormat, QfaiConfig } from "../../core/config.js";
+import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
-import { hasStoryTreeEntries, resolveStoryTreeRoots } from "../../core/storyTree/layout.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
@@ -350,17 +349,6 @@ export function scopedReportPath(
   return `${dir}${stem}.flow-${suffix}${ext}`;
 }
 
-/** Detect the story-tree layout through the configured specs directory. */
-export async function isStoryTreeProject(root: string, config: QfaiConfig): Promise<boolean> {
-  const specsDir = resolveStoryTreeRoots(root, config).specsDir;
-  try {
-    return hasStoryTreeEntries(await readdir(specsDir));
-  } catch (caught: unknown) {
-    if ((caught as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw caught;
-  }
-}
-
 /**
  * Compute the `.qfai/report/validate-<profile>.json` path that mirrors
  * the configured always-latest path. Splits at the basename so a custom
@@ -423,7 +411,6 @@ export const GATE_GROUP_FAMILIES = {
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
-  "grilling-discussion": ["QFAI-GRILL-002"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
@@ -442,10 +429,12 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-004",
     "QFAI-STORY-005",
     "QFAI-STORY-011",
+    "QFAI-STORY-012",
+    "QFAI-STORY-013",
     "QFAI-SPACK-102",
   ],
-  "grilling-flow": ["QFAI-GRILL-001"],
   "story-contract-index": ["QFAI-CONTRACT-034"],
+  "document-schema": ["QFAI-DOCSCHEMA-*"],
   "story-test-obligations": [
     "QFAI-STORY-006",
     "QFAI-STORY-007",
@@ -453,11 +442,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-009",
     "QFAI-SCAN-002",
   ],
-  "story-atdd-depth": ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
   sdd: [
     "QFAI-AUTOPILOT-*",
-    "W-WORKLOG-*",
-    "W-PENDING-PROMOTION",
     "W-ASSISTANT-LAYOUT",
     "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",
@@ -468,15 +454,9 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    "R-HANDOFF-INCOMPLETE",
-    "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
   ],
-  "reviewer-gate-shared": [
-    "R-MOCK-HREF-DRIFT",
-    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    "R-EVIDENCE-MUTATION-UNLOGGED",
-  ],
+  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT", "R-EVIDENCE-MUTATION-UNLOGGED"],
   "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
   contracts: [
     "QFAI-CONTRACT-000",
@@ -487,7 +467,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-036",
     "QFAI-CONTRACT-037",
     "QFAI-CONTRACT-038",
@@ -497,17 +476,9 @@ export const GATE_GROUP_FAMILIES = {
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
   "contract-parse": ["QFAI-CONTRACT-021"],
-  "contract-ssot-modules": ["QFAI-CONTRACT-050"],
-  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
+  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-sdd": ["QFAI-DCON-019"],
-  "design-contract-readiness-prototyping": [
-    "QFAI-DCON-001",
-    "QFAI-DCON-005",
-    "QFAI-DCON-009",
-    "QFAI-DCON-012",
-    "QFAI-DCON-013",
-  ],
+  "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
@@ -519,7 +490,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-FLOW-001",
     "QFAI-FLOW-002",
     "QFAI-FLOW-004",
-    "QFAI-BPAP-*",
     "QFAI-CONSISTENCY-*",
     "QFAI-AGENT-*",
     "QFAI-AUD-*",
@@ -537,7 +507,6 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
-  "design-contract-readiness-sdd": "sdd",
   drift: "drift",
   "saas-package-profile": "saas-package",
 };
@@ -572,15 +541,13 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "research-summary",
     "canonical-uix",
     "review-artifacts",
-    "grilling-discussion",
     "root-design-md-parse",
   ],
   sdd: [
     "story-structure",
-    "grilling-flow",
+    "document-schema",
     "story-contract-index",
     "design-contract-readiness",
-    "design-contract-readiness-sdd",
     "sdd",
     "reviewer-gate-sdd",
     "reviewer-gate-shared",
@@ -588,12 +555,11 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "contracts",
     "ui-screen-entries",
     "contract-parse",
-    "contract-ssot-modules",
     "package-self-governance",
     "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["story-test-obligations", "story-atdd-depth", "atdd-scaffold", "test-stubs"],
+  atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
   tdd: [
     "story-test-obligations",
     "test-stubs",
@@ -601,7 +567,6 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "contracts",
     "ui-screen-entries",
     "contract-parse",
-    "contract-ssot-modules",
   ],
   "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
   drift: ["drift"],
@@ -845,8 +810,9 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
-  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
-  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  // The effective failOn appeared only in the `--format github` summary line,
+  // so a reviewer reading the default text output could not see why the exit
+  // code is what it is.
   process.stdout.write(`fail-on: ${failOn}\n`);
   const overruns = formatTimingOverruns(result.timings);
   if (overruns) {
@@ -1187,7 +1153,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
   "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
-  "QFAI-STORY-005": "Every business rule and contract reference resolves.",
+  "QFAI-STORY-005":
+    "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
   "QFAI-STORY-006":
     "The selected profile's story obligations have test annotations: BF and AC in ATDD, EX in TDD.",
   "QFAI-STORY-007":
@@ -1198,8 +1165,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each test exception cites a declared BF, AC, or EX ID and a decision row in force.",
   "QFAI-STORY-010":
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
-  "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
-  "QFAI-GRILL-001": "Each affected business flow records its pre-draft grilling checkpoint.",
+  "QFAI-STORY-011":
+    "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
+  "QFAI-STORY-013":
+    "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
+  "QFAI-DOCSCHEMA-001":
+    "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
+  "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1218,12 +1192,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
 
-  "QFAI-ATDD-131":
-    "Every BF has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-BF-NNNN.md`.",
-  "QFAI-ATDD-132":
-    "The Coverage Depth Matrix and ATDD evidence are tracked or unignored so their justifications are committed.",
-  "QFAI-ATDD-133":
-    "Each matrix covers its BF, US, AC, and EX obligations, and `.qfai/evidence/atdd-BF-NNNN.md` links it with matching counted totals.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
@@ -1280,7 +1248,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
-    "qfai.config.yaml: prototyping.primaryUiContract names a CON-UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
+    "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
@@ -1291,36 +1259,25 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
-  "QFAI-DCON-001":
-    "UI-bearing execution requires the canonical design contracts for the current phase when UI contracts exist.",
-  "QFAI-DCON-005":
-    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, and motion_rules, plus component guidance via checklist.component_tone or richer component guidance blocks.",
-  "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
-  "QFAI-DCON-019":
-    "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
+    "prototyping.json#handoff must carry `finalArtifact` and `implementationNotes`, each as a non-empty string — the first the path of the final prototype, the second the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
-  "QFAI-DCON-031":
-    "DESIGN.md.lock.yaml must exist under contracts/design/ and contain a designMdSha256 string.",
-  "QFAI-DCON-032":
-    "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
   "QFAI-DCON-033":
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
   "QFAI-AGENT-015":
-    "Every role a skill declares is dispatchable: some routing phase or its review profile selects it.",
+    "Every role a step or skill declares is dispatchable: some routing phase or its review profile selects it.",
   "QFAI-AGENT-016":
-    "Every routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
+    "Every routed step's `STEP.md` and routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
   "QFAI-AGENT-017":
-    "Every skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
+    "Every step or skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
   "QFAI-AGENT-018":
-    "Each routed skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
+    "Each routed step or skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
   "QFAI-AGENT-019":
-    "A skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
+    "A step's or skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   "QFAI-PROT-337":
@@ -1330,7 +1287,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
-  "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
+  "QFAI-CONTRACT-034":
+    "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID and file. Every row names a contract file, and no two contracts share a number.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   // Reads the implementation tree rather than another declaration, so what it
@@ -1347,32 +1305,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  // Same rule as `QFAI-BPAP-001` below: `paths.contractsDir` is configurable, so
-  // the expected state names the contracts root by role. Pinning the default
-  // path sent a project that moved its contracts to repair a directory it does
-  // not use, and the offending file is already on the finding's own line.
-  "QFAI-CONTRACT-050":
-    "Every `- SSOT modules:` entry in a contract under the configured contracts directory must resolve to a readable file or directory that travels with the project.",
-  // `paths.contractsDir` is configurable, so the expected state names the file
-  // by role rather than pinning the default location: a project that moved its
-  // contracts must not be told to repair a directory it does not use. The
-  // offending path is already on the finding's `target:` line.
-  "QFAI-BPAP-001": "Every BP/AP rule file in the contracts `design/` directory is readable.",
-  "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
-  "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
-  "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
-  "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
-  // The check is `toSafeString(value).trim() === ""`, so a required key that is
-  // present but holds `[]`, `{}`, or `null` fails it exactly like an absent
-  // one. The expected state says "non-empty scalar", not "present", so the
-  // report does not read as if the key were missing when it is not.
-  "QFAI-BPAP-006": "Every BP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
-  "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
-  "QFAI-BPAP-009": "Every AP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
-  "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
-  "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
@@ -1383,7 +1315,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
-    "The contract-layer tech.md and structure.md hold project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
+    "The contract-layer tech.md holds project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
   // Both state the graph, not a path: `paths.skillsDir` is configurable, and
   // the file actually judged is on the finding's `target:` line.
   "QFAI-SKILLS-013":
@@ -1392,6 +1324,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every document under the skills tree can be read, so reference reachability is decided over the whole graph rather than over the part that happened to open.",
   "QFAI-SKILLS-015":
     "Every skill carries both fields a host registers it by: a `name:` that is its own directory, in lowercase letters, digits and single hyphens to 64 characters, and a `description:` with text in it, to 1024 characters and with no `<` or `>` — a skill that should not be offered to the model declares `disable-model-invocation: true` and keeps the description, rather than dropping the field and losing the registration with it.",
+  "QFAI-SKILLS-016":
+    "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used, and a skill that lists steps declares `orchestrator` and every role those steps declare.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
@@ -1442,18 +1376,13 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  * values that failed the check.
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
-  "QFAI-ATDD-131":
-    "Create the Coverage Depth Matrix for the named business flow under .qfai/evidence/.",
-  "QFAI-ATDD-132": "Track the named coverage matrix and ATDD evidence file in Git.",
-  "QFAI-ATDD-133":
-    "Repair the named matrix rows and six coverage axes, then make its counts match the linked ATDD evidence.",
   "QFAI-CONTRACT-034":
-    "Correct the named contract index row or add its missing contract file, then rerun validate.",
+    "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
-    "Invoke the `/qfai-migration-spec-to-story` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
+    "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
   "QFAI-SCAN-002":
     "Fix the unreadable test path or reduce the configured test globs so the selected tests can all be scanned.",
   "QFAI-SPACK-102":
@@ -1462,7 +1391,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
   "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
   "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
-  "QFAI-STORY-005": "Define the missing business rule or contract, or correct the cited reference.",
+  "QFAI-STORY-005":
+    "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
     "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
   "QFAI-STORY-007":
@@ -1471,64 +1401,41 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":
     "Restore the protected row or record an in-force change request for the named file change.",
-  "QFAI-STORY-011": "Add a Mermaid flowchart or sequence diagram to the named business-flow file.",
+  "QFAI-STORY-011":
+    "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
+  "QFAI-STORY-013":
+    "Order the Architecture rows from the uppermost layer down, so each Depends on names only rows below it, and give the diagram one node per layer and one Upper --> Lower edge per Depends on entry, nothing more.",
+  "QFAI-DOCSCHEMA-001":
+    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
+  "QFAI-DOCSCHEMA-002":
+    "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
   "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
-  "QFAI-BPAP-001":
-    "Restore read access to the file, or delete it if it is no longer part of the rule set.",
-  "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
-  // QFAI-BPAP-001/002/003 fire on both `best-practices*.yaml` and
-  // `anti-patterns*.yaml`, so the example ID has to stay neutral: spelling
-  // `BP-0001` here would walk an anti-pattern author straight into
-  // QFAI-BPAP-007, which demands the `AP-XXXX` form.
-  "QFAI-BPAP-003":
-    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` in a best-practices file, `- id: AP-0001` in an anti-patterns file); a mapping at the root is not a rule set.",
-  "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
-  "QFAI-BPAP-005":
-    "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
-  // Both codes fire on a present-but-empty value as well as on an absent key:
-  // the check reads `toSafeString(value).trim()`, and a `description: []` or a
-  // `detection_method: {}` reduces to the empty string. "Add the missing field"
-  // is unusable on that path — the key is already there, and adding a second
-  // one of the same name is a YAML duplicate rather than a repair.
-  "QFAI-BPAP-006":
-    "Give the BP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the practice is no longer needed.",
-  "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
-  "QFAI-BPAP-008":
-    "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
-  "QFAI-BPAP-009":
-    "Give the AP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the anti-pattern is no longer needed.",
-  "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
-  "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
-  "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
   // All four declared-mapping paths (blank cell, several directories, a CAP on
   // two rows, two CAPs on one directory) pass no `suggested_action`, and one
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
   // make each row name exactly one directory that no other row names.
   "QFAI-AGENT-015":
-    "Remove the role from the skill's `roles:`, or bind it in the package defaults (`packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Remove the role from the skill's `roles:`, or bind it in the package defaults (the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-AGENT-016":
     "Repair the `SKILL.md` frontmatter the message names: close the `---` block, and give `roles:` a list of strings and `routing-profile:` a non-empty profile name.",
   "QFAI-AGENT-017":
-    "Add a route with a dispatching phase to `packages/qfai/assets/defaults/agent-routing.yml`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
+    "Add a route with a dispatching phase to the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
   "QFAI-AGENT-018":
     "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile. Define package defaults in `packages/qfai/assets/defaults/review-profiles.yml`; use `qfai.config.yaml#routing` and `#reviewProfiles` for complete project-specific overrides.",
   "QFAI-AGENT-019":
-    "Add the agent to the skill's `roles:`, or remove its binding from `packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Add the agent to the skill's `roles:`, or remove its binding from the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or from `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+  "QFAI-SKILLS-016":
+    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, list a common step a skill's body runs in that skill's `requires:`, and add the roles the message names to the skill's `roles:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
-  // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
-  // component guidance, a mirror value that diverges from DESIGN.md, and a
-  // mirror key DESIGN.md never authored — all fall through to this entry, so it
-  // has to name every repair, not just the additive one.
-  "QFAI-DCON-005":
-    "design-system.yaml is a verbatim copy of DESIGN.md, so repair the entry the message names in whichever direction it is off: add it when it is missing (the `visual.*` block or key, the legacy `checklist.*` key, or the component-guidance block), copy DESIGN.md's value over it when the two diverge, and delete it when DESIGN.md does not author it. Then refreeze the lock and rerun validate.",
   // The browser-QA bundle checks are schema assertions raised by a local
   // `makeIssue` helper that has no `suggested_action` parameter, so every one of
   // their call sites depends on this catalog for its `fix:` line.
@@ -1581,7 +1488,7 @@ function resolveIssueTarget(issue: Issue): string {
  * emitting validator uses, instead of drifting from it silently.
  *
  * `issue.rule` is deliberately not a fallback: it holds an internal rule token
- * (`bpApDb.duplicateId`), and printing it in the `expected` field made a missing
+ * (`htmlMock.externalUrl`), and printing it in the `expected` field made a missing
  * catalog entry look like a value rather than an omission.
  */
 export function resolveIssueExpected(issue: Issue): string {

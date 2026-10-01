@@ -4,12 +4,22 @@ import path from "node:path";
 import { isEnoent } from "../../core/fs/errno.js";
 
 export const ID_MAP_PATH = ".qfai/evidence/migration-spec-to-story/id-map.json";
+export const CONTRACT_MAP_PATH = ".qfai/evidence/migration-spec-to-story/contract-map.json";
+
+/**
+ * A 1.x contract's new identity, keyed by its old path under `paths.contractsDir`:
+ * its new contract ID, its new path under the same directory, and the `CON-*` ID
+ * it declared, when it declared one.
+ */
+export type ContractEntry = { id: string; path: string; old?: string };
+export type ContractMap = Record<string, ContractEntry>;
 
 export type MigrationIdMap = {
   version: 1;
   ids: Record<string, Record<string, string>>;
   placements: Record<string, Record<string, string>>;
   retiredPacks: Record<string, string>;
+  contracts?: ContractMap;
 };
 
 export class IdMapInputError extends Error {}
@@ -26,6 +36,18 @@ function isNestedStringMap(value: unknown): value is Record<string, Record<strin
   return isRecord(value) && Object.values(value).every(isStringMap);
 }
 
+function isContractMap(value: unknown): value is ContractMap {
+  return (
+    isNestedStringMap(value) &&
+    Object.values(value).every(
+      (entry) =>
+        typeof entry.id === "string" &&
+        typeof entry.path === "string" &&
+        Object.keys(entry).every((key) => ["id", "path", "old"].includes(key)),
+    )
+  );
+}
+
 function isMigrationIdMap(value: unknown): value is MigrationIdMap {
   if (!isRecord(value)) return false;
   return (
@@ -33,9 +55,44 @@ function isMigrationIdMap(value: unknown): value is MigrationIdMap {
     isNestedStringMap(value.ids) &&
     isNestedStringMap(value.placements) &&
     isStringMap(value.retiredPacks) &&
+    (value.contracts === undefined || isContractMap(value.contracts)) &&
     Object.keys(value).every((key) =>
-      ["version", "ids", "placements", "retiredPacks"].includes(key),
+      ["version", "ids", "placements", "retiredPacks", "contracts"].includes(key),
     )
+  );
+}
+
+/** The contract map step 3 writes, which step 4 copies into the ID map. */
+export async function readContractMap(root: string): Promise<ContractMap | null> {
+  let content: string;
+  try {
+    content = await readFile(path.join(root, CONTRACT_MAP_PATH), "utf8");
+  } catch (error) {
+    if (isEnoent(error)) return null;
+    throw new IdMapInputError(`Cannot read ${CONTRACT_MAP_PATH}: ${String(error)}`);
+  }
+  try {
+    const parsed: unknown = JSON.parse(content);
+    if (!isRecord(parsed) || !isContractMap(parsed.contracts) || Object.keys(parsed).length !== 1)
+      throw new TypeError("Unexpected contract map structure");
+    return parsed.contracts;
+  } catch (error) {
+    throw new IdMapInputError(`Cannot parse ${CONTRACT_MAP_PATH}: ${String(error)}`);
+  }
+}
+
+export function serializeContractMap(contracts: ContractMap): string {
+  return `${JSON.stringify({ contracts }, null, 2)}\n`;
+}
+
+/** Each old `CON-*` ID one contract declared, mapped to that contract's new ID. */
+export function oldContractIds(contracts: ContractMap | undefined): Record<string, string> {
+  const byOld = new Map<string, string[]>();
+  for (const entry of Object.values(contracts ?? {})) {
+    if (entry.old) byOld.set(entry.old, [...(byOld.get(entry.old) ?? []), entry.id]);
+  }
+  return Object.fromEntries(
+    [...byOld].filter(([, ids]) => ids.length === 1).map(([old, ids]) => [old, ids[0] ?? ""]),
   );
 }
 
@@ -80,6 +137,7 @@ export async function compareIdMap(root: string, map: MigrationIdMap): Promise<b
     ids: nested(value.ids),
     placements: nested(value.placements),
     retiredPacks: sorted(value.retiredPacks),
+    contracts: nested(value.contracts ?? {}),
   });
   return JSON.stringify(normalized(existing)) === JSON.stringify(normalized(map));
 }

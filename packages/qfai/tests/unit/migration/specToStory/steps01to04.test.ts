@@ -25,6 +25,7 @@ describe("migration record status", () => {
 
 describe("migration numbering", () => {
   it("numbers flows, stories, criteria, examples and rules in their specified order", () => {
+    // QFAI:EX-0004-0007-02
     expect(
       numberPlannedItems({
         flows: [
@@ -37,14 +38,18 @@ describe("migration numbering", () => {
           },
           { name: "F2", stories: [] },
         ],
-        rules: ["r1", "r2"],
+        rules: [
+          { id: "r1", contract: "API-0002" },
+          { id: "r2", contract: "DB-0001" },
+          { id: "r3", contract: "API-0002" },
+        ],
       }),
     ).toEqual({
       flows: { F1: "BF-0001", F2: "BF-0002" },
       stories: { S2: "US-0001-0001", S1: "US-0001-0002" },
       criteria: { a1: "AC-0001-0001-01", a2: "AC-0001-0001-02" },
       examples: { e1: "EX-0001-0001-01", e2: "EX-0001-0001-02" },
-      rules: { r1: "BR-0001", r2: "BR-0002" },
+      rules: { r1: "BR-0002-0001", r2: "BR-0001-0001", r3: "BR-0002-0002" },
     });
   });
 });

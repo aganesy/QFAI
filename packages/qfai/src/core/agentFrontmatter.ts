@@ -165,7 +165,7 @@ export type SkillFrontmatter = {
 };
 
 /**
- * The frontmatter fields that bind a skill to `agent-routing.yml`.
+ * The frontmatter fields that bind a skill to its routing entry.
  *
  * That manifest and a skill's `roles:` both say who may act inside the skill,
  * and until `QFAI-AGENT-019` / `QFAI-AGENT-015` nothing compared them. Reading

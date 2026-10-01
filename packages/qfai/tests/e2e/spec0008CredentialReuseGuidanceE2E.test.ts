@@ -9,7 +9,7 @@
  * has dropped whole subtrees before. A reference artifact that exists in the package and never
  * arrives is indistinguishable, from every integration row, from one that works. So this file
  * initialises an empty project and reads the delivered tree, and it follows the cross-link the way
- * a reader would — from the delivered `SKILL.md`, resolved against the delivered skill directory.
+ * a reader would — from the delivered `atdd-credentials` step, resolved against the project root.
  *
  * `runInit` once, shared: a full asset tree is the expensive part and both rows read the same one.
  */
@@ -38,24 +38,30 @@ afterAll(async () => {
   await rm(await projectPromise, { recursive: true, force: true });
 });
 
-async function skillDir(): Promise<string> {
-  return path.join(await project(), ".qfai", "assistant", "skill", "qfai-atdd");
+const CREDENTIAL_LINK =
+  /`(\.qfai\/assistant\/skill\/qfai-atdd\/references\/[a-z0-9-]*credential[a-z0-9-]*\.md)`/;
+
+function readStep(dir: string): Promise<string> {
+  return readFile(
+    path.join(dir, ".qfai", "assistant", "step", "atdd-credentials", "STEP.md"),
+    "utf-8",
+  );
 }
 
 // QFAI:BF-0001
 describe(
-  "E2E: an adopter receives the worker-scoped credential-reuse rules, reachable from the skill (US-0008-0008)",
+  "E2E: an adopter receives the worker-scoped credential-reuse rules, reachable from its step (US-0008-0008)",
   { timeout: 120000 },
   () => {
-    it("delivers the rule set, and the link in the delivered skill resolves to it", async () => {
-      const dir = await skillDir();
-      const entry = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+    it("delivers the rule set, and the link in the delivered step resolves to it", async () => {
+      const dir = await project();
+      const entry = await readStep(dir);
 
-      // The link as written in the delivered file, followed from the delivered directory. Asserting
+      // The link as written in the delivered file, followed from the project root. Asserting
       // that the artifact exists at a path this test spells would prove the file arrived and not
       // that a reader can get to it.
-      const link = /`(references\/[a-z0-9-]*credential[a-z0-9-]*\.md)`/.exec(entry)?.[1];
-      expect(link, "the delivered skill entry point links no credential guidance").toBeDefined();
+      const link = CREDENTIAL_LINK.exec(entry)?.[1];
+      expect(link, "the delivered credentials step links no credential guidance").toBeDefined();
       if (link === undefined) return;
 
       const guidance = await readFile(path.resolve(dir, link), "utf-8");
@@ -79,9 +85,9 @@ describe(
     });
 
     it("arrives naming no backend, and adds nothing to the adopter's ATDD vocabulary", async () => {
-      const dir = await skillDir();
-      const entry = await readFile(path.join(dir, "SKILL.md"), "utf-8");
-      const link = /`(references\/[a-z0-9-]*credential[a-z0-9-]*\.md)`/.exec(entry)?.[1] ?? "";
+      const dir = await project();
+      const entry = await readStep(dir);
+      const link = CREDENTIAL_LINK.exec(entry)?.[1] ?? "";
       const guidance = await readFile(path.resolve(dir, link), "utf-8");
 
       // What the adopter must NOT receive: a tool choice made for them, and a vocabulary their

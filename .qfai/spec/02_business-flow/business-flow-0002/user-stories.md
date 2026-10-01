@@ -4,14 +4,14 @@
 
 | US-ID        | Story                                                                       | Path                    |
 | ------------ | --------------------------------------------------------------------------- | ----------------------- |
-| US-0002-0001 | 配布 workflow の hardening                                                  | `user-story-0002-0001/` |
-| US-0002-0002 | 配布 action pin ポリシーと trailer 解決                                     | `user-story-0002-0002/` |
-| US-0002-0003 | layer 分離された credential-free 配布 workflow set                          | `user-story-0002-0003/` |
-| US-0002-0004 | 配布 change detection と green-on-skip verdict                              | `user-story-0002-0004/` |
-| US-0002-0005 | 配布 runner label 間接化                                                    | `user-story-0002-0005/` |
-| US-0002-0006 | 配布 Node / package manager portability                                     | `user-story-0002-0006/` |
-| US-0002-0007 | 配布 workflow 所有権コントラクト                                            | `user-story-0002-0007/` |
-| US-0002-0008 | 配布 set の structural contract gate                                        | `user-story-0002-0008/` |
+| US-0002-0001 | Shipped workflow hardening                                                  | `user-story-0002-0001/` |
+| US-0002-0002 | Shipped action pin policy and trailer resolution                            | `user-story-0002-0002/` |
+| US-0002-0003 | A layer-separated, credential-free shipped workflow set                     | `user-story-0002-0003/` |
+| US-0002-0004 | Shipped change detection and a green-on-skip verdict                        | `user-story-0002-0004/` |
+| US-0002-0005 | Shipped runner label indirection                                            | `user-story-0002-0005/` |
+| US-0002-0006 | Shipped Node and package manager portability                                | `user-story-0002-0006/` |
+| US-0002-0007 | Shipped workflow ownership contract                                         | `user-story-0002-0007/` |
+| US-0002-0008 | Structural contract gate for the shipped set                                | `user-story-0002-0008/` |
 | US-0002-0009 | Distributed-surface guards learn the story-tree ID shapes                   | `user-story-0002-0009/` |
 | US-0002-0010 | Scanner and prompt synchronization                                          | `user-story-0002-0010/` |
 | US-0002-0011 | Discussion-pack location gate                                               | `user-story-0002-0011/` |
@@ -24,6 +24,7 @@
 | US-0002-0018 | A workflow-hygiene lint lane that pull requests actually run                | `user-story-0002-0018/` |
 | US-0002-0019 | Runner parallelism derived from QFAI's own workload                         | `user-story-0002-0019/` |
 | US-0002-0020 | Retire the duplicate validate workflow without weakening the required check | `user-story-0002-0020/` |
-| US-0002-0021 | Layer-to-CI-lane mapping in a home the layer parser cannot see              | `user-story-0002-0021/` |
+| US-0002-0021 | Layer-to-CI-lane mapping in the layer rule                                  | `user-story-0002-0021/` |
 | US-0002-0022 | The assistant-tree mirror follows the renamed tree                          | `user-story-0002-0022/` |
 | US-0002-0023 | The shape table moves with the leak guards                                  | `user-story-0002-0023/` |
+| US-0002-0024 | Run the init suites on Windows                                              | `user-story-0002-0024/` |

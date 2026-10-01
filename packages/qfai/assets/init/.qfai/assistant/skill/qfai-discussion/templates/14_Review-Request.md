@@ -6,7 +6,7 @@
 - layer: `discussion`
 - review-pack: `assigned per review cycle` — see `.qfai/review/`
 
-<!-- Do NOT record a single review-pack id here. `references/review-cycle-playbook.md`
+<!-- Do NOT record a single review-pack id here. `.qfai/assistant/step/common-review-cycle/STEP.md#cycle`
      requires a new review pack per cycle, so one discussion pack is reviewed by N packs.
      The authoritative pointer for a given cycle is that pack's own
      `.qfai/review/review-YYYYMMDDhhmmssSSS/review_request.md#Scope`, which names the directory that
@@ -58,7 +58,7 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 - Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`) (when UI-bearing)
 - Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
-- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`qfai-discussion/SKILL.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `qfai-prototyping/SKILL.md` (when UI-bearing)
+- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`.qfai/assistant/step/discussion-pack/STEP.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `.qfai/assistant/step/prototyping-loop/STEP.md` (when UI-bearing)
 - Screen contract sufficiency and strong schema completeness (when UI-bearing)
 - Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)
@@ -70,7 +70,7 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 
 - Design direction (skip on a cli-only pack; required as soon as `web`/`mobile`/`desktop`/`mixed` appears as primary or secondary surface): verify `04_Sources.md` records brand personality, audience emotion, product intent, must-preserve interactions, brand signals and differentiation targets, and that every registry entry names its adopted points, rejected points and local translation
 - Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as sidecar files
-- History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `qfai-prototyping/SKILL.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
+- History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `.qfai/assistant/step/prototyping-loop/STEP.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
 
 ## Sidecar Artifact Review Scope
 

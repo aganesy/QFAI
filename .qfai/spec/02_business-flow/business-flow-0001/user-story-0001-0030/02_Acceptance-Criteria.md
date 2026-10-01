@@ -3,20 +3,17 @@
 ## Criteria
 
 ```gherkin
-Feature: Copilot review instructions 配布
+Feature: Copilot review instructions distribution
+  # AC-0001-0030-01
+  Scenario: Init creates the Copilot review instructions
+    Given a new repository with no `.github/instructions/` directory
+    When `qfai init` runs
+    Then `.github/instructions/code-review.instructions.md` and `principles.instructions.md` are created
+    And each file carries YAML front matter
 
-# AC-0001-0030-01
-# Parent: US-0001-0030
-Scenario: Copilot review instructions 新規配置
-  Given .github/instructions/ ディレクトリが存在しない新規リポジトリ
-  When `qfai init` を実行する
-  Then `.github/instructions/code-review.instructions.md` と `principles.instructions.md` が作成される
-  And 各ファイルに YAML frontmatter が含まれる
-
-# AC-0001-0030-02
-# Parent: US-0001-0030
-Scenario: instructions の既存ファイル保護
-  Given `.github/instructions/code-review.instructions.md` がカスタム内容で存在する
-  When `qfai init` を実行する
-  Then 既存ファイルは変更されない
+  # AC-0001-0030-02
+  Scenario: An existing instructions file is left unchanged
+    Given `.github/instructions/code-review.instructions.md` exists with custom content
+    When `qfai init` runs
+    Then the existing file is not changed
 ```

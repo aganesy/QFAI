@@ -3,19 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Devils-Advocate Reviewer
-
-# AC-0001-0170-01
-# Parent: US-0001-0170
-Scenario: Optional Review Mode Concrete Alternative
-  Given a devils-advocate FAIL verdict
-  When checked
-  Then it includes a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-
-# AC-0001-0170-02
-# Parent: US-0001-0170
-Scenario: Devils-Advocate 3-FAIL Demotion
-  Given 3 consecutive devils-advocate FAILs
-  When checked
-  Then advisory demotion is triggered (blocking power lost for current review cycle).
+Feature: Envelope-deviation `AskUserQuestion` audit-log
+  # AC-0001-0170-01
+  Scenario: Envelope-deviation `AskUserQuestion` writes a decision record
+    Given an `AskUserQuestion` whose template names one of the four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion),
+    When the skill body resolves the answer,
+    Then it MUST write `.qfai/evidence/decision/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270; An `AskUserQuestion` that names none of the four contexts MUST NOT write a record (no fail-open false-positive).
 ```

@@ -3,13 +3,16 @@
 ## Criteria
 
 ```gherkin
-Feature: Steering Population
+Feature: Tool Selection Documentation
+  # AC-0001-0079-01
+  Scenario: Tool Selection Rationale Recorded
+    Given the configure workflow
+    When tool selection is made per layer
+    Then rationale is recorded in the evidence file.
 
-# AC-0001-0079-01
-# Parent: US-0001-0079
-Scenario: Steering Files Evidence-Based
-  Given the story-tree templates for objective, initiative, principle, tech and structure
-  When /qfai-configure populates them
-  Then each fact is derived from repository evidence or marked `TBD` if unverifiable
-  And each fact appears in only one of those five files
+  # AC-0001-0079-02
+  Scenario: Minimum Runnable Path Documented
+    Given the project
+    When configuration completes
+    Then a minimum runnable path (dev server, DB, env, commands) is documented.
 ```

@@ -3,19 +3,17 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Deprecated assistant paths and skill project memory
+  # AC-0001-0045-01
+  Scenario: The legacy steering layout raises D-DEPRECATED-PATH naming the sunset
+    Given a project still carrying `.qfai/assistant/steering/` after the v1.9.0 release
+    When `qfai validate` runs in v1.9.x
+    Then `D-DEPRECATED-PATH` warning is emitted with the body string literally containing `sunset: v1.10.0`; in v1.10.0+ the same condition escalates to error per REQ-0008 (handled by spec-0003 sunset semantics + spec-0004 validator severity table)
 
-# AC-0001-0045-01
-# Parent: US-0001-0045
-Scenario: AC-0001-0045-01
-  Given a reviewer report containing an `R-WORKLOG-DRIFT` or `R-REJECTED-READOPT` finding with an empty or missing `justification:` field
-  When `qfai validate` ingests the reviewer report
-  Then the validator rejects the run with severity error (advisory-failing). A correctly-justified finding (non-empty `justification:` naming the entry ID or Decisions row) passes
-
-# AC-0001-0045-02
-# Parent: US-0001-0045
-Scenario: AC-0001-0045-02
-  Given a work-log entry with `kind: handoff` whose body is missing at least one of the 5 required sections (`## State of the task`, `## Next single action`, `## Constraints to preserve`, `## Open questions`, `## References to consult first` — canonical per `.qfai/contracts/cli/worklog-entry.schema.md`)
-  When `qfai validate` runs
-  Then `R-HANDOFF-INCOMPLETE` is emitted at error severity; the finding text names the missing section(s) and the entry file
+  # AC-0001-0045-02
+  Scenario: A project_memory block that is not trailing raises a warning
+    Given a `qfai-*` skill whose SKILL.md declares a `project_memory:` YAML block followed by other content
+    When `qfai validate` runs
+    Then `W-SKILL-PROJECT-MEMORY` is emitted at warning, naming the skill and the block
+    And a trailing `project_memory:` block raises no such warning whatever sub-keys it holds
 ```

@@ -3,20 +3,17 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Skill-document references and migration notes
+  # AC-0001-0046-01
+  Scenario: A SKILL.md reference to a retired steering path is reported
+    Given a `qfai-*` SKILL.md whose body references one of the retired `.qfai/assistant/steering/` paths `agent-routing.yml`, `agent-catalog.yml`, `review-profiles.yml` or `test-layers.md`
+    When `qfai validate` runs
+    Then `W-SKILL-DOC-BROKEN-REF` is emitted at error against that SKILL.md, and its message says the reference is past the announced sunset and where that content now lives. User-defined (non-`qfai-*`) skills are NOT flagged.
+    And the check matches only that fixed list, so any other `.qfai/assistant/...` reference raises no such finding
 
-# AC-0001-0046-01
-# Parent: US-0001-0046
-Scenario: AC-0001-0046-01
-  Given a work-log entry of `kind: decision` whose declared `promote-to: spec-NNNN/07_Decisions.md` target has no row citing the entry ID as a whole token, or whose status is not `archived`, or whose `promoted-to` does not name that row's DR ID
-  When `qfai validate` runs
-  Then `W-PENDING-PROMOTION` is emitted at warning severity AND a dedicated section "Pending Promotions" appears in the validate report
-  And On the story tree, the same finding and section appear for an entry whose `promote-to: decisions.md` is set while no `decisions.md` row cites its ID as a whole token, its status is not `archived`, or its `promoted-to` does not name that row's DEC ID
-
-# AC-0001-0046-02
-# Parent: US-0001-0046
-Scenario: AC-0001-0046-02
-  Given a `status: active` work-log entry whose `updated` timestamp is older than 90 days from now
-  When `qfai validate` runs
-  Then `W-WORKLOG-STALE` is emitted at warning severity naming the entry and its age in days
+  # AC-0001-0046-02
+  Scenario: Migration notes pass through as informational
+    Given a validate run on a project that just completed `qfai init --upgrade-assistant-tree`
+    When the migration emitted `W-USER-EDIT-PRESERVED` informational notes
+    Then the validator recognizes those notes as informational pass-throughs (`info` severity, not warning/error); they appear in the validate report under "Informational" without failing any gate
 ```

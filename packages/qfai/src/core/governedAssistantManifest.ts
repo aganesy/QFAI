@@ -29,5 +29,4 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "rule/ui-definition-protocol.md",
   "rule/ui-procurement.md",
   "rule/workflow.md",
-  "rule/worklog-entry.schema.md",
 ];

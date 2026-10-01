@@ -45,7 +45,7 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
   }
 }
 
-const HEADER = "-- QFAI-CONTRACT-ID: CON-DB-0001\n";
+const HEADER = "-- QFAI-CONTRACT-ID: DB-0001\n";
 
 describe("the statement splitter knows SQL's quoting rules", () => {
   // A naive split(";") would report a valid PL/pgSQL function as a dozen

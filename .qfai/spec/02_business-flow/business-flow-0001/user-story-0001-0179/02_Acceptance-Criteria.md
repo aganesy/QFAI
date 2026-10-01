@@ -3,12 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature: `qfai audit log` CLI surface
+Feature: Prompt Injection Defense
+  # AC-0001-0179-01
+  Scenario: Prompt injection in fetched web content
+    Given a fetched web page containing hidden text with injection instructions
+    When the content passes through the sanitization stage
+    Then hidden text (aria-hidden, display:none) is stripped
+    And control characters are removed
+    And the sanitized content is safe for LLM processing
 
-# AC-0001-0179-01
-# Parent: US-0001-0179
-Scenario: `qfai audit log` lists and filters decision records
-  Given `.qfai/evidence/decision/<ts>.json` records exist,
-  When `qfai audit log` runs,
-  Then it lists the records newest-first and supports `--scope`, `--operator`, and `--clause` (filtering on `envelopeContractClause`) plus `--format table|json` defaulting to `table`, per DR-0271 (CLI-AUDIT). Because `.qfai/evidence/decision/` is human-readable JSON, the CLI is SHOULD-level (ergonomic, not a hard requirement).
+  # AC-0001-0179-02
+  Scenario: Normal documentation passes sanitization
+    Given a fetched web page containing standard documentation text
+    When the content passes through the sanitization stage
+    Then the documentation content passes through cleanly
+    And no legitimate content is lost
 ```

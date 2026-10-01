@@ -5,9 +5,9 @@
  * The comparison set of `workflows.integrity` is the set of names the
  * `.qfai/install-provenance.json` record carries — never a filename pattern.
  * The reserved `qfai-` prefix is a reservation notice, not a selector
- * (`.qfai/contracts/cli/shipped-workflows.md` §1), so an adopter who authored
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0008), so an adopter who authored
  * a colliding name first owns that file and it is `adopter-owned`: silent in
- * `qfai doctor`, forever (§3).
+ * `qfai doctor`, forever (BR-0018-0021).
  *
  * What this file has to establish is that the silence is DERIVED, not vacuous.
  * A check that reported nothing at all would satisfy "the collision is not
@@ -20,7 +20,7 @@
  * pass a reader-only test. One assertion in the second row below reads the
  * reader instead, and says why at its own line.
  *
- * Both of §3's entry-LESS states live here, one row each: `adopter-owned`
+ * Both of BR-0018-0021's entry-LESS states live here, one row each: `adopter-owned`
  * (no entry, file present) and `absent` (no entry, nothing on disk). What they
  * share is the observation that decides them — the name has no provenance
  * entry — which is this file's subject.
@@ -28,7 +28,7 @@
  * This file grows row by row; each describe block is one ledger row.
  */
 // QFAI:EX-0003-0011-04
-// QFAI:EX-0003-0011-03
+// QFAI:EX-0003-0011-10
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -112,7 +112,7 @@ describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never r
     // Asserted as the two facts the row actually needs (the collision is
     // unrecorded, the control is recorded) rather than as deep equality on
     // the sorted key set. Deep equality would additionally pin the shipped
-    // set's CARDINALITY at 2, and contract §1 explicitly anticipates that
+    // set's CARDINALITY at 2, and BR-0018-0019 explicitly anticipates that
     // number changing (`SHIPPED_WORKFLOW_NAMES` is an in-binary list names
     // enter and leave). A third shipped workflow would then redden this row
     // for a reason it says nothing about, and no assertion here needs the
@@ -155,7 +155,7 @@ describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never r
 
     const data = await createDoctorData({ startDir: dir, rootExplicit: true });
     // The finding SET, not the first match. The TC's Assert is about the set
-    // (「finding 集合に ... 1 度も現れない」), and `addCheck` is a bare push
+    // ("no finding in the set ... appears even once"), and `addCheck` is a bare push
     // with no dedup — so a `find` would hand back only the gated emission
     // while a second, ungated registration of the same id named the
     // collision, and every assertion below would read the clean one and
@@ -267,7 +267,7 @@ describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never r
  * revision and the other one is this row's live control.
  *
  * Reached by stripping a real install, which is a SIMULATION of a state that
- * arises on its own rather than a contrived tree: contract §1 has names
+ * arises on its own rather than a contrived tree: BR-0018-0019 has names
  * entering and leaving the shipped list, so an adopter who installed while the
  * package shipped one workflow and then upgraded to a version shipping two
  * carries exactly this state for the new name — no entry, no file, record
@@ -277,16 +277,16 @@ const ABSENT_NAME = "qfai-tests.yml";
 
 describe("TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk yields no drift finding, while a live entry-bearing stale file is still reported", () => {
   // TC-0006-0030 leg (b), re-quoted after `CR-20260810-0001` Option A reworded it
-  // — 「`absent` の name は `workflows.integrity` finding の title / message /
-  // `details` のいずれにも現れない (不在は drift ではない)。同じ tree の対照 stale
-  // file は `details.modified` に報告され、check は severity `info` で 1 度だけ
-  // registered される」. That is this row's tree exactly — `absent` plus a
+  // — "the name of `absent` appears in none of the title / message /
+  // `details` of the `workflows.integrity` finding (absence is not drift). The control stale
+  // file in the same tree is reported in `details.modified`, and the check is registered
+  // exactly once with severity `info`". That is this row's tree exactly — `absent` plus a
   // co-located entry-bearing control — so the leg no longer DIVIDES and this row
-  // is the whole of it. The pre-CR quotation stood here (「drift finding が 0 件」,
+  // is the whole of it. The pre-CR quotation stood here ("0 drift findings",
   // split between two owners) and named nothing this row asserts.
   //
   // `declined` (entry present, file gone) is a different state, OUTSIDE this TC by
-  // its own 境界 clause, which names TC-0006-0034 / TC-0006-0035 as the owners. The
+  // its own boundary clause, which names TC-0006-0034 / TC-0006-0035 as the owners. The
   // sibling drift suite's second `it` still deletes a recorded `qfai-validate.yml`
   // and pins its silence — measured, not assumed, by the M2 mutation below, which
   // reddens that `it` and nothing else in that file — but it does so under its own
@@ -377,7 +377,7 @@ describe("TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and a
     // name IS compared and every assertion in this row stays green, the row
     // above killing that mutant instead, its collision being present on disk.
     // Pinned against `recordedNames.length`, not the literal 1: that would pin
-    // the shipped set's cardinality at 2, which contract §1 expects to change.
+    // the shipped set's cardinality at 2, which BR-0018-0019 expects to change.
     expect
       .soft(
         diff.comparedCount,

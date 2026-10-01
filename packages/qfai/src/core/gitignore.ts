@@ -38,6 +38,13 @@ export const QFAI_STATE_SCRATCH_SUFFIX = ".qfai-state.tmp";
 export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
 
 /**
+ * The run state `qfai workflow` keeps under `.qfai/run/`: the journal, the lock and each run's
+ * snapshot. It is per-checkout and rebuilt from the journal, so it never belongs in a commit, and
+ * init adds it to an existing block that lacks it.
+ */
+export const QFAI_RUN_STATE_IGNORE = ".qfai/run/";
+
+/**
  * The Article XI recommendation, as it is named in a finding's `refs`.
  *
  * Held here rather than written twice: the list below advertises it and
@@ -60,9 +67,8 @@ export const ARTICLE_XI_TMP_SAMPLE_PATH = "tmp/scratch.txt";
  * Gitignore entries qfai init writes alongside the marker.
  *
  * Recommended, not required: QFAI-REVIEW-008 reports a missing one at
- * info. .qfai/evidence/**, .qfai/review/** and .qfai/discussion/**
- * hold governance records a project may legitimately want tracked, and
- * failing validation for tracking your own audit trail is the wrong answer.
+ * info. A project may legitimately choose to track .qfai/review/** or
+ * .qfai/discussion/**, and failing validation for that is the wrong answer.
  * Named for that semantics — the old _REQUIRED_ read as a hard gate this
  * has not been since the severity moved to info.
  */
@@ -82,6 +88,7 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   // The staging directories that file's atomic write uses; see
   // QFAI_STATE_SCRATCH_IGNORE.
   QFAI_STATE_SCRATCH_IGNORE,
+  QFAI_RUN_STATE_IGNORE,
   // Constitution Article XI rule 3: `tmp/` MUST be listed in `.gitignore`.
   // Rule 2 sends every agent's scratch work there, so without the entry the
   // first `git add .` commits exactly what rule 3 exists to prevent.
@@ -95,121 +102,21 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
 ] as const;
 
 /**
- * Governance records that must stay in version control: Change Requests
- * carrying user approval, durable decision records, and the per-item evidence
- * the completion gate reads. `qfai init` writes these negations after the
- * ignore lines so the later pattern wins.
+ * Records under `.qfai/` that must stay in version control. `qfai init` writes these negations
+ * after the ignore lines so the later pattern wins.
  *
- * They are deliberately NOT in `QFAI_GITIGNORE_RECOMMENDED_ENTRIES`: an existing
- * project whose `.gitignore` predates them must not start failing validation.
+ * Nothing under `.qfai/evidence/` is among them: that directory is a local work area, ignored
+ * whole.
+ *
+ * They are deliberately NOT in `QFAI_GITIGNORE_RECOMMENDED_ENTRIES`: an existing project whose
+ * `.gitignore` predates them must not start failing validation.
  */
 export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
-  // Parent re-inclusions. Git cannot re-include a path whose PARENT directory
-  // is excluded, so a leaf negation alone is inert against a broad pre-existing
-  // rule an adopting project already had:
-  //   `.qfai/`          excludes `.qfai` itself -> `!.qfai/` is required
-  //   `.qfai/*`         excludes `.qfai/evidence` -> `!.qfai/evidence/` too
-  //   `.qfai/evidence/` excludes the directory   -> `!.qfai/evidence/` too
-  // Measured with `git check-ignore -v .qfai/evidence/decision/a.json`: without
-  // these two lines all three shapes still report the broad rule as the winner.
-  // Neither line widens the managed block. `!.qfai/` and `!.qfai/evidence/`
-  // match the directories only, so the `.qfai/<subtree>/*` ignores above still
-  // win for every generated file (evidence/prototyping, report, discussion,
-  // review); the only paths they re-expose are governed files elsewhere under
-  // `.qfai/`.
+  // Parent re-inclusion. Git cannot re-include a path whose PARENT directory is excluded, so a
+  // leaf negation alone is inert against a broad pre-existing `.qfai/` rule an adopting project
+  // already had. `!.qfai/` matches the directory only, so the `.qfai/<subtree>/*` ignores above
+  // still win for every generated file.
   "!.qfai/",
-  "!.qfai/evidence/",
-  // The real durable-decision write target: `writeDecisionRecord` persists
-  // `.qfai/evidence/decision/<ISO8601-stamp>.json` (see
-  // `core/decisionRecord.ts#DECISIONS_REL`). Git never descends into an
-  // ignored directory, so `.qfai/evidence/*` must be undone for the directory
-  // itself before its contents can be re-included.
-  "!.qfai/evidence/decision/",
-  "!.qfai/evidence/decision/**",
-  // The prototyping session record: what the user said the prototype is for,
-  // what counts as better, and what is out of bounds. Every later generator and
-  // reviewer is required to read it, and nothing regenerates it — a re-run
-  // rebuilds the prototype, not the answers. Without this it is ignored with the
-  // rest of `.qfai/evidence/prototyping/`, so a fresh clone, another worktree or
-  // a later checkout grades against none of the user's decisions.
-  "!.qfai/evidence/prototyping/",
-  "!.qfai/evidence/prototyping/grilling.md",
-  "!.qfai/evidence/change-request-*.md",
-  "!.qfai/evidence/decision-*.md",
-  // The per-item RED/GREEN record the completion gate resolves every
-  // `test-list.md` Evidence anchor against: `implement-<spec-id>.md`, or
-  // `atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row. Unlike a
-  // report or a run log these are not regenerable — a RED is an observation
-  // taken before the code that makes it pass exists, and rerunning the owner
-  // skill afterwards cannot reproduce it. Left ignored, the anchor resolves
-  // only on the machine that ran the gate: a reviewer, a fresh clone and CI
-  // all read a repository where the payload is absent, and the ledger's
-  // `Evidence` cell is the only part of the record that reaches a commit.
-  // The negation stays narrow — the remaining stage evidence files really are
-  // regenerable logs and stay ignored.
-  "!.qfai/evidence/implement-*.md",
-  // The spec stage's evidence, on the same footing as the two above and for the
-  // same reason: `QFAI-GRILL-001` reads its `## Pre-draft Grilling` section, and
-  // a record only the machine that produced it can see is one no review and no
-  // CI checkout ever reads.
-  "!.qfai/evidence/sdd-*.md",
-  // The discussion stage's evidence, for that reason exactly: the same rule
-  // reads its `## Grilling Session` section. Ignored, the rule's discussion
-  // half can only ever report nothing, which reads in a summary like a project
-  // that grilled every run.
-  //
-  // The stamp is spelled out to its full width, as the import-lite negation
-  // below spells out its own and for the same reason: the check reads
-  // `discussion-` followed by exactly that many digits and nothing else, so a
-  // wider negation would commit a draft or a backup no reader consumes.
-  `!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
-  "!.qfai/evidence/atdd-*.md",
-  // The import-lite record. On the route where a spec set arrives without a
-  // discussion pack, this file is the only thing standing in for the pack: it
-  // carries the sources and the excerpt Stage 1 reads as its requirement
-  // intake, and it is what `validateDiscussionPackReadiness` accepts in place
-  // of the pack it cannot find. Ignored, it exists only on the machine that
-  // wrote it — the fresh clone CI builds from has neither the evidence nor a
-  // pack, so `QFAI-DPACK-001` fires on every imported spec set, and the
-  // provenance every US and AC on that route cites points at nothing.
-  // Two entries, for the two names the check reads: the run-stamped
-  // `import-lite-<ts>.md`, and the copy an operator kept under the template's
-  // own `import-lite.md`. `findImportLiteEvidence` accepts that second one
-  // deliberately — the remedy names the stamped form, but the shipped template
-  // does not carry a stamp, so requiring the separator would leave an operator
-  // who copied it under its own name still holding the warning they had just
-  // acted on. Both are input sources when filled in, so both have to reach a
-  // commit.
-  //
-  // The stamped entry spells the stamp out to its full width, which is the
-  // only width the check accepts: `classifyEvidenceName` rejects any other
-  // suffix outright rather than demoting it, so a wider negation would commit
-  // files nothing ever reads. The glob comes from the same constant the check
-  // matches on, because the two cannot be compared once they disagree — the
-  // file is either in the commit or not, and no run says which rule decided.
-  "!.qfai/evidence/import-lite.md",
-  `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
-  // The Coverage Depth Matrix and the justification behind each `❌` cell.
-  // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
-  // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing
-  // matrix — so the judgement that discharges those gates is a governance
-  // record, not a regenerable log. Re-running the stage recomputes the cells;
-  // it does not recompute *why* an uncoverable obligation was accepted. Left
-  // inside the ignored stage-evidence file, that reasoning never reaches a
-  // commit and "unjustified" becomes unfalsifiable for every later reader.
-  "!.qfai/evidence/coverage-depth-*.md",
-  // `Phase: Skeleton` records here: the smoke run that proved the program
-  // starts, the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton
-  // debt` whose rows a Change Request asks for, all defined in
-  // `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md#evidence`.
-  // That phase requires the debt to be written back *in the skeleton's own
-  // commit*, and every later invocation decides whether an entrypoint is
-  // already proven by reading this file. Left ignored, both requirements hold
-  // only inside the working directory that happened to run the phase: no other
-  // clone, CI run or author can see the pass or the debt it owes. And it is not
-  // regenerable — re-running the phase re-runs the smoke script; it does not
-  // recover which shortcuts were taken or which CR was raised for them.
-  "!.qfai/evidence/skeleton.md",
   // The install-provenance record. It is the only thing that tells a FRESH CLONE
   // which shipped files QFAI wrote and which the adopter deliberately deleted, so
   // it has to survive in version control — and it sits directly under `.qfai/`,
@@ -291,6 +198,26 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   "!.qfai/evidence/decisions/**",
   "!.qfai/decisions/",
   "!.qfai/decisions/**",
+  // `.qfai/evidence/` is a local work area, ignored whole by `.qfai/evidence/*`, so every
+  // negation that re-included a record under it is retired, and so is the line that re-ignored
+  // the prototyping directory those negations opened.
+  ".qfai/evidence/prototyping/*",
+  "!.qfai/evidence/",
+  "!.qfai/evidence/decision/",
+  "!.qfai/evidence/decision/**",
+  "!.qfai/evidence/prototyping/",
+  "!.qfai/evidence/prototyping/grilling.md",
+  "!.qfai/evidence/workflow/",
+  "!.qfai/evidence/change-request-*.md",
+  "!.qfai/evidence/decision-*.md",
+  "!.qfai/evidence/implement-*.md",
+  "!.qfai/evidence/sdd-*.md",
+  `!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
+  "!.qfai/evidence/atdd-*.md",
+  "!.qfai/evidence/import-lite.md",
+  `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
+  "!.qfai/evidence/coverage-depth-*.md",
+  "!.qfai/evidence/skeleton.md",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [
@@ -319,18 +246,7 @@ export const QFAI_GITIGNORE_BLOCK = [
   // whose `.gitignore` predates this line must not start failing validation
   // over it.
   ".qfai/state.json.lock",
-  // Re-ignores the contents of the one evidence directory the negations below
-  // re-include. `.qfai/evidence/*` does not reach inside it — a single `*` does
-  // not cross a `/` — so without this line, un-ignoring the directory exposes
-  // every file in it: `mutation-log.jsonl`, each `iter-NN/` screenshot and HTML
-  // snapshot, `progress.md`. Those are the regenerable stage evidence this
-  // block exists to keep out, and `git add .` would stage them.
-  //
-  // Above the negations on purpose, and it is an ignore rather than one of
-  // them. Git applies the last matching pattern, so the order that works is:
-  // ignore the directory, re-include it so git descends, re-ignore its
-  // contents, re-include the one record.
-  ".qfai/evidence/prototyping/*",
+  QFAI_RUN_STATE_IGNORE,
   // Article XI rule 3, the one mandated ignore that is not under `.qfai/`.
   // Anchored: rule 2 names the repository-root staging area, and an unanchored
   // `tmp/` would also swallow a `src/**/tmp/` a project tracks on purpose.
@@ -347,8 +263,8 @@ export const QFAI_GITIGNORE_BLOCK = [
  * A presence check is not enough for a negation: git applies the **last**
  * matching pattern, so a negation is effective only when no ignore line below
  * it matches the same path. Deciding that needs real gitignore glob semantics,
- * not a prefix comparison — a prefix test cannot see that `*.md` or
- * `**` + `/*.md`, placed after `!.qfai/evidence/coverage-depth-*.md`,
+ * not a prefix comparison — a prefix test cannot see that `*.json` or
+ * `**` + `/*.json`, placed after `!.qfai/install-provenance.json`,
  * re-ignores exactly what the negation re-included.
  *
  * Implemented rules, the ones a real `.gitignore` uses:
@@ -575,19 +491,16 @@ export type GitignoreLayer = {
  * right:
  *
  * - **the deepest file that matches wins.** Per gitignore(5), patterns read
- *   from a `.gitignore` deeper in the tree override those from a shallower one.
- *   `qfai init` still maintains a legacy `.qfai/evidence/.gitignore` whose
- *   first line is `*` (`cli/commands/init.ts#ensureLegacyEvidenceIgnoreNegations`),
- *   so on an adopting project the root managed block is not the last word on
- *   the governance records in either direction: the nested
- *   `!coverage-depth-*.md` re-includes a matrix the root ignored, and a nested
- *   re-ignore hides one the root re-included.
+ *   from a `.gitignore` deeper in the tree override those from a shallower one,
+ *   so on an adopting project that carries nested ignore files the root managed
+ *   block is not the last word in either direction: a nested negation
+ *   re-includes a path the root ignored, and a nested re-ignore hides one the
+ *   root re-included.
  * - **within one file the last matching pattern wins**, negations included.
  *
  * Ancestors are decided first because git never descends into an excluded
- * directory — a negation on a file inside one is unreachable, which is why the
- * managed block ignores `.qfai/evidence/*` (the contents) rather than the
- * directory. A layer deeper than the path being judged cannot contain it, so
+ * directory — a negation on a file inside one is unreachable. A layer deeper
+ * than the path being judged cannot contain it, so
  * the same walk also declines to read an ignore file git would never have
  * reached.
  *
@@ -749,19 +662,13 @@ export function missingRecommendedGitignoreEntries(content: string): string[] {
  */
 export function negationSamplePath(negation: string): string {
   const body = negation.replace(/^!/, "");
-  // These globs are consumed only by canonical `*-spec-NNNN.md` records.
-  // A generic `sample` does not overlap a later `implement-spec-*.md` rule,
-  // so migration would treat a losing negation as effective.
-  if (/(?:^|\/)(?:implement|atdd)-\*\.md$/.test(body)) {
-    return body.replace(/\*\.md$/, "spec-0001.md");
-  }
   const withContents = body.endsWith("/") ? `${body}sample` : body;
   // A scan rather than chained replacements, for the reason `globToRegexSource`
   // gives: inside a bracket expression the alphabet is different, and the same
   // parser has to read it. Left as text, `[0-9]` instantiates as the four
   // characters `[0-9]` — a path no rule written about digits matches, so every
-  // overlap question about the stamped negation would answer "no" and a later
-  // `import-lite-[0-9]*.md` would look like no conflict at all.
+  // overlap question about a stamped negation would answer "no" and a later
+  // `record-[0-9]*.md` would look like no conflict at all.
   let sample = "";
   let index = 0;
   while (index < withContents.length) {
@@ -824,7 +731,7 @@ function sampleForClass(source: string, literal: string): string {
  * re-includes.
  *
  * `lines` is the whole file, not one block: a project that appended
- * `.qfai/evidence/*.md` **after** the managed block wins under git's
+ * `.qfai/*.json` **after** the managed block wins under git's
  * last-match rule, and a block-scoped check calls the negation effective while
  * `git check-ignore -v` names the project's line.
  */
@@ -850,15 +757,14 @@ export function negationsOutrankLaterIgnores(
       // Direction 2: a path the later ignore covers, matched by this negation.
       //
       // Direction 1 alone decides overlap from ONE instance of the negation, and two globs can
-      // overlap without that instance being in the intersection: the negation
-      // `!.qfai/evidence/coverage-depth-*.md` instantiates as `coverage-depth-sample.md`, and a
-      // project line `.qfai/evidence/coverage-depth-spec-*.md` does not match it — while a real
-      // matrix, whose name carries a spec number, is matched by both. Missing that overlap would
-      // leave the Coverage Depth Matrix — a record this repository requires in version control —
+      // overlap without that instance being in the intersection: a negation `!docs/record-*.md`
+      // instantiates as `record-sample.md`, and a later line `docs/record-spec-*.md` does not
+      // match it — while a real record whose name carries a spec number is matched by both.
+      // Missing that overlap would leave a record the negation exists to keep in version control
       // ignored, with nothing left to flag it.
       //
       // Instantiating the LATER pattern and asking whether the negation covers it closes that
-      // case: `coverage-depth-spec-sample.md` is matched by `coverage-depth-*.md`. Neither
+      // case: `record-spec-sample.md` is matched by `record-*.md`. Neither
       // direction alone is exact, and two are not exact either — but each one can only ADD
       // conflicts, and a false conflict costs a relocation that was harmless anyway.
       const trimmed = later.trim();

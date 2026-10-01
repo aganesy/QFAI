@@ -1,17 +1,9 @@
-# US-0003-0003: パス解決診断
+# US-0003-0003: Path resolution diagnosis
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: 設定ファイル内の各パス（testsDir, outDir 等）が実際に解決可能かチェック
-- Non-goals: パスの自動修正
+As an operator, I want `qfai doctor` to check that each path in the configuration file (`testsDir`, `outDir` and the like) resolves, so that a path pointing nowhere is reported before a command relies on it.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0006/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0006/02_User-stories.md#us-0006-0003`
+- Correcting paths automatically.

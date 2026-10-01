@@ -2,10 +2,10 @@
  * The `--fail-on warning` leg of the installed shipped-workflow drift advisory:
  * a drift-only tree exits 0, and an unrelated warning still exits 1.
  *
- * TC-0006-0032 (AC-0006-0025 / EX-0006-0025) — Setup 「`workflows.integrity` が
- * drift を返し、他の check は 1 件も warning / error を返さないフィクスチャ
- * (`summary.warning === 0` かつ `summary.error === 0` になる状態)」, Action
- * 「`runDoctor({ root, format: 'text', failOn: 'warning' })` 相当を呼ぶ」.
+ * TC-0006-0032 (AC-0006-0025 / EX-0006-0025) — Setup "a fixture on which `workflows.integrity`
+ * returns drift and no other check returns a single warning or error
+ * (a state where `summary.warning === 0` and `summary.error === 0`)", Action
+ * "call the equivalent of `runDoctor({ root, format: 'text', failOn: 'warning' })`".
  *
  * TC-0006-0033 (AC-0006-0025 / EX-0006-0026) — the same drift fixture plus exactly
  * one warning finding unrelated to `workflows.integrity`, asserting exit 1 with the
@@ -35,13 +35,12 @@
  * requires ZERO warnings across the run, not merely that the advisory is not one.
  *
  * A freshly seeded adopter tree does not deliver that: `qfai init` reports success
- * and leaves FIVE warnings standing (`paths.srcDir`, `paths.testsDir`,
- * `paths.outDir`, `output.validateJson`, `traceability.testGlobs`). Every one is an
- * absence — a directory not created, a report not yet run, a glob list left
- * intentionally empty — which is the default state of a bare install rather than a
- * defect. `quietUnrelatedWarnings` answers each with the minimum its own condition
- * asks for; why each repair is minimal, and why only three of the five may be left
- * standing, is in that helper's docblock and is not restated here.
+ * and leaves a warning standing for `traceability.testGlobs`, an intentionally
+ * empty glob list. The absent default `paths.srcDir`, `paths.testsDir` and
+ * `paths.outDir`, and a missing `output.validateJson`, are reported at info.
+ * `quietUnrelatedWarnings` answers the warning with the minimum its own condition
+ * asks for; why the repair is minimal is in that helper's docblock and is not
+ * restated here.
  *
  * ## Guard #3 is scoped to OTHER ids, and the scope is load-bearing
  *
@@ -56,8 +55,8 @@
  * ## What the `summary.info` claim does NOT discriminate, measured
  *
  * `TC-0006-0032` asks for `summary.info >= 1`. On this fixture the bare install
- * already contributes four `info` checks (`paths.specsDir`, `paths.contractsDir`,
- * `paths.discussionDir`, `guardrails.present`), so the claim holds at 4 even with
+ * already contributes three `info` checks (`paths.specsDir`, `paths.contractsDir`,
+ * `paths.discussionDir`), so the claim holds at 3 even with
  * the drift advisory absent or re-severitied. It is asserted because the TC asks
  * for it, and it is recorded here as NON-DISCRIMINATING so no reader mistakes it
  * for the claim that pins the severity choice. That claim is `summary.warning`.
@@ -105,13 +104,13 @@ const pool = useAdopterTreePool();
 const STALE_NAME = "qfai-tests.yml";
 
 /**
- * The one unrelated warning the control leaves standing. `paths.testsDir` is a
- * missing directory, so the control differs from the first fixture by a single
- * `mkdir` — the smallest available difference between "exit 0" and "exit 1" on
+ * The one unrelated warning the control leaves standing. `traceability.testGlobs`
+ * is an empty glob list, so the control differs from the first fixture by a single
+ * config edit — the smallest available difference between "exit 0" and "exit 1" on
  * this flag, which is what makes the pair a control rather than two unrelated
- * measurements.
+ * measurements. An absent default `paths.testsDir` is `info`, so it cannot serve.
  */
-const UNRELATED_WARNING_ID = "paths.testsDir";
+const UNRELATED_WARNING_ID = "traceability.testGlobs";
 
 /** The check ids whose severity would make `--fail-on warning` exit 1. */
 function failingIdsOtherThanDrift(checks: { id: string; severity: string }[]): string[] {
@@ -176,7 +175,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
     ).toContain("workflows.integrity");
 
-    // CLAIM 1 — 「exit code が 0 であること」.
+    // CLAIM 1 — "the exit code is 0".
     expect
       .soft(
         run.exitCode,
@@ -184,7 +183,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       )
       .toBe(0);
 
-    // CLAIM 2 — 「`summary.warning` が 0 のままであること」. This is the claim that
+    // CLAIM 2 — "`summary.warning` stays 0". This is the claim that
     // discriminates `info` from `warning`; the equivalent mutant TC-0006-0029
     // recorded dies here.
     expect
@@ -194,9 +193,9 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
       )
       .toBe(0);
 
-    // CLAIM 3 — 「`summary.info` が 1 以上であること」. Asserted because the TC asks
+    // CLAIM 3 — "`summary.info` is 1 or more". Asserted because the TC asks
     // for it; recorded in the header as non-discriminating, because the bare
-    // install already contributes four.
+    // install already contributes info checks.
     expect
       .soft(
         data.summary.info,
@@ -249,7 +248,7 @@ describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fa
       "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
     ).toContain("workflows.integrity");
 
-    // CLAIM 1 — 「exit code が 1 であること」, i.e. the flag really does catch a
+    // CLAIM 1 — "the exit code is 1", i.e. the flag really does catch a
     // warning. This is what makes TC-0006-0032's exit 0 non-vacuous.
     expect
       .soft(
@@ -258,7 +257,7 @@ describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fa
       )
       .toBe(1);
 
-    // CLAIM 2 — 「`workflows.integrity` finding は依然 `info` のままであること」. Read
+    // CLAIM 2 — "the `workflows.integrity` finding is still `info`". Read
     // at the registration site rather than in the rendered text, matching every
     // suite in this family: severity is decided at `addCheck`.
     expect

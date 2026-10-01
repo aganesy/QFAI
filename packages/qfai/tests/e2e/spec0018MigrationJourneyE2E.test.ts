@@ -32,7 +32,8 @@ import process from "node:process";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 
-import { ensureRootGitignoreEntries } from "../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -43,7 +44,7 @@ const CONVERTIBLE_CRITERIA = path.join(
 );
 const SKILL_SCRIPTS = path.join(
   PACKAGE_ROOT,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const CLI = path.join(PACKAGE_ROOT, "dist/cli/index.mjs");
 const RESOLUTION = path.join(
@@ -61,6 +62,8 @@ const SCRIPT_NAMES = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const HOST_AGENT_DIRS = [".claude/agents", ".github/agents"];
@@ -114,13 +117,14 @@ async function fingerprint(
     for (const name of (await readdir(directory)).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).replace(/\\/g, "/");
-      if (excluded.has(relative)) continue;
+      if (excluded.has(relative) || isMigrationReportPath(relative)) continue;
       const stats = await lstat(file);
-      hash.update(`${relative}\0${stats.mode}\0`);
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(`${relative}\0${stats.mode}\0`);
       if (stats.isSymbolicLink()) {
         hash.update(`link\0${await readlink(file)}\0`);
       } else if (stats.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(file);
       } else {
         hash.update("file\0");
@@ -213,7 +217,10 @@ async function applyPreparedResolution(root: string): Promise<void> {
     example: string;
   };
   const target = path.join(root, ".qfai/spec/03_contract", resolution.contract);
-  const parsed: unknown = parse(await readFile(target, "utf8"));
+  const text = await readFile(target, "utf8");
+  // The contract declares its ID on a comment line, which a YAML round trip drops.
+  const declaration = /^# QFAI-CONTRACT-ID: .*\n/.exec(text)?.[0] ?? "";
+  const parsed: unknown = parse(text);
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`Prepared resolution cannot read ${resolution.contract}`);
   }
@@ -229,7 +236,7 @@ async function applyPreparedResolution(root: string): Promise<void> {
   }
   if (!Array.isArray(selected.examples)) throw new Error("Migrated rule has no examples");
   selected.examples.push(resolution.example);
-  await writeFile(target, stringify(contract), "utf8");
+  await writeFile(target, `${declaration}${stringify(contract)}`, "utf8");
 }
 
 /**
@@ -439,13 +446,12 @@ describe("spec-0018: one shipped-script migration journey", () => {
   });
 
   it("places each rule in the selected contract with its example", async () => {
-    const api = await textAt(journey.root, ".qfai/spec/03_contract/api/order.yaml");
-    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/orders.sql");
-    const design = await textAt(journey.root, ".qfai/spec/03_contract/design/order.md");
-    expect(api).toContain("BR-0001");
+    const api = await textAt(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml");
+    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
+    expect(api).toContain("BR-0001-0001");
+    expect(api).toContain("BR-0001-0002");
     expect(api).toContain("EX-0001-0001-01");
-    expect(db).toContain("BR-0002");
-    expect(design).toContain("BR-0003");
+    expect(db).toContain("BR-0002-0001");
   });
 
   it("rewrites mapped annotations while reporting an integration US and contract annotation", async () => {
@@ -460,7 +466,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(report).toContain("QFAI:SPEC-0001:US-0001-0001");
   });
 
-  it("repoints the six host links and keeps decision evidence trackable", async () => {
+  it("repoints the six host links and keeps decision evidence out of Git", async () => {
     for (const dir of HOST_SKILL_DIRS) {
       expect(
         (await readlink(path.join(journey.root, dir, "qfai-sdd"))).replace(/\\/g, "/"),
@@ -473,14 +479,14 @@ describe("spec-0018: one shipped-script migration journey", () => {
     }
     const ignore = await textAt(journey.root, ".gitignore");
     expect(ignore).toContain("# Local notes stay ignored.\nscratch/\n");
-    expect(ignore).toContain("!.qfai/evidence/decision/");
+    expect(ignore).not.toContain("!.qfai/evidence/");
     const expected = await cloneProject(journey.beforeLinks);
     await ensureRootGitignoreEntries(expected, false, () => {});
     expect(ignore).toBe(await textAt(expected, ".gitignore"));
     const record = ".qfai/evidence/decision/receipt.json";
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });
     await writeFile(path.join(journey.root, record), "{}\n");
-    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(1);
+    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(0);
   });
 
   it("limits link repair to managed wrappers and refuses an inspection failure", async () => {

@@ -1,6 +1,6 @@
 /**
- * Integration: skill wording, the validate entry point and the Coverage
- * Depth Matrix of BF-0001.
+ * Integration: skill wording, the validate entry point and the test-case
+ * depth review of BF-0001.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -123,28 +123,9 @@ describe("TC-0014-0029: integration test existence", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // TC-0008-0011
-// QFAI:EX-0001-0074-01
-describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
-  it("the flow matrix records each required depth dimension and story-tree IDs", async () => {
-    const matrixPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "evidence",
-      "coverage-depth-BF-0001.md",
-    );
-    const content = await readFile(matrixPath, "utf-8");
-    expect(content).toContain("Coverage Depth Matrix — BF-0001");
-    expect(content).toMatch(
-      /\| Normal \| Error \| Boundary \| Special \| State transition \| Combinatorial \|/,
-    );
-    expect(content).toContain("| US-0001-0074 |");
-    expect(content).toContain("| AC-0001-0074-01 |");
-    expect(content).toContain("| EX-0001-0074-01 |");
-  });
-
-  it("the story criterion assigns depth review to the business flow", async () => {
+// QFAI:EX-0001-0072-01
+describe("TC-0008-0011: Depth Review Covers the Story Tree", () => {
+  it("the story criterion flags a normal-path-only flow or criterion", async () => {
     const acPath = path.resolve(
       process.cwd(),
       "..",
@@ -153,18 +134,19 @@ describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
       "spec",
       "02_business-flow",
       "business-flow-0001",
-      "user-story-0001-0074",
+      "user-story-0001-0072",
       "02_Acceptance-Criteria.md",
     );
     const content = await readFile(acPath, "utf-8");
-    expect(content).toContain("AC-0001-0074-01");
-    expect(content).toMatch(/normal\/error\/boundary\/special\/state-transition\/combinatorial/);
-    expect(content).toContain("one ATDD evidence file");
+    expect(content).toContain("AC-0001-0072-01");
+    expect(content).toContain(
+      "Then a BF or AC with only normal-path test cases is flagged as incomplete.",
+    );
   });
 });
 
 // TC-0008-0012
-// QFAI:EX-0001-0074-01
+// QFAI:EX-0001-0072-01
 describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
   const storyDir = path.resolve(
     process.cwd(),
@@ -174,7 +156,7 @@ describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
     "spec",
     "02_business-flow",
     "business-flow-0001",
-    "user-story-0001-0074",
+    "user-story-0001-0072",
   );
 
   it("the story criterion requires incomplete status for a normal-only case", async () => {
@@ -182,9 +164,9 @@ describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
     expect(content).toMatch(/only normal-path test cases is flagged as incomplete/);
   });
 
-  it("the example assigns missing error depth to the criterion row", async () => {
+  it("the example flags the criterion missing an error path, not the flow", async () => {
     const content = await readFile(path.join(storyDir, "03_Example.md"), "utf-8");
-    expect(content).toContain("EX-0001-0074-01");
-    expect(content).toContain("❌ for Error path and is incomplete");
+    expect(content).toContain("EX-0001-0072-01");
+    expect(content).toContain("The AC is flagged incomplete and the BF is not flagged");
   });
 });

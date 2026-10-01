@@ -125,18 +125,37 @@ describe("lint-shipping fixture — detection rules", () => {
     ]);
   });
 
+  // QFAI:EX-0002-0012-03
+  it("reports requirement and test-design IDs in source comments at any number", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// REQ-0006\n/** TDD-0039 */\n// REQ-NNNN\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      { file: "src/guard.ts", line: 1, pattern: "local-reference-id-comment", matched: "REQ-0006" },
+      { file: "src/guard.ts", line: 2, pattern: "local-reference-id-comment", matched: "TDD-0039" },
+    ]);
+  });
+
   it("scans built-in routing defaults outside the init tree", async () => {
     const root = await newTempDir();
-    await mkdir(path.join(root, "assets/defaults"), { recursive: true });
+    await mkdir(path.join(root, "assets/defaults/agent-routing"), { recursive: true });
     await writeFile(
-      path.join(root, "assets/defaults/agent-routing.yml"),
+      path.join(root, "assets/defaults/agent-routing/skills.yml"),
       "routing:\n  - skill: spec-1234\n",
     );
     const { violations, scannedFileCount } = await runLintShipping(root);
     expect(scannedFileCount).toBe(1);
     expect(violations).toEqual([
       expect.objectContaining({
-        file: "assets/defaults/agent-routing.yml",
+        file: "assets/defaults/agent-routing/skills.yml",
         pattern: "spec-id-literal",
       }),
     ]);
@@ -438,20 +457,17 @@ describe("lint-shipping fixture — detection rules", () => {
     );
   });
 
-  it("does NOT flag composite trace IDs (BR/AC/TC) in JSDoc — only internal spec-NNNN paths/IDs", async () => {
-    // Composite trace IDs (BR-NNNN-NNNN, AC-NNNN-NNNN, TC-NNNN-NNNN) are NOT in the
-    // forbidden set declared by `.agents/rules/distributed-surface.md`
-    // (only spec-0010+, CAP-0010+, DEC-NNNN-NNNN, DR-NNNN, and the
-    // QFAI-PROT2-NNN trace prefix are forbidden). Composite IDs in
-    // JSDoc remain permitted so existing trace pointers like
-    // "BR-0029-0001" / "AC-0025-0005" do not need to be scrubbed.
+  it("does NOT flag two-segment AC or TC trace IDs in JSDoc", async () => {
+    // `AC-NNNN-NNNN` and `TC-NNNN-NNNN` are not in the forbidden set of
+    // `.agents/rules/distributed-surface.local.md`. `BR-NNNN-NNNN` is: it is the
+    // contract-scoped business-rule ID.
     const root = await newTempDir();
     await mkdir(path.join(root, "src/foo"), { recursive: true });
     await writeFile(
       path.join(root, "src/foo/bar.ts"),
       [
         "/**",
-        " * Implements BR-0029-0001 and references AC-0025-0005.",
+        " * Implements TC-0029-0001 and references AC-0025-0005.",
         " */",
         "export function foo(): void {}",
         "",

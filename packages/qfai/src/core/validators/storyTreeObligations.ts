@@ -20,6 +20,11 @@ export type StoryTestFile = {
 
 export type StoryObligationProfile = "atdd" | "tdd";
 
+/** Whether an EX annotation in this file covers its example: a selected test outside E2E. */
+export function countsForExample(file: StoryTestFile): boolean {
+  return file.selectedForExample && file.kind !== "e2e";
+}
+
 /** Evaluates coverage using the layer assigned by the existing ATDD crosswalk. */
 export function validateStoryTreeObligationsModel(
   model: StoryTreeModel,
@@ -114,7 +119,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.selectedForExample && file.kind !== "e2e") covered.EX.add(id);
+      if (countsForExample(file)) covered.EX.add(id);
     }
   }
 
@@ -172,7 +177,7 @@ function toPosix(value: string): string {
 }
 
 /** Reads acceptance layers and the configured EX test selectors once per run. */
-async function readStoryTests(
+export async function readStoryTests(
   root: string,
   config: QfaiConfig,
 ): Promise<{ files: StoryTestFile[]; truncated: boolean }> {

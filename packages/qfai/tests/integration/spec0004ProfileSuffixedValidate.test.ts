@@ -5,16 +5,13 @@
  *
  * Covers TC-0004-0055..0066.
  */
-// QFAI:EX-0001-0049-01
-// QFAI:EX-0001-0049-01
-// QFAI:EX-0001-0049-02
-// QFAI:EX-0001-0049-02
-// QFAI:EX-0002-0010-01
-// QFAI:EX-0002-0010-01
-// QFAI:EX-0002-0010-01
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0047-02
 // QFAI:EX-0002-0010-02
-// QFAI:EX-0001-0050-01
-// QFAI:EX-0001-0050-01
+// QFAI:EX-0001-0048-01
+// QFAI:EX-0001-0048-01
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -120,6 +117,20 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
     body = JSON.parse(await readFile(alwaysLatest, "utf-8")) as { profile?: string };
     expect(body.profile).toBe("tdd");
   });
+
+  // QFAI:AC-0001-0047-01
+  // QFAI:EX-0001-0047-01
+  it("records a run with no profile as the full profile", async () => {
+    await runValidate({ root, strict: false });
+    const full = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate-full.json"), "utf-8"),
+    ) as { profile?: string };
+    const latest = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate.json"), "utf-8"),
+    ) as { profile?: string };
+    expect(full.profile).toBe("full");
+    expect(latest.profile).toBe("full");
+  });
 });
 
 describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 when consumer evidence exists", () => {
@@ -205,6 +216,7 @@ async function runCheckScript(
 }
 
 describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () => {
+  // QFAI:EX-0002-0010-01
   it("scanner-only PR emits R-PROMPT-SCANNER-DRIFT naming the scanner and un-paired prompt", async () => {
     const result = await runCheckScript(["--changed", SCANNER_REL]);
     expect(result.code).not.toBe(0);
@@ -217,6 +229,7 @@ describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () =
 });
 
 describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () => {
+  // QFAI:EX-0002-0010-01
   it("prompt-only PR emits R-PROMPT-SCANNER-DRIFT naming the prompt and un-paired scanner", async () => {
     const result = await runCheckScript(["--changed", PROMPT_REL]);
     expect(result.code).not.toBe(0);
@@ -228,6 +241,7 @@ describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () =>
 });
 
 describe("TC-0004-0061: pair-changed lane passes when both halves change", () => {
+  // QFAI:EX-0002-0010-01
   it("both-changed PR passes the lane silently with no drift finding", async () => {
     const result = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
     expect(result.code).toBe(0);
@@ -282,8 +296,8 @@ describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-D
 // Certify + post-sunset consumer
 // ────────────────────────────────────────────────────────────────────────────
 
-// QFAI:AC-0001-0049-01
-// QFAI:EX-0001-0049-04
+// QFAI:AC-0001-0047-03
+// QFAI:EX-0001-0047-04
 describe("certify reads the prototyping-profile validate report", () => {
   it("rejects the prototyping report's error even when the latest tdd report passed", async () => {
     // Seed the same prerequisite evidence as a normal certify invocation.
@@ -291,7 +305,7 @@ describe("certify reads the prototyping-profile validate report", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0004.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0004\nscreens:\n  - id: home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0004\nscreens:\n  - id: home\n    route: /\n",
       "utf-8",
     );
     const protoDir = path.join(root, ".qfai/evidence/prototyping");
@@ -304,8 +318,8 @@ describe("certify reads the prototyping-profile validate report", () => {
         designMd: { sha256: "0".repeat(64) },
         reviewerGate: { result: "PASS" },
         iterations: [{}],
-        uiContractsCovered: ["CON-UI-0004"],
-        frozenSurfaceUnion: ["CON-UI-0004"],
+        uiContractsCovered: ["UI-0004"],
+        frozenSurfaceUnion: ["UI-0004"],
       }),
       "utf-8",
     );
@@ -351,8 +365,8 @@ describe("certify reads the prototyping-profile validate report", () => {
   });
 });
 
-// QFAI:AC-0001-0049-02
-// QFAI:EX-0001-0049-03
+// QFAI:AC-0001-0047-02
+// QFAI:EX-0001-0047-03
 describe("legacy validate path becomes an error after the sunset", () => {
   it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk

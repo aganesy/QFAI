@@ -42,9 +42,7 @@ export type PrototypingMode = "convergence" | "exploration";
  */
 export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
   "QFAI-CRIT-008", // loop not completed across viewports
-  "QFAI-DCON-030", // design contract drift (DESIGN.md / lock)
-  "QFAI-DCON-031", // design contract drift (paired lock value)
-  "QFAI-DCON-032", // design contract drift (paired token surface)
+  "QFAI-DCON-030", // root DESIGN.md missing
 ] as const;
 
 /**
@@ -136,9 +134,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
   // validators/designContractReadiness.ts — non-drift readiness gates
-  "QFAI-DCON-001",
-  "QFAI-DCON-005",
-  "QFAI-DCON-009",
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DCON-033",
@@ -176,18 +171,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CONTRACT-042",
   // validators/contracts.ts — a UI contract that does not parse
   "QFAI-CONTRACT-021",
-  // validators/bpApDb.ts
-  "QFAI-BPAP-001",
-  "QFAI-BPAP-002",
-  "QFAI-BPAP-003",
-  "QFAI-BPAP-004",
-  "QFAI-BPAP-005",
-  "QFAI-BPAP-006",
-  "QFAI-BPAP-007",
-  "QFAI-BPAP-008",
-  "QFAI-BPAP-009",
-  "QFAI-BPAP-010",
-  "QFAI-BPAP-011",
   // validators/researchSummary.ts
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",

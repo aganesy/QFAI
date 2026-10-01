@@ -29,6 +29,17 @@ at `REVISE`; a Work Orders Summary row does not replace this record.
 | Phase | Session | Participants | Frontier | Recommendation | Disposition | Decision/OQ IDs | Ended at | Wrote at | Evidence |
 | ----- | ------- | ------------ | -------- | -------------- | ----------- | --------------- | -------- | -------- | -------- |
 
+## Concrete-Abstract Cycle
+
+Record one row per finding of each cycle that ran, and one row for a cycle that
+raised nothing, with `none` in Finding. Leave the table empty when no cycle ran.
+The Adjudicator is the cycle's griller, or `user` for a finding put to the
+user. A finding left with no decision has `none` in Decision. Name the finder in
+the Work Orders Summary.
+
+| Cycle | Finding | Kind | Target IDs | Decision | Adjudicator | Reason |
+| ----- | ------- | ---- | ---------- | -------- | ----------- | ------ |
+
 ## Artifacts changed
 
 | Layer | IDs or paths                         |
@@ -50,6 +61,9 @@ at `REVISE`; a Work Orders Summary row does not replace this record.
 - Run log: `<run ID and log location under paths.outDir>`
 
 ## Work Orders Summary
+
+Where the concrete-abstract cycle ran, a row names its finder, a
+`test-design-analyst`.
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |

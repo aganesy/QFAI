@@ -3,13 +3,16 @@
 ## Criteria
 
 ```gherkin
-Feature: DESIGN.md sha256 Lock at Phase 0
+Feature: Truthful verification evidence
+  # AC-0001-0157-01
+  Scenario: A REVISE review artifact blocks verification
+    Given reviewer artifacts exist
+    When /qfai-verify evaluates completion
+    Then Verify inspects reviewer artifacts and blocks on `REVISE`.
 
-# AC-0001-0157-01
-# Parent: US-0001-0157
-Scenario: SDD Phase 0 DESIGN.md sha256 Lock
-  Given root `DESIGN.md` exists at `/qfai-sdd` Phase 0 entry in the spec-pack layout, or at the 03-contract step on the story tree,
-  When Phase 0 completes in the spec-pack layout, or the 03-contract step completes on the story tree,
-  Then `<paths.contractsDir>/design/DESIGN.md.lock.yaml` exists with `sha256: <hex>` matching `sha256(DESIGN.md bytes)` and a `lockedAt` ISO 8601 timestamp.
-  And Missing root `DESIGN.md` halts Phase 0 and surfaces as an error-severity finding in the design contract validator family owned by spec-0004. On the story tree it halts the 03-contract step with the same finding.
+  # AC-0001-0157-02
+  Scenario: Prototyping Evidence Path Layout
+    Given a `/qfai-verify` run on a UI-bearing repo,
+    When prototyping evidence is inspected,
+    Then the active layout is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}` per iter; the legacy `screenshots/` / `html/` directory layout is no longer accepted as the active SSOT.
 ```

@@ -180,6 +180,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     expect(await readFile(target, "utf-8")).toBe(generated);
   });
 
+  // QFAI:EX-0001-0025-04
   it("uses a project's agent card and refuses one with an invalid kind", async () => {
     const root = await initProject();
     await addProjectAgent(root, "reviewer");

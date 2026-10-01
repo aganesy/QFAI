@@ -16,12 +16,28 @@ import {
 import { createHash } from "node:crypto";
 import path from "node:path";
 
-import { loadConfig, resolvePath, type QfaiConfig } from "../../core/config.js";
+import { SKILL_ARCHIVE_DIR, SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
+import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+} from "../../core/claudeCodeHooks.js";
+import {
+  AGENTS_RULES_DIR,
+  REMINDERS_BASENAME,
+  RULE_LOCK_BASENAME,
+} from "../../core/ruleMasterUpdates.js";
+import {
+  loadConfig,
+  resolvePath,
+  WORKFLOW_MODE_MESSAGE,
+  type QfaiConfig,
+} from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { ID_MAP_PATH, IdMapInputError, readIdMap } from "./idMap.js";
+import { captureOutput, writeReportFile } from "./reportFile.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
 
-export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 export type WriteSetArea =
   | "qfai"
   | "specs"
@@ -29,9 +45,17 @@ export type WriteSetArea =
   | "config"
   | "gitignore"
   | "gitignore-staging"
+  | "evidence-gitignore"
   | "links"
-  | "test-annotations";
-export type ReportSection = "Cases to examples" | "For a person" | "Annotations kept";
+  | "test-annotations"
+  | "skills"
+  | "skill-archive"
+  | "steps"
+  | "step-archive"
+  | "skill-links"
+  | "reminder-hooks";
+export type ReportSection =
+  "Cases to examples" | "Git index" | "For a person" | "Annotations kept" | "Reminder hooks";
 
 export type MigrationContext = {
   root: string;
@@ -41,7 +65,13 @@ export type MigrationContext = {
 };
 
 export type MigrationOperation =
-  | { kind: "write"; target: string; content: string }
+  | {
+      kind: "write";
+      target: string;
+      content: string;
+      /** Report lines printed after the write's own line. */
+      notes?: readonly string[];
+    }
   | { kind: "move"; source: string; target: string; resume?: boolean }
   | { kind: "remove"; target: string; description: string }
   | { kind: "remove-empty-directory"; target: string }
@@ -52,15 +82,31 @@ export type MigrationOperation =
       target: string;
       targets?: readonly string[];
       description: string;
+      /** Report lines printed in place of one line per target. */
+      report?: readonly string[];
       apply: () => Promise<void>;
     };
+
+/** What a step does to the git index, reported apart from its file operations. */
+export type GitIndexPlan =
+  | { kind: "not-a-repository" }
+  | { kind: "nothing-tracked" }
+  | { kind: "untrack"; count: number; apply: () => void };
 
 export type StepPlan = {
   operations: MigrationOperation[];
   annotationTargets?: string[];
   forAPerson?: string[];
+  /**
+   * The items of `forAPerson` that only pair an old ID with its new one. When set,
+   * the section prints under `Content` and `Identifiers` headings: these items
+   * under the second, every other item under the first.
+   */
+  forAPersonIdentifiers?: string[];
   casesToExamples?: string[];
   annotationsKept?: string[];
+  reminderHooks?: string[];
+  gitIndex?: GitIndexPlan;
 };
 
 export type MigrationStep = {
@@ -89,6 +135,14 @@ const HOST_LINKS = [
   ".claude/agents",
   ".github/agents",
 ] as const;
+
+/** The hook files step 11 writes, and the message file and record the hooks read. */
+const REMINDER_FILES = [
+  CLAUDE_SETTINGS_RELATIVE_PATH,
+  CODEX_HOOKS_RELATIVE_PATH,
+  `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`,
+  `${AGENTS_RULES_DIR}/${RULE_LOCK_BASENAME}`,
+];
 
 const GITIGNORE_STAGE_NAME =
   /^\.gitignore-([1-9]\d*)-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.tmp$/;
@@ -462,6 +516,8 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return target === path.join(root, "qfai.config.yaml");
     case "gitignore":
       return target === path.join(root, ".gitignore");
+    case "evidence-gitignore":
+      return target === path.join(root, ".qfai", "evidence", ".gitignore");
     case "gitignore-staging": {
       if (path.dirname(target) !== path.join(root, ".qfai", "report")) return false;
       const name = path.basename(target).replace(/\.owner$/, "");
@@ -472,6 +528,22 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return HOST_LINKS.some((link) => inside(path.join(root, link), target));
     case "test-annotations":
       return inside(resolvePath(root, context.config, "testsDir"), target);
+    case "skills": {
+      const skills = path.join(root, ".qfai", "assistant", "skill");
+      return target !== skills && inside(skills, target);
+    }
+    case "skill-archive":
+      return inside(path.join(root, SKILL_ARCHIVE_DIR), target);
+    case "steps": {
+      const steps = path.join(root, ".qfai", "assistant", "step");
+      return target !== steps && inside(steps, target);
+    }
+    case "step-archive":
+      return inside(path.join(root, path.dirname(SKILL_ARCHIVE_DIR), "step"), target);
+    case "skill-links":
+      return SKILL_INTEGRATION_DIRS.some((link) => inside(path.join(root, link), target));
+    case "reminder-hooks":
+      return REMINDER_FILES.some((file) => target === path.join(root, ...file.split("/")));
   }
 }
 
@@ -924,31 +996,83 @@ function operationLine(operation: MigrationOperation): string {
 
 function operationLines(operation: MigrationOperation): string[] {
   if (operation.kind === "delegate") {
+    if (operation.report !== undefined) return [...operation.report];
     return (operation.targets ?? [operation.target]).map(
       (target) => `${target}: ${operation.description}`,
     );
   }
-  return [operationLine(operation)];
+  return [operationLine(operation), ...(operation.kind === "write" ? (operation.notes ?? []) : [])];
 }
 
 function reportSection(name: string, entries: readonly string[]): string {
   return `## ${name}\n${entries.length === 0 ? "none" : entries.map((entry) => `- ${entry}`).join("\n")}\n`;
 }
 
+function pathCount(count: number): string {
+  return count === 1 ? "1 path" : `${count} paths`;
+}
+
+function gitIndexLines(plan: GitIndexPlan | undefined, dryRun: boolean): string[] {
+  switch (plan?.kind) {
+    case undefined:
+      return [];
+    case "not-a-repository":
+      return ["the project is not a git repository, so the index is unchanged"];
+    case "nothing-tracked":
+      return ["the git index tracks nothing under `.qfai/evidence/`, so it is unchanged"];
+    case "untrack":
+      return [
+        dryRun
+          ? `${pathCount(plan.count)} under \`.qfai/evidence/\` would leave the git index`
+          : `${pathCount(plan.count)} under \`.qfai/evidence/\` left the git index; the files stay on disk`,
+      ];
+  }
+}
+
+function sectionItems(section: ReportSection, plan: StepPlan, dryRun: boolean): string[] {
+  switch (section) {
+    case "For a person":
+      return plan.forAPerson ?? [];
+    case "Cases to examples":
+      return plan.casesToExamples ?? [];
+    case "Git index":
+      return gitIndexLines(plan.gitIndex, dryRun);
+    case "Annotations kept":
+      return plan.annotationsKept ?? [];
+    case "Reminder hooks":
+      return plan.reminderHooks ?? [];
+  }
+}
+
+function groupedReportSection(items: readonly string[], identifiers: readonly string[]): string {
+  const paired = new Set(identifiers);
+  const groups: [string, string[]][] = [
+    ["Content", items.filter((item) => !paired.has(item))],
+    ["Identifiers", items.filter((item) => paired.has(item))],
+  ];
+  const printed = groups
+    .filter(([, entries]) => entries.length > 0)
+    .map(
+      ([heading, entries]) =>
+        `### ${heading}\n${entries.map((entry) => `- ${entry}`).join("\n")}\n`,
+    );
+  return `## For a person\n${printed.length === 0 ? "none\n" : printed.join("\n")}`;
+}
+
 function renderReport(
   step: MigrationStep,
   plan: StepPlan,
   operations: readonly MigrationOperation[],
+  dryRun: boolean,
 ): string {
   let report = reportSection("Operations", operations.flatMap(operationLines));
   for (const section of step.sections ?? []) {
-    const items =
-      section === "For a person"
-        ? (plan.forAPerson ?? [])
-        : section === "Cases to examples"
-          ? (plan.casesToExamples ?? [])
-          : (plan.annotationsKept ?? []);
-    report += `\n${reportSection(section, items)}`;
+    const items = sectionItems(section, plan, dryRun);
+    report += `\n${
+      section === "For a person" && plan.forAPersonIdentifiers !== undefined
+        ? groupedReportSection(items, plan.forAPersonIdentifiers)
+        : reportSection(section, items)
+    }`;
   }
   return report;
 }
@@ -969,8 +1093,9 @@ export async function executePlannedStep(
   }
   if (!dryRun) {
     await applyOperations(prepared.operations, context, step.number);
+    if (prepared.plan.gitIndex?.kind === "untrack") prepared.plan.gitIndex.apply();
   }
-  io.stdout.write(`${renderReport(step, prepared.plan, prepared.operations)}\n`);
+  io.stdout.write(`${renderReport(step, prepared.plan, prepared.operations, dryRun)}\n`);
   return (prepared.plan.forAPerson?.length ?? 0) > 0 ? 3 : 0;
 }
 
@@ -991,7 +1116,7 @@ async function applyOperations(
 }
 
 export function isMigrationStepNumber(value: unknown): value is MigrationStepNumber {
-  return Number.isInteger(value) && typeof value === "number" && value >= 1 && value <= 10;
+  return Number.isInteger(value) && typeof value === "number" && value >= 1 && value <= 12;
 }
 
 async function loadStep(number: MigrationStepNumber): Promise<MigrationStep> {
@@ -1016,11 +1141,15 @@ async function loadStep(number: MigrationStepNumber): Promise<MigrationStep> {
       return (await import("./step09RepointLinks.js")).step09;
     case 10:
       return (await import("./step10UpdateGitignore.js")).step10;
+    case 11:
+      return (await import("./step11InstallEntry.js")).step11;
+    case 12:
+      return (await import("./step12CheckEntry.js")).step12;
   }
 }
 
-async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
-  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
+/** Whether a source of step 1's rename map is still in place, so step 1 has not run. */
+async function hasPendingRename(context: MigrationContext): Promise<boolean> {
   for (const [source] of STEP01_RENAMES) {
     if (
       (await shouldRenameSource(context, source)) &&
@@ -1029,6 +1158,11 @@ async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
       return true;
     }
   }
+  return false;
+}
+
+/** Whether the spec directory still holds a spec pack or the old policy directory. */
+async function hasSpecPackEntries(context: MigrationContext): Promise<boolean> {
   const entries = await readdir(context.specsDir).catch((error: unknown) => {
     if (isEnoent(error)) return [] as string[];
     throw error;
@@ -1036,9 +1170,69 @@ async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
   return entries.some((entry) => entry === "_policies" || /^spec-\d{4}$/.test(entry));
 }
 
+async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
+  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
+  if (await hasPendingRename(context)) return true;
+  return await hasSpecPackEntries(context);
+}
+
+const ALREADY_DONE =
+  "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
+
+/**
+ * Whether an earlier run finished steps 1 to 10 on this tree, so that running
+ * them again would only repeat what they already reported.
+ *
+ * The ID map cannot say so alone: it is what keeps a migration in progress on
+ * the step path once step 4 has moved the spec packs. So the tree also has to
+ * hold no old layout, and none of the ten steps may have an operation, a git
+ * index change, staging to clear, or an item for a person or an annotation to
+ * report. A 1.x project has no ID map, and a migration stopped part way has a
+ * step with work or a report left, so neither reads as finished.
+ *
+ * Steps 4 and 7 are not planned here. They place the spec packs' content, and
+ * with the ID map written and no pack left they have none to place. Their plans
+ * read `plan.yaml` as well, which an old copy of the skill may have written
+ * again after the migration; asking them would let that file decide whether a
+ * finished project reads as finished. Their staging is still checked.
+ *
+ * `current` is planned first, because a migration in progress most often
+ * has work left for the step being run.
+ */
+async function migrationFinished(
+  context: MigrationContext,
+  current: MigrationStepNumber,
+): Promise<boolean> {
+  if (!(await pathExists(path.join(context.root, ID_MAP_PATH)))) return false;
+  if ((await hasPendingRename(context)) || (await hasSpecPackEntries(context))) return false;
+  const others = CONTENT_STEPS.filter((number) => number !== current);
+  for (const number of [current, ...others]) {
+    if ((await staleStageOperations(context, number)).length > 0) return false;
+    if (PACK_PLACING_STEPS.has(number)) continue;
+    let prepared: { plan: StepPlan; operations: MigrationOperation[] };
+    try {
+      prepared = await prepareStep(await loadStep(number), context);
+    } catch (error) {
+      if (isInputFailure(error)) return false;
+      throw error;
+    }
+    const { plan, operations } = prepared;
+    if (operations.length > 0 || plan.gitIndex?.kind === "untrack") return false;
+    if ((plan.annotationsKept?.length ?? 0) > 0) return false;
+    if ((plan.forAPerson?.length ?? 0) > 0) return false;
+  }
+  return true;
+}
+
+/** The steps that place the spec packs' content by `plan.yaml`. */
+const PACK_PLACING_STEPS: ReadonlySet<MigrationStepNumber> = new Set([4, 7]);
+
+/** The steps that move a project's content, before the free-text entry. */
+const CONTENT_STEPS: readonly MigrationStepNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Promise<0 | 2 | 3> {
   if (!isMigrationStepNumber(step)) {
-    io.stderr.write("Step must be an integer from 1 to 10.\n");
+    io.stderr.write("Step must be an integer from 1 to 12.\n");
     return 2;
   }
   if (!Array.isArray(argv) || !argv.every((arg) => typeof arg === "string")) {
@@ -1063,9 +1257,62 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     io.stderr.write("Run the migration from a project root containing qfai.config.yaml.\n");
     return 2;
   }
+  const dryRun = argv.length === 1;
+  const captured = captureOutput(io);
+  const code = await runConfiguredStep(step, dryRun, root, captured.io);
+  const refusal = await writeReportFile(
+    root,
+    step,
+    dryRun,
+    { stdout: captured.stdout(), stderr: captured.stderr() },
+    code,
+  );
+  if (refusal !== null) io.stderr.write(refusal);
+  return code;
+}
+
+/** The config keys `loadConfig` reports as retired, which steps 1 to 3 migrate. */
+const RETIRED_CONFIG_KEYS = [
+  "prototyping.primarySpecId",
+  "validation.traceability.scMustHaveTest",
+  "validation.traceability.unknownContractIdSeverity",
+] as const;
+
+function holdsRetiredKey(issue: { message: string }): boolean {
+  return RETIRED_CONFIG_KEYS.some((key) => issue.message.startsWith(`${key} is retired`));
+}
+
+/**
+ * The text that refuses the run because of the config, or null when the run may
+ * go on. Steps 1 to 3 run past the retired keys they migrate; steps 11 and 12
+ * report an invalid workflow mode as one of their checks.
+ */
+function configRefusal(
+  step: MigrationStepNumber,
+  issues: readonly { message: string }[],
+): string | null {
+  const blocking = issues.filter(
+    (issue) =>
+      !(step <= 3 && holdsRetiredKey(issue)) &&
+      !((step === 11 || step === 12) && issue.message === WORKFLOW_MODE_MESSAGE),
+  );
+  if (blocking.length === 0) return null;
+  const sentence = blocking.every(holdsRetiredKey)
+    ? `qfai.config.yaml still holds a retired key. Steps 1 and 3 remove or replace it; step ${step} runs once it is gone.`
+    : "Cannot read or parse qfai.config.yaml.";
+  return `${[sentence, ...issues.map((issue) => issue.message)].join("\n")}\n`;
+}
+
+async function runConfiguredStep(
+  step: MigrationStepNumber,
+  dryRun: boolean,
+  root: string,
+  io: OutputIo,
+): Promise<0 | 2 | 3> {
   const loaded = await loadConfig(root);
-  if (loaded.issues.length > 0) {
-    io.stderr.write("Cannot read or parse qfai.config.yaml.\n");
+  const refusal = configRefusal(step, loaded.issues);
+  if (refusal !== null) {
+    io.stderr.write(refusal);
     return 2;
   }
   const context: MigrationContext = {
@@ -1074,12 +1321,25 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     specsDir: resolvePath(root, loaded.config, "specsDir"),
     contractsDir: resolvePath(root, loaded.config, "contractsDir"),
   };
+  if (step === 11 || step === 12) return await runEntryStep(step, context, dryRun, io);
   let selected: MigrationStep;
   let staleStages: MigrationOperation[];
   try {
     const map = await readIdMap(root);
     staleStages = await staleStageOperations(context, step);
-    if (!(await hasLegacyEntries(context)) && staleStages.length === 0) {
+    if (await migrationFinished(context, step)) {
+      const done = renderReport(await loadStep(step), { operations: [] }, [], dryRun);
+      io.stdout.write(`${done}\n${ALREADY_DONE}\n`);
+      return 0;
+    }
+    // Step 3 replaces a retired config key, so a project that still holds one is not done with it.
+    const retiredConfigWork = step === 3 && loaded.issues.some(holdsRetiredKey);
+    if (
+      step !== 1 &&
+      !retiredConfigWork &&
+      !(await hasLegacyEntries(context)) &&
+      staleStages.length === 0
+    ) {
       const selected = await loadStep(step);
       if (step === 9) {
         // Step 1 moved the directories the host links pointed at, so an old
@@ -1087,37 +1347,23 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
         const plan = await selected.plan(context);
         if (plan.operations.length > 0 || (plan.forAPerson?.length ?? 0) > 0) {
           const linkStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
-          return await executePlannedStep(linkStep, context, argv.length === 1, io);
+          return await executePlannedStep(linkStep, context, dryRun, io);
         }
       }
       if (step === 10) {
-        const plan = await selected.plan(context);
-        const hasStaging = plan.operations.some(
-          (operation) =>
-            operation.kind === "delegate" &&
-            operation.targets?.some((target) => target !== ".gitignore"),
-        );
-        if (hasStaging || (plan.forAPerson?.length ?? 0) > 0) {
-          const cleanupStep: MigrationStep = {
-            ...selected,
-            plan: () => Promise.resolve(hasStaging ? plan : { ...plan, operations: [] }),
-          };
-          return await executePlannedStep(cleanupStep, context, argv.length === 1, io);
-        }
+        // A tree already on the story layout keeps its managed block unless
+        // staging needs reclaiming, and still keeps its evidence local.
+        const { planStep10 } = await import("./step10UpdateGitignore.js");
+        const plan = await planStep10(context, false);
+        const localStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
+        return await executePlannedStep(localStep, context, dryRun, io);
       }
-      io.stdout.write(`${renderReport(selected, { operations: [] }, [])}\n`);
+      io.stdout.write(`${renderReport(selected, { operations: [] }, [], false)}\n`);
       return 0;
     }
-    if (step >= 2) {
-      for (const [source] of STEP01_RENAMES) {
-        if (
-          (await shouldRenameSource(context, source)) &&
-          (await pathExists(path.join(root, source)))
-        ) {
-          io.stderr.write(`Run step 1 before step ${step}.\n`);
-          return 2;
-        }
-      }
+    if (step >= 2 && (await hasPendingRename(context))) {
+      io.stderr.write(`Run step 1 before step ${step}.\n`);
+      return 2;
     }
     if (step >= 3 && step <= 8) {
       const { pendingMergeInput } = await import("./step02MergeTables.js");
@@ -1144,7 +1390,6 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     }
     throw error;
   }
-  const dryRun = argv.length === 1;
   const moveRecovery = staleStages.some(
     (operation) => operation.kind === "move" && operation.resume,
   );
@@ -1199,7 +1444,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     }
     await applyOperations(remainder.operations, context, step);
     io.stdout.write(
-      `${renderReport(selected, remainder.plan, [...recovery.operations, ...remainder.operations])}\n`,
+      `${renderReport(selected, remainder.plan, [...recovery.operations, ...remainder.operations], false)}\n`,
     );
     return (remainder.plan.forAPerson?.length ?? 0) > 0 ? 3 : 0;
   }
@@ -1211,4 +1456,28 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     },
   };
   return await executePlannedStep(withRecovery, context, dryRun, io);
+}
+
+/**
+ * Steps 11 and 12 compare the project with the installed package rather than
+ * with the old layout, so only step 1's output gates them: no ID map, plan or
+ * earlier staging is read.
+ */
+async function runEntryStep(
+  step: 11 | 12,
+  context: MigrationContext,
+  dryRun: boolean,
+  io: OutputIo,
+): Promise<0 | 2 | 3> {
+  try {
+    if (await hasPendingRename(context)) {
+      io.stderr.write(`Run step 1 before step ${step}.\n`);
+      return 2;
+    }
+  } catch (error) {
+    if (!isInputFailure(error)) throw error;
+    io.stderr.write(`${errorMessage(error)}\n`);
+    return 2;
+  }
+  return await executePlannedStep(await loadStep(step), context, dryRun, io);
 }

@@ -3,26 +3,17 @@
 ## Criteria
 
 ```gherkin
-Feature: Validate Gate Integration
+Feature: `primary_tasks` ceiling + accepted shape documented
+  # AC-0001-0155-01
+  Scenario: `primary_tasks` ceiling documented and named in warning
+    Given the `ui-contract.sample.yaml` template comments and `references/ui-contract-guide.md`,
+    When they are read,
+    Then the recommended ceiling of 7 `primary_tasks` per screen is documented, and the `QFAI-AUD-020` warning text names it
+    And a screen declaring more than 7 emits the warning, while one declaring 1 to 7 does not, because there is no floor
 
-# AC-0001-0155-01
-# Parent: US-0001-0155
-Scenario: Validate Gate error=0
-  Given SDD completion
-  When `qfai validate --fail-on error` runs
-  Then error count is 0.
-
-# AC-0001-0155-02
-# Parent: US-0001-0155
-Scenario: Validate Pipeline Validator Registration Integrity
-  Given the current story-tree structure, contract-reference, test-obligation, coverage-depth and drift validators
-  When the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded
-  Then each validator's public export and direct pipeline registration hold as one complete outcome, including invocation in its owning profile.
-
-# AC-0001-0155-03
-# Parent: US-0001-0155
-Scenario: Scoped Completion Gate Per Business Flow
-  Given the story tree,
-  When `/qfai-sdd` gates the business flows it wrote or changed before completion,
-  Then it runs `qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each of those flows, so that a parallel worker gates only on its own flow, and it does not pass `--spec <spec-id>`.
+  # AC-0001-0155-02
+  Scenario: `primary_tasks` accepts only the structured shape
+    Given a UI contract whose `primary_tasks` entries are structured `{id, label, acceptance}` (all-required, closed schema per DR-0268) or plain strings,
+    When `auditProfile.ts` evaluates them,
+    Then a complete structured item is accepted; a plain string item, a structured item missing any of `id` / `label` / `acceptance`, or one carrying extra keys, is rejected.
 ```

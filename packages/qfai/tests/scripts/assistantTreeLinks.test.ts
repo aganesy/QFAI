@@ -223,6 +223,21 @@ describe("link-assistant-tree --check", () => {
     expect(await readFile(memo, "utf-8")).toBe("# Local\n");
   });
 
+  // QFAI:EX-0002-0022-02
+  it("reports a root-only file the shipped assets never had", async () => {
+    const { root, script, assistant } = await makeIsolatedTree();
+    expect(runIsolated(script, root, false).status).toBe(0);
+    expect(runIsolated(script, root, true).status).toBe(0);
+
+    const planted = path.join(assistant, "notes", "x.md");
+    await mkdir(path.dirname(planted), { recursive: true });
+    await writeFile(planted, "# Root only\n", "utf-8");
+    const checked = runIsolated(script, root, true);
+    expect(checked.status, checked.output).toBe(1);
+    expect(checked.output).toContain(".qfai/assistant/notes");
+    expect(checked.output).toContain("exists here and nowhere in the shipped assets");
+  });
+
   it("no longer carries the legacy steering residue", () => {
     // `.qfai/assistant/steering/` is gone, and `assistantTreeMigration` reports
     // `D-DEPRECATED-PATH` at `error` for a tree that still holds it.

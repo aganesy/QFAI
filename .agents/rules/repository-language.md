@@ -13,10 +13,9 @@ Everything tracked here, and everything written about it:
 - Workflow files and the comments inside them
 - Commit messages, and the title and body of every pull request and issue
 
-An allowlist is the one place a Japanese line appears on purpose. It records
-what is still untranslated so a check can hold that count, which makes the text
-there data rather than writing. Listing a line is not permission to add
-another: the lists may only shrink.
+No text in another script appears anywhere in the repository. Where a matcher
+or a fixture has to hold such a sample to do its job, the sample is written as
+\uXXXX escapes and a nearby English comment says what it is.
 
 ## Not in scope
 
@@ -43,21 +42,23 @@ least.
 
 ## Enforcement
 
-Two surfaces are checked today. Both work the same way: an unlisted Japanese
-line fails, and a line that has been translated is struck from the list rather
-than left as a slot something else can take.
+Every tracked text file is held at zero forbidden characters, and no allowlist
+exists: a forbidden character fails wherever it appears. The forbidden set is
+the Han, Hiragana, Katakana, Hangul, Cyrillic, Arabic, Hebrew, Thai and
+Devanagari scripts, the CJK Symbols and Punctuation block, and the Halfwidth
+and Fullwidth Forms block. Latin letters with diacritics, Greek, arrows,
+box-drawing characters and dashes are allowed.
 
-| Surface                                           | Pinned by                            | Held against                                                            |
-| ------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
-| Operator-facing strings in `packages/qfai/src/**` | this rule, § Operator-facing strings | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` and its allowlist |
-| `CHANGELOG.md`                                    | this rule                            | `packages/qfai/tests/unit/changelogLanguage.test.ts` and its allowlist  |
+Two narrower checks hold the same rule for a single surface.
 
-The changelog check is keyed by release section, so `## [Unreleased]` — where
-every entry is written before it ships — is held at zero rather than
-allowlisted. Released sections carry the backlog.
+| Surface                                           | Held by                                               |
+| ------------------------------------------------- | ----------------------------------------------------- |
+| Every tracked text file                           | `scripts/check-repository-language.mjs`               |
+| Operator-facing strings in `packages/qfai/src/**` | `packages/qfai/tests/unit/cliMessageLanguage.test.ts` |
+| `CHANGELOG.md`, every section                     | `packages/qfai/tests/unit/changelogLanguage.test.ts`  |
 
-Comments, other documents, tests and workflow files have no check, so on those
-surfaces the rule is held by review.
+The repository-wide guard skips symlinks, files holding a NUL byte and files
+that are not valid UTF-8. It runs in the `ci:lint:scans` lane.
 
 ## Operator-facing strings
 
@@ -73,29 +74,13 @@ qfai prints, not the language an assistant replies in.
 | Source comments and JSDoc                                     | No: they reach implementers, not operators |
 | An adopter's own specs, contracts and discussion packs        | No: they follow the project's language     |
 
-A rule code, a CLI contract and most `error()` and `info()` calls are already
-English. One language lets a log search, an alert rule or a runbook match a
-message without a branch per language.
-
-`src/core/**` still holds untranslated finding messages: most under
-`validators/**`, and some outside them, such as `QFAI_CONFIG_INVALID` in
-`config.ts`, `waivers.ts` and `report.ts`. The allowlist names each one by its
-text. A translated message is struck from the list in the same change. The list
-grows only when a merge brings in messages the base added, and the count pin
-moves in that same change so the growth is visible in review.
-
-## Existing content
-
-Japanese predates this rule across much of the tree. That is a backlog, not
-permission. Content you add or change is English whatever surrounds it.
-
-The rule masters in this directory are no longer part of that backlog: each one
-a project shares with an adopter is a link to its shipped copy under
-`packages/qfai/assets/init/root/.agents/rules/`, and those carry no Japanese at
-all.
+One language lets a log search, an alert rule or a runbook match a message
+without a branch per language. A finding message is held to it wherever it is
+built: the validators, `config.ts`, `waivers.ts` and `report.ts` alike.
 
 ## Related
 
 - Writing standard, once the language is settled: `documentation-clarity.md`
 - The `--format text` grammar those messages are printed in:
-  `.qfai/spec/03_contract/cli/qfai-validate.md#text-output-grammar`
+  BR-0014-0092 to BR-0014-0095 in
+  `.qfai/spec/03_contract/cli/cli-0014-qfai-validate.md`

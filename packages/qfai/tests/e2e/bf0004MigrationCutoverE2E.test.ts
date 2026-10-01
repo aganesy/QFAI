@@ -21,6 +21,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -54,7 +55,7 @@ const migratedE2e = path.join(
 );
 const scripts = path.join(
   packageRoot,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const cli = path.join(packageRoot, "dist/cli/index.mjs");
 const names = [
@@ -68,6 +69,8 @@ const names = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const tempRoots: string[] = [];
 
@@ -109,8 +112,21 @@ function step(root: string, number: number, args: string[] = []): Result {
   return run(root, process.execPath, [path.join(scripts, name), ...args]);
 }
 
-function requireComplete(result: Result, stage: string): void {
-  if (result.status !== 0 || forPerson(result.stdout).length > 0) {
+/** Step 4 lists every flow it writes, for a person to write its alternate and exception paths. */
+const FLOW_FOR_A_PERSON =
+  /^- \.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/business-flow\.md: BF-\d{4} has (?:no purpose and )?no alternate and exception paths; write them$/;
+
+/** Exit 0 with nothing for a person, or, where the step lists flows, exit 3 with only flows. */
+function completed(result: Result, listsFlows: boolean): boolean {
+  const items = forPerson(result.stdout);
+  if (!listsFlows) return result.status === 0 && items.length === 0;
+  return (
+    result.status === 3 && items.length > 0 && items.every((item) => FLOW_FOR_A_PERSON.test(item))
+  );
+}
+
+function requireComplete(result: Result, stage: string, listsFlows: boolean): void {
+  if (!completed(result, listsFlows)) {
     throw new Error(`${stage}: exit ${result.status}\n${result.stderr}\n${result.stdout}`);
   }
 }
@@ -134,12 +150,14 @@ async function hashTree(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const item = path.join(directory, name);
       const relative = path.relative(root, item).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stat = await lstat(item);
-      hash.update(`${relative}\0${stat.mode}\0`);
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(`${relative}\0${stat.mode}\0`);
       if (stat.isSymbolicLink()) {
         hash.update(`link\0${await readlink(item)}\0`);
       } else if (stat.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(item);
       } else {
         hash.update("file\0");
@@ -179,6 +197,12 @@ async function project(): Promise<string> {
       { recursive: true, force: true },
     );
   }
+  // The step layer has no legacy name; a project on current assets carries it.
+  await cp(
+    path.join(packageRoot, "assets/init/.qfai/assistant/step"),
+    path.join(root, ".qfai/assistant/step"),
+    { recursive: true, force: true },
+  );
   await cp(convertibleCriteria, path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"));
   await cp(completeExamples, path.join(root, ".qfai/specs/spec-0001/05_Examples.md"));
   await cp(completeCases, path.join(root, ".qfai/specs/spec-0001/06_Test-Cases.md"));
@@ -210,7 +234,7 @@ async function project(): Promise<string> {
 
 function prepareThrough(root: string, last: number): void {
   for (let number = 1; number <= last; number += 1) {
-    requireComplete(step(root, number), `prepare step ${number}`);
+    requireComplete(step(root, number), `prepare step ${number}`, number === 4);
   }
 }
 
@@ -229,16 +253,16 @@ beforeAll(async () => {
   for (let number = 1; number <= 10; number += 1) {
     const before = await hashTree(root);
     const preview = step(root, number, ["--dry-run"]);
-    requireComplete(preview, `dry step ${number}`);
+    requireComplete(preview, `dry step ${number}`, number === 4);
     dry.push(preview);
     dryUnchanged.push((await hashTree(root)) === before);
     const applied = step(root, number);
-    requireComplete(applied, `real step ${number}`);
+    requireComplete(applied, `real step ${number}`, number === 4);
     real.push(applied);
   }
   const firstHash = await hashTree(root);
   for (let number = 1; number <= 10; number += 1) {
-    requireComplete(step(root, number), `rerun step ${number}`);
+    requireComplete(step(root, number), `rerun step ${number}`, false);
   }
   const rerunUnchanged = (await hashTree(root)) === firstHash;
   const map = JSON.parse(
@@ -311,19 +335,9 @@ beforeAll(async () => {
   };
 
   const unresolvedRoot = await project();
-  prepareThrough(unresolvedRoot, 3);
-  const unresolvedPlan = path.join(
-    unresolvedRoot,
-    ".qfai/evidence/migration-spec-to-story/plan.yaml",
-  );
-  const originalRulePlan = await readFile(unresolvedPlan, "utf8");
-  const missingContractPlan = originalRulePlan.replace(
-    "contract: api/order.yaml",
-    "contract: api/missing-order.yaml",
-  );
-  if (missingContractPlan === originalRulePlan) throw new Error("Fixture has no API rule owner");
-  await writeFile(unresolvedPlan, missingContractPlan);
   prepareThrough(unresolvedRoot, 6);
+  // The contract the plan names is gone by the time step 7 runs.
+  await rm(path.join(unresolvedRoot, ".qfai/spec/03_contract/api/api-0001-order.yaml"));
   const ruleSource = path.join(unresolvedRoot, ".qfai/spec/spec-0001/04_Business-Rules.md");
   const ruleText = await readFile(ruleSource, "utf8");
   const unresolvedBefore = await hashTree(unresolvedRoot);
@@ -347,9 +361,8 @@ describe("BF-0004 migration cutover", () => {
     expect(journey.dry).toHaveLength(10);
     expect(journey.real).toHaveLength(10);
     expect(journey.dryUnchanged).toEqual(Array(10).fill(true));
-    expect(journey.real.every((result) => result.status === 0)).toBe(true);
-    expect(journey.real.map((result) => forPerson(result.stdout))).toEqual(
-      Array.from({ length: 10 }, () => []),
+    expect(journey.real.map((result, index) => completed(result, index === 3))).toEqual(
+      Array(10).fill(true),
     );
     expect(journey.dry.map((result) => operations(result.stdout))).toEqual(
       journey.real.map((result) => operations(result.stdout)),
@@ -404,7 +417,8 @@ describe("BF-0004 migration cutover", () => {
     // its flow rather than keeping it.
     expect(e2e).not.toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(journey.real[7]?.stdout).not.toContain("QFAI:SPEC-0001:US-0001-0001");
-    expect(journey.real[7]?.stdout).toContain("QFAI:CON-API-0001");
+    expect(integration).toContain(["QFAI", "API-0001"].join(":"));
+    expect(integration).not.toContain(["QFAI", "CON-API-0001"].join(":"));
   });
 
   it("retires the old reader and leaves no story or contract migration errors", async () => {

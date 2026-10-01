@@ -10,18 +10,25 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("autopilot choices cannot supply missing approval", () => {
   for (const tree of trees) {
+    // QFAI:EX-0001-0205-04
     it(tree + ": SDD classifies its own decisions and stops for pending approval", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
+      // The skill adds its own inputs; the three buckets are the shared prototype's.
+      const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
       expect(skill).toContain("## Default Autopilot Policy");
-      for (const bucket of ["auto-decide:", "ask-user:", "hard-required:"]) {
-        expect(skill).toContain(bucket);
+      expect(skill).toContain("hard-required:");
+      expect(baseline).toContain("## Default Autopilot Policy (Shared)");
+      for (const bucket of ["| `auto-decide`", "| `ask-user`", "| `hard-required`"]) {
+        expect(baseline).toContain(bucket);
       }
-      expect(skill).toContain("sdd-triage.md");
+      const step = await read(tree, "assistant/step/sdd-triage/STEP.md");
+      expect(step).toContain("sdd-triage.md");
       expect(triage).toContain("CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE");
       expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("In --auto, ask no question, leave approval-required rows at TODO");
       expect(triage).toContain("stop before their dependent writes");
+      expect(triage).toContain("report every pending row with its operation and target");
     });
 
     it(tree + ": the shared rule keeps mandatory approvals outside the prompt budget", async () => {

@@ -3,6 +3,8 @@
 This document defines **non‑negotiable operating rules** for QFAI agents and subagents.
 It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but adapted to QFAI’s minimal workflow.
 
+Inside an `npx qfai workflow` run, what authorizes the run's work and the one target a work order binds its stage to are stated in `.qfai/assistant/rule/shared-skill-operating-baseline.md#what-authorizes-a-runs-work`. They add to these articles and except none.
+
 ---
 
 ## Absolute Rule — Output Language
@@ -63,8 +65,8 @@ policy and contract files. These are complementary obligations.
 Outputs MUST align with:
 
 - repository structure and conventions
-- chosen tools / runtimes
-- architecture boundaries
+- chosen tools / runtimes (`<paths.contractsDir>/tech.md`)
+- architecture boundaries (the `## Architecture` layers of `<paths.contractsDir>/tech.md`: a new module belongs to one layer and imports only from the layers its row lists)
 
 ---
 
@@ -81,9 +83,14 @@ If spec and code conflict:
 
 Maintain the chain from a business flow to its stories, acceptance criteria,
 examples, tests, code, and verification evidence. Business rules live in the
-relevant contract under `.qfai/spec/03_contract/`, and each example cites
-exactly one acceptance criterion. Keep those links intact when moving a story
-or changing a contract.
+contract that enforces them under `.qfai/spec/03_contract/`, and each example
+cites exactly one acceptance criterion. Keep those links intact when moving a
+story or changing a contract.
+
+References point one way. A business rule cites examples and nothing else, and
+only code and tests cite a business rule. A contract never names an
+implementation file. The contracts a flow relies on are the ones whose rules
+cite the flow's examples.
 
 The test obligation is determined by the ID and the test's layer:
 
@@ -97,8 +104,9 @@ test is an uncovered obligation, even if tests in another layer mention it.
 Resolve a valid exception through a row in `.qfai/spec/decisions.md`; do not
 invent a test annotation to suppress a finding.
 
-When practical, cite the BF, US, AC, EX, and relevant contract IDs in the
-work's evidence so a reviewer can follow the changed behavior.
+When practical, cite the BF, US, AC and EX IDs, and the contract and BR IDs
+that enforce them, in the work's evidence so a reviewer can follow the changed
+behavior.
 
 ---
 
@@ -186,12 +194,16 @@ Default policy:
   — is a decision, not a clarification. Such questions are unbounded and MUST
   still be asked after the budget is exhausted. Skipping a mandatory approval to
   stay under the budget violates this article; it is not compliance with it.
+- **The next-action question is exempt.** The question that ends a turn leaving
+  the next step to the user (`.agents/rules/user-questions.md` § 6) resolves no
+  ambiguity, so it is not a clarification. It is still put after the budget is
+  exhausted.
 - **`hard-required` inputs are exempt — but only where the invocation needs
   them.** An input a skill's `Default Autopilot Policy` lists under
   `hard-required` has no default and MUST NOT be guessed once the budget is
   exhausted. The exemption is **scoped to the inputs the requested work actually
   consumes**: brand intent when the run produces brand-facing
-  output, a full `CON-UI-NNNN` when a prototyping-scoped run cannot identify
+  output, a full `UI-NNNN` when a prototyping-scoped run cannot identify
   its primary UI contract, or a usable story source and `BF-NNNN` when a
   flow-scoped run cannot identify its target. An input the requested
   path never reads MUST NOT be asked for and MUST NOT block the run — a

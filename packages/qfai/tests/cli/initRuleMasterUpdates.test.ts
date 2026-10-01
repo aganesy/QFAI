@@ -1,3 +1,5 @@
+// QFAI:EX-0001-0021-07
+// QFAI:EX-0001-0021-08
 /**
  * A rule master whose text moved in a release, reaching a project that already
  * ran `qfai init`.

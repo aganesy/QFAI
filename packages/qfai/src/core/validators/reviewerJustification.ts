@@ -15,20 +15,18 @@ import { exists, issue } from "./utils.js";
 // Empty justification is treated as advisory-failing (error severity).
 //
 // The set is composed from three sources:
-//   1. The historical R-WORKLOG-DRIFT family (REQ-0006 contract).
+//   1. R-REJECTED-READOPT, raised when a rejected option is adopted again.
 //   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
-//   3. The 8-code spec governance catalog sourced
+//   3. The 7-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
-  "R-WORKLOG-DRIFT",
   "R-REJECTED-READOPT",
-  "R-HANDOFF-INCOMPLETE",
   // Second-wave Reviewer-Gate findings that MUST carry a non-empty
   // justification. Empty / whitespace-only justifications are treated
   // as advisory-failing to enforce non-empty justifications across spec families.
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-PROMPT-SCANNER-DRIFT",
-  // The 8-code spec governance catalog is
+  // The 7-code spec governance catalog is
   // merged in via the catalog SSOT so this set stays in lockstep with
   // the catalog by construction. The catalog contributes membership
   // only — it declares no severity, and the ingestion issue below is
@@ -138,8 +136,8 @@ type ReviewerReport = {
 
 /**
  * Scans every `*.json` file under `.qfai/review/**` for findings whose
- * code is on the advisory-failing list (R-WORKLOG-DRIFT,
- * R-REJECTED-READOPT, R-HANDOFF-INCOMPLETE). Each finding with an
+ * code is on the advisory-failing list (R-REJECTED-READOPT, the
+ * second-wave codes and the justification catalog). Each finding with an
  * empty `justification:` field is surfaced as an error at the host
  * code so reviewer drift can be caught by `qfai validate --fail-on
  * error`. The scan is unfiltered — any JSON file in the tree that
@@ -185,7 +183,8 @@ export async function validateReviewerJustification(
       // lint failure. The deferred-catalog rule grants ONE
       // exemption and this branch was taking two — it says the gate "does not
       // re-derive, re-word or re-classify" the payload, that both codes are
-      // "declared lint-failure codes in `CLI-WFSET`, i.e. error class", and that
+      // declared lint-failure codes of the shipped-workflows contract, i.e.
+      // error class, and that
       // what is deferred until catalog registration lands is REJECTING them for
       // an empty `justification:`. Nothing there defers the severity.
       if (DEFERRED_CATALOG_REGISTRATION_CODE_SET.has(code)) {
@@ -231,8 +230,7 @@ export async function validateReviewerJustification(
         // Severity is `error` for every advisory-failing code, without
         // exception: the violation reported here is the missing
         // justification, not the finding itself. A code whose own
-        // detector emits `warning` (e.g. R-DESIGN-MD-PATCH-OUT-OF-ZONE)
-        // is still an `error` on this path.
+        // detector emits `warning` is still an `error` on this path.
         issues.push(
           issue(
             code,

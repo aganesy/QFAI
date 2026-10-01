@@ -1,47 +1,29 @@
+// QFAI:EX-0001-0039-08
 /**
- * Meta-test: operator-facing CLI strings are written in one language.
+ * Meta-test: operator-facing strings are written in English.
  *
- * The validate contract pins the *shape* of an error message. Until
- * `.agents/rules/repository-language.md` gained its `## Operator-facing strings`
- * section, nothing pinned the language of `<message>`, and the
- * implementation split arbitrarily inside a single command's output:
- * `qfai doctor` emitted 16 English findings and 2 Japanese ones, and
- * `usage()` — the only documentation for `--strict`, `--clean`,
- * `--autoremediate`, `--target-url` and `--upgrade-scope` — was Japanese
- * while the CLI contracts describing the same flags were English.
+ * `.agents/rules/repository-language.md` says every string the qfai CLI prints
+ * to an operator is English. The validate contract pins the *shape* of an error
+ * message; this test pins its language, over the whole of `src/**`:
  *
- * The rule is English for every operator-facing surface. This test holds
- * the surfaces that have been converted:
- *
- *   - every string emitted from `src/cli/**` (usage, error/warn/info,
- *     direct stdout writes)
+ *   - every string emitted from `src/cli/**` (usage, error/warn/info, direct
+ *     stdout writes)
  *   - the `title` / `message` / `details` of every `qfai doctor` check
+ *   - every `Issue.message`, wherever it is built: `src/core/config.ts`,
+ *     `src/core/waivers.ts`, `src/core/report.ts` and the validators all reach
+ *     stdout through `emitText`
  *
- * `Issue.message` is produced well beyond `src/core/validators/**` —
- * `src/core/config.ts` builds `QFAI_CONFIG_INVALID`, `src/core/waivers.ts`
- * and `src/core/report.ts` build their own — and those messages reach
- * stdout through `emitText` just like a validator's. So the check below
- * covers the whole of `src/**`, matching every Japanese line against
- * `cliMessageLanguage.allowlist.ts`, which pins the messages the staged
- * migration has not reached yet *by their content*.
+ * Every file is held at zero Japanese lines. There is no allowlist.
  *
- * Content, not a per-file line count: a ceiling of "n Japanese lines in
- * this file" is satisfied just as well by n *different* ones, so
- * translating a message would free a slot for a brand-new Japanese
- * message — the file total never moves and the ceiling never complains.
- * Matching content closes that: an unlisted Japanese line fails wherever
- * it appears, and a listed message that has been translated has to be
- * struck from the list rather than left as a reusable slot. A file absent
- * from the allowlist is held at zero, which is what keeps the already
- * converted `src/cli/**` and `src/core/doctor.ts` converted.
- *
- * Source *comments* are deliberately out of scope: they are not shipped to
- * an operator, and this repository keeps Japanese prose in them. They are
- * removed with the TypeScript scanner rather than by regex, so a comment
+ * Source *comments* are out of scope: they are not shipped to an operator. They
+ * are removed with the TypeScript scanner rather than by regex, so a comment
  * marker *inside* an operator-facing string literal — a plain one or a
  * template literal spanning an interpolation — cannot hide a violation, and
  * a backtick inside a regular expression literal does not turn the comments
  * that follow it into a template literal and hide *them*.
+ *
+ * Japanese samples below are written as \uXXXX escapes so this file holds no
+ * Japanese text itself.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -50,7 +32,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
-  diffAgainstAllowlist,
   findJapaneseLines,
   formatJapaneseLine,
   listSourceFiles,
@@ -58,15 +39,13 @@ import {
   stripComments,
 } from "../helpers/japaneseMessageScan.js";
 
-import { SRC_JAPANESE_ALLOWLIST } from "./cliMessageLanguage.allowlist.js";
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const SRC_DIR = path.join(PACKAGE_ROOT, "src");
-const CLI_DIR = path.join(SRC_DIR, "cli");
-const DOCTOR_TS = path.join(SRC_DIR, "core", "doctor.ts");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 const LANGUAGE_RULE_MD = path.join(REPO_ROOT, ".agents", "rules", "repository-language.md");
 const VALIDATE_CONTRACT_MD = path.join(
@@ -75,7 +54,7 @@ const VALIDATE_CONTRACT_MD = path.join(
   "spec",
   "03_contract",
   "cli",
-  "qfai-validate.md",
+  "cli-0014-qfai-validate.md",
 );
 
 function reportJapaneseLines(relPath: string, source: string): string[] {
@@ -111,94 +90,15 @@ function srcSources(): Promise<[string, string][]> {
 }
 
 describe("operator-facing CLI message language", () => {
-  it("keeps every string emitted from src/cli in English", async () => {
-    const files = await listSourceFiles(CLI_DIR);
-    expect(files.length).toBeGreaterThan(0);
-
-    const offenders = (await readSources(files, PACKAGE_ROOT)).flatMap(([rel, source]) =>
+  it("keeps every operator-facing string under src in English", async () => {
+    const offenders = (await srcSources()).flatMap(([rel, source]) =>
       reportJapaneseLines(rel, source),
     );
 
-    expect(offenders).toEqual([]);
-  });
-
-  it("keeps every qfai doctor check message in English", async () => {
-    const source = await readFile(DOCTOR_TS, "utf-8");
-    expect(reportJapaneseLines(relativeToPosix(PACKAGE_ROOT, DOCTOR_TS), source)).toEqual([]);
-  });
-
-  /**
-   * What the allowlist is allowed to weigh. Translating a message lowers it;
-   * only a merge taking the base's own entries raises it.
-   *
-   * Every other assertion here compares the list against the sources, so the
-   * list is exact — but only in one direction. Adding an entry for a message
-   * that is really in the tree satisfies all of them, and the lane goes green:
-   * the guard then reads "no Japanese nobody bothered to list" rather than "no
-   * new Japanese", which is a much weaker claim and the one the list exists to
-   * avoid making.
-   *
-   * A merge absorbing the base's new messages is the case that legitimately
-   * adds entries, and it still moves this number — which is the point. The
-   * addition stops being an invisible edit inside the allowlist and
-   * becomes a line a reviewer is asked about.
-   */
-  const ALLOWLISTED_MESSAGE_COUNT = 297;
-
-  it("holds the allowlist to a count that only a reviewed change moves", () => {
-    const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(
-      (total, entries) => total + entries.length,
-      0,
-    );
-    // The two directions get different advice on purpose. A shrink is always
-    // owed and the re-pin is the whole answer. A growth is the case this number
-    // exists to stop, so it is not sent to a command that would clear it: the
-    // one growth that is legitimate takes a flag, named here rather than
-    // offered as the default step.
-    const rePin =
-      "Run `node scripts/pin-cli-message-allowlist-count.mjs` and land it in the same commit. " +
-      "If this branch changed no entry, the drift is inherited: a merge carries the entries of " +
-      "both parents and neither parent's pin counted them together, so no branch owed this " +
-      "re-pin. Run the same command and land it on its own — it is a re-measurement, not a " +
-      "correction of your change.";
     expect(
-      counted,
-      counted > ALLOWLISTED_MESSAGE_COUNT
-        ? "the allowlist grew. A new operator-facing message must be English " +
-            "(.agents/rules/repository-language.md, Operator-facing strings), so translate the messages the added entries " +
-            "name and delete them rather than raising this number. The one growth that is not that " +
-            "is a merge taking entries the base added: re-pin with " +
-            "`node scripts/pin-cli-message-allowlist-count.mjs --allow-increase`, which raises the " +
-            "number as a line a reviewer is asked about."
-        : `the allowlist shrank, so the migration's progress could otherwise be spent on a later addition. ${rePin}`,
-    ).toBe(ALLOWLISTED_MESSAGE_COUNT);
-  });
-
-  it("admits no Japanese message under src that the allowlist does not name", async () => {
-    const added: string[] = [];
-    const migrated: string[] = [];
-    const seen = new Set<string>();
-    for (const [rel, source] of await srcSources()) {
-      seen.add(rel);
-      const diff = diffAgainstAllowlist(
-        rel,
-        findJapaneseLines(source),
-        SRC_JAPANESE_ALLOWLIST[rel] ?? [],
-      );
-      added.push(...diff.added);
-      migrated.push(...diff.migrated);
-    }
-
-    const stale = Object.keys(SRC_JAPANESE_ALLOWLIST).filter((rel) => !seen.has(rel));
-    expect(stale, "allowlist entries whose file no longer exists — drop them").toEqual([]);
-    expect(
-      added,
-      "Japanese message the allowlist does not name. A new operator-facing message must be " +
-        "English (.agents/rules/repository-language.md, Operator-facing strings)",
-    ).toEqual([]);
-    expect(
-      migrated,
-      "allowlist entries whose message is gone — delete them, do not leave a reusable slot",
+      offenders,
+      "Japanese operator-facing message. It must be English " +
+        "(.agents/rules/repository-language.md, Operator-facing strings)",
     ).toEqual([]);
   });
 
@@ -207,10 +107,13 @@ describe("operator-facing CLI message language", () => {
     // prefix, a package script, or a global bin — so a message naming one
     // launcher is wrong for the other two. Shipped docs take the opposite
     // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
-    const contract = await readFile(VALIDATE_CONTRACT_MD, "utf-8");
-    expect(contract).toContain("#### Command spelling in messages");
-    expect(contract).toContain("`npx qfai <subcommand>`");
-    expect(contract).toContain("`qfai <subcommand>`");
+    const spelling = parseContractRules(
+      VALIDATE_CONTRACT_MD,
+      await readFile(VALIDATE_CONTRACT_MD, "utf-8"),
+    ).rules.find((rule) => rule.statement.includes("A runtime message spells a command"));
+    expect(spelling, "the validate contract states the command spelling as a rule").toBeDefined();
+    expect(spelling?.statement).toContain("`npx qfai <subcommand>`");
+    expect(spelling?.statement).toContain("`qfai <subcommand>`");
 
     // Comments explain the implementation and are not read by an operator,
     // so they are removed first — with the same TypeScript scanner the
@@ -243,85 +146,70 @@ describe("operator-facing CLI message language", () => {
     expect(offenders, "runtime message naming a launcher").toEqual([]);
   });
 
-  it("reports a new Japanese message that replaces a translated one", () => {
-    const found = findJapaneseLines('error("新しい日本語メッセージ");');
-
-    const diff = diffAgainstAllowlist("core/sample.ts", found, ["古い日本語メッセージ"]);
-
-    expect(diff.added).toEqual(['core/sample.ts:1: error("新しい日本語メッセージ");']);
-    expect(diff.migrated).toEqual(["core/sample.ts: 古い日本語メッセージ"]);
+  it("reports a Japanese message in the line it appears on", () => {
+    // Positive control: a scan that always finds nothing would pass the case
+    // above whatever the sources held.
+    expect(
+      reportJapaneseLines("core/sample.ts", 'error("\u65b0\u3057\u3044\u65e5\u672c\u8a9e");'),
+    ).toEqual(['core/sample.ts:1: error("\u65b0\u3057\u3044\u65e5\u672c\u8a9e");']);
   });
 
   it("does not treat a Japanese input matcher as an operator message", () => {
-    const source = ["const key = /(?:reason|理由):/;", 'error("日本語");'].join("\n");
-    expect(findJapaneseLines(source)).toEqual([{ line: 2, text: 'error("日本語");' }]);
-  });
-
-  it("reports an extra copy of a message the allowlist already names", () => {
-    const found = findJapaneseLines(['error("同じ日本語");', 'warn("同じ日本語");'].join("\n"));
-
-    const diff = diffAgainstAllowlist("core/sample.ts", found, ["同じ日本語"]);
-
-    expect(diff.added).toEqual(['core/sample.ts:2: warn("同じ日本語");']);
-    expect(diff.migrated).toEqual([]);
-  });
-
-  it("passes an un-migrated file through unchanged, whatever the code around it", () => {
-    const found = findJapaneseLines('const renamed = error("残っている日本語");');
-
-    const diff = diffAgainstAllowlist("core/sample.ts", found, ["残っている日本語"]);
-
-    expect(diff).toEqual({ added: [], migrated: [] });
+    // \u7406\u7531 is the Japanese word for "reason".
+    const source = ["const key = /(?:reason|\u7406\u7531):/;", 'error("\u65e5\u672c\u8a9e");'].join(
+      "\n",
+    );
+    expect(findJapaneseLines(source)).toEqual([{ line: 2, text: 'error("\u65e5\u672c\u8a9e");' }]);
   });
 
   it("does not mistake a comment marker inside a string for a comment", () => {
     const source = [
-      'info("prefix // 日本語");',
-      'info("/* 日本語 */");',
-      "// 日本語のコメント",
+      'info("prefix // \u65e5\u672c\u8a9e");',
+      'info("/* \u65e5\u672c\u8a9e */");',
+      "// \u65e5\u672c\u8a9e\u306e\u30b3\u30e1\u30f3\u30c8",
     ].join("\n");
 
     expect(reportJapaneseLines("sample.ts", source)).toEqual([
-      'sample.ts:1: info("prefix // 日本語");',
-      'sample.ts:2: info("/* 日本語 */");',
+      'sample.ts:1: info("prefix // \u65e5\u672c\u8a9e");',
+      'sample.ts:2: info("/* \u65e5\u672c\u8a9e */");',
     ]);
   });
 
   it("does not mistake a comment marker after a template interpolation for a comment", () => {
     const source = [
-      "info(`prefix ${value} // 日本語`);",
-      "info(`prefix ${value} /* 日本語 */`);",
-      "info(`outer ${obj.f({ k: `inner ${x} // 日本語` })} tail`);",
-      "// 日本語のコメント",
+      "info(`prefix ${value} // \u65e5\u672c\u8a9e`);",
+      "info(`prefix ${value} /* \u65e5\u672c\u8a9e */`);",
+      "info(`outer ${obj.f({ k: `inner ${x} // \u65e5\u672c\u8a9e` })} tail`);",
+      "// \u65e5\u672c\u8a9e\u306e\u30b3\u30e1\u30f3\u30c8",
     ].join("\n");
 
     expect(reportJapaneseLines("sample.ts", source)).toEqual([
-      "sample.ts:1: info(`prefix ${value} // 日本語`);",
-      "sample.ts:2: info(`prefix ${value} /* 日本語 */`);",
-      "sample.ts:3: info(`outer ${obj.f({ k: `inner ${x} // 日本語` })} tail`);",
+      "sample.ts:1: info(`prefix ${value} // \u65e5\u672c\u8a9e`);",
+      "sample.ts:2: info(`prefix ${value} /* \u65e5\u672c\u8a9e */`);",
+      "sample.ts:3: info(`outer ${obj.f({ k: `inner ${x} // \u65e5\u672c\u8a9e` })} tail`);",
     ]);
   });
 
   it("does not mistake a backtick inside a regular expression for a template literal", () => {
     const source = [
       "const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;",
-      "// 日本語のコメント",
-      'info("日本語のメッセージ");',
+      "// \u65e5\u672c\u8a9e\u306e\u30b3\u30e1\u30f3\u30c8",
+      'info("\u65e5\u672c\u8a9e\u306e\u30e1\u30c3\u30bb\u30fc\u30b8");',
     ].join("\n");
 
     expect(reportJapaneseLines("sample.ts", source)).toEqual([
-      'sample.ts:3: info("日本語のメッセージ");',
+      'sample.ts:3: info("\u65e5\u672c\u8a9e\u306e\u30e1\u30c3\u30bb\u30fc\u30b8");',
     ]);
   });
 
   it("does not mistake a division slash for a regular expression", () => {
     const source = [
-      "const ratio = (done + skipped) / total; // 日本語のコメント",
-      'info("日本語のメッセージ");',
+      "const ratio = (done + skipped) / total; // \u65e5\u672c\u8a9e\u306e\u30b3\u30e1\u30f3\u30c8",
+      'info("\u65e5\u672c\u8a9e\u306e\u30e1\u30c3\u30bb\u30fc\u30b8");',
     ].join("\n");
 
     expect(reportJapaneseLines("sample.ts", source)).toEqual([
-      'sample.ts:2: info("日本語のメッセージ");',
+      'sample.ts:2: info("\u65e5\u672c\u8a9e\u306e\u30e1\u30c3\u30bb\u30fc\u30b8");',
     ]);
   });
 
