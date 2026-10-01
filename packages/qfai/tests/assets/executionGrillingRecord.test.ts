@@ -34,7 +34,7 @@ describe.each(trees)("%s — execution stage grilling records", (tree) => {
     expect(body).toContain("Work Orders Summary");
     expect(body).toMatch(/run start/i);
     expect(body).toMatch(/millisecond/);
-    expect(body).toContain("working-tree+<hash>");
+    expect(body).toContain("git revision of the clean tree");
     expect(body).toContain("Ended at");
     expect(body).toContain("Work resumed");
   });

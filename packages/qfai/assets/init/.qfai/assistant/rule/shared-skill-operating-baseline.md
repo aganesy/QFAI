@@ -46,8 +46,7 @@ one roster file.
 The ceiling applies to **every** shipped assistant prose asset, including
 rules and cards. A rule at the ceiling moves topic detail to
 `rule/references/<topic>.md`; a skill uses its own `references/` directory.
-The tree that owns the file owns its detail. A shared example is
-`rule/audited-evidence-hash.md`.
+The tree that owns the file owns its detail.
 
 For a prose asset, raising the ceiling or claiming an exemption is not the remedy. An exemption claims no split is possible, and a Markdown file whose tree has a `references/` home available cannot make that claim.
 

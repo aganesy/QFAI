@@ -141,7 +141,7 @@ unresolved findings and implementation work. Follow
 An author cannot certify their own tests.
 
 The reviewers check the active BF's test layers, observable assertions,
-RED/GREEN evidence, and handoff. The review pack, its seal and the rounds a
+RED/GREEN evidence, and handoff. The review pack and the rounds a
 blocking finding opens are `common-review-cycle`'s; the round entries go in
 the RED record for the BF or AC under
 `.qfai/assistant/skill/qfai-atdd/references/red-provenance.md`.

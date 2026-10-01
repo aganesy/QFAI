@@ -3,25 +3,9 @@
 Each BF or AC test needs evidence that its assertion can reject the wrong
 behavior. Keep the record under `### <BF-ID>` or `### <AC-ID>` in
 `.qfai/evidence/atdd-BF-NNNN.md`. Name the test file and selector, the exact
-command, the selected-test output, the tested revision, and the manifest and
-hash of the test plus fixtures or snapshots it reads. The manifest lists
-paths in a stable order. A hash of the test file alone is insufficient when
-its oracle depends on shared artifacts.
-
-For each manifest entry, hash `path + NUL + kind + NUL + mode + NUL + blob hash`
-in sorted path order. `kind` is `file` or `symlink`; `mode` is the six-digit
-Git tree form: `120000` for a symlink, `100755` for a file `git add` would
-record as executable, and `100644` for another file. Do not use the revision
-manifest's full permission bits. The hash is recomputed on another checkout,
-where non-execute permission bits may differ.
-
-Read the execute bit where git reads it. Where `core.fileMode` is `false`, as
-in a repository git created on Windows, take it from the index: `100755` when
-`git ls-files -s` says so, and `100644` for a file git does not track.
-Everywhere else, take the owner's execute bit off the disk: a `0654` file is
-`100644`. Two checkouts of one commit then read the same mode on Windows and
-on POSIX. Resolve and stage a merge conflict in a manifest file before
-recording the hash.
+command, the selected-test output, the tested revision, and the fixtures or
+snapshots the test reads. The revision is the git commit of a clean tree, so
+it pins the test and every file it reads; commit before observing.
 
 ## Observed RED
 
@@ -46,11 +30,9 @@ proof.
 
 ## Freshness
 
-A test or fixture edit after RED changes the proof subject. Recompute the
-manifest and hash and retake the proof before a reviewer certifies it.
+A test or fixture edit after RED changes the proof subject. Commit it and
+retake the proof before a reviewer certifies it.
 A later flow that changes a shared fixture follows
 `references/shared-test-artifacts.md`. Do not overwrite the old record;
-append the new attempt and identify the current one. The revision form is
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`, and
-the review seal and the rounds a blocking finding opens are
-`.qfai/assistant/step/common-review-cycle/STEP.md`.
+append the new attempt and identify the current one. The review pack and the rounds a
+blocking finding opens are `.qfai/assistant/step/common-review-cycle/STEP.md`.

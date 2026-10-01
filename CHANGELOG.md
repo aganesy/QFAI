@@ -35,6 +35,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A reviewed revision is a git commit, and the hand-computed evidence hashes
+  are gone.** The shipped rules no longer ask for an `Audited evidence hash`, a
+  review pack seal, a RED test manifest hash or a `working-tree+<content hash>`
+  revision: no gate recomputed them, and two agents following the prose
+  procedures could address one tree differently. `rule/audited-evidence-hash.md`
+  and `qfai-implement/references/evidence-revision.md` are removed. Work is
+  committed before it is observed or reviewed, and `Reviewed revision` and
+  `summary.json#revision` name that commit. `qfai validate` refuses any other
+  `revision` value with `QFAI-REVIEW-007`. Fixes #2413.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an

@@ -54,8 +54,7 @@ scope.
 - Review read-only. Do not author the test, production change or evidence
   whose verdict you give.
 - Follow `rule/shared-skill-delegation-baseline.md` for what a reviewer may
-  demand, `rule/review-convergence.md` for a REVISE, and
-  `rule/audited-evidence-hash.md` for review subjects and seals.
+  demand, and `rule/review-convergence.md` for a REVISE.
 - Report excess as `defect:code-quality` only when it names the concrete
   code, control, setting or copy to remove or simplify and what replaces it.
   Do not weaken an active obligation to reduce code.
@@ -95,7 +94,7 @@ its evidence on the revision submitted for review.
   `red-not-observable` explanation and independent evidence. Do not turn
   an unobserved assertion into a PASS by convention.
 - GREEN needs the same selected test with an observed passing result.
-  The test hash, source revision and command must agree with the RED/GREEN
+  The test file, revision and command must agree with the RED/GREEN
   evidence. A later source or shared-fixture change requires the affected
   observation to be refreshed.
 
@@ -108,9 +107,9 @@ scope or the whole flow.
 ## Completion and runtime gate
 
 - Read the current BF's ATDD or implement evidence, test selectors,
-  command/results, reviewer verdicts and review pack seals. Use
-  `rule/audited-evidence-hash.md` and the owning skill's evidence reference to
-  check freshness.
+  command/results, reviewer verdicts and review packs. Use the owning
+  skill's evidence reference to check freshness: a verdict holds for the
+  commit it names, and a later change to its subject needs a new one.
 - An ATDD gate uses
   `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses
@@ -129,7 +128,7 @@ scope or the whole flow.
 
 A failure owned by another BF or stage must name its owner and remain
 visible. A global error does not become a scoped PASS by omission. Return
-REVISE for any in-scope failure, missing evidence, stale result, unsealed
+REVISE for any in-scope failure, missing evidence, stale result, missing
 required review, or unresolved blocker. Cite the exact finding, ID,
 command and evidence path.
 
@@ -146,7 +145,7 @@ partial validation.
 
 ## Sign-off
 
-Return PASS or REVISE, reviewed revision, audited evidence hash, review
-pack path and seal, findings, and the exact commands and outcomes examined.
+Return PASS or REVISE, reviewed revision, review pack path, findings, and
+the exact commands and outcomes examined.
 Only a complete independent PASS on the final revision can support the
 owning skill's completion claim.

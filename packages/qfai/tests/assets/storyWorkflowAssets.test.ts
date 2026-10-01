@@ -75,24 +75,17 @@ describe("story-tree acceptance and implementation assets", () => {
     const red = await read("skill/qfai-atdd/references/red-provenance.md");
     const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(red).toContain("selected-test output");
-    expect(red).toContain("test plus fixtures or snapshots");
+    expect(red).toContain("fixtures or\nsnapshots the test reads");
     expect(red).toContain("A module-load error, missing dependency, broken fixture");
     expect(red).toContain("restore the mutation");
     expect(gatekeeper).toContain("A syntax error, deleted export");
   });
 
-  it("reads the RED test hash's execute bit where git reads it", async () => {
-    // Windows has no execute bit on disk, so a bit read off the disk hashes a
-    // file git marks executable differently on Windows and POSIX checkouts.
+  it("names the commit of a clean tree as the RED revision, with no hash of its own", async () => {
     const red = (await read("skill/qfai-atdd/references/red-provenance.md")).replace(/\s+/g, " ");
-    expect(red).toContain("`100755` for a file `git add` would record as executable");
-    expect(red).toContain(
-      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index",
-    );
-    expect(red).toContain("take the owner's execute bit off the disk: a `0654` file is `100644`");
-    expect(red).toContain("Resolve and stage a merge conflict in a manifest file");
-    expect(red).not.toContain("any execute bit set");
-    expect(red).not.toContain("record its hash on the platform that will verify it");
+    expect(red).toContain("The revision is the git commit of a clean tree");
+    expect(red).not.toContain("manifest");
+    expect(red).not.toContain("core.fileMode");
   });
 
   it("rejects a load error and proves RED came from the selected assertion", async () => {
@@ -103,12 +96,15 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(admissibility).toContain("restore the assertion");
   });
 
-  it("addresses each observation and seals review packs without rewriting history", async () => {
-    const evidence = await read("skill/qfai-implement/references/evidence-revision.md");
-    expect(evidence).toContain("working-tree+<content hash>");
-    expect(evidence).toContain("RED, the temporary falsifiability mutation, GREEN");
-    expect(evidence).toContain("Review pack seal");
-    expect(evidence).toContain("A later result does not retitle an earlier observation");
+  it("addresses each observation by commit and keeps review packs unchanged", async () => {
+    const round = (await read("skill/qfai-implement/references/round-evidence.md")).replace(
+      /\s+/g,
+      " ",
+    );
+    expect(round).toContain("Every revision is a git commit");
+    expect(round).toContain("an uncommitted tree has no revision");
+    expect(round).toContain("A timestamp is never a revision");
+    expect(round).not.toContain("seal");
     const implement = await read("step/implement-tdd/STEP.md");
     expect(implement).toContain("implementation-reviewer checks code and tests");
     expect(implement).toContain("Each required reviewer must pass the same final revision");

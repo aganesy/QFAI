@@ -56,7 +56,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
     expect(content).toContain("Take the lowest EX ID");
-    expect(content).toContain("Record command, selector, failure, test hash, and");
+    expect(content).toContain("Record command, selector, failure, test file, and");
     expect(content).toContain("Run the same selector and record");
     expect(content).toContain(
       "The stage's review pack identifies the BF, every EX the stage implemented, the",

@@ -144,7 +144,7 @@ the smallest useful seam and a falsifiable assertion.
 1. **Red:** Run the smallest applicable Test command from `tech.md`.
    Observe the assertion fail for the intended behavior before changing
    production code. A load error, missing dependency, or broken fixture is
-   not an admissible RED. Record command, selector, failure, test hash, and
+   not an admissible RED. Record command, selector, failure, test file, and
    revision. Follow
    `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md` and
    `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`
@@ -197,11 +197,10 @@ Change nothing on the surface that owns the truth.
 Write `.qfai/evidence/implement-BF-NNNN.md` with `common-evidence-record`.
 Give each example its own
 `### EX-NNNN-NNNN-NN` section with the obligation, test path and selector,
-RED, GREEN, and Refactor commands and observed results, revisions, hashes,
+RED, GREEN, and Refactor commands and observed results, revisions,
 reviewer verdicts, and open findings. Keep prior rounds as history; new work
 gets a new round. Evidence without a command and result pair does not prove a
 gate. Follow
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` and
 `.qfai/assistant/skill/qfai-implement/references/round-evidence.md` for
 freshness and round fields.
 
@@ -216,14 +215,14 @@ product-surface-reviewer where an example is UI-affecting.
 The stage's review pack identifies the BF, every EX the stage implemented, the
 evidence path, the revision and the requested reviewers.
 Each required reviewer must pass the same final revision.
-Record the pack path and its seal in the current round of each example it
+Record the pack path in the current round of each example it
 covers, following
 `.qfai/assistant/skill/qfai-implement/references/review-artifact-layout.md`
 and
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`.
 A blocking REVISE opens the next round of the examples it names.
 A record correction follows `.qfai/assistant/rule/drift-protocol.md` and
-never changes a sealed pack.
+never changes a finished pack.
 Record explicit PASS or REVISE for the current revision.
 
 ## Gate

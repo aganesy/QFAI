@@ -99,7 +99,7 @@ describe("wrapper parity across all three platforms", () => {
 
       const requiredPhrases = [
         "one EX at a time by default",
-        "Record command, selector, failure, test hash",
+        "Record command, selector, failure, test file",
         "qa-gatekeeper checks the observed RED and GREEN evidence",
         "implementation-reviewer checks code and tests",
         "completion-reviewer checks",

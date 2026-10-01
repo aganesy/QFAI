@@ -57,7 +57,7 @@ record says `none` with the reason; deleting the heading is a gap, not a pass.
   run records `<paths.outDir>/validate.log` and the `run-*/` directory its
   `run_log:` line names. `common-gate-run` produces these.
 - **Reviewer results.** One line per reviewer: role, verdict, reviewed revision,
-  and the pack path and seal where the stage writes a pack
+  and the pack path where the stage writes a pack
   (`common-review-cycle`).
 - **Open risks.** Every finding left unresolved, with its owner.
 - **Final status.** `PASS` or `REVISE`, with the evidence-based reason.
@@ -72,11 +72,9 @@ record says `none` with the reason; deleting the heading is a gap, not a pass.
 - **Multi-line output goes in a fenced block** longer than any fence the output
   itself prints, so a heading in the output cannot end the section. Keep the
   command and output verbatim.
-- **Revisions name trees, not times.** Use a git revision for a clean tree and
-  `working-tree+<content hash>` otherwise, as
-  `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`
-  defines.
-- **A record defect is repaired in a new entry.** It never edits a sealed review
+- **Revisions name commits, not times.** Use the git revision of a clean tree,
+  and commit before observing: an uncommitted tree has no revision.
+- **A record defect is repaired in a new entry.** It never edits a finished review
   pack. The queue that drains such defects is
   `.qfai/assistant/rule/drift-protocol.md#the-record-defect-queue`.
 - **What must outlast the work goes elsewhere**: the story tree, the

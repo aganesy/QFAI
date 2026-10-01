@@ -29,7 +29,7 @@ describe("implementation evidence contract", () => {
       "GREEN command",
       "GREEN result",
       "Refactor verify revision",
-      "Review pack seal",
+      "Review pack",
       "reviewer verdict",
     ]) {
       expect(round).toContain(field);
@@ -50,21 +50,14 @@ describe("implementation evidence contract", () => {
     expect(round).toMatch(/fence must be longer than any fence printed by the command output/);
   });
 
-  it("ties observations and verdicts to the source revision and sealed review pack", async () => {
-    const [round, revision] = await Promise.all([
-      readReference("round-evidence.md"),
-      readReference("evidence-revision.md"),
-    ]);
-    expect(round).toMatch(
-      /Every reviewer verdict names its reviewed revision and audited evidence hash/,
-    );
+  it("ties observations and verdicts to the commit they read", async () => {
+    const round = await readReference("round-evidence.md");
+    expect(round).toMatch(/Every reviewer verdict names its reviewed revision\./);
     expect(round).toMatch(
       /review of a changed test, implementation, fixture, or capture is repeated/,
     );
-    expect(revision).toMatch(/Do not use a timestamp as a revision/);
-    expect(revision).toMatch(
-      /A verdict is stale when the state it claims to have reviewed differs/,
-    );
-    expect(revision).toMatch(/Recompute every recorded seal before accepting a verdict/);
+    expect(round).toMatch(/A timestamp is never a revision/);
+    expect(round).toMatch(/an uncommitted tree has no revision/);
+    expect(round).not.toMatch(/audited evidence hash|seal/);
   });
 });

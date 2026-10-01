@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "revision_form": "content-hash",
-  "revision": "<git rev, or working-tree+<content hash>>",
+  "revision": "<git rev>",
   "created_at": "YYYY-MM-DDThh:mm:ssZ",
   "producer": "discussion",
   "target": {

@@ -41,7 +41,7 @@ describe.each(trees)("%s — implementation RED evidence", (tree) => {
     );
     expect(probe).toContain("The test's own checker or fixture is not the behavior");
     expect(probe).toContain("Do not mutate it to manufacture a failure.");
-    expect(probe).toContain("Record the test file hash");
+    expect(probe).toContain("Record the revision");
     expect(probe).toContain("confirm the test is unchanged after restoration");
     expect(probe).toContain("improve the oracle or raise a contract gap");
   });

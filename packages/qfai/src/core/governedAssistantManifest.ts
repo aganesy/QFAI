@@ -14,7 +14,6 @@
  */
 export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "rule/agent-selection.md",
-  "rule/audited-evidence-hash.md",
   "rule/change-classification.md",
   "rule/communication.md",
   "rule/constitution.md",

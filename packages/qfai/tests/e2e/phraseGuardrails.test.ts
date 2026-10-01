@@ -13,7 +13,7 @@ const implementAssistantDir = path.join(templateQfaiDir, "assistant");
 
 const requiredPhrases = [
   "one EX at a time by default",
-  "Record command, selector, failure, test hash",
+  "Record command, selector, failure, test file",
   "qa-gatekeeper checks the observed RED and GREEN evidence",
   "implementation-reviewer checks code and tests",
   "completion-reviewer checks",
@@ -141,7 +141,7 @@ describe("E2E: prototyping wording alignment", () => {
   it("SKILL.md contains actionable implementation verbs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
     const actionableVerbs = [
-      "Record command, selector, failure, test hash",
+      "Record command, selector, failure, test file",
       "Re-run validation before selecting the next unassigned EX",
       "Record explicit PASS or REVISE",
     ];
