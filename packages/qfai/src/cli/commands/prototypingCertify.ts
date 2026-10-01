@@ -909,7 +909,8 @@ export async function runPrototypingCertify(
     error(
       "qfai prototyping certify: root DESIGN.md sha256 (" +
         `${currentSha}) differs from the frozen value in prototyping.json (${frozenSha}). ` +
-        "DESIGN.md was edited after the loop completed; re-run prototyping from cycle 0.",
+        "DESIGN.md was edited after the loop completed; re-run prototyping from cycle 0. " +
+        "If only its prose changed, run `qfai prototyping refreeze`, then certify again.",
     );
     return 2;
   }

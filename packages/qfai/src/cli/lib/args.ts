@@ -61,7 +61,13 @@ export type ParsedArgs = {
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
     platform?: string;
-    prototypingAction?: "preflight" | "iterate" | "certify" | "show-ui-contract" | "rescope";
+    prototypingAction?:
+      | "preflight"
+      | "iterate"
+      | "certify"
+      | "show-ui-contract"
+      | "rescope"
+      | "refreeze";
     /** `rescope --remove <surface-id>`, repeatable. */
     rescopeRemove: string[];
     /** `rescope --reason <delta-id>`: the decision that retired the surface. */
@@ -354,7 +360,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         candidate === "iterate" ||
         candidate === "certify" ||
         candidate === "show-ui-contract" ||
-        candidate === "rescope"
+        candidate === "rescope" ||
+        candidate === "refreeze"
       ) {
         options.prototypingAction = candidate;
       } else {
@@ -1129,7 +1136,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
-  ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
+  ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope|refreeze"],
   ["discussion", "list|use"],
   ["audit", "log"],
   ["atdd", "scaffold"],

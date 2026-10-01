@@ -9,6 +9,7 @@ import {
   runPrototypingCertify,
   runPrototypingShowUiContract,
 } from "./commands/prototypingCertify.js";
+import { runPrototypingRefreeze } from "./commands/prototypingRefreeze.js";
 import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
@@ -314,6 +315,14 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           });
           return;
         }
+        if (options.prototypingAction === "refreeze") {
+          const resolvedRoot = await resolveRoot(options);
+          process.exitCode = await runPrototypingRefreeze({
+            root: resolvedRoot,
+            dryRun: options.dryRun,
+          });
+          return;
+        }
         if (options.prototypingAction === "show-ui-contract") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingShowUiContract({ root: resolvedRoot });
@@ -442,6 +451,8 @@ Commands:
   prototyping rescope --remove <id> --reason <delta-id>
                                         Drop a retired surface from frozenSurfaceUnion
                                         (the loop stays on its current cycle; a surface still being resolved is refused)
+  prototyping refreeze                  Re-take the frozen DESIGN.md hash after a prose-only edit
+                                        (a change to its tokens is refused)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
@@ -463,7 +474,7 @@ Options:
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
                               (legacy .qfai/assistant/{instructions,steering}/ -> rule/ skill/ agent/ prompt/)
-  --dry-run       init / doctor / prototyping iterate|rescope: show what would change without writing anything
+  --dry-run       init / doctor / prototyping iterate|rescope|refreeze: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format

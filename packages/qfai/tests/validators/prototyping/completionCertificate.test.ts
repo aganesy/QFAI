@@ -179,5 +179,44 @@ describe("validateCompletionCertificateIssues", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-336");
     expect(issues[0]?.message).toMatch(/digest mismatch/);
+    expect(issues[0]?.suggested_action).toContain("rerun `qfai prototyping certify`");
+  });
+
+  // QFAI:EX-0001-0112-07
+  it("names the refreeze route when DESIGN.md changed since certify", async () => {
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      mode: { effective: "standard", source: "explicit-request", rationale: "test" },
+      completionClaimed: true,
+    });
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(path.join(evidenceRoot, "rounds/r5"), { recursive: true });
+    await writeFile(path.join(evidenceRoot, "rounds/r5/harvest.json"), "{}\n", "utf-8");
+    await writeFile(path.join(root, "DESIGN.md"), "# Brand Philosophy\n\nCalm.\n", "utf-8");
+    const cert = await buildCompletionCertificate({
+      runId: "test-run",
+      toolVersion: "1.8.4",
+      evidenceRoot,
+      validateRun: { errorCount: 0, ranAt: "2026-04-27T00:00:00Z" },
+      verifyRun: { status: "PASS", ranAt: "2026-04-27T00:01:00Z" },
+      reviewerSignoff: {
+        reviewerId: "test",
+        approved: true,
+        timestamp: "2026-04-27T00:02:00Z",
+      },
+      iterationCount: 1,
+      polishCycleCount: 0,
+      uiContractsCovered: ["UI-0012"],
+      convergedUiContracts: ["UI-0012"],
+      laggingUiContracts: [],
+      designMd: { path: "DESIGN.md", sha256: "0".repeat(64) },
+    });
+    await writeCompletionCertificate(root, cert);
+
+    const issues = await validateCompletionCertificateIssues(root, makeConfig());
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-PROT-336");
+    expect(issues[0]?.suggested_action).toContain("`qfai prototyping refreeze`");
+    expect(issues[0]?.suggested_action).toContain("re-run from cycle 0");
   });
 });

@@ -295,7 +295,7 @@ describe("cli usage errors", () => {
       {
         argv: ["prototyping", "bogusaction"],
         expected:
-          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
+          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope|refreeze',
       },
     ];
     for (const { argv, expected } of cases) {
