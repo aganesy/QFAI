@@ -20,6 +20,19 @@ async function section(file: string, heading: string): Promise<string> {
   return text;
 }
 
+// The cells of every body row of the first table whose header row has a cell `header`.
+function tableRows(text: string, header: string): string[][] {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line.startsWith("|") && line.includes(`| ${header} `));
+  if (start === -1) return [];
+  const rows: string[][] = [];
+  for (const line of lines.slice(start + 2)) {
+    if (!line.startsWith("|")) break;
+    rows.push(line.split("|").slice(1, -1).map((cell) => cell.trim()));
+  }
+  return rows;
+}
+
 describe("qfai-atdd in a workflow run", () => {
   // QFAI:AC-0001-0197-01
   // QFAI:EX-0001-0197-01
@@ -160,6 +173,21 @@ describe("qfai-verify in a workflow run", () => {
     expect(text).toMatch(/`verify\.json` itself is unchanged inside a run/i);
     expect(text).toMatch(/qfai-verify\/references\/verify-output-contract\.md`/);
     expect(text).toMatch(/the run's values stay in the stage result/i);
+    const contract = await readShipped("skill/qfai-verify/references/verify-output-contract.md");
+    expect(tableRows(contract, "Field").map((row) => row[0])).toEqual([
+      "`status`",
+      "`scope`",
+      "`flowId`",
+      "`recordedAt`",
+      "`summary`",
+      "`gates`",
+    ]);
+    expect(flat(contract)).toContain('`status` is a closed two-value enum: `"PASS"` / `"FAIL"`.');
+    expect(tableRows(contract, "Written by").map((row) => row[0])).toEqual([
+      "`prototyping`",
+      "`atdd`",
+      "`full`",
+    ]);
   });
 
   // QFAI:AC-0001-0208-05
@@ -169,9 +197,11 @@ describe("qfai-verify in a workflow run", () => {
     const text = flat(raw);
     expect(text).toMatch(/verify edits no artifact another owner holds/i);
     expect(text).toMatch(/returns `needs_repair`, with the finding listed in `debts`/i);
-    expect(rowOf(raw, "| A story or contract gap ")).toMatch(/`qfai-sdd`/);
-    expect(rowOf(raw, "| An acceptance-test defect ")).toMatch(/`qfai-atdd`/);
-    expect(rowOf(raw, "| An implementation defect ")).toMatch(/`qfai-implement`/);
+    expect(tableRows(raw, "Finding")).toEqual([
+      ["A story or contract gap", "`qfai-sdd`"],
+      ["An acceptance-test defect", "`qfai-atdd`"],
+      ["An implementation defect", "`qfai-implement`"],
+    ]);
     expect(text).toMatch(/these three are the only repairs verify routes/i);
   });
 
