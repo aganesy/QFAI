@@ -266,7 +266,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // The text formatter prints only `message`, so the issues the loader
     // returned are listed there, one line, `; `-joined.
     const listed = issues
-      .map((issue) => escapeForMessage(withoutYamlExcerpt(issue.message)))
+      .map((issue) => boundForMessage(escapeForMessage(withoutYamlExcerpt(issue.message))))
       .join("; ");
     addCheck(checks, {
       id: "config.load",
@@ -1003,6 +1003,16 @@ function isControlCodePoint(code: number): boolean {
     LINE_SEPARATORS.has(code) ||
     BIDIRECTIONAL_CONTROLS.has(code)
   );
+}
+
+/** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
+const MAX_LISTED_ISSUE_LENGTH = 500;
+
+/** Several loader messages quote the rejected value, so a very large value is cut here. */
+function boundForMessage(value: string): string {
+  return value.length > MAX_LISTED_ISSUE_LENGTH
+    ? `${value.slice(0, MAX_LISTED_ISSUE_LENGTH)}... (cut)`
+    : value;
 }
 
 /**

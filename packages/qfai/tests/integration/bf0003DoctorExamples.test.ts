@@ -164,6 +164,18 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(load?.message).toContain("reviewProfiles.a\\x0a\\x0ab must be an entry");
   });
 
+  it("cuts a very long rejected value in the config.load message and keeps it whole in details", async () => {
+    // QFAI:AC-0003-0001-03
+    const root = await newTempDir("invalid-long-value");
+    await put(root, "qfai.config.yaml", `prototyping:\n  mode: ${"x".repeat(5000)}\n`);
+    const load = check(await doctorJson(root), "config.load");
+    const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
+    const modeIssue = issues?.find((issue) => issue.message.startsWith("prototyping.mode"));
+    expect(modeIssue?.message.length).toBeGreaterThan(5000);
+    expect(load?.message).toContain("prototyping.mode must be");
+    expect(load?.message.length).toBeLessThan(2000);
+  });
+
   it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-excerpt");
