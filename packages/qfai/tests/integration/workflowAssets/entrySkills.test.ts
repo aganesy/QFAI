@@ -517,14 +517,17 @@ describe("the entry skills' routing entries", () => {
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
     const authors = maintainPhases
-      .filter((phase) => !strings(phase.mandatory_agents).includes("completion-reviewer"))
+      .filter((phase) => strings(phase.blocking_agents).length === 0)
       .flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
     const reviewing = maintainPhases.filter((phase) =>
       strings(phase.blocking_agents).includes("completion-reviewer"),
     );
     expect(reviewing.length, "qfai-maintain has a blocking reviewer phase").toBeGreaterThan(0);
-    expect(authors, "the reviewer is not an author").not.toContain("completion-reviewer");
+    expect(
+      authors.filter((agent) => agent.endsWith("-reviewer") || agent === "qa-gatekeeper"),
+      "no reviewer is an author",
+    ).toEqual([]);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 
