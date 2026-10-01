@@ -91,6 +91,18 @@ describe("legacy migration records", () => {
     ).toThrow(/holds a different Rule/);
   });
 
+  it("compares Rule values written in a script other than Latin", () => {
+    // Greek letters, built from code points: two different rules that share no Latin letter.
+    const table = String.fromCodePoint(0x3b1, 0x3b2, 0x3b3, 0x20, 0x3b4, 0x3b5);
+    const heading = String.fromCodePoint(0x3b6, 0x3b7, 0x3b8, 0x20, 0x3b9, 0x3ba);
+    const markdown = (headingRule: string) =>
+      `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0011-0012 | ${table} |\n\n## BR-0011-0012: Totals\n\n- Rule: ${headingRule}\n`;
+    expect(() => parseLegacyRecords(markdown(heading), "BR", "04_Business-Rules.md")).toThrow(
+      /holds a different Rule/,
+    );
+    expect(parseLegacyRecords(markdown(table), "BR", "04_Business-Rules.md")).toHaveLength(1);
+  });
+
   it("keeps the bold inside a section's Rule value", () => {
     const rule = parseLegacyRecords(
       "# Rules\n\n## BR-0011-0009: Audit\n\n- **Rule**: Orders are **audited**,\n  and **kept**.\n",
