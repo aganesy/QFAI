@@ -39,5 +39,7 @@ describe("Implementation evidence ownership", () => {
     expect(drift).toContain(
       "Complete the decision row by changing Status from WIP to DONE only after",
     );
+    expect(drift).toContain("DONE claims every action its Approach lists");
+    expect(drift).toContain("append a new Change request: row for the deferred action");
   });
 });

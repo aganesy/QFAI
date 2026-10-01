@@ -35,6 +35,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A DONE change request claims every action it lists** (#2312). A
+  `decisions.md` row has one Status, so a request with one action deferred could
+  be marked DONE and the deferred action dropped from view. The drift protocol
+  now keeps such a row at WIP, or splits the deferred action into a new
+  `Change request:` row before the original is marked DONE.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
