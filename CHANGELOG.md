@@ -110,6 +110,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The seam-failure example is checked under its own heading.** Its test read
+  the whole `implement-seam` step, so the `blocked` and `needs_repair` rules
+  passed even with the `When the seam cannot be landed or observed` heading
+  gone or the rules moved under another one. The test now reads that section
+  only. The item completion story no longer names a numbered gate or a ledger
+  item. (#2291)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
