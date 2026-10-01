@@ -544,7 +544,7 @@ describe("US-0001-0184: iterate --check-convergence reports the recorded loop st
     }
   }
 
-  // QFAI:US-0001-0184
+  // Exercises US-0001-0184.
   it("reports a budget-exhausted loop as not converged and a converged one as converged, without --cycle and without writing", async () => {
     const root = await p2TempDir();
     await seedPhase2Project(root);
