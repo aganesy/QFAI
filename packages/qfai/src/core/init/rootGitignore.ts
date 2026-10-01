@@ -460,6 +460,9 @@ function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
   const own = new Set(significant);
   return QFAI_GITIGNORE_BLOCK.split("\n").filter((line) => {
     if (line === "" || line.startsWith("#") || line.startsWith("!")) return false;
+    // The freshness check reads the run-state line from the block itself, so a
+    // block without it would be rebuilt on every run.
+    if (line === QFAI_RUN_STATE_IGNORE) return false;
     return line === "/tmp/"
       ? effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH)
       : own.has(line);

@@ -675,6 +675,51 @@ describe("the managed block does not repeat a line the project already has", () 
   });
 
   // QFAI:EX-0001-0033-10
+  it("leaves out any other exact-match ignore line and names it", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `.qfai/state.json${NL}`, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      const lines = (await readGitignore(root)).split(NL);
+      expect(lines.filter((line) => line === ".qfai/state.json")).toHaveLength(1);
+      expect(output).toContain("left out of the QFAI entries: .qfai/state.json");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("names the lines it would leave out on --dry-run", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).toContain("left out of the QFAI entries: /tmp/");
+      expect(await readGitignore(root)).toBe(`/tmp/${NL}`);
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("keeps the run-state line in the block even when the project has it, and settles", async () => {
+    // The freshness check reads that line from the block, so leaving it out
+    // would rebuild the block on every run.
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `.qfai/run/${NL}`, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const first = await readGitignore(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(first.split(NL).filter((line) => line === ".qfai/run/")).toHaveLength(2);
+      expect(await readGitignore(root)).toBe(first);
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
   it("does not count a project line that starts with whitespace", async () => {
     // Git reads the leading space as part of the pattern, so ` /tmp/` ignores nothing.
     await withProject(async (root) => {

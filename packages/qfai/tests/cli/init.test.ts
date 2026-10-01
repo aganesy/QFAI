@@ -1750,19 +1750,22 @@ describe("qfai init", () => {
       await execFile("git", ["worktree", "add", linked], { cwd: main });
       const shared = /shared by every worktree of this repository/;
 
+      // Before the real run, which sets the shared value to true and so ends the write
+      // this output would otherwise describe.
+      const mainOutput = await captureStdout(async () => {
+        await runInit({ dir: main, force: false, dryRun: true, yes: true });
+      });
       const dryRunOutput = await captureStdout(async () => {
         await runInit({ dir: linked, force: false, dryRun: true, yes: true });
       });
       const realOutput = await captureStdout(async () => {
         await runInit({ dir: linked, force: false, dryRun: false, yes: true });
       });
-      const mainOutput = await captureStdout(async () => {
-        await runInit({ dir: main, force: false, dryRun: true, yes: true });
-      });
 
+      expect(mainOutput).toContain("would set: git config --local core.symlinks true");
+      expect(mainOutput).not.toMatch(shared);
       expect(dryRunOutput).toMatch(shared);
       expect(realOutput).toMatch(shared);
-      expect(mainOutput).not.toMatch(shared);
     } finally {
       await removeTempTree(root);
     }
