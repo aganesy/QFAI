@@ -1,8 +1,9 @@
-import type { Dirent } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { isEnoent } from "./fs/errno.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -96,12 +97,36 @@ type CreateDoctorDataOptions = {
   targetUrl?: string;
 };
 
+/** Follows links on every platform, so a broken link does not exist; `access` succeeds on one on Windows. */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await stat(target);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** True when the path is a regular file the process may read, which is what `qfai report` needs of validate.json. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error: unknown) {
+    return isEnoent(error);
   }
 }
 
@@ -163,6 +188,19 @@ const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
 
 function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
+}
+
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+  outDir: "the first `qfai validate` creates it",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
 }
 
 /**
@@ -252,15 +290,25 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
+    const absentNote =
+      ok || missingDefaultSkillCreatedPath || !(await isAbsent(resolved))
+        ? undefined
+        : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
+      severity: ok
+        ? "ok"
+        : missingDefaultSkillCreatedPath || absentNote !== undefined
+          ? "info"
+          : "warning",
       title: `Path exists: ${key}`,
       message: ok
         ? `${key} exists`
         : missingDefaultSkillCreatedPath
           ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
-          : `${key} is missing (configure this path or create the directory)`,
+          : absentNote !== undefined
+            ? `${key} is the shipped default and does not exist yet: ${absentNote}`
+            : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
@@ -705,14 +753,17 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
-  const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonExists = await isReadableFile(validateJsonAbs);
+  const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "warning",
+    severity: validateJsonExists ? "ok" : validateJsonAbsent ? "info" : "warning",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"
-      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+      : validateJsonAbsent
+        ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
+        : "validate.json is not a readable file (a directory, a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 

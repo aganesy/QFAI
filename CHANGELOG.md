@@ -56,6 +56,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under the `spec-*/` and `_policies/` directories, and ends with a line that
   names `/qfai-migration-v1-to-v2`, `/qfai-sdd` and the archive a file must be
   in before it is deleted.
+- **A fresh `qfai init` no longer leaves false warnings in `qfai doctor` and
+  `qfai validate`.** An absent `paths.srcDir`, `paths.testsDir` or
+  `paths.outDir` that is still the shipped default is now an `info` check with
+  one line saying why, and `QFAI-CFG-LINK-002` follows the same rule for
+  `srcDir` and `testsDir`. A missing `validate.json` is `info`. A path that is
+  not the default and does not exist is still a warning. `QFAI-CFG-LINK-002`
+  also stays a warning when a file, not a directory, has the default name.
+  `qfai.config.yaml` is not rewritten, and the warning for an empty
+  `testFileGlobs` is unchanged. Fixes #2732.
 - **Step 3 rewrites the `CON-*` IDs its contract map translates in the
   contract files it writes,** wherever they stand in the file, instead of
   listing each one for a person. An ID no contract declared, or that more than
