@@ -311,7 +311,11 @@ type OldCriterion = {
   parent: string | null;
   /** Why the criterion has no such story where its two references disagree or name several. */
   unresolved?: string;
+  /** Every story of its pack that its `Parent:` line or its catalog row names. */
+  named: readonly string[];
   text: string;
+  /** The line of the old criteria file its text starts on. */
+  line: number;
 };
 type OldExample = { id: string; input: string; expected: string; status: string };
 type OldCase = {
@@ -345,7 +349,7 @@ type OldPack = {
 function sectionBlocks(
   text: string,
   prefix: "US" | "AC",
-): Array<{ id: string; title: string; body: string; line: number }> {
+): Array<{ id: string; title: string; body: string; line: number; bodyLine: number }> {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const h2 = parseHeadings(text).filter((heading) => heading.level === 2);
   const headings = h2.filter((heading) =>
@@ -354,14 +358,19 @@ function sectionBlocks(
   return headings.map((heading) => {
     const id = new RegExp(`^${prefix}-\\d{4}-\\d{4}`).exec(heading.title)?.[0] ?? "";
     const next = h2.find((candidate) => candidate.line > heading.line);
+    const raw = lines.slice(heading.line, (next?.line ?? lines.length + 1) - 1);
     return {
       id,
       line: heading.line,
+      bodyLine:
+        heading.line +
+        1 +
+        Math.max(
+          0,
+          raw.findIndex((line) => line.trim() !== ""),
+        ),
       title: heading.title.replace(new RegExp(`^${id}:?\\s*`), "").trim(),
-      body: lines
-        .slice(heading.line, (next?.line ?? lines.length + 1) - 1)
-        .join("\n")
-        .trim(),
+      body: raw.join("\n").trim(),
     };
   });
 }
@@ -400,7 +409,9 @@ export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): 
       criterion: {
         id: entry.id,
         parent: /(?:^|\n)\s*(?:#|-)?\s*Parent:\s*(US-\d{4}-\d{4})/i.exec(entry.body)?.[1] ?? null,
+        named: [],
         text: entry.body,
+        line: entry.bodyLine,
       },
     });
   }
@@ -439,7 +450,9 @@ export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): 
       criterion: {
         id,
         parent: /^[ \t]*#[ \t]*Parent:[ \t]*(US-\d{4}-\d{4})/im.exec(block)?.[1] ?? null,
+        named: [],
         text: block,
+        line,
       },
     });
   }
@@ -448,14 +461,18 @@ export function parseOldCriteria(text: string, storyIds?: ReadonlySet<string>): 
     .sort((left, right) => left.line - right.line)
     .map(({ criterion }) => {
       const declared = (story: string): boolean => storyIds?.has(story) ?? true;
+      const rowStories = (catalog.get(criterion.id) ?? []).filter(declared);
+      const lineStory = criterion.parent !== null && declared(criterion.parent);
+      const named = [...new Set([...(lineStory ? [criterion.parent ?? ""] : []), ...rowStories])];
       if (criterion.parent !== null && !declared(criterion.parent)) {
         return {
           ...criterion,
           parent: null,
+          named,
           unresolved: `names ${criterion.parent} in its Parent line, which is no story of its pack; list it under a story's criteria in plan.yaml`,
         };
       }
-      return withCatalogParent(criterion, (catalog.get(criterion.id) ?? []).filter(declared));
+      return { ...withCatalogParent(criterion, rowStories), named };
     });
 }
 
@@ -499,9 +516,11 @@ function withCatalogParent(criterion: OldCriterion, named: readonly string[]): O
   return { ...criterion, parent: row[0] ?? null };
 }
 
-type GherkinItem = { keyword: string; name: string; lines: string[] };
+type GherkinItem = { keyword: string; name: string; line: number; lines: string[] };
+/** An item of a criterion that is not written, and the line of the old file it starts on. */
+type DroppedItem = { line: number; text: string };
 /** What a convertible criterion writes: its one named scenario, or null for the placeholder. */
-type CriterionShape = { scenario: string | null; dropped: string[] };
+type CriterionShape = { scenario: string | null; dropped: DroppedItem[] };
 
 const GHERKIN_ITEM = /^\s*(Background|Scenario Outline|Scenario Template|Scenario):[ \t]*(.*?)\s*$/;
 const ID_ONLY_NAME = /^(?:US|AC)-\d{4}-\d{4}(?:-\d{2})?:?$/;
@@ -515,17 +534,42 @@ const PLACEHOLDER_SCENARIO = [
 ].join("\n");
 
 /** Each `Background`, `Scenario` and `Scenario Outline` of a criterion, with the lines under it. */
-function gherkinItems(source: string): GherkinItem[] {
+function gherkinItems(source: string, firstLine: number): GherkinItem[] {
   const items: GherkinItem[] = [];
   let docString = false;
-  for (const line of source.replace(/\r\n/g, "\n").split("\n")) {
+  for (const [index, line] of source.replace(/\r\n/g, "\n").split("\n").entries()) {
     const delimiter = /^\s*"""/.test(line);
     const header = docString || delimiter ? null : GHERKIN_ITEM.exec(line);
     if (delimiter) docString = !docString;
-    if (header) items.push({ keyword: header[1] ?? "", name: header[2] ?? "", lines: [line] });
-    else items.at(-1)?.lines.push(line);
+    if (header) {
+      items.push({
+        keyword: header[1] ?? "",
+        name: header[2] ?? "",
+        line: firstLine + index,
+        lines: [line],
+      });
+    } else items.at(-1)?.lines.push(line);
   }
   return items;
+}
+
+/** The part of a criterion's text that holds its Gherkin, and the file line it starts on. */
+function gherkinSource(criterion: OldCriterion): { source: string; line: number } {
+  const fenced = /```gherkin\s*\n([\s\S]*?)\n```/m.exec(criterion.text);
+  if (fenced?.[1] === undefined) {
+    return { source: criterion.text.replace(/\n```[\s\S]*$/m, ""), line: criterion.line };
+  }
+  const start = fenced.index + fenced[0].length - "\n```".length - fenced[1].length;
+  const before = criterion.text.slice(0, start).match(/\n/g)?.length ?? 0;
+  return { source: fenced[1], line: criterion.line + before };
+}
+
+/** The header row of an item's first `Examples:` table as written, or null where it has none. */
+function examplesHeader(item: GherkinItem): string | null {
+  const at = item.lines.findIndex((line) => /^\s*(?:Examples|Scenarios):/.test(line));
+  if (at < 0) return null;
+  const row = item.lines.slice(at + 1).find((line) => !/^\s*(?:#|@|$)/.test(line));
+  return row !== undefined && row.trim().startsWith("|") ? row.trim() : null;
 }
 
 /** An item's text without the blank, tag and comment lines that lead into the next item. */
@@ -535,9 +579,13 @@ function itemText(item: GherkinItem): string {
   return lines.join("\n");
 }
 
-function droppedItem(item: GherkinItem): string {
+function droppedText(item: GherkinItem): string {
   if (item.keyword === "Background") return item.name ? `Background "${item.name}"` : "Background";
-  if (item.keyword !== "Scenario") return `${item.keyword} "${item.name}"`;
+  if (item.keyword !== "Scenario") {
+    const header = examplesHeader(item);
+    const named = `${item.keyword} "${item.name}"`;
+    return header === null ? named : `${named} with Examples header row ${header}`;
+  }
   if (item.name === "") return "Scenario with no name";
   if (ID_ONLY_NAME.test(item.name)) return `Scenario named only by its ID ${item.name}`;
   return `further Scenario "${item.name}"`;
@@ -549,9 +597,8 @@ function droppedItem(item: GherkinItem): string {
  * `Background`, `Scenario` and `Scenario Outline` is dropped and named for a person.
  */
 function criterionShape(criterion: OldCriterion): CriterionShape | null {
-  const fenced = /```gherkin\s*\n([\s\S]*?)\n```/m.exec(criterion.text)?.[1];
-  const source = fenced ?? criterion.text.replace(/\n```[\s\S]*$/m, "");
-  const start = source.search(/^[ \t]*Scenario(?: Outline| Template)?:[ \t]+\S/m);
+  const { source, line } = gherkinSource(criterion);
+  const start = source.search(/^[ \t]*Scenario(?: Outline| Template)?:/m);
   if (start < 0) return null;
   const scenario = source.slice(start);
   if (
@@ -561,13 +608,15 @@ function criterionShape(criterion: OldCriterion): CriterionShape | null {
   ) {
     return null;
   }
-  const items = gherkinItems(source);
+  const items = gherkinItems(source, line);
   const kept = items.find(
     (item) => item.keyword === "Scenario" && item.name !== "" && !ID_ONLY_NAME.test(item.name),
   );
   return {
     scenario: kept === undefined ? null : itemText(kept),
-    dropped: items.filter((item) => item !== kept).map(droppedItem),
+    dropped: items
+      .filter((item) => item !== kept)
+      .map((item) => ({ line: item.line, text: droppedText(item) })),
   };
 }
 
@@ -1125,7 +1174,7 @@ function criteriaForAPerson(
     if (shape === null) continue;
     for (const item of shape.dropped) {
       forAPerson.push(
-        `${source}: ${criterion.id} ${item} is not written; a criterion holds one named Scenario`,
+        `${source}:${item.line}: ${criterion.id} ${item.text} is not written; a criterion holds one named Scenario`,
       );
     }
     if (shape.scenario === null) {
@@ -1135,6 +1184,14 @@ function criteriaForAPerson(
     }
   }
   return forAPerson;
+}
+
+/** The old criteria whose `Parent:` line, catalog row or plan entry named the story, as an item tail. */
+function namedByNote(pack: OldPack, planned: PlannedStory): string {
+  const named = pack.criteria
+    .filter((item) => planned.criteria.includes(item.id) || item.named.includes(planned.id))
+    .map((item) => item.id);
+  return named.length === 0 ? "" : `; named by ${named.join(", ")} in 03_Acceptance-Criteria.md`;
 }
 
 function outputExamples(
@@ -1609,7 +1666,9 @@ export const step04: MigrationStep = {
         });
         const criteriaText = outputCriteria(story, mappedCriteria, packMap);
         if (criteriaText === null) {
-          forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
+          forAPerson.push(
+            `${criteriaFile}: ${storyId} has no criterion that takes a new ID${namedByNote(pack, planned)}`,
+          );
           // Nothing tells an earlier step 4's output from a file a person wrote, so an
           // existing criteria file is kept and named for the person resolving the story.
           if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
