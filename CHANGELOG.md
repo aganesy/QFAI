@@ -110,6 +110,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three governance tests can now fail.** The missing-bucket test matched
+  bucket names the message always prints; it now checks the
+  `missingBuckets=[...]` list, with a second case where one bucket is missing.
+  The `qfai-maintain` routing test counted any agent outside a phase naming
+  `completion-reviewer` as an author; it now takes the phases with no blocking
+  agent and finds no reviewer among them. The grilling-in-a-run test now
+  requires the session to keep the user and delegated split, not just mention
+  it. (#2295)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

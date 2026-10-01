@@ -170,7 +170,7 @@ describe("governance inside a run", () => {
     const text = await passage(DELEGATION, "### Grilling in a run");
     expect(text).toMatch(/takes what the work order's `settled` field records as settled/i);
     expect(text).toMatch(/works only the remaining frontier/i);
-    expect(text).toMatch(/split between user sessions and delegated sessions/i);
+    expect(text).toMatch(/it keeps the split between user sessions and delegated sessions/i);
     expect(text).toMatch(/no run invokes `qfai-grill`/i);
   });
 
