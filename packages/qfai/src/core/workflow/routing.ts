@@ -25,6 +25,7 @@ import {
 import { isWorkflowRoute } from "./routes.js";
 import type {
   ProposalRefusal,
+  ProposalRefusalReason,
   WorkflowDecision,
   WorkflowEvent,
   WorkflowFacts,
@@ -56,8 +57,26 @@ function routingNotReady(run: WorkflowRun): WorkflowDecision {
   return { verdict: { ok: false, run, error: { code: "invalid-input", message } }, events: [] };
 }
 
+// What satisfies each refusal reason, so a revising agent need not guess from the bare code.
+const REFUSAL_FIXES: Record<ProposalRefusalReason, string> = {
+  "unknown-path": "name a project-relative path that exists, with no glob",
+  "unknown-id": "name a flow the story tree declares, and cite a contract by its file path",
+  "protected-surface": "keep proposedWriteScope off the run's records and every protected target",
+  "scope-escape":
+    "use requestKind routed, and keep proposedWriteScope inside the project and what the route writes",
+  "unresolved-approval": "open each risk signal that needs the operator as an unresolved question",
+  "flow-binding":
+    "name exactly one existing flow in affectedFlowIds; with new stories, name only the flows they join",
+};
+
 function proposalRefused(run: WorkflowRun, reasons: ProposalRefusal[]): WorkflowDecision {
-  const message = "The route proposal failed a check. Revise it and submit it again.";
+  const fixes = [...new Set(reasons.map(({ reason }) => reason))].map(
+    (reason) => `${reason}: ${REFUSAL_FIXES[reason]}.`,
+  );
+  const message = [
+    "The route proposal failed a check. Revise it and submit it again.",
+    ...fixes,
+  ].join(" ");
   return {
     verdict: { ok: false, run, error: { code: "proposal-refused", message, reasons } },
     events: [],

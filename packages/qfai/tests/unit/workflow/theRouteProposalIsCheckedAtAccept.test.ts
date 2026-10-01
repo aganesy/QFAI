@@ -236,6 +236,58 @@ it("flow-binding", () => {
   );
 });
 
+// QFAI:EX-0001-0185-59
+it("one flow the tree does not declare is an unknown ID, not a binding count", () => {
+  expect(boundedNaming(["BF-9999"])).toEqual(refused({ reason: "unknown-id", subject: "BF-9999" }));
+});
+
+// QFAI:EX-0001-0185-60
+it("a new story in one flow and a change named in another binds neither", () => {
+  expect(
+    acceptRouting(
+      { ...checkedProposal(), affectedFlowIds: ["BF-0002"] },
+      { flows: ["BF-0001", "BF-0002"], plans: { "add-feature": boundedPlan } },
+    ),
+  ).toEqual(refused({ reason: "flow-binding", subject: "BF-0002" }));
+});
+
+// QFAI:EX-0001-0185-61
+it("the refusal says what satisfies each reason it lists", () => {
+  const decision = decide(
+    {
+      run: { id: "run-checks", state: "routing", sequence: 2 },
+      outstandingWorkOrder: {
+        workOrderId: "routing-1",
+        stageInstanceId: "routing-stage-1",
+        attempt: 1,
+        stageKind: "route",
+      },
+    },
+    {
+      operation: "accept",
+      result: {
+        resultId: "routing-result-1",
+        workOrderId: "routing-1",
+        stageInstanceId: "routing-stage-1",
+        attempt: 1,
+        expectedSequence: 2,
+        outcome: "accepted",
+        proposal: {
+          ...checkedProposal(),
+          extraction: extractionFor("add-feature"),
+          newStories: [],
+          affectedFlowIds: ["BF-0001", "BF-0002"],
+        },
+      },
+    },
+    { flows: ["BF-0001", "BF-0002"], plans: { "add-feature": boundedPlan } },
+  );
+  expect(decision.verdict.error?.code).toBe("proposal-refused");
+  expect(decision.verdict.error?.message).toContain(
+    "flow-binding: name exactly one existing flow in affectedFlowIds",
+  );
+});
+
 it("no flow is named", () => {
   expect(boundedNaming([])).toEqual(
     refused({ reason: "flow-binding", subject: "affectedFlowIds" }),

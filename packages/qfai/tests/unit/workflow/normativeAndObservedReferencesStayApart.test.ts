@@ -42,7 +42,7 @@ it("Decide accept of a routing result with normative references, observed refere
               goal: "Let each customer register a notification email.",
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
-              affectedFlowIds: ["BF-0007"],
+              affectedFlowIds: [],
               newStories: [
                 {
                   goal: "Customer notification email registration",

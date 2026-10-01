@@ -76,23 +76,31 @@ function unaskedRiskSignals(proposal: WorkflowProposal): string[] {
   return (proposal.riskSignals ?? []).filter((signal) => signal !== "authorization-restored");
 }
 
-// The one flow a proposal with no new story binds on a route's plan, or the subject a
-// `flow-binding` refusal names. A route that binds a flow needs exactly one; a route whose only
-// stage facing a flow is a test fix takes the one named, or none; any other route binds none,
-// whatever the proposal names.
+// The one flow a proposal with no new story binds on a route's plan, or the subject a refusal
+// names: `unknown` for the one flow named when the tree has no such flow, `refused` for a
+// `flow-binding` refusal. A route that binds a flow needs exactly one; a route whose only stage
+// facing a flow is a test fix takes the one named, or none; any other route binds none, whatever
+// the proposal names. A proposal with new stories binds through them, and naming a flow none of
+// them joins is refused: a run works on one flow, so that flow would otherwise be dropped unsaid.
 export function flowToBind(
   proposal: WorkflowProposal,
   stages: PlanStages | undefined,
   facts: WorkflowFacts,
-): { flowId?: string; refused?: string } {
+): { flowId?: string; refused?: string; unknown?: string } {
   const binding = stages ? flowBindingOf(stages) : "none";
-  if (proposal.newStories.length > 0 || binding === "none") return {};
+  if (binding === "none") return {};
   const named = proposal.affectedFlowIds ?? [];
+  if (proposal.newStories.length > 0) {
+    const joined = new Set(proposal.newStories.map((story) => story.flowId));
+    const others = named.filter((flowId) => !joined.has(flowId));
+    return others.length > 0 ? { refused: others.join(",") } : {};
+  }
   if (binding === "optional" && named.length === 0) return {};
   const [flowId] = named;
-  if (named.length !== 1 || flowId === undefined || !(facts.flows ?? []).includes(flowId)) {
+  if (named.length !== 1 || flowId === undefined) {
     return { refused: named.length > 0 ? named.join(",") : "affectedFlowIds" };
   }
+  if (!(facts.flows ?? []).includes(flowId)) return { unknown: flowId };
   return { flowId };
 }
 
@@ -161,12 +169,16 @@ export function proposalRefusals(
   const protectedAreas = scope.filter((area) =>
     touchesProtectedSurface(area, proposal.protectedTargets ?? [], specs),
   );
-  const bindings = routes.flatMap(
-    (each) => flowToBind(proposal, facts.plans?.[each]?.stages, facts).refused ?? [],
-  );
+  const bound = routes.map((each) => flowToBind(proposal, facts.plans?.[each]?.stages, facts));
+  const bindings = bound.flatMap((binding) => binding.refused ?? []);
+  const references = referenceRefusals(proposal, facts);
+  const unknownFlows = bound
+    .flatMap((binding) => binding.unknown ?? [])
+    .filter((flowId) => !references.some(({ subject }) => subject === flowId));
   const kind = proposal.requestKind;
   return [
-    ...referenceRefusals(proposal, facts),
+    ...references,
+    ...refusalsOf("unknown-id", [...new Set(unknownFlows)]),
     ...refusalsOf("protected-surface", protectedAreas),
     ...refusalsOf("scope-escape", kind === "routed" ? [] : [kind]),
     ...refusalsOf("scope-escape", scope.filter(escapesRoot)),
