@@ -82,4 +82,11 @@ Feature: shipped workflow drift detection (detection half)
     When `qfai init` runs
     Then it prints one line, starting `Shipped workflows:`, with the count and a pointer to `qfai doctor`
     And a project where every fact is met gets no such line
+
+  # AC-0003-0011-10
+  Scenario: A document-schema checker binary that does not run is reported
+    Given an installed QFAI package whose `@jackchuka/mdschema` binary starts, and one whose binary cannot start
+    When `qfai doctor` runs
+    Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0, and no binary found from the inspected project's root is started
+    And it is an error naming the reason and the fix when the binary cannot start
 ```
