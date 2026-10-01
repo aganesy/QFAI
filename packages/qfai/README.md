@@ -39,6 +39,26 @@ here: `package.json#version` in the published package is the only version source
 > Standalone CLI inspection can use `npx qfai@latest <command>`;
 > agent skills need a local installation for their routing defaults.
 
+### The install script of `@jackchuka/mdschema`
+
+`qfai` depends on `@jackchuka/mdschema`, the document-schema checker, which
+declares a `postinstall` script. Recent npm and pnpm 10 report it as unapproved
+on every install. QFAI does not need it to run where the checker's platform package installs: the
+platform binary arrives as an optional dependency, which installs without any
+script. The script only downloads a binary when that platform package is missing,
+for example after `--omit=optional` or on a platform the package does not cover.
+There, the checker cannot run until the script is approved.
+
+To let the script run anyway, approve it:
+
+```bash
+npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
+pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
+```
+
+`npx qfai doctor` runs `mdschema --help` and reports an error, naming these
+fixes, when the binary does not start.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
@@ -519,7 +539,10 @@ runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set nothing).
   of the QFAI package rather than the `qfai` bin, so it needs the package on
   disk: when your install has not already put one there it fetches QFAI itself,
   saving nothing to your manifest. If you do depend on QFAI, the lane reports the
-  rules of the version you pinned and never replaces it.
+  rules of the version you pinned and never replaces it. The checkers it runs go
+  into a directory of their own under `tmp/`, never into your `node_modules`, so
+  the lane works with whichever package manager laid that tree out. It installs
+  them with `--ignore-scripts`.
 
 A push to `main` or `master` runs the test lanes and the document checks again by
 default, because nothing in the files can tell whether that commit passed a pull

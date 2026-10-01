@@ -119,6 +119,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   presence checks while that directory does not exist. The `prototyping` and
   `saas-package` profiles still run them, and so do `full` and `verify` once
   the directory exists.
+- **The shipped `qfai-docs.yml` installs its checkers outside the project's
+  dependency tree.** It ran `npm install --no-save` into the project's own
+  `node_modules`, which npm cannot read after a pnpm install, so both document
+  checks stopped at that step in every pnpm project. The checkers
+  (`@jackchuka/mdschema`, `mermaid`, `jsdom`, and QFAI itself, with the schema
+  checker it depends on, when the project has none) now install into `tmp/qfai-docs-tools` with `npm install --prefix`,
+  and the schema and Mermaid scripts take `--tools <dir>` to find them. An
+  installed copy of the workflow is not replaced; copy the packaged file to take
+  the fix.
+- **`qfai doctor` reports whether the `@jackchuka/mdschema` binary runs.** The
+  new `workflows.mdschemaBinary` check runs `mdschema --help` from the
+  installation found from where the QFAI package sits, not from the inspected
+  project's root, and is an error that names the reason and the fix when the
+  binary does not start. Until now
+  `workflows.docsLane` read `ok` for a project with no binary. The README now
+  says that the package's install script is not needed while the platform
+  package installs, and how to approve it with `npm approve-scripts` (npm 11.16
+  or later) or `pnpm approve-builds` where it is.
+- **The shipped `qfai-docs.yml` installs its checkers with `--ignore-scripts` and `--include=optional`,
+  and its comment no longer says the install script is required.** The
+  `@jackchuka/mdschema` platform binary arrives as an optional dependency, which
+  installs without a script; the package's install script only downloads a
+  binary when that platform package is missing. The lane therefore does not
+  depend on a policy for install scripts that it does not manage.
 - **A fresh clone of a just-initialised project no longer fails
   `QFAI-ASSETS-003`.** The four empty directories `qfai init` seeds under
   `03_contract/` are not in a clone, and the check for an untouched seed
