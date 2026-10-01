@@ -737,13 +737,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
   const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "info",
+    severity: validateJsonExists ? "ok" : validateJsonAbsent ? "info" : "warning",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"
-      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+      : validateJsonAbsent
+        ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
+        : "validate.json cannot be read (a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 

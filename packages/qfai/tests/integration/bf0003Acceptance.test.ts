@@ -5,9 +5,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
+import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { createDoctorData } from "../../src/core/doctor.js";
-import { validateConfigReferenceIntegrity } from "../../src/core/validators/configReferenceIntegrity.js";
+import { isEperm } from "../../src/core/fs/errno.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   editShippedWorkflow,
@@ -27,6 +28,30 @@ async function withWorkspace(task: (root: string) => Promise<void>): Promise<voi
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+}
+
+/** Runs `qfai validate` and returns the `QFAI-CFG-LINK-002` issues it wrote to validate.json. */
+async function linkIssuesFromValidate(root: string) {
+  await captureStdout(async () => {
+    await runValidate({ root, strict: false, format: "text" });
+  });
+  const report: { issues: Array<{ code: string; rule?: string; severity: string }> } = JSON.parse(
+    await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf-8"),
+  );
+  return report.issues.filter((found) => found.code === "QFAI-CFG-LINK-002");
+}
+
+/** Creates a link to a target that is absent; false only where Windows withholds the privilege. */
+async function tryBrokenLink(root: string, linkPath: string): Promise<boolean> {
+  try {
+    await symlink(path.join(root, "missing-target"), linkPath);
+    return true;
+  } catch (error: unknown) {
+    if (process.platform === "win32" && isEperm(error)) {
+      return false;
+    }
+    throw error;
   }
 }
 
@@ -113,8 +138,7 @@ describe("BF-0003 doctor acceptance", () => {
   // QFAI:EX-0003-0003-03
   it("raises QFAI-CFG-LINK-002 at info for an absent shipped-default source and test directories", async () => {
     await withWorkspace(async (root) => {
-      const issues = await validateConfigReferenceIntegrity(root, defaultConfig);
-      const linkIssues = issues.filter((found) => found.code === "QFAI-CFG-LINK-002");
+      const linkIssues = await linkIssuesFromValidate(root);
 
       expect(
         linkIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
@@ -128,31 +152,54 @@ describe("BF-0003 doctor acceptance", () => {
 
   // QFAI:AC-0003-0003-03
   // QFAI:EX-0003-0003-04
-  it("keeps a warning where a file (validate) or a broken link (doctor and validate) stands at the shipped-default source path", async () => {
+  it("keeps QFAI-CFG-LINK-002 at warning where a file or a broken link stands at the shipped-default source path", async () => {
     await withWorkspace(async (root) => {
       const srcPath = path.join(root, "src");
       await writeFile(srcPath, "not a directory", "utf-8");
-      const fileIssues = await validateConfigReferenceIntegrity(root, defaultConfig);
       expect(
-        fileIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
+        (await linkIssuesFromValidate(root)).find(
+          (found) => found.rule === "config.paths.srcDir.reality",
+        ),
       ).toMatchObject({ severity: "warning" });
 
       await rm(srcPath);
-      try {
-        await symlink(path.join(root, "missing-target"), srcPath);
-      } catch (error: unknown) {
-        // Creating a symbolic link needs a privilege on some Windows hosts; that is the only skip.
-        if (process.platform === "win32" && (error as NodeJS.ErrnoException).code === "EPERM") {
-          return;
-        }
-        throw error;
+      if (!(await tryBrokenLink(root, srcPath))) {
+        return;
       }
-      const asLink = await createDoctorData({ startDir: root, rootExplicit: true });
-      expect(check(asLink, "paths.srcDir")).toMatchObject({ severity: "warning" });
-      const linkIssues = await validateConfigReferenceIntegrity(root, defaultConfig);
       expect(
-        linkIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
+        (await linkIssuesFromValidate(root)).find(
+          (found) => found.rule === "config.paths.srcDir.reality",
+        ),
       ).toMatchObject({ severity: "warning" });
+    });
+  });
+
+  // QFAI:AC-0003-0003-02
+  // QFAI:EX-0003-0003-05
+  it("keeps the doctor warning where a broken link stands at the shipped-default source path", async () => {
+    await withWorkspace(async (root) => {
+      if (!(await tryBrokenLink(root, path.join(root, "src")))) {
+        return;
+      }
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      expect(check(data, "paths.srcDir")).toMatchObject({ severity: "warning" });
+      expect(check(data, "paths.srcDir")?.message).not.toContain("no source yet");
+    });
+  });
+
+  // QFAI:AC-0003-0003-02
+  // QFAI:EX-0003-0003-06
+  it("keeps the doctor warning where a broken link stands at the validate.json path", async () => {
+    await withWorkspace(async (root) => {
+      const reportDir = path.join(root, ".qfai", "report");
+      await mkdir(reportDir, { recursive: true });
+      if (!(await tryBrokenLink(root, path.join(reportDir, "validate.json")))) {
+        return;
+      }
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      expect(check(data, "output.validateJson")).toMatchObject({ severity: "warning" });
     });
   });
 

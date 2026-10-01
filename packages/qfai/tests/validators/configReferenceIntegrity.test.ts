@@ -158,7 +158,7 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(byRule.get("config.paths.srcDir.reality")?.suggested_action).toBeUndefined();
   });
 
-  // QFAI:EX-0003-0003-03
+  // QFAI:EX-0003-0003-04
   it("still warns when the shipped-default directory is a file", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "src"), "not a directory", "utf-8");

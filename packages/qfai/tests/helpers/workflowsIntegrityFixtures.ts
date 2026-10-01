@@ -112,8 +112,7 @@ export type LeavableWarningId = "traceability.testGlobs";
  * `--fail-on warning` reads `summary.warning + summary.error`, a whole-run total
  * with no per-check exclusions, so a row asserting exit 0 on that flag needs every
  * OTHER warning gone. A bare `qfai init` tree leaves one at `warning`,
- * `traceability.testGlobs`, and the retired prompt directory it installs is
- * another, which is the opposite of what "a clean tree" suggests.
+ * `traceability.testGlobs`, which is the opposite of what "a clean tree" suggests.
  *
  * Each repair is the minimum the check's own condition asks for, read from
  * `src/core/doctor.ts` rather than guessed:
