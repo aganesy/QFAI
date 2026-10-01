@@ -4,16 +4,18 @@
  * Verifies that values in `qfai.config.yaml` resolve to real filesystem
  * entities:
  *   - QFAI-CFG-LINK-001: prototyping.primaryUiContract names no UI contract
- *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning)
+ *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning), or, for
+ *     the shipped default srcDir and testsDir that do not exist yet, info
  *   - QFAI-CFG-LINK-003: prototyping.calibration.packPath points to a missing dir
  *
  * Catches dangling IDs in config that would otherwise go undetected.
  */
 
-import { stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { defaultConfig, type QfaiConfig, type ConfigPathKey } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
 import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -24,6 +26,16 @@ async function isDirectory(absolutePath: string): Promise<boolean> {
     return s.isDirectory();
   } catch {
     return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(absolutePath: string): Promise<boolean> {
+  try {
+    await lstat(absolutePath);
+    return false;
+  } catch (err: unknown) {
+    return isEnoent(err);
   }
 }
 
@@ -104,7 +116,9 @@ export async function validateConfigReferenceIntegrity(
       if (isDefaultSkillCreatedPath(key, relPath)) {
         continue;
       }
-      const absentNote = defaultAbsentNote(key, relPath);
+      const absentNote = (await isAbsent(absolutePath))
+        ? defaultAbsentNote(key, relPath)
+        : undefined;
       issues.push(
         issue(
           "QFAI-CFG-LINK-002",
@@ -116,7 +130,9 @@ export async function validateConfigReferenceIntegrity(
           `config.paths.${key}.reality`,
           undefined,
           "canonical",
-          `Point paths.${key} at an existing directory, or create the directory it names.`,
+          absentNote === undefined
+            ? `Point paths.${key} at an existing directory, or create the directory it names.`
+            : undefined,
         ),
       );
     }

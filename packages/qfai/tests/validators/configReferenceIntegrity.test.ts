@@ -154,6 +154,20 @@ describe("validateConfigReferenceIntegrity", () => {
       "the project has no tests yet",
     );
     expect(byRule.get("config.paths.skillsDir.reality")?.severity).toBe("warning");
+    // A benign absence prescribes no repair.
+    expect(byRule.get("config.paths.srcDir.reality")?.suggested_action).toBeUndefined();
+  });
+
+  // QFAI:EX-0003-0003-03
+  it("still warns when the shipped-default directory is a file", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "src"), "not a directory", "utf-8");
+
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const srcIssue = issues.find((i) => i.rule === "config.paths.srcDir.reality");
+
+    expect(srcIssue?.severity).toBe("warning");
+    expect(srcIssue?.suggested_action).toBeDefined();
   });
 
   it("still warns when a custom workflow artifact path is missing", async () => {

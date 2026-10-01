@@ -5,7 +5,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
+import { defaultConfig } from "../../src/core/config.js";
 import { createDoctorData } from "../../src/core/doctor.js";
+import { validateConfigReferenceIntegrity } from "../../src/core/validators/configReferenceIntegrity.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   editShippedWorkflow,
@@ -99,8 +101,28 @@ describe("BF-0003 doctor acceptance", () => {
       expect(check(data, "paths.testsDir")).toMatchObject({ severity: "info" });
       expect(check(data, "paths.testsDir")?.message).toContain("the project has no tests yet");
       expect(check(data, "paths.outDir")).toMatchObject({ severity: "info" });
+      expect(check(data, "paths.outDir")?.message).toContain(
+        "the first `qfai validate` creates it",
+      );
       expect(check(data, "output.validateJson")).toMatchObject({ severity: "info" });
       expect(check(data, "output.validateJson")?.message).toContain("qfai validate");
+    });
+  });
+
+  // QFAI:AC-0003-0003-03
+  // QFAI:EX-0003-0003-03
+  it("raises QFAI-CFG-LINK-002 at info for an absent shipped-default source and tests directory", async () => {
+    await withWorkspace(async (root) => {
+      const issues = await validateConfigReferenceIntegrity(root, defaultConfig);
+      const linkIssues = issues.filter((found) => found.code === "QFAI-CFG-LINK-002");
+
+      expect(
+        linkIssues.find((found) => found.rule === "config.paths.srcDir.reality"),
+      ).toMatchObject({ severity: "info" });
+      expect(
+        linkIssues.find((found) => found.rule === "config.paths.testsDir.reality"),
+      ).toMatchObject({ severity: "info" });
+      expect(linkIssues.some((found) => found.rule === "config.paths.outDir.reality")).toBe(false);
     });
   });
 

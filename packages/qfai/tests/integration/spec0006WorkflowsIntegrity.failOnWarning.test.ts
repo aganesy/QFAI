@@ -38,8 +38,8 @@
  * and leaves a warning standing for `traceability.testGlobs`, an intentionally
  * empty glob list. The absent default `paths.srcDir`, `paths.testsDir` and
  * `paths.outDir`, and a missing `output.validateJson`, are reported at info.
- * `quietUnrelatedWarnings` still answers each with the minimum its own condition
- * asks for; why each repair is minimal is in that helper's docblock and is not
+ * `quietUnrelatedWarnings` answers the warning with the minimum its own condition
+ * asks for; why the repair is minimal is in that helper's docblock and is not
  * restated here.
  *
  * ## Guard #3 is scoped to OTHER ids, and the scope is load-bearing
