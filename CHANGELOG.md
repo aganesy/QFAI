@@ -110,6 +110,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A triage row written `REMOVE:` needs the approval a removal needs** (#2263).
+  A bare `APPEND`, `MODIFY` or `REMOVE` is not an operation, so a row
+  `REMOVE: <ID>` needed no approval inside a workflow run and passed the gate
+  that holds `UPDATE:REMOVE`. It now counts as an approval-required operation.
+  The `qfai-sdd` triage reference spells the update operations and lists every
+  place an EX, AC or BR retirement has to touch.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.

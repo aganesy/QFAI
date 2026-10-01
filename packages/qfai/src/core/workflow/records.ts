@@ -41,12 +41,31 @@ function obligationRefusals(
   return [...refused("example-uncovered", uncovered), ...refused("example-added", added)];
 }
 
-const APPROVAL_REQUIRED = ["CREATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE", "UPDATE:REMOVE"];
+// A bare APPEND, MODIFY or REMOVE is not an operation: the update operations are spelled
+// UPDATE:APPEND, UPDATE:MODIFY and UPDATE:REMOVE. Read as an unknown operation it would need no
+// approval, so a removal written `REMOVE:` would pass the gate UPDATE:REMOVE holds; it is held
+// to the approval every removal needs instead.
+const APPROVAL_REQUIRED = [
+  "CREATE",
+  "DELETE",
+  "SPLIT",
+  "MERGE",
+  "SUPERSEDE",
+  "UPDATE:REMOVE",
+  "APPEND",
+  "MODIFY",
+  "REMOVE",
+];
 
 // SIMPLIFIED: the operation of a triage row is the first operation token of its Content.
 // Lift when: a triage row is found whose operation stands elsewhere in its Content.
+const OPERATION = /\b(CREATE|DELETE|SPLIT|MERGE|SUPERSEDE|UPDATE(?::[A-Z]+)?)\b/;
+const BARE_UPDATE = /(?<![:\w])(APPEND|MODIFY|REMOVE)\b/;
 function operationOf(row: RecordRow): string | undefined {
-  return /\b(CREATE|DELETE|SPLIT|MERGE|SUPERSEDE|UPDATE(?::[A-Z]+)?)\b/.exec(row.content)?.[1];
+  const known = OPERATION.exec(row.content);
+  const bare = BARE_UPDATE.exec(row.content);
+  if (bare && (!known || bare.index < known.index)) return bare[1];
+  return known?.[1];
 }
 
 // Rows present at issue keep their ID, Content and Approach and stay in the table; only a row

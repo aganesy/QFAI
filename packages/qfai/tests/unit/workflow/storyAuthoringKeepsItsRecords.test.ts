@@ -220,6 +220,16 @@ it("An appended CREATE row at WIP citing no human_decision of this run", () => {
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
+// QFAI:EX-0001-0185-56
+it("An appended row naming a bare REMOVE at WIP citing no human_decision of this run", () => {
+  expect(
+    accept({
+      stageKind: "sdd",
+      after: [...ISSUED, "| DEC-0003 | REMOVE: EX-0001-0005-01 | Retired | WIP |"],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
 it("An sdd result deleting an open-questions row present at issue", () => {
   expect(accept({ stageKind: "sdd", after: ISSUED, questionsAfter: [] })).toEqual(
     refused("record-rewritten", "OQ-0001"),

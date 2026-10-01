@@ -14,7 +14,8 @@ Read the flow and story indexes plus concrete files. A subject match alone is in
 ## Operation choice
 
 Choose one primary operation for each affected BF or US. UPDATE is the default when the existing item keeps its identity
-and purpose. Its sub-operation is APPEND, MODIFY, or REMOVE. CREATE is used when no existing item represents the new
+and purpose. Its sub-operation is written UPDATE:APPEND, UPDATE:MODIFY, or UPDATE:REMOVE; a bare APPEND, MODIFY or
+REMOVE is not an operation, and a workflow run holds it to the approval UPDATE:REMOVE needs. CREATE is used when no existing item represents the new
 outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and require explicit approval. UPDATE:REMOVE also
 requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
 second fictional flow.
@@ -97,6 +98,19 @@ Only a row this stage appended changes its Status.
 
 Upstream drift found outside the run's checked scope gets no `Change request:`
 row here. The stage returns `blocked`, with each finding listed in `debts`.
+
+## Retiring an EX, AC or BR
+
+A retirement touches every place the ID is written. Do all of them in one change:
+
+1. Append an UPDATE:REMOVE decision row whose Content names every retired ID, and obtain its approval.
+2. Delete the EX row from 03_Example.md, the AC scenario from 02_Acceptance-Criteria.md, or the BR row from its contract.
+3. Remove a retired EX from the Examples cell of every BR that cites it. A BR left with no example gets another example or is retired in the same row.
+4. Remove each QFAI:EX annotation of a retired EX from the tests, or point it at the example the test now proves.
+5. An AC left with no example gets one or is retired in the same row.
+6. Never reuse a retired ID. The retirement row keeps it counted.
+
+qfai validate reports what step 3, 4 or 5 left behind: a BR citing an unknown example, an undeclared annotation, and an AC with no example.
 
 ## ID allocation
 
