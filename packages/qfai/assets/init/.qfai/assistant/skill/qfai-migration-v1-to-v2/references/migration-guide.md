@@ -462,7 +462,7 @@ other, and run step 11 again. A skill the package does not ship and
 `.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
 host skill link and the `.qfai/run/` line of the managed `.gitignore` block. A
 path it cannot write is reported with the reason. It leaves `AGENTS.md` and
-`CLAUDE.md` as they are, a line an earlier `qfai init` wrote included.
+`CLAUDE.md` as they are, a line an earlier `npx qfai init` wrote included.
 
 Step 11 also installs the reminder hooks `npx qfai init` installs, through the
 same merge, into `.claude/settings.json` and `.codex/hooks.json`:
