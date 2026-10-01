@@ -110,6 +110,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The two by-name entry examples each have their own test.** One test
+  discharged both: it read only the shared `by-name` row. The stop at its own
+  stage now also checks that `/qfai-atdd` and `/qfai-sdd` run the entry check
+  and that `/qfai-sdd` ends at its stage; the hand-off to `qfai-run` checks the
+  sentence `/qfai-sdd` carries. (#2285)
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
