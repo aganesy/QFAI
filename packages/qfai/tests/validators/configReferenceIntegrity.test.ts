@@ -138,7 +138,6 @@ describe("validateConfigReferenceIntegrity", () => {
   });
 
   // QFAI:EX-0003-0003-03
-  // QFAI:EX-0003-0003-03
   it("reads a shipped default spelled with a leading ./ as the default", async () => {
     const root = await newTempDir();
     const base = makeConfig();
