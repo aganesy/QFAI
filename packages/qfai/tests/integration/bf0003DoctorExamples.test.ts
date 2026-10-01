@@ -133,6 +133,29 @@ describe("BF-0003 configuration discovery and loading", () => {
     }
   });
 
+  it("lists a loader issue whole when its key holds a decoded newline", async () => {
+    // QFAI:AC-0003-0001-03
+    // QFAI:EX-0003-0001-08
+    const root = await newTempDir("invalid-newline");
+    await put(root, "qfai.config.yaml", 'reviewProfiles:\n  "a\\nb": 5\n');
+    const load = check(await doctorJson(root), "config.load");
+    expect(load?.message).toContain("reviewProfiles.a\\x0ab must be an entry");
+  });
+
+  it("lists at most ten loader issues in the config.load message and keeps all in details", async () => {
+    // QFAI:AC-0003-0001-03
+    // QFAI:EX-0003-0001-08
+    const root = await newTempDir("invalid-many");
+    const entries = Array.from({ length: 25 }, (_, index) => `  p${index}: 5\n`).join("");
+    await put(root, "qfai.config.yaml", `reviewProfiles:\n${entries}`);
+    const load = check(await doctorJson(root), "config.load");
+    const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
+    expect(issues?.length).toBeGreaterThanOrEqual(25);
+    expect(load?.message).toContain("reviewProfiles.p0 must be an entry");
+    expect(load?.message).not.toContain("reviewProfiles.p24");
+    expect(load?.message).toContain(`and ${(issues?.length ?? 0) - 10} more in details.issues`);
+  });
+
   it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
     // QFAI:AC-0003-0001-03
     // QFAI:EX-0003-0001-08

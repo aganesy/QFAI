@@ -182,6 +182,9 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
  */
 const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
 
+/** The most loader issues `config.load` lists in its message; `details.issues` keeps all of them. */
+const MAX_LISTED_ISSUES = 10;
+
 export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
   const checks: DoctorCheck[] = [];
@@ -227,19 +230,25 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const configHasError = issues.some((issue) => issue.severity === "error");
     // The text formatter prints only `message`, so the issues the loader
     // returned are listed there, one line, `; `-joined. A YAML parse error
-    // carries an excerpt of the offending source after its first line, and that
-    // excerpt can hold any value the file holds, so only the first line
-    // (the cause and its position) is rendered; `details.issues` keeps the text.
+    // appends an excerpt of the offending source after a blank line, and that
+    // excerpt can hold any value the file holds, so the text from the blank line
+    // on is left out. A config can also yield one issue per entry, so at most
+    // MAX_LISTED_ISSUES are listed; `details.issues` keeps every issue whole.
     const listed = issues
-      .map((issue) => escapeForMessage(issue.message.split("\n", 1)[0] ?? ""))
+      .slice(0, MAX_LISTED_ISSUES)
+      .map((issue) => escapeForMessage(issue.message.split("\n\n", 1)[0] ?? ""))
       .join("; ");
+    const unlisted =
+      issues.length > MAX_LISTED_ISSUES
+        ? `; and ${issues.length - MAX_LISTED_ISSUES} more in details.issues`
+        : "";
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}${unlisted}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}${unlisted}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
