@@ -35,6 +35,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Fifteen of the seventeen untested BF-0003 doctor criteria name the tests
+  that prove them.** The integration tests already checked each behaviour and
+  now carry the criterion's `QFAI:AC-` annotation. `AC-0003-0004-01` gets a new
+  test of the deprecated `paths.promptsDir` warning. The full dogfooding pin for
+  BF-0003 falls from 17 to 2; `AC-0003-0006-01` and `AC-0003-0006-03` stay
+  open. Refs #2367.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
