@@ -402,6 +402,44 @@ describe("qfai-run", () => {
     expect(text).toMatch(/when the session must end first, stop the run and say so/i);
   });
 
+  // QFAI:AC-0001-0214-07
+  // QFAI:EX-0001-0214-10
+  it("runs a review only when the work order names reviewers, and a question as one work order", async () => {
+    const text = flat(sectionOf(await readShipped(RUN), "## The run"));
+    expect(text).toMatch(
+      /one review, by `requiredreviewerroles`, and none when the work order names none/i,
+    );
+    expect(text).toMatch(
+      /a question is one work order, run by one sub-agent with no separate reviewer/i,
+    );
+  });
+
+  // QFAI:AC-0001-0214-07
+  // QFAI:EX-0001-0214-10
+  it("lets the stage worker confirm each triage gate where the work order names no reviewer", async () => {
+    const gate = flat(sectionOf(await readShipped(RUN), "### Reviewer Gate (MUST)"));
+    expect(gate).toMatch(/a work order's reviewers, where it names any, return pass or revise/i);
+    for (const step of ["triage-answer", "triage-investigate", "triage-close"]) {
+      const text = flat(sectionOf(await readShipped(`step/${step}/STEP.md`), "## Gate"));
+      expect(text).toMatch(
+        /the reviewer, or the stage worker where the work order names none, confirms/i,
+      );
+    }
+  });
+
+  // QFAI:AC-0001-0215-02
+  // QFAI:EX-0001-0215-10
+  it("ends a combined stage at a reported branch, with no later step and no closure", async () => {
+    const baseline = flat(await readShipped("rule/shared-skill-operating-baseline.md"));
+    const investigate = flat(await readShipped("step/triage-investigate/STEP.md"));
+    expect(baseline).toMatch(
+      /a step that reports a `branch` ends the work order there: the steps after it do not run, and the result carries the `branch` and no `closure`/i,
+    );
+    expect(investigate).toMatch(
+      /`triage-answer` and `triage-close` do not run, and the result carries no `closure`/i,
+    );
+  });
+
   // QFAI:AC-0001-0185-17
   // QFAI:EX-0001-0185-54
   it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {

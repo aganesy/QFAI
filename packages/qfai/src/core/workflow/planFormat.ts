@@ -12,6 +12,9 @@ export interface PlanStage {
   steps: PlanStep[];
   after: string[];
   effects: string[];
+  // `none`: the stage's steps add no reviewer to its work order. A stage that omits it is
+  // reviewed by the reviewers of its steps.
+  review?: "none";
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -73,7 +76,7 @@ const PLAN_KEYS = [
   "releasePoint",
   "branchPoints",
 ];
-const STAGE_KEYS = ["id", "kind", "steps", "after", "effects"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
 const OUTCOME_KEYS = ["outcome", "routes"];
@@ -273,9 +276,18 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   if (!effects) return refused(refuse, "shape", id);
-  const stage = { id, kind, steps, after, effects };
+  const review = reviewOf(value.review, kind, id, refuse);
+  const stage = { id, kind, steps, after, effects, ...(review ? { review } : {}) };
   vocabularyRefusals(stage, refuse);
   return stage;
+}
+
+// A stage's `review`: absent, or `none` on a stage that changes no tracked file, which is a
+// triage stage.
+function reviewOf(value: unknown, kind: string, id: string, refuse: Refuse): "none" | undefined {
+  if (value === undefined) return undefined;
+  if (value !== "none" || kind !== "triage") refuse("shape", id);
+  return value === "none" ? "none" : undefined;
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {

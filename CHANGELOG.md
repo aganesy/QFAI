@@ -74,6 +74,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   an answer already given does not end it. In Claude Code the reminders before and
   after a file write, and the minimal-implementation one, print nothing for a file under
   `.qfai/run/`.
+- **A question that changes no file is answered in one stage by one sub-agent, with no separate
+  reviewer.** `answer-question` and `investigate-question` are one stage each, which runs every step of
+  the route down to `triage-close`, and `finish` follows its acceptance. A plan marks such a
+  stage `review: none`, which is admitted only on a triage stage and gives its work order no step
+  reviewer; a run carrying `review:heavy` still adds the heavy reviewers. A defect found while
+  investigating still re-routes by the decision rules. This replaces the earlier multi-stage
+  question routes (investigate, answer, close) and their reviews. Fixes #2730.
 - **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
   entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`
   and `Bash(yarn qfai:*)`) into `permissions.allow` of

@@ -457,6 +457,7 @@ export type PlanStages = {
   stageKind: string;
   steps?: PlanStep[];
   effects?: string[];
+  review?: "none";
 }[];
 
 export interface WorkflowPlan {

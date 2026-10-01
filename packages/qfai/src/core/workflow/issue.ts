@@ -47,14 +47,17 @@ const UPGRADED_OWNERS = ["qfai-implement", "qfai-atdd"];
 // The reviewers of every step the work order runs, reviewed once at the end of the stage. A run
 // that restores an authorization check reviews its implementation work harder, and asks nobody
 // first. A run carrying `review:heavy` adds the heavy review profile's reviewers to every stage.
+// A stage its plan marks `review: none` has no step reviewers, and only `review:heavy` gives it any.
 function requiredReviewerRoles(
   steps: readonly string[],
   snapshot: WorkflowSnapshot,
   plan: Plan,
+  stage: PlanStage,
   facts: WorkflowFacts,
 ): string[] | undefined {
   const restored = (plan.riskSignals ?? []).includes("authorization-restored");
   const perStep = steps.flatMap((step) => {
+    if (stage.review === "none") return [];
     const upgraded = restored && UPGRADED_OWNERS.includes(ownerOfStep(step));
     const roles = upgraded ? IMPLEMENTATION_HEAVY_ROLES : facts.reviewerRoles?.[step];
     return roles ? [roles] : [];
@@ -205,6 +208,7 @@ function baseWorkOrder(
     steps.map((step) => step.name),
     snapshot,
     plan,
+    stage,
     facts,
   );
   const modifiers = modifierNames(snapshot.modifiers);

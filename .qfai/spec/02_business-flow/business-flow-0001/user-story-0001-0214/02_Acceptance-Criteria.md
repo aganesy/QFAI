@@ -44,4 +44,12 @@ Feature: Close, answer or hand back a request without a change
     Given a request that `triage-decompose` splits
     When the run closes
     Then each child is a follow-up request with its dependencies, and none is routed inside the run
+
+  # AC-0001-0214-07
+  Scenario: A question is answered in one stage with no separate reviewer
+    Given a run on `answer-question` or `investigate-question`
+    When its work order is issued
+    Then one work order runs every step of the route, the answer and the closure included
+    And it names no required reviewer, unless the run carries `review:heavy`
+    And `finish` follows its acceptance
 ```
