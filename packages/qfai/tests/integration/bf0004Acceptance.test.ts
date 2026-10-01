@@ -1396,12 +1396,12 @@ describe("BF-0004 acceptance criteria", () => {
     const step3 = results[2];
     expect(step3?.status).toBe(3);
     const listed = section(step3?.stdout ?? "", "For a person");
-    const warning = listed.filter((line) => line.includes(String(entryName(changed))));
+    const warning = listed.filter((line) => line.includes(entryName(changed)));
     expect(warning).toHaveLength(1);
     expect(warning.join("\n")).toMatch(/1\.x/);
     expect(warning.join("\n")).toMatch(/hides?\b/i);
     expect(warning.join("\n")).toMatch(/roles?\b/i);
-    expect(listed.filter((line) => line.includes(String(entryName(copied))))).toEqual([]);
+    expect(listed.filter((line) => line.includes(entryName(copied)))).toEqual([]);
   });
 
   // QFAI:AC-0004-0007-01
