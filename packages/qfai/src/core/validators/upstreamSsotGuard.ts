@@ -3,8 +3,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import { parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
+import { countsForExample, readStoryTests } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
 
 /** Story-tree protected files and append-only register rows. */
@@ -97,7 +99,66 @@ export async function validateStoryTreeDrift(
       ),
     );
   }
+  issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
   return issues;
+}
+
+/**
+ * An example whose row changed since the base while no test annotating it changed. The test may
+ * still assert the old expectation, so the owner rechecks it; a confirmed example needs no edit,
+ * which is why this is a warning.
+ */
+async function examplesWithoutTestChange(
+  root: string,
+  config: QfaiConfig,
+  changed: ReadonlySet<string>,
+  specs: string,
+  baseBranch: string,
+): Promise<Issue[]> {
+  const rewritten: { id: string; file: string }[] = [];
+  for (const file of changed) {
+    if (!file.startsWith(`${specs}/02_business-flow/`) || !file.endsWith("/03_Example.md")) {
+      continue;
+    }
+    const base = exampleRows(readFileAtBase(root, baseBranch, file) ?? "");
+    const head = exampleRows(await readSafePath(path.join(root, file)));
+    for (const [id, row] of base) {
+      const now = head.get(id);
+      if (now !== undefined && now !== row) rewritten.push({ id, file });
+    }
+  }
+  if (rewritten.length === 0) return [];
+  const tests = (await readStoryTests(root, config)).files.filter(countsForExample);
+  return rewritten
+    .filter(({ id }) => {
+      const annotating = tests.filter((test) =>
+        parseStoryTestAnnotations(test.content).EX.includes(id),
+      );
+      return !annotating.some((test) =>
+        changed.has(normalizeRepoPath(path.relative(root, test.file))),
+      );
+    })
+    .map(({ id, file }) =>
+      issue(
+        "QFAI-DRIFT-002",
+        `${id} changed in ${file}; no test annotating it changed`,
+        "warning",
+        file,
+        "storyTree.exampleWithoutTestChange",
+        [id],
+      ),
+    );
+}
+
+/** Each example row by EX ID, cells trimmed so a re-padded table reads as unchanged. */
+function exampleRows(content: string): Map<string, string> {
+  const rows = new Map<string, string>();
+  for (const line of content.split(/\r?\n/)) {
+    const cells = line.split("|").map((cell) => cell.trim());
+    const id = cells[1] ?? "";
+    if (/^EX-\d{4}-\d{4}-\d{2}$/.test(id)) rows.set(id, cells.join("|"));
+  }
+  return rows;
 }
 
 function withoutChangeRequestRows(content: string): string {

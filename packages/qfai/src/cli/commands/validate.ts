@@ -1332,6 +1332,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  "QFAI-DRIFT-002":
+    "An example whose row changed since the base branch has a test annotating it that changed too.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications
@@ -1380,6 +1382,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
     "Restore the protected file or record an in-force change request authorizing the named change.",
+  "QFAI-DRIFT-002":
+    "Update the tests annotating the named example to its new row, or confirm they already assert it.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
     "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",

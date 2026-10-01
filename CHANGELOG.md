@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` warns when an example changes and its tests do not.** In
+  the `tdd` and `drift` profiles, an EX row of a `03_Example.md` whose cells
+  changed since the base branch raises `QFAI-DRIFT-002` at warning when no
+  test file annotating that EX changed too. A test can otherwise keep
+  asserting the old expectation while every gate stays green. It is a warning
+  because the owner may confirm that the reworded example needs no test change
+  (#2309, #2310).
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then

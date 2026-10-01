@@ -46,7 +46,7 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
       "QFAI-SCAN-002",
     ],
     validateTestTodoStubs: ["QFAI-TEST-*"],
-    validateStoryTreeDrift: ["QFAI-DRIFT-001", "QFAI-STORY-010"],
+    validateStoryTreeDrift: ["QFAI-DRIFT-001", "QFAI-DRIFT-002", "QFAI-STORY-010"],
   };
 
 /** Deduped, order-preserving code families the saas-package profile skips. */
