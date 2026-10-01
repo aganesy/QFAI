@@ -69,9 +69,7 @@ Classify the request before any write call. Only `routed` calls `start`.
 5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2. One carrying `reroute` has its route fixed already: the result supplies only the scope, the flows and the new stories for it, and the decision rules do not choose again.
    - Any other work order: hand it whole to one sub-agent. It reads the `path`
      of each entry in `steps`, in order and only the current one, and runs that
-     step. After the last step it runs one review, by `requiredReviewerRoles`,
-     and none when the work order names none: a question is one work order, run
-     by one sub-agent with no separate reviewer.
+     step. After the last step it runs one review, by `requiredReviewerRoles`, and none when the work order names none: a question is one work order, run by one sub-agent with no separate reviewer.
      Write its stage result under `.qfai/run/<runId>/inbox/` and call `accept`.
      A `retry` names the delay before the same work order is handed over again.
    - `awaiting_input`: put each open question as `references/operator-screens.md`
