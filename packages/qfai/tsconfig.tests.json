@@ -213,6 +213,7 @@
     "tests/integration/contractIdScheme.test.ts",
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
+    "tests/integration/doctorWorkflowPreconditions.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
     "tests/integration/evidenceGatesAbsentDirectory.test.ts",
     "tests/integration/explorationRelaxationAudit.test.ts",
@@ -607,6 +608,7 @@
     "tests/integration/init/noOpenaiYaml.test.ts",
     "tests/integration/init/upgradeStates.ts",
     "tests/integration/init/windowsParity.test.ts",
+    "tests/integration/init/workflowPreconditionsNote.test.ts",
     "tests/integration/workflow/theModeIsValidated.test.ts"
   ]
 }
