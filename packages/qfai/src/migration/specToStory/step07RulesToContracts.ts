@@ -29,6 +29,11 @@ import {
 type Rule = { id: string; statement: string; examples: string[] };
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 
+/** A statement on one line: each run of whitespace, line breaks included, is one space. */
+function oneLine(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
 }
@@ -117,7 +122,7 @@ function sqlRules(original: string): Map<string, Rule | null> {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = [header[2].replace(/^ /, ""), ...(continuations as string[])].join("\n");
+    const statement = oneLine([header[2], ...(continuations as string[])].join(" "));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
@@ -172,7 +177,7 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     const additional = pendingRules(structuredRules(current), rules, file);
     if (additional.length === 0) return original;
     document.set("x-qfai-rules", [...current, ...additional]);
-    return String(document);
+    return document.toString({ lineWidth: 0 });
   }
   if (extension === ".json") {
     // The contract declares its ID on a comment line above the JSON document.
@@ -197,10 +202,14 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
-    const additional = pendingRules(sqlRules(original), rules, file);
+    const additional = pendingRules(
+      sqlRules(original),
+      rules.map((rule) => ({ ...rule, statement: oneLine(rule.statement) })),
+      file,
+    );
     return additional.length === 0
       ? original
-      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement.split(/\r?\n/).join("\n-- ")}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
+      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
     const additional = pendingRules(

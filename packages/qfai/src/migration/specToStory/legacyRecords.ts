@@ -1,5 +1,5 @@
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { parseAllMarkdownTables } from "../../core/specPackParsers.js";
+import { parseAllMarkdownTables, splitMarkdownRow } from "../../core/specPackParsers.js";
 import { MigrationInputError } from "./harness.js";
 
 export type LegacyKind = "BR" | "EX" | "TC";
@@ -63,6 +63,30 @@ function field(body: string, name: string): string {
   return "";
 }
 
+/** A line as a field reads it: no bold markers, no list bullet. */
+function cleanLine(line: string): string {
+  return line
+    .replace(/\*\*/g, "")
+    .replace(/^\s*-\s*/, "")
+    .trim();
+}
+
+/**
+ * The value of a section's `Rule` field: its own line and each line after it up to the next bullet,
+ * bold field line or blank line, trimmed and joined with one space. Empty where there is no field.
+ */
+function ruleField(body: string): string {
+  const lines = body.split("\n");
+  const start = lines.findIndex((line) => /^Rule\s*:/i.test(cleanLine(line)));
+  if (start < 0) return "";
+  const parts = [cleanLine(lines[start] ?? "").replace(/^Rule\s*:\s*/i, "")];
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === "" || /^\s*[-*]\s/.test(line) || /^\s*\*\*[^*]+\*\*\s*:/.test(line)) break;
+    parts.push(cleanLine(line));
+  }
+  return parts.join(" ").trim();
+}
+
 function headingCells(
   kind: LegacyKind,
   id: string,
@@ -87,7 +111,7 @@ function headingCells(
       "BR-ID": id,
       Status: field(body, "Status"),
       "Contract-Refs": field(body, "Contract-Refs") || field(body, "Contract-Ref"),
-      Rule: [title, content].filter(Boolean).join("\n\n"),
+      Rule: ruleField(body) || [title, content].filter(Boolean).join("\n\n"),
     };
   }
   if (kind === "EX") {
@@ -186,14 +210,98 @@ ${heading.source.raw}`,
   };
 }
 
+/** A table header read as the hyphen spelling of its kind's ID header where it is written with a space. */
+function canonicalHeader(header: string, kind: LegacyKind): string {
+  return header.trim() === `${kind} ID` ? `${kind}-ID` : header;
+}
+
+/** The line, from 1, of each table's header row, in the order `parseAllMarkdownTables` returns them. */
+function headerLines(
+  lines: readonly string[],
+  tables: ReturnType<typeof parseAllMarkdownTables>,
+): number[] {
+  const found: number[] = [];
+  let from = 0;
+  for (const table of tables) {
+    const wanted = table.headers.join("\u0000");
+    let index = from;
+    while (index < lines.length && splitMarkdownRow(lines[index] ?? "").join("\u0000") !== wanted)
+      index += 1;
+    found.push(index + 1);
+    from = index + 2 + table.rows.length;
+  }
+  return found;
+}
+
+function kindIdPattern(kind: LegacyKind): RegExp {
+  return new RegExp(`^${kind}-\\d{4}-\\d{4}$`);
+}
+
+/** Whether a table without the kind's ID header holds only IDs of the kind in its first column. */
+function isUnnamedIdTable(rows: readonly string[][], kind: LegacyKind): boolean {
+  const idPattern = kindIdPattern(kind);
+  return rows.length > 0 && rows.every((row) => idPattern.test(row[0]?.trim() ?? ""));
+}
+
+function tableRecords(
+  markdown: string,
+  lines: readonly string[],
+  kind: LegacyKind,
+  file: string,
+): LegacyRecord[] {
+  const idHeader = `${kind}-ID`;
+  const idPattern = kindIdPattern(kind);
+  const records: LegacyRecord[] = [];
+  const tables = parseAllMarkdownTables(markdown);
+  const headerAt = headerLines(lines, tables);
+  for (const [tableIndex, table] of tables.entries()) {
+    const headers = table.headers.map((header) => canonicalHeader(header, kind));
+    const idColumn = headers.indexOf(idHeader);
+    if (idColumn < 0) {
+      if (isUnnamedIdTable(table.rows, kind))
+        throw new MigrationInputError(
+          `${file}:${headerAt[tableIndex]}: the first column holds ${kind} IDs under the header "${table.headers[0] ?? ""}"; write the header as ${idHeader}`,
+        );
+      continue;
+    }
+    for (const row of table.rows) {
+      const id = row[idColumn]?.trim() ?? "";
+      const lineIndex = lines.findIndex((line) =>
+        new RegExp(`^\\|\\s*${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|`).test(line),
+      );
+      const line = lineIndex + 1;
+      if (!idPattern.test(id))
+        throw new MigrationInputError(`${file}:${line}: invalid ${kind} ID ${id}`);
+      if (lineIndex < 0) throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
+      const cells = Object.fromEntries(
+        headers.map((header, column) => [header, row[column] ?? ""]),
+      );
+      if (kind === "EX" && cells.Input === undefined && cells["Given / Input"] !== undefined) {
+        cells.Input = cells["Given / Input"] ?? "";
+      }
+      records.push({
+        id,
+        cells,
+        source: {
+          kind: "table",
+          startLine: line,
+          endLine: line,
+          ranges: [{ startLine: line, endLine: line }],
+          raw: lines[lineIndex] ?? "",
+        },
+      });
+    }
+  }
+  return records;
+}
+
 export function parseLegacyRecords(
   markdown: string,
   kind: LegacyKind,
   file: string,
 ): LegacyRecord[] {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  const idHeader = `${kind}-ID`;
-  const idPattern = new RegExp(`^${kind}-\\d{4}-\\d{4}$`);
+  const idPattern = kindIdPattern(kind);
   const records: LegacyRecord[] = [];
   const headings = parseHeadings(markdown).filter((heading) => heading.level === 2);
   for (let index = 0; index < headings.length; index++) {
@@ -222,37 +330,7 @@ export function parseLegacyRecords(
       },
     });
   }
-  for (const table of parseAllMarkdownTables(markdown)) {
-    const idColumn = table.headers.indexOf(idHeader);
-    if (idColumn < 0) continue;
-    for (const row of table.rows) {
-      const id = row[idColumn]?.trim() ?? "";
-      const lineIndex = lines.findIndex((line) =>
-        new RegExp(`^\\|\\s*${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|`).test(line),
-      );
-      const line = lineIndex + 1;
-      if (!idPattern.test(id))
-        throw new MigrationInputError(`${file}:${line}: invalid ${kind} ID ${id}`);
-      if (lineIndex < 0) throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
-      const cells = Object.fromEntries(
-        table.headers.map((header, column) => [header, row[column] ?? ""]),
-      );
-      if (kind === "EX" && cells.Input === undefined && cells["Given / Input"] !== undefined) {
-        cells.Input = cells["Given / Input"] ?? "";
-      }
-      records.push({
-        id,
-        cells,
-        source: {
-          kind: "table",
-          startLine: line,
-          endLine: line,
-          ranges: [{ startLine: line, endLine: line }],
-          raw: lines[lineIndex] ?? "",
-        },
-      });
-    }
-  }
+  records.push(...tableRecords(markdown, lines, kind, file));
   const byId = new Map<string, LegacyRecord>();
   for (const record of records.sort((a, b) => a.source.startLine - b.source.startLine)) {
     const previous = byId.get(record.id);
