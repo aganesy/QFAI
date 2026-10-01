@@ -53,9 +53,9 @@ describe("legacy migration records", () => {
     expect(rule?.cells.Status).toBe("Approved");
   });
 
-  it("ends a section's Rule value at a plain Notes or NFRs field", () => {
+  it("ends a section's Rule value at a plain Contracts, Notes or NFRs field", () => {
     const rule = parseLegacyRecords(
-      "# Rules\n\n## BR-0011-0005: Totals\n\n- Rule: An order total MUST\n  include tax.\nNotes: Rounded per line.\nNFRs: Under 50 ms.\n",
+      "# Rules\n\n## BR-0011-0005: Totals\n\n- Rule: An order total MUST\n  include tax.\nContracts: API-0001\nNotes: Rounded per line.\nNFRs: Under 50 ms.\n",
       "BR",
       "04_Business-Rules.md",
     )[0];

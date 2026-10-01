@@ -65,7 +65,7 @@ function field(body: string, name: string): string {
 
 /** A field line that ends a `Rule` field's continuation. */
 const OTHER_FIELD =
-  /^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Status|Notes?|NFRs?)\s*:/i;
+  /^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Contracts?|Status|Notes?|NFRs?)\s*:/i;
 
 /** A line as a field reads it: no bold markers, no list bullet. */
 function cleanLine(line: string): string {
