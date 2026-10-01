@@ -414,6 +414,19 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0215-02
+  // QFAI:EX-0001-0215-10
+  it("ends a combined stage at a reported branch, with no later step and no closure", async () => {
+    const baseline = flat(await readShipped("rule/shared-skill-operating-baseline.md"));
+    const investigate = flat(await readShipped("step/triage-investigate/STEP.md"));
+    expect(baseline).toMatch(
+      /a step that reports a `branch` ends the work order there: the steps after it do not run, and the result carries the `branch` and no `closure`/i,
+    );
+    expect(investigate).toMatch(
+      /`triage-answer` and `triage-close` do not run, and the result carries no `closure`/i,
+    );
+  });
+
   // QFAI:AC-0001-0185-17
   // QFAI:EX-0001-0185-54
   it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {

@@ -79,7 +79,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the route down to `triage-close`, and `finish` follows its acceptance. A plan marks such a
   stage `review: none`, which is admitted only on a triage stage and gives its work order no step
   reviewer; a run carrying `review:heavy` still adds the heavy reviewers. A defect found while
-  investigating still re-routes by the decision rules. This replaces the earlier three-stage
+  investigating still re-routes by the decision rules. This replaces the earlier multi-stage
   question routes (investigate, answer, close) and their reviews. Fixes #2730.
 - **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
   entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`

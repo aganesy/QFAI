@@ -112,6 +112,7 @@ restated. A skill with no check of its own carries no reviewer gate section. A
 stage that runs several steps is reviewed once, after its last step, with the
 union of their reviewers
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
+A work order that names no required reviewer is reviewed by none.
 
 - Final completion gate must be delegated to an independent reviewer.
 - Each reviewer records an explicit PASS or REVISE for the reviewed revision.
