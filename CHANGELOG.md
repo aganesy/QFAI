@@ -112,7 +112,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **`qfai doctor` names the config issues, not only their count.** The
   `config.load` line said how many issues the loader returned and named no
-  key. It now ends with the message of every issue, on the same line. Under
+  key. It now ends with the message of every issue, on the same line, without
+  the source excerpt a YAML parse error appends. Under
   `--format json` the same longer text is the check's `message`; `details.issues`
   is unchanged.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed

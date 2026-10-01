@@ -135,7 +135,6 @@ describe("BF-0003 configuration discovery and loading", () => {
 
   it("lists a loader issue whole when its key holds a decoded newline", async () => {
     // QFAI:AC-0003-0001-03
-    // QFAI:EX-0003-0001-08
     const root = await newTempDir("invalid-newline");
     await put(root, "qfai.config.yaml", 'reviewProfiles:\n  "a\\nb": 5\n');
     const load = check(await doctorJson(root), "config.load");
@@ -144,7 +143,6 @@ describe("BF-0003 configuration discovery and loading", () => {
 
   it("lists every loader issue in the config.load message, past the tenth", async () => {
     // QFAI:AC-0003-0001-03
-    // QFAI:EX-0003-0001-08
     const root = await newTempDir("invalid-many");
     const entries = Array.from({ length: 25 }, (_, index) => `  p${index}: 5\n`).join("");
     await put(root, "qfai.config.yaml", `reviewProfiles:\n${entries}`);
@@ -160,7 +158,6 @@ describe("BF-0003 configuration discovery and loading", () => {
 
   it("lists a loader issue whole when its key holds two decoded newlines in a row", async () => {
     // QFAI:AC-0003-0001-03
-    // QFAI:EX-0003-0001-08
     const root = await newTempDir("invalid-blank-line");
     await put(root, "qfai.config.yaml", 'reviewProfiles:\n  "a\\n\\nb": 5\n');
     const load = check(await doctorJson(root), "config.load");
@@ -169,7 +166,6 @@ describe("BF-0003 configuration discovery and loading", () => {
 
   it("keeps the source excerpt of a YAML parse error out of the config.load message", async () => {
     // QFAI:AC-0003-0001-03
-    // QFAI:EX-0003-0001-08
     const root = await newTempDir("invalid-excerpt");
     await put(root, "qfai.config.yaml", "paths: {specsDir: topsecret-value\n");
     const load = check(await doctorJson(root), "config.load");
