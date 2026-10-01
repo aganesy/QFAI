@@ -35,6 +35,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The repository's dogfooding ratchet pins each finding, not each file's
+  count.** `scripts/check-dogfood-backlog.mjs` keys an error by its code and the
+  IDs it names, so a change that clears one untested example and adds another
+  in the same file no longer passes at the same count. A pin still written as a
+  bare count is refused with the command that re-pins it. Fixes #2355.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
