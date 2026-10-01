@@ -14,12 +14,13 @@ export function shouldFail(result: ValidationResult, failOn: FailOn): boolean {
 }
 
 /**
- * 失敗条件の解決順序: 明示 `--fail-on` > `--strict` > 設定値
- * (`validation.failOn`, 同梱既定値は `error`)。
+ * Resolution order for the failure condition: explicit `--fail-on` >
+ * `--strict` > the configured value (`validation.failOn`, whose shipped
+ * default is `error`).
  *
- * validate / doctor の双方がこの 1 箇所を使う。doctor が設定を読まず
- * フラグ未指定時に必ず 0 を返していた頃は、同じ config を読む 2 つの
- * コマンドが `[error]` の重みで食い違っていた。
+ * Both validate and doctor use this one function. When doctor ignored the
+ * config and always returned 0 without a flag, two commands reading the same
+ * config disagreed on how much an `[error]` weighs.
  */
 export function resolveFailOn(
   options: { failOn?: FailOn; strict?: boolean },
@@ -35,16 +36,18 @@ export function resolveFailOn(
 }
 
 /**
- * `--strict` が明示 `--fail-on` に上書きされたか。
+ * Whether `--strict` was overridden by an explicit `--fail-on`.
  *
- * {@link resolveFailOn} の優先順位の裏側であり、同じ 1 箇所に置く。優先順位
- * そのものは仕様だが、`--strict` はヘルプ上「方針」として書かれているため、
- * 既存の `--strict` レーンに後から `--fail-on error` を足すと warning ゲートが
- * 黙って外れ、差分は「締めた」ようにしか見えない。呼び出し側がどちらが勝ったかを
- * 名指しできるよう、判定をここから返す。
+ * This is the other side of the {@link resolveFailOn} precedence, so it lives
+ * beside it. The precedence itself is specified, but the help describes
+ * `--strict` as a policy, so adding `--fail-on error` to an existing
+ * `--strict` lane silently drops the warning gate while the diff looks like a
+ * tightening. The check is returned from here so a caller can name which flag
+ * won.
  *
- * 閾値が一致する `--strict --fail-on warning` は矛盾ではないので上書きとは
- * 扱わない。`--strict` を受け取らないコマンド (doctor) では常に `false`。
+ * `--strict --fail-on warning` agrees on the threshold, so it is not an
+ * override. For a command that does not accept `--strict` (doctor) the result
+ * is always `false`.
  */
 export function strictSupersededBy(options: { failOn?: FailOn; strict?: boolean }): boolean {
   return options.strict === true && options.failOn !== undefined && options.failOn !== "warning";

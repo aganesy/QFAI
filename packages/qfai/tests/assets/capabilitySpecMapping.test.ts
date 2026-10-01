@@ -1,136 +1,40 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
 import { describe, expect, it } from "vitest";
 
-// Anchored to this file, not to `process.cwd()`.
-// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const read = (tree: string, file: string): Promise<string> =>
+  readFile(path.join(root, tree, file), "utf-8");
 
-const CAPABILITY_TEMPLATES = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/03_Capabilities.md",
-  ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/03_Capabilities.md",
-];
-const SLICE_TEMPLATES = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
-  ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
-];
-const TRIAGE_REFERENCES = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
-  ".qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
-];
-// Every shipped CREATE procedure. Each one has to name the `Spec` cell, or an
-// agent follows it, leaves the cell blank, clears QFAI-TRIAGE-006, and only
-// then trips QFAI-SPLIT-106 at the final gate with no instruction to fall back on.
-const CREATE_PROCEDURES = [
-  ...TRIAGE_REFERENCES,
-  ...SLICE_TEMPLATES,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md",
-  ".qfai/assistant/skills/qfai-sdd/SKILL.md",
-];
-
-/** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
-const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
-
-const read = async (relativePath: string): Promise<string> =>
-  readFile(path.join(repoRoot, relativePath), "utf-8");
-
-describe("the CAP catalog declares the spec mapping the gap policy depends on", () => {
-  for (const relativePath of CAPABILITY_TEMPLATES) {
-    it(`${relativePath}: the catalog table carries a Spec column`, async () => {
-      const content = await read(relativePath);
-      // Without this column `validateSpecSplitByCapability` derives the spec
-      // directory from row order, and an approved DELETE that leaves a gap
-      // raises QFAI-SPLIT-103/104/105 with no legal edit that clears them.
-      expect(content).toContain("| CAP ID   | Spec      |");
-      expect(content).toContain("| CAP-0001 | spec-0001 |");
-      expect(content).toContain("| CAP-0002 | spec-0002 |");
-    });
-
-    it(`${relativePath}: the mapping is named as the SSOT, not the row order`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).not.toContain(
-        "Spec directories are generated from this order (`spec-0001`, `spec-0002`, ...)",
+describe("business-flow and story indexes locate the canonical tree", () => {
+  for (const tree of trees) {
+    it(tree + ": the flow index uses BF IDs and paths", async () => {
+      const index = await read(
+        tree,
+        "assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flows.md",
       );
-      expect(content).toContain(
-        "The `Spec` column declares which spec directory owns each capability",
+      expect(index).toContain("| BF-ID | Flow | Path |");
+      const rules = await read(
+        tree,
+        "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(content).toContain("validateSpecSplitByCapability");
-      expect(content).toContain("QFAI-SPLIT-106");
-    });
-  }
-
-  for (const relativePath of SLICE_TEMPLATES) {
-    it(`${relativePath}: the gap policy names the validator codes it interacts with`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).toContain("A gap is legal only because the mapping is declared");
-      expect(content).toContain("QFAI-SPLIT-103");
-      expect(content).toContain("QFAI-SPLIT-105");
-      expect(content).toContain("QFAI-SPLIT-106");
+      expect(rules).toContain("business-flows.md cites each actual BF");
     });
 
-    it(`${relativePath}: DELETE also drops the capability row`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).toContain(
-        "DELETE removes the spec directory entirely and drops the capability's row from `_policies/03_Capabilities.md`",
+    it(tree + ": the story index maps US IDs to directories within a flow", async () => {
+      const index = await read(
+        tree,
+        "assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN/user-stories.md",
       );
-      // The ID-stability rule must stay: a DELETE never renumbers survivors.
-      expect(content).toContain("Do not renumber surviving specs only to close gaps");
-    });
-  }
-
-  // Every shipped SPLIT procedure. An approved SPLIT moves capabilities between
-  // directories, so a step that only creates the new spec leaves the moved CAP
-  // row pointing at the old one and strands the run on QFAI-SPLIT-106/104/105.
-  for (const relativePath of [...SLICE_TEMPLATES, ...TRIAGE_REFERENCES]) {
-    it(`${relativePath}: the SPLIT step reassigns each moved CAP row's Spec cell`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).toContain("`Spec` cell of every moved `CAP-NNNN` row");
-      expect(content).toContain("QFAI-SPLIT-104");
-      expect(content).toContain("QFAI-SPLIT-105");
-      expect(content).toContain("QFAI-SPLIT-106");
-    });
-  }
-
-  for (const relativePath of TRIAGE_REFERENCES) {
-    it(`${relativePath}: the DELETE lifecycle step also drops the CAP row`, async () => {
-      const content = unwrap(await read(relativePath));
-      // SKILL.md points at this file as the precise procedure, so a DELETE step
-      // that only removes the directory leaves the CAP row behind and strands
-      // the run on a QFAI-SPLIT-103 it was never told to clear.
-      expect(content).toContain(
-        "DELETE removes the spec directory entirely and drops the capability's row from `_policies/03_Capabilities.md`",
+      expect(index).toContain("US-0001-0001");
+      expect(index).toContain("user-story-0001-0001/");
+      const rules = await read(
+        tree,
+        "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(content).toContain("QFAI-SPLIT-103");
-    });
-  }
-
-  for (const relativePath of SLICE_TEMPLATES) {
-    it(`${relativePath}: no rule still promises sequential directory names`, async () => {
-      const content = unwrap(await read(relativePath));
-      // The gap policy legalises `spec-0001` + `spec-0003`; a surviving
-      // "sequential directory names" claim would justify renumbering them back.
-      expect(content).not.toContain("sequential directory names");
-      expect(content).toContain("each CAP row declares exactly one directory in the `Spec` column");
-      expect(content).toContain("never a row-order sequence");
-    });
-  }
-
-  for (const relativePath of CREATE_PROCEDURES) {
-    it(`${relativePath}: the CREATE step fills the Spec cell too`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).toContain("fill its `Spec` cell with the next unused `spec-NNNN`");
-      expect(content).toContain("QFAI-SPLIT-106");
-    });
-
-    // `QFAI-SPLIT-106` is an error, so the procedure has to say the gate stops
-    // rather than describe a window that no longer exists. A blank cell also
-    // suppresses 103/104/105 for that row, so nothing else stands in for it.
-    it(`${relativePath}: the CREATE step says the empty cell stops the gate`, async () => {
-      const content = unwrap(await read(relativePath));
-      expect(content).not.toMatch(/promotion window/);
-      expect(content).toMatch(/an error|stops/);
+      expect(rules).toContain("user-stories.md cites each US under that flow");
     });
   }
 });

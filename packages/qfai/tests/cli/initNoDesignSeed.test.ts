@@ -75,7 +75,7 @@ describe("qfai init and root DESIGN.md", () => {
           root,
           ".qfai",
           "assistant",
-          "skills",
+          "skill",
           "qfai-prototyping",
           "templates",
           "DESIGN.md.sample",

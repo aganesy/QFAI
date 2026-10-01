@@ -1,0 +1,30 @@
+route: restate-records
+family: consistency
+stages:
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+  - id: spec
+    kind: sdd
+    steps:
+      - sdd-triage
+      - sdd-story
+      - { step: sdd-contract, passThrough: true }
+      - sdd-gate
+    after: [diagnose]
+  - id: tests
+    kind: test_fix
+    steps:
+      - { step: implement-test-fix, passThrough: true }
+    after: [spec]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [tests]
+defaultModifiers: []
+decisionPoints: [sdd-triage]
+branchPoints: []
