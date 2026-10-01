@@ -402,6 +402,18 @@ describe("qfai-run", () => {
     expect(text).toMatch(/when the session must end first, stop the run and say so/i);
   });
 
+  // QFAI:AC-0001-0214-07
+  // QFAI:EX-0001-0214-10
+  it("runs a review only when the work order names reviewers, and a question as one work order", async () => {
+    const text = flat(sectionOf(await readShipped(RUN), "## The run"));
+    expect(text).toMatch(
+      /one review, by `requiredreviewerroles`, and none when the work order names none/i,
+    );
+    expect(text).toMatch(
+      /a question is one work order, run by one sub-agent with no separate reviewer/i,
+    );
+  });
+
   // QFAI:AC-0001-0185-17
   // QFAI:EX-0001-0185-54
   it("ends the completion report with the next actions, and asks nothing under a no-question mode", async () => {
