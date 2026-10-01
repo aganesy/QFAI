@@ -6,6 +6,8 @@ A passing example test must depend on the behavior it claims to verify. After GR
 
 A missing import, syntax error, fixture failure, or deliberate unimplemented throw does not prove the oracle. The failure must name the example's observable behavior. A mutation in an unrelated helper only proves that helper is used.
 
+A proof belongs to one example. If the mutation also fails a test annotated with another EX, the failure cannot say which example it disproved. Record both failing tests in the evidence. Then narrow one test to its own boundary, or have `/qfai-sdd` state in the examples that the two share the boundary.
+
 The falsifiability run in red-not-observable.md already supplies this proof when it tests the same predicate and selector. Reuse that run instead of mutating twice.
 
 ## Weak oracles

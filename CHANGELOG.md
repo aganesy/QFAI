@@ -35,6 +35,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A mutation proof belongs to one example** (#2409). The `qfai-implement`
+  oracle-strength reference now says what to do when a mutation also fails a
+  test annotated with another example: record both failing tests, then narrow
+  one test to its own boundary or have `/qfai-sdd` state that the two examples
+  share it.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an

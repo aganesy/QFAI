@@ -28,6 +28,13 @@ describe.each(trees)("%s oracle strength", (tree) => {
     expect(proof).toContain("assertions on a mock's own input");
   });
 
+  it("attributes a proof to one example and routes a shared boundary", async () => {
+    const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
+    expect(proof).toContain("A proof belongs to one example.");
+    expect(proof).toContain("also fails a test annotated with another EX");
+    expect(proof).toContain("narrow one test to its own boundary");
+  });
+
   it("reuses an observed falsifiability run and routes contract gaps", async () => {
     const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
     expect(proof).toContain("already supplies this proof");
