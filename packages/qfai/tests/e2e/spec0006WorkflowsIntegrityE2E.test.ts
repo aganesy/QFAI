@@ -36,7 +36,7 @@ const pool = useAdopterTreePool();
 const STALE = "qfai-tests.yml";
 const UNTOUCHED = "qfai-validate.yml";
 
-// QFAI:SPEC-0006:US-0006-0011
+// QFAI:BF-0003
 describe(
   "E2E: an adopter is told which installed workflow went stale, and doctor still exits 0 (US-0006-0011)",
   { timeout: 120000 },

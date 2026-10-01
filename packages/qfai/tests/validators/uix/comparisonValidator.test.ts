@@ -35,16 +35,16 @@ describe("comparisonValidator", () => {
     expect(validateExplorationArtifacts).toBe(validateOptionComparison);
   });
 
-  it("pass: review bundle with best-of-history shape", async () => {
+  it("pass: review bundle that states its one-lineage handling", async () => {
     const root = await newTempDir();
     await createUiBearingPack(root);
     // The legacy 33_exploration_rubric.md / 34_evaluator_calibration.md
     // sidecars are no longer required (DESIGN.md is the brand SSOT and
     // the review contract lives there). Only the review
-    // bundle's best-of-history wording is validated here.
+    // bundle's one-lineage wording is validated here.
     await writeFile(
       path.join(root, "uiux", "50_review_input_bundle.md"),
-      "# Review Input Bundle\n\n## Best-of-history\nRetain stronger earlier directions when later loops regress.\n",
+      "# Review Input Bundle\n\n## History handling\nThe latest iteration is accepted; no best-of-history.\n",
       "utf-8",
     );
 

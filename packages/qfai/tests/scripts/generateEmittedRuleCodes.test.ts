@@ -142,9 +142,8 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(written).toContain('"QFAI-EXAMPLE-031"');
   });
 
-  // A `code:` field alone is not proof of a validate `Issue`: the guardrails
-  // command and the handoff schema carry their own diagnostic shapes, and
-  // `applyWaivers` never sees either.
+  // A `code:` field alone is not proof of a validate `Issue`: the handoff
+  // schema carries its own diagnostic shape, and `applyWaivers` never sees it.
   it("skips a code: field on a shape that is not an Issue", async () => {
     const dir = await newTempDir();
     const output = path.join(dir, "emittedRuleCodes.ts");

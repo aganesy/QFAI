@@ -5,41 +5,43 @@ dependencies: none
 version: 1.0.0
 ---
 
-# プロジェクト構成（QFAI Toolkit）
+# Project Structure (QFAI Toolkit)
 
-QFAI Toolkit は CLI と検証エンジンを単一パッケージとして配布するモノレポです。
+QFAI Toolkit is a monorepo that distributes the CLI and the validation engine as a single package.
 
-## リポジトリ概要
+## Repository Overview
 
-- `packages/qfai/`: CLI とコア（npm 配布対象）
-- `packages/qfai/assets/init/`: `qfai init` のテンプレート（`.qfai/` と `qfai.config.yaml` など）
+- `packages/qfai/`: the CLI and core (published to npm)
+- `packages/qfai/assets/init/`: the `qfai init` templates (`.qfai/`, `qfai.config.yaml` and others)
+- `packages/qfai/assets/mdschema/` and `packages/qfai/assets/scripts/`: the
+  document schemas and the checkers that run them, shipped with the package
 - `packages/qfai/docs/`: design notes and the finding-code reference. Not shipped.
 - `.agents/rules/`: the rule masters every assistant follows.
 - `scripts/`: the lint and guard scripts the quality gate runs.
 - `tests/`: repository-level tests. The package's own live under `packages/qfai/tests/`.
-- `tmp/`: 作業用ディレクトリ（成果物対象外）
+- `tmp/`: scratch directory (not a deliverable)
 
-## packages/qfai の構成
+## Layout of packages/qfai
 
 ```
 packages/qfai/
   src/
     cli/
       commands/   # init / validate / report
-      lib/        # args/logger 等の共通処理
+      lib/        # shared code such as args and logger
     core/
       validators/ # spec/delta/scenario/contracts/traceability/ids
-      parse/      # spec/delta/scenario のパース
-      gherkin/    # Gherkin モデル補助
+      parse/      # parsing of spec/delta/scenario
+      gherkin/    # Gherkin model helpers
   assets/
-    init/         # init テンプレート
+    init/         # init templates
   tests/
-    cli/          # CLI テスト
-    core/         # コア検証テスト
+    cli/          # CLI tests
+    core/         # core validation tests
 ```
 
-## 実行フロー
+## Execution Flow
 
-- `qfai init` は `packages/qfai/assets/init/` をコピーしてテンプレートを生成する
-- `qfai validate` は `core/validators` を集約して `.qfai/report/validate.json` を出力する
-- `qfai report` は `validate.json` を読み込み、Markdown/JSON を生成する
+- `qfai init` generates the templates by copying `packages/qfai/assets/init/`
+- `qfai validate` aggregates `core/validators` and writes `.qfai/report/validate.json`
+- `qfai report` reads `validate.json` and generates Markdown/JSON

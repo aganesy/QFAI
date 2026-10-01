@@ -1,0 +1,19 @@
+route: hand-off-operation
+family: release
+stages:
+  - id: inspect
+    kind: diagnose
+    steps:
+      - { step: implement-diagnose, mode: read-only }
+  - id: handoff
+    kind: triage
+    steps: [triage-handoff]
+    after: [inspect]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [handoff]
+defaultModifiers: [gate:release]
+decisionPoints: []
+releasePoint: triage-handoff
+branchPoints: []

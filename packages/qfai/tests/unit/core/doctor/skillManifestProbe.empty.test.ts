@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0025
+// QFAI:EX-0003-0010-02
 //
 // Boundary: a skill manifest declaring `runtimeDependencies: []` MUST
 // yield zero probe findings — no false positives, even when the
@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 async function seedManifest(root: string, skill: string, deps: string[]): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", skill);
+  const dir = path.join(root, ".qfai", "assistant", "skill", skill);
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "manifest.json"),
@@ -83,6 +83,30 @@ describe("probeSkillManifestRuntimeDeps — empty runtimeDependencies", () => {
 // manifest at all" MUST stay distinguishable at the probe boundary —
 // collapsing them let a typo'd `--profile <skill>` report healthy.
 describe("probeSkillManifest — manifest state is reported separately from findings", () => {
+  it("reads a configured skill directory instead of the default tree", async () => {
+    const root = await newTempDir("custom-skills");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  skillsDir: custom/skill\n",
+      "utf-8",
+    );
+    const custom = path.join(root, "custom", "skill", "qfai-atdd");
+    await mkdir(custom, { recursive: true });
+    await writeFile(path.join(custom, "manifest.json"), '{"runtimeDependencies":[]}', "utf-8");
+    const retired = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+    await mkdir(retired, { recursive: true });
+    await writeFile(
+      path.join(retired, "manifest.json"),
+      '{"runtimeDependencies":["missing-dependency"]}',
+      "utf-8",
+    );
+
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("found");
+    expect(result.manifestPath).toBe(path.join(custom, "manifest.json"));
+    expect(result.findings).toEqual([]);
+  });
+
   it("reports manifest=found with zero findings when runtimeDependencies is []", async () => {
     const root = await newTempDir("state-empty");
     await seedManifest(root, "qfai-atdd", []);
@@ -94,7 +118,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
 
   it("reports manifest=found when the manifest omits the field entirely", async () => {
     const root = await newTempDir("state-nofield");
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, "manifest.json"),
@@ -118,7 +142,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
 
   it("reports manifest=absent with skillDirExists=true when only the manifest is missing", async () => {
     const root = await newTempDir("state-nomanifest");
-    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd"), { recursive: true });
+    await mkdir(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd"), { recursive: true });
     const result = await probeSkillManifest(root, "qfai-atdd");
     expect(result.manifest).toBe("absent");
     expect(result.skillDirExists).toBe(true);
@@ -129,7 +153,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
     // A directory in place of manifest.json makes readFile throw
     // EISDIR: the manifest path is occupied, so nothing was probed and
     // "absent" would hide the fault as a missing declaration.
-    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "manifest.json"), {
+    await mkdir(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "manifest.json"), {
       recursive: true,
     });
     const result = await probeSkillManifest(root, "qfai-atdd");
@@ -145,7 +169,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
   // doctor warned "no manifest" and autoremediate said "not found".
   it("reports manifest=unreadable when the skill directory is a regular file", async () => {
     const root = await newTempDir("state-skilldir-file");
-    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(skillsRoot, { recursive: true });
     await writeFile(path.join(skillsRoot, "qfai-atdd"), "not a directory", "utf-8");
     const result = await probeSkillManifest(root, "qfai-atdd");
@@ -158,7 +182,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
   it("reports manifest=unreadable when the skills root itself is a regular file", async () => {
     const root = await newTempDir("state-skillsroot-file");
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory", "utf-8");
+    await writeFile(path.join(root, ".qfai", "assistant", "skill"), "not a directory", "utf-8");
     const result = await probeSkillManifest(root, "qfai-atdd");
     expect(result.manifest).toBe("unreadable");
     expect(result.skillDirExists).toBe(false);
@@ -183,7 +207,7 @@ describe("probeSkillManifest — manifest state is reported separately from find
 
   it("reports manifest=unparseable for invalid JSON and for a non-array field", async () => {
     const root = await newTempDir("state-bad");
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "manifest.json"), "{ not json", "utf-8");
     expect((await probeSkillManifest(root, "qfai-atdd")).manifest).toBe("unparseable");

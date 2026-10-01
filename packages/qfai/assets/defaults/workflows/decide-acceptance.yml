@@ -1,0 +1,20 @@
+route: decide-acceptance
+family: decide
+stages:
+  - id: clarify
+    kind: discussion
+    steps: [discussion-research, discussion-interview]
+  - id: record
+    kind: discussion
+    steps: [discussion-oq]
+    after: [clarify]
+  - id: close
+    kind: triage
+    steps: [triage-close]
+    after: [record]
+defaultModifiers: [gate:user]
+decisionPoints: [discussion-interview]
+branchPoints:
+  - step: triage-close
+    outcomes:
+      - { outcome: adopted, routes: [add-feature, prototype-feature, change-compatibility] }
