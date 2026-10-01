@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0021-10
 /**
  * The marker retirement unlinks a pathname, and two things can move under it.
  *
@@ -89,6 +88,7 @@ beforeEach(() => {
   openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
 });
 
+// QFAI:EX-0001-0021-10
 describe("the assistant marker retirement under concurrent writes", () => {
   it("removes the copy it wrote when nothing moves under it", async () => {
     // The control for the two races below: without it, a retirement that never

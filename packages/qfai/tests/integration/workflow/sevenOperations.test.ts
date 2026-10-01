@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-05
-// QFAI:EX-0001-0185-17
 
 import { afterEach, expect, it } from "vitest";
 
@@ -15,6 +14,7 @@ const refused: [string, string[]][] = [
 ];
 
 for (const [title, args] of refused) {
+  // QFAI:EX-0001-0185-17
   it(title, async () => {
     const root = await minimalProject();
     const run = workflow(root, args);

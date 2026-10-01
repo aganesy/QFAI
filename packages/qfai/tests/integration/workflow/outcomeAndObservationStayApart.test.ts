@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-08
-// QFAI:EX-0001-0185-30
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +16,7 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0185-30
 it("Built CLI accept of a verify result naming its verify", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");

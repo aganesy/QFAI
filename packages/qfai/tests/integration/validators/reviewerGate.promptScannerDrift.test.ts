@@ -11,7 +11,6 @@
  * fixture matrix. Any future widening of the SSOT-sync ruleset MUST
  * be exercised by both anchors so the cross-link remains tight.
  */
-// QFAI:EX-0001-0124-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -69,6 +68,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0124-01
 describe("TC-0012-0458: Reviewer-Gate R-PROMPT-SCANNER-DRIFT (spec-0012 anchor)", () => {
   it("does NOT emit drift when the paired SSOT surfaces agree", async () => {
     await seedPair(root);

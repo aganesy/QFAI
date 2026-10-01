@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-05
-// QFAI:EX-0001-0185-18
 
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -90,6 +89,7 @@ const calls: [string, (root: string) => Promise<CliRun>, boolean][] = [
 ];
 
 for (const [title, call, ok] of calls) {
+  // QFAI:EX-0001-0185-18
   it(title, async () => {
     const root = await minimalProject();
 

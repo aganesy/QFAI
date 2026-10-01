@@ -8,8 +8,6 @@
  * finding. Reviewer override requires a non-empty `justification:`.
  */
 
-// QFAI:EX-0001-0139-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -109,6 +107,7 @@ async function seedProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0139-01
 describe("lap-009 md5-duplicate-capture advisory-failing", () => {
   it("emits a lap-009 finding when two screens share the same md5 (deterministic)", () => {
     // The same bytes for both screens → identical md5 → lap-009 fires

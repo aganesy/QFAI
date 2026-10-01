@@ -1,9 +1,8 @@
-// QFAI:EX-0001-0185-21
-
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
 
+// QFAI:EX-0001-0185-21
 it("Decide finish where the only qa-gatekeeper PASS comes from an instance the actor history shows as an author", () => {
   const snapshot = readySnapshot();
   const acceptedStages = (snapshot.acceptedStages ?? []).map((stage) => ({

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-11
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -69,6 +67,7 @@ function settledOf(decision: Decision) {
   return settled;
 }
 
+// QFAI:EX-0001-0188-11
 it("settled names the routing result and the answered question", () => {
   const routed = route();
   const run = routed.verdict.run;

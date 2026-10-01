@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0189-20
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -40,6 +38,7 @@ function replan(snapshot: Snapshot) {
   );
 }
 
+// QFAI:EX-0001-0189-20
 it("Four replans in one run", () => {
   const decisions = [0, 1, 2, 3].map((earlier) => replan(stale(earlier)));
   const fourth = decisions[3]?.verdict;

@@ -106,7 +106,6 @@
  * what its three-`return` scoping buys are in its own docblock, not restated
  * here; a prose copy is a second SSOT.
  */
-// QFAI:EX-0003-0011-02
 
 import { describe, expect, it } from "vitest";
 
@@ -141,6 +140,7 @@ const FINDING_ID = "workflows.integrity";
 const BLOCKING_HEADER = "errors blocking the active profile";
 const ADVISORY_HEADER = "warnings advisory of drift";
 
+// QFAI:EX-0003-0011-02
 describe("TC-0006-0029 (TDD-0040): the drift advisory renders below the advisory-findings header and not in the blocking bucket", () => {
   it("places the drift finding inside the advisory bucket, outside the blocking bucket, tagged [info]", async () => {
     const dir = await pool.seedAdopterTree();

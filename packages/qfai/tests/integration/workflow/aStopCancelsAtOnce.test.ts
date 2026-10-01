@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-06
-// QFAI:EX-0001-0189-13
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +16,7 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0189-13
 it("Built CLI", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "implement");

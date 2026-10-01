@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-23
-
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
@@ -17,6 +15,7 @@ function finishWith(baseline: Finding[], found: Finding[]) {
   return finish({ ...snapshot, baseline: { ...start, findings: baseline } }, facts);
 }
 
+// QFAI:EX-0001-0185-23
 it("A start baseline with one error, and finish facts holding it and one new error", () => {
   const known = { code: "QFAI-TRACE-002", file: "src/notify/email.ts", refs: [] };
   const added = { code: "QFAI-TRACE-004", file: "src/notify/sms.ts", refs: [] };

@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-08
-
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
@@ -12,6 +10,7 @@ const diagnosis = {
   matchedIds: ["EX-0007-0002-01"],
 };
 
+// QFAI:EX-0001-0186-08
 it("A diagnose result expectation-differs", async () => {
   const plans = await planFacts();
   const facts = { plans, flows: [FLOW] };

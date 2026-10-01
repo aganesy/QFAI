@@ -21,10 +21,6 @@
  * generated, and asserting there would pass on a tree whose source was never
  * edited.
  */
-// QFAI:EX-0001-0074-01
-// QFAI:EX-0001-0074-02
-// QFAI:EX-0001-0074-02
-// QFAI:EX-0001-0074-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -62,6 +58,9 @@ function sections(markdown: string): string[] {
     .filter((section) => section.length > 0);
 }
 
+// QFAI:EX-0001-0074-01
+// QFAI:EX-0001-0074-02
+// QFAI:EX-0001-0074-03
 describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are stated and linked", () => {
   /**
    * One predicate per obligation, each keyed on the rule's own subject rather

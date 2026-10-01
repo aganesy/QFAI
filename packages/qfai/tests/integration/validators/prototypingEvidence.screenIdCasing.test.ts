@@ -10,8 +10,6 @@
  * consistent end-to-end.
  */
 
-// QFAI:EX-0001-0135-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -43,6 +41,7 @@ async function seedUiContract(root: string, screenIds: string[]): Promise<void> 
   await writeFile(path.join(root, ".qfai/contracts/ui/main.yaml"), `${screensYaml}\n`, "utf-8");
 }
 
+// QFAI:EX-0001-0135-01
 describe("screen-id casing validator", () => {
   it("ACCEPTS underscore-form ids (home_page / settings_panel)", async () => {
     const root = await newTempDir();

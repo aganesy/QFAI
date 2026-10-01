@@ -1,6 +1,4 @@
 // QFAI:AC-0001-0185-15
-// QFAI:EX-0001-0185-42
-// QFAI:EX-0001-0185-43
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -68,6 +66,8 @@ const COMPLETED_AT_RUNTIME_ONLY = {
   status: "completed",
 };
 
+// QFAI:EX-0001-0185-42
+// QFAI:EX-0001-0185-43
 it("committed qfai_done finishes at runtime only", async () => {
   const root = await initProject();
   const runId = await verifiedRun(root, "qfai_done");

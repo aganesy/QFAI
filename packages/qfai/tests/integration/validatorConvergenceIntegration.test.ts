@@ -17,11 +17,6 @@
  * (every TC must be referenced at least once from tests/integration/**).
  */
 
-// QFAI:EX-0001-0018-01
-// QFAI:EX-0001-0045-02
-// QFAI:EX-0001-0046-01
-// QFAI:EX-0001-0046-02
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -69,6 +64,10 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 // The aggregator validate.ts calls, read from its source
 // ---------------------------------------------------------------------------
 
+// QFAI:EX-0001-0018-01
+// QFAI:EX-0001-0045-02
+// QFAI:EX-0001-0046-01
+// QFAI:EX-0001-0046-02
 describe("the canonical UIX aggregator is the one validate.ts names", () => {
   it("validate.ts calls runCanonicalUixValidators (not a legacy wrapper)", async () => {
     const validateSrc = await readFile(

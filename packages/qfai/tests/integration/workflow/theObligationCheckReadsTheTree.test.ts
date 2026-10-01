@@ -1,7 +1,4 @@
 // QFAI:AC-0001-0186-03
-// QFAI:EX-0001-0186-05
-// QFAI:EX-0001-0186-06
-// QFAI:EX-0001-0186-12
 // Fault seeds: FAULT-015
 
 import { afterEach, expect, it } from "vitest";
@@ -25,6 +22,9 @@ afterEach(removeStoryProjects);
 
 const ADDED = "| EX-0001-0001-03 | AC-0001-0001-01 | A cancelled line | No row |";
 
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0186-06
+// QFAI:EX-0001-0186-12
 it("A test annotating an example loses its annotation while an implement stage runs", async () => {
   const root = await storyProject();
   const { snapshot, workOrder } = await issued(root, readySnapshot("implement"));

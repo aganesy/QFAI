@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0044-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -25,6 +24,7 @@ async function ingest(finding: Record<string, unknown>) {
   }
 }
 
+// QFAI:EX-0001-0044-01
 it("rejects an empty R-REJECTED-READOPT justification", async () => {
   for (const finding of [
     { code: "R-REJECTED-READOPT", justification: "" },

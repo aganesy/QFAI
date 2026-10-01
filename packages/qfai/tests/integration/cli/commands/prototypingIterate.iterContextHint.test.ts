@@ -7,8 +7,6 @@
  * The file is advisory-only (certify ignores presence/absence).
  */
 
-// QFAI:EX-0001-0141-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -108,6 +106,7 @@ async function seedProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0141-01
 describe("iter-NN/iterate-context.json", () => {
   it("writes the advisory file with the locked 4-key schema on cycle >= 1", async () => {
     const root = await newTempDir();

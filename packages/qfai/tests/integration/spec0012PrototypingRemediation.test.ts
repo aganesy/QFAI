@@ -24,40 +24,6 @@
  *     intentionally omitted to keep `--profile tdd / full`
  *     `forbidTestTodoStubs` green during the phased landing.
  */
-// QFAI:EX-0001-0124-01
-// QFAI:EX-0001-0124-01
-// QFAI:EX-0001-0125-01
-// QFAI:EX-0001-0126-01
-// QFAI:EX-0001-0127-01
-// QFAI:EX-0001-0128-01
-// QFAI:EX-0001-0129-01
-// QFAI:EX-0001-0130-01
-// QFAI:EX-0001-0130-01
-// QFAI:EX-0001-0131-01
-// QFAI:EX-0001-0132-01
-// QFAI:EX-0001-0132-01
-// QFAI:EX-0001-0133-01
-// QFAI:EX-0001-0133-01
-// QFAI:EX-0001-0134-01
-// QFAI:EX-0001-0135-01
-// QFAI:EX-0001-0136-01
-// QFAI:EX-0001-0139-01
-// QFAI:EX-0001-0139-01
-// QFAI:EX-0001-0140-01
-// QFAI:EX-0001-0141-01
-// QFAI:EX-0001-0142-01
-// QFAI:EX-0001-0124-01
-// QFAI:EX-0001-0125-01
-// QFAI:EX-0001-0128-01
-// QFAI:EX-0001-0130-01
-// QFAI:EX-0001-0131-01
-// QFAI:EX-0001-0132-01
-// QFAI:EX-0001-0135-01
-// QFAI:EX-0001-0136-01
-// QFAI:EX-0001-0139-01
-// QFAI:EX-0001-0140-01
-// QFAI:EX-0001-0141-01
-// QFAI:EX-0001-0142-01
 
 import { describe, expect, it } from "vitest";
 
@@ -68,6 +34,23 @@ import { describe, expect, it } from "vitest";
 // the host workspace (e.g. `.qfai/specs/spec-0012/09_delta.md`) from a
 // package test would violate the `packages/qfai/` vs `.qfai/` boundary
 // documented in CLAUDE.md, so the assertion is intentionally tautological.
+// QFAI:EX-0001-0124-01
+// QFAI:EX-0001-0125-01
+// QFAI:EX-0001-0126-01
+// QFAI:EX-0001-0127-01
+// QFAI:EX-0001-0128-01
+// QFAI:EX-0001-0129-01
+// QFAI:EX-0001-0130-01
+// QFAI:EX-0001-0131-01
+// QFAI:EX-0001-0132-01
+// QFAI:EX-0001-0133-01
+// QFAI:EX-0001-0134-01
+// QFAI:EX-0001-0135-01
+// QFAI:EX-0001-0136-01
+// QFAI:EX-0001-0139-01
+// QFAI:EX-0001-0140-01
+// QFAI:EX-0001-0141-01
+// QFAI:EX-0001-0142-01
 describe("spec-0012 CHG-005 remediation anchor", () => {
   it("anchor smoke: this file carries ATDD coverage annotations", () => {
     expect(true).toBe(true);

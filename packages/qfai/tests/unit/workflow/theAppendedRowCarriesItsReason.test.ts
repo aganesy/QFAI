@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0186-02
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -18,6 +16,7 @@ const plan = {
 const reproductionRef = "evidence/empty-value-reproduction.json";
 const reproductionDigest = "a".repeat(64);
 
+// QFAI:EX-0001-0186-02
 it("Issue the sdd_append work order after a missing-test diagnosis", () => {
   const decision = decide(
     {

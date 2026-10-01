@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0008-01
 //
 // Integration: `qfai doctor --clean` archives a TTL-expired review pack
 // into `.qfai/review/_archive/<ts>/` while leaving TTL-in packs in place.
@@ -50,6 +49,7 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:EX-0003-0008-01
 describe("doctor --clean archives TTL-expired review packs", () => {
   it("moves a 26-day-old pack into _archive/ and leaves TTL-in pack", async () => {
     const root = await newTempDir("archive");

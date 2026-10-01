@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-01
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -11,6 +9,7 @@ import type {
 import { planStage } from "./kindSteps.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
+// QFAI:EX-0001-0185-01
 it("Decide accept of a routing result whose checked proposal names one new story", () => {
   const snapshot = {
     run: { id: "run-routing", state: "routing", sequence: 2 },

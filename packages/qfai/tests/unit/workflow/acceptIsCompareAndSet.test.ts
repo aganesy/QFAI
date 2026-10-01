@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-32
 // Fault seeds: FAULT-004
 
 import { expect, it } from "vitest";
@@ -41,6 +40,7 @@ function acceptChanged(change: Partial<AcceptResult>) {
   );
 }
 
+// QFAI:EX-0001-0185-32
 it("A result whose expectedSequence is behind the run's", () => {
   const decision = acceptChanged({ expectedSequence: 5 });
   expect({

@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0187-05
-// QFAI:EX-0001-0191-04
-
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -67,6 +64,8 @@ const SDD_DELTA = "sdd-triage+sdd-flow+sdd-story+sdd-contract+sdd-cycle+sdd-gate
 const IMPLEMENT = "implement-tdd+implement-checkpoint";
 const VERIFY = "verify-change-note+verify-context+verify-qfai-gate+verify-repo-gate";
 
+// QFAI:EX-0001-0187-05
+// QFAI:EX-0001-0191-04
 it("A verify result needs_repair whose finding sits in a story file with resolvingOwner qfai-sdd", () => {
   const run = verifying();
 

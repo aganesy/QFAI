@@ -17,8 +17,6 @@
  *       command returns exit 2 with the abort diagnostic).
  */
 
-// QFAI:EX-0001-0136-01
-
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -120,6 +118,7 @@ async function seedProject(root: string): Promise<void> {
   await writeFile(path.join(iter00, "prior-loop.marker"), "prior-content", "utf-8");
 }
 
+// QFAI:EX-0001-0136-01
 describe("iterate --cycle 0 --force backup-before-clear ordering", () => {
   it("preserves the prior iter-00 content under iter-00.backup-<ISO> after --force re-run", async () => {
     const root = await newTempDir();

@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-01
-// QFAI:EX-0001-0189-01
 
 import { spawnSync } from "node:child_process";
 import { appendFile, cp, mkdtemp } from "node:fs/promises";
@@ -31,6 +30,7 @@ async function runningRun(root: string): Promise<string> {
   return runId;
 }
 
+// QFAI:EX-0001-0189-01
 it("Built CLI", async () => {
   const root = await minimalProject();
   const runId = await runningRun(root);

@@ -10,7 +10,6 @@
  * writers owning disjoint top-level namespaces and a merge onto `{}`
  * would erase the namespaces this writer does not own.
  */
-// QFAI:EX-0001-0090-01
 
 import {
   chmod,
@@ -55,6 +54,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0090-01
 describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
   it("returns null when state.json is absent", async () => {
     expect(await readDiscussionCurrentId(root)).toBeNull();

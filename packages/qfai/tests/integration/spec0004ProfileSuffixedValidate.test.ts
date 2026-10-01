@@ -5,13 +5,6 @@
  *
  * Covers TC-0004-0055..0066.
  */
-// QFAI:EX-0001-0047-01
-// QFAI:EX-0001-0047-01
-// QFAI:EX-0001-0047-02
-// QFAI:EX-0001-0047-02
-// QFAI:EX-0002-0010-02
-// QFAI:EX-0001-0048-01
-// QFAI:EX-0001-0048-01
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -85,6 +78,9 @@ afterEach(async () => {
 // REQ-0120 — Profile-suffixed validate output
 // ────────────────────────────────────────────────────────────────────────────
 
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0048-01
+// QFAI:EX-0002-0010-02
 describe("TC-0004-0055: profile-suffixed path written per invocation", () => {
   it("running --profile prototyping then --profile default produces both validate-<profile>.json files with independent contents", async () => {
     await runValidate({ root, strict: false, profile: "prototyping" });

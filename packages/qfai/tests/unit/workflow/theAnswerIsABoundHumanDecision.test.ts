@@ -1,11 +1,10 @@
-// QFAI:EX-0001-0185-02
-// QFAI:EX-0001-0185-44
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
+// QFAI:EX-0001-0185-02
+// QFAI:EX-0001-0185-44
 it("A proceed answer records a bound human decision used by the SDD work order", () => {
   const question = {
     questionId: "question-3-1",

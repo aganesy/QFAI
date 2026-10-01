@@ -7,7 +7,6 @@
  * `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
  * The managed .gitignore block tracks `.qfai/evidence/decision/`.
  */
-// QFAI:EX-0001-0170-01
 
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -27,6 +26,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0170-01
 describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decision/<ts>.json for envelope contexts", () => {
   it("writes a record when the envelope context is 'architectural-decision'", async () => {
     const result = await writeDecisionRecord({

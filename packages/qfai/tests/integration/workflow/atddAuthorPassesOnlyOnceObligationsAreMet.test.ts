@@ -1,6 +1,5 @@
 // QFAI:AC-0001-0185-05
 // QFAI:AC-0001-0216-03
-// QFAI:EX-0001-0185-51
 
 import { afterEach, expect, it } from "vitest";
 
@@ -59,6 +58,7 @@ const refused = {
   unchanged: true,
 };
 
+// QFAI:EX-0001-0185-51
 it("An E2E test annotates the flow and an integration test annotates its criterion", async () => {
   expect(
     await authorPassed({

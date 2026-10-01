@@ -1,4 +1,3 @@
-// QFAI:EX-0003-0009-10
 /**
  * Taking a version that requires `revision_form` must not fail on adoption.
  *
@@ -51,6 +50,7 @@ async function newRoot(): Promise<string> {
   return root;
 }
 
+// QFAI:EX-0003-0009-10
 describe("legacy review pack migration", () => {
   it("records every pack that does not declare the form", async () => {
     const root = await newRoot();

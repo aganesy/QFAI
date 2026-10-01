@@ -70,7 +70,6 @@
  * The round-by-round derivation — mutations as needle text, blobs, outputs — is in
  * `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:EX-0003-0011-02
 
 import { describe, expect, it } from "vitest";
 
@@ -93,6 +92,7 @@ const pool = useAdopterTreePool();
  */
 const STALE_NAME = "qfai-tests.yml";
 
+// QFAI:EX-0003-0011-02
 describe("TC-0006-0029 (TDD-0031): the drift advisory is severity info and leaves --fail-on error at exit 0", () => {
   it("emits the drift finding at severity info and returns exit 0 under --fail-on error", async () => {
     const dir = await pool.seedAdopterTree();

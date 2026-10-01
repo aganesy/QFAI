@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0186-01
-// QFAI:EX-0001-0186-11
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -84,6 +81,8 @@ function reasonsOf(decision: Decision | undefined) {
   return error && "reasons" in error ? error.reasons : [];
 }
 
+// QFAI:EX-0001-0186-01
+// QFAI:EX-0001-0186-11
 it("A diagnose result missing-test whose criterion no example states, driven to the last stage", () => {
   const { issued } = driveMissingTest(["AC-0018-0001-01"]);
 

@@ -15,8 +15,6 @@
  *       exit 2 with the PID/command surfaced on stderr.
  */
 
-// QFAI:EX-0001-0131-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

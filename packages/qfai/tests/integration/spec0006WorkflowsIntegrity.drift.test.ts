@@ -16,8 +16,6 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-// QFAI:EX-0003-0011-01
-// QFAI:EX-0003-0011-01
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -64,6 +62,7 @@ function sortedDetailsKeys(details: Record<string, unknown> | undefined): string
   return details === undefined ? undefined : Object.keys(details).sort();
 }
 
+// QFAI:EX-0003-0011-01
 describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a workflows.integrity info advisory naming the stale path", () => {
   it("reports the hand-edited workflow as an info advisory naming its adopter-relative path", async () => {
     const dir = await pool.seedAdopterTree();
@@ -199,8 +198,8 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
   // temporarily deleting the earlier assertions, which only holds until the
   // next edit to them and which no gate can notice. Reached unconditionally
   // here instead.
+  // QFAI:EX-0003-0011-13
   it("treats a recorded name absent from the packaged tree as `extra`, never as drift", async () => {
-    // QFAI:EX-0003-0011-13
     const dir = await pool.seedAdopterTree();
     const installed = await readFile(adopterWorkflowPath(dir, "qfai-tests.yml"), "utf-8");
 

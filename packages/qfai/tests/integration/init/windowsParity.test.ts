@@ -5,9 +5,6 @@
  * CRLF comes from the fixture, never from `core.autocrlf`.
  */
 // QFAI:AC-0001-0196-06
-// QFAI:EX-0001-0196-16
-// QFAI:EX-0001-0196-17
-// QFAI:EX-0001-0196-18
 import { spawnSync } from "node:child_process";
 import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -43,6 +40,9 @@ async function viewOf(root: string, output: string): Promise<RunView> {
   return { modeLines: modeLines(output), lock: (await readLock(root)).lock, wrappers };
 }
 
+// QFAI:EX-0001-0196-16
+// QFAI:EX-0001-0196-17
+// QFAI:EX-0001-0196-18
 describe("windows parity", () => {
   it("Every provenance lock key is a slash-separated relative path", async () => {
     await withEmptyRepo(async (root) => {

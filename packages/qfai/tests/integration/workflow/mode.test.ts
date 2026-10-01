@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0192-02
-// QFAI:EX-0001-0192-04
 
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +10,7 @@ import { field, minimalProject, removeProjects, startRun, workflow } from "./wor
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0192-04
 it("Built CLI start with no workflow key in qfai", async () => {
   const root = await minimalProject("paths:\n  specsDir: .qfai/spec\n");
   const runId = await startRun(root).catch(() => undefined);

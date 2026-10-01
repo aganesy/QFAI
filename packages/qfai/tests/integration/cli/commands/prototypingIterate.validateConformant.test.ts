@@ -17,8 +17,6 @@
  * Plus top-level `acceptedIterationIndex` + `stopReason`.
  */
 
-// QFAI:EX-0001-0132-01
-
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -120,6 +118,7 @@ async function seedProject(root: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0132-01
 describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
   it("validatePrototypingEvidence returns zero error-severity issues post-cycle-0 (default-OFF capture)", async () => {
     const root = await newTempDir();

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolveFlowScope } from "../flowScope.js";
-import { parseStoryTestAnnotations } from "../storyTree/ids.js";
+import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, parseRecordTable } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { isEnoent } from "../fs/errno.js";
@@ -77,7 +77,7 @@ export async function obligationFactsOf(
   const files = (await readStoryTests(root, config)).files;
   const annotated = new Set<string>();
   for (const file of files.filter(countsForExample)) {
-    for (const id of parseStoryTestAnnotations(file.content).EX) {
+    for (const id of parseCountedExampleAnnotations(file.content)) {
       if (inScope.has(id)) annotated.add(id);
     }
   }

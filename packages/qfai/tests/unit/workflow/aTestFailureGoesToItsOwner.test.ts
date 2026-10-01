@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0189-18
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -21,6 +19,7 @@ const failingExample = {
   blockingExtent: "run",
 };
 
+// QFAI:EX-0001-0189-18
 it("An implement result with testObservation", () => {
   const run = { id: "run-test-failure", state: "running", sequence: 8 };
   const implementOrder = {

@@ -7,12 +7,6 @@
  * up an isolated workspace with `mkdtemp` and tears it down via
  * `afterEach`.
  */
-// QFAI:EX-0001-0154-01
-// QFAI:EX-0001-0154-02
-// QFAI:EX-0001-0155-01
-// QFAI:EX-0001-0155-01
-// QFAI:EX-0001-0155-02
-// QFAI:EX-0001-0155-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -52,7 +46,12 @@ async function makeUiContract(filename: string, content: string): Promise<void> 
   await writeFile(path.join(uiDir, filename), content, "utf-8");
 }
 
+// QFAI:EX-0001-0154-01
+// QFAI:EX-0001-0154-02
+// QFAI:EX-0001-0155-01
+// QFAI:EX-0001-0155-02
 describe("spec-0013 active-pack resolver CHG-006", () => {
+  // QFAI:EX-0001-0154-01
   it("QFAI:EX-0001-0154-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await makeDiscussionPack("discussion-20260527075558258");
     await makeDiscussionPack("discussion-20260528075558258");
@@ -61,6 +60,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     expect(resolved).toBe(expected);
   });
 
+  // QFAI:EX-0001-0154-03
   it("QFAI:EX-0001-0154-03 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
@@ -78,6 +78,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     }
   });
 
+  // QFAI:EX-0001-0154-02
   it("QFAI:EX-0001-0154-02 — an absent currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
@@ -102,6 +103,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     return validateDesignAudit(root, defaultConfig);
   }
 
+  // QFAI:EX-0001-0155-01
   it("QFAI:EX-0001-0155-01 — normal: QFAI-AUD-020 warning text names the ceiling when count is 9", async () => {
     const tasks = Array.from(
       { length: 9 },
@@ -127,6 +129,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
   });
 
   // QFAI:AC-0001-0155-01
+  // QFAI:EX-0001-0155-04
   it("QFAI:EX-0001-0155-04 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
     // count == 2: silent, because there is no floor
     {
@@ -188,6 +191,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     }
   });
 
+  // QFAI:EX-0001-0155-02
   it("QFAI:EX-0001-0155-02 — normal: complete structured items are accepted and a string item is rejected", async () => {
     const issues = await withinBandIssues(
       [
@@ -215,6 +219,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeUndefined();
   });
 
+  // QFAI:EX-0001-0155-02
   it("QFAI:EX-0001-0155-02 — error: structured item missing acceptance is rejected (closed schema)", async () => {
     const issues = await withinBandIssues(
       [

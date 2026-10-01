@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-11
-// QFAI:EX-0001-0185-35
 // Fault seeds: FAULT-024
 
 import { writeFile } from "node:fs/promises";
@@ -19,6 +18,7 @@ import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0185-35
 it("Built CLI", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   // An edit-text plan, whose write scope may name the policy file.

@@ -1,10 +1,9 @@
-// QFAI:EX-0001-0193-03
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
 
+// QFAI:EX-0001-0193-03
 it("The first stage needing a real delegation returns delegation", () => {
   const ready = {
     run: { id: "run-first-delegation", state: "ready", sequence: 4 },

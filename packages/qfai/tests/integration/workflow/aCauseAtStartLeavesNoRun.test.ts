@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0192-03
-// QFAI:EX-0001-0192-06
 // Fault seeds: FAULT-023
 
 import { readdir, rm, writeFile } from "node:fs/promises";
@@ -54,6 +53,7 @@ async function dropBlockingAgent(root: string, step: string): Promise<void> {
   await writeFile(path.join(root, "qfai.config.yaml"), stringifyYaml({ routing: [entry] }));
 }
 
+// QFAI:EX-0001-0192-06
 it("A qfai.config.yaml routing override that drops a required reviewer", async () => {
   const root = await minimalProject();
   await dropBlockingAgent(root, "implement-tdd");

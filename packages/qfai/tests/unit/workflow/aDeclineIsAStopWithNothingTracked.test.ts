@@ -1,9 +1,8 @@
-// QFAI:EX-0001-0185-06
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
+// QFAI:EX-0001-0185-06
 it("Declining CREATE cancels the run without a binding or work order", () => {
   const question = {
     questionId: "question-3-1",

@@ -1,8 +1,5 @@
 // QFAI:AC-0001-0185-12
 // QFAI:AC-0001-0185-16
-// QFAI:EX-0001-0185-47
-// QFAI:EX-0001-0185-49
-// QFAI:EX-0001-0185-50
 
 import { afterEach, expect, it } from "vitest";
 
@@ -28,6 +25,9 @@ afterEach(removeStoryProjects);
 const SEEDED = "| EX-0001-0001-03 | AC-0001-0001-01 | A cancelled line | No row |";
 const ROW = "| BR-0001-0001 | One row per order line | EX-0001-0001-01, EX-0001-0001-02 |";
 
+// QFAI:EX-0001-0185-47
+// QFAI:EX-0001-0185-49
+// QFAI:EX-0001-0185-50
 it("The sdd_append work order after a missing-test diagnosis matching AC-0001-0001-01", async () => {
   const root = await storyProject();
   const { workOrder } = await issued(root, readySnapshot("sdd_append"));

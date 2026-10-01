@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-14
-// QFAI:EX-0001-0185-41
 
 import { spawnSync } from "node:child_process";
 
@@ -32,6 +31,7 @@ function commitOnly(root: string, paths: string[]): void {
   }
 }
 
+// QFAI:EX-0001-0185-41
 it("finish on a worktree the operator left dirty before start", async () => {
   const root = await initProject();
   await write(root, "README.md", "# Notifications\n\nYou recieve one email per address.\n");

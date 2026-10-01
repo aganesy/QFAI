@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-31
 // Fault seeds: FAULT-003
 
 import { expect, it } from "vitest";
@@ -90,6 +89,7 @@ function refusal(decision: Decision) {
   };
 }
 
+// QFAI:EX-0001-0185-31
 it("Resubmit the accepted SDD result with the same resultId after the run moved on, its expected sequence now stale", () => {
   const { first, replay } = acceptThenResubmit("digest-first");
   expect(first.events.filter((event) => event.type === "binding-recorded")).toHaveLength(1);

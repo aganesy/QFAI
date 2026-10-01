@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0193-02
-// QFAI:EX-0001-0193-02
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -32,6 +31,7 @@ async function started(root: string) {
   };
 }
 
+// QFAI:EX-0001-0193-02
 it("A temp project with no eval record and READMEs claiming no host", async () => {
   const claiming = await minimalProject("workflow:\n  mode: active\n");
   await writeFile(path.join(claiming, "README.md"), NO_CLAIM);

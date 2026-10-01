@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0189-13
 // Fault seeds: FAULT-021
 
 import { expect, it } from "vitest";
@@ -38,6 +37,7 @@ const states: [string, string][] = [
 ];
 
 for (const [title, state] of states) {
+  // QFAI:EX-0001-0189-13
   it(title, () => {
     const stopped = decide(runIn(state), stop, {});
     expect({

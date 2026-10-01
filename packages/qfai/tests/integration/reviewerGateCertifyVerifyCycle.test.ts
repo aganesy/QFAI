@@ -9,8 +9,6 @@
  * R-CERTIFY-VERIFY-CIRCULAR (error). When scope="prototyping" (or no
  * prototyping-phase context exists) the gate stays silent.
  */
-// QFAI:EX-0001-0167-01
-// QFAI:EX-0001-0167-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -56,6 +54,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+// QFAI:EX-0001-0167-01
 describe("TC-0015-0017: Reviewer Gate emits R-CERTIFY-VERIFY-CIRCULAR on regressed certify path", () => {
   it("emits R-CERTIFY-VERIFY-CIRCULAR at severity info with 3-part justification when verify.json scope=atdd is consumed at prototyping phase", async () => {
     await seedVerifyJson(root, { status: "PASS", scope: "atdd" });

@@ -17,6 +17,7 @@ async function exists(target: string): Promise<boolean> {
   );
 }
 
+// QFAI:EX-0001-0026-01
 it("removes only retired workflow files from both assistant skill layouts on --force", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-force-"));
   try {
@@ -48,7 +49,6 @@ it("removes only retired workflow files from both assistant skill layouts on --f
     await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
 
     // QFAI:AC-0001-0026-01
-    // QFAI:EX-0001-0026-01
     for (const directory of legacyDirectories) {
       expect(await exists(path.join(directory, retiredName))).toBe(false);
       expect(await readFile(path.join(directory, `${retiredName}.notes`), "utf-8")).toBe(

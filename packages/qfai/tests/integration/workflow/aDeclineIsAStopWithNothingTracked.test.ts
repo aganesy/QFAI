@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0185-03
-// QFAI:EX-0001-0185-06
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -21,6 +20,7 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0185-06
 it("Built CLI on a temp repo", async () => {
   const root = await minimalProject();
   const input = await inbox(root, null, "start", START_INPUT);

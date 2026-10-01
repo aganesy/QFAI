@@ -19,8 +19,6 @@
  * row below, and must still be rejected in the same run. A blanket relaxation
  * passes every other assertion here and fails that one.
  */
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0175-01
 
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -89,6 +87,7 @@ async function run(): Promise<Issue[]> {
 const forCode = (issues: readonly Issue[], code: string): Issue[] =>
   issues.filter((entry) => entry.code === code);
 
+// QFAI:EX-0001-0175-01
 describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intact and no justification demanded", () => {
   it("surfaces the lane's file, job and rule, and demands nothing", async () => {
     await writeReport([

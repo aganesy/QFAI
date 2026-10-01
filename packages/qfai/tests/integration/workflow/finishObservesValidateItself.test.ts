@@ -1,6 +1,4 @@
 // QFAI:AC-0001-0185-06
-// QFAI:EX-0001-0185-19
-// QFAI:EX-0001-0185-36
 
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -25,6 +23,8 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0185-19
+// QFAI:EX-0001-0185-36
 it("Built CLI on a fixture whose validate is clean, asserted first", async () => {
   const root = await initProject();
   const errors = (await validateQuietly(root)).issues.filter((issue) => issue.severity === "error");

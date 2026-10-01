@@ -1,10 +1,3 @@
-// QFAI:EX-0001-0194-05
-// QFAI:EX-0001-0194-06
-// QFAI:EX-0001-0194-10
-// QFAI:EX-0001-0221-03
-// QFAI:EX-0001-0221-05
-// QFAI:EX-0001-0221-06
-
 import { expect, it } from "vitest";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
@@ -56,6 +49,12 @@ const derivation: [string, ScoredSeed, boolean][] = [
 ];
 
 for (const [title, synthetic, relevant] of derivation) {
+  // QFAI:EX-0001-0194-05
+  // QFAI:EX-0001-0194-06
+  // QFAI:EX-0001-0194-10
+  // QFAI:EX-0001-0221-03
+  // QFAI:EX-0001-0221-05
+  // QFAI:EX-0001-0221-06
   it(`${title} is ${relevant ? "" : "not "}safety-relevant`, () => {
     expect(isSafetyRelevant(synthetic, vocabulary)).toBe(relevant);
   });

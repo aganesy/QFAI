@@ -4,9 +4,6 @@
  * Covers TC-0004-0015 (4-layer enum guard), TC-0004-0022 (D-DEPRECATED-PATH
  * sunset literal), TC-0004-0025 (W-USER-EDIT-PRESERVED info pass-through).
  */
-// QFAI:EX-0001-0043-01
-// QFAI:EX-0001-0045-01
-// QFAI:EX-0001-0046-02
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -32,6 +29,8 @@ async function getConfig(root: string) {
   return r.config;
 }
 
+// QFAI:EX-0001-0045-01
+// QFAI:EX-0001-0046-02
 describe("assistantTreeMigration validator", () => {
   it("returns no issues when .qfai/assistant/ is absent", async () => {
     const root = await newRoot("treemig-absent");

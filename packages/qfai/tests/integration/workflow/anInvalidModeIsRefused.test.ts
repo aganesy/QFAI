@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0192-02
-// QFAI:EX-0001-0192-05
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +16,7 @@ import {
 
 afterEach(removeProjects);
 
+// QFAI:EX-0001-0192-05
 it("Built CLI start with workflow", async () => {
   const root = await minimalProject("workflow:\n  mode: always\n");
   const started = workflow(root, ["start", "--in", await inbox(root, null, "start", START_INPUT)]);

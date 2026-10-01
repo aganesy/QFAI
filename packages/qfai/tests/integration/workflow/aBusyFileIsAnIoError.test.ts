@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0189-09
-// QFAI:EX-0001-0189-09
 
 import { chmod } from "node:fs/promises";
 import path from "node:path";
@@ -16,6 +15,7 @@ function failure(code: string): Error {
   return Object.assign(new Error(`${code}: the operating system refused`), { code });
 }
 
+// QFAI:EX-0001-0189-09
 it("A write refused with EBUSY, EPERM or EACCES, and failures that are not", () => {
   const mapped = ["EBUSY", "EPERM", "EACCES"].map((code) => ioRefusalOf(failure(code))?.cause);
   const unmapped = ["EISDIR", "ENOSPC", "ERR_INVALID_ARG_VALUE"].map((code) =>

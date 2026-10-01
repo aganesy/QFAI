@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0021-07
-// QFAI:EX-0001-0021-08
 /**
  * A rule master whose text moved in a release, reaching a project that already
  * ran `qfai init`.
@@ -84,6 +82,8 @@ async function outsideProject(): Promise<string> {
   return dir;
 }
 
+// QFAI:EX-0001-0021-07
+// QFAI:EX-0001-0021-08
 describe("a re-init and a rule master the project has", () => {
   it("records what the first run wrote", async () => {
     // Without the record there is nothing to compare a later file against, and

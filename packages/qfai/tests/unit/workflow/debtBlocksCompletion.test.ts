@@ -1,4 +1,3 @@
-// QFAI:EX-0001-0185-26
 // Fault seeds: FAULT-010, FAULT-011
 
 import { expect, it } from "vitest";
@@ -50,6 +49,7 @@ function acceptWithDebts(debts: NonNullable<AcceptResult["debts"]>) {
   };
 }
 
+// QFAI:EX-0001-0185-26
 it("A result with a debt that has no resolvingOwner", () => {
   const actual = acceptWithDebts([
     {

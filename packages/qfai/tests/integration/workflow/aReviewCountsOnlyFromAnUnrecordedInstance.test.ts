@@ -1,5 +1,4 @@
 // QFAI:AC-0001-0187-04
-// QFAI:EX-0001-0187-08
 
 import { afterEach, expect, it } from "vitest";
 
@@ -26,6 +25,7 @@ const reasonsOf = (document: unknown) => {
   return Array.isArray(reasons) ? reasons.map((each) => field(each, "reason")) : [];
 };
 
+// QFAI:EX-0001-0187-08
 it("Built CLI results reviewed by their own actor, an author, the recommender, and one with no actor", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "implement");

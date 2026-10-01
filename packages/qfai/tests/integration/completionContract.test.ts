@@ -55,8 +55,8 @@ describe("BF completion gate", () => {
     expect(c).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
   });
 
+  // QFAI:EX-0001-0094-04
   it("requires current evidence and independent reviewer PASS for the integrated revision", async () => {
-    // QFAI:EX-0001-0094-04
     const c = await loadContent();
     expect(c).toMatch(/implementation-reviewer checks code and tests/);
     expect(c).toMatch(
@@ -68,8 +68,8 @@ describe("BF completion gate", () => {
     expect(c).toMatch(/A reviewer\s+REVISE follows/);
   });
 
+  // QFAI:EX-0001-0094-01
   it("requires phase evidence, checkpoint verification and both independent reviewer passes", async () => {
-    // QFAI:EX-0001-0094-01
     const c = await loadContent();
     expect(c).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
     expect(c).toContain("A fresh validate result has no test-obligation EX finding for this BF");
@@ -80,8 +80,8 @@ describe("BF completion gate", () => {
     expect(c).toContain("Each required reviewer must pass the same final revision");
   });
 
+  // QFAI:EX-0001-0094-02
   it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
-    // QFAI:EX-0001-0094-02
     const c = await loadContent();
     expect(c).toContain("including decision exceptions");
     expect(c).toContain("fresh validate result has no test-obligation EX finding for this BF");
@@ -90,8 +90,8 @@ describe("BF completion gate", () => {
     expect(c).not.toContain("test-list.md");
   });
 
+  // QFAI:EX-0001-0094-03
   it("rejects stale phase evidence from an earlier revision", async () => {
-    // QFAI:EX-0001-0094-03
     const c = await loadContent();
     const parallelPolicy = await readFile(
       path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
@@ -103,15 +103,15 @@ describe("BF completion gate", () => {
     expect(parallelPolicy).toContain("Retake evidence whose source revision changed");
   });
 
+  // QFAI:EX-0001-0094-07
   it("rejects a phase entry with a status and no command or result", async () => {
-    // QFAI:EX-0001-0094-07
     const c = await loadContent();
     expect(c).toContain("Evidence without a command and result pair does not prove a");
     expect(c).toMatch(/RED, GREEN, and Refactor commands and observed\s+results/);
   });
 
+  // QFAI:EX-0001-0094-05
   it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {
-    // QFAI:EX-0001-0094-05
     const c = await loadContent();
     const checkpoint = await readFile(
       path.join(path.dirname(implementSkillPath), "references", "checkpoint-verification.md"),
@@ -125,9 +125,9 @@ describe("BF completion gate", () => {
     expect(checkpoint).not.toMatch(/qfai validate[^\n]*--spec\b/);
   });
 
+  // QFAI:EX-0001-0094-06
   it("stops selection when the scoped result is missing, stale or from another profile", async () => {
     // QFAI:AC-0001-0094-05
-    // QFAI:EX-0001-0094-06
     const c = await loadContent();
     expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
     expect(c).toContain("the file exists, `profile` is");

@@ -16,8 +16,6 @@
  * downstream validate pass runs.
  */
 
-// QFAI:EX-0001-0133-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -147,6 +145,7 @@ function captureStderr(): string[] {
   return lines;
 }
 
+// QFAI:EX-0001-0133-01
 describe("certify recognises verify.json#scope = prototyping", () => {
   it("accepts scope=prototyping and seals the certificate (exit 0)", async () => {
     const root = await newTempDir();

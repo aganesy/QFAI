@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0185-35
-
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
@@ -10,6 +8,7 @@ const drifts: [string, { toolVersion?: string; cliEntryDigest?: string }, string
 ];
 
 for (const [title, change, subject] of drifts) {
+  // QFAI:EX-0001-0185-35
   it(title, () => {
     const snapshot = readySnapshot();
     const facts = metFacts();

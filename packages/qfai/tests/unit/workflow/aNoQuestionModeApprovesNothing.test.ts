@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0188-06
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -19,6 +17,7 @@ const question: Question = {
   recommendation: "stop",
 };
 
+// QFAI:EX-0001-0188-06
 it("A run in awaiting_input that nobody answers", () => {
   const ready = readySnapshot();
   const waiting = {

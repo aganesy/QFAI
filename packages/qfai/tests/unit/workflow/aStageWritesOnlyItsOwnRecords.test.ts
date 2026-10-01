@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0185-38
-// QFAI:EX-0001-0185-49
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -95,6 +92,8 @@ function refusedWriteScope(path: string) {
   return { ok: false, reasons: [{ reason: "write-scope", subject: path }] };
 }
 
+// QFAI:EX-0001-0185-38
+// QFAI:EX-0001-0185-49
 it("own evidence accepted", () => {
   expect(acceptChanging(...implement, [IMPLEMENT_EVIDENCE])).toEqual({
     recordAreas: [IMPLEMENT_EVIDENCE],

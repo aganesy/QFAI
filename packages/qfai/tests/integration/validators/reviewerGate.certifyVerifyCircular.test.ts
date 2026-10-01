@@ -14,8 +14,6 @@
  * `core/validators/reviewerGate.ts`. This file is a re-anchor only.
  */
 
-// QFAI:EX-0001-0133-01
-
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -70,6 +68,7 @@ async function seedPair(root: string, scope: string): Promise<void> {
   );
 }
 
+// QFAI:EX-0001-0133-01
 describe("R-CERTIFY-VERIFY-CIRCULAR — spec-0012 anchor", () => {
   it("emits the finding when verify.json#scope=atdd and canonical prototyping.json exists", async () => {
     const root = await newTempDir();

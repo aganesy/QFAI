@@ -134,7 +134,8 @@ integrated result after slices join.
 ## Red, Green, Refactor
 
 For the selected EX, create or strengthen a test in a non-acceptance layer and
-annotate it `QFAI:EX-NNNN-NNNN-NN`. Preserve the BF E2E and AC integration
+annotate it `QFAI:EX-NNNN-NNNN-NN` on the comment line directly before its
+`it(`, `test(` or `describe(`. Preserve the BF E2E and AC integration
 or API coverage owned by `/qfai-atdd`. Put the test where the observable
 behavior belongs. Use
 `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md` and

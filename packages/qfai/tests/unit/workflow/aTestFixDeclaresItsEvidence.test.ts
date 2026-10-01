@@ -1,6 +1,3 @@
-// QFAI:EX-0001-0187-02
-// QFAI:EX-0001-0187-07
-
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
@@ -81,6 +78,8 @@ const refused = {
   events: [],
 };
 
+// QFAI:EX-0001-0187-02
+// QFAI:EX-0001-0187-07
 it("A test_fix result with citedBefore equal to citedAfter, a review receipt and a re-run receipt", () => {
   const decision = acceptTestFix(completeFix);
 

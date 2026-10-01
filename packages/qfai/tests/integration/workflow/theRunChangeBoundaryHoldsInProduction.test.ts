@@ -1,7 +1,4 @@
 // QFAI:AC-0001-0189-08
-// QFAI:EX-0001-0189-21
-// QFAI:EX-0001-0189-22
-// QFAI:EX-0001-0189-23
 
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -35,6 +32,9 @@ async function changed(root: string, file: string) {
   return { path: file, digest: createHash("sha256").update(text, "utf8").digest("hex") };
 }
 
+// QFAI:EX-0001-0189-21
+// QFAI:EX-0001-0189-22
+// QFAI:EX-0001-0189-23
 it("An implement result changing its evidence and a source file inside the boundary, then next", async () => {
   const root = await initProject();
   const { runId, issued } = await featureRunAt(root, "implement");

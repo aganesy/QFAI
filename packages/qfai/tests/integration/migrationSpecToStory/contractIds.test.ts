@@ -216,8 +216,8 @@ const PRIMARY_SPEC = "prototyping:\n  primarySpecId: spec-0001\n";
 
 describe("migration contract IDs", () => {
   // QFAI:AC-0004-0006-04
+  // QFAI:EX-0004-0006-12
   it("numbers every old contract across kinds, so a colliding old number takes a new one", async () => {
-    // QFAI:EX-0004-0006-12
     const root = await project();
     expect((await run(step03, root)).code).toBe(3);
     expect(await files(path.join(root, CONTRACTS))).toEqual([
@@ -255,8 +255,8 @@ describe("migration contract IDs", () => {
     ]);
   });
 
+  // QFAI:EX-0004-0006-13
   it("declares each new ID and rewrites the old IDs a dependency names", async () => {
-    // QFAI:EX-0004-0006-13
     const root = await project();
     await run(step03, root);
     const api = await text(root, `${CONTRACTS}/api/api-0002-orders.yaml`);
@@ -276,8 +276,8 @@ describe("migration contract IDs", () => {
     );
   });
 
+  // QFAI:EX-0004-0006-14
   it("writes the contract index in its table shape and lists the old sections for a person", async () => {
-    // QFAI:EX-0004-0006-14
     const root = await project();
     const result = await run(step03, root);
     expect(result.code).toBe(3);
@@ -304,8 +304,8 @@ describe("migration contract IDs", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-15
   it("shows every rename in a dry run and changes nothing on a second run", async () => {
-    // QFAI:EX-0004-0006-15
     const root = await project();
     const before = await files(root);
     const dry = await run(step03, root, true);
@@ -322,8 +322,8 @@ describe("migration contract IDs", () => {
     expect(await text(root, `${EVIDENCE}/contract-map.json`)).toBe(map);
   });
 
+  // QFAI:EX-0004-0006-16
   it("rewrites a translated old ID in a contract body and lists one no contract declares", async () => {
-    // QFAI:EX-0004-0006-16
     const root = await project();
     const result = await run(step03, root);
     const receipt = `${CONTRACTS}/ui/ui-0004-receipt.yaml`;
@@ -338,8 +338,8 @@ describe("migration contract IDs", () => {
   });
 
   // QFAI:AC-0004-0006-04
+  // QFAI:EX-0004-0006-32
   it("rewrites each old ID the contract map translates wherever a written contract holds it", async () => {
-    // QFAI:EX-0004-0006-32
     const root = await project();
     const api = await readFile(path.join(FIXTURE, "contracts/api/api-0001-orders.yaml"), "utf8");
     const sql = await readFile(path.join(FIXTURE, "contracts/db/db-0001-orders.sql"), "utf8");
@@ -363,8 +363,8 @@ describe("migration contract IDs", () => {
   });
 
   // QFAI:AC-0004-0007-04
+  // QFAI:EX-0004-0007-24
   it("refuses a rule destination outside the contract kinds or naming no contract", async () => {
-    // QFAI:EX-0004-0007-24
     const root = await project();
     await run(step03, root);
     for (const [contract, message] of [
@@ -380,8 +380,8 @@ describe("migration contract IDs", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-27
   it("refuses a rule destination that holds no contract", async () => {
-    // QFAI:EX-0004-0007-27
     const root = await project();
     await put(root, `${CONTRACTS}/api/orders.md`, "# Orders API\n");
     await put(root, `${CONTRACTS}/design/order.md`, "# Order screen\n");
@@ -404,9 +404,9 @@ describe("migration contract IDs", () => {
     }
   });
 
+  // QFAI:EX-0004-0007-25
+  // QFAI:EX-0004-0007-26
   it("numbers a rule under the contract its old path names and records the contract map", async () => {
-    // QFAI:EX-0004-0007-25
-    // QFAI:EX-0004-0007-26
     const root = await project();
     await putPack(
       root,
@@ -433,9 +433,9 @@ describe("migration contract IDs", () => {
     );
   });
 
+  // QFAI:EX-0004-0009-13
+  // QFAI:EX-0004-0009-14
   it("writes a rule into its renamed contract with the old IDs in its statement rewritten", async () => {
-    // QFAI:EX-0004-0009-13
-    // QFAI:EX-0004-0009-14
     const root = await project();
     await putPack(
       root,
@@ -463,8 +463,8 @@ describe("migration contract IDs", () => {
   });
 
   // QFAI:AC-0004-0010-03
+  // QFAI:EX-0004-0010-06
   it("rewrites a contract annotation to the new contract ID and lists one no contract declares", async () => {
-    // QFAI:EX-0004-0010-06
     const root = await project();
     await putPack(
       root,
@@ -518,8 +518,8 @@ describe("migration CLI contract shape", () => {
   ].join("\n");
 
   // QFAI:AC-0004-0006-05
+  // QFAI:EX-0004-0006-20
   it("keeps the H1 and the ownership boundary and lists every other part for a person", async () => {
-    // QFAI:EX-0004-0006-20
     const root = await project();
     await put(root, OLD, WITH_LEFTOVERS);
     const result = await run(step03, root);
@@ -536,8 +536,8 @@ describe("migration CLI contract shape", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  // QFAI:EX-0004-0006-21
   it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
-    // QFAI:EX-0004-0006-21
     const root = await project();
     await put(root, OLD, "# Contract: Orders command\n");
     const result = await run(step03, root);
@@ -551,8 +551,8 @@ describe("migration CLI contract shape", () => {
     await expect(readFile(path.join(root, ARCHIVE))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  // QFAI:EX-0004-0006-22
   it("names the template section for an ownership boundary or a rules table it cannot keep", async () => {
-    // QFAI:EX-0004-0006-22
     const root = await project();
     const old =
       "# Contract: Orders command\n\n## Ownership boundary\n\n- Orders only.\n\n## Business rules\n\nBR-ID | Statement | Examples\n--- | --- | ---\n\n## Rules\n\n| ID | Rule |\n| --- | --- |\n| R1 | List newest first. |\n";
@@ -571,8 +571,8 @@ describe("migration CLI contract shape", () => {
     expect(await text(root, ARCHIVE)).toBe(old);
   });
 
+  // QFAI:EX-0004-0006-23
   it("leaves a contract that passes the CLI schema once its rules are written", async () => {
-    // QFAI:EX-0004-0006-23
     const root = await project();
     await put(root, OLD, WITH_LEFTOVERS);
     await putPack(
@@ -599,8 +599,8 @@ describe("migration CLI contract shape", () => {
   });
 
   // QFAI:AC-0004-0009-03
+  // QFAI:EX-0004-0009-15
   it("lists a rule whose statement names another rule when it lands in a CLI contract", async () => {
-    // QFAI:EX-0004-0009-15
     const root = await project();
     await putPack(
       root,
@@ -632,8 +632,8 @@ describe("migration files that are no contract", () => {
   ];
 
   // QFAI:AC-0004-0006-06
+  // QFAI:EX-0004-0006-24
   it("archives a Markdown file under api/, db/ or ui/ unnumbered and names its directory's form", async () => {
-    // QFAI:EX-0004-0006-24
     const root = await project();
     const markdown = [
       ["api/orders.md", "# Orders API\n\nPOST /orders accepts an order.\n", "OpenAPI YAML or JSON"],
@@ -656,8 +656,8 @@ describe("migration files that are no contract", () => {
     expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
   });
 
+  // QFAI:EX-0004-0006-25
   it("archives the whole design/ directory unnumbered and names each of its files", async () => {
-    // QFAI:EX-0004-0006-25
     const root = await project();
     const design = [
       ["design/order.md", "# Order screen\n\nThe receipt shows the order ID.\n"],
@@ -682,8 +682,8 @@ describe("migration files that are no contract", () => {
     expect(await text(root, `${EVIDENCE}/contract-map.json`)).not.toContain("design/");
   });
 
+  // QFAI:EX-0004-0006-26
   it("names every dot-prefixed file of design/, an empty .gitkeep included", async () => {
-    // QFAI:EX-0004-0006-26
     const root = await project();
     const design = [
       ["design/.gitkeep", ""],
@@ -737,8 +737,8 @@ describe("migration primary spec becomes the primary UI contract", () => {
     expect(step4.errors).toContain(OLD_KEY);
   });
 
+  // QFAI:EX-0004-0006-30
   it("replaces the primary spec ID by the new ID of the UI contract its rules cite", async () => {
-    // QFAI:EX-0004-0006-30
     const control = await primaryProject("CON-UI-0008", "");
     expect((await runCli(3, control)).code).toBe(3);
     expect(await files(path.join(control, CONTRACTS))).toContain("ui/ui-0004-receipt.yaml");
@@ -763,8 +763,8 @@ describe("migration primary spec becomes the primary UI contract", () => {
     expect(section(kept.output, "Operations")).toContain(OLD_NAME);
   });
 
+  // QFAI:EX-0004-0006-31
   it("leaves the key for a person where no single UI contract is tied, and stops the steps after", async () => {
-    // QFAI:EX-0004-0006-31
     const markdown = async (root: string) => {
       await put(root, `${CONTRACTS}/ui/receipt.md`, "# CON-UI-0006: Receipt screen\n");
     };
@@ -852,8 +852,8 @@ describe("migration step 3 groups what it lists for a person", () => {
   };
 
   // QFAI:AC-0004-0006-08
+  // QFAI:EX-0004-0006-33
   it("opens with Content, then Identifiers, and prints no group or heading it has no item for", async () => {
-    // QFAI:EX-0004-0006-33
     const nothing = await run(step03, await lean(GLOSSARY));
     expect(nothing.code).toBe(0);
     expect(section(nothing.output, "For a person")).toMatch(/^## For a person\r?\nnone\s*$/);

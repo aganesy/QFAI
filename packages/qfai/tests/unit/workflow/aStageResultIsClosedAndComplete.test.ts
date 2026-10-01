@@ -1,5 +1,3 @@
-// QFAI:EX-0001-0194-19
-
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -25,6 +23,7 @@ async function routingExample(): Promise<unknown> {
   return JSON.parse(block ?? "null");
 }
 
+// QFAI:EX-0001-0194-19
 it("The parser's verdict on each stage result variant", async () => {
   const verdicts = stageResultVariants(await routingExample()).map(({ name, payload }) => {
     const refusals =

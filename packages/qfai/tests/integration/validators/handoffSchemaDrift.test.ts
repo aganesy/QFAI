@@ -12,7 +12,6 @@
  * writer file's expected `writerToken`. Symmetric (both present or
  * both absent) → no finding. Asymmetric → fire.
  */
-// QFAI:EX-0001-0171-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -46,6 +45,7 @@ async function writeAt(rel: string, body: string): Promise<void> {
   await writeFile(abs, body, "utf-8");
 }
 
+// QFAI:EX-0001-0171-01
 describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edits", () => {
   it("does NOT fire when neither source file exists (consumer install)", async () => {
     const issues = await detectHandoffSchemaDrift(root);
