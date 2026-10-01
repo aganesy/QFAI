@@ -19,7 +19,8 @@ import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 const SETTINGS = path.join(".claude", "settings.json");
-const LAUNCHER_ENTRY = "Bash(npx qfai:*)";
+// One launcher spelling for each way a project resolves its own qfai.
+const LAUNCHER_ENTRIES = ["Bash(npx qfai:*)", "Bash(yarn exec qfai:*)", "Bash(yarn qfai:*)"];
 
 /** The permission entries a settings file holds under `permissions.allow`. */
 async function allowOf(root: string): Promise<unknown[]> {
@@ -39,7 +40,7 @@ async function shippedEntries(): Promise<string[]> {
   const skills = await readdir(
     path.join(packageRoot, "assets", "init", ".qfai", "assistant", "skill"),
   );
-  return [...skills.map((name) => `Skill(${name})`), LAUNCHER_ENTRY];
+  return [...skills.map((name) => `Skill(${name})`), ...LAUNCHER_ENTRIES];
 }
 
 describe("the permission entries of .claude/settings.json", () => {
@@ -93,6 +94,7 @@ describe("the permission entries of .claude/settings.json", () => {
       const output = await initQuietly(root);
       expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(text);
       expect(output).toContain(".claude/settings.json was left unchanged");
+      expect(output).toContain("Make `permissions.allow` an array");
     });
   });
 });

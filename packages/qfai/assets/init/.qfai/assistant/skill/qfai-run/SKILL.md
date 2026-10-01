@@ -1,7 +1,7 @@
 ---
 name: qfai-run
 title: QFAI Run (Change request entry)
-description: "Use when the operator asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
+description: "Use when the operator asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. A question that one command or one file read answers needs no run. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]

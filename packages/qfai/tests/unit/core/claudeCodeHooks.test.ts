@@ -18,7 +18,6 @@ import { describe, expect, it } from "vitest";
 import {
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   MINIMAL_IMPLEMENTATION_HOOK_MARKER,
-  PERMISSION_ENTRIES_EVENT,
   carriesDocumentationClarityHooks,
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
@@ -358,7 +357,7 @@ describe("an earlier release's hook groups", () => {
   );
 
   it("covers every group the fixture holds", () => {
-    expect(cases).toHaveLength(14);
+    expect(cases).toHaveLength(15);
   });
 
   it.each(cases)("replaces $event group $index where it stands", ({ event, group }) => {
@@ -445,11 +444,12 @@ describe("the permission entries the template declares", () => {
     });
   });
 
-  it("reports the entries as an event of their own, and is a no-op on a second run", () => {
+  it("reports the entries apart from the hook events, and is a no-op on a second run", () => {
     const result = mergeDocumentationClarityHooks("{}", WITH_ALLOW);
     expect(result.outcome).toBe("merged");
     if (result.outcome !== "merged") return;
-    expect(result.events).toEqual(["PreToolUse", "PostToolUse", PERMISSION_ENTRIES_EVENT]);
+    expect(result.events).toEqual(["PreToolUse", "PostToolUse"]);
+    expect(result.permissionsAdded).toBe(true);
     expect(
       mergeDocumentationClarityHooks(serializeClaudeSettings(result.settings), WITH_ALLOW),
     ).toEqual({ outcome: "already-present", edited: [] });
@@ -460,7 +460,8 @@ describe("the permission entries the template declares", () => {
     const result = mergeDocumentationClarityHooks(hooksOnly, WITH_ALLOW);
     expect(result.outcome).toBe("merged");
     if (result.outcome !== "merged") return;
-    expect(result.events).toEqual([PERMISSION_ENTRIES_EVENT]);
+    expect(result.events).toEqual([]);
+    expect(result.permissionsAdded).toBe(true);
   });
 
   it.each([

@@ -107,8 +107,16 @@ describe("the install check of the Claude Code settings", () => {
       const installed = await project(path.join(base, "installed"));
       await launcherIn(installed);
       expect(await run(installed)).toBe("");
+      // Plug'n'Play proves the install mode only; the project has to declare qfai as well.
       const pnp = await project(path.join(base, "pnp"));
       await writeFile(path.join(pnp, ".pnp.cjs"), "", "utf-8");
+      await writeFile(path.join(pnp, "package.json"), '{"devDependencies":{}}\n', "utf-8");
+      expectRemedy(await run(pnp));
+      await writeFile(
+        path.join(pnp, "package.json"),
+        '{"devDependencies":{"qfai":"^2.0.0"}}\n',
+        "utf-8",
+      );
       expect(await run(pnp)).toBe("");
 
       // A project below its git root finds the launcher at the root.

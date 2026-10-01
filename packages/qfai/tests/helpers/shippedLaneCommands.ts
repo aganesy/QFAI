@@ -1503,12 +1503,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // byte.
   //
   // Re-pinned for three more changes, each a reviewed delta. A `permissions.allow` list names one
-  // `Skill(<name>)` entry for each shipped skill and `Bash(npx qfai:*)`. The grilling reminder
-  // before a write and the documentation-clarity reminders after one read the tool call and print
-  // nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
-  // looks for `node_modules/.bin/qfai` from the project up to its git root and prints only where
-  // there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
-  [".claude/settings.json", "719b7b1f29df22d267807631595f0af96a24a4c14df5653bc0d0b5ac02df21d6"],
+  // `Skill(<name>)` entry for each shipped skill and the three launcher spellings. The grilling
+  // reminder before a write and the documentation-clarity and minimal-implementation reminders
+  // after one read the tool call and print nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
+  // looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // the project up to its git root and prints only where there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  [".claude/settings.json", "87ae0f312dfbfaa49c5bdb665287ad8e9e9d692f2c43d614b0be5e54162ab78d"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1532,10 +1532,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `4c710d7e…`, is kept as a fixture the merge test upgrades.
   //
   // Re-pinned for the install check, a third `UserPromptSubmit` group. Its line finds the message
-  // file as every other line does, then looks for `node_modules/.bin/qfai` or `.pnp.cjs` from that
-  // project up to the first directory that holds `.git`, and holds no character those shells
+  // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // that project up to the first directory that holds `.git`, and holds no character those shells
   // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
-  [".codex/hooks.json", "c97308a314ba050a6c6742c7a3f1b9d63df2eb2f711bf4ab012686f2b8abdf43"],
+  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

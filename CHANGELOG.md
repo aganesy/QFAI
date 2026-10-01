@@ -67,13 +67,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-run` description both say a change, a fix, an investigation of the
   codebase or a question about the project. The entry line `qfai init` writes
   into `AGENTS.md` and `CLAUDE.md` is unchanged.
-- **A question needs no run, and a run ends on purpose.** The free-text reminder says a
-  question that one command or one file read answers is answered directly. The
+- **A question that one command answers needs no run, and a run ends on purpose.** The
+  free-text reminder and the `qfai-run` description say a question that one command or one file
+  read answers is answered directly. The
   `qfai-run` skill says a run ends at `finish` or at `decision` with `stop`, and that
   an answer already given does not end it. In Claude Code the reminders before and
-  after a file write print nothing for a file under `.qfai/run/`.
+  after a file write, and the minimal-implementation one, print nothing for a file under
+  `.qfai/run/`.
 - **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
-  entry for each shipped skill and `Bash(npx qfai:*)` into `permissions.allow` of
+  entry for each shipped skill and the launcher entries (`Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)`
+  and `Bash(yarn qfai:*)`) into `permissions.allow` of
   `.claude/settings.json`, the way it merges hook groups. A non-interactive Claude Code run
   refused the skills without them. The free-text reminder now tells the agent to stop and say so
   when `qfai-run` cannot start.

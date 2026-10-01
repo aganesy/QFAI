@@ -287,12 +287,13 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
     const project = projectDirOf(repoRoot, rel);
     const writeTime = [
       ...(hooks.get("PreToolUse") ?? []).filter((group) => group.matcher === "Write|Edit"),
-      ...(hooks.get("PostToolUse") ?? []).slice(0, 1),
+      ...(hooks.get("PostToolUse") ?? []),
     ].flatMap((group) => group.hooks);
     expect(writeTime.map((entry) => entry.statusMessage)).toEqual([
       GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
       DOCUMENTATION_CLARITY_HOOK_MARKER,
       DOCUMENTATION_CLARITY_HOOK_MARKER,
+      MINIMAL_IMPLEMENTATION_HOOK_MARKER,
     ]);
     const written = (filePath: string): string =>
       JSON.stringify({ tool_name: "Write", tool_input: { file_path: filePath } });

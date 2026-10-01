@@ -121,12 +121,6 @@ export const CODEX_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 export type ClaudeSettings = Record<string, unknown>;
 
 /**
- * The entry of `events` that stands for the permission entries the merge added,
- * which are not a hook event.
- */
-export const PERMISSION_ENTRIES_EVENT = "permissions.allow";
-
-/**
  * Every hook group an earlier template shipped, as the SHA-256 of
  * `JSON.stringify(group)` read from that template.
  *
@@ -168,20 +162,25 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "981058fa84e7c20eb9a72815aa6d132cbd8dbfbbe7e2a99db24a209e0b034723",
   "15d21b0c00535c6f8241a4fbefb670c9d01bbdf15e9b18337d5fc76ed09b8879",
   "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
+  // minimal implementation after a write or edit, before it skipped the run's own records
+  "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
 ]);
 
 export type HookMergeResult =
   /**
-   * The project file gained or refreshed groups. `events` names the hook events
-   * touched, and `edited` the groups left alone because the project changed them.
+   * The project file gained or refreshed groups or permission entries. `events`
+   * names the hook events touched, `permissionsAdded` says whether entries were
+   * appended to `permissions.allow`, and `edited` names the groups left alone
+   * because the project changed them.
    */
   | {
       readonly outcome: "merged";
       readonly settings: ClaudeSettings;
       readonly events: readonly string[];
+      readonly permissionsAdded: boolean;
       readonly edited: readonly string[];
     }
-  /** The project already carries every group the template declares. */
+  /** The project already carries every group and entry the template declares. */
   | { readonly outcome: "already-present"; readonly edited: readonly string[] }
   /** Nothing was changed; `reason` says what could not be read. */
   | { readonly outcome: "unreadable"; readonly reason: string };
@@ -361,13 +360,12 @@ export function mergeDocumentationClarityHooks(
 
   const allowed = addAllowedEntries(merged, shippedAllowEntries(templateText));
   if (typeof allowed === "string") return { outcome: "unreadable", reason: allowed };
-  if (allowed) events.push(PERMISSION_ENTRIES_EVENT);
 
-  if (events.length === 0) {
+  if (events.length === 0 && !allowed) {
     return { outcome: "already-present", edited };
   }
   merged.hooks = mergedHooks;
-  return { outcome: "merged", settings: merged, events, edited };
+  return { outcome: "merged", settings: merged, events, permissionsAdded: allowed, edited };
 }
 
 /** The `permissions.allow` strings the template declares, none when it declares no list. */

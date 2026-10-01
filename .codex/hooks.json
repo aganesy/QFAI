@@ -26,7 +26,7 @@
           {
             "type": "command",
             "statusMessage": "QFAI install check reminder",
-            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let e=p.dirname(p.dirname(p.dirname(r))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))||f.existsSync(p.join(e,'.pnp.cjs'))){ok=1;break}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" qfai-not-installed",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let e=p.dirname(p.dirname(p.dirname(r))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))){ok=1;break}if(f.existsSync(p.join(e,'.pnp.cjs'))){try{const j=JSON.parse(f.readFileSync(p.join(e,'package.json'),'utf8'));if((j.dependencies||{}).qfai||(j.devDependencies||{}).qfai){ok=1;break}}catch{}}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" qfai-not-installed",
             "timeout": 10
           }
         ]

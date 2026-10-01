@@ -15,7 +15,9 @@
       "Skill(qfai-triage)",
       "Skill(qfai-verify)",
       "Skill(web-research)",
-      "Bash(npx qfai:*)"
+      "Bash(npx qfai:*)",
+      "Bash(yarn exec qfai:*)",
+      "Bash(yarn qfai:*)"
     ]
   },
   "hooks": {
@@ -61,7 +63,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs'),p=require('path');let e=p.dirname(p.dirname(p.dirname(process.argv[1]))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))||f.existsSync(p.join(e,'.pnp.cjs'))){ok=1;break}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const f=require('fs'),p=require('path');let e=p.dirname(p.dirname(p.dirname(process.argv[1]))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))){ok=1;break}if(f.existsSync(p.join(e,'.pnp.cjs'))){try{const j=JSON.parse(f.readFileSync(p.join(e,'package.json'),'utf8'));if((j.dependencies||{}).qfai||(j.devDependencies||{}).qfai){ok=1;break}}catch{}}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "qfai-not-installed"
             ]
@@ -190,7 +192,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{const f=require('fs');let p;try{p=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path}catch{}if(typeof p!=='string'||!/[\\\\/]\\.qfai[\\\\/]run[\\\\/]/.test(p)){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "minimal-implementation"
             ]
