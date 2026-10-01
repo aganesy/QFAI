@@ -54,8 +54,6 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
-  addEntryDirective,
-  addEntryPointDirectives,
   addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
@@ -111,7 +109,7 @@ import {
 import {
   refuseUnsafeEntryPointRewrite,
   replaceEntryPointFile,
-} from "../../core/init/entryDirective.js";
+} from "../../core/init/entryPointFile.js";
 import {
   SIDECAR_RE,
   claimSidecar,
@@ -2202,8 +2200,7 @@ async function ensureAgentEntryPointRules(
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
       const cited = addRuleCitations(refreshed.text, section, toCite);
-      const reviewed = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
-      const merged = addEntryDirective(reviewed, template);
+      const merged = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
@@ -2216,11 +2213,7 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(
-          cited !== refreshed.text,
-          { review: reviewed !== cited, entry: merged !== reviewed },
-          refreshed.refreshed,
-        ),
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2243,7 +2236,7 @@ async function ensureAgentEntryPointRules(
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
       const rulesAdded = addRuleCitationsToList(existing, section, uncited);
-      const merged = addEntryPointDirectives(rulesAdded, template, hasReviewPolicy);
+      const merged = hasReviewPolicy ? addReviewPointer(rulesAdded, template) : rulesAdded;
       if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
         // numbered list, an indented bullet. Name the missing masters instead
@@ -2307,7 +2300,9 @@ async function ensureAgentEntryPointRules(
           : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      addEntryPointDirectives(`${existing}${separator}${section}${end}`, template, hasReviewPolicy),
+      hasReviewPolicy
+        ? addReviewPointer(`${existing}${separator}${section}${end}`, template)
+        : `${existing}${separator}${section}${end}`,
       destRoot,
       existing,
     );
@@ -2427,11 +2422,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(
-      merged !== refreshed.text,
-      { review: false, entry: false },
-      refreshed.refreshed,
-    ),
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2508,7 +2499,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  directives: { review: boolean; entry: boolean },
+  reviewDirective: boolean,
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -2519,14 +2510,10 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  for (const [added, name] of [
-    [directives.entry, "entry"],
-    [directives.review, "review"],
-  ] as const) {
-    if (!added) continue;
-    planned.push(`add the ${name} directive`);
-    done.push(`added the ${name} directive`);
-    byHand.push(`add the ${name} directive`);
+  if (reviewDirective) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;

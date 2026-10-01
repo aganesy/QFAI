@@ -1,10 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
-import { planEntryDirective } from "../../core/init/entryDirective.js";
 import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
 import { extractManagedBlock } from "../../core/init/rootGitignore.js";
 import { QFAI_RUN_STATE_IGNORE } from "../../core/gitignore.js";
@@ -41,19 +39,6 @@ async function modeItems(context: MigrationContext): Promise<string[]> {
     ? `workflow.mode is ${JSON.stringify(workflow.mode)}`
     : "workflow is not a mapping";
   return [`invalid-mode: qfai.config.yaml: ${value}, not active, shadow or off`];
-}
-
-async function entryDirectiveItems(context: MigrationContext): Promise<string[]> {
-  const items: string[] = [];
-  for (const name of AGENT_ENTRY_POINT_FILES) {
-    const entry = await planEntryDirective(context.root, name);
-    if (entry.kind === "current") continue;
-    let reason = "it carries no operative entry directive";
-    if (entry.kind === "create") reason = "the file does not exist";
-    if (entry.kind === "refused") reason += `, and step 11 cannot add one. ${entry.reason}`;
-    items.push(`entry-directive: ${name}: ${reason}`);
-  }
-  return items;
 }
 
 async function gitignoreItems(context: MigrationContext): Promise<string[]> {
@@ -131,7 +116,6 @@ export const step12: MigrationStep = {
       forAPerson: [
         ...refusals.map(refusalItem),
         ...(await modeItems(context)),
-        ...(await entryDirectiveItems(context)),
         ...(await gitignoreItems(context)),
         ...(await runLinkItems(context)),
         ...trackedEvidenceItems(context),

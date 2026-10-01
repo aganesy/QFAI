@@ -10,7 +10,7 @@ Feature: A migrated project runs the free-text entry
     When step 11 runs
     Then every skill directory the installed package ships equals the package's copy
     And each host skills directory links every shipped skill
-    And `AGENTS.md` and `CLAUDE.md` carry the entry directive
+    And `AGENTS.md` and `CLAUDE.md` are left as the project has them, an earlier init's entry line included
     And the managed `.gitignore` block equals the installed package's block
     And `.claude/settings.json` and `.codex/hooks.json` carry the reminder hooks `qfai init` installs, merged the way it merges them
     And `.agents/rules/reminders.json` holds the installed package's reminder text unless the project edited it
