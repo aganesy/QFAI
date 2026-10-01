@@ -164,6 +164,17 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+  outDir: "the first `qfai validate` creates it",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return relPath === defaultConfig.paths[key] ? DEFAULT_ABSENT_NOTES[key] : undefined;
+}
+
 /**
  * `title` of every `workflows.integrity` emission.
  *
@@ -251,15 +262,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
+    const absentNote = ok ? undefined : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
+      severity: ok
+        ? "ok"
+        : missingDefaultSkillCreatedPath || absentNote !== undefined
+          ? "info"
+          : "warning",
       title: `Path exists: ${key}`,
       message: ok
         ? `${key} exists`
         : missingDefaultSkillCreatedPath
           ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
-          : `${key} is missing (configure this path or create the directory)`,
+          : absentNote !== undefined
+            ? `${key} is the shipped default and does not exist yet: ${absentNote}`
+            : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
@@ -706,7 +724,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const validateJsonExists = await exists(validateJsonAbs);
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "warning",
+    severity: validateJsonExists ? "ok" : "info",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"

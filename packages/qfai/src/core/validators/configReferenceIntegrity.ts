@@ -60,6 +60,16 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return relPath === defaultConfig.paths[key] ? DEFAULT_ABSENT_NOTES[key] : undefined;
+}
+
 export async function validateConfigReferenceIntegrity(
   root: string,
   config: QfaiConfig,
@@ -94,11 +104,14 @@ export async function validateConfigReferenceIntegrity(
       if (isDefaultSkillCreatedPath(key, relPath)) {
         continue;
       }
+      const absentNote = defaultAbsentNote(key, relPath);
       issues.push(
         issue(
           "QFAI-CFG-LINK-002",
-          `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`,
-          "warning",
+          absentNote === undefined
+            ? `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`
+            : `qfai.config.yaml: paths.${key}="${relPath}" is the shipped default and does not exist yet: ${absentNote}.`,
+          absentNote === undefined ? "warning" : "info",
           "qfai.config.yaml",
           `config.paths.${key}.reality`,
           undefined,

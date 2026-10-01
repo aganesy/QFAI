@@ -87,6 +87,41 @@ describe("BF-0003 doctor acceptance", () => {
     });
   });
 
+  // QFAI:AC-0003-0003-02
+  // QFAI:EX-0003-0003-02
+  it("reports an absent shipped-default path and a missing validate.json at info", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: stories\n");
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      expect(check(data, "paths.srcDir")).toMatchObject({ severity: "info" });
+      expect(check(data, "paths.srcDir")?.message).toContain("the project has no source yet");
+      expect(check(data, "paths.testsDir")).toMatchObject({ severity: "info" });
+      expect(check(data, "paths.testsDir")?.message).toContain("the project has no tests yet");
+      expect(check(data, "paths.outDir")).toMatchObject({ severity: "info" });
+      expect(check(data, "output.validateJson")).toMatchObject({ severity: "info" });
+      expect(check(data, "output.validateJson")?.message).toContain("qfai validate");
+    });
+  });
+
+  // QFAI:AC-0003-0003-02
+  // QFAI:EX-0003-0003-02
+  it("still warns for a source directory that is not the shipped default", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: stories\n  srcDir: lib\n  outDir: build/report\n",
+      );
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      expect(check(data, "paths.srcDir")).toMatchObject({
+        severity: "warning",
+        details: { path: "lib" },
+      });
+      expect(check(data, "paths.outDir")).toMatchObject({ severity: "warning" });
+    });
+  });
+
   // QFAI:AC-0003-0005-01
   // QFAI:AC-0003-0005-02
   it("emits machine-readable diagnosis and writes the same result to --out", async () => {
