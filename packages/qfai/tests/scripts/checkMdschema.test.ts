@@ -358,6 +358,16 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("--tools needs a directory");
   });
 
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option, which it must not swallow", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--tools", "--scope", "all"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newTempDir();
 

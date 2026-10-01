@@ -51,7 +51,7 @@ only downloads a binary when that platform package is missing, for example after
 To let the script run anyway, approve it:
 
 ```bash
-npm approve-scripts          # npm: adds it to `allowScripts`
+npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
 pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
 ```
 

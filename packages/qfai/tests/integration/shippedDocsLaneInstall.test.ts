@@ -25,6 +25,9 @@ import { collectJobSteps, findWorkflowJob } from "../helpers/shippedWorkflowFixt
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
+/** Bash is absent on some Windows images; the cases that execute the step are skipped there, not passed. */
+const HAS_BASH = spawnSync("bash", ["--version"], { encoding: "utf-8" }).error === undefined;
+
 const TOOLS_DIR = "tmp/qfai-docs-tools";
 const INSTALL_STEP = "Install the document-shape and diagram checkers";
 
@@ -66,7 +69,7 @@ type Recorded = { status: number | null; stderr: string; calls: string[][] };
  * Runs the install step in a project laid out as pnpm lays one out, with `npm` recording its arguments.
  * Each call is one line of the log: its arguments, joined by a tab.
  */
-async function runInstall(withQfai: boolean): Promise<Recorded | "no-bash"> {
+async function runInstall(withQfai: boolean): Promise<Recorded> {
   const body = await runBody(INSTALL_STEP);
   const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-install-run-"));
   try {
@@ -83,14 +86,7 @@ async function runInstall(withQfai: boolean): Promise<Recorded | "no-bash"> {
       encoding: "utf-8",
       env: { ...process.env, NPM_LOG: log },
     });
-    if (child.error !== undefined) {
-      // `bash` is absent on some Windows images; a missing interpreter says nothing about the lane.
-      const error: unknown = child.error;
-      const code =
-        typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
-      if (code === "ENOENT") return "no-bash";
-      throw child.error;
-    }
+    if (child.error !== undefined) throw child.error;
     const lines = (await readFile(log, "utf-8")).split(/\r?\n/).filter((line) => line !== "");
     return {
       status: child.status,
@@ -105,12 +101,11 @@ async function runInstall(withQfai: boolean): Promise<Recorded | "no-bash"> {
 describe("the delivered document lane installs its checkers outside the project's dependency tree", () => {
   // QFAI:AC-0002-0003-04
   // QFAI:EX-0002-0003-07
-  it.each([
+  it.skipIf(!HAS_BASH).each([
     ["depends on QFAI", true],
     ["does not depend on QFAI", false],
   ])("installs into its own prefix when the project %s", async (_name, withQfai) => {
     const run = await runInstall(withQfai);
-    if (run === "no-bash") return;
 
     expect(run.status, run.stderr).toBe(0);
     // One install, so the checkers and QFAI land together rather than the second install pruning

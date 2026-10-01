@@ -257,6 +257,34 @@ describe("check-mermaid --tools", () => {
   });
 
   // QFAI:EX-0002-0003-08
+  it("does not take a tool from a directory above the named one", async () => {
+    const parent = await newTempDir();
+    // A refusing copy one level up: if resolution walked there, the run would fail.
+    await seedTool(
+      parent,
+      "mermaid",
+      "export default { initialize() {}, parse: () => Promise.reject(new Error('refused by the parent copy')) };\n",
+    );
+    const tools = path.join(parent, "tools");
+    await mkdir(tools);
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir, "--tools", tools]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option", () => {
+    const result = runLane(["--tools", "--list"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
+  // QFAI:EX-0002-0003-08
   it("exits 2 when --tools names no directory", () => {
     const result = runLane(["--tools"]);
 

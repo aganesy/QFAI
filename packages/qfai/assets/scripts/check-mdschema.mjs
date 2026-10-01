@@ -1041,7 +1041,10 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === "--tools") {
-      tools = argv[++i] ?? "";
+      // A following option is not a directory: consuming it would drop that option.
+      const value = argv[i + 1] ?? "";
+      tools = value.startsWith("-") ? "" : value;
+      i += tools === "" ? 0 : 1;
       continue;
     }
     if (arg === "--summary") {

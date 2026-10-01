@@ -50,6 +50,7 @@
  *   1  at least one diagram failed to parse
  *   2  usage error (unknown flag, unreadable path)
  */
+import { realpathSync } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -247,17 +248,23 @@ async function collectMarkdown(target) {
  * package manager laid out. A bare `import()` looks from this file's location,
  * which is inside the project's tree, so the directory is named explicitly.
  * Resolution goes through `createRequire`, which takes the `default` condition
- * of a package's exports, as Mermaid's own entry declares.
+ * of a package's exports, as Mermaid's own entry declares. It also walks every
+ * ancestor `node_modules`, so a result outside the named directory's own
+ * `node_modules` is not accepted: a project's unpinned copy must not stand in
+ * for the pinned one.
  *
  * @param {string} name
  * @param {string | null} tools
- * @returns {Promise<any>}
+ * @returns {Promise<Record<string, unknown>>}
  */
 async function importTool(name, tools) {
   if (tools !== null) {
     let resolved = null;
     try {
-      resolved = createRequire(path.join(tools, "noop.cjs")).resolve(name);
+      // `resolve` returns real paths, so the directory it is compared with is one too.
+      const own = path.join(realpathSync(tools), "node_modules") + path.sep;
+      const found = createRequire(path.join(tools, "noop.cjs")).resolve(name);
+      resolved = found.startsWith(own) ? found : null;
     } catch {
       // Not installed there: resolve it the way this script always did.
     }
@@ -328,7 +335,7 @@ export async function main() {
   const listOnly = argv.includes("--list");
   const toolsAt = argv.indexOf("--tools");
   const toolsValue = toolsAt === -1 ? null : (argv[toolsAt + 1] ?? "");
-  if (toolsValue === "") {
+  if (toolsValue === "" || toolsValue?.startsWith("-")) {
     console.error("check-mermaid: --tools needs a directory");
     return 2;
   }
