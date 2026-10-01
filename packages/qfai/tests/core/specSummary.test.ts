@@ -74,7 +74,7 @@ async function writeSpec(
 
 describe("extractScopeBullets", () => {
   it("returns the In bullet content split on commas", () => {
-    const md = "## Scope\n\n- In: alpha, beta、gamma\n- Out: outside\n";
+    const md = "## Scope\n\n- In: alpha, beta\u3001gamma\n- Out: outside\n";
     expect(extractScopeBullets(md, "In")).toEqual(["alpha", "beta", "gamma"]);
   });
 

@@ -12,11 +12,11 @@ describe("parseSpec", () => {
     const text = [
       "# SPEC-0001: Sample",
       "",
-      "## 背景",
+      "## Background",
       "",
       "- note",
       "",
-      "## 業務ルール",
+      "## Business Rules",
       "",
       "- [BR-0001-0001][P1] first",
       "- [BR-0001-0002] second",
@@ -27,8 +27,8 @@ describe("parseSpec", () => {
     const parsed = parseSpec(text, "spec.md");
 
     expect(parsed.specId).toBe("SPEC-0001");
-    expect(parsed.sections.has("背景")).toBe(true);
-    expect(parsed.sections.has("業務ルール")).toBe(true);
+    expect(parsed.sections.has("Background")).toBe(true);
+    expect(parsed.sections.has("Business Rules")).toBe(true);
     expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001-0001"]);
     expect(parsed.brs[0]?.line).toBe(9);
     expect(parsed.brsWithoutPriority.map((br) => br.id)).toEqual(["BR-0001-0002"]);
@@ -41,11 +41,11 @@ describe("parseSpec", () => {
       "",
       "- [BR-0001-0001][P1] top",
       "",
-      "## 背景",
+      "## Background",
       "",
       "- note",
       "",
-      "## その他",
+      "## Other",
       "",
       "- [BR-0001-0002][P2] middle",
       "",
@@ -53,8 +53,8 @@ describe("parseSpec", () => {
 
     const parsed = parseSpec(text, "spec.md");
 
-    expect(parsed.sections.has("背景")).toBe(true);
-    expect(parsed.sections.has("その他")).toBe(true);
+    expect(parsed.sections.has("Background")).toBe(true);
+    expect(parsed.sections.has("Other")).toBe(true);
     expect(parsed.brs.map((br) => br.id)).toEqual(["BR-0001-0001", "BR-0001-0002"]);
     expect(parsed.brs[0]?.line).toBe(3);
     expect(parsed.brs[1]?.line).toBe(11);

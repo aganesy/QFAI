@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0023
+// QFAI:EX-0003-0008-01
 //
 // Unit-level boundary check for the review-pack TTL helper. The helper
 // `isReviewPackArchiveEligible(mtimeMs, ttlDays, nowMs)` powers the
@@ -25,6 +25,7 @@ describe("isReviewPackArchiveEligible — review.staleTtlDays boundary semantics
   });
 
   it("exactly TTL-old is not yet eligible (strict greater-than boundary)", () => {
+    // QFAI:EX-0003-0008-04
     const now = Date.UTC(2026, 4, 28);
     const mtime = now - 14 * DAY_MS;
     expect(isReviewPackArchiveEligible(mtime, 14, now)).toBe(false);

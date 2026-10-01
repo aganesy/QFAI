@@ -5,25 +5,25 @@ dependencies: none
 version: 1.0.0
 ---
 
-# ベストプラクティス（Codex）
+# Best Practices (Codex)
 
-Codex で作業する際の共通ルール。
+Common rules for working with Codex.
 
-## トーンとスタイル
+## Tone and Style
 
-- 余計な前置きを省き、要点を簡潔に伝える（コードやログ以外は4行以内を目安）。
-- 不明点は最小限の質問で確認し、推測で進めない。
+- Skip unnecessary preamble and state the key points briefly (aim for four lines or fewer apart from code and logs).
+- Confirm unknowns with the fewest questions possible, and do not proceed on guesses.
 
-## 進め方
+## Workflow
 
-1. まず関連ファイルと仕様を読む（すぐにコードを書かない）。
-2. 複雑な作業は小さなステップの Plan を提示し、合意後に実装する。
-3. 変更は小さくまとめ、近傍のテストを実行・結果を報告する。
-4. 残リスクや不明点があれば明示し、必要ならフォローアップを依頼する。
+1. First read the relevant files and specifications (do not start writing code straight away).
+2. For complex work, present a plan in small steps and implement after agreement.
+3. Keep changes small, then run the nearest tests and report the results.
+4. State any remaining risks or open points, and ask for follow-up where needed.
 
-## 実行のコツ
+## Execution Tips
 
-- 読み取り系コマンドはまとめて実行し、結果を簡潔に整理する。
-- テスト/ビルドは必要なものだけを選択し、失敗時はログ要約と対応方針を記載する。
-- 秘密情報を出力しない。ユーザー許可なしに `eslint-disable*` / `@ts-ignore` 等の抑制は原則禁止（詳細: `.instruction/00_universal/quality.md`）。
-- MCP を積極活用する（一覧/使いどころ: `.instruction/02_project/mcp.md`）。
+- Run read-only commands together and summarize the results concisely.
+- Run only the tests and builds that are needed, and on failure give a log summary and the planned response.
+- Do not output secrets. Suppressions such as `eslint-disable*` and `@ts-ignore` are prohibited by default unless the user permits them (details: `.instruction/00_universal/quality.md`).
+- Use MCP actively (list and when to use each: `.instruction/02_project/mcp.md`).
