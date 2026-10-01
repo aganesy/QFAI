@@ -55,6 +55,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Step 3 writes no `routing:` override for an unmodified 1.x manifest entry
+  (#2714).** An `agent-routing.yml` entry equal to an entry a 1.x release
+  shipped is no longer copied into `qfai.config.yaml`, where it hid the roles
+  the 2.x skills declare. Each entry step 3 does write is listed under
+  `## For a person` with a warning to that effect.
+- **Step 8 keeps a test-case annotation in an E2E file and lists it (#2720).**
+  It rewrote the annotation to an example annotation, which `QFAI-STORY-007`
+  rejects there. The item names the file, line, annotation and example, and the
+  two ways to settle it: a test outside the E2E layer, or a DONE
+  `Test exception:` row in `decisions.md`. Step 8 lists the annotation on each
+  run until it is deleted.
+- **Step 7 writes a section-form rule as its `Rule` value (#2712).** The
+  statement was the whole section, raw. A SQL contract holds it on one line, so
+  `qfai validate` no longer reports the rule as having no examples.
+- **A `BR ID`, `EX ID` or `TC ID` table header is read (#2713).** The table was
+  skipped without a word and its rules never reached the story tree. A table of
+  only IDs under any other header now stops the run with exit 2, naming the file
+  and line.
+- **Step 7 keeps `x-qfai-depends-on` on one line (#2715).** Writing the rules
+  into a YAML contract folded a long list over several lines, which
+  `QFAI-CONTRACT-015` does not read.
+- **Step 4 lists an outline and a further scenario with their line (#2716).**
+  The item for a `Scenario Outline:` also carries the header row of its
+  `Examples:` table, so the cases can be placed through `/qfai-sdd`.
+- **Step 4 lists the old criteria of a story left with no criterion (#2717).**
+  A story that only shared criteria in the old model gets no
+  `02_Acceptance-Criteria.md`; its item names the criteria that named it.
+- **The migration guide says how an unfinished ledger test leaves (#2719).** A
+  `todo`, `blocked` or `red` row of the old ledger, and a criterion that lost
+  its integration or API annotation, end as `QFAI-STORY-006` findings until a
+  test or a `Test exception:` row finishes them.
+- **The migration guide says how to keep a shipped workflow deleted (#2711).**
+  `npx qfai init` already leaves a workflow deleted once
+  `.qfai/install-provenance.json` records it, and a 1.x project has no record
+  before its first `init`. Delete the workflow after that run and commit the
+  record.
 - **A step names the key when `qfai.config.yaml` cannot be loaded.** It printed
   one fixed sentence; it now prints that sentence and then the message of every
   issue the loader returned.
