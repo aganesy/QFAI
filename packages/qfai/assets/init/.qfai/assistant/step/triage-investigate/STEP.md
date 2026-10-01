@@ -40,5 +40,5 @@ code behaves as it does, when it changed, or what an outside source says.
 
 ## Gate
 
-The reviewer confirms each fact names where it was read, nothing was changed
+The reviewer, or the stage worker where the work order names none, confirms each fact names where it was read, nothing was changed
 to learn it, and a defect found is reported rather than fixed.

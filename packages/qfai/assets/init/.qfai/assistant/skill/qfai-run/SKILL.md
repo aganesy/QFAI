@@ -120,7 +120,7 @@ Report one row per work order handed on.
 
 ### Reviewer Gate (MUST)
 
-This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers return PASS or
+This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers, where it names any, return PASS or
 REVISE on that stage's work, and `accept` refuses a result whose reviewer is not independent.
 
 - The Drift Protocol applies to the run: a stage that would change a story, a

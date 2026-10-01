@@ -414,6 +414,19 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0214-07
+  // QFAI:EX-0001-0214-10
+  it("lets the stage worker confirm each triage gate where the work order names no reviewer", async () => {
+    const gate = flat(sectionOf(await readShipped(RUN), "### Reviewer Gate (MUST)"));
+    expect(gate).toMatch(/a work order's reviewers, where it names any, return pass or revise/i);
+    for (const step of ["triage-answer", "triage-investigate", "triage-close"]) {
+      const text = flat(sectionOf(await readShipped(`step/${step}/STEP.md`), "## Gate"));
+      expect(text).toMatch(
+        /the reviewer, or the stage worker where the work order names none, confirms/i,
+      );
+    }
+  });
+
   // QFAI:AC-0001-0215-02
   // QFAI:EX-0001-0215-10
   it("ends a combined stage at a reported branch, with no later step and no closure", async () => {
