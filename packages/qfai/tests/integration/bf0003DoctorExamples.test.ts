@@ -181,6 +181,22 @@ describe("BF-0003 configuration discovery and loading", () => {
     expect(listedMode?.endsWith('x"')).toBe(true);
   });
 
+  it("keeps a listed issue within 500 characters as displayed when its key is all escapes", async () => {
+    // QFAI:AC-0003-0001-03
+    const root = await newTempDir("invalid-escapes");
+    // A YAML implicit key may run to 1024 characters, so 150 escapes of six fit.
+    const key = "\\u2028".repeat(150);
+    await put(root, "qfai.config.yaml", `reviewProfiles:\n  "${key}": 5\n`);
+    const load = check(await doctorJson(root), "config.load");
+    const message = load?.message ?? "";
+    const listed = message.slice(message.indexOf(": ", message.indexOf("issue(s)")) + 2);
+    const part = listed.split("; ").find((entry) => entry.startsWith("reviewProfiles."));
+    expect(part?.length).toBeLessThanOrEqual(500);
+    expect(part).toContain(" ... ");
+    expect(part?.endsWith(" must be an entry.")).toBe(true);
+    expect(/\\(?!u2028)/.test(part ?? "")).toBe(false);
+  });
+
   it("keeps the source excerpt out of the message for a config with CRLF line endings", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-crlf");

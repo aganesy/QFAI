@@ -265,9 +265,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const configHasError = issues.some((issue) => issue.severity === "error");
     // The text formatter prints only `message`, so the issues the loader
     // returned are listed there, one line, `; `-joined.
-    const listed = issues
-      .map((issue) => escapeForMessage(boundForMessage(withoutYamlExcerpt(issue.message))))
-      .join("; ");
+    const listed = issues.map((issue) => renderIssueForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
@@ -1010,20 +1008,36 @@ const MAX_LISTED_ISSUE_LENGTH = 500;
 
 const CUT_MARKER = " ... ";
 
+/** Takes whole tokens from the front of `tokens` while they fit in `budget` characters. */
+function takeWithin(tokens: ReadonlyArray<string>, budget: number): string[] {
+  const taken: string[] = [];
+  let used = 0;
+  for (const token of tokens) {
+    if (used + token.length > budget) {
+      break;
+    }
+    taken.push(token);
+    used += token.length;
+  }
+  return taken;
+}
+
 /**
- * Several loader messages quote the rejected value, so a very large value is cut
- * here. The middle goes, so the start of the message and the diagnosis at its end
- * both stay, and the result is exactly `MAX_LISTED_ISSUE_LENGTH` long.
+ * Renders one loader issue for the `config.load` message: without a YAML parse
+ * error's source excerpt, escaped, and at most `MAX_LISTED_ISSUE_LENGTH`
+ * characters as displayed. Several loader messages quote the rejected value, so a
+ * very large value is cut. The middle goes, so the start of the message and the
+ * diagnosis at its end both stay, and no escape sequence is split.
  */
-function boundForMessage(value: string): string {
-  const characters = Array.from(value);
-  if (characters.length <= MAX_LISTED_ISSUE_LENGTH) {
-    return value;
+function renderIssueForMessage(message: string): string {
+  const tokens = Array.from(withoutYamlExcerpt(message), escapeCharacter);
+  if (tokens.reduce((total, token) => total + token.length, 0) <= MAX_LISTED_ISSUE_LENGTH) {
+    return tokens.join("");
   }
   const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
-  const head = Math.ceil(kept / 2);
-  const tail = kept - head;
-  return `${characters.slice(0, head).join("")}${CUT_MARKER}${characters.slice(characters.length - tail).join("")}`;
+  const head = takeWithin(tokens, Math.ceil(kept / 2));
+  const tail = takeWithin(tokens.slice().reverse(), Math.floor(kept / 2)).reverse();
+  return `${head.join("")}${CUT_MARKER}${tail.join("")}`;
 }
 
 /**
@@ -1046,16 +1060,15 @@ function withoutYamlExcerpt(message: string): string {
  * greps rely on. `details` keeps the raw value; only what is rendered is
  * escaped.
  */
+function escapeCharacter(character: string): string {
+  const code = character.codePointAt(0);
+  return code !== undefined && isControlCodePoint(code)
+    ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
+    : character;
+}
+
 function escapeForMessage(value: string): string {
-  let escaped = "";
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    escaped +=
-      code !== undefined && isControlCodePoint(code)
-        ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
-        : character;
-  }
-  return escaped;
+  return Array.from(value, escapeCharacter).join("");
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
