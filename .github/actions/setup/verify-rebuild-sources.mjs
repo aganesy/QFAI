@@ -80,6 +80,17 @@ function allowedNames(listPath) {
  */
 function permittedNames(workspacePath) {
   const lines = readFileSync(workspacePath, "utf-8").split(/\r?\n/);
+  // The key is read only in its bare, unindented spelling. A quoted key, or one an indented
+  // root mapping carries, is the same key to the manager and an absent list to this scan, so
+  // it is refused rather than reported as no list at all.
+  const respelled = lines.find(
+    (line) => /^\s*["']?allowBuilds["']?\s*:/.test(line) && !/^allowBuilds\s*:/.test(line),
+  );
+  if (respelled !== undefined) {
+    throw new Error(
+      `allowBuilds in ${workspacePath} is spelled in a way this check cannot read: ${respelled.trim()}`,
+    );
+  }
   const names = [];
   let inBlock = false;
   for (const line of lines) {

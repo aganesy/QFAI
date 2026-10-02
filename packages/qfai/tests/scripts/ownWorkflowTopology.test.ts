@@ -2873,6 +2873,9 @@ describe("a permitted rebuild is verified against where the package comes from",
         ["allowBuilds:\n  esbuild: true\n  sharp: !!bool true\n", "a tagged boolean"],
         ["allowBuilds:\n  esbuild: true\n  sharp: yes\n", "another spelling of true"],
         ["allowBuilds: { esbuild: true }\n", "a flow mapping on the key's own line"],
+        ['"allowBuilds":\n  esbuild: true\n  sharp: true\n', "a double-quoted key"],
+        ["'allowBuilds':\n  esbuild: true\n  sharp: true\n", "a single-quoted key"],
+        [" allowBuilds:\n   esbuild: true\n   sharp: true\n", "a root mapping that is indented"],
       ] as Array<[string, string]>) {
         const unreadable = verify("esbuild\n", shape);
         expect.soft(unreadable.status, `${why} must be refused, not skipped`).toBe(1);
