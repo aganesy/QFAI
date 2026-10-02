@@ -8,6 +8,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule that classifies an action by how hard it is to undo** (#2232).
+  `action-reversibility.md` sorts an action into four classes before it runs:
+  local and reversible, destructive, hard to reverse, and visible to others.
+  Only the first proceeds on the agent's own judgement; the other three need
+  the user, or a standing instruction that already covers that action. The one
+  exception is an ordinary push, without force, to a branch the agent created
+  for the current task. A standing instruction is the user's request in the
+  current session, a skill the user invoked whose steps include the action, or
+  an instruction recorded in memory or settings that names the action and its
+  context in the user's own words. Under a mode that may not ask, such as
+  `--auto`, the action is not taken: it is recorded as an open question and the
+  rest of the work continues. The rule also states that an obstacle is not a
+  reason for a destructive shortcut. Until
+  now only release operations were bounded this way, by
+  `version-discipline.md`, which is unchanged. `qfai init` seeds the rule and
+  cites it from `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+
+- **A rule that text the repository did not author is data, not instruction**
+  (#2231). `qfai init` now writes `.agents/rules/untrusted-content.md` and cites
+  it from the agent entry points. It names the surfaces that carry such text —
+  tool results, fetched pages, files the project did not add, pull request and
+  issue bodies, pasted text — and says an instruction found there is followed
+  only where the user's own request asks for it. It also sets out how to mark
+  pasted text: an opening and closing tag carrying the same short random id,
+  with a system-prompt note saying what the tags mean.
+
+  The research protocol no longer applies an entry on the strength of an
+  external source alone: the `reason` of an `apply` states what the agent
+  verified against the repository, and an entry with nothing verified is
+  `defer`. The shipped code-review instructions treat the pull request
+  description, issue text and comments as data.
+
+  This repository's own review instructions say the same. They are also split
+  by topic into four files, so the TypeScript checks apply to `*.ts` files and
+  the compatibility checks to the package source only.
+
 - **The shared skill baseline says how an unattended run may end its turn**
   (#2233). Under `--auto`, a message with no tool call in it ends the turn and
   stops the run, whether or not the work is done. While work is still owed, a
@@ -57,6 +93,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The minimal-implementation rule names four additions a change leaves
+  out** (#2234). A change can clear every rung of the ladder and still add work
+  nobody asked for. A new section names the four shapes that takes: wider
+  scope, comments on untouched code, handling for a case that cannot happen,
+  and an abstraction for a one-time need. A function's length alone is not a
+  reason to extract a helper. The section keeps what § 2 of the rule already
+  requires, such as traceability annotations. The section after it moves from
+  § 4 to § 5.
 - **The capture URL and response-status tests now fail on the mistakes they
   guard against** (#2228). The `composeCaptureUrl` cases use inputs where a URL
   join and a string concatenation give different results, so an implementation
