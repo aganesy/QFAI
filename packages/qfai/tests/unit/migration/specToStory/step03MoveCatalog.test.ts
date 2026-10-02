@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isDeepStrictEqual } from "node:util";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -9,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../../../src/shared/assets.js";
-import { defaultConfig } from "../../../../src/core/config.js";
+import { defaultConfig, routingEntryName } from "../../../../src/core/config.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -19,6 +20,7 @@ import {
   validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 import { step03 } from "../../../../src/migration/specToStory/step03MoveCatalog.js";
+import { legacyRoutingEntries } from "../../../helpers/legacyRouting.js";
 import { defaultRoutingEntries } from "../../../helpers/shippedAssistant.js";
 
 const roots: string[] = [];
@@ -83,6 +85,57 @@ function schemaCheck(schema: string, document: string): string {
 /** What the shipped schema says about one written policy document. */
 function conformance(specsDir: string, name: string): string {
   return schemaCheck(`01_policy/${name}`, path.join(specsDir, "01_policy", `${name}.md`));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** `qfai.config.yaml` of a migrated project, as data. */
+async function readConfig(root: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8"));
+  return isRecord(parsed) ? parsed : {};
+}
+
+/** The text under `## For a person`, up to the next level-two heading; empty when there is none. */
+function forAPerson(output: string): string {
+  const start = output.indexOf("## For a person");
+  if (start === -1) return "";
+  const rest = output.slice(start + "## For a person".length);
+  const next = rest.search(/\n## /);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+const defaultReviewProfilesFile = path.resolve(
+  getInitAssetsDir(),
+  "..",
+  "defaults",
+  "review-profiles.yml",
+);
+
+/** Writes the agent manifests of a project: its routing entries and its review profiles. */
+async function putManifests(
+  context: MigrationContext,
+  routing: unknown[],
+  reviewProfilesText?: string,
+): Promise<void> {
+  await put(context.root, ".qfai/assistant/manifest/agent-routing.yml", stringifyYaml({ routing }));
+  await put(
+    context.root,
+    ".qfai/assistant/manifest/review-profiles.yml",
+    reviewProfilesText ?? (await readFile(defaultReviewProfilesFile, "utf8")),
+  );
+}
+
+/** The list item of `## For a person` that names `name`; empty when no item does. */
+function itemNaming(person: string, name: string): string {
+  return person.split(/\n(?=\s*[-*] )/).find((item) => item.includes(name)) ?? "";
+}
+
+function entryNamed(entries: Record<string, unknown>[], skill: string): Record<string, unknown> {
+  const found = entries.find((entry) => entry.skill === skill);
+  if (found === undefined) throw new Error(`no routing entry for ${skill}`);
+  return found;
 }
 
 async function run(context: MigrationContext): Promise<{ code: number; output: string }> {
@@ -989,29 +1042,136 @@ describe("migration catalog move", () => {
   it("writes only manifest entries that differ from built-in defaults", async () => {
     // QFAI:EX-0004-0006-05
     const context = await fixture();
-    const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
     const defaults = { routing: await defaultRoutingEntries() };
-    expect(defaults.routing.length).toBeGreaterThanOrEqual(2);
     const unchanged = defaults.routing[0];
-    const changed = { ...defaults.routing[1], review_profile: "migration-test" };
-    await put(
-      context.root,
-      ".qfai/assistant/manifest/agent-routing.yml",
-      stringifyYaml({ routing: [unchanged, changed] }),
-    );
-    await put(
-      context.root,
-      ".qfai/assistant/manifest/review-profiles.yml",
-      await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf8"),
-    );
-    await run(context);
-    const config = parseYaml(
-      await readFile(path.join(context.root, "qfai.config.yaml"), "utf8"),
-    ) as {
-      routing?: Array<Record<string, unknown>>;
-      reviewProfiles?: Record<string, unknown>;
-    };
+    const base = defaults.routing[1];
+    if (unchanged === undefined || base === undefined)
+      throw new Error("fewer than two default routing entries");
+    const changed = { ...base, review_profile: "migration-test" };
+    const changedName = routingEntryName(base);
+    const unchangedName = routingEntryName(unchanged);
+    if (changedName === undefined || unchangedName === undefined)
+      throw new Error("a default routing entry has no name");
+    // Premise: the two names are distinct and neither holds the other, and no 1.x manifest entry
+    // carries the changed entry's name. A change to the installed defaults that breaks this needs
+    // other entries chosen here.
+    expect(changedName.includes(unchangedName) || unchangedName.includes(changedName)).toBe(false);
+    const legacy = await legacyRoutingEntries();
+    expect(legacy.some((entry) => routingEntryName(entry) === changedName)).toBe(false);
+    await putManifests(context, [unchanged, changed]);
+    const result = await run(context);
+    const config = await readConfig(context.root);
     expect(config.routing).toEqual([changed]);
     expect(config.reviewProfiles).toBeUndefined();
+    const person = forAPerson(result.output);
+    const item = itemNaming(person, changedName);
+    expect(item).toMatch(/1\.x/);
+    expect(item).toMatch(/hides/i);
+    expect(item).toMatch(/roles/i);
+    expect(person).not.toContain(unchangedName);
+    expect(result.code).toBe(3);
+  });
+
+  it("does not carry an entry equal to the 1.x entry of the same skill, and lists one changed from both", async () => {
+    // QFAI:EX-0004-0006-34
+    const context = await fixture();
+    const legacy = await legacyRoutingEntries();
+    const defaults = await defaultRoutingEntries();
+    const unmodified = entryNamed(legacy, "qfai-sdd");
+    const shipped = entryNamed(legacy, "qfai-verify");
+    const changed = { ...shipped, review_profile: "migration-test" };
+    // Premise: neither the unmodified 1.x entry nor the changed one equals an installed default,
+    // and the changed one differs from the 1.x entry of its skill. A change to the installed
+    // defaults or to the 1.x set that breaks this needs other entries chosen here.
+    expect(defaults.some((entry) => isDeepStrictEqual(entry, unmodified))).toBe(false);
+    expect(defaults.some((entry) => isDeepStrictEqual(entry, changed))).toBe(false);
+    expect(isDeepStrictEqual(shipped, changed)).toBe(false);
+    await putManifests(context, [unmodified, changed]);
+    const result = await run(context);
+    const config = await readConfig(context.root);
+    const written: unknown[] = Array.isArray(config.routing) ? config.routing : [];
+    // The changed entry is written whatever is done with entries equal to a 1.x entry.
+    expect(written).toContainEqual(changed);
+    expect(written).toEqual([changed]);
+    const person = forAPerson(result.output);
+    const item = itemNaming(person, "qfai-verify");
+    expect(item).toMatch(/1\.x/);
+    expect(item).toMatch(/hides/i);
+    expect(item).toMatch(/roles/i);
+    expect(person).not.toContain("qfai-sdd");
+    expect(result.code).toBe(3);
+  });
+
+  it("carries an entry whose content equals a 1.x entry but whose name differs", async () => {
+    // QFAI:EX-0004-0006-34
+    const context = await fixture();
+    const legacy = await legacyRoutingEntries();
+    const defaults = await defaultRoutingEntries();
+    const renamed = { ...entryNamed(legacy, "qfai-sdd"), skill: "house-sdd" };
+    // Premise: the new name belongs to no 1.x entry and no installed default.
+    expect(legacy.some((entry) => routingEntryName(entry) === "house-sdd")).toBe(false);
+    expect(defaults.some((entry) => routingEntryName(entry) === "house-sdd")).toBe(false);
+    await putManifests(context, [renamed]);
+    const result = await run(context);
+    const config = await readConfig(context.root);
+    const written: unknown[] = Array.isArray(config.routing) ? config.routing : [];
+    expect(written).toEqual([renamed]);
+    const item = itemNaming(forAPerson(result.output), "house-sdd");
+    expect(item).toMatch(/1\.x/);
+    expect(item).toMatch(/hides/i);
+    expect(item).toMatch(/roles/i);
+    // No installed entry has this name, so deleting it would not switch to an installed one.
+    expect(item).not.toMatch(/to use the installed one/);
+    expect(item).toMatch(/no installed entry has this name/);
+    expect(result.code).toBe(3);
+  });
+
+  it("writes no routing override for a 1.x routing manifest nobody customised", async () => {
+    // QFAI:EX-0004-0006-34
+    const context = await fixture();
+    const legacy = await legacyRoutingEntries();
+    const defaults = await defaultRoutingEntries();
+    expect(legacy).toHaveLength(7);
+    // Premise: only the qfai-configure entry equals an installed default. A change to the
+    // installed defaults or to the 1.x set that breaks this needs the expectation revisited.
+    const equalToDefault = legacy.filter((entry) =>
+      defaults.some((candidate) => isDeepStrictEqual(candidate, entry)),
+    );
+    expect(equalToDefault.map((entry) => entry.skill)).toEqual(["qfai-configure"]);
+    await putManifests(context, legacy);
+    const result = await run(context);
+    const config = await readConfig(context.root);
+    expect(config.routing).toBeUndefined();
+    expect(config.reviewProfiles).toBeUndefined();
+    const person = forAPerson(result.output);
+    for (const entry of legacy) expect(person).not.toContain(String(entry.skill));
+    expect(result.code).toBe(0);
+  });
+
+  it("writes a changed review profile and leaves it out of the routing warning", async () => {
+    // QFAI:EX-0004-0006-05
+    const context = await fixture();
+    const defaultProfiles: unknown = parseYaml(await readFile(defaultReviewProfilesFile, "utf8"));
+    const profiles =
+      isRecord(defaultProfiles) && isRecord(defaultProfiles.profiles)
+        ? defaultProfiles.profiles
+        : {};
+    const [profileName] = Object.keys(profiles);
+    if (profileName === undefined) throw new Error("the default review profiles are empty");
+    const original = profiles[profileName];
+    const edited = { ...(isRecord(original) ? original : {}), migrationTest: true };
+    await putManifests(
+      context,
+      [(await defaultRoutingEntries())[0]],
+      stringifyYaml({ profiles: { ...profiles, [profileName]: edited } }),
+    );
+    const result = await run(context);
+    const config = await readConfig(context.root);
+    expect(config.reviewProfiles).toEqual({ [profileName]: edited });
+    const routing: unknown = config.routing ?? [];
+    expect(routing).toEqual([]);
+    const person = forAPerson(result.output);
+    expect(person).not.toMatch(/hides/i);
+    expect(person).not.toMatch(/roles/i);
   });
 });

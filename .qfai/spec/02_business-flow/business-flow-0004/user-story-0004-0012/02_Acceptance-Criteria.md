@@ -9,7 +9,7 @@ Feature: Migrate a project with the skill
     Given the installed /qfai-migration-v1-to-v2 skill
     When an AI follows SKILL.md on a project on the spec-pack layout
     Then it writes the plan, runs each step with --dry-run and then without it, reads every report from the migration evidence's report directory, and runs qfai validate after step 10
-    And on a project with nothing to migrate it reports that there is nothing to migrate
+    And on a project with nothing to migrate it reports that there is nothing to migrate, names the specs directory the steps looked in and asks the person to check that the specs live there
     And on a project an earlier 2.x release migrated it runs the steps again and reports that only what that release lacked changed
 
   # AC-0004-0012-02

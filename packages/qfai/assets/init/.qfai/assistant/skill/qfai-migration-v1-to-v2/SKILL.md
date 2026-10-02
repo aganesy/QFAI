@@ -41,6 +41,23 @@ itself:
   files step 11 lists changed. The guide says how to reach this copy of the
   skill from an earlier release's.
 
+Steps 1 to 10 each print one line before their report, in a dry run and a
+real run, and the report file keeps it. The line says what the step found:
+
+| First line                                                      | What it means                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` | The tree shows no trace of the old layout, and steps 1, 9 and 10 have no work of their own. |
+| `1.x layout found, migrating`                                   | The tree shows a trace of the old layout, or step 1, 9 or 10 has work of its own.           |
+| `already migrated (id-map.json present)`                        | An earlier run migrated the project and no step has anything left to do.                    |
+
+`<specsDir>` is the directory the project's configuration names for its specs
+and `<value>` is the configured value, each written from the project root. Step
+10 also ends with a `Summary:` line for the first two, and with the line saying
+the migration is already done for the third. Steps 11 and 12 print neither
+line, because they compare the project with the installed package and not with
+the old layout. A step never decides that the project is in the wrong place: it
+names the directory and leaves the check to the person.
+
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.
 Use `rule/shared-skill-delegation-baseline.md` to route the declared roles and
@@ -50,11 +67,16 @@ keep authors separate from reviewers.
 
 1. Inspect the spec packs, contracts, assistant files and configured paths. If
    the project already has the story tree and no migration ID map, run steps 1
-   to 10. When steps 1 to 9 list no operation, report that there is nothing to
-   migrate, and continue at item 6. If it has the story tree and the ID map,
-   an earlier run migrated it, whole or in part: run steps 1 to 10 all the
-   same, each with `--dry-run` first. When each says the migration is already
-   done, continue at item 6; otherwise they finish that run, and items 2 to 5
+   to 10. When every one of them prints
+   `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` first, then
+   `none` under every section but step 10's `## Git index`, and exits 0, report
+   that there is nothing to migrate in the directory that line names and ask
+   the person to check that the specs live there; step 10 says under
+   `## Git index` why it left the index alone. Then continue at item 6. A step that prints another first line
+   has found work: read its report as in item 2. If it has the story tree and
+   the ID map, an earlier run migrated it, whole or in part: run steps 1 to 10
+   all the same, each with `--dry-run` first. When each says the migration is
+   already done, continue at item 6; otherwise they finish that run, and items 2 to 5
    apply to their reports. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
@@ -109,7 +131,9 @@ keep authors separate from reviewers.
 7. Resolve every item step 12 lists under `## For a person`. Rerun step 11 for
    an item it installs, and step 10 for an evidence re-include line or an
    `evidence-tracked` item. A `qfai.config.yaml` routing override is the project's,
-   so ask its owner before changing it. Rerun step 12 until it exits 0.
+   so ask its owner before changing it. Resolve each `old-path` item with the
+   person who wrote the file, by rewording the line so that it no longer names
+   the old path, using the 2.x path that the guide's table gives for it. Rerun step 12 until it exits 0.
 8. Then run `npx qfai validate` through the launcher proven by preflight.
    Resolve layout and chain errors. Use its BF, AC and EX test-obligation
    findings to finish test coverage or record a permitted decision exception.
@@ -136,7 +160,7 @@ keep authors separate from reviewers.
 | 9    | `09-repoint-links.mjs`       | Repoint host integration links only.                           |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git.                             |
 | 11   | `11-install-entry.mjs`       | Install skills, links, ignores and hooks.                      |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that a free-text run can start.        |
+| 12   | `12-check-entry.mjs`         | Check, without writing, the entry and the files' 1.x paths.    |
 
 Each script is invoked as
 `node <skill-dir>/scripts/<script>.mjs [--dry-run]`, with `<skill-dir>` set to
@@ -144,13 +168,15 @@ this installed skill directory. `scripts/_step.mjs` is the shared package
 loader used by all twelve entry points and must be shipped with them. Step 9
 only repairs links. Do not run `npx qfai init --force` during migration.
 
-The scripts print `## Operations` even when empty. Steps 2 through 12 also print
-`## For a person`; step 5 prints `## Cases to examples`; step 8 prints
-`## Annotations kept`; step 10 prints `## Git index`; step 11 prints
-`## Reminder hooks`. An empty section says `none`. Rerunning a completed step
-changes no file but its own report file, and an interrupted step can be run again. On a project
-whose migration finished, steps 1 to 10 add one line saying it is already done.
-The complete write boundary is in `references/migration-guide.md#write-boundary`.
+Every script prints `## Operations` even when empty, after the first line of
+steps 1 to 10. Steps 2 through 12 also print `## For a person`; step 5 prints
+`## Cases to examples`; step 8 prints `## Annotations kept`; step 10 prints
+`## Git index`; step 11 prints `## Reminder hooks`; step 12 prints
+`## Files scanned`. An empty section says `none`. Rerunning a completed step
+changes no file but its own report file, and an interrupted step can be run
+again. On a project whose migration finished, steps 1 to 10 add one last line
+saying it is already done. The complete write boundary is in
+`references/migration-guide.md#write-boundary`.
 
 ### Reviewer Gate
 
