@@ -1,21 +1,26 @@
 /**
  * Reviewer-Gate finding `R-AUTOPILOT-POLICY-MISSING` (severity error).
  *
- * Every qfai-* SKILL.md MUST carry a `## Default Autopilot Policy`
- * section listing three named buckets per the spec governance contract:
+ * Every qfai-* skill works under the prototype policy that
+ * `rule/shared-skill-operating-baseline.md` states in its
+ * `## Default Autopilot Policy (Shared)` section, with three named buckets:
  *   - auto-decide (output formatting / ID / sequence numbering /
  *     append-vs-create on subject overlap / equivalent-option pick)
  *   - ask-user (the decisions the skill stops and prompts on)
  *   - hard-required (the inputs the skill cannot proceed without)
  *
- * A SKILL.md MAY narrow ANY of the three buckets — dropping an entry
- * the skill cannot reach — but MUST NOT widen one. Only auto-decide
- * widening is machine-detectable (the canonical entry set is closed);
- * it surfaces a warning-level `R-AUTOPILOT-POLICY-WIDENED` flag. The
- * other two buckets carry per-skill entries, so their contract is
- * enforced by review.
+ * The finding is raised against the baseline when that section or one of
+ * its buckets is gone, and against a skill whose own
+ * `## Default Autopilot Policy` section no longer names a hard-required input
+ * declared for that skill.
  *
- * Scoping: only `qfai-*` skills under `.qfai/assistant/skills/` are
+ * A skill's own section lists only what it adds to the prototype, and MUST
+ * NOT widen a bucket. Only auto-decide widening is machine-detectable (the
+ * canonical entry set is closed); it surfaces a warning-level
+ * `R-AUTOPILOT-POLICY-WIDENED` flag. Hard-required entries are checked
+ * against what each skill declares.
+ *
+ * Scoping: only `qfai-*` skills under `.qfai/assistant/skill/` are
  * checked. User-authored non-qfai-* skills are intentionally exempt
  * (mirrors `validateSkillDocReferences` scoping).
  */
@@ -28,9 +33,13 @@ import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const SKILL_DIR_REL = path.join(".qfai", "assistant", "skills");
+const SKILL_DIR_REL = path.join(".qfai", "assistant", "skill");
 const QFAI_SKILL_ID_RE = /^qfai-/;
 const SECTION_HEADING_RE = /^##\s+Default Autopilot Policy\s*$/im;
+
+/** The shared baseline that states the prototype policy, beside the skills. */
+const BASELINE_REL = path.join("rule", "shared-skill-operating-baseline.md");
+const BASELINE_HEADING_RE = /^##\s+Default Autopilot Policy \(Shared\)\s*$/m;
 
 /**
  * Canonical token set for the auto-decide bucket. A SKILL.md whose
@@ -53,16 +62,14 @@ export const AUTO_DECIDE_ALLOWED_TOKENS: readonly string[] = [
 /**
  * The hard-required entries every skill may carry.
  *
- * `brand intent` reaches root `DESIGN.md` front-matter through qfai-sdd Phase 0;
- * `primarySpecId` selects the spec a skill operates on. Both have a consumer in
- * the shipped tree.
+ * `brand intent` reaches root `DESIGN.md` front-matter through qfai-sdd Phase 0.
  *
  * Stored already normalized (see {@link normalizeHardRequiredEntry}).
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
-export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", "primaryspecid"];
+export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent"];
 
 /**
  * Inputs a single skill reads, keyed by skill id, declared here so that adding
@@ -82,17 +89,22 @@ export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", 
  * public surface.
  */
 export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly string[]>> = {
-  "qfai-configure": ["testfileglobs", "tooling choice"],
+  "qfai-configure": ["business-flow id", "testfileglobs", "tooling choice"],
+  "qfai-discussion": ["requirement source", "affected bf"],
+  "qfai-sdd": ["requirement source", "affected flow"],
+  "qfai-verify": ["ui-nnnn", "story source", "affected bf-nnnn"],
   // A grilling session interrogates one subject, and that subject is the root
   // of the decision tree the whole method reads. There is no default for what a
   // design conversation is about: picking one would be the skill answering the
   // first question it exists to ask.
   "qfai-grilling": ["grilling subject"],
   "qfai-grill": ["grilling subject"],
-  // The entry skill starts from the operator's own words, and a maintenance
-  // edit from the text it changes. Neither has a default.
+  // The entry skill starts from the operator's own words, a maintenance edit
+  // from the text it changes, and triage from the request it closes. None has
+  // a default.
   "qfai-run": ["change request"],
   "qfai-maintain": ["edit target"],
+  "qfai-triage": ["triage request"],
 };
 
 /**
@@ -108,7 +120,7 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
-export const RETIRED_HARD_REQUIRED_ENTRIES: readonly string[] = ["companyname"];
+export const RETIRED_HARD_REQUIRED_ENTRIES: readonly string[] = ["companyname", "primaryspecid"];
 
 const BUCKET_HEADERS = {
   autoDecide: /^\s*[-*]\s*auto-decide\s*:/im,
@@ -147,7 +159,7 @@ export function decorationOnly(bullet: string): string {
  * against the allowed entries reads the name and not the decoration around it.
  *
  * Decoration is backticks and emphasis; a qualifier is a trailing parenthetical
- * or a trailing dash clause, and both attach to ONE entry — `` `primarySpecId`
+ * or a trailing dash clause, and both attach to ONE entry — `` `business-flow ID`
  * (when absent from inputs) ``. Parentheses go first: a qualifier may hold a
  * dash of its own, and dropping from that dash leaves an unclosed parenthesis
  * behind.
@@ -272,13 +284,12 @@ export function collectHardRequiredEntries(content: string): string[] {
  * declares an input nothing has approved and reads as clean. Each piece
  * answering for itself is what closes that.
  *
- * A dash joins too, because {@link normalizeHardRequiredEntry} keeps a one-word
- * dash clause: that clause is a name rather than a condition, and left inside
- * its neighbour it would be carried in by an allowed-name search that only asks
- * whether SOME permitted name is present.
+ * A spaced dash joins too, because {@link normalizeHardRequiredEntry} keeps a
+ * one-word dash clause. A dash inside an identifier such as `UI-NNNN` is
+ * part of that name.
  *
  * Parentheses are skipped because a qualifier is prose and may hold any of
- * these characters: `primarySpecId (absent from inputs, and no default)` is one
+ * these characters: `business-flow ID (absent from inputs, and no default)` is one
  * entry with one qualifier rather than two entries.
  *
  * @internal Exported for direct unit-testing — not part of the package's
@@ -293,13 +304,16 @@ export function splitJoinedEntries(normalized: string): string[] {
   const pieces: string[] = [];
   let depth = 0;
   let current = "";
-  for (const char of normalized) {
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i];
+    if (char === undefined) continue;
     if (char === "(") {
       depth += 1;
     } else if (char === ")") {
       depth = Math.max(0, depth - 1);
     }
-    if (depth === 0 && (char === "/" || char === "+" || char === "," || isDash(char))) {
+    const spacedDash = isDash(char) && normalized[i - 1] === " " && normalized[i + 1] === " ";
+    if (depth === 0 && (char === "/" || char === "+" || char === "," || spacedDash)) {
       pieces.push(current);
       current = "";
       continue;
@@ -311,15 +325,44 @@ export function splitJoinedEntries(normalized: string): string[] {
 }
 
 /**
+ * Whether the normalized text names any of `names` as a whole word.
+ *
+ * The names are input identifiers, matched as literals. Interpolating one
+ * straight into a pattern would read a `+` or a `(` in a future entry as
+ * syntax — a silently wrong match, or a thrown SyntaxError.
+ */
+function named(normalized: string, names: readonly string[]): boolean {
+  const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return names.some((name) =>
+    new RegExp(`(^|[^a-z0-9-])${escape(name)}([^a-z0-9-]|$)`).test(normalized),
+  );
+}
+
+/**
+ * The hard-required inputs declared for `skillId` that no entry names.
+ *
+ * The declaration is what the skill consumes, so an input missing from its
+ * bucket is an obligation the policy no longer states rather than a
+ * narrowing.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function missingDeclaredEntries(entries: readonly string[], skillId: string): string[] {
+  const declared = HARD_REQUIRED_SKILL_ENTRIES[skillId] ?? [];
+  return declared.filter((name) => !entries.some((entry) => named(decorationOnly(entry), [name])));
+}
+
+/**
  * Judge one hard-required bucket against what its skill may carry.
  *
  * `retired` holds bullets naming an entry that has been withdrawn; `unknown`
  * holds bullets naming anything else outside the allowed set. Both are returned
  * as written, for the operator to find.
  *
- * A bucket carrying **fewer** entries than the allowed set is not reported: a
- * skill may narrow this bucket to the inputs it actually reads. Carrying more
- * is what this refuses.
+ * A bucket carrying **fewer** entries than the allowed set is not reported
+ * here; {@link missingDeclaredEntries} answers for a declared input the bucket
+ * dropped. Carrying more is what this refuses.
  *
  * Matching is by whole word inside the bullet rather than by equality, so a
  * bullet naming two entries answers for both: `- brand intent / companyName`
@@ -344,13 +387,6 @@ export function classifyHardRequiredEntries(
   retired: string[];
   unknown: string[];
 } {
-  // The names are input identifiers, matched as literals. Interpolating one
-  // straight into a pattern would read a `+` or a `(` in a future entry as
-  // syntax — a silently wrong match, or a thrown SyntaxError.
-  const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const named = (normalized: string, names: readonly string[]): boolean =>
-    names.some((name) => new RegExp(`(^|[^a-z0-9])${escape(name)}([^a-z0-9]|$)`).test(normalized));
-
   const allowed = [
     ...HARD_REQUIRED_COMMON_ENTRIES,
     ...(skillId === undefined ? [] : (HARD_REQUIRED_SKILL_ENTRIES[skillId] ?? [])),
@@ -407,14 +443,18 @@ export type AutopilotPolicyParseResult = {
   hardRequiredRetired: string[];
   /**
    * Hard-required bullets naming an entry that is neither common to every
-   * skill nor declared for this one. Narrowing is not reported: a bucket may
-   * name fewer entries than the set allows.
+   * skill nor declared for this one.
    */
   hardRequiredUnknown: string[];
+  /**
+   * The inputs declared for this skill that its hard-required bucket does not
+   * name. Every declared input when the skill has no section of its own.
+   */
+  hardRequiredMissing: string[];
 };
 
 /**
- * Pure-function parser. Extracts the `## Default Autopilot Policy`
+ * Pure-function parser. Extracts a skill's own `## Default Autopilot Policy`
  * block (until the next `## ` heading or EOF), then scans the block for
  * the three bucket headers. The auto-decide widening check enumerates
  * the bullets nested under the `auto-decide:` line and flags any
@@ -435,6 +475,7 @@ export function parseAutopilotPolicy(
       widenedTokens: [],
       hardRequiredRetired: [],
       hardRequiredUnknown: [],
+      hardRequiredMissing: skillId === undefined ? [] : missingDeclaredEntries([], skillId),
     };
   }
   const startIdx = headingMatch.index + headingMatch[0].length;
@@ -450,9 +491,6 @@ export function parseAutopilotPolicy(
   const hardRequired = BUCKET_HEADERS.hardRequired.test(block);
 
   const widenedTokens = autoDecide ? findWidenedAutoDecideTokens(block) : [];
-  // Only meaningful once the bucket header exists; without it the emitter
-  // already reports the missing bucket and reporting every pinned entry as
-  // "missing" on top of that would be the same defect twice.
   const hardRequiredEntries = hardRequired ? collectHardRequiredEntries(block) : [];
   const { retired, unknown } = classifyHardRequiredEntries(hardRequiredEntries, skillId);
 
@@ -462,6 +500,8 @@ export function parseAutopilotPolicy(
     widenedTokens,
     hardRequiredRetired: hardRequired ? retired : [],
     hardRequiredUnknown: hardRequired ? unknown : [],
+    hardRequiredMissing:
+      skillId === undefined ? [] : missingDeclaredEntries(hardRequiredEntries, skillId),
   };
 }
 
@@ -501,10 +541,174 @@ function findWidenedAutoDecideTokens(block: string): string[] {
 }
 
 /**
- * Scan every `qfai-*` SKILL.md under the skills root and emit
- * `R-AUTOPILOT-POLICY-MISSING` (error) when the section is absent, or
- * `R-AUTOPILOT-POLICY-WIDENED` (warning) when the auto-decide bucket
- * contains entries outside the canonical allowed set.
+ * The buckets the baseline's shared section lacks, or `null` when the section
+ * itself is gone. A bucket is a row of the prototype table or a bucket bullet.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function missingBaselineBuckets(content: string): string[] | null {
+  const heading = BASELINE_HEADING_RE.exec(content);
+  if (heading === null) return null;
+  const rest = content.slice(heading.index + heading[0].length);
+  const next = /^##\s+/m.exec(rest);
+  const block = next ? rest.slice(0, next.index) : rest;
+  return ["auto-decide", "ask-user", "hard-required"].filter(
+    (bucket) =>
+      !new RegExp(`^\\|\\s*\`?${bucket}\`?\\s*\\|`, "m").test(block) &&
+      !new RegExp(`^\\s*[-*]\\s*${bucket}\\s*:`, "m").test(block),
+  );
+}
+
+type SkillDocument = { skillId: string; skillDoc: string; body: string };
+
+/** Every `qfai-*` skill directory's `SKILL.md`, skipping a directory without one. */
+async function readQfaiSkills(skillsDir: string): Promise<SkillDocument[]> {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(skillsDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const skills: SkillDocument[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !QFAI_SKILL_ID_RE.test(entry.name)) continue;
+    const skillDoc = path.join(skillsDir, entry.name, "SKILL.md");
+    try {
+      skills.push({ skillId: entry.name, skillDoc, body: await readFile(skillDoc, "utf-8") });
+    } catch (err: unknown) {
+      if (isEnoent(err)) continue;
+      throw err;
+    }
+  }
+  return skills;
+}
+
+/** The finding for a baseline that no longer states the prototype policy. */
+async function baselineIssues(root: string, baselinePath: string): Promise<Issue[]> {
+  let content: string | null;
+  try {
+    content = await readFile(baselinePath, "utf-8");
+  } catch (err: unknown) {
+    if (!isEnoent(err)) throw err;
+    content = null;
+  }
+  const missing = content === null ? null : missingBaselineBuckets(content);
+  if (missing !== null && missing.length === 0) return [];
+  const relPath = path.relative(root, baselinePath).replace(/\\/g, "/");
+  const message =
+    missing === null
+      ? `R-AUTOPILOT-POLICY-MISSING: ${relPath} does not carry the ` +
+        `"## Default Autopilot Policy (Shared)" section that every qfai-* skill ` +
+        `works under. Restore it with its three named buckets ` +
+        `(auto-decide / ask-user / hard-required); \`qfai init --force\` ` +
+        `regenerates the shipped wording. ` +
+        `Justification: file=${relPath}, missing=## Default Autopilot Policy (Shared).`
+      : `R-AUTOPILOT-POLICY-MISSING: ${relPath} "## Default Autopilot Policy (Shared)" ` +
+        `section is missing required bucket(s): [${missing.join(", ")}]. ` +
+        `Every qfai-* skill works under all three named buckets ` +
+        `(auto-decide / ask-user / hard-required). ` +
+        `Justification: file=${relPath}, missingBuckets=[${missing.join(", ")}].`;
+  return [
+    issue(
+      "R-AUTOPILOT-POLICY-MISSING",
+      message,
+      "error",
+      relPath,
+      "reviewerGate.autopilotPolicyMissing",
+    ),
+  ];
+}
+
+/** The findings for one skill's own policy section, or for its absence. */
+function skillPolicyIssues(
+  relPath: string,
+  skillId: string,
+  result: AutopilotPolicyParseResult,
+): Issue[] {
+  const issues: Issue[] = [];
+  if (result.hardRequiredMissing.length > 0) {
+    const message =
+      `R-AUTOPILOT-POLICY-MISSING: ${relPath} does not name the hard-required ` +
+      `input(s) declared for ${skillId} ([${result.hardRequiredMissing.join(" | ")}]). ` +
+      `The shared baseline states every other entry; an input only this skill ` +
+      `consumes is listed under hard-required in its own ` +
+      `"## Default Autopilot Policy" section. ` +
+      `Justification: file=${relPath}, missingEntries=[${result.hardRequiredMissing.join(", ")}].`;
+    issues.push(
+      issue(
+        "R-AUTOPILOT-POLICY-MISSING",
+        message,
+        "error",
+        relPath,
+        "reviewerGate.autopilotPolicyMissing",
+      ),
+    );
+  }
+  if (result.widenedTokens.length > 0) {
+    const message =
+      `R-AUTOPILOT-POLICY-WIDENED: ${relPath} auto-decide bucket lists ` +
+      `entries outside the canonical allowed set ` +
+      `([${result.widenedTokens.join(" | ")}]). Narrowing is permitted; ` +
+      `widening MUST go through ask-user. ` +
+      `Justification: file=${relPath}, widened=[${result.widenedTokens.join(", ")}].`;
+    issues.push(
+      issue(
+        "R-AUTOPILOT-POLICY-WIDENED",
+        message,
+        "warning",
+        relPath,
+        "reviewerGate.autopilotPolicyWidened",
+      ),
+    );
+  }
+  // The bucket's CONTENT, not just its header. Checking only the header let
+  // a project whose installed SKILL.md still lists a retired entry pass
+  // `qfai validate` indefinitely: installed skills are refreshed only by an
+  // explicit `qfai init --force`, so nothing else would ever surface it.
+  if (result.hardRequiredRetired.length > 0 || result.hardRequiredUnknown.length > 0) {
+    const parts: string[] = [];
+    if (result.hardRequiredRetired.length > 0) {
+      parts.push(`a retired entry ([${result.hardRequiredRetired.join(" | ")}])`);
+    }
+    if (result.hardRequiredUnknown.length > 0) {
+      parts.push(
+        `an entry this skill does not declare ([${result.hardRequiredUnknown.join(" | ")}])`,
+      );
+    }
+    const message =
+      `QFAI-AUTOPILOT-001: ${relPath} hard-required bucket names ${parts.join(" and ")}. ` +
+      `Every entry costs a guaranteed prompt, so an input nothing reads buys nothing. ` +
+      `A skill carries brand intent and the inputs declared for it, and nothing else: ` +
+      `drop the entry, or declare it for this skill if the skill really consumes it — ` +
+      `\`qfai init --force\` regenerates the shipped wording. ` +
+      `Justification: file=${relPath}, retired=[${result.hardRequiredRetired.join(", ")}], ` +
+      `unknown=[${result.hardRequiredUnknown.join(", ")}].`;
+    issues.push(
+      issue(
+        "QFAI-AUTOPILOT-001",
+        message,
+        "error",
+        relPath,
+        "reviewerGate.autopilotPolicyHardRequiredDrift",
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * Check the shared baseline once, then every `qfai-*` SKILL.md under the
+ * skills root against what it adds to that baseline. Emits
+ * `R-AUTOPILOT-POLICY-MISSING` (error) when the baseline section or one of its
+ * buckets is gone, or when a skill drops a hard-required input declared for
+ * it; `R-AUTOPILOT-POLICY-WIDENED` (warning) when a skill's auto-decide bucket
+ * contains entries outside the canonical allowed set; and `QFAI-AUTOPILOT-001`
+ * (error) for a hard-required entry the skill may not carry.
+ *
+ * A skill with no section of its own and no declared input works under the
+ * baseline alone and raises nothing.
  *
  * Code-registry note: `R-AUTOPILOT-POLICY-MISSING` is part of the
  * closed mandatory-justification catalog
@@ -513,21 +717,20 @@ function findWidenedAutoDecideTokens(block: string): string[] {
  * `R-AUTOPILOT-POLICY-WIDENED` is an AUXILIARY warning-class code that
  * lives OUTSIDE the mandatory-justification catalog: it is semantically
  * distinct from MISSING (different remediation: narrow the auto-decide
- * bucket back to the canonical set vs add the section), still useful
+ * bucket back to the canonical set vs restore the policy), still useful
  * as a signal, but its severity (`warning`) and advisory contract are
- * not the same as the 8-code error-class catalog. It is intentionally
+ * not the same as the 7-code error-class catalog. It is intentionally
  * NOT added to `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`.
  */
 export async function validateAutopilotPolicy(
   root: string,
   options: { config?: QfaiConfig } = {},
 ): Promise<Issue[]> {
-  const issues: Issue[] = [];
   // Honor `config.paths.skillsDir` via the canonical `resolvePath`
   // helper (SSOT) so a project that relocates its skills tree
   // (relative OR absolute) is still scanned. When no config is
-  // supplied, fall back to the legacy hardcoded
-  // `.qfai/assistant/skills` so single-arg test callers keep
+  // supplied, fall back to the canonical
+  // `.qfai/assistant/skill` so single-arg test callers keep
   // working. Pre-fix the scan was hardcoded to the default path,
   // so a relocated skillsDir would silently SKIP every qfai-*
   // SKILL.md and let missing / widened Default Autopilot Policy
@@ -535,135 +738,22 @@ export async function validateAutopilotPolicy(
   const skillsDir = options.config
     ? resolvePath(root, options.config, "skillsDir")
     : path.join(root, SKILL_DIR_REL);
-  if (!(await exists(skillsDir))) return issues;
+  if (!(await exists(skillsDir))) return [];
 
-  const hardRequiredSeverity = "error";
+  const skills = await readQfaiSkills(skillsDir);
+  // The baseline governs the qfai-* skills, so a tree with none has nothing
+  // for it to govern.
+  if (skills.length === 0) return [];
 
-  let entries: Dirent[];
-  try {
-    entries = await readdir(skillsDir, { withFileTypes: true });
-  } catch (err: unknown) {
-    if (isEnoent(err)) return issues;
-    throw err;
-  }
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const skillId = entry.name;
-    if (!QFAI_SKILL_ID_RE.test(skillId)) continue;
-    const skillDoc = path.join(skillsDir, skillId, "SKILL.md");
-    let body: string;
-    try {
-      body = await readFile(skillDoc, "utf-8");
-    } catch (err: unknown) {
-      if (isEnoent(err)) continue;
-      throw err;
-    }
-    const result = parseAutopilotPolicy(body, skillId);
+  // The baseline sits beside the skills in the assistant tree, as the Reviewer
+  // Gate's delegation baseline does.
+  const issues = await baselineIssues(root, path.join(path.dirname(skillsDir), BASELINE_REL));
+  for (const { skillId, skillDoc, body } of skills) {
     // Operator-facing relPath derived from the actual scan path so a
     // relocated skillsDir surfaces under its real root-relative
     // location (mirrors `staleReferences.ts` and `skillDocReferences.ts`).
     const relPath = path.relative(root, skillDoc).replace(/\\/g, "/");
-    if (!result.hasSection) {
-      const message =
-        `R-AUTOPILOT-POLICY-MISSING: ${relPath} is missing the ` +
-        `"## Default Autopilot Policy" section required by the SKILL.md ` +
-        `governance contract. Add the section with three named buckets ` +
-        `(auto-decide / ask-user / hard-required). ` +
-        `Justification: file=${relPath}, missing=## Default Autopilot Policy.`;
-      issues.push(
-        issue(
-          "R-AUTOPILOT-POLICY-MISSING",
-          message,
-          "error",
-          relPath,
-          "reviewerGate.autopilotPolicyMissing",
-        ),
-      );
-      continue;
-    }
-    // Section present BUT one or more required buckets are missing.
-    // `parseAutopilotPolicy` already detects the three canonical
-    // headings; gating on `hasSection` alone would PASS a section
-    // that contains the heading but no buckets — defeating the
-    // governance contract. Reuse the MISSING code (same intent: the
-    // section is not satisfying the contract) and enumerate the
-    // missing buckets in the message so the operator can locate the
-    // gap quickly.
-    const missingBuckets: string[] = [];
-    if (!result.buckets.autoDecide) missingBuckets.push("auto-decide");
-    if (!result.buckets.askUser) missingBuckets.push("ask-user");
-    if (!result.buckets.hardRequired) missingBuckets.push("hard-required");
-    if (missingBuckets.length > 0) {
-      const message =
-        `R-AUTOPILOT-POLICY-MISSING: ${relPath} "## Default Autopilot Policy" ` +
-        `section is present but missing required bucket(s): ` +
-        `[${missingBuckets.join(", ")}]. The governance contract requires all ` +
-        `three named buckets (auto-decide / ask-user / hard-required). ` +
-        `Add the missing bucket(s) under the section as bullet lines ` +
-        `(e.g. "- auto-decide:" / "- ask-user:" / "- hard-required:") ` +
-        `with their entries listed beneath. ` +
-        `Justification: file=${relPath}, missingBuckets=[${missingBuckets.join(", ")}].`;
-      issues.push(
-        issue(
-          "R-AUTOPILOT-POLICY-MISSING",
-          message,
-          "error",
-          relPath,
-          "reviewerGate.autopilotPolicyMissing",
-        ),
-      );
-      continue;
-    }
-    if (result.widenedTokens.length > 0) {
-      const message =
-        `R-AUTOPILOT-POLICY-WIDENED: ${relPath} auto-decide bucket lists ` +
-        `entries outside the canonical allowed set ` +
-        `([${result.widenedTokens.join(" | ")}]). Narrowing is permitted; ` +
-        `widening MUST go through ask-user. ` +
-        `Justification: file=${relPath}, widened=[${result.widenedTokens.join(", ")}].`;
-      issues.push(
-        issue(
-          "R-AUTOPILOT-POLICY-WIDENED",
-          message,
-          "warning",
-          relPath,
-          "reviewerGate.autopilotPolicyWidened",
-        ),
-      );
-    }
-    // The bucket's CONTENT, not just its header. Checking only the header let
-    // a project whose installed SKILL.md still lists a retired entry pass
-    // `qfai validate` indefinitely: installed skills are refreshed only by an
-    // explicit `qfai init --force`, so nothing else would ever surface it.
-    if (result.hardRequiredRetired.length > 0 || result.hardRequiredUnknown.length > 0) {
-      const parts: string[] = [];
-      if (result.hardRequiredRetired.length > 0) {
-        parts.push(`a retired entry ([${result.hardRequiredRetired.join(" | ")}])`);
-      }
-      if (result.hardRequiredUnknown.length > 0) {
-        parts.push(
-          `an entry this skill does not declare ([${result.hardRequiredUnknown.join(" | ")}])`,
-        );
-      }
-      const message =
-        `QFAI-AUTOPILOT-001: ${relPath} hard-required bucket names ${parts.join(" and ")}. ` +
-        `Every entry costs a guaranteed prompt, so an input nothing reads buys nothing. ` +
-        `A skill may carry fewer entries than it is allowed and never more: drop the ` +
-        `entry, or declare it for this skill if the skill really consumes it — ` +
-        `\`qfai init --force\` regenerates the shipped wording. ` +
-        `Justification: file=${relPath}, retired=[${result.hardRequiredRetired.join(", ")}], ` +
-        `unknown=[${result.hardRequiredUnknown.join(", ")}].`;
-      issues.push(
-        issue(
-          "QFAI-AUTOPILOT-001",
-          message,
-          hardRequiredSeverity,
-          relPath,
-          "reviewerGate.autopilotPolicyHardRequiredDrift",
-        ),
-      );
-    }
+    issues.push(...skillPolicyIssues(relPath, skillId, parseAutopilotPolicy(body, skillId)));
   }
   return issues;
 }

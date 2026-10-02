@@ -6,27 +6,38 @@ import path from "node:path";
 import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
-import { loadConfig, resolvePath } from "../config.js";
+import { loadConfig, type QfaiConfig } from "../config.js";
 import {
   ResolveActiveDiscussionPackError,
   resolveActiveDiscussionPack,
 } from "../discussionPack.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { assistantLayerDir } from "../paths/assistantPaths.js";
+import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import { validateProject } from "../validate.js";
-import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
-import { areaCovers } from "./decide.js";
+import { changedSinceStart } from "./boundary.js";
+import { areaCovers, everyStageResult, isRunChange } from "./common.js";
+import { isRecord } from "./parse.js";
+import {
+  checkPlans,
+  loadBuiltInPlans,
+  packagePlansDir,
+  planDigestKey,
+  WORKFLOW_ROUTES,
+  type WorkflowPlanFile,
+} from "./plans.js";
+import { ownerOfSteps, stepNamesOf } from "./steps.js";
+import { obligationOf, storyFactsOf } from "./storyFacts.js";
 import type {
+  PlanStep,
   WorkflowDependency,
   WorkflowFacts,
-  WorkflowInput,
+  WorkflowProposal,
+  WorkflowResult,
   WorkflowSnapshot,
   WorkflowWorkOrder,
-} from "./decide.js";
-import { obligationFingerprints } from "./obligation.js";
-import { isRecord } from "./parse.js";
-import { checkInstalledPlans, loadBuiltInPlans, WORKFLOW_ROUTES } from "./plans.js";
+} from "./types.js";
 
 type Digests = Record<string, string>;
 
@@ -45,10 +56,19 @@ async function digestsOf(root: string, patterns: string[]): Promise<Digests> {
   return Object.fromEntries(entries);
 }
 
-const ASSISTANT = ".qfai/assistant";
-
 export async function policyDigestsOf(root: string): Promise<Digests> {
-  return digestsOf(root, ["qfai.config.yaml", `${ASSISTANT}/constitution/**`]);
+  return digestsOf(root, ["qfai.config.yaml", `${assistantLayerDir("rule")}/**`]);
+}
+
+// The digest of each plan the package ships, under its path in the package.
+async function planDigestsOf(): Promise<Digests> {
+  const entries = await Promise.all(
+    WORKFLOW_ROUTES.map(async (route) => {
+      const text = await readFile(path.join(packagePlansDir(), `${route}.yml`), "utf8");
+      return [planDigestKey(route), hashAssistantAssetText(text)] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 // The digest of the CLI entry file this process runs, which `finish` compares with the one
@@ -60,14 +80,10 @@ export async function cliEntryDigest(): Promise<string> {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-// The policy, manifest and plan digests a run is held to.
+// The policy and plan digests a run is held to.
 export async function policyNowOf(root: string): Promise<NonNullable<WorkflowFacts["policyNow"]>> {
-  const [policyDigests, manifestDigests, planDigests] = await Promise.all([
-    policyDigestsOf(root),
-    digestsOf(root, [`${ASSISTANT}/manifest/**`]),
-    digestsOf(root, [`${ASSISTANT}/process/workflows/**`]),
-  ]);
-  return { policyDigests, manifestDigests, planDigests };
+  const [policyDigests, planDigests] = await Promise.all([policyDigestsOf(root), planDigestsOf()]);
+  return { policyDigests, planDigests };
 }
 
 // The worktree real path and the branch checked out there, or `null` outside a branch.
@@ -76,22 +92,27 @@ export async function identityOf(root: string): Promise<NonNullable<WorkflowFact
   return { worktree: await realpath(root), branch: branch && branch !== "HEAD" ? branch : null };
 }
 
-// What `start` fixes for the run: its ID and key, and the tool and policy it runs under.
-// SIMPLIFIED: takes no run change boundary snapshot.
-// Lift when: the change boundary observers land.
-export async function startFacts(root: string, runId: string): Promise<WorkflowFacts> {
+// What `start` fixes for the run: its ID and key, and the tool and policy it runs under. The run
+// change boundary's starting state is recorded beside them, when the run is created.
+export async function startFacts(
+  root: string,
+  config: QfaiConfig,
+  runId: string,
+): Promise<WorkflowFacts> {
   const [qfaiVersion, policyNow, plans] = await Promise.all([
     resolveToolVersion(),
     policyNowOf(root),
-    checkInstalledPlans(root),
+    checkPlans(root, config),
   ]);
   const digestKey = randomBytes(32).toString("hex");
   const start = { runId, qfaiVersion, digestKey, ...policyNow };
-  return { start, ...(plans.cause ? { cause: plans.cause } : {}) };
+  if (!plans.cause) return { start };
+  const causeSubjects = plans.refusals.map((refusal) => refusal.subject);
+  return { start, cause: plans.cause, causeSubjects };
 }
 
 // Validate in process, as the project configures it, with the report files it writes sent to a
-// temporary directory so the run changes nothing outside `.qfai/runs/`.
+// temporary directory so the run changes nothing outside `.qfai/run/`.
 export async function validateQuietly(root: string) {
   const loaded = await loadConfig(root);
   const outDir = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-validate-"));
@@ -124,25 +145,67 @@ export async function baselineOf(root: string): Promise<NonNullable<WorkflowSnap
   return { findings, toolVersion, cliEntryDigest: entryDigest, policyDigests };
 }
 
+// Each step as a work order names it: the points the route declares at it are marked on it.
+function markedSteps(plan: WorkflowPlanFile, steps: readonly PlanStep[]): PlanStep[] {
+  const branches = plan.branchPoints.map((point) => point.step);
+  return steps.map((step) => {
+    const decision = plan.decisionPoints.includes(step.name) ? "user" : undefined;
+    const point = plan.releasePoint === step.name ? "release" : decision;
+    return {
+      ...step,
+      ...(point ? { decisionPoint: point } : {}),
+      ...(branches.includes(step.name) ? { branchPoint: true } : {}),
+    };
+  });
+}
+
 // The built-in plans, in the form the decision function reads.
 export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> {
   const plans = await loadBuiltInPlans();
   return Object.fromEntries(
-    WORKFLOW_ROUTES.map((route) => [
-      route,
+    plans.map((plan) => [
+      plan.route,
       {
-        route,
-        stages: plans[route].stages.map((stage) => ({
+        route: plan.route,
+        family: plan.family,
+        defaultModifiers: plan.defaultModifiers,
+        branchPoints: plan.branchPoints,
+        stages: plan.stages.map((stage) => ({
           stageInstanceId: stage.id,
           stageKind: stage.kind,
-          ...(stage.skills[0] ? { skill: stage.skills[0] } : {}),
-          operation: stage.operation,
-          when: stage.when,
+          steps: markedSteps(plan, stage.steps),
           ...(stage.effects.length > 0 ? { effects: stage.effects } : {}),
+          ...(stage.review ? { review: stage.review } : {}),
         })),
       },
     ]),
   );
+}
+
+// The always-required reviewers of the review profile the effective routing gives each step,
+// keyed by the step's name as its routing entry names it.
+export async function reviewerRolesOf(config: QfaiConfig): Promise<Record<string, string[]>> {
+  const { routing, profiles } = await readEffectiveRouting(config);
+  const roles: Record<string, string[]> = {};
+  for (const [step, entry] of routing ?? []) {
+    const profile = entry.reviewProfile ? profiles?.get(entry.reviewProfile) : undefined;
+    if (!profile) continue;
+    roles[step] = [...profile.reviewers]
+      .filter(([, binding]) => binding === "required")
+      .map(([reviewer]) => reviewer);
+  }
+  return roles;
+}
+
+// The always-required reviewers of the `heavy` review profile, which a run carrying
+// `review:heavy` adds to every stage.
+export async function heavyReviewerRolesOf(config: QfaiConfig): Promise<string[]> {
+  const { profiles } = await readEffectiveRouting(config);
+  const heavy = profiles?.get("heavy");
+  if (!heavy) return [];
+  return [...heavy.reviewers]
+    .filter(([, binding]) => binding === "required")
+    .map(([reviewer]) => reviewer);
 }
 
 // Whether a path names a regular file whose real path stays under the project's real root.
@@ -171,25 +234,25 @@ function pathReferences(proposal: unknown): string[] {
   );
 }
 
-async function specFacts(root: string): Promise<NonNullable<WorkflowFacts["specs"]>> {
-  const { config } = await loadConfig(root);
-  const entries = await collectSpecEntries(resolvePath(root, config, "specsDir"));
-  return Object.fromEntries(
-    entries.map((entry) => [path.basename(entry.dir), { lifecycle: entry.status ?? "active" }]),
-  );
-}
-
 // What `accept` of a routing result checks the proposal against.
-// SIMPLIFIED: no contract ID is known, so a `contract-id` reference is refused `unknown-id`.
-// Lift when: a routing result naming a contract ID is accepted by a row that needs it.
-export async function routingFacts(root: string, proposal: unknown): Promise<WorkflowFacts> {
+export async function routingFacts(
+  root: string,
+  config: QfaiConfig,
+  proposal: unknown,
+): Promise<WorkflowFacts> {
   const realRoot = await realpath(root);
   const refs = [...new Set(pathReferences(proposal))];
   const existence = await Promise.all(
     refs.map(async (ref) => [ref, await isProjectFile(realRoot, root, ref)] as const),
   );
-  const [plans, specs] = await Promise.all([planFacts(), specFacts(root)]);
-  return { pathExistence: Object.fromEntries(existence), plans, specs, contractIds: [] };
+  const [plans, story] = await Promise.all([planFacts(), storyFactsOf(root, config, undefined)]);
+  return {
+    pathExistence: Object.fromEntries(existence),
+    plans,
+    flows: story.flows,
+    specsDir: story.specsDir,
+    discussionDir: config.paths.discussionDir,
+  };
 }
 
 // The JSON object the text holds, or an empty one: a report that says nothing passes nothing.
@@ -202,37 +265,15 @@ function parsedRecord(text: string): Record<string, unknown> {
   }
 }
 
-// The bound spec's ledger rows, read with the ledger parser: each row's ID, status and a digest
-// of its cells. None when the spec has no ledger file.
-export async function ledgerFactsOf(root: string, specId: string) {
-  const { config } = await loadConfig(root);
-  const file = path.join(resolvePath(root, config, "specsDir"), specId, "tdd", "test-list.md");
-  const text = await readFile(file, "utf8").catch(() => undefined);
-  if (text === undefined) return undefined;
-  const rows = collectLedgerTables(text).flatMap((scan) => {
-    const statusIndex = scan.headers.indexOf("Status");
-    return scan.table.rows
-      .filter((row) => isLedgerRow(scan, row))
-      .map((row) => ({
-        rowId: (row[scan.tddIdIndex] ?? "").trim(),
-        status: (row[statusIndex] ?? "").trim(),
-        digest: hashAssistantAssetText(row.map((cell) => cell.trim()).join("|")),
-        layer: (row[scan.layerIndex] ?? "").trim(),
-      }));
-  });
-  return { specId, rows };
-}
-
-type Dependency = WorkflowDependency;
 const GLOB = /[*?[{]/;
-// The digest recorded for a file that does not exist, which stays valid while it still does not.
+// The digest recorded for a file that does not exist; it stays valid while the file stays absent.
 const ABSENT = "absent";
 // A dependency that is not a project path is a fact the core recomputes: `qfai:<kind>[:<subject>]`.
 const FACT = "qfai:";
 const TOOL = "qfai:tool";
 const DISCUSSION = "qfai:discussion";
-const OBLIGATION = /^qfai:obligation:([^:]+):(.+)$/;
-const LIFECYCLE = /^qfai:lifecycle:(.+)$/;
+const OBLIGATION = "qfai:obligation:";
+const TREE = "qfai:tree:";
 // SIMPLIFIED: the lockfiles these package managers write at the project root, and no other.
 // Lift when: a project keeps its lockfile below the root or uses another package manager.
 const LOCKFILES = [
@@ -243,155 +284,112 @@ const LOCKFILES = [
   "bun.lock",
 ];
 
-// What one validity check reads once, however many receipts depend on it.
-interface FactReads {
-  obligations: Map<string, Promise<Map<string, string> | undefined>>;
-  specs?: Promise<NonNullable<WorkflowFacts["specs"]>>;
-  tool?: Promise<string>;
-  discussion?: Promise<{ digest: string; pack?: string }>;
-}
-
-async function toolDigest(): Promise<string> {
-  const [version, entry] = await Promise.all([resolveToolVersion(), cliEntryDigest()]);
-  return hashAssistantAssetText(`${version}\n${entry}`);
-}
-
-// The selected discussion pack's project-relative path and its digest; none selected is `""`.
-async function discussionOf(root: string): Promise<{ digest: string; pack?: string }> {
+// The selected discussion pack's project-relative path; none when no pack is selected.
+async function discussionPackOf(root: string): Promise<string | undefined> {
   const selected = await resolveActiveDiscussionPack(root).catch((error: unknown) => {
     if (error instanceof ResolveActiveDiscussionPackError) return undefined;
     throw error;
   });
-  const pack = selected && path.relative(root, selected).split(path.sep).join("/");
-  return { digest: hashAssistantAssetText(pack ?? ""), ...(pack ? { pack } : {}) };
+  return selected && path.relative(root, selected).split(path.sep).join("/");
 }
 
-async function lifecycleDigest(root: string, specId: string, reads: FactReads): Promise<string> {
-  reads.specs ??= specFacts(root);
-  return hashAssistantAssetText((await reads.specs)[specId]?.lifecycle ?? ABSENT);
-}
-
-async function obligationDigests(root: string, specId: string, reads: FactReads) {
-  const known = reads.obligations.get(specId) ?? obligationFingerprints(root, specId);
-  reads.obligations.set(specId, known);
-  return known;
-}
-
-async function factDigest(root: string, fact: string, reads: FactReads) {
-  const [, specId = "", rowId = ""] = OBLIGATION.exec(fact) ?? [];
-  if (rowId) {
-    const rows = await obligationDigests(root, specId, reads);
-    return rows && (rows.get(rowId) ?? ABSENT);
+// A fact's digest as the core computes it now: the tool, the selected discussion pack, the flow's
+// obligation, or the files a glob matches by path and content. An unknown kind has none.
+async function factDigest(root: string, fact: string): Promise<string | undefined> {
+  if (fact === TOOL) {
+    const [version, entry] = await Promise.all([resolveToolVersion(), cliEntryDigest()]);
+    return hashAssistantAssetText(`${version}\n${entry}`);
   }
-  const lifecycle = LIFECYCLE.exec(fact)?.[1];
-  if (lifecycle !== undefined) return lifecycleDigest(root, lifecycle, reads);
-  if (fact === TOOL) return (reads.tool ??= toolDigest());
-  if (fact === DISCUSSION) return (reads.discussion ??= discussionOf(root)).then((d) => d.digest);
-  return undefined;
+  if (fact === DISCUSSION) return hashAssistantAssetText((await discussionPackOf(root)) ?? "");
+  if (fact.startsWith(TREE)) {
+    return hashAssistantAssetText(JSON.stringify(await digestsOf(root, [fact.slice(TREE.length)])));
+  }
+  if (!fact.startsWith(OBLIGATION)) return undefined;
+  const { config } = await loadConfig(root);
+  return (await obligationOf(root, config, fact.slice(OBLIGATION.length)))?.digest ?? ABSENT;
 }
 
 // A file's digest, or undefined when it cannot be read; a glob's, the digest of its sorted
-// member list, so an added or removed member changes it while no member's bytes do; a fact's,
-// the digest the core computes for it now.
-async function dependencyDigest(
-  root: string,
-  dependency: string,
-  reads: FactReads,
-): Promise<string | undefined> {
-  if (dependency.startsWith(FACT)) return factDigest(root, dependency, reads);
-  if (GLOB.test(dependency)) return membershipDigest(root, dependency);
-  const text = await readFile(path.join(root, dependency), "utf8").catch(() => undefined);
-  return text === undefined ? undefined : hashAssistantAssetText(text);
-}
-
-async function membershipDigest(root: string, glob: string): Promise<string> {
-  const members = await fg(glob, { cwd: root, dot: true, onlyFiles: true });
+// member list, so an added or removed member changes it while no member's bytes do; a fact's, the
+// digest the core computes for it now.
+async function dependencyDigest(root: string, dependency: string): Promise<string | undefined> {
+  if (dependency.startsWith(FACT)) return factDigest(root, dependency);
+  if (!GLOB.test(dependency)) {
+    const text = await readFile(path.join(root, dependency), "utf8").catch(() => undefined);
+    return text === undefined ? undefined : hashAssistantAssetText(text);
+  }
+  const members = await fg(dependency, { cwd: root, dot: true, onlyFiles: true });
   return hashAssistantAssetText(members.sort().join("\n"));
 }
 
-// The obligation fingerprint of each ledger row the work order covers; every row of the bound
-// spec's ledger when the work order names none.
-async function obligationOf(
-  root: string,
-  specId: string,
-  workOrder: WorkflowWorkOrder,
-): Promise<Dependency[]> {
-  const rows = await obligationFingerprints(root, specId);
-  if (!rows) return [];
-  const ledger = workOrder.ledger;
-  const covered = ledger?.specId === specId ? ledger.rowIds : [...rows.keys()];
-  return covered.map((rowId) => ({
-    path: `${FACT}obligation:${specId}:${rowId}`,
-    digest: rows.get(rowId) ?? ABSENT,
-    class: "normative",
-  }));
+type Digest = (dependency: string) => Promise<string | undefined>;
+
+// `dependencyDigest`, reading each dependency once however many receipts name it.
+function memoDigest(root: string): Digest {
+  const known = new Map<string, Promise<string | undefined>>();
+  return (dependency) => {
+    const cached = known.get(dependency) ?? dependencyDigest(root, dependency);
+    known.set(dependency, cached);
+    return cached;
+  };
 }
 
-// Each file the patterns match, and the membership of each pattern.
-async function treeOf(root: string, patterns: string[]): Promise<Dependency[]> {
-  const files = await digestsOf(root, patterns);
-  const members = await Promise.all(
-    patterns.map(async (glob) => ({ path: glob, digest: await membershipDigest(root, glob) })),
-  );
-  return [
-    ...Object.entries(files).map(([file, digest]) => ({ path: file, digest })),
-    ...members,
-  ].map((each): Dependency => ({ ...each, class: "normative" }));
-}
-
-// What every receipt depends on besides its inputs: the config and the lockfiles, the policy and
-// the executor skill, the tool, the selected discussion pack, and the bound spec's lifecycle.
+// What every stage result's receipt depends on besides its inputs: the config and the lockfiles,
+// the policy, the skill that owns the work order's steps and the steps themselves, the tool, and
+// the selected discussion pack with its files.
 async function contextOf(
-  root: string,
   workOrder: WorkflowWorkOrder,
-  specId: string | undefined,
-): Promise<Dependency[]> {
-  const reads: FactReads = { obligations: new Map() };
-  const discussion = await discussionOf(root);
-  const skill = workOrder.executor?.skill;
-  const patterns = [
-    `${ASSISTANT}/constitution/**`,
-    ...(skill ? [`${ASSISTANT}/skills/${skill}/**`] : []),
-    ...(discussion.pack ? [`${discussion.pack}/**`] : []),
+  pack: string | undefined,
+  digest: Digest,
+): Promise<WorkflowDependency[]> {
+  const steps = stepNamesOf(workOrder);
+  const owner = workOrder.executor?.skill ?? ownerOfSteps(steps);
+  const trees = [
+    `${assistantLayerDir("rule")}/**`,
+    ...(owner.startsWith("qfai-") ? [`${assistantLayerDir("skill")}/${owner}/**`] : []),
+    ...steps.map((name) => `${assistantLayerDir("step")}/${name}/**`),
+    ...(pack ? [`${pack}/**`] : []),
   ];
-  const named = ["qfai.config.yaml", ...LOCKFILES].map(async (file) => ({
-    path: file,
-    digest: (await dependencyDigest(root, file, reads)) ?? ABSENT,
-  }));
-  const facts = [
-    { path: TOOL, digest: await toolDigest() },
-    { path: DISCUSSION, digest: discussion.digest },
-    ...(specId
-      ? [{ path: `${FACT}lifecycle:${specId}`, digest: await lifecycleDigest(root, specId, reads) }]
-      : []),
+  const paths = [
+    "qfai.config.yaml",
+    ...LOCKFILES,
+    TOOL,
+    DISCUSSION,
+    ...trees.map((glob) => `${TREE}${glob}`),
   ];
-  const files = [...(await Promise.all(named)), ...facts].map((each): Dependency => ({
-    ...each,
-    class: "normative",
-  }));
-  return [...files, ...(await treeOf(root, patterns))];
+  return Promise.all(
+    paths.map(async (each): Promise<WorkflowDependency> => ({
+      path: each,
+      digest: (await digest(each)) ?? ABSENT,
+      class: "normative",
+    })),
+  );
 }
 
 const OBSERVED_TESTS = ["expected_red", "pass", "fail"];
 
 // What an accepted result's receipt depends on. Every receipt holds its work order's inputs and
-// the context it ran in. A result that observed a test also holds the obligation of the ledger
-// rows it covers, and the files it changed: as the oracle it observed at RED, or as the files a
-// GREEN or verify ran, with the membership of each glob write area covering one of them. A
-// changed file that no longer exists is held as absent.
+// the context it ran in. A result that observed a test also holds the bound flow's obligation
+// digest, the contract files that declare the rules citing its examples, and the files it
+// changed: as the oracle it observed at RED, or as the files a GREEN or verify ran, with the
+// membership of each glob write area covering one of them. A changed file that no longer exists
+// is held as absent, so the receipt goes stale when it comes back.
+// SIMPLIFIED: one obligation digest for the bound flow, not one for each example a result covers.
+// Lift when: a stage result names the examples it covers.
 export async function receiptDependenciesOf(
   root: string,
   workOrder: WorkflowWorkOrder,
-  result: NonNullable<WorkflowInput["result"]>,
-  specId: string | undefined,
-): Promise<Dependency[]> {
-  const inputs = (workOrder.inputs ?? []).map((input): Dependency => ({
+  result: WorkflowResult,
+  obligation?: { flowId: string; digest: string; ruleFiles: readonly string[] },
+): Promise<WorkflowDependency[]> {
+  const inputs = (workOrder.inputs ?? []).map((input): WorkflowDependency => ({
     ...input,
     class: "normative",
   }));
-  const context = await contextOf(root, workOrder, specId);
+  const digest = memoDigest(root);
+  const context = await contextOf(workOrder, await discussionPackOf(root), digest);
   if (!OBSERVED_TESTS.includes(result.testObservation ?? "")) return [...inputs, ...context];
-  const ran: Dependency["class"] =
+  const ran: WorkflowDependency["class"] =
     result.testObservation === "expected_red" ? "historical_observation" : "current_verification";
   const changed = (result.changedFiles ?? []).map((each) => each.path);
   const globs =
@@ -400,53 +398,84 @@ export async function receiptDependenciesOf(
           (area) => GLOB.test(area) && changed.some((file) => areaCovers(area, file)),
         )
       : [];
-  const reads: FactReads = { obligations: new Map() };
-  const observed = await Promise.all(
-    [...changed, ...globs].map(async (each) => ({
-      path: each,
-      digest: (await dependencyDigest(root, each, reads)) ?? ABSENT,
-      class: ran,
-    })),
-  );
-  const obligation = specId ? await obligationOf(root, specId, workOrder) : [];
-  return [...inputs, ...context, ...obligation, ...observed];
+  const digested = async (each: string, cls: WorkflowDependency["class"]) => ({
+    path: each,
+    digest: (await digest(each)) ?? ABSENT,
+    class: cls,
+  });
+  const [owners, observed] = await Promise.all([
+    Promise.all((obligation?.ruleFiles ?? []).map((each) => digested(each, "normative"))),
+    Promise.all([...changed, ...globs].map((each) => digested(each, ran))),
+  ]);
+  const flow: WorkflowDependency[] = obligation
+    ? [{ path: `${OBLIGATION}${obligation.flowId}`, digest: obligation.digest, class: "normative" }]
+    : [];
+  return [...inputs, ...context, ...flow, ...owners, ...observed];
 }
 
 // A receipt with no dependency record, or one whose dependency cannot be read, is `unknown`; one
 // whose rechecked dependency changed is `stale`. What a stage observed once is never rechecked.
-async function validityOf(
-  root: string,
-  dependencies: readonly Dependency[] | undefined,
-  reads: FactReads,
-) {
+async function validityOf(digest: Digest, dependencies: readonly WorkflowDependency[] | undefined) {
   if (!dependencies) return "unknown";
   const checked = dependencies.filter((each) => each.class !== "historical_observation");
   const now = await Promise.all(
     checked.map(
-      async (each) =>
-        (await dependencyDigest(root, each.path, reads)) ??
-        (each.digest === ABSENT ? ABSENT : undefined),
+      async (each) => (await digest(each.path)) ?? (each.digest === ABSENT ? ABSENT : undefined),
     ),
   );
   if (now.includes(undefined)) return "unknown";
   return now.every((digest, index) => digest === checked[index]?.digest) ? "valid" : "stale";
 }
 
-// Each accepted stage's receipt, classed against the tree now.
+// Every receipt the run holds, classed against the tree now: routing's, and each stage result's
+// of every plan the run has had.
 export async function receiptValidityOf(
   root: string,
   snapshot: WorkflowSnapshot,
 ): Promise<NonNullable<WorkflowFacts["receiptValidity"]>> {
-  const stages = snapshot.acceptedStages ?? [];
-  const reads: FactReads = { obligations: new Map() };
+  const routing = snapshot.routingReceiptRef
+    ? [{ receiptRef: snapshot.routingReceiptRef, dependencies: snapshot.routingDependencies }]
+    : [];
+  const digest = memoDigest(root);
   const classed = await Promise.all(
-    stages.map(async (stage) =>
+    [...routing, ...everyStageResult(snapshot)].map(async (stage) =>
       stage.receiptRef
-        ? [[stage.receiptRef, await validityOf(root, stage.dependencies, reads)] as const]
+        ? [[stage.receiptRef, await validityOf(digest, stage.dependencies)] as const]
         : [],
     ),
   );
   return Object.fromEntries(classed.flat());
+}
+
+// What the routing receipt depends on: every path and evidence file the proposal cites outside
+// the write scope it proposes. A file inside that scope is the run's to change, so its change
+// is the run's own work rather than a premise of the route going stale. Cited evidence, such as
+// a failing log, is what routing observed once, and is never rechecked.
+export async function routingDependenciesOf(
+  root: string,
+  proposal:
+    | Pick<WorkflowProposal, "expectedBehaviorRefs" | "observedRefs" | "proposedWriteScope">
+    | undefined,
+): Promise<WorkflowDependency[]> {
+  const refs = [...(proposal?.expectedBehaviorRefs ?? []), ...(proposal?.observedRefs ?? [])];
+  const scope = proposal?.proposedWriteScope ?? [];
+  const cited = new Map<string, WorkflowDependency["class"]>();
+  for (const each of refs) {
+    // A file cited as a normative path stays normative even where it is also cited as evidence.
+    if (each.kind === "path") cited.set(each.ref, "normative");
+    if (each.kind === "evidence" && !cited.has(each.ref)) {
+      cited.set(each.ref, "historical_observation");
+    }
+  }
+  const digested = await Promise.all(
+    [...cited]
+      .filter(([each]) => !scope.some((area) => areaCovers(area, each)))
+      .map(async ([each, cls]) => {
+        const digest = await dependencyDigest(root, each);
+        return digest === undefined ? [] : [{ path: each, digest, class: cls }];
+      }),
+  );
+  return digested.flat();
 }
 
 // This run's copy of the verify report, read from the stage that accepted it. A copy whose bytes
@@ -469,25 +498,24 @@ async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
 }
 
 // What `finish` observes: validate run in process, this run's verify report, the tool and
-// policy it runs under, and the working tree's uncommitted paths.
-// SIMPLIFIED: the run's changed paths are the uncommitted ones, so a change committed during the
-// run is not counted; and under `failOn: never` no finding is reported, so no debt stays open.
-// Lift when: `start` fixes the commit the run began at, and a `never` project runs a workflow.
+// policy it runs under, the run's changes since `start` and those not yet committed, the change
+// requests in force and the bound flow's obligations.
+// SIMPLIFIED: under `failOn: never` no finding is reported, so no debt stays open.
+// Lift when: a `never` project runs a workflow.
 export async function completionFacts(
   root: string,
   runDir: string,
   snapshot: WorkflowSnapshot,
 ): Promise<WorkflowFacts> {
-  const [result, loaded, toolVersion, entryDigest, policyDigests, verifyReport] = await Promise.all(
-    [
-      validateQuietly(root),
-      loadConfig(root),
-      resolveToolVersion(),
-      cliEntryDigest(),
-      policyDigestsOf(root),
-      verifyReportOf(runDir, snapshot),
-    ],
-  );
+  const loaded = await loadConfig(root);
+  const [result, toolVersion, entryDigest, policyDigests, verifyReport, story] = await Promise.all([
+    validateQuietly(root),
+    resolveToolVersion(),
+    cliEntryDigest(),
+    policyDigestsOf(root),
+    verifyReportOf(runDir, snapshot),
+    storyFactsOf(root, loaded.config, snapshot.flowBinding?.flowId),
+  ]);
   const failOn = loaded.config.validation.failOn;
   const findings = result.issues.map((issue) => ({
     code: issue.code,
@@ -495,7 +523,11 @@ export async function completionFacts(
     refs: [...(issue.refs ?? [])].sort(),
     severity: issue.severity,
   }));
-  const changed = uncommittedPaths(root) ?? [];
+  const dirty = (uncommittedPaths(root) ?? []).filter(isRunChange);
+  const changed = snapshot.boundary ? await changedSinceStart(root, snapshot.boundary) : dirty;
+  // Only the run's own changes wait on a commit; a path the operator left uncommitted before
+  // `start` is not the run's to deliver, and neither are the runs' own local records.
+  const uncommitted = dirty.filter((file) => changed.includes(file));
   const validate =
     failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
   const completion = {
@@ -505,7 +537,20 @@ export async function completionFacts(
     cliEntryDigest: entryDigest,
     policyDigests,
     changedPaths: changed,
-    uncommittedPaths: changed,
+    uncommittedPaths: uncommitted,
   };
-  return { completion };
+  const digests = await Promise.all(
+    changed.map(async (file) => [file, await dependencyDigest(root, file)] as const),
+  );
+  return {
+    completion,
+    changeRequests: story.changeRequests,
+    ...(story.acceptanceObligationsUnmet !== undefined
+      ? { acceptanceObligationsUnmet: story.acceptanceObligationsUnmet }
+      : {}),
+    fileDigests: Object.fromEntries(
+      digests.flatMap(([file, digest]) => (digest ? [[file, digest]] : [])),
+    ),
+    ...(story.obligations ? { obligations: story.obligations } : {}),
+  };
 }

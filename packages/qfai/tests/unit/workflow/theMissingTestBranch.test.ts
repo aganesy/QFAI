@@ -1,75 +1,51 @@
-// QFAI:SPEC-0018:TC-0018-0063
-// QFAI:SPEC-0018:TC-0018-0064
+// QFAI:EX-0001-0186-01
+// QFAI:EX-0001-0186-11
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type Decision = ReturnType<typeof decide>;
 
-const specBinding = { specId: "spec-0018" };
+const flowBinding = { flowId: "BF-0018" };
 const plan = {
-  route: "bugfix",
+  route: "fix-defect",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-row-seeding",
-      "missing_test_row_needed",
-    ],
-    [
-      "bugfix-acceptance",
-      "acceptance",
-      "qfai-atdd",
-      "author-acceptance-tests",
-      "acceptance_obligations_unmet",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "missing_test_row_needed"],
-    [
-      "bugfix-regression-fix",
-      "regression_fix",
-      "qfai-implement",
-      "regression-fix",
-      "regression_found",
-    ],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-sdd-append", "sdd_append"),
+    planStage("bugfix-acceptance", "acceptance"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
+  ],
 };
-const diagnosis = {
+const diagnosisMatching = (matchedIds: string[]) => ({
   verdict: "missing-test",
   reproductionRef: "evidence/empty-value-reproduction.json",
-  matchedRowIds: [],
+  matchedIds,
+});
+
+const storyPass = {
+  step: "sdd-story",
+  reason: "EX-0018-0001-02 already states the empty value.",
+  evidenceRef: ".qfai/report/sdd-story-pass.md",
 };
 
-function driveMissingTest(appendedLayer: "Integration" | "Unit") {
+// A missing-test run driven to its last stage; `matchedIds` first names the criterion or the
+// example the diagnosis found, and the append stage's first result carries `appendPasses`.
+function driveMissingTest(matchedIds: string[], appendPasses: (typeof storyPass)[] = []) {
+  const diagnosis = diagnosisMatching(matchedIds);
   let run = { id: "run-bugfix", state: "ready", sequence: 4 };
   let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
-  let acceptanceObligationsUnmet = false;
-  let recordedDiagnosis: typeof diagnosis | null = null;
-  const issued: { stageKind: string; skill: string | undefined; operation: string | undefined }[] =
-    [];
-  const events: Decision["events"] = [];
+  let recordedDiagnosis: ReturnType<typeof diagnosisMatching> | null = null;
+  const issued: { stageKind: string; steps: ReturnType<typeof kindSteps> | undefined }[] = [];
+  const decisions: Decision[] = [];
   for (let index = 0; index < plan.stages.length; index++) {
-    const facts = { acceptanceObligationsUnmet };
-    const context = { plan, specBinding, diagnosis: recordedDiagnosis };
-    const next = decide({ ...context, run, acceptedStages }, { operation: "next" }, facts);
-    events.push(...next.events);
+    const context = { plan, flowBinding, diagnosis: recordedDiagnosis };
+    const next = decide({ ...context, run, acceptedStages }, { operation: "next" }, {});
     const workOrder = next.verdict.workOrder;
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
-    issued.push({
-      stageKind: workOrder.stageKind,
-      skill: workOrder.executor?.skill,
-      operation: workOrder.operation,
-    });
+    issued.push({ stageKind: workOrder.stageKind, steps: workOrder.steps });
     const result = {
       resultId: `result-${workOrder.stageInstanceId}`,
       workOrderId: workOrder.workOrderId,
@@ -78,18 +54,18 @@ function driveMissingTest(appendedLayer: "Integration" | "Unit") {
       expectedSequence: next.verdict.run.sequence,
       outcome: "accepted",
       ...(workOrder.stageKind === "diagnose" ? { diagnosis } : {}),
+      ...(workOrder.stageKind === "sdd_append" && appendPasses.length > 0
+        ? { passes: appendPasses }
+        : {}),
     };
     const accepted = decide(
       { ...context, run: next.verdict.run, acceptedStages, outstandingWorkOrder: workOrder },
       { operation: "accept", result },
-      facts,
+      {},
     );
-    events.push(...accepted.events);
+    decisions.push(accepted);
     if (!accepted.verdict.ok || !accepted.verdict.run) break;
     if (workOrder.stageKind === "diagnose") recordedDiagnosis = diagnosis;
-    if (workOrder.stageKind === "sdd_append") {
-      acceptanceObligationsUnmet = appendedLayer === "Integration";
-    }
     acceptedStages = [
       ...acceptedStages,
       {
@@ -100,36 +76,49 @@ function driveMissingTest(appendedLayer: "Integration" | "Unit") {
     ];
     run = accepted.verdict.run;
   }
-  return { issued, events };
+  return { issued, decisions };
 }
 
-it("TC-0018-0063 (TDD-0081): A diagnose result missing-test whose appended row's layer is Integration, driven to the last stage", () => {
-  const { issued } = driveMissingTest("Integration");
+function reasonsOf(decision: Decision | undefined) {
+  const error = decision?.verdict.error;
+  return error && "reasons" in error ? error.reasons : [];
+}
+
+it("A diagnose result missing-test whose criterion no example states, driven to the last stage", () => {
+  const { issued } = driveMissingTest(["AC-0018-0001-01"]);
 
   expect(issued).toEqual([
-    { stageKind: "diagnose", skill: "qfai-implement", operation: "diagnose-only" },
-    { stageKind: "sdd_append", skill: "qfai-sdd", operation: "defect-row-seeding" },
-    { stageKind: "acceptance", skill: "qfai-atdd", operation: "author-acceptance-tests" },
-    { stageKind: "implement", skill: "qfai-implement", operation: "implement" },
-    { stageKind: "verify", skill: "qfai-verify", operation: "verify-full" },
+    { stageKind: "diagnose", steps: kindSteps("diagnose") },
+    { stageKind: "sdd_append", steps: kindSteps("sdd_append") },
+    { stageKind: "acceptance", steps: kindSteps("acceptance") },
+    { stageKind: "implement", steps: kindSteps("implement") },
+    { stageKind: "verify", steps: kindSteps("verify") },
   ]);
 });
 
-it("TC-0018-0064 (TDD-0082): The same with the appended row's layer Unit", () => {
-  const { issued, events } = driveMissingTest("Unit");
-  const acceptanceRecord = events.find(
-    (event) => event.stageInstanceId === "bugfix-acceptance" && event.notRun,
-  );
+it("The append stage passing sdd-story while no example states the case", () => {
+  const { issued, decisions } = driveMissingTest(["AC-0018-0001-01"], [storyPass]);
 
   expect({
     issued: issued.map((workOrder) => workOrder.stageKind),
-    acceptanceNotRun: acceptanceRecord?.notRun?.kind,
-    acceptanceReasonGiven:
-      acceptanceRecord?.notRun?.kind === "not_applicable" &&
-      (acceptanceRecord.notRun.reason ?? "").trim().length > 0,
+    reasons: reasonsOf(decisions.at(-1)),
   }).toEqual({
-    issued: ["diagnose", "sdd_append", "implement", "verify"],
-    acceptanceNotRun: "not_applicable",
-    acceptanceReasonGiven: true,
+    issued: ["diagnose", "sdd_append"],
+    reasons: [{ reason: "pass-obligation-open", subject: "sdd-story" }],
+  });
+});
+
+it("A diagnose result missing-test whose first matched ID is an example that states the case", () => {
+  const { issued, decisions } = driveMissingTest(["EX-0018-0001-02"], [storyPass]);
+  const append = decisions[1]?.events.find((event) => event.type === "accept-nonfinal-result");
+
+  expect({
+    issued: issued.map((workOrder) => workOrder.stageKind),
+    passes: append?.passes,
+    notRun: append?.notRun,
+  }).toEqual({
+    issued: ["diagnose", "sdd_append", "acceptance", "implement", "verify"],
+    passes: [storyPass],
+    notRun: undefined,
   });
 });

@@ -16,7 +16,7 @@ set -euo pipefail
 if [[ "${VERSION_PIN_SKIP:-0}" == "1" ]]; then
   # GitHub Actions warning so the skip surfaces in the run summary,
   # not just an easily-missed plain log line. Past incident
-  # (2026-05-02 1.9.0 暴走) shows that silent skip use is risky.
+  # (2026-05-02 1.9.0 runaway release) shows that silent skip use is risky.
   echo "::warning title=VERSION_PIN_SKIP=1::branch version pin check skipped. Justification required in PR description; see .agents/rules/version-discipline.md."
   echo "VERSION_PIN_SKIP=1: skipping branch version pin check."
   exit 0

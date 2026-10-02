@@ -2,39 +2,30 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:qfai:workflow:route-proposal",
   "title": "Route proposal",
-  "description": "The proposal a routing result carries: the request kind, the route and what the route needs.",
+  "description": "The proposal a routing result carries: the request kind, the facts the decision rules read, and what the route needs. It names no route.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "requestKind",
-    "candidateRoute",
+    "extraction",
     "goal",
     "expectedBehaviorRefs",
     "observedRefs",
-    "affectedSpecIds",
+    "affectedFlowIds",
     "riskSignals",
     "unresolvedQuestions",
-    "newCapabilities",
+    "newStories",
     "proposedWriteScope",
     "protectedTargets",
-    "requiredStages",
     "rationale"
   ],
   "properties": {
     "requestKind": {
-      "enum": [
-        "change",
-        "read_only",
-        "plan_only",
-        "verify_only",
-        "resume",
-        "cancel",
-        "explicit_stage"
-      ]
+      "description": "Only a routed request takes a route.",
+      "enum": ["routed", "verify_only", "resume", "cancel", "explicit_stage"]
     },
-    "candidateRoute": {
-      "description": "The route, or null for a request kind other than change.",
-      "enum": ["direct", "bugfix", "bounded-change", "feature", "discovery", null]
+    "extraction": {
+      "$ref": "#/$defs/extraction"
     },
     "goal": {
       "type": "string",
@@ -54,11 +45,12 @@
         "$ref": "#/$defs/observedReference"
       }
     },
-    "affectedSpecIds": {
+    "affectedFlowIds": {
+      "description": "Business-flow IDs.",
       "type": "array",
       "items": {
         "type": "string",
-        "minLength": 1
+        "pattern": "^BF-\\d{4}$"
       }
     },
     "riskSignals": {
@@ -82,13 +74,13 @@
         "$ref": "#/$defs/question"
       }
     },
-    "newCapabilities": {
-      "description": "Each capability the plan needs and no spec owns.",
+    "newStories": {
+      "description": "Each story the plan needs and no existing story represents.",
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["goal", "covers", "excludes", "evidence"],
+        "required": ["goal", "covers", "excludes", "evidence", "flowId"],
         "properties": {
           "goal": {
             "type": "string",
@@ -107,8 +99,24 @@
             }
           },
           "evidence": {
-            "type": "string",
-            "minLength": 1
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "flowId": {
+            "description": "The flow the story joins, or null for a new flow.",
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^BF-\\d{4}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       }
@@ -128,31 +136,303 @@
         "minLength": 1
       }
     },
-    "requiredStages": {
-      "description": "Stage kinds, in plan order.",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
     "rationale": {
       "type": "string",
       "minLength": 1
-    },
-    "confidence": {
-      "description": "Advisory only.",
-      "type": "number"
     }
   },
   "$defs": {
+    "reading": {
+      "description": "One further reading of the request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent", "entryFlags", "qualifiers", "signals"],
+      "properties": {
+        "intent": {
+          "description": "What the request asks for, or null when it cannot be read.",
+          "enum": [
+            "question-how",
+            "question-why",
+            "question-help",
+            "question-hosted",
+            "no-work",
+            "defect",
+            "defect-regression",
+            "defect-silent",
+            "defect-crash",
+            "defect-conformance",
+            "performance",
+            "security",
+            "surface-contradiction",
+            "model-gap",
+            "unenforced",
+            "stale-record",
+            "feature",
+            "design",
+            "epic",
+            "behaviour-change",
+            "deprecation",
+            "refactor",
+            "docs",
+            "flaky-test",
+            "test-defect",
+            "ci",
+            "dependency",
+            "release",
+            "order",
+            "follow-up",
+            null
+          ]
+        },
+        "entryFlags": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "repro",
+              "cause",
+              "fix",
+              "expect",
+              "decision",
+              "upstream",
+              "bundle",
+              "vague",
+              "last-good",
+              "env",
+              "intermittent",
+              "trace",
+              "bot",
+              "measured",
+              "stale"
+            ]
+          }
+        },
+        "qualifiers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "docs-answerable",
+              "known-duplicate",
+              "mixed-bundle",
+              "human-run",
+              "distribution-incident",
+              "settled-design",
+              "red-since-change",
+              "check-misses",
+              "mechanism-inert",
+              "removal-requested",
+              "visual-open",
+              "contradicts-record"
+            ]
+          }
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "approved-record-task",
+              "grilling-required",
+              "decide-by-change-request",
+              "disabled-test",
+              "flaky-label",
+              "backport",
+              "release-notes",
+              "test-plan"
+            ]
+          }
+        }
+      }
+    },
+    "extraction": {
+      "description": "The facts the decision rules read. Alternatives are required at low confidence, allowed at medium and refused at high.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intent",
+        "entryFlags",
+        "qualifiers",
+        "signals",
+        "risks",
+        "gate",
+        "artifacts",
+        "confidence"
+      ],
+      "properties": {
+        "intent": {
+          "description": "What the request asks for, or null when it cannot be read.",
+          "enum": [
+            "question-how",
+            "question-why",
+            "question-help",
+            "question-hosted",
+            "no-work",
+            "defect",
+            "defect-regression",
+            "defect-silent",
+            "defect-crash",
+            "defect-conformance",
+            "performance",
+            "security",
+            "surface-contradiction",
+            "model-gap",
+            "unenforced",
+            "stale-record",
+            "feature",
+            "design",
+            "epic",
+            "behaviour-change",
+            "deprecation",
+            "refactor",
+            "docs",
+            "flaky-test",
+            "test-defect",
+            "ci",
+            "dependency",
+            "release",
+            "order",
+            "follow-up",
+            null
+          ]
+        },
+        "entryFlags": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "repro",
+              "cause",
+              "fix",
+              "expect",
+              "decision",
+              "upstream",
+              "bundle",
+              "vague",
+              "last-good",
+              "env",
+              "intermittent",
+              "trace",
+              "bot",
+              "measured",
+              "stale"
+            ]
+          }
+        },
+        "qualifiers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "docs-answerable",
+              "known-duplicate",
+              "mixed-bundle",
+              "human-run",
+              "distribution-incident",
+              "settled-design",
+              "red-since-change",
+              "check-misses",
+              "mechanism-inert",
+              "removal-requested",
+              "visual-open",
+              "contradicts-record"
+            ]
+          }
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "approved-record-task",
+              "grilling-required",
+              "decide-by-change-request",
+              "disabled-test",
+              "flaky-label",
+              "backport",
+              "release-notes",
+              "test-plan"
+            ]
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "enum": ["security", "data-loss", "silent", "breaking", "upgrade", "performance"]
+          }
+        },
+        "gate": {
+          "enum": ["none", "decide", "approve", "external"]
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "code",
+              "tests",
+              "spec",
+              "contract",
+              "ui",
+              "docs",
+              "config",
+              "ci",
+              "deps",
+              "data",
+              "release",
+              "assistant"
+            ]
+          }
+        },
+        "confidence": {
+          "enum": ["high", "medium", "low"]
+        },
+        "alternatives": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/reading"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["confidence"],
+            "properties": {
+              "confidence": {
+                "const": "high"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": ["alternatives"],
+              "properties": {
+                "alternatives": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["confidence"],
+            "properties": {
+              "confidence": {
+                "const": "low"
+              }
+            }
+          },
+          "then": {
+            "required": ["alternatives"],
+            "properties": {
+              "alternatives": true
+            }
+          }
+        }
+      ]
+    },
     "normativeReference": {
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "ref"],
       "properties": {
         "kind": {
-          "enum": ["request", "spec-id", "contract-id", "path"]
+          "enum": ["request", "flow-id", "contract-id", "path"]
         },
         "ref": {
           "type": "string",
@@ -206,7 +486,7 @@
       "required": ["kind", "text"],
       "properties": {
         "kind": {
-          "enum": ["decision", "fact", "create"]
+          "enum": ["decision", "fact"]
         },
         "text": {
           "type": "string",
@@ -239,29 +519,6 @@
         },
         "effect": {
           "$ref": "#/$defs/effect"
-        },
-        "capability": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["goal", "covers", "excludes"],
-          "properties": {
-            "goal": {
-              "type": "string",
-              "minLength": 1
-            },
-            "covers": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "excludes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
         }
       },
       "if": {

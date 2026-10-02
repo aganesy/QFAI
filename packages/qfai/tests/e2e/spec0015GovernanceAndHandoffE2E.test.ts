@@ -6,10 +6,9 @@
  *     decision record.
  *   - US-0015-0011: canonical cross-skill handoff schema /
  *     R-HANDOFF-SCHEMA-DRIFT.
- *   - US-0015-0012: eight-code Reviewer-Gate finding catalog (mandatory
+ *   - US-0015-0012: seven-code Reviewer-Gate finding catalog (mandatory
  *     non-empty justification).
  *   - US-0015-0013: `qfai audit log` CLI surface.
- *   - US-0015-0014: `qfai handoff upgrade` legacy adapter.
  *   - US-0015-0015: cross-skill documentation realignment / zero stale
  *     references.
  *
@@ -20,13 +19,13 @@
  * approach was non-deterministic (CWD-dependent); the rewrite drops
  * that coupling while preserving the spec / TC annotations.
  */
-// QFAI:SPEC-0015:US-0015-0009
-// QFAI:SPEC-0015:US-0015-0010
-// QFAI:SPEC-0015:US-0015-0011
-// QFAI:SPEC-0015:US-0015-0012
-// QFAI:SPEC-0015:US-0015-0013
-// QFAI:SPEC-0015:US-0015-0014
-// QFAI:SPEC-0015:US-0015-0015
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -35,7 +34,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAuditLog } from "../../src/cli/commands/auditLog.js";
-import { runHandoffUpgrade } from "../../src/cli/commands/handoffUpgrade.js";
 import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
 import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
@@ -60,47 +58,47 @@ afterEach(async () => {
 });
 
 async function writeSkill(skillId: string, body: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", skillId);
+  const dir = path.join(root, ".qfai", "assistant", "skill", skillId);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }
 
-const FULL_POLICY_SKILL = `# qfai-fixture
+/** The shared prototype every qfai-* skill works under. */
+const BASELINE = `# Shared Skill Operating Baseline
 
-## Default Autopilot Policy
+## Default Autopilot Policy (Shared)
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick
-- ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage ops
-  - destructive operations
-  - version-pin changes
-  - scope expansions
-- hard-required:
-  - companyName
-  - brand intent
-  - primarySpecId when absent
+| Bucket          | Prototype entries                        |
+| --------------- | ---------------------------------------- |
+| \`auto-decide\`   | output formatting; ID / sequence numbering |
+| \`ask-user\`      | destructive operations; scope expansions |
+| \`hard-required\` | brand intent                             |
 `;
 
+async function writeBaseline(body: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "assistant", "rule");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "shared-skill-operating-baseline.md"), body, "utf-8");
+}
+
 describe("spec-0015 US-0015-0009 autopilot policy (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0009 — error: a SKILL.md missing ## Default Autopilot Policy emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:BF-0001 — error: a baseline missing the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+    await writeBaseline("# Shared Skill Operating Baseline\n\nNo policy section.\n");
     await writeSkill("qfai-x", "# qfai-x\n\nNo policy section.\n");
     const issues = await validateAutopilotPolicy(root);
     expect(issues.some((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBe(true);
   });
 
-  it("QFAI:SPEC-0015:US-0015-0009 — normal: a SKILL.md with 3 buckets passes without R-AUTOPILOT-POLICY-MISSING", async () => {
-    await writeSkill("qfai-x", FULL_POLICY_SKILL);
+  it("QFAI:BF-0001 — normal: a skill under a 3-bucket baseline passes without R-AUTOPILOT-POLICY-MISSING", async () => {
+    await writeBaseline(BASELINE);
+    await writeSkill("qfai-x", "# qfai-x\n\nNo policy section of its own.\n");
     const issues = await validateAutopilotPolicy(root);
     expect(issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
   });
 });
 
 describe("spec-0015 US-0015-0010 envelope audit-log (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0010 — normal: an envelope AskUserQuestion writes decisions/<ISO>.json", async () => {
+  it("QFAI:BF-0001 — normal: an envelope AskUserQuestion writes evidence/decision/<ISO>.json", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "expand scope?",
@@ -112,12 +110,13 @@ describe("spec-0015 US-0015-0010 envelope audit-log (E2E, deterministic temp-fix
     expect(r.written).toBe(true);
     expect(r.path).toBeDefined();
     if (r.path) {
+      expect(path.dirname(r.path)).toBe(path.join(root, ".qfai", "evidence", "decision"));
       const body = JSON.parse(await readFile(r.path, "utf-8")) as Record<string, unknown>;
       expect(body.envelopeContractClause).toMatch(/scope-expansion/);
     }
   });
 
-  it("QFAI:SPEC-0015:US-0015-0010 — boundary: a non-envelope question writes no record (no fail-open)", async () => {
+  it("QFAI:BF-0001 — boundary: a non-envelope question writes no record (no fail-open)", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "format pick?",
@@ -131,7 +130,7 @@ describe("spec-0015 US-0015-0010 envelope audit-log (E2E, deterministic temp-fix
 });
 
 describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0011 — error: asymmetric Pair IV edit emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:BF-0001 — error: asymmetric Pair IV edit emits R-HANDOFF-SCHEMA-DRIFT", async () => {
     // Schema declares the canonical token; writer omits its expected token.
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
@@ -152,7 +151,7 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
     expect(issues.some((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toBe(true);
   });
 
-  it("QFAI:SPEC-0015:US-0015-0011 — normal: a symmetric pair passes without R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:BF-0001 — normal: a symmetric pair passes without R-HANDOFF-SCHEMA-DRIFT", async () => {
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
       path.join(root, HANDOFF_SCHEMA_REL),
@@ -174,20 +173,19 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
 });
 
 describe("spec-0015 US-0015-0012 finding-code catalog (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0012 — normal: all 8 catalog codes are registered", () => {
+  it("QFAI:BF-0001 — normal: all 7 catalog codes are registered", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
     expect(codes).toContain("R-AUTOPILOT-POLICY-MISSING");
     expect(codes).toContain("R-HANDOFF-SCHEMA-DRIFT");
     expect(codes).toContain("R-EVIDENCE-MUTATION-UNLOGGED");
-    expect(codes).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
     expect(codes).toContain("R-PACK-LOCATION-DRIFT");
     expect(codes).toContain("R-SKILL-MANIFEST-DRIFT");
     expect(codes).toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
     expect(codes).toContain("R-MOCK-HREF-DRIFT");
-    expect(codes).toHaveLength(8);
+    expect(codes).toHaveLength(7);
   });
 
-  it("QFAI:SPEC-0015:US-0015-0012 — error: empty justification on a catalog code is rejected by validate ingestion", async () => {
+  it("QFAI:BF-0001 — error: empty justification on a catalog code is rejected by validate ingestion", async () => {
     const dir = path.join(root, ".qfai", "review");
     await mkdir(dir, { recursive: true });
     await writeFile(
@@ -204,7 +202,7 @@ describe("spec-0015 US-0015-0012 finding-code catalog (E2E, deterministic temp-f
 });
 
 describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0013 — normal: qfai audit log lists records newest-first and filters via --scope", async () => {
+  it("QFAI:BF-0001 — normal: qfai audit log lists records newest-first and filters via --scope", async () => {
     await writeDecisionRecord({
       root,
       question: "Q1",
@@ -236,7 +234,7 @@ describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)
     expect(parsed[0]?.scope).toBe("architectural-decision");
   });
 
-  it("QFAI:SPEC-0015:US-0015-0013 — boundary: empty store yields empty result and exit 0", async () => {
+  it("QFAI:BF-0001 — boundary: empty store yields empty result and exit 0", async () => {
     const written: string[] = [];
     const exit = await runAuditLog({
       root,
@@ -249,44 +247,8 @@ describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)
   });
 });
 
-describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0014 — normal: qfai handoff upgrade emits .qfai/handoff.yaml with legacy: preserved", async () => {
-    await writeFile(
-      path.join(root, "session-handoff.yaml"),
-      "companyName: Acme\nprimarySpecId: spec-0012\nextra: keepme\n",
-      "utf-8",
-    );
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "session-handoff.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/legacy:/);
-    expect(body).toMatch(/extra/);
-  });
-
-  it("QFAI:SPEC-0015:US-0015-0014 — error: malformed legacy input fails without partial overwrite", async () => {
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: pre\n", "utf-8");
-    await writeFile(path.join(root, "malformed.yaml"), "  \n  \n", "utf-8");
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "malformed.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).not.toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toBe("companyName: pre\n");
-  });
-});
-
 describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0015 — normal: rewritten refs report zero stale references", async () => {
+  it("QFAI:BF-0001 — normal: rewritten refs report zero stale references", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
@@ -294,7 +256,7 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
-  it("QFAI:SPEC-0015:US-0015-0015 — error: a stale reference at HEAD is reported", async () => {
+  it("QFAI:BF-0001 — error: a stale reference at HEAD is reported", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
