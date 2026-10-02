@@ -1,32 +1,18 @@
-// QFAI:SPEC-0018:TC-0018-0058
+// QFAI:EX-0001-0185-34
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "feature",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "feature-sdd",
-      stageKind: "sdd",
-      skill: "qfai-sdd",
-      operation: "new-capability",
-    },
-    {
-      stageInstanceId: "feature-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-    },
-    {
-      stageInstanceId: "feature-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
+    planStage("feature-sdd", "sdd"),
+    planStage("feature-implement", "implement"),
+    planStage("feature-verify", "verify"),
   ],
 };
 const approval = {
@@ -34,7 +20,7 @@ const approval = {
   kind: "human_decision",
   operation: "CREATE",
   effect: "proceed",
-  target: { kind: "new_capability", slotId: "slot-3-1" },
+  target: { kind: "new_story", slotId: "slot-3-1" },
 };
 
 function acceptSddBindings(bindings: NonNullable<AcceptResult["bindings"]>) {
@@ -64,8 +50,8 @@ function acceptSddBindings(bindings: NonNullable<AcceptResult["bindings"]>) {
   );
 }
 
-it("TC-0018-0058 (TDD-0076): An SDD result binding the spec it created to the goal's slot", () => {
-  const binding = { slotId: "slot-3-1", capabilityId: "CAP-0001", specId: "spec-0007" };
+it("An SDD result binding the spec it created to the goal's slot", () => {
+  const binding = { slotId: "slot-3-1", flowId: "BF-0007", storyIds: ["US-0007-0001"] };
   const decision = acceptSddBindings([binding]);
   expect({
     state: decision.verdict.run?.state,
@@ -73,11 +59,10 @@ it("TC-0018-0058 (TDD-0076): An SDD result binding the spec it created to the go
   }).toEqual({ state: "ready", bindings: [{ type: "binding-recorded", binding }] });
 });
 
-// QFAI:SPEC-0018:TC-0018-0059
-it("TC-0018-0059 (TDD-0077): An SDD result creating a capability no approved slot is bound to", () => {
+it("An SDD result creating a capability no approved slot is bound to", () => {
   const decision = acceptSddBindings([
-    { slotId: "slot-3-1", capabilityId: "CAP-0001", specId: "spec-0007" },
-    { slotId: "slot-9-9", capabilityId: "CAP-0002", specId: "spec-0008" },
+    { slotId: "slot-3-1", flowId: "BF-0007", storyIds: ["US-0007-0001"] },
+    { slotId: "slot-9-9", flowId: "BF-0008", storyIds: ["US-0008-0001"] },
   ]);
   const error = decision.verdict.error;
   expect({
@@ -88,13 +73,12 @@ it("TC-0018-0059 (TDD-0077): An SDD result creating a capability no approved slo
   }).toEqual({
     state: "running",
     code: "invalid-input",
-    reasons: [{ reason: "unbound-capability", subject: "bindings[1]" }],
+    reasons: [{ reason: "unbound-story", subject: "bindings[1]" }],
     events: [],
   });
 });
 
-// QFAI:SPEC-0018:TC-0018-0060
-it("TC-0018-0060 (TDD-0078): Issue a work order whose inputs include paths outside the plan's write scope", () => {
+it("Issue a work order whose inputs include paths outside the plan's write scope", () => {
   const checkedPlan = {
     ...plan,
     writeScope: ["src/notify/**", "tests/notify/**"],

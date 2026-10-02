@@ -3,9 +3,9 @@
  *
  * Twelve colours, three families, four radii and three shadows used to be
  * written from a sentence of prose about an archetype. Everything downstream
- * is exact about them — the lock hashes them, `certify` re-scans them, every
- * literal in every capture is checked against them — so the rigour sat on top
- * of a guess.
+ * is exact about them — the prototyping loop hashes them, `certify` re-scans
+ * them, every literal in every capture is checked against them — so the rigour
+ * sat on top of a guess.
  *
  * `brand.theme` names the published theme the values were taken from. What is
  * checkable here is that the instruction to take them travels with the field,
@@ -23,7 +23,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const SKILLS = "assistant/skills";
+const SKILLS = "assistant/skill";
 const AUTHORING = `${SKILLS}/qfai-sdd/references/design-md-authoring.md`;
 const SPEC = `${SKILLS}/qfai-prototyping/references/design-md-spec.md`;
 const SAMPLE = `${SKILLS}/qfai-prototyping/templates/DESIGN.md.sample`;
@@ -82,7 +82,9 @@ describe("the design tokens name their source", () => {
     it(`${tree}: the name reaches the implementer`, async () => {
       const handoff = flat(await read(tree, HANDOFF));
 
-      expect(handoff).toContain("the mirror copies it too");
+      expect(handoff).toContain(
+        "When `DESIGN.md` names a `brand.theme`, that name is the instruction",
+      );
       expect(handoff).toContain("install the theme, rather than reproduce");
     });
   }
@@ -97,7 +99,7 @@ describe("a project's own token check can hold every key", () => {
       );
     });
 
-    it(`${tree}: the mirror contract says what such a check must do`, async () => {
+    it(`${tree}: the handoff reference says what such a check must do`, async () => {
       // A name class of letters and hyphens never captures `2xl` or `3xl`, and a
       // check that captures nothing for a key passes in both directions.
       const handoff = flat(await read(tree, HANDOFF));

@@ -1,65 +1,65 @@
-# conflict-resolve リファレンス
+# conflict-resolve reference
 
-## 意図分析マトリクス
+## Intent analysis matrix
 
-| file path         | ours意図                 | theirs意図          | 破壊禁止仕様           | 統合方針                     | 検証方法                            |
-| ----------------- | ------------------------ | ------------------- | ---------------------- | ---------------------------- | ----------------------------------- |
-| `path/to/file.ts` | 例: 新バリデーション追加 | 例: 既存API互換維持 | 例: 既存レスポンス形式 | 例: 両条件を満たす分岐へ統合 | 例: `npm test -- path/to/file.test` |
+| file path         | ours intent                | theirs intent                          | Spec that must not break          | Integration approach                                    | Verification                         |
+| ----------------- | -------------------------- | -------------------------------------- | --------------------------------- | ------------------------------------------------------- | ------------------------------------ |
+| `path/to/file.ts` | e.g. adds a new validation | e.g. keeps the existing API compatible | e.g. the existing response format | e.g. merge into a branch that satisfies both conditions | e.g. `npm test -- path/to/file.test` |
 
-## 競合パターン別ガイド
+## Guide by conflict pattern
 
-### API署名衝突
+### API signature conflicts
 
-- 公開APIの入出力互換を優先し、必要ならオーバーロードやオプション引数で共存させる。
-- 片側の破壊的変更が必要な場合は、呼び出し側への影響一覧を先に作成する。
+- Prefer input and output compatibility of the public API, and let both coexist through overloads or optional arguments where needed.
+- If one side needs a breaking change, first list its impact on callers.
 
-### ロジック衝突
+### Logic conflicts
 
-- 事前条件・副作用・例外処理の差分を比較し、両方の成功条件を満たす統合ロジックを設計する。
-- 片側のみの条件分岐削除は禁止。不要と判断する場合は根拠を記録する。
+- Compare the differences in preconditions, side effects and exception handling, and design merged logic that satisfies both success conditions.
+- Removing a conditional branch added by only one side is prohibited. If you judge it unnecessary, record the reason.
 
-### import衝突
+### Import conflicts
 
-- 不足importを補い、未使用importはプロジェクトの lint/format ツールで整理する。
-- import順序はプロジェクトの formatter で自動整列する。
+- Add missing imports, and tidy unused imports with the project's lint/format tools.
+- Let the project's formatter sort the import order automatically.
 
-### rename/delete衝突
+### Rename/delete conflicts
 
-- renameとdeleteが衝突した場合、参照先の実利用を確認してから移行方針を決める。
-- delete採用時も、rename側で追加されたロジックの必要性を先に検証する。
+- When a rename and a delete conflict, check how the target is actually used before deciding the migration approach.
+- Even when adopting the delete, first verify whether the logic added on the rename side is still needed.
 
-### generated file衝突（手編集禁止）
+### Generated file conflicts (no hand edits)
 
-- 生成物は手編集しない。元ソースを統合後、コード生成ツールを再実行して差分解消する。
-- 生成差分のみを根拠に `ours/theirs` を丸ごと採用しない。
+- Do not hand-edit generated files. Merge the source, then rerun the code generation tool to resolve the diff.
+- Do not adopt `ours` or `theirs` wholesale based only on a generated diff.
 
-## コミットメッセージ規約
+## Commit message convention
 
-- コミット: `merge: resolve conflicts with <base-branch>`
+- Commit: `merge: resolve conflicts with <base-branch>`
 
-## 作業報告テンプレート
+## Work report template
 
 ```markdown
-## 競合対象一覧
+## Conflicted files
 
-- [path]: [状態]
+- [path]: [status]
 
-## 意図分析結果
+## Intent analysis results
 
 - [path]
-  - ours意図:
-  - theirs意図:
-  - 統合方針:
-  - 破壊していない根拠:
+  - ours intent:
+  - theirs intent:
+  - integration approach:
+  - why nothing was broken:
 
-## 検証結果
+## Verification results
 
 - lint/format:
-- 型チェック:
-- テスト:
+- type check:
+- tests:
 
-## コミット/プッシュ結果
+## Commit and push results
 
-- コミット:
+- commit:
 - push:
 ```

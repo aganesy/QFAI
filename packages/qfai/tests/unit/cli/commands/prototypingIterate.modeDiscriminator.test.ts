@@ -2,16 +2,13 @@
  * Unit: `prototyping.mode` config key + `--mode` CLI override + medium
  * gate-relaxation.
  *
- * - TC-0012-0475: `--mode exploration` overrides config; absence of
- *   both defaults to `convergence`. `prototyping.json#mode` records
- *   the per-iteration mode. Under exploration `QFAI-CRIT-008` and the
- *   design-compliance error downgrade error → warning while schema /
- *   path / license (exit 66) gates stay hard error (medium relaxation).
+ * `--mode exploration` overrides config; absence of both defaults to
+ * convergence. Exploration relaxes selected soft gates while schema,
+ * path, and license failures stay hard errors.
  *
  * The discriminator lives in `core/prototyping/mode.ts`
  * (`resolvePrototypingMode` + `relaxIssuesForMode`).
  */
-// QFAI:SPEC-0012:TC-0012-0475
 
 import { describe, expect, it } from "vitest";
 
@@ -46,7 +43,6 @@ const gateSurface = (): Promise<GateSurface> => (cached ??= collectPrototypingGa
  * same reason, by `tests/validators/ruleCodeUniqueness.test.ts`.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
-  ["core/validators/agentDefinition.ts", new Map([["code", 1]])],
   ["core/validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
 ]);
 
@@ -58,7 +54,7 @@ const describeSites = (sites: ReadonlyMap<string, ReadonlyMap<string, number>>):
     return `${file}: ${parts.join(", ")}`;
   });
 
-describe("TC-0012-0475: prototyping mode discriminator + CLI override", () => {
+describe("prototyping mode discriminator and CLI override", () => {
   it("defaults to convergence when neither CLI nor config is set", () => {
     const mode = resolvePrototypingMode({ cli: undefined, config: undefined });
     expect(mode).toBe("convergence");
@@ -81,7 +77,7 @@ describe("TC-0012-0475: prototyping mode discriminator + CLI override", () => {
   });
 });
 
-describe("TC-0012-0475: exploration medium gate-relaxation downgrades soft gates only", () => {
+describe("exploration mode downgrades soft gates only", () => {
   const baseIssue: Issue = {
     code: "QFAI-CRIT-008",
     severity: "error",
@@ -197,7 +193,7 @@ describe("exploration relaxation leaves an audit trail on the findings it rewrit
   });
 });
 
-describe("TC-0012-0475: the hard-error allowlist is the pipeline's real gate set", () => {
+describe("the hard-error allowlist matches the pipeline gate set", () => {
   // Set EQUALITY against the WHOLE post-filter input, not a directory sample.
   // A scan scoped to the prototyping validator files left every other gate the
   // same pipeline runs — the evidence-artifact and config-link path gates, the
