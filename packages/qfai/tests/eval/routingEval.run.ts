@@ -34,6 +34,7 @@ import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   UnknownFactKeyError,
   type RunRecord,
@@ -219,7 +220,7 @@ async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
 function spawnHost(root: string, prompt: string, argv: string[]): number {
   const [command = "", ...args] = argv.map((each) => (each === "{prompt}" ? prompt : each));
   const started = Date.now();
-  spawnSync(command, args, { cwd: root, encoding: "utf8", shell: false });
+  runHost(command, args, root);
   return Date.now() - started;
 }
 
@@ -294,9 +295,13 @@ async function runEval(): Promise<void> {
     .map((seed) => seed.id);
   const baseRoot = await base();
   const runs: Record<string, Awaited<ReturnType<typeof runSeed>>> = {};
-  for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
-  const routes = await routeEval(baseRoot, argv);
-  await removeTempTree(baseRoot);
+  let routes: Awaited<ReturnType<typeof routeEval>>;
+  try {
+    for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
+    routes = await routeEval(baseRoot, argv);
+  } finally {
+    await removeTempTree(baseRoot);
+  }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
   const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
   const verdict = releaseVerdict(cases, safetyList);
