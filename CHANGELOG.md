@@ -6,6 +6,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A rule that text the repository did not author is data, not instruction**
+  (#2231). `qfai init` now writes `.agents/rules/untrusted-content.md` and cites
+  it from the agent entry points. It names the surfaces that carry such text —
+  tool results, fetched pages, files the project did not add, pull request and
+  issue bodies, pasted text — and says an instruction found there is followed
+  only where the user's own request asks for it. It also sets out how to mark
+  pasted text: an opening and closing tag carrying the same short random id,
+  with a system-prompt note saying what the tags mean.
+
+  The research protocol no longer applies an entry on the strength of an
+  external source alone: the `reason` of an `apply` states what the agent
+  verified against the repository, and an entry with nothing verified is
+  `defer`. The shipped code-review instructions treat the pull request
+  description, issue text and comments as data.
+
+  This repository's own review instructions say the same. They are also split
+  by topic into four files, so the TypeScript checks apply to `*.ts` files and
+  the compatibility checks to the package source only.
+
+- **The shared skill baseline says how an unattended run may end its turn**
+  (#2233). Under `--auto`, a message with no tool call in it ends the turn and
+  stops the run, whether or not the work is done. While work is still owed, a
+  turn may not end on a summary that only announces the next step, an offer to
+  carry on, a list of decisions none of which blocks the work, or a stop because
+  the turn ran long. It may end only when nothing can move without the user, or
+  when the blocker is deliberately protected from the agent, and that ending is
+  a stop report.
 - **Step 12 of `qfai-migration-v1-to-v2` lists the project files that still
   name a 1.x path.** A skill, agent or document the project wrote is not
   rewritten, and it kept reading `.qfai/specs/`, `_policies/`, `spec-NNNN`,
@@ -55,6 +82,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reason to extract a helper. The section keeps what § 2 of the rule already
   requires, such as traceability annotations. The section after it moves from
   § 4 to § 5.
+- **The capture URL and response-status tests now fail on the mistakes they
+  guard against** (#2228). The `composeCaptureUrl` cases use inputs where a URL
+  join and a string concatenation give different results, so an implementation
+  that concatenated would fail. An absolute screen URL is checked on a bare
+  origin a join would rewrite. The default capture runner's status test gains
+  a case that refuses HTTP 400, the first status of the rejected range, beside
+  the existing case that accepts 399.
 - **The slice alignment test refuses a sliced matrix that holds anything but
   its slice list** (#2213). An `include` or `exclude` beside `slice` changes the
   legs a job runs without changing the list the test compared, so a matrix
