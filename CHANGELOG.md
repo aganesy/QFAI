@@ -274,8 +274,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `artifactRefs` entry that is a readable file inside the project's real root,
   and refuses a digest that differs from that file as `digest-mismatch`. An
   entry that is missing, unreadable or outside the root gets no digest, so its
-  submitted digest is not compared. A reissued work order names each of its inputs at
-  the file's current digest, and the `sdd_append` work order after a
+  submitted digest is not compared. A reissued work order names each input
+  that is a readable file inside the root at the file's current digest. An
+  input that has since gone missing, become unreadable or left the root keeps
+  the digest recorded earlier. The `sdd_append` work order after a
   missing-test diagnosis names the reproduction record as its input.
 - **A fact question may offer its candidates as a choice (#2346).** The route
   proposal schema allowed options on a fact question, but the parser refused
@@ -298,20 +300,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   #2344).** No finding fails the gate, and a debt whose finding remains stays
   open. Before, every finding was dropped, so every debt closed.
 - **A route proposal cannot reach a protected path by spelling it differently
-  (#2458).** A write area such as `./src/notify/**`, `.qfai\runs\**`, or one
+  (#2458).** A write area such as `./src/notify/**`, `.qfai\run\**`, or one
   with a doubled or trailing `/`, was compared as written and not refused. Both
   the fixed protected paths and the protected targets are now compared after
   the area is normalized. The refusal still names the area as written.
-- **`qfai workflow accept` names every check a refused stage result fails
-  (#2338).** A result for a work order the plan does not issue next, a missing
-  bug diagnosis, an outcome the stage cannot take and an invalid route proposal
-  were refused as `invalid-input` with no `reasons[]`. Each is now named:
+- **`qfai workflow accept` names the check behind four more refusals of a
+  stage result (#2338).** A result for a work order the plan does not issue
+  next, a missing bug diagnosis, an outcome the stage cannot take and an
+  invalid route proposal were refused as `invalid-input` with no `reasons[]`.
+  These four are now named:
   `work-order`, or `schema` on `diagnosis`, `outcome` or `proposal`, beside the
   reasons of the other checks.
 - **`qfai validate` no longer reports `QFAI-TOOL-002` in a worktree whose
-  `node_modules` links to another checkout's (#2262).** The `qfai` that link
-  resolves to is the project's own copy. A worktree with no `node_modules`,
-  where `npx` finds another checkout's copy, is still reported.
+  `node_modules` links to another checkout's (#2262),** when the `qfai` behind
+  that link is an installed copy inside the linked `node_modules`. It is still
+  reported when that `qfai` is itself a workspace link to the other checkout's
+  source, and in a worktree with no `node_modules`, where `npx` finds another
+  checkout's copy.
 - **The question-form reminder stays silent on a turn the host starts
   (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
   of the prompt opens with `<task-notification>` or `<wake>`. A typed prompt,
