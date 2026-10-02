@@ -25,17 +25,12 @@ describe("excess vocabulary covers code and product surface without adding tags"
 
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
-      [
-        "architecture-reviewer",
-        "completion-reviewer",
-        "implementation-reviewer",
-        "product-surface-reviewer",
-        "qa-gatekeeper",
-        "requirements-reviewer",
-      ].map((role) => ({ tree, role })),
+      ["architecture-reviewer", "product-surface-reviewer", "requirements-reviewer"].map(
+        (role) => ({ tree, role }),
+      ),
     ),
   )("$tree/$role ships the same vocabulary and product scope", async ({ tree, role }) => {
-    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
     const routes = text.match(/^- File excess .*(?:\r?\n {2}.+)*/gm);
     expect(routes).toHaveLength(1);
     const excess = routes?.[0]?.replace(/\s+/g, " ");
@@ -56,6 +51,30 @@ describe("excess vocabulary covers code and product surface without adding tags"
     expect(excess).toContain("Otherwise report unsupported Article VII excess as advisory");
     expect(text).not.toMatch(/^- Apply .*tag excess/m);
   });
+
+  it.each(
+    ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
+      ["completion-reviewer", "implementation-reviewer", "qa-gatekeeper"].map((role) => ({
+        tree,
+        role,
+      })),
+    ),
+  )(
+    "$tree/$role keeps excess findings concrete without weakening obligations",
+    async ({ tree, role }) => {
+      const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
+      if (role === "qa-gatekeeper") {
+        expect(text).toContain("`defect:code-quality`");
+        expect(text).toContain("what replaces it");
+        expect(text).toContain("Do not weaken an active obligation");
+      } else {
+        expect(text).toContain(".agents/rules/minimal-implementation.md");
+        expect(text).toContain(
+          "The finding would add a product obligation upstream never asked for.",
+        );
+      }
+    },
+  );
 });
 
 describe("the implementation reviewer flags dropped promises, not uncaught propagation", () => {
@@ -63,21 +82,16 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
     "%s keeps the correctness class",
     async (tree) => {
       const card = await readFile(
-        path.join(ROOT, tree, "assistant/agents/implementation-reviewer.md"),
+        path.join(ROOT, tree, "assistant/agent/implementation-reviewer.md"),
         "utf-8",
       );
-      expect(card.replace(/\s+/g, " ")).toContain("a promise that is neither awaited nor returned");
+      expect(card.replace(/\s+/g, " ")).toContain("promises that callers neither await nor return");
       expect(card).not.toContain("unhandled async paths");
-      const classification = await readFile(
-        path.join(
-          ROOT,
-          tree,
-          "assistant/skills/qfai-implement/references/finding-classification.md",
-        ),
+      const rule = await readFile(
+        path.join(ROOT, ".agents/rules/minimal-implementation.md"),
         "utf-8",
       );
-      expect(classification).toContain("defect:correctness");
-      expect(classification).toContain("unhandled rejection");
+      expect(rule).toContain("A dropped rejection remains a correctness defect");
     },
   );
 });
@@ -88,12 +102,12 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
       ["completion-reviewer", "implementation-reviewer"].map((role) => ({ tree, role })),
     ),
   )("$tree/$role retains the named-rule defect route", async ({ tree, role }) => {
-    const text = await readFile(path.join(ROOT, tree, "assistant/agents", `${role}.md`), "utf-8");
+    const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
     const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
     expect(stop).toBeDefined();
     expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
     expect(stop).toContain("raise it as an advisory finding plus a Change Request proposal");
-    expect(stop).toContain("a regression against a named constitution or catalog rule");
+    expect(stop).toContain("a regression against a governing rule or contract");
     expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
   });
 });
@@ -148,11 +162,11 @@ describe("the retained-failure test stays under the safety floor", () => {
     expect(flat).toContain(
       "Do not make the callback async and assume its ignored outer promise is consumed",
     );
-    expect(flat).toContain("<paths.specsDir>/spec-*/06_Test-Cases.md");
+    expect(flat).toContain("the owning story's `03_Example.md`");
     expect(flat).toContain("Resolve `paths.specsDir` from `qfai.config.yaml`");
     expect(flat).toContain("process entry point is a trust boundary");
     expect(flat).toContain("A dropped rejection remains a correctness defect");
-    expect(flat).toContain("06_Test-Cases.md");
+    expect(flat).toContain("a test that annotates its EX ID");
   });
 
   it("keeps the operating rule byte-identical to its shipped master", async () => {
@@ -291,7 +305,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
     const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
-    expect(text).toMatch(/バージョン規律/);
+    expect(text).toMatch(/Version discipline/);
     expect(text).toMatch(/\.agents\/rules\/version-discipline\.md/);
     expect(text).toMatch(/\.agents\/rules\//);
   });
@@ -307,7 +321,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     expect(text).toMatch(/version-discipline/);
   });
 
-  // A repository-only rule, like `document-schema.md`: it governs what this
+  // A repository-only rule, like `repository-language.md`: it governs what this
   // tree stores, and `packages/qfai/assets/init/root/.agents/rules/` does not
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
@@ -425,7 +439,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "packages/qfai/assets/init/root/AGENTS.md",
         "packages/qfai/assets/init/root/CLAUDE.md",
       ];
-      const enumerates = /issue\/PR 番号|issue 番号 \/ PR 番号|issue or pull request numbers/;
+      const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
       for (const rel of entryPoints) {
         const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -473,8 +487,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
     });
 
-    // A sourcing decision is taken at a design stage, and contracts-first
-    // freezes it before any source file exists — so a rule reaching the
+    // A sourcing decision is taken at a design stage, and a contract written
+    // before any source file exists freezes it — so a rule reaching the
     // sourcing rungs only from source reaches them after the answer is fixed.
     it.each(MASTERS)("%s reaches the sourcing rungs at the stage that decides", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -532,8 +546,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
 
     it.each([
-      "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
-      ".qfai/assistant/constitution/constitution.md",
+      "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+      ".qfai/assistant/rule/constitution.md",
     ])("%s names this repository first among the reuse rungs", async (rel) => {
       const text = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
       expect(text).toContain(
@@ -634,7 +648,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       for (const neighbour of [
         "documentation-clarity.md",
         "minimal-implementation.md",
-        ".qfai/assistant/catalog/ui-definition-protocol.md",
+        ".qfai/assistant/rule/ui-definition-protocol.md",
       ]) {
         expect(text).toContain(neighbour);
       }
@@ -658,10 +672,10 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // places an agent is already reading when it is about to write the
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
-      "packages/qfai/assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/product-experience-architect.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/frontend-engineer.md",
-      "packages/qfai/assets/init/.qfai/assistant/agents/product-surface-reviewer.md",
+      ".qfai/spec/03_contract/cli/cli-0014-qfai-validate.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain(".agents/rules/interface-clarity.md");
@@ -794,6 +808,31 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
     });
 
+    // A turn that leaves the next step to the user and ends on a report leaves
+    // the session idle with nothing saying it waits. One token per clause: the
+    // question is owed, it lists the next actions recommended first, the
+    // fallback carries it, it is not a clarification, a stop asks nothing, and
+    // a no-question mode reports the actions instead of asking.
+    it.each(MASTERS)("%s ends a turn that waits on the user with the next actions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /A\s+turn\s+that\s+leaves\s+the\s+next\s+step\s+to\s+the\s+user\s+ends\s+with\s+a\s+question\s+listing\s+the\s+next\s+actions/,
+      );
+      expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
+      expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
+      expect(text).toMatch(/It\s+is\s+not\s+a\s+clarification:\s+it\s+resolves\s+no\s+ambiguity/);
+      expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
+      expect(text).toMatch(
+        /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
+      );
+      // A halt's form is the halt notice `qfai-run` sets out, not this question.
+      expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
+      expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
+      // The introduction states the same exception, or it promises a question
+      // the mode forbids.
+      expect(text).toMatch(/always\s+put,\s+except\s+under\s+a\s+no-question\s+mode/);
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
@@ -821,6 +860,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/in\s+the\s+shape\s+its\s+answer\s+has/);
       expect(text).toMatch(/a\s+plain\s+request/);
       expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
+    });
+
+    // The entry points `qfai init` writes are where an adopter's agent meets
+    // the rule, so their summary names the turn that waits on the user too.
+    it.each([
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the next-action question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /user-questions\.md` — [^\n]*a turn that waits on the user ends with a question listing the next actions/,
+      );
     });
 
     // The two rules divide one subject: which questions to ask, and what each
@@ -999,6 +1051,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/never\s+because\s+the\s+answer\s+is\s+a\s+value/);
     });
 
+    // Outside a session a question is a clarification and capped, but the one
+    // that ends a turn waiting on the user resolves no ambiguity. Without its
+    // own row the scope table caps the question the question-form rule owes.
+    it.each(MASTERS)("%s does not cap the question ending a waiting turn", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /\|\s*The question ending a turn that waits on the user\s*\|\s*Not a clarification, and not capped/,
+      );
+    });
+
     // The frontier empties while a lookup is in flight, so an end condition
     // reading the frontier alone closes the session before the lookup can raise
     // the questions it was dispatched to answer.
@@ -1154,6 +1216,64 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("api-budget.md");
     });
   });
+
+  // An adopter's spec tree is held to the same closed schemas, by the same
+  // checker, in `qfai validate` and in the docs lane. So the master ships, and
+  // what only this repository has — its lanes and how a schema is changed — is
+  // in the overlay.
+  describe("document-schema rule", () => {
+    const MASTER = "packages/qfai/assets/init/root/.agents/rules/document-schema.md";
+    const OVERLAY = ".agents/rules/document-schema.local.md";
+
+    it("states every clause in the shipped master", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      for (const clause of [
+        /Every document has one schema/,
+        /no entry names fails/,
+        /The schemas are closed/,
+        /A section the schema does not name fails/,
+        /An empty section is still there/,
+        /The template is the shape/,
+        /No history in a document/,
+        /`<!-- mdschema:ignore -->` is refused/,
+        /QFAI-DOCSCHEMA-001/,
+        /The lane is required/,
+        /What a schema cannot say/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("keeps what only this repository has in the overlay", async () => {
+      const text = await readFile(path.join(ROOT, OVERLAY), "utf-8");
+      for (const clause of [
+        /lint:mdschema/,
+        /lint:mermaid/,
+        /check-markdownlint-config\.mjs/,
+        /One implementation, three entry points/,
+        /One content kind per section/,
+        /A required section may hold a header-only table/,
+        /mdschemaSchemas\.test\.ts/,
+        /`max: 0` means no upper limit/,
+        /mermaid-lint:ignore/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+      expect(text).not.toMatch(/`when:`/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("document-schema.md");
+    });
+  });
 });
 
 describe("the question shape has one owner", () => {
@@ -1199,14 +1319,14 @@ describe("a no-question run opens every node, on every surface that says so", ()
   it.each([
     ".agents/rules/grilling.md",
     "packages/qfai/assets/init/root/.agents/rules/grilling.md",
-    ".qfai/assistant/constitution/constitution.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
-    ".qfai/assistant/constitution/communication.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
-    ".qfai/assistant/skills/qfai-grilling/SKILL.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grilling/SKILL.md",
-    ".qfai/assistant/constitution/shared-skill-operating-baseline.md",
-    "packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md",
+    ".qfai/assistant/rule/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+    ".qfai/assistant/rule/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/communication.md",
+    ".qfai/assistant/skill/qfai-grilling/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling/SKILL.md",
+    ".qfai/assistant/rule/shared-skill-operating-baseline.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/shared-skill-operating-baseline.md",
   ])("%s opens nodes rather than decisions", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(
@@ -1281,8 +1401,8 @@ describe("an open fact survives the surfaces that report a session", () => {
   // where a stage's unanswered questions land. A fact only the user holds
   // disappears at either one unless both carry it.
   it.each([
-    ".qfai/assistant/skills/qfai-grill/SKILL.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-grill/SKILL.md",
+    ".qfai/assistant/skill/qfai-grill/SKILL.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grill/SKILL.md",
   ])("%s reports every open node, not every open decision", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/every\s+node\s+left\s+open/);
@@ -1290,8 +1410,8 @@ describe("an open fact survives the surfaces that report a session", () => {
   });
 
   it.each([
-    ".qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
-    "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/11_OQ-Register.md",
+    ".qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
   ])("%s has a row shape for a question asking for a fact", async (rel) => {
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/A\s+question\s+asking\s+for\s+a\s+fact\s+is\s+the\s+exception/);
@@ -1348,11 +1468,23 @@ describe("rule overlays", () => {
         // clause names.
         "CAP-0010",
         "DEC-NNNN-NNNN",
-        // The three exceptions: the sample IDs, the manifest version, and the
-        // migration memo whose file name the guards neutralise before scanning.
+        "DEC-NNNN",
+        "OQ-NNNN",
+        "BF-NNNN",
+        "US-NNNN-NNNN",
+        "AC-NNNN-NNNN-NN",
+        "EX-NNNN-NNNN-NN",
+        "BR-NNNN",
+        "BR-NNNN-NNNN",
+        "DESIGN-NNNN",
+        "`cli-NNNN`, `api-NNNN`",
+        "every four-digit segment",
+        "is not read as `UI-NNNN`",
+        // The three exceptions — the sample IDs, the manifest version and the
+        // story-tree sample band — and the absence of any file-name exemption.
         "spec-0001",
         "is the released version",
-        "cannot be renamed",
+        "No file name is exempt",
         // Versions that belong to something else, and the matcher's ceiling.
         "A version that belongs to something else",
         "project-qualified form",
@@ -1371,10 +1503,9 @@ describe("rule overlays", () => {
         // What a pin authorizes, and when it is done.
         "chore(release): qfai X.Y.Z",
         "Do this once",
-        // How each guard reads a branch name. One token per row, taken from
-        // the half of the row no other row repeats.
+        // The remaining guard's branch-name rule and CI location.
         "exits 1 rather than reading",
-        "a suffix after",
+        "packages/qfai/scripts/check-branch-version-pin.sh",
         // The override, and the unpinned case.
         "coordinated release",
         "On an unpinned branch",

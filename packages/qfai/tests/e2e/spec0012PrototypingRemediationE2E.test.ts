@@ -9,29 +9,30 @@
  * prototyping.json + certify scope discriminator + single-spec
  * surface + screen-id casing + --cycle 0 --force backup +
  * --cycle out-of-range). Phase 4 adds US-0012-0132/0133/0134/0135/0136
- * (Operator UX surface: [BLOCKED] summary + primarySpecId
+ * (Operator UX surface: [BLOCKED] summary + primaryUiContract
  * normalisation + lap-009/010 advisory + --license-patch + iter-NN/
- * iterate-context.json).
+ * iterate-context.json). US-0001-0184 covers the read-only
+ * `--check-convergence` peek.
  */
-// QFAI:SPEC-0012:US-0012-0119
-// QFAI:SPEC-0012:US-0012-0120
-// QFAI:SPEC-0012:US-0012-0121
-// QFAI:SPEC-0012:US-0012-0122
-// QFAI:SPEC-0012:US-0012-0123
-// QFAI:SPEC-0012:US-0012-0124
-// QFAI:SPEC-0012:US-0012-0125
-// QFAI:SPEC-0012:US-0012-0126
-// QFAI:SPEC-0012:US-0012-0127
-// QFAI:SPEC-0012:US-0012-0128
-// QFAI:SPEC-0012:US-0012-0129
-// QFAI:SPEC-0012:US-0012-0130
-// QFAI:SPEC-0012:US-0012-0131
-// QFAI:SPEC-0012:US-0012-0132
-// QFAI:SPEC-0012:US-0012-0133
-// QFAI:SPEC-0012:US-0012-0134
-// QFAI:SPEC-0012:US-0012-0135
-// QFAI:SPEC-0012:US-0012-0136
-// QFAI:SPEC-0012:US-0012-0137
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,6 +41,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
+import { run } from "../../src/cli/main.js";
 import { loadConfig } from "../../src/core/config.js";
 import type { DesignMd } from "../../src/core/design/designMd.js";
 import { findDesignMdViolations } from "../../src/core/prototyping/designMdViolations.js";
@@ -54,7 +56,7 @@ import {
   findMissingRoutes,
 } from "../../src/core/prototyping/layoutAntiPatternsAdvisory.js";
 import { isLicensePatchAuditRow } from "../../src/core/prototyping/licensePatchAudit.js";
-import { parsePrimarySpecId } from "../../src/core/prototyping/primarySpecIdParse.js";
+import { parsePrimaryUiContract } from "../../src/core/prototyping/primarySpecIdParse.js";
 import {
   validatePrototypingEvidence,
   validateScreenIdCasing,
@@ -202,12 +204,11 @@ async function seedPhase2Project(root: string, browserTool = "playwright"): Prom
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/out",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
@@ -218,18 +219,19 @@ async function seedPhase2Project(root: string, browserTool = "playwright"): Prom
     ].join("\n"),
     "utf-8",
   );
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
+  await mkdir(uiDir, { recursive: true });
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01 Spec\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
+    path.join(uiDir, "home.yaml"),
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
 }
 
 describe("US-0012-0123: countWords CJK 800-1500 + EN 200-500 (Intl.Segmenter + OR-fallback)", () => {
   it("accepts a 1200-char Japanese critique AND a 350-word English critique under the same band", () => {
-    const ja = "あ".repeat(1200);
+    // Hiragana "a" (U+3042) repeated: a whitespace-free Japanese critique.
+    const ja = "\u3042".repeat(1200);
     const en = Array.from({ length: 350 }, () => "lorem").join(" ");
     const r1 = validateProseCritiqueBand(ja);
     const r2 = validateProseCritiqueBand(en);
@@ -404,7 +406,7 @@ describe("US-0012-0129: /qfai-prototyping single-spec surface (resolveSurfaceUni
     const { readFile: rf, readdir: rd } = await import("node:fs/promises");
     const skillRoot = path.resolve(
       process.cwd(),
-      "assets/init/.qfai/assistant/skills/qfai-prototyping",
+      "assets/init/.qfai/assistant/skill/qfai-prototyping",
     );
     const skill = await rf(path.join(skillRoot, "SKILL.md"), "utf-8");
     expect(skill.includes("resolveSurfaceUnion")).toBe(false);
@@ -421,13 +423,13 @@ describe("US-0012-0130: underscore screen-id mirrored to evidence end-to-end", (
   it("validator rejects hyphen ids; --capture mirrors underscore ids to aggregate dirs", async () => {
     // (a) validator: hyphen rejected
     const rootReject = await p2TempDir();
-    await mkdir(path.join(rootReject, ".qfai/contracts/ui"), { recursive: true });
+    await mkdir(path.join(rootReject, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
-      path.join(rootReject, ".qfai/contracts/ui/main.yaml"),
+      path.join(rootReject, ".qfai/spec/03_contract/ui/main.yaml"),
       ["screens:", "  - id: home-page", '    route: "/"'].join("\n"),
       "utf-8",
     );
-    const issues = await validateScreenIdCasing(rootReject, ".qfai/contracts");
+    const issues = await validateScreenIdCasing(rootReject, ".qfai/spec/03_contract");
     expect(issues.length).toBeGreaterThanOrEqual(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-010");
 
@@ -517,6 +519,78 @@ describe("US-0012-0137: --cycle out-of-range error + peek hint", () => {
   });
 });
 
+describe("US-0001-0184: iterate --check-convergence reports the recorded loop state read-only", () => {
+  async function listTree(dir: string): Promise<string[]> {
+    const entries = await readdir(dir, { recursive: true });
+    return entries.map((entry) => entry.split(path.sep).join("/")).sort();
+  }
+
+  async function peek(root: string): Promise<{ exitCode: unknown; stdout: string }> {
+    const chunks: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
+      chunks.push(String(c));
+      return true;
+    });
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["prototyping", "iterate", "--check-convergence", "--root", root], root);
+      return { exitCode: process.exitCode, stdout: chunks.join("") };
+    } finally {
+      process.exitCode = previousExitCode;
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
+  }
+
+  // QFAI:US-0001-0184
+  it("reports a budget-exhausted loop as not converged and a converged one as converged, without --cycle and without writing", async () => {
+    const root = await p2TempDir();
+    await seedPhase2Project(root);
+    const protoDir = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(protoDir, { recursive: true });
+    const protoPath = path.join(protoDir, "prototyping.json");
+    const iterations = Array.from({ length: 10 }, (_, index) => ({ index }));
+
+    const exhausted = `${JSON.stringify(
+      { stopReason: "max-iterations", acceptedIterationIndex: null, iterations },
+      null,
+      2,
+    )}\n`;
+    await writeFile(protoPath, exhausted, "utf-8");
+    const treeBefore = await listTree(root);
+
+    const notConverged = await peek(root);
+    expect(notConverged.exitCode).toBe(2);
+    expect(notConverged.stdout).toContain(
+      "qfai prototyping iterate --check-convergence (cycle 9):",
+    );
+    expect(notConverged.stdout).toContain("stopReason: max-iterations");
+    expect(notConverged.stdout).toContain("acceptedIterationIndex: null");
+    expect(notConverged.stdout).toContain("iterations: 10");
+    expect(notConverged.stdout).toContain('Not converged: stopReason="max-iterations"');
+    expect(await readFile(protoPath, "utf-8")).toBe(exhausted);
+    expect(await listTree(root)).toEqual(treeBefore);
+
+    const sealed = `${JSON.stringify(
+      { stopReason: "converged", acceptedIterationIndex: 3, iterations: iterations.slice(0, 4) },
+      null,
+      2,
+    )}\n`;
+    await writeFile(protoPath, sealed, "utf-8");
+
+    const converged = await peek(root);
+    expect(converged.exitCode).toBe(0);
+    expect(converged.stdout).toContain("stopReason: converged");
+    expect(converged.stdout).toContain("acceptedIterationIndex: 3");
+    expect(converged.stdout).toContain("iterations: 4");
+    expect(converged.stdout).toContain("Converged:");
+    expect(await readFile(protoPath, "utf-8")).toBe(sealed);
+    expect(await listTree(root)).toEqual(treeBefore);
+  });
+});
+
 // Phase 4 e2e blocks (US-0012-0132..0136).
 
 describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () => {
@@ -540,18 +614,18 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
   });
 });
 
-describe("US-0012-0133: primarySpecId 4-digit error + SHOULD-normalisation", () => {
-  it('normalises 1/"1"/"01"/"0001" to "0001" and rejects "abc" with the canonical literal', () => {
-    expect(parsePrimarySpecId(1)).toEqual({ ok: true, normalised: "0001" });
-    expect(parsePrimarySpecId("1")).toEqual({ ok: true, normalised: "0001" });
-    expect(parsePrimarySpecId("01")).toEqual({ ok: true, normalised: "0001" });
-    expect(parsePrimarySpecId("0001")).toEqual({ ok: true, normalised: "0001" });
-    expect(parsePrimarySpecId("abc")).toEqual({
-      ok: false,
-      error: 'primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc',
+describe("US-0012-0133: primaryUiContract requires a canonical contract ID", () => {
+  it("accepts a full UI contract ID and rejects legacy numeric pins", () => {
+    expect(parsePrimaryUiContract("UI-0001")).toEqual({
+      ok: true,
+      uiContractId: "UI-0001",
     });
-    expect(parsePrimarySpecId(10000).ok).toBe(false);
-    expect(parsePrimarySpecId(0).ok).toBe(false);
+    expect(parsePrimaryUiContract("0001")).toEqual({
+      ok: false,
+      error: "primaryUiContract must be a full UI-NNNN ID; received 0001",
+    });
+    expect(parsePrimaryUiContract(1).ok).toBe(false);
+    expect(parsePrimaryUiContract("abc").ok).toBe(false);
   });
 });
 

@@ -1,0 +1,25 @@
+route: retire-mechanism
+family: consistency
+stages:
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+  - id: decide
+    kind: sdd
+    steps: [sdd-triage]
+    after: [diagnose]
+  - id: remove
+    kind: implement
+    steps: [implement-retire]
+    after: [decide]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [remove]
+defaultModifiers: []
+decisionPoints: [sdd-triage]
+branchPoints: []
