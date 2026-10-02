@@ -234,7 +234,7 @@ describe("§ 4 of the minimal-implementation rule bounds unrequested fixes and r
     );
     expect(flat).toContain("**An ambiguous request**, where the work goes ahead on an assumption");
     expect(flat).toContain(
-      "the reading the wording and the surrounding code most directly support",
+      "is built only for the reading the wording and the surrounding code most directly support.",
     );
     expect(flat).toContain("State the assumption.");
     expect(flat).toContain("Whether to ask instead is `grilling.md`'s to decide.");

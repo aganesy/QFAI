@@ -62,8 +62,9 @@ Questions to the user follow
 
 The one review after the last step checks what the `Review` section of each
 step that ran names. It also checks that the change adds test files sized like
-their neighbours, commits no scratch checks, fixes nothing it was not asked to
-fix, and states any assumption it built on
+their neighbours, commits no scratch checks, follows § 4 on unrequested fixes,
+including its exception for a necessary fix and reporting requirement, and
+states any assumption it built on
 (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
 `.agents/rules/minimal-implementation.md` § 4).
 

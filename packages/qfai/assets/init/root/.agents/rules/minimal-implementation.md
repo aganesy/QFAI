@@ -158,7 +158,7 @@ Article VII of `.qfai/assistant/rule/constitution.md`.
   without stays in. The change's report names it, and it needs no expansion
   declared under Article VII.
 - **An ambiguous request**, where the work goes ahead on an assumption, is built
-  for the reading the wording and the surrounding code most directly support.
+  only for the reading the wording and the surrounding code most directly support.
   State the assumption. Whether to ask instead is `grilling.md`'s to decide.
 
 ## 5. What this rule is not

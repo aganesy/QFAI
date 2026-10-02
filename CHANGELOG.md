@@ -91,6 +91,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped guidance now bounds test-suite size and unrequested fixes**
+  (#2242). The test-layer rule gains a sizing section: a new test file is sized
+  like its neighbours, a process-per-case suite is a choice rather than an
+  inherited shape, and a scratch check does not become a permanent test file.
+  The minimal-implementation rule's section on what a change leaves out gains
+  two lines. A fix nobody asked for is reported as a follow-up, unless the
+  requested behaviour cannot work without it; the change's report then names
+  it. Where work goes ahead on an assumption about an ambiguous request, it is
+  built for one reading and the assumption is stated. The implementation and QA
+  reviewer cards, and the review checks the implement and ATDD skills give,
+  each gain one check for these. Test coverage for every source change is still
+  required.
+
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work
   nobody asked for. A new section names the four shapes that takes: wider
@@ -311,19 +324,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout included. The setting itself stays `--local`: scoping it to the
   worktree needs `extensions.worktreeConfig`, which changes the same shared
   file.
-
-- **The shipped guidance now bounds test-suite size and unrequested fixes**
-  (#2242). The test-layer rule gains a sizing section: a new test file is sized
-  like its neighbours, a process-per-case suite is a choice rather than an
-  inherited shape, and a scratch check does not become a permanent test file.
-  The minimal-implementation rule's section on what a change leaves out gains
-  two lines. A fix nobody asked for is reported as a follow-up, unless the
-  requested behaviour cannot work without it; the change's report then names
-  it. Where work goes ahead on an assumption about an ambiguous request, it is
-  built for one reading and the assumption is stated. The implementation and QA
-  reviewer cards, and the review checks the implement and ATDD skills give,
-  each gain one check for these. Test coverage for every source change is still
-  required.
 
 ## [2.0.1] - 2026-09-30
 
