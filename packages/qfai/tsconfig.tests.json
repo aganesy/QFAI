@@ -529,6 +529,7 @@
     "tests/unit/workflow/aMaterialRiskStopsRouting.test.ts",
     "tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts",
     "tests/unit/workflow/aProceedAnswerContinuesUnprompted.test.ts",
+    "tests/unit/workflow/aReceiptDependsOnItsObligationAndContext.test.ts",
     "tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts",
     "tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts",
     "tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts",

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { resolveFlowScope } from "../flowScope.js";
+import { resolveFlowScope, type FlowScope } from "../flowScope.js";
 import { parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, parseRecordTable } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
@@ -61,6 +61,11 @@ export function decisionRowsOf(decisions: string): NonNullable<WorkflowFacts["de
     .map((row) => ({ rowId: row.row.id, inForce: row.inForce || row.row.status === "DONE" }));
 }
 
+// The IDs a flow's obligation digest covers: the flow, its criteria and its examples.
+function obligationIdsOf(scope: FlowScope): string[] {
+  return [...scope.flowIds, ...scope.acceptanceCriteriaIds, ...scope.exampleIds].sort();
+}
+
 // The bound flow's obligations as the tree and its tests read now: its BF, AC and EX IDs, the
 // examples a test annotates, whether an acceptance-layer obligation is unmet, and whether a UI
 // contract serves the flow.
@@ -72,7 +77,7 @@ export async function obligationFactsOf(
 ) {
   const scope = resolveFlowScope([flowId], model);
   if (scope.flowIds.length === 0) return undefined;
-  const ids = [...scope.flowIds, ...scope.acceptanceCriteriaIds, ...scope.exampleIds].sort();
+  const ids = obligationIdsOf(scope);
   const inScope = new Set(scope.exampleIds);
   const files = (await readStoryTests(root, config)).files;
   const annotated = new Set<string>();
@@ -97,20 +102,21 @@ export async function obligationFactsOf(
   return { obligations, acceptanceObligationsUnmet };
 }
 
-// The files that declare an item of the flow or a rule citing one of its examples, which a
-// receipt that observed a test depends on.
-export async function obligationFilesOf(
+// What a receipt that observed a test depends on for the flow it is bound to: the obligation
+// digest, and the contract files that declare the rules citing the flow's examples. A flow the
+// tree does not declare has neither.
+export async function obligationOf(
   root: string,
   config: QfaiConfig,
   flowId: string,
-): Promise<string[]> {
+): Promise<{ digest: string; ruleFiles: string[] } | undefined> {
   const model = await readStoryTreeModel(root, config);
   const scope = resolveFlowScope([flowId], model);
-  const ids = new Set([...scope.flowIds, ...scope.acceptanceCriteriaIds, ...scope.exampleIds]);
-  const files = model.declarations.filter((item) => ids.has(item.id)).map((item) => item.file);
-  return [...new Set([...files, ...scope.ruleFiles])]
-    .map((file) => projectRelative(root, file))
-    .sort();
+  if (scope.flowIds.length === 0) return undefined;
+  return {
+    digest: await obligationDigest(model, scope, obligationIdsOf(scope), readText),
+    ruleFiles: scope.ruleFiles.map((file) => projectRelative(root, file)).sort(),
+  };
 }
 
 // The criterion a diagnosis's first matched ID names: the ID itself, or an example's criterion.
