@@ -25,8 +25,10 @@ import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_BLOCK } from "../../src/core/giti
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const INIT_ASSETS = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const CONFIGURE_SKILL = "assistant/skills/qfai-configure/SKILL.md";
-const VERIFY_SKILL = "assistant/skills/qfai-verify/SKILL.md";
+const CONFIGURE_SKILL = "assistant/skill/qfai-configure/SKILL.md";
+const VERIFY_STEP = "assistant/step/verify-repo-gate/STEP.md";
+/** Where every stage's evidence file, the verify evidence included, is kept. */
+const EVIDENCE_RECORD = "assistant/step/common-evidence-record/STEP.md";
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -71,20 +73,20 @@ describe("the evidence-ignore claim matches what qfai init actually ships", () =
       expect(skill).toContain(QFAI_GITIGNORE_MARKER);
     });
 
-    it(`${tree}: distinguishes local run evidence from committed item evidence`, async () => {
+    it(`${tree}: keeps run evidence local`, async () => {
       const configure = await read(tree, CONFIGURE_SKILL);
-      const verify = await read(tree, VERIFY_SKILL);
+      const verify = await read(tree, VERIFY_STEP);
+      const record = await read(tree, EVIDENCE_RECORD);
 
       expect(flat(configure)).toContain(
         "The run-scoped `.qfai/evidence/configure-<run-id>.md` remains local and ignored",
       );
-      expect(flat(verify)).toContain(
-        "The run-scoped `.qfai/evidence/verify-<spec-id>.md` remains local and ignored",
+      expect(flat(record)).toContain("| `qfai-verify` | `verify-<run-id>.md`");
+      expect(flat(record)).toContain(
+        "Evidence lives under `.qfai/evidence/`, stays local and is never committed",
       );
-      for (const skill of [configure, verify]) {
-        expect(flat(skill)).toContain(
-          "Durable per-item `implement-*.md` and `atdd-*.md` governance records are committed",
-        );
+      expect(flat(verify)).toContain("Summarize its key outcomes in the PR description.");
+      for (const skill of [configure, verify, record]) {
         expect(skill).not.toContain("Do NOT commit evidence files");
       }
     });

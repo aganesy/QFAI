@@ -1,11 +1,12 @@
-// QFAI:SPEC-0018:TC-0018-0084
+// QFAI:EX-0001-0188-01
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -13,11 +14,10 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
-  specs: { "spec-0007": { lifecycle: "active" } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
+  flows: ["BF-0007"],
 };
 
 function routeWithRisk(signal: string) {
@@ -61,18 +61,17 @@ function routeWithRisk(signal: string) {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Change how user records are stored.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: ["spec-0007"],
+          affectedFlowIds: ["BF-0007"],
           riskSignals: [signal],
           unresolvedQuestions: [question],
-          newCapabilities: [],
+          newStories: [],
           proposedWriteScope: ["src/users/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
@@ -88,13 +87,13 @@ function routeWithRisk(signal: string) {
 }
 
 const signals: [string, string][] = [
-  ["TC-0018-0084 (TDD-0104): data-loss", "data-loss"],
-  ["TC-0018-0084 (TDD-0105): breaking-public-contract", "breaking-public-contract"],
-  ["TC-0018-0084 (TDD-0106): authorization-loosened", "authorization-loosened"],
-  ["TC-0018-0084 (TDD-0107): secret-egress", "secret-egress"],
-  ["TC-0018-0084 (TDD-0108): production-effect", "production-effect"],
-  ["TC-0018-0084 (TDD-0109): requirement-dropped", "requirement-dropped"],
-  ["TC-0018-0084 (TDD-0110): out-of-scope-work", "out-of-scope-work"],
+  ["data-loss", "data-loss"],
+  ["breaking-public-contract", "breaking-public-contract"],
+  ["authorization-loosened", "authorization-loosened"],
+  ["secret-egress", "secret-egress"],
+  ["production-effect", "production-effect"],
+  ["requirement-dropped", "requirement-dropped"],
+  ["out-of-scope-work", "out-of-scope-work"],
 ];
 
 for (const [title, signal] of signals) {
@@ -104,7 +103,7 @@ for (const [title, signal] of signals) {
     expect(actual).toEqual({
       state: "awaiting_input",
       questions: [{ kind: "decision", text: expectedText }],
-      events: ["question-opened", "unsettled-material-input"],
+      events: ["route-decided", "question-opened", "binding-recorded", "unsettled-material-input"],
     });
   });
 }
