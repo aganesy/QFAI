@@ -20,6 +20,7 @@ import {
   findDeclaringDir,
   findPackageJsonUpward,
   locateToolAgainstProject,
+  reachedThroughLinkedNodeModules,
   resolveToolPackageDir,
   resolvesThroughOwnNodeModules,
 } from "../../src/core/version.js";
@@ -407,6 +408,43 @@ describe("resolvesThroughOwnNodeModules", () => {
       await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
 
       expect(await resolvesThroughOwnNodeModules(worktree, sourceDir)).toBe(false);
+    });
+  });
+});
+
+describe("reachedThroughLinkedNodeModules", () => {
+  it("counts the declaring directory's linked node_modules for a workspace package", async () => {
+    // The worktree's top level declares qfai and links its `node_modules` to
+    // the main checkout's; the project being validated is a package below it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      const webDir = path.join(worktree, "packages", "web");
+      await mkdir(webDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await reachedThroughLinkedNodeModules(webDir, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count a copy when neither directory links to it", async () => {
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(worktree, packageDir)).toBe(false);
     });
   });
 });
