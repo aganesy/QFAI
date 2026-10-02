@@ -44,7 +44,7 @@ describe("the layer rule sizes a new test suite without removing coverage", () =
       "Like the volume signals in `.qfai/assistant/skill/qfai-atdd/references/volume-signals.md`, " +
         "these are review signals. No validator reads them.",
     );
-    const headings = rule.match(/^## .+$/gm) ?? [];
+    const headings: string[] = rule.match(/^## .+$/gm) ?? [];
     expect(headings[headings.indexOf("## Test-suite sizing") - 1]).toBe(
       "## Selecting a test layer",
     );
