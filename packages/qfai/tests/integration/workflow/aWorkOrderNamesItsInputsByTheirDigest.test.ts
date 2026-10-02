@@ -47,7 +47,7 @@ it("A reproduction record outside the project is not read, so the work order nam
     });
 
     expect([field(next.json, "workOrder.stageKind"), field(next.json, "workOrder.inputs")]).toEqual(
-      ["sdd_append", undefined],
+      ["sdd_append", []],
     );
   } finally {
     await rm(outside, { force: true });
