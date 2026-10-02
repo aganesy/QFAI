@@ -17,7 +17,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { pruneMatchingEntries } from "../../../src/cli/commands/init.js";
-import { copyTemplateTree } from "../../../src/cli/lib/fs.js";
+import { copyTemplateTree } from "../../../src/core/fs/templateCopy.js";
 import { readBoundedRegularFile } from "../../../src/shared/boundedRead.js";
 import {
   readInstallProvenance,
@@ -255,7 +255,7 @@ describe("the copy creates, and records only what it created", () => {
     // so the packaged digest is recorded as QFAI's own, doctor reports no drift on a file QFAI
     // never wrote, and the retired-workflow prune considers it QFAI's to delete.
     const source = await readFile(
-      path.join(__dirname, "..", "..", "..", "src", "cli", "lib", "fs.ts"),
+      path.join(__dirname, "..", "..", "..", "src", "core", "fs", "templateCopy.ts"),
       "utf-8",
     );
     expect(

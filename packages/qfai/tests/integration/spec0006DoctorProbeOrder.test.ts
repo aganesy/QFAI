@@ -9,13 +9,12 @@
  * referenced from tests/integration/**); type-column values are planning
  * signals per .qfai/assistant/catalog/test-layers.md "Volume policy".
  */
-// QFAI:SPEC-0006:TC-0006-0012
-// QFAI:SPEC-0006:TC-0006-0013
-// QFAI:SPEC-0006:TC-0006-0014
-// QFAI:SPEC-0006:TC-0006-0015
-// QFAI:SPEC-0006:TC-0006-0016
-// QFAI:SPEC-0006:TC-0006-0017
-// QFAI:SPEC-0006:TC-0006-0018
+// QFAI:EX-0003-0006-01
+// QFAI:EX-0003-0006-01
+// QFAI:EX-0003-0006-02
+// QFAI:EX-0003-0006-03
+// QFAI:EX-0003-0006-04
+// QFAI:EX-0003-0007-01
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -93,6 +92,7 @@ type DoctorJson = {
   checks: Array<{
     id: string;
     severity: "ok" | "info" | "warning" | "error";
+    title?: string;
     message: string;
     details?: Record<string, unknown>;
   }>;
@@ -142,6 +142,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
 
 describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1.10.0", () => {
   it("emits an error finding whose body literally contains `sunset: 1.10.0`", async () => {
+    // QFAI:AC-0003-0006-04
     const root = await newTempDir("tc14");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedLocalPlaywrightCli(root);
@@ -213,7 +214,7 @@ describe("TC-0006-0017: skills.integrity defaults to warning, --fail-on error st
 
     // Mutate a skill markdown to force diffProjectSkillsAgainstInitAssets to
     // emit a `drift` (changed entry) result.
-    const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+    const skillsDir = path.join(root, ".qfai", "assistant", "skill");
     const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
     const original = await readFile(targetSkill, "utf-8").catch(() => "");
     expect(original.length, "skills assets must exist after init").toBeGreaterThan(0);
@@ -239,7 +240,7 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     // Seed both: (a) a missing-DESIGN.md error via prototyping profile, and
     // (b) skills.integrity drift via mutated skill markdown.
-    const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+    const skillsDir = path.join(root, ".qfai", "assistant", "skill");
     const targetSkill = path.join(skillsDir, "qfai-atdd", "SKILL.md");
     const skillOriginal = await readFile(targetSkill, "utf-8");
     await writeFile(targetSkill, `${skillOriginal}\n<!-- drift sentinel -->\n`, "utf-8");
@@ -254,10 +255,10 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     });
     const text = await readFile(outPath, "utf-8");
     expect(text).toContain("errors blocking the active profile");
-    expect(text).toContain("advisory findings (drift, non-blocking by default)");
+    expect(text).toContain("warnings advisory of drift");
 
     const errorsHeaderIdx = text.indexOf("errors blocking the active profile");
-    const advisoryHeaderIdx = text.indexOf("advisory findings (drift, non-blocking by default)");
+    const advisoryHeaderIdx = text.indexOf("warnings advisory of drift");
     expect(errorsHeaderIdx).toBeGreaterThan(-1);
     expect(advisoryHeaderIdx).toBeGreaterThan(errorsHeaderIdx);
 
@@ -265,5 +266,38 @@ describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to 
     expect(skillsIdx).toBeGreaterThan(-1);
     // skills.integrity must appear AFTER the advisory header (never under errors).
     expect(skillsIdx).toBeGreaterThan(advisoryHeaderIdx);
+  });
+});
+
+describe("root DESIGN.md readiness", () => {
+  // QFAI:AC-0003-0006-05
+  it("names root DESIGN.md in the readiness check and lists its findings", async () => {
+    // QFAI:EX-0003-0006-06
+    const root = await newTempDir("design-md");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const ready = findCheck(await readDoctorJson(root), "prototyping.designMdReadiness");
+    expect(ready).toMatchObject({
+      severity: "ok",
+      title: "Root DESIGN.md readiness",
+      details: { designMd: "DESIGN.md" },
+    });
+
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-home.yaml"),
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - { id: browse, label: Browse, acceptance: done }\n",
+      "utf-8",
+    );
+    await rm(path.join(root, "DESIGN.md"), { force: true });
+    const blocked = findCheck(await readDoctorJson(root), "prototyping.designMdReadiness");
+    expect(blocked).toMatchObject({
+      severity: "error",
+      title: "Root DESIGN.md readiness",
+      details: { designMd: "DESIGN.md" },
+    });
+    expect(blocked?.details?.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "QFAI-DCON-030" })]),
+    );
   });
 });

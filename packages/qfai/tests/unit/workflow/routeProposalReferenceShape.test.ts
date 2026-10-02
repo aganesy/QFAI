@@ -1,9 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0269
+// QFAI:EX-0001-0185-45
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs: unknown[] }) {
   const snapshot = {
@@ -29,19 +30,19 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
             expectedSequence: 2,
             outcome: "accepted",
             proposal: {
-              requestKind: "change",
-              candidateRoute: "feature",
+              requestKind: "routed",
+              extraction: extractionFor("add-feature"),
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
-              newCapabilities: [
+              newStories: [
                 {
                   goal: "Customer notification email registration",
                   covers: ["One notification email per customer"],
                   excludes: ["Notification delivery"],
                   evidence: ["request"],
+                  flowId: "BF-0001",
                 },
               ],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },
@@ -55,7 +56,7 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
   };
 }
 
-it("TC-0018-0269 (TDD-0528): bare string in expectedBehaviorRefs", () => {
+it("bare string in expectedBehaviorRefs", () => {
   const actual = acceptRouting({
     expectedBehaviorRefs: ["request"],
     observedRefs: [{ kind: "path", ref: "src/notify.ts" }],
@@ -72,7 +73,7 @@ it("TC-0018-0269 (TDD-0528): bare string in expectedBehaviorRefs", () => {
   expect(actual).toEqual(expected);
 });
 
-it("TC-0018-0269 (TDD-0529): bare string in observedRefs", () => {
+it("bare string in observedRefs", () => {
   const actual = acceptRouting({
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: ["src/notify.ts"],

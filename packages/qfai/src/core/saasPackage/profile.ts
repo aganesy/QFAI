@@ -3,8 +3,8 @@
  *
  * Gates a SaaS-tenant package on three required conditions:
  *   1. Prototyping-profile validators PASS (no error-severity findings).
- *   2. The design-system attestation is present at
- *      `.qfai/contracts/design/design-system.yaml`.
+ *   2. The design-system attestation, root `DESIGN.md`, is present and
+ *      parses.
  *   3. The cross-skill handoff file (when present at
  *      `.qfai/handoff.yaml`) conforms to the canonical schema.
  *
@@ -15,84 +15,22 @@
  * which surfaces were not exercised in this profile.
  */
 
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ConfigLoadResult } from "../config.js";
+import { parseDesignMd } from "../design/designMd.js";
 import type { Issue } from "../types.js";
 import { parseHandoff, validateHandoff } from "../schemas/handoff.js";
 import { issue } from "../validators/utils.js";
 
 import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
 
-const DESIGN_ATTESTATION_REL = ".qfai/contracts/design/design-system.yaml";
-const DESIGN_ATTESTATION_SUBPATH = "design/design-system.yaml";
+const DESIGN_ATTESTATION_REL = "DESIGN.md";
 const HANDOFF_REL = ".qfai/handoff.yaml";
-
-/**
- * Resolve the design-system attestation path honoring
- * `config.paths.contractsDir`. The fallback `.qfai/contracts/design/
- * design-system.yaml` is preserved for projects that do not override
- * `contractsDir`, matching the legacy hardcoded surface.
- *
- * The reported `rel` is forward-slash normalized when the resolved
- * absolute path is INSIDE `root` (the common case for relative or
- * inside-root absolute `contractsDir` values). When the resolved
- * absolute path is OUTSIDE `root` (operator pointed `contractsDir` at
- * an absolute location elsewhere on disk — an uncommon but valid
- * configuration), `rel` falls back to the absolute path itself so the
- * `D-SAAS-PACKAGE-ATTESTATION-MISSING` message always names a
- * locatable filesystem path. A naive `path.relative` would have
- * produced a `../...` string and the prior `replace(/^(\.\.\/)+/, "")`
- * cleanup would have stripped the parent-traversal prefix into a
- * dangling middle-of-tree string that no longer maps to the real file
- * — least-astonishment violation. The new fallback always names a
- * path the operator can navigate to.
- */
-function resolveDesignAttestationPath(
-  root: string,
-  config: ConfigLoadResult["config"],
-): { abs: string; rel: string } {
-  const contractsDir = config.paths.contractsDir;
-  if (typeof contractsDir === "string" && contractsDir.length > 0) {
-    const abs = path.resolve(root, contractsDir, DESIGN_ATTESTATION_SUBPATH);
-    const rawRelative = path.relative(root, abs);
-    // Test the FIRST segment of `rawRelative` rather than a prefix
-    // `startsWith("..")`. The prefix-only check false-positives on
-    // legitimate inside-root names that begin with two dots
-    // (e.g. `contractsDir = "..foo/bar"` → `rawRelative = "..foo/bar/
-    // design/design-system.yaml"`, which would have been flagged as
-    // outside-root and switched to the absolute fallback even though
-    // the path is squarely inside root). The exact-`..` + `../` + `..\`
-    // forms are the actual parent-traversal markers; treat anything
-    // else (and any absolute `rawRelative`) as outside-root. Drive-
-    // crossing on Windows (`D:\...`) lands in `path.isAbsolute`.
-    const isOutsideRoot =
-      rawRelative === ".." ||
-      rawRelative.startsWith(".." + path.sep) ||
-      rawRelative.startsWith("../") ||
-      path.isAbsolute(rawRelative);
-    if (isOutsideRoot) {
-      return { abs, rel: abs.replace(/\\/g, "/") };
-    }
-    const rel = rawRelative.replace(/\\/g, "/");
-    return { abs, rel: rel.length > 0 ? rel : DESIGN_ATTESTATION_REL };
-  }
-  return { abs: path.join(root, DESIGN_ATTESTATION_REL), rel: DESIGN_ATTESTATION_REL };
-}
 
 const VERIFY_SKIPPED_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
 const ATTESTATION_MISSING_CODE = "D-SAAS-PACKAGE-ATTESTATION-MISSING";
 const HANDOFF_SCHEMA_CODE = "D-SAAS-PACKAGE-HANDOFF-SCHEMA";
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function readTextOrNull(p: string): Promise<string | null> {
   try {
@@ -117,24 +55,32 @@ function buildSkipFindings(): Issue[] {
   );
 }
 
-async function checkDesignAttestation(
-  root: string,
-  config: ConfigLoadResult["config"],
-): Promise<Issue[]> {
-  const { abs, rel } = resolveDesignAttestationPath(root, config);
-  if (await pathExists(abs)) {
+/**
+ * The design system a SaaS tenant ships is the root `DESIGN.md`, read
+ * through the same parser the prototyping loop uses. A file that does not
+ * parse attests nothing, so it is reported the same way as a missing one.
+ */
+async function checkDesignAttestation(root: string): Promise<Issue[]> {
+  const text = await readTextOrNull(path.join(root, DESIGN_ATTESTATION_REL));
+  const problem =
+    text === null
+      ? "is absent"
+      : "error" in parseDesignMd(text)
+        ? "does not parse as DESIGN.md"
+        : null;
+  if (problem === null) {
     return [];
   }
   return [
     issue(
       ATTESTATION_MISSING_CODE,
-      `Design-system attestation is absent: ${rel}. The saas-package profile requires this attestation to PASS.`,
+      `Design-system attestation ${DESIGN_ATTESTATION_REL} ${problem}. The saas-package profile requires this attestation to PASS.`,
       "error",
-      rel,
+      DESIGN_ATTESTATION_REL,
       "validate.saasPackage.attestationMissing",
-      [rel],
+      [DESIGN_ATTESTATION_REL],
       "canonical",
-      `Author the design-system attestation at ${rel} (one screen-system mapping per shipped surface), then rerun validate.`,
+      `Author root ${DESIGN_ATTESTATION_REL} as this product's brand SSOT (see the qfai-prototyping design-md-spec reference), then rerun validate.`,
     ),
   ];
 }
@@ -196,10 +142,9 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
  */
 export async function runSaasPackageProfile(
   root: string,
-  config: ConfigLoadResult["config"],
   prototypingIssues: Issue[],
 ): Promise<Issue[]> {
-  const attestation = await checkDesignAttestation(root, config);
+  const attestation = await checkDesignAttestation(root);
   const handoff = await checkHandoffSchema(root);
   return [...prototypingIssues, ...attestation, ...handoff, ...buildSkipFindings()];
 }

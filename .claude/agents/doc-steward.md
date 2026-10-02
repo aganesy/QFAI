@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/doc-steward.md
+../../.qfai/assistant/agent/doc-steward.md
