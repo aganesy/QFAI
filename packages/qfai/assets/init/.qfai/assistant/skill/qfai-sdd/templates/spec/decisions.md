@@ -1,5 +1,4 @@
-# Decisions
-
+<!--
 Each row records one decision. Its Approach cell holds these four items, in
 this order, each written as `- ` followed by its label:
 
@@ -16,6 +15,9 @@ correction, goes inside these items. Write a `|` inside a cell as `\|`.
 
 A stage that does not own this file records its decisions in its own evidence
 file, with the same four items under the same rules.
+-->
+
+# Decisions
 
 ## Decisions
 

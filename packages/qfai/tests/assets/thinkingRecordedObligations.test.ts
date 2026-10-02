@@ -90,7 +90,11 @@ describe("every decision a stage records carries one form", () => {
     });
 
     it(`${tree}: the template is still one empty four-column record table`, async () => {
-      const parsed = parseRecordTable(await read(tree, TEMPLATE), "decisions");
+      const template = await read(tree, TEMPLATE);
+      expect(template).toMatch(
+        /^<!--\r?\n[\s\S]+?\r?\n-->\s*# Decisions\s+## Decisions\s+\|\s*ID\s*\|\s*Content\s*\|\s*Approach\s*\|\s*Status\s*\|\s+\|\s*---\s*\|\s*-------\s*\|\s*--------\s*\|\s*------\s*\|\s*$/,
+      );
+      const parsed = parseRecordTable(template, "decisions");
       expect(parsed.errors).toEqual([]);
       expect(parsed.rows).toEqual([]);
     });
