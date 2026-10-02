@@ -187,7 +187,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
       }
     }
     expect(await treeHash(root)).toBe(before);
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-41
   it("names the configured specs directory and never a 1.x pack elsewhere in the project", async () => {
@@ -205,7 +205,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
       if (step === 10) expect(lastLine(result.output), label).toBe(summaryNone("docs/specs"));
     }
     expect(await treeHash(root)).toBe(before);
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-42
   it("opens step 1 on the old layout with the found line, in a dry run, a real run and a rerun", async () => {
@@ -219,7 +219,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
       expect(result.output).not.toContain(ALREADY_DONE);
     }
     expect(operationsOf(again.output)).toEqual(["none"]);
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-43
   it("opens a resumed step 1 with the found line and leaves the tree of an uninterrupted run", async () => {
@@ -238,7 +238,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
       expect(opening(result.output)).toEqual([FOUND, "", "## Operations"]);
     }
     expect(await treeHash(partial)).toBe(await treeHash(uninterrupted));
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-43
   it("opens a step that resumes an interrupted move with the found line, in a dry run and a real run", async () => {
@@ -273,7 +273,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
       }
       await expect(readFile(source)).rejects.toMatchObject({ code: "ENOENT" });
     }
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-45
   it("reads a retired configuration key as a trace of the old layout in steps 1 to 3", async () => {
@@ -337,7 +337,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
     expect(five.code).toBe(2);
     expect(five.output).toBe("");
     expect(five.errors).toContain("Run step 4");
-  }, 60_000);
+  });
 
   // QFAI:EX-0004-0003-47
   it("prints no verdict line and no summary from steps 11 and 12", async () => {
