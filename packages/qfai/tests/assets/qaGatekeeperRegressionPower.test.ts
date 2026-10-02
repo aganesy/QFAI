@@ -1,14 +1,3 @@
-/**
- * The gatekeeper's test checks ask whether a test covers the behaviour and
- * whether it would fail on a regression. None asked whether it would survive a
- * refactor that keeps the behaviour.
- *
- * The card adds that one check and points the other three questions at the
- * checks that already own them, rather than restating them. The check is
- * advisory, scores nothing, admits a finding only with a named change, and
- * reads every touched test file whole while deferring findings on tests the
- * change did not add.
- */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,7 +39,11 @@ describe.each(TREES)("%s", (tree) => {
     expect(check).toContain(
       "| Would it survive a refactor that keeps the behaviour? | This check |",
     );
-    expect(check).toContain("asserts on what the contract does not name");
+    expect(check).toContain(
+      "A test fails the last question when it asserts on what the contract does not name: " +
+        "a private function, an internal call order, a mock of the code's own collaborators, " +
+        "or the structure of a value rather than what it means.",
+    );
   });
 
   it("sends the other three questions to the checks that own them", async () => {

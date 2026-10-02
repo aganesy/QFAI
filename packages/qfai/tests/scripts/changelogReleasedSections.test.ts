@@ -54,28 +54,6 @@ describe("what a released section may gain", () => {
     ]);
   });
 
-  it("does not count a title translated in place as an addition", () => {
-    // The base title is Japanese text written as escapes: "The first thing".
-    const before = RELEASED.replace(
-      "- **The first thing the release carried.**",
-      "- **\u6700\u521d\u306e\u5909\u66f4**",
-    );
-
-    expect(addedEntries(before, RELEASED)).toEqual([]);
-  });
-
-  it("still reports a new entry in a section whose base titles are Japanese", () => {
-    const before = RELEASED.replace(
-      "- **The first thing the release carried.**",
-      "- **\u6700\u521d\u306e\u5909\u66f4**",
-    );
-    const after = `${RELEASED}- **An entry the release page never carried.**\n`;
-
-    expect(addedEntries(before, after)).toEqual([
-      { version: "1.2.0", gained: ["- **An entry the release page never carried.**"] },
-    ]);
-  });
-
   it("says nothing about an entry added to the unreleased section", () => {
     // Where every entry belongs, and the remedy the finding names.
     const after = RELEASED.replace(

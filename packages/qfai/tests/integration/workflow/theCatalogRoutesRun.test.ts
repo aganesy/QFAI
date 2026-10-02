@@ -126,7 +126,6 @@ it("Checked proposals with no new story bind the flow their route takes", async 
   const plan = answer.verdict.plan;
   const ready = await readyOn("answer-question", 0);
   const first = issued(ready).workOrder;
-  const close = issued(await readyOn("answer-question", 1)).workOrder;
 
   expect({
     fixDefect: bound(await routed("fix-defect", ["BF-0001"], ["src/**"])),
@@ -135,7 +134,7 @@ it("Checked proposals with no new story bind the flow their route takes", async 
     repairTestNone: bound(await routed("repair-test", [], ["tests/**"])),
     answer: bound(answer),
     answerRoute: plan?.route,
-    targets: [first.target, close.target],
+    target: first.target,
   }).toEqual({
     fixDefect: ["BF-0001"],
     fixDefectNone: [{ reason: "flow-binding", subject: "affectedFlowIds" }],
@@ -143,7 +142,7 @@ it("Checked proposals with no new story bind the flow their route takes", async 
     repairTestNone: [],
     answer: [],
     answerRoute: "answer-question",
-    targets: [undefined, undefined],
+    target: undefined,
   });
 });
 
@@ -167,6 +166,7 @@ it("An answer-question proposal naming a source file, and an answer that changed
     writeAreas: workOrder.scope?.writeAreas,
     result: accepted(running, workOrder, {
       changedFiles: [{ path: "README.md", digest: "a".repeat(64) }],
+      closure: { outcome: "answered", followUps: [] },
     }),
   }).toEqual({
     proposal: [{ reason: "scope-escape", subject: "src/report.ts" }],
@@ -218,7 +218,7 @@ const CLOSURE = {
 
 // QFAI:EX-0001-0214-03
 it("An answer-question run whose answer shows the documentation lacks the option", async () => {
-  const { running, workOrder } = issued(await readyOn("answer-question", 1));
+  const { running, workOrder } = issued(await readyOn("answer-question", 0));
   const result = resultFor(running, workOrder, { closure: CLOSURE });
   const decision = decide(running, { operation: "accept", result }, {});
 
@@ -235,10 +235,47 @@ it("An answer-question run whose answer shows the documentation lacks the option
   });
 });
 
+// QFAI:AC-0001-0214-07
+// QFAI:EX-0001-0214-09
+it("A question's one work order runs every step of its route and names no reviewer", async () => {
+  const HEAVY = ["completion-reviewer", "architecture-reviewer", "requirements-reviewer"];
+  const facts: Facts = {
+    reviewerRoles: {
+      "triage-answer": ["completion-reviewer"],
+      "triage-close": ["completion-reviewer"],
+    },
+    heavyReviewerRoles: [...HEAVY, "implementation-reviewer"],
+  };
+  const order = async (route: string, modifiers: Snapshot["modifiers"] = []) => {
+    const snapshot = { ...(await readyOn(route, 0)), modifiers };
+    const decision = decide(snapshot, { operation: "next" }, facts);
+    return decision.verdict.workOrder;
+  };
+  const heavy: Snapshot["modifiers"] = [{ modifier: "review:heavy", source: "extraction" }];
+
+  const answer = await order("answer-question");
+  const investigate = await order("investigate-question");
+  const heavyAnswer = await order("answer-question", heavy);
+
+  expect({
+    answer: answer?.steps?.map((step) => step.name),
+    investigate: investigate?.steps?.map((step) => step.name),
+    answerReviewers: answer?.requiredReviewerRoles,
+    investigateReviewers: investigate?.requiredReviewerRoles,
+    heavyReviewers: heavyAnswer?.requiredReviewerRoles,
+  }).toEqual({
+    answer: ["triage-answer", "triage-close"],
+    investigate: ["triage-investigate", "triage-answer", "triage-close"],
+    answerReviewers: undefined,
+    investigateReviewers: undefined,
+    heavyReviewers: [...HEAVY, "implementation-reviewer"],
+  });
+});
+
 // QFAI:EX-0001-0214-01
 it("finish on an answer-question run that ran no verify stage", async () => {
   const snapshot: Snapshot = {
-    ...(await readyOn("answer-question", 2)),
+    ...(await readyOn("answer-question", 1)),
     completionTarget: "qfai_done",
     baseline: { findings: [], toolVersion: "2.0.0", cliEntryDigest: "d", policyDigests: {} },
   };

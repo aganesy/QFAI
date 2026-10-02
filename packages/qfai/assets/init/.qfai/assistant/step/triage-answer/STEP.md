@@ -35,5 +35,5 @@ Answers a question about the project from what the project already says.
 
 ## Gate
 
-The reviewer confirms every claim in the answer has a citation that says it,
+The reviewer, or the stage worker where the work order names none, confirms every claim in the answer has a citation that says it,
 each gap found is listed as a follow-up, and no tracked file changed.

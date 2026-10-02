@@ -23,15 +23,16 @@ Feature: Install or upgrade and get the free-text entry
     Then no skill directory reached through a host skills directory contains `agents/openai.yaml`
 
   # AC-0001-0196-03
-  Scenario: The entry directive is prepended to `AGENTS.md` and `CLAUDE.md`
-    Given a project whose `AGENTS.md` and `CLAUDE.md` carry no operative entry directive
+  Scenario: Init writes no line that sends a request to `qfai-run` into `AGENTS.md` or `CLAUDE.md`
+    Given a fresh project, or a project whose `AGENTS.md` and `CLAUDE.md` exist
     When `qfai init` runs
-    Then each of the two files begins with one directive that sends a first free-text change request to `qfai-run`
-    And the project's existing text and line endings follow it unchanged
-    And `.github/copilot-instructions.md` carries no such directive
-    And the directive is added whether or not `REVIEW.md` exists
+    Then the seeded files open with their heading and carry no line that sends a request to `qfai-run`
+    And an existing file gains no such line, and its text and line endings are kept
+    And a line an earlier init wrote is kept as written, once, and is never removed or edited
+    And `.github/copilot-instructions.md` carries no such line
+    And the review directive is still prepended, only where `REVIEW.md` exists
     And a rerun adds nothing
-    And the shipped Markdown lint accepts the directive above the level-1 heading of the seeded files
+    And the shipped Markdown lint accepts a directive above the level-1 heading
 
   # AC-0001-0196-04
   Scenario: Init names the mode in force and writes no mode key
@@ -98,4 +99,24 @@ Feature: Install or upgrade and get the free-text entry
     And the reminder before leaving plan mode has no Codex group, because Codex has no tool call that leaves plan mode
     And each runs under every shell as the prompt-time reminders do
     And an existing file gains the tool-time groups once, and a second run changes nothing
+    And in `.claude/settings.json` the reminders before and after a file write, the minimal-implementation one included, print nothing for a file under `.qfai/run/`
+
+  # AC-0001-0196-13
+  Scenario: Init allows the shipped skills and the launcher to run without a prompt
+    Given a fresh project, or a project with its own `.claude/settings.json`
+    When `qfai init` runs
+    Then `.claude/settings.json` lists under `permissions.allow` one `Skill(<name>)` entry for each shipped skill and the launcher entries `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
+    And the list holds no wildcard skill pattern
+    And an existing file keeps its own entries in their order and gains only the missing ones, and no other key of `permissions` changes
+    And a `permissions` value init cannot read leaves the file unchanged, with a warning
+    And a second run changes nothing
+
+  # AC-0001-0196-14
+  Scenario: Every prompt says when this checkout has no qfai install
+    Given a project whose `.claude/settings.json` and `.codex/hooks.json` init wrote
+    When a prompt arrives and no directory from the project up to its git root holds `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists `qfai`
+    Then both hosts print the remedy: run the project's install command when `package.json` lists qfai, and `npm i -D qfai` when it does not
+    And a project with a launcher in its own checkout, or below a git root that holds one, prints nothing
+    And a launcher in a directory above the git root does not count
+    And each Codex line prints the same through `sh`, `cmd.exe` and PowerShell
 ```
