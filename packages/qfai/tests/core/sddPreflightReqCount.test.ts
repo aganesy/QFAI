@@ -120,16 +120,16 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "  U->>S: request",
         "```",
         "",
-        "補足: Mermaid diagram を含む Story Workshop テスト用データ。",
+        "Note: test data for a Story Workshop that contains a Mermaid diagram.",
       ].join("\n");
     case "06_REQ.md":
       return [
         "# 06 REQ",
         "",
-        "- REQ-0001: ユーザーは要件セットを保存できる。背景として監査対応が必要である。",
-        "- REQ-0002: システムは保存した要件セットを再読込できる。再読込時の整合性チェックも含む。",
+        "- REQ-0001: The user can save a requirement set. Audit compliance is the background need.",
+        "- REQ-0002: The system can reload a saved requirement set, including an integrity check on reload.",
         "",
-        "補足: 最小内容チェックを通すため、説明文を十分な文字数で保持する。",
+        "Note: the description keeps enough characters to pass the minimum-content check.",
       ].join("\n");
     case "11_OQ-Register.md":
       return [
@@ -138,9 +138,9 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
-        "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
+        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "",
-        "補足: blocking 条件（Disposition=open）に該当しない。",
+        "Note: this does not meet the blocking condition (Disposition=open).",
       ].join("\n");
     case "13_Deferred.md":
       return [
@@ -148,18 +148,18 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "",
         "### OQ-0001: contract versioning policy",
         "",
-        "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
+        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "- Next decision point: v1.5.x cycle review",
         "",
-        "補足: 11_OQ-Register.md の deferred OQ は本ファイルに記載する。",
+        "Note: deferred OQs from 11_OQ-Register.md are recorded in this file.",
       ].join("\n");
     default:
       return [
         `# ${fileName}`,
         "",
-        "このファイルは preflight テスト用のダミー本文です。",
-        "最低100文字要件を満たすため、仕様意図と制約を記述しています。",
-        "テンプレート占位子だけではない実文を含め、validator の incomplete 判定を回避します。",
+        "This file is dummy body text for preflight tests.",
+        "It describes the spec intent and constraints to meet the minimum 100-character requirement.",
+        "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
       ].join("\n");
   }
 }

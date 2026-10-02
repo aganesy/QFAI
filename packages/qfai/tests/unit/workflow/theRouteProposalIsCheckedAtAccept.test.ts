@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0012
+// QFAI:EX-0001-0185-48
+// QFAI:EX-0001-0185-08
 
 import { expect, it } from "vitest";
 
@@ -8,8 +9,9 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
-it("TC-0018-0012 (TDD-0015): unknown-path", () => {
+it("unknown-path", () => {
   const missingPath = "packages/qfai/src/core/workflow/missing-observed-reference.ts";
   const missingRootFile = "Dockerfile";
   const missingNormativePath = ".qfai/specs/missing/01_Spec.md";
@@ -39,8 +41,8 @@ it("TC-0018-0012 (TDD-0015): unknown-path", () => {
       reviewResults: [],
       debts: [],
       proposal: {
-        requestKind: "change",
-        candidateRoute: "feature",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Let each customer register a notification email.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -51,20 +53,20 @@ it("TC-0018-0012 (TDD-0015): unknown-path", () => {
           { kind: "path", ref: missingRootFile },
           { kind: "evidence", ref: missingDotFile },
         ] satisfies RouteReference<ObservedReferenceKind>[],
-        affectedSpecIds: [],
+        affectedFlowIds: [],
         riskSignals: [],
         unresolvedQuestions: [],
-        newCapabilities: [
+        newStories: [
           {
             goal: "Customer notification email registration",
             covers: ["One notification email per customer"],
             excludes: ["Notification delivery"],
             evidence: ["request"],
+            flowId: "BF-0001",
           },
         ],
-        proposedWriteScope: [".qfai/specs/spec-0018/**"],
+        proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
-        requiredStages: ["sdd", "verify"],
         rationale: "The requested capability is not yet specified.",
       },
     },
@@ -116,25 +118,25 @@ type Proposal = NonNullable<NonNullable<AcceptInput["result"]>["proposal"]>;
 
 function checkedProposal(): Proposal {
   return {
-    requestKind: "change",
-    candidateRoute: "feature",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Let each customer register a notification email.",
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: [],
-    affectedSpecIds: [],
+    affectedFlowIds: [],
     riskSignals: [],
     unresolvedQuestions: [],
-    newCapabilities: [
+    newStories: [
       {
         goal: "Customer notification email registration",
         covers: ["One notification email per customer"],
         excludes: ["Notification delivery"],
         evidence: ["request"],
+        flowId: "BF-0001",
       },
     ],
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
-    requiredStages: ["sdd", "verify"],
   };
 }
 
@@ -181,67 +183,95 @@ function refused(...reasons: { reason: string; subject: string }[]) {
   };
 }
 
-it("TC-0018-0012 (TDD-0016): unknown-id", () => {
+it("unknown-id", () => {
   const actual = acceptRouting(
     {
       ...checkedProposal(),
       expectedBehaviorRefs: [
         { kind: "request", ref: "request" },
-        { kind: "spec-id", ref: "spec-9999" },
+        { kind: "flow-id", ref: "BF-9999" },
         { kind: "contract-id", ref: "CLI-MISSING" },
       ],
     },
-    { specs: { "spec-0007": { lifecycle: "active" } }, contractIds: ["CLI-WF"] },
+    { flows: ["BF-0007"] },
   );
   expect(actual).toEqual(
     refused(
-      { reason: "unknown-id", subject: "spec-9999" },
+      { reason: "unknown-id", subject: "BF-9999" },
       { reason: "unknown-id", subject: "CLI-MISSING" },
     ),
   );
 });
 
-it("TC-0018-0012 (TDD-0017): inactive-spec", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), affectedSpecIds: ["spec-0007", "spec-0008"] },
+const boundedPlan = {
+  route: "add-feature",
+  stages: [
+    ["sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
+    ["implement", "implement", "qfai-implement", "implement"],
+    ["verify", "verify", "qfai-verify", "verify-full"],
+  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
+    stageInstanceId,
+    stageKind,
+    skill,
+    operation,
+  })),
+};
+
+// A proposal with no new story whose plan takes a flow target, naming these flows.
+function boundedNaming(affectedFlowIds: string[]) {
+  return acceptRouting(
     {
-      specs: { "spec-0007": { lifecycle: "active" }, "spec-0008": { lifecycle: "retired" } },
+      ...checkedProposal(),
+      extraction: extractionFor("add-feature"),
+      newStories: [],
+      affectedFlowIds,
     },
+    { flows: ["BF-0001", "BF-0002"], plans: { "add-feature": boundedPlan } },
   );
-  expect(actual).toEqual(refused({ reason: "inactive-spec", subject: "spec-0008" }));
+}
+
+it("flow-binding", () => {
+  expect(boundedNaming(["BF-0001", "BF-0002"])).toEqual(
+    refused({ reason: "flow-binding", subject: "BF-0001,BF-0002" }),
+  );
 });
 
-it("TC-0018-0012 (TDD-0018): broken-reference", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), affectedSpecIds: ["spec-0007"] },
-    {
-      specs: { "spec-0007": { lifecycle: "active" } },
-      itemReferences: {
-        "spec-0007#AC-0007-0003": "resolved",
-        "spec-0007#BR-0007-0099": "unresolved",
-      },
-    },
-  );
-  expect(actual).toEqual(
-    refused({ reason: "broken-reference", subject: "spec-0007#BR-0007-0099" }),
+it("no flow is named", () => {
+  expect(boundedNaming([])).toEqual(
+    refused({ reason: "flow-binding", subject: "affectedFlowIds" }),
   );
 });
 
-it("TC-0018-0012 (TDD-0019): protected-surface", () => {
+it("one flow is bound", () => {
+  const bound = boundedNaming(["BF-0001"]);
+  expect({
+    run: bound.run,
+    events: bound.events.map((event) => [event.type, event.flowId]),
+  }).toEqual({
+    run: { id: "run-checks", state: "ready", sequence: 5 },
+    events: [
+      ["route-decided", undefined],
+      ["binding-recorded", "BF-0001"],
+      ["plan-accepted", undefined],
+    ],
+  });
+});
+
+it("protected-surface", () => {
   const actual = acceptRouting({
     ...checkedProposal(),
     proposedWriteScope: [
       "tests/notify/**",
-      ".qfai/runs/**",
-      ".qfai/evidence/change-request-20260925.md",
+      ".qfai/run/**",
+      ".qfai/spec/decisions.md",
       "src/notify/**",
     ],
     protectedTargets: ["src/notify/keys.ts"],
   });
   expect(actual).toEqual(
     refused(
-      { reason: "protected-surface", subject: ".qfai/runs/**" },
-      { reason: "protected-surface", subject: ".qfai/evidence/change-request-20260925.md" },
+      { reason: "protected-surface", subject: ".qfai/run/**" },
+      { reason: "protected-surface", subject: ".qfai/spec/decisions.md" },
       { reason: "protected-surface", subject: "src/notify/**" },
     ),
   );
@@ -270,10 +300,10 @@ it("TC-0018-0012 (TDD-0019): protected-surface", () => {
   ).toEqual(refused({ reason: "protected-surface", subject: "src/notify/**" }));
 
   const fixedPathSpelledDifferently = [
-    "./.qfai/runs/**",
-    ".qfai\\runs\\**",
-    ".qfai//runs/**",
-    "./.qfai/runs",
+    "./.qfai/run/**",
+    ".qfai\\run\\**",
+    ".qfai//run/**",
+    "./.qfai/run",
     "./.git/config",
   ];
   expect(
@@ -288,7 +318,7 @@ it("TC-0018-0012 (TDD-0019): protected-surface", () => {
   );
 });
 
-it("TC-0018-0012 (TDD-0020): scope-escape", () => {
+it("scope-escape", () => {
   const actual = acceptRouting({
     ...checkedProposal(),
     proposedWriteScope: [
@@ -307,7 +337,7 @@ it("TC-0018-0012 (TDD-0020): scope-escape", () => {
   );
 });
 
-it("TC-0018-0012 (TDD-0021): unresolved-approval", () => {
+it("unresolved-approval", () => {
   const actual = acceptRouting({
     ...checkedProposal(),
     riskSignals: ["authorization-restored", "data-loss"],
@@ -316,59 +346,19 @@ it("TC-0018-0012 (TDD-0021): unresolved-approval", () => {
   expect(actual).toEqual(refused({ reason: "unresolved-approval", subject: "data-loss" }));
 });
 
-const featurePlan = {
-  route: "feature",
-  stages: [
-    { stageInstanceId: "sdd", stageKind: "sdd", when: "always" },
-    {
-      stageInstanceId: "acceptance",
-      stageKind: "acceptance",
-      when: "acceptance_obligations_unmet",
-    },
-    { stageInstanceId: "implement", stageKind: "implement", when: "always" },
-    { stageInstanceId: "verify", stageKind: "verify", when: "always" },
-  ],
-};
-
-it("TC-0018-0012 (TDD-0022): stage-set", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), requiredStages: ["sdd", "deploy"] },
-    { plans: { feature: featurePlan } },
-  );
-  expect(actual).toEqual(
-    refused(
-      { reason: "stage-set", subject: "implement" },
-      { reason: "stage-set", subject: "verify" },
-      { reason: "stage-set", subject: "deploy" },
-    ),
-  );
-});
-
 const missingSpecReference: Proposal["expectedBehaviorRefs"] = [
   { kind: "request", ref: "request" },
-  { kind: "spec-id", ref: "spec-9999" },
+  { kind: "flow-id", ref: "BF-9999" },
 ];
 
-// QFAI:SPEC-0018:TC-0018-0013
-it("TC-0018-0013 (TDD-0023): A proposal failing unknown-id and stage-set at once", () => {
-  const actual = acceptRouting(
-    { ...checkedProposal(), expectedBehaviorRefs: missingSpecReference, requiredStages: ["sdd"] },
-    { specs: {}, plans: { feature: featurePlan } },
-  );
-  expect(actual).toEqual(
-    refused(
-      { reason: "unknown-id", subject: "spec-9999" },
-      { reason: "stage-set", subject: "implement" },
-      { reason: "stage-set", subject: "verify" },
-    ),
-  );
-});
-
-// QFAI:SPEC-0018:TC-0018-0014
-it("TC-0018-0014 (TDD-0024): A proposal failing unknown-id with confidence", () => {
+it("A proposal failing unknown-id with confidence", () => {
   const proposal = { ...checkedProposal(), expectedBehaviorRefs: missingSpecReference };
-  const facts = { specs: {} };
-  const withConfidence = acceptRouting({ ...proposal, confidence: 1 }, facts);
+  const facts = { flows: [] };
+  const unsure = extractionFor("add-feature", {
+    confidence: "low",
+    alternatives: [{ intent: "feature", entryFlags: ["decision"], qualifiers: [], signals: [] }],
+  });
+  const withConfidence = acceptRouting({ ...proposal, extraction: unsure }, facts);
   expect(withConfidence).toEqual(acceptRouting(proposal, facts));
-  expect(withConfidence).toEqual(refused({ reason: "unknown-id", subject: "spec-9999" }));
+  expect(withConfidence).toEqual(refused({ reason: "unknown-id", subject: "BF-9999" }));
 });

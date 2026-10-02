@@ -1,25 +1,20 @@
-// QFAI:SPEC-0018:TC-0018-0091
+// QFAI:EX-0001-0188-05
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Question = NonNullable<Parameters<typeof decide>[0]["openQuestions"]>[number];
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/export/**"],
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
-    ["bounded-implement", "implement", "qfai-implement", "implement"],
-    ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
+  ],
 };
 const question: Question = {
   questionId: "question-3-1",
@@ -32,14 +27,14 @@ const question: Question = {
   selection: { min: 1, max: 1 },
   recommendation: "keep",
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
-it("TC-0018-0091 (TDD-0129): A proceed answer to a material question, then next", () => {
+it("A proceed answer to a material question, then next", () => {
   const answered = decide(
     {
       run: { id: "run-proceed", state: "awaiting_input", sequence: 5 },
       plan,
-      specBinding,
+      flowBinding,
       openQuestions: [question],
       scopeDigest: "d".repeat(64),
     },
@@ -56,7 +51,7 @@ it("TC-0018-0091 (TDD-0129): A proceed answer to a material question, then next"
   expect(run?.state).toBe("ready");
   if (!run) return;
 
-  const issued = decide({ run, plan, specBinding }, { operation: "next" }, {});
+  const issued = decide({ run, plan, flowBinding }, { operation: "next" }, {});
 
   expect(issued.verdict.run?.state).toBe("running");
   expect(issued.verdict.workOrder?.stageInstanceId).toBe("bounded-sdd-delta");

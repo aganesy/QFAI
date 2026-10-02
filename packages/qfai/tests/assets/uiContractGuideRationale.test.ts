@@ -1,18 +1,4 @@
-/**
- * The shipped UI contract guide explained the closed `primary_tasks` schema by
- * sending the reader to `_policies/08_Decisions.md` for the rationale.
- *
- * That path is correct only in the repository the guide was written in. `qfai
- * init` copies the guide verbatim, and the relative path re-binds on arrival to
- * the consuming project's own `.qfai/specs/_policies/08_Decisions.md` — a
- * required per-project artifact whose shipped template ships empty. The reader
- * with the sharpest need (their `priority:` key was just rejected) is sent to a
- * skeleton, and the only conclusions available are that the rationale was lost
- * or that they must author a decision record for a framework rule they cannot
- * change.
- *
- * The rationale is two sentences, so the guide states it inline instead.
- */
+/** The shipped UI contract guide states framework schema rationale inline. */
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -24,7 +10,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const GUIDE = "assistant/skills/qfai-sdd/references/ui-contract-guide.md";
+const GUIDE = "assistant/skill/qfai-sdd/references/ui-contract-guide.md";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
@@ -53,8 +39,7 @@ describe.each(QFAI_TREES)("%s ui-contract-guide.md", (tree) => {
 
   it("does not defer the rationale to a project-owned decisions file", async () => {
     const guide = await readGuide(tree);
-    // In an install this path names the project's own (empty) decisions file,
-    // never the framework decision the sentence meant.
+    // A project-owned decisions file cannot supply the framework's rationale.
     expect(guide).not.toContain("08_Decisions.md");
     expect(guide).not.toContain("_policies/");
   });

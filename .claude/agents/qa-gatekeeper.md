@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/qa-gatekeeper.md
+../../.qfai/assistant/agent/qa-gatekeeper.md

@@ -22,14 +22,12 @@
 
 import path from "node:path";
 
-import { extractDeclaredDependencies } from "../contractsDecl.js";
+import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
 /** Waivable as `QFAI-CONTRACT-036`; `CONTRACT-036` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const DB_CONTRACT_APPLY_ORDER_RULE_ID = "QFAI-CONTRACT-036";
-
-const CONTRACT_ID = /\bCON-DB-[A-Za-z0-9_-]+/;
 
 /**
  * `CREATE TABLE [IF NOT EXISTS] <name>` and `REFERENCES <name>`.
@@ -100,10 +98,11 @@ async function readContractFiles(
     if (!text) {
       continue;
     }
-    const contractId = CONTRACT_ID.exec(text)?.[0];
-    if (contractId === undefined) {
-      // A `db/` file with no `CON-DB-*` id is already reported by
-      // `QFAI-CONTRACT-010`; do not pile a second finding onto it.
+    const contractId = declaredContractId(file, text);
+    if (contractId === null || !contractId.startsWith("DB-")) {
+      // A `db/` file that declares no ID, several IDs or an ID of another kind is
+      // already reported by the declaration checks. It neither owns a table nor
+      // receives a finding here, so a correct file is not blamed for it.
       continue;
     }
     const { creates, references } = readTableEdges(text);

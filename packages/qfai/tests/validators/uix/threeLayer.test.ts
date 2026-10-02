@@ -4,7 +4,7 @@
  * The file reads no shipped document, so the canonical-wording obligation it
  * used to claim is discharged elsewhere.
  *
- * QFAI:SPEC-0002:TC-0002-0010
+ * QFAI:EX-0001-0018-01
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
