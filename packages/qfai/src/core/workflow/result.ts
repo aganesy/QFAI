@@ -98,15 +98,17 @@ function reviewerRefusals(result: WorkflowResult, actorHistory: readonly Workflo
   );
 }
 
-// SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
-// Lift when: the command adapter supplies the digest of every file a result names.
+// Every submitted digest of a changed file or an artifact is checked against the core's own. A
+// path the facts carry no digest for names no readable file: a changed file outside the project's
+// real root is refused as `write-scope`, an artifact as `schema`, and a deleted file has no
+// digest to compare.
 function digestRefusals(result: WorkflowResult, facts: WorkflowFacts): InputRefusal[] {
-  return (result.changedFiles ?? [])
-    .filter((changed) => {
-      const own = facts.fileDigests?.[changed.path];
-      return own !== undefined && own !== changed.digest;
+  return [...(result.changedFiles ?? []), ...(result.artifactRefs ?? [])]
+    .filter((named) => {
+      const own = facts.fileDigests?.[named.path];
+      return own !== undefined && own !== named.digest;
     })
-    .map((changed) => ({ reason: "digest-mismatch", subject: changed.path }));
+    .map((named) => ({ reason: "digest-mismatch", subject: named.path }));
 }
 
 function measurementRefusals(result: WorkflowResult): InputRefusal[] {
