@@ -172,7 +172,9 @@ function section(report: string, name: string): string[] {
   const heading = "## " + name;
   const start = report.indexOf(heading + "\n");
   if (start < 0) return [];
-  const body = report.slice(start + heading.length + 1).split(/\r?\n## /, 1)[0] ?? "";
+  // Step 10's closing line follows its last section and belongs to none of them.
+  const body =
+    report.slice(start + heading.length + 1).split(/\r?\n## |\r?\nSummary: /, 1)[0] ?? "";
   return body
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -689,7 +691,7 @@ describe("BF-0004 acceptance criteria", () => {
       for (const name of ["Operations", "For a person", "Annotations kept"]) {
         expect(result.stdout, name).toContain(`## ${name}\nnone`);
       }
-      expect(result.stdout).toMatch(/^## Operations\n/);
+      expect(opening(result.stdout)).toEqual([VERDICT_FOUND, "", "## Operations"]);
       results.push(result);
     }
     const after = await fileSnapshot(root);
@@ -923,7 +925,7 @@ describe("BF-0004 acceptance criteria", () => {
     const before = await fileSnapshot(root);
     const result = step(root, 1);
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/^## Operations\n- /);
+    expect(result.stdout).toMatch(/^1\.x layout found, migrating\n\n## Operations\n- /);
     expect(await migrationReportFiles(root, "run", 1)).toEqual([reportPath("run", 1, 1)]);
     const after = await fileSnapshot(root);
     const added = [...after.keys()].filter((name) => !before.has(name));
@@ -937,6 +939,7 @@ describe("BF-0004 acceptance criteria", () => {
     const again = step(root, 1);
     expect(again.status).toBe(0);
     expect(again.stdout).toContain("## Operations\nnone\n");
+    expect(opening(again.stdout)).toEqual([VERDICT_FOUND, "", "## Operations"]);
     expect(await fileSnapshot(root)).toEqual(after);
   });
 
@@ -1192,17 +1195,42 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-08
-  it("opens each rerun step with the already-migrated line and keeps the already-done line last", async () => {
+  it("opens each rerun step with the found line while the migration still keeps an annotation for a person", async () => {
     for (let number = 1; number <= 10; number += 1) {
       const rerun = await readMigrationReport(journey.root, reportPath("run", number, 2));
       const label = `step ${number} rerun`;
-      expect(opening(rerun), label).toEqual([VERDICT_DONE, "", "## Operations"]);
-      expect(summaryLines(rerun), label).toEqual([]);
-      const lines = rerun.split(/\r?\n/).filter((line) => line.trim() !== "");
-      expect(lines.at(-2), label).toBe(ALREADY_DONE);
-      expect(lines.at(-1), label).toBe("Exit code: 0");
+      expect(opening(rerun), label).toEqual([VERDICT_FOUND, "", "## Operations"]);
+      expect(rerun, label).not.toContain(ALREADY_DONE);
+      expect(summaryLines(rerun), label).toEqual(number === 10 ? [SUMMARY_FOUND] : []);
     }
   });
+
+  // QFAI:AC-0004-0003-08
+  it("opens each rerun step of a finished migration with the already-migrated line and keeps the already-done line last", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-finished-"));
+    temporary.push(root);
+    await cp(journey.root, root, { recursive: true, verbatimSymlinks: true });
+    await rm(path.join(root, "node_modules"), { recursive: true, force: true });
+    await linkPackage(root);
+    const test = path.join(root, "tests/integration/order.test.ts");
+    const kept = (await readFile(test, "utf8"))
+      .split("\n")
+      .filter((line) => !line.includes("QFAI:SPEC-0001:US-0001-0001"));
+    await writeFile(test, kept.join("\n"));
+    // A first pass settles what copying the tree changed, such as the host links.
+    for (let number = 1; number <= 10; number += 1) step(root, number);
+    for (let number = 1; number <= 10; number += 1) {
+      const result = step(root, number);
+      const label = `step ${number} rerun`;
+      expect(result.status, `${label}: ${result.stderr}`).toBe(0);
+      expect(opening(result.stdout), label).toEqual([VERDICT_DONE, "", "## Operations"]);
+      expect(summaryLines(result.stdout), label).toEqual([]);
+      expect(lastLine(result.stdout), label).toBe(ALREADY_DONE);
+      const [latest] = (await migrationReportFiles(root, "run", number)).slice(-1);
+      const report = await readMigrationReport(root, latest ?? "");
+      expect(report.split(/\r?\n/)[0], label).toBe(VERDICT_DONE);
+    }
+  }, 300_000);
 
   // QFAI:AC-0004-0003-08
   it("prints no verdict line and no closing line from steps 11 and 12", async () => {
