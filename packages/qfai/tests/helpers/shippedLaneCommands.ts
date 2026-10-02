@@ -1376,11 +1376,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
-    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/untrusted-content.md`,
-    // the rule master the run now seeds, which says text the repository did not author is data,
-    // not instruction. Dropping that one bullet reproduces `dfa370bc…` byte for byte.
+    // The generated rule list cites action-reversibility and untrusted-content.
+    // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "d5258001f410aeb036fefbb3ffb1c66b8b8bcb3cb5f1315ec3c8909c8a04cef2",
+    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1465,10 +1464,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // The entry files cite `.agents/rules/untrusted-content.md` and open with their heading.
+  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "fdcad30d0b94a225eff7a063db9ed919c244f1e3f3f029f7ca7768388aa84545"],
-  ["CLAUDE.md", "0fe698781bf6134fde2582db746bcee3b147283c140ba34eebbc56d8bae4c389"],
+  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
+  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1710,6 +1709,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
