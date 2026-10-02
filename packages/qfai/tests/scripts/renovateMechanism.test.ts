@@ -451,9 +451,17 @@ describe("automerge is declared together with the check that decides whether any
       let from = -1;
       let quote = "";
       let comment = false;
+      let block = false;
       for (let i = open; i < config.length; i += 1) {
         const ch = config[i] ?? "";
         const next = config[i + 1] ?? "";
+        if (block) {
+          if (ch === "*" && next === "/") {
+            block = false;
+            i += 1;
+          }
+          continue;
+        }
         if (comment) {
           if (ch === "\n") comment = false;
           continue;
@@ -465,6 +473,11 @@ describe("automerge is declared together with the check that decides whether any
         }
         if (ch === "/" && next === "/") {
           comment = true;
+          continue;
+        }
+        if (ch === "/" && next === "*") {
+          block = true;
+          i += 1;
           continue;
         }
         if (ch === '"' || ch === "'") {
