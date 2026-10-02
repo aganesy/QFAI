@@ -1,5 +1,5 @@
 /**
- * Render runner — WS-C
+ * Render runner
  *
  * Executes render capture for a list of targets, producing truthful
  * evidence entries. No placeholder paths are emitted.

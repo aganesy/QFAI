@@ -1,0 +1,21 @@
+route: change-tooling
+family: upkeep
+stages:
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+  - id: edit
+    kind: implement
+    steps: [implement-tooling]
+    after: [diagnose]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [edit]
+defaultModifiers: []
+decisionPoints: []
+branchPoints: []

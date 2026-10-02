@@ -326,9 +326,7 @@ function readCallSites(source: string, constants: Map<string, string>): Emission
  * An object literal counts as an `Issue` only when it names both `severity` and
  * `category` directly. Both are required by the type, and `category` is the
  * discriminating one: `severity` alone also matches diagnostic records that
- * `qfai validate` never returns — `decisionGuardrails.GuardrailIssue`, consumed
- * only by `guardrails check`, was pulling `QFAI-GR-*` into the census on that
- * looser test.
+ * `qfai validate` never returns.
  */
 function readObjectSites(source: string, constants: Map<string, string>): EmissionSite[] {
   const sites: EmissionSite[] = [];

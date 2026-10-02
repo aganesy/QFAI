@@ -220,6 +220,8 @@ function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
 }
 
+const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
+
 /**
  * Prepend the template's review directive only when no operative copy exists.
  *
@@ -228,11 +230,21 @@ function terminatorOf(line: string | undefined): string {
  * a reviewer reads `REVIEW.md` from.
  */
 export function addReviewPointer(existing: string, template: string | null): string {
-  const directive = "Read `REVIEW.md` before reviewing a pull request";
-  const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(directive));
-  if (pointer === undefined) return existing;
+  const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(REVIEW_DIRECTIVE_PREFIX));
+  return pointer === undefined ? existing : prependDirective(existing, pointer);
+}
+
+/**
+ * `existing` with `pointer` on its first line, followed by a blank line, unless
+ * an operative copy is already there. An operative line in an earlier wording
+ * is replaced where it stands instead.
+ */
+function prependDirective(existing: string, pointer: string): string {
   // Where the text of the first operative line in an earlier wording sits.
   let earlier: { start: number; end: number } | null = null;
+  // A code span the directive itself contains is part of its visible text; any
+  // other span is opaque, so a copy quoted inside one is not operative.
+  const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
 
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
@@ -850,7 +862,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           let span = codeSpan.exec(tail)?.[0];
           if (span !== undefined && crossesTable(offset + index, offset + index + span.length))
             span = undefined;
-          if (span === "`REVIEW.md`") {
+          if (span !== undefined && pointerSpans.has(span)) {
             visible += span;
             index += span.length;
             continue;
@@ -897,7 +909,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
         if (
           earlier === null &&
-          operative.startsWith(directive) &&
+          operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
           line.slice(lead.length).trimEnd() === operative
         )
           earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
@@ -1117,6 +1129,12 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    ],
+  ],
+  [
+    ".agents/rules/user-questions.md",
+    [
+      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     ],
   ],
 ]);
