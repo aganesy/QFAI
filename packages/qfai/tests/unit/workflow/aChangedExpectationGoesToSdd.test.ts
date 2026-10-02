@@ -1,60 +1,42 @@
-// QFAI:SPEC-0018:TC-0018-0081
+// QFAI:EX-0001-0187-04
 // Fault seeds: FAULT-016
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "repair-test",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-test-fix", "test_fix"),
+    planStage("bugfix-verify", "verify"),
+  ],
 };
 const run = { id: "run-test-fix", state: "running", sequence: 8 };
-const target: { kind: "spec"; specId: string } = { kind: "spec", specId: "spec-0007" };
+const target: { kind: "flow"; flowId: string } = { kind: "flow", flowId: "BF-0007" };
 const workOrder = {
   workOrderId: "work-order-bugfix-test-fix-1",
   stageInstanceId: "bugfix-test-fix",
   attempt: 1,
   stageKind: "test_fix",
   target,
-  executor: { skill: "qfai-implement" },
-  operation: "test-fix",
+  steps: kindSteps("test_fix"),
 };
-const facts = {
-  ledger: {
-    specId: "spec-0007",
-    rows: [
-      {
-        rowId: "TDD-0004",
-        status: "done",
-        digest: "4".repeat(64),
-        layer: "Unit",
-        tcLevels: ["L1"],
-      },
-    ],
-  },
-};
+// An example ID first: the test fix goes to `qfai-implement`.
+const facts = {};
 
-it("TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from citedBefore", () => {
+it("A test_fix result whose citedAfter differs from citedBefore", () => {
   const decision = decide(
     {
       run,
       plan,
-      specBinding: { specId: "spec-0007" },
+      flowBinding: { flowId: "BF-0007" },
       diagnosis: {
         verdict: "defective-test",
         reproductionRef: "evidence/defective-test.json",
-        matchedRowIds: ["TDD-0004"],
+        matchedIds: ["EX-0007-0002-01"],
       },
       acceptedStages: [
         { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
@@ -71,8 +53,8 @@ it("TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from cit
         expectedSequence: run.sequence,
         outcome: "accepted",
         testFix: {
-          citedBefore: "AC-0007-0002: an empty value is refused with 400",
-          citedAfter: "AC-0007-0002: an empty value is refused with 422",
+          citedBefore: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "a".repeat(64) },
+          citedAfter: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "b".repeat(64) },
           reviewRef: "evidence/test-fix-review.json",
           rerunRef: "evidence/test-fix-rerun.json",
         },

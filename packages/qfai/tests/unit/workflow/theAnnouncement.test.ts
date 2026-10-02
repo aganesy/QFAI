@@ -1,39 +1,23 @@
-// QFAI:SPEC-0018:TC-0018-0010
+// QFAI:EX-0001-0185-07
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
-it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal passes every check", () => {
+it("Decide accept of a routing result whose proposal passes every check", () => {
   const boundedPlan = {
-    route: "bounded-change",
+    route: "add-feature",
     stages: [
-      {
-        stageInstanceId: "sdd-delta",
-        stageKind: "sdd_delta",
-        skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
-        when: "always",
-      },
-      {
-        stageInstanceId: "implement",
-        stageKind: "implement",
-        skill: "qfai-implement",
-        operation: "implement",
-        when: "always",
-      },
-      {
-        stageInstanceId: "verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-        when: "always",
-      },
+      planStage("sdd-delta", "sdd"),
+      planStage("implement", "implement"),
+      planStage("verify", "verify"),
     ],
   };
   const snapshot = {
@@ -55,8 +39,8 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
       expectedSequence: 2,
       outcome: "accepted",
       proposal: {
-        requestKind: "change",
-        candidateRoute: "bounded-change",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Reject an empty notification email with a clear message.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -64,16 +48,16 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
         observedRefs: [
           { kind: "path", ref: "src/notify/email.ts" },
         ] satisfies RouteReference<ObservedReferenceKind>[],
-        affectedSpecIds: ["spec-0007"],
-        newCapabilities: [],
+        affectedFlowIds: ["BF-0007"],
+        newStories: [],
         proposedWriteScope: ["src/notify/**", "tests/notify/**"],
-        requiredStages: ["sdd_delta", "implement", "verify"],
       },
     },
   };
   const facts = {
     pathExistence: { "src/notify/email.ts": true },
-    plans: { "bounded-change": boundedPlan },
+    plans: { "add-feature": boundedPlan },
+    flows: ["BF-0007"],
   };
 
   const decision = decide(snapshot, input, facts);

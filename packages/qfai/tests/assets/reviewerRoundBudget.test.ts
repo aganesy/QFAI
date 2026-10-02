@@ -48,9 +48,9 @@ function expectNoPhrase(content: string, phrase: string): void {
 // unchanged by the move; the assertions about them follow the file, and the
 // assertions about the reviewer remit table and the response template stay
 // on the baseline, which still owns those.
-const CONVERGENCE = "assistant/constitution/review-convergence.md";
-const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
-const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
+const CONVERGENCE = "assistant/rule/review-convergence.md";
+const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
+const OPERATING = "assistant/rule/shared-skill-operating-baseline.md";
 
 describe("reviewer gates terminate", () => {
   for (const tree of QFAI_TREES) {
@@ -171,7 +171,7 @@ describe("reviewer gates terminate", () => {
 
     it(`${tree}: every skill referencing the baseline has a remit row`, async () => {
       const content = await read(tree, DELEGATION);
-      const skillsDir = path.join(repoRoot, tree, "assistant", "skills");
+      const skillsDir = path.join(repoRoot, tree, "assistant", "skill");
       const skills = (await readdir(skillsDir, { withFileTypes: true }))
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name);

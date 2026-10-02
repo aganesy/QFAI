@@ -1,6 +1,6 @@
 /**
  * File provider — reads a predefined critique response from a JSON file
- * for offline/reproducible critique (BR-0029-0006).
+ * for offline/reproducible critique.
  */
 
 import { readFile } from "node:fs/promises";

@@ -27,13 +27,11 @@ import { issue, readSafe } from "./utils.js";
  */
 
 const RENDERED_KEYWORDS_RE = /\b(rendered|screenshot|html\b|preview|visual\s*review)/i;
-const SPEC_RE = /\b(01_spec|03_acceptance-criteria|spec-|\bspec\b)\b/i;
-// DESIGN.md is the brand SSOT (replaces the legacy exploration-brief /
-// brand-design / reference-pool sidecars); design-system.yaml and
-// prototype-handoff.yaml are produced AFTER prototyping completes, so
-// they are not required references in the upstream skill prompts.
+const STORY_RE = /\b(BF-\d{4}|US-\d{4}-\d{4}|business[ -]flow|user[ -]story|story tree)\b/i;
+// DESIGN.md is the brand SSOT. The handoff artifacts are produced after
+// prototyping and are not required inputs for these skill prompts.
 const DESIGN_MD_RE = /\bDESIGN\.md\b/;
-const UI_CONTRACTS_RE = /\b(contracts\/ui|ui\s*contracts|screen\s*contracts)\b/i;
+const UI_CONTRACTS_RE = /\b(contracts\/ui|03_contract\/ui|ui\s*contracts|screen\s*contracts)\b/i;
 
 const DESKTOP_RE = /\b(desktop|1024\s*px|1280\s*px|1440\s*px|viewport\s*[≥>=]+\s*1024)\b/i;
 const MOBILE_RE = /\b(mobile|480\s*px|375\s*px|390\s*px|viewport\s*[≤<=]+\s*480)\b/i;
@@ -84,7 +82,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   const renderEvidenceViewports = await collectRenderEvidenceViewports(root);
 
-  // --- TDD-0001: Code-only rejection (QFAI-CRIT-001) ---
+  // --- Code-only rejection (QFAI-CRIT-001) ---
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0 && !RENDERED_KEYWORDS_RE.test(content)) {
@@ -103,30 +101,29 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- Canonical spec/contract reference missing in downstream (QFAI-CRIT-002) ---
-  // Required: spec inputs + root DESIGN.md (brand SSOT) + UI contracts.
+  // --- Story and contract references in downstream prompts (QFAI-CRIT-002) ---
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (
       content.length > 0 &&
-      (!SPEC_RE.test(content) || !DESIGN_MD_RE.test(content) || !UI_CONTRACTS_RE.test(content))
+      (!STORY_RE.test(content) || !DESIGN_MD_RE.test(content) || !UI_CONTRACTS_RE.test(content))
     ) {
       issues.push(
         issue(
           "QFAI-CRIT-002",
-          `Downstream skill prompt missing canonical spec/contract references: ${path.relative(root, sf)}`,
+          `Downstream skill prompt missing story, design, or UI contract references: ${path.relative(root, sf)}`,
           "error",
           sf,
           "renderCritique.contractMissing",
           undefined,
           "change",
-          "Reference spec inputs, root DESIGN.md, and UI contracts in the downstream skill prompt.",
+          "Reference the BF or story tree, root DESIGN.md, and UI contracts in the downstream skill prompt.",
         ),
       );
     }
   }
 
-  // --- TDD-0002: Desktop critique missing (QFAI-CRIT-003) ---
+  // --- Desktop critique missing (QFAI-CRIT-003) ---
   const allEvidenceContent = await collectContent(evidenceFiles);
   if (
     evidenceFiles.length > 0 &&
@@ -147,7 +144,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0002: Mobile critique missing (QFAI-CRIT-004) ---
+  // --- Mobile critique missing (QFAI-CRIT-004) ---
   if (
     evidenceFiles.length > 0 &&
     !MOBILE_RE.test(allEvidenceContent) &&
@@ -167,18 +164,17 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0003: Read order (QFAI-CRIT-005) ---
-  // Contract-first model: require semantic tokens for spec inputs, the
-  // root DESIGN.md brand SSOT, and UI contracts.
+  // --- Read order (QFAI-CRIT-005) ---
+  // Require the story source, the root brand design, and UI contracts.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0) {
-      const hasSpec = SPEC_RE.test(content);
+      const hasStory = STORY_RE.test(content);
       const hasDesignMd = DESIGN_MD_RE.test(content);
       const hasUiContracts = UI_CONTRACTS_RE.test(content);
-      if (!hasSpec || !hasDesignMd || !hasUiContracts) {
+      if (!hasStory || !hasDesignMd || !hasUiContracts) {
         const missing: string[] = [];
-        if (!hasSpec) missing.push("spec inputs");
+        if (!hasStory) missing.push("story inputs");
         if (!hasDesignMd) missing.push("DESIGN.md");
         if (!hasUiContracts) missing.push("ui contracts");
         issues.push(
@@ -190,14 +186,14 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
             "renderCritique.readOrder",
             undefined,
             "change",
-            "Specify read order with spec inputs, root DESIGN.md, and UI contracts.",
+            "Specify read order with the BF or story tree, root DESIGN.md, and UI contracts.",
           ),
         );
       }
     }
   }
 
-  // --- TDD-0004: Evidence recording (QFAI-CRIT-006) ---
+  // --- Evidence recording (QFAI-CRIT-006) ---
   for (const ef of evidenceFiles) {
     const content = await readSafe(ef);
     if (content.length === 0) continue;
@@ -226,7 +222,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0004: Rubric not documented (QFAI-CRIT-007) ---
+  // --- Rubric not documented (QFAI-CRIT-007) ---
   if (evidenceFiles.length > 0 && !RUBRIC_RE.test(allEvidenceContent)) {
     issues.push(
       issue(
@@ -242,7 +238,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0005: Loop completion (QFAI-CRIT-008) ---
+  // --- Loop completion (QFAI-CRIT-008) ---
   if (evidenceFiles.length > 0) {
     const desktopPass = hasViewportPass(allEvidenceContent, "desktop");
     const mobilePass = hasViewportPass(allEvidenceContent, "mobile");
@@ -262,7 +258,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0006: taskFidelity not recorded (QFAI-CRIT-009) ---
+  // --- taskFidelity not recorded (QFAI-CRIT-009) ---
   if (evidenceFiles.length > 0 && !TASK_FIDELITY_SECTION_RE.test(allEvidenceContent)) {
     // Use TASK_FIDELITY_REQUIRED_KEYWORDS (SSOT) so the error text
     // surfaces every required keyword and the operator-facing doc
@@ -285,7 +281,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0006: taskFidelity FAIL (QFAI-CRIT-010) ---
+  // --- taskFidelity FAIL (QFAI-CRIT-010) ---
   if (evidenceFiles.length > 0 && TASK_FIDELITY_SECTION_RE.test(allEvidenceContent)) {
     const stepCountMatch = STEP_COUNT_RE.exec(allEvidenceContent);
     const maxStepsMatch = MAX_PRIMARY_STEPS_RE.exec(allEvidenceContent);
