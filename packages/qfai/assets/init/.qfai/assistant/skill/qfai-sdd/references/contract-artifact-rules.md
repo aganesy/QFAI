@@ -9,7 +9,12 @@ Contracts are version-managed downstream execution truth and inputs:
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
 - `ui/`: UI contract YAML
-- `design/`: design files the project keeps beside its UI contracts. The brand SSOT is root `DESIGN.md` at the project root, not a file here. Evaluator axes are fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`) and no longer authored as separate rubric / calibration contracts.
+
+The brand SSOT is root `DESIGN.md` at the project root, and screens are `ui/`
+contracts. No other directory under `<paths.contractsDir>` holds a contract, and
+`QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
+either: the review validation the QFAI CLI applies fixes them (restated in
+`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`).
 
 Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/rule/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `<paths.contractsDir>/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 
@@ -38,10 +43,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
 - **A contract's ID comes from its directory.** `cli/` holds `CLI`
-  contracts, `api/` `API`, `db/` `DB`, `ui/` `UI` and `design/` `DESIGN`. The
-  ID is `<KIND>-NNNN`. Its number is one more than the highest contract number
-  of any kind, so `API-0002` and `DB-0002` cannot both exist. A number is never
-  reused, even after its contract is removed.
+  contracts, `api/` `API`, `db/` `DB` and `ui/` `UI`. The ID is `<KIND>-NNNN`.
+  Its number is one more than the highest contract number of any kind, so
+  `API-0002` and `DB-0002` cannot both exist. A number is never reused, even
+  after its contract is removed.
 - **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
   `api/api-0002-orders.yaml` or `cli/cli-0001-checkout.md`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in
@@ -59,7 +64,9 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   an implementation file and never cites a rule another contract declares. To
   find the contracts a flow relies on, read the rules whose `Examples` cite
   that flow's examples.
-- `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract <paths.contractsDir>/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
+- An owner rerun addresses an `api/` / `db/` / `ui/` contract whose ID is the
+  thing under repair by its repo-relative path:
+  `/qfai-sdd --contract <paths.contractsDir>/ui/<file>`.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
   table necessarily becomes N cross-referencing files. State the resulting

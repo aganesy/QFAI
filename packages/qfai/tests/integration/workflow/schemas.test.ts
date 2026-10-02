@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0201-19
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-19
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -158,6 +158,7 @@ it("Validate every payload example and fixture with the parser and with the five
       "routing result",
       "stage result with a flowless debt",
       "stage result measured with nulls",
+      "stage result reporting a branch",
       "proposal",
       "question",
       "measurement",
@@ -182,7 +183,7 @@ it("A planted payload with an unknown key", async () => {
   }).toEqual({ reference: [false, false], measurement: [false, false] });
 });
 
-// QFAI:EX-0001-0216-05
+// QFAI:EX-0001-0209-05
 it("A stage work order names its steps, and only the routing work order its executor", async () => {
   const validate = await loadValidator();
   const example = (await payloadExamples()).find((entry) => entry.heading === "Work order");
@@ -218,7 +219,7 @@ it("A stage work order names its steps, and only the routing work order its exec
   });
 });
 
-it("A work order carries a target unless it binds no flow and no new story", async () => {
+it("A work order carries no target where its kind or its run binds no flow", async () => {
   const validate = await loadValidator();
   const order = (stageKind: string, target?: { kind: "flow"; flowId: string }) =>
     workOrderDocument("run-20260925000000000", 3, {
@@ -238,6 +239,8 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     discussion: validate(WORK_ORDER, order("discussion")),
     maintenance: validate(WORK_ORDER, order("maintenance")),
     verify: validate(WORK_ORDER, order("verify")),
+    triage: validate(WORK_ORDER, order("triage")),
+    triageWithTarget: validate(WORK_ORDER, order("triage", flow)),
     implementWithTarget: validate(WORK_ORDER, order("implement", flow)),
     implementWithout: validate(WORK_ORDER, order("implement")),
     maintenanceWithTarget: validate(WORK_ORDER, order("maintenance", flow)),
@@ -247,8 +250,10 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     discussion: true,
     maintenance: true,
     verify: true,
+    triage: true,
+    triageWithTarget: false,
     implementWithTarget: true,
-    implementWithout: false,
+    implementWithout: true,
     maintenanceWithTarget: false,
     verifyWithTarget: false,
   });

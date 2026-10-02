@@ -126,7 +126,7 @@ export const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism())
  * machine that can hold ten still runs ten.
  *
  * `DECLARED_START` is untouched and the override is still honoured as asked, which is the
- * whole of what `BR-0017-0048` requires. `DR-0017-0010` records that reasoning for the worker
+ * whole of what `BR-0015-0048` requires. `DR-0017-0010` records that reasoning for the worker
  * axis and `DR-0017-0013` for this one, with the sweep above.
  */
 export const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());

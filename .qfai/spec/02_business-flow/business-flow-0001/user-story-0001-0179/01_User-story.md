@@ -1,5 +1,10 @@
-# US-0001-0179: `qfai audit log` CLI surface
+# US-0001-0179: Prompt Injection Defense
 
 ## User Story
 
-As a QFAI operator, I want a `qfai audit log` command that lists the envelope-deviation decision records newest-first with `--scope`, `--operator` and `--clause` filters and `--format table|json` (table by default), so that auditing recorded deviations does not require piping raw JSON through external tooling.
+As a security-conscious developer, I want fetched web content sanitized automatically by removing hidden text and control characters and labeling it as untrusted data, so that injected instructions do not reach the model.
+
+## Non-goals
+
+- ML-based injection detection.
+- Real-time model protection.

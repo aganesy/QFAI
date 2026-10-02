@@ -11,7 +11,8 @@
  * SSOT note: the shared scan helper is one of THREE equivalent
  * expressions of the same forbidden class set:
  *   1. `packages/qfai/scripts/lint-shipping.ts` `src-comment` rules
- *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan).
+ *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan), except
+ *      `local-reference-id-comment`, which only that lint carries.
  *   2. `packages/qfai/scripts/check-no-internal-version-leakage.sh`
  *      (POSIX ERE, post-build `dist/` scan).
  *   3. `tests/helpers/distributedSurfaceScan.ts` (JS RegExp, smoke

@@ -8,6 +8,8 @@ import { issue, readSafe } from "./utils.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 import {
+  CONTRACT_KIND_DIRS,
+  directoryOutsideContractKinds,
   markdownOutsideContractForm,
   NON_MARKDOWN_CONTRACT_FORMS,
   resolveStoryTreeRoots,
@@ -18,7 +20,7 @@ const CELL_DECORATION_RE = /^[`*_]+|[`*_]+$/g;
 type IndexTableRow = { cells: string[]; line: number };
 type IndexTable = { headers: string[]; rows: IndexTableRow[]; line: number; heading: string };
 
-/** Checks the story-tree contract index, including CLI and design files. */
+/** Checks the story-tree contract index, including the Markdown CLI contracts. */
 export async function validateStoryTreeContractReferences(
   root: string,
   config: QfaiConfig,
@@ -60,7 +62,8 @@ function contractKind(relative: string): string | null {
  * directory declares an ID of that kind, is named `<kind>-NNNN-<slug>.<ext>`
  * after it, and has a row whose ID and File agree with it. A number belongs to
  * one contract, and every row names a contract file. A Markdown file under
- * `api/`, `db/` or `ui/` is not a contract, and is reported as that alone.
+ * `api/`, `db/` or `ui/`, and a file in any other directory, is not a
+ * contract, and is reported as that alone.
  */
 function validateContractIndex(
   location: IndexLocation,
@@ -76,15 +79,29 @@ function validateContractIndex(
   const issues: Issue[] = [];
   for (const file of model.contractFiles) {
     const relative = toPosixPath(path.relative(location.contractsDir, file));
+    const outside = directoryOutsideContractKinds(relative);
     const kind = contractKind(relative);
-    if (!kind) continue;
+    if (!outside && !kind) continue;
     const spellings = [
       relative,
       toPosixPath(path.relative(location.root, file)),
       toPosixPath(file),
     ];
+    // Matched before any report, so a listed file that is not a contract is reported once.
     const row = listed.find((entry) => spellings.includes(entry.file));
     if (row) matched.add(row);
+    if (outside) {
+      const kinds = CONTRACT_KIND_DIRS.map((kind) => `${kind}/`).join(", ");
+      issues.push(
+        indexIssue(
+          `${file} is under ${outside}/, which is not a contract kind: contracts live in ${kinds}`,
+          file,
+          [file],
+        ),
+      );
+      continue;
+    }
+    if (!kind) continue;
     const directory = markdownOutsideContractForm(relative);
     if (directory) {
       issues.push(

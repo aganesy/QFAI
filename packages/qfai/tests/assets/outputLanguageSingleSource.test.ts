@@ -7,9 +7,9 @@
  * `constitution/agent-selection.md` opened with a ported-in block that pinned
  * a language unconditionally:
  *
- *     > **言語指示（厳守）**
+ *     > **Language instruction (strict)** (written in Japanese)
  *     >
- *     > - 報告・出力: 日本語（Plan も含む）
+ *     > - Reports and output: Japanese (Plans included) (written in Japanese)
  *
  * Nothing in `constitution/` establishes precedence between its files, all 19
  * shipped agent definitions declare the whole directory as a mandatory input,
@@ -23,7 +23,7 @@
  *
  * The tree-wide sweep does not look for the two Japanese strings that happened
  * to leak in — the defect is a *class*, and `Always respond in English` or
- * `出力は日本語とする` recreates it word-for-word differently. It delegates to
+ * a Japanese sentence meaning "output shall be Japanese" recreates it word-for-word differently. It delegates to
  * {@link findFixedLanguageDirectives}, which matches directive *shapes* in
  * both languages and admits exactly two ways to name a language: a clause
  * conditional on the user's own language, and an explicit disclaimer that the
@@ -94,9 +94,9 @@ describe("output language is stated in one place only", () => {
 
       // The exact block that leaked in, pinned by its literal wording so the
       // regression that started this is named, not merely covered by class.
-      expect(text).not.toContain("言語指示");
-      expect(text).not.toContain("厳守");
-      expect(text).not.toContain("報告・出力: 日本語");
+      expect(text).not.toContain("\u8a00\u8a9e\u6307\u793a");
+      expect(text).not.toContain("\u53b3\u5b88");
+      expect(text).not.toContain("\u5831\u544a\u30fb\u51fa\u529b: \u65e5\u672c\u8a9e");
       // And the class it belongs to, whatever the wording.
       expect(fixedLanguageOffenders(AGENT_SELECTION, text)).toEqual([]);
     });
@@ -199,15 +199,24 @@ describe("output language is stated in one place only", () => {
  */
 describe("fixed-language directive matcher", () => {
   const CAUGHT: ReadonlyArray<readonly [string, string]> = [
-    ["the original ported header", "> **言語指示（厳守）**"],
-    ["the original ported bullet", "> - 報告・出力: 日本語（Plan も含む）"],
+    ["the original ported header", "> **\u8a00\u8a9e\u6307\u793a\uff08\u53b3\u5b88\uff09**"],
+    [
+      "the original ported bullet",
+      "> - \u5831\u544a\u30fb\u51fa\u529b: \u65e5\u672c\u8a9e\uff08Plan \u3082\u542b\u3080\uff09",
+    ],
     ["an English directive", "Always respond in English."],
     ["an English directive, passive", "All reports MUST be written in Japanese."],
     ["an English exclusivity clause", "Use English only for user-facing output."],
     ["an English key/value pin", "Output language: English"],
-    ["a Japanese directive", "出力は日本語とする。"],
-    ["a Japanese directive, emphatic", "必ず英語で回答すること。"],
-    ["a Japanese exclusivity clause", "ユーザー向けの応答は日本語に統一する。"],
+    ["a Japanese directive", "\u51fa\u529b\u306f\u65e5\u672c\u8a9e\u3068\u3059\u308b\u3002"],
+    [
+      "a Japanese directive, emphatic",
+      "\u5fc5\u305a\u82f1\u8a9e\u3067\u56de\u7b54\u3059\u308b\u3053\u3068\u3002",
+    ],
+    [
+      "a Japanese exclusivity clause",
+      "\u30e6\u30fc\u30b6\u30fc\u5411\u3051\u306e\u5fdc\u7b54\u306f\u65e5\u672c\u8a9e\u306b\u7d71\u4e00\u3059\u308b\u3002",
+    ],
     ["a directive soft-wrapped over two lines", "Every plan is\nwritten in English."],
     // A fallback wearing the user-conditional carve-out's clothes. It opens
     // with `If`, it names the user, and it forces English on every operator
@@ -224,14 +233,20 @@ describe("fixed-language directive matcher", () => {
     ],
     [
       "a Japanese fallback to a fixed language",
-      "ユーザーが言語を指定しない場合は必ず英語で回答すること。",
+      "\u30e6\u30fc\u30b6\u30fc\u304c\u8a00\u8a9e\u3092\u6307\u5b9a\u3057\u306a\u3044\u5834\u5408\u306f\u5fc5\u305a\u82f1\u8a9e\u3067\u56de\u7b54\u3059\u308b\u3053\u3068\u3002",
     ],
     // The topic marker, with the language last. Every other Japanese shape
     // expects the language before a particle or beside a colon, so the plainest
     // way of writing the rule was the one the matcher read as prose — and it is
     // the wording the root entry point used.
-    ["a Japanese topic-marker directive", "報告/Plan/最終出力は日本語。"],
-    ["the same, with the noun further from the marker", "ユーザーへの最終報告は英語。"],
+    [
+      "a Japanese topic-marker directive",
+      "\u5831\u544a/Plan/\u6700\u7d42\u51fa\u529b\u306f\u65e5\u672c\u8a9e\u3002",
+    ],
+    [
+      "the same, with the noun further from the marker",
+      "\u30e6\u30fc\u30b6\u30fc\u3078\u306e\u6700\u7d42\u5831\u544a\u306f\u82f1\u8a9e\u3002",
+    ],
   ];
 
   for (const [label, sample] of CAUGHT) {
@@ -266,19 +281,25 @@ describe("fixed-language directive matcher", () => {
     ],
     [
       "the agent-selection disclaimer",
-      "> **出力言語**: `.qfai/assistant/rule/constitution.md` の Absolute Rule — Output Language に従う。\n" +
-        "> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、\n" +
-        "> エージェントの出力に対する指示ではない）。",
+      "> **\u51fa\u529b\u8a00\u8a9e**: `.qfai/assistant/rule/constitution.md` \u306e Absolute Rule — Output Language \u306b\u5f93\u3046\u3002\n" +
+        "> \u3053\u306e\u30d5\u30a1\u30a4\u30eb\u306f\u51fa\u529b\u8a00\u8a9e\u3092\u56fa\u5b9a\u3057\u306a\u3044\uff08\u672c\u6587\u304c\u65e5\u672c\u8a9e\u3067\u3042\u308b\u3053\u3068\u306f\u8a18\u8ff0\u8a00\u8a9e\u3067\u3042\u3063\u3066\u3001\n" +
+        "> \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u306e\u51fa\u529b\u306b\u5bfe\u3059\u308b\u6307\u793a\u3067\u306f\u306a\u3044\uff09\u3002",
     ],
     [
       "prose that merely names a language",
       "| `countWords` splits on `\\s+` | prose critiques pass trivially for Japanese/Chinese copy. |",
     ],
-    ["a glossary term ending in 語", "- 用語・単語・述語は言語ごとに定義する。"],
+    [
+      "a glossary term ending in \u8a9e",
+      "- \u7528\u8a9e\u30fb\u5358\u8a9e\u30fb\u8ff0\u8a9e\u306f\u8a00\u8a9e\u3054\u3068\u306b\u5b9a\u7fa9\u3059\u308b\u3002",
+    ],
     // The Japanese restatement, kept beside the fallback it must not be
-    // confused with: the condition names 日本語, so the directive echoing it is
+    // confused with: the condition names Japanese, so the directive echoing it is
     // the user's language and not a fixed one.
-    ["the rule restated per language (ja)", "- ユーザーが日本語で書く場合は日本語で回答する。"],
+    [
+      "the rule restated per language (ja)",
+      "- \u30e6\u30fc\u30b6\u30fc\u304c\u65e5\u672c\u8a9e\u3067\u66f8\u304f\u5834\u5408\u306f\u65e5\u672c\u8a9e\u3067\u56de\u7b54\u3059\u308b\u3002",
+    ],
   ];
 
   for (const [label, sample] of PERMITTED) {

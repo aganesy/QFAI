@@ -126,7 +126,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts[0]).toMatchObject({ ok: true, attemptIndex: 0 });
   });
 
-  // QFAI:EX-0001-0122-05
+  // QFAI:EX-0001-0118-05
   it("retries up to attemptLimit and returns 'retryExhausted' when every attempt fails", async () => {
     let calls = 0;
     const outcome = await dispatchReviewerToPair("UI-0012", "dashboard", {
@@ -286,7 +286,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts[1]?.ok).toBe(true);
   });
 
-  // QFAI:EX-0001-0122-05
+  // QFAI:EX-0001-0118-05
   it("omits reviewJson when every attempt fails (retryExhausted)", async () => {
     const outcome = await dispatchReviewerToPair("UI-0012", "dashboard", {
       attemptLimit: 2,
@@ -352,7 +352,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 });
 
 describe("reviewer dispatch source-grep", () => {
-  // QFAI:EX-0001-0119-01
+  // QFAI:EX-0001-0115-01
   it("prototypingIterate.ts contains no orchestrator-side captureScreenshots() call", async () => {
     const source = await readFile(PROTOTYPING_ITERATE_SRC, "utf-8");
     const code = stripComments(source);
@@ -385,7 +385,7 @@ describe("reviewer cycle leaves zero heavy artifacts under iter-NN/", () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  // QFAI:EX-0001-0119-02
+  // QFAI:EX-0001-0115-02
   it("dispatch with a stub runner writes only the review JSON (no .png/.html/interaction.json)", async () => {
     const iterDir = path.join(tmpDir, "iter-00", "UI-0012");
     await mkdir(iterDir, { recursive: true });

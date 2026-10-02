@@ -20,6 +20,9 @@ export const RECORDED_AT = "2026-09-26T00:00:00.000Z";
 export class JournalRun {
   readonly records: JournalRecord[] = [];
 
+  // The key the command reads from the run's private request file, which a value answer needs.
+  digestKey: string | undefined;
+
   // The run's journal begins with the records the core wrote before the case starts.
   constructor(seed: readonly Seed[]) {
     seed.forEach((record, index) => {
@@ -36,7 +39,7 @@ export class JournalRun {
   get snapshot(): Snapshot {
     const folded = snapshotOf(this.records);
     if (!folded) throw new Error("the journal holds no run");
-    return folded;
+    return this.digestKey ? { ...folded, digestKey: this.digestKey } : folded;
   }
 
   // Decides one operation on the folded snapshot and appends what the command would append.
@@ -111,12 +114,8 @@ export function readyWith(
 }
 
 // One plan stage, in the order the plan files list its fields, carrying its kind's steps.
-export function stage(
-  stageInstanceId: string,
-  stageKind: string,
-  when = "always",
-): PlanStages[number] {
+export function stage(stageInstanceId: string, stageKind: string): PlanStages[number] {
   const steps = KIND_STEPS[stageKind];
   if (!steps) throw new Error(`no steps for stage kind ${stageKind}`);
-  return { stageInstanceId, stageKind, steps, when };
+  return { stageInstanceId, stageKind, steps };
 }

@@ -29,4 +29,11 @@ Feature: playwright primary probe
     Given only `playwright-cli` resolves in `node_modules`
     When `qfai doctor --profile prototyping` runs
     Then `D-DEPRECATED-PROBE` is emitted at severity `error` with `sunset: 1.10.0` in its message
+
+  # AC-0003-0006-05
+  Scenario: The DESIGN.md readiness check names the file it read
+    Given a prototyping-profile project
+    When `qfai doctor --profile prototyping` runs
+    Then the `prototyping.designMdReadiness` check, titled `Root DESIGN.md readiness`, names root `DESIGN.md` in `details.designMd`
+    And it is `ok` when the readiness checks find nothing, and otherwise lists their findings in `details.issues`
 ```

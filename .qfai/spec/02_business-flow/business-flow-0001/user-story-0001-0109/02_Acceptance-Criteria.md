@@ -3,12 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Acceptance of the latest iteration
+Feature: Deterministic iteration stop codes
   # AC-0001-0109-01
-  Scenario: Convergence accepts the latest iteration
-    Given a convergence-mode run has recorded iterations with indices 0 through 6
-    And an earlier iteration has a higher ordinal score than iteration 6
-    When the run records its accepted iteration
-    Then acceptedIterationIndex is 6
-    And no best-of-history selection replaces the latest convergence iteration
+  Scenario: CLI iterate exit codes
+    Given `qfai prototyping iterate --cycle <n>` runs,
+    When the cycle completes,
+    Then exit code is `0` for continue or a cycle-0 no-op, `2` for invalid input or frozen-state drift, `64` for convergence or reviewer-session failure, `65` for the ten-cycle budget, or `66` for license verification failure.
+    And a recorded reviewer session status distinguishes its exit `64` from convergence.
 ```

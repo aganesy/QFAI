@@ -99,7 +99,7 @@ function populatedPrimaryTasksContract(): string {
     "    title: Create Order",
     "    route: /orders/new",
     "    primary_tasks:",
-    "      - create_order",
+    "      - { id: create_order, label: Create an order, acceptance: done }",
     "",
   ].join("\n");
 }

@@ -39,6 +39,7 @@ import {
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -438,7 +439,6 @@ describe("assets guardrails", () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(defaultsDir, "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -449,7 +449,7 @@ describe("assets guardrails", () => {
     const verifyPath = path.join(assistantDir, "step", "verify-context", "STEP.md");
 
     const [routing, configure, verify] = await Promise.all([
-      readFile(routingPath, "utf-8"),
+      readDefaultRoutingText(),
       readFile(configurePath, "utf-8"),
       readFile(verifyPath, "utf-8"),
     ]);
@@ -878,7 +878,7 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Same ceiling as every other skill; the trailing `project_memory:` block
-    // and the mandatory `## Default Autopilot Policy` section fit inside it.
+    // and the skill's own `## Default Autopilot Policy` section fit inside it.
     expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
   });
 
@@ -1374,15 +1374,6 @@ describe("assets guardrails", () => {
       absolute: true,
     });
     const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
-    const mandatoryDiscussSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
-    const discussSkillPath = path.resolve(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
     const approvedJapanesePaths = new Set([
       path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
@@ -1393,17 +1384,11 @@ describe("assets guardrails", () => {
       if (approvedJapanesePaths.has(normalizedPath)) {
         continue;
       }
-      const sanitized =
-        normalizedPath === discussSkillPath
-          ? content.replaceAll(mandatoryDiscussSentence, "")
-          : content;
-      if (japanesePattern.test(sanitized)) {
+      if (japanesePattern.test(content)) {
         matches.push(path.relative(repoRoot, filePath));
       }
     }
 
-    const discussContent = await readFile(discussSkillPath, "utf-8");
-    expect(discussContent).toContain(mandatoryDiscussSentence);
     expect(matches).toEqual([]);
   });
 
@@ -1878,7 +1863,7 @@ describe("assets guardrails", () => {
     expect(skill).toContain(canonicalPhrase);
   });
 
-  it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
+  it("ensures qfai-discussion hands off to /qfai-sdd through the next-action question", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1887,13 +1872,11 @@ describe("assets guardrails", () => {
       "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
-    const requiredSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
 
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
-    expect(content).toContain(requiredSentence);
-    expect(content).toMatch(/active user language/i);
-    expect(content).toContain("`/qfai-sdd`");
+    expect(content).toContain(
+      "End the turn with a question listing the next actions, `/qfai-sdd` recommended",
+    );
   });
 
   it("ensures qfai-discussion template packs exist", async () => {
@@ -2051,7 +2034,7 @@ describe("assets guardrails", () => {
       }
     }
 
-    const routing = await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf-8");
+    const routing = await readDefaultRoutingText();
     const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
     expect(routing).toContain("routing:");
     expect(profiles).toContain("profiles:");
@@ -2799,7 +2782,7 @@ describe("assets guardrails", () => {
     // bucket to the entries that do have one — `brand intent` (routed to root
     // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
     //
-    // A skill may narrow this bucket, and may hard-require an input only it
+    // A skill may hard-require an input only it
     // reads — declared per skill, so adding one is a reviewed change. What it
     // may not do is carry an entry nothing declares.
     //
@@ -3156,11 +3139,10 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
-  // A path inside the installed package. This repository ships that package
-  // and never installs it — `scripts/check-not-a-dependency.mjs` refuses an
-  // install that would create one — so no checkout of this tree holds the
-  // directory. Naming a file under it is how the README tells an adopter where
-  // the packaged copy of a shipped file sits in THEIR tree.
+  // A path inside the installed package. Naming a file under it is how the
+  // README tells an adopter where the packaged copy of a shipped file sits in
+  // THEIR tree. Whether it exists here depends only on whether this checkout
+  // has been installed, so the walk does not judge it.
   if (ref.startsWith("node_modules/")) {
     return true;
   }

@@ -30,6 +30,7 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Audit architecture boundaries, trade-offs, and technical consistency.
+- Judge a change against the `## Architecture` table of `<paths.contractsDir>/tech.md`: each new module belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - Audit contract decisions across UI, API, and DB surfaces.
 - Block a contract that names an implementation file, cites another contract's business rule, or reuses a contract number.
 - Block reintroduction of rejected architecture options without RE-OPEN.

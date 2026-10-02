@@ -1,8 +1,8 @@
-// QFAI:AC-0001-0192-12
-// QFAI:AC-0001-0192-16
-// QFAI:EX-0001-0192-47
-// QFAI:EX-0001-0192-49
-// QFAI:EX-0001-0192-50
+// QFAI:AC-0001-0185-12
+// QFAI:AC-0001-0185-16
+// QFAI:EX-0001-0185-47
+// QFAI:EX-0001-0185-49
+// QFAI:EX-0001-0185-50
 
 import { afterEach, expect, it } from "vitest";
 
@@ -83,9 +83,9 @@ it("Seeding that also rewords the rule's Statement", async () => {
   ]);
 });
 
-it("An sdd_delta result editing the Content of a row present at issue", async () => {
+it("An sdd result editing the Content of a row present at issue", async () => {
   const root = await storyProject();
-  const { snapshot } = await issued(root, readySnapshot("sdd_delta"));
+  const { snapshot } = await issued(root, readySnapshot("sdd"));
   await write(root, DECISIONS, decisions(["| DEC-0001 | Export as TSV | Settled | DONE |"]));
 
   expect(await accepted(root, snapshot)).toEqual({

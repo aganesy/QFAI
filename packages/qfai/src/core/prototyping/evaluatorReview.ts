@@ -41,11 +41,11 @@ export const PROSE_CRITIQUE_MAX_CJK_CHARS = 2500;
 // whitespace-tokenised one in `validateProseCritiqueBand`.
 //
 // Coverage note: BMP only. Extension A (U+3400..U+4DBF) and Extension B+
-// (surrogate-pair ideographs like 𠮷 at U+20BB7) are not matched, which
+// (surrogate-pair ideographs such as U+20BB7) are not matched, which
 // targets everyday Japanese prose. Since the rule is a cap and not a
 // floor, an uncounted ideograph can only make the cap bind later than it
 // should, never reject a critique that should pass.
-const CJK_CHAR_RE = /[぀-ヿ一-鿿]/u;
+const CJK_CHAR_RE = /[\u3040-\u30FF\u4E00-\u9FFF]/u;
 
 function countCjkCharacters(text: string): number {
   let n = 0;

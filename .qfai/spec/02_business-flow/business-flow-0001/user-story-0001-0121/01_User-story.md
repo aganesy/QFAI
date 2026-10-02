@@ -1,5 +1,5 @@
-# US-0001-0121: Stock-photo source provenance
+# US-0001-0121: Cycle-zero UI-contract set freeze
 
 ## User Story
 
-As a downstream `/qfai-implement` consumer, I want every image slot filled from an allowlisted free stock-photo source and recorded as `{url, license, attribution, source}` in `prototyping.json#imageSources[]`, so that legal and compliance review can verify provenance without re-reading the prototype HTML.
+As a maintainer, I want the resolved UI contract set frozen at cycle 0 and recorded as `uiContractsCovered[]`, so that a UI contract added mid-run does not restart cycle 0 and is deferred to the next invocation instead.

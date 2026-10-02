@@ -51,10 +51,11 @@ Behavior obligations are primary; an HTML+CSS mock is an optional fallback only.
 Evaluation axes are global constants (4-step ordinal: weak / acceptable /
 strong / exceptional) and are not authored as discussion sidecars.
 
-## Skipped when
+## Passes when
 
-The target is not UI-bearing. The parent decides that with the playbook above
-before this step runs.
+Read first: the target's surface classification, judged with the playbook
+above. The step passes when the target is not UI-bearing. The pass names the
+classification it read.
 
 ## Gate
 

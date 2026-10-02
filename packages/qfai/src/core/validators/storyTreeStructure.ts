@@ -2,6 +2,9 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { extractH2Sections } from "../parse/markdown.js";
+import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { architectureProblems } from "../storyTree/architecture.js";
 import {
   contractNumber,
   isStoryTreeId,
@@ -334,7 +337,74 @@ export async function validateStoryTreeStructure(
     ...(await validateStoryDirectories(roots.specsDir, tree)),
     ...(await validateFlowMermaid(tree)),
     ...validateStoryTreeStructureModel(tree),
+    ...(await validateConstraintIds(roots.specsDir)),
+    ...(await validateTechArchitecture(roots.contractsDir)),
   ];
+}
+
+/**
+ * The `## Architecture` section of `tech.md` draws its layers as a diagram and lists
+ * them in a table, uppermost first. The document schema holds the section to one
+ * diagram then one table; this reads whether the two agree and the rows are in order.
+ */
+export async function validateTechArchitecture(contractsDir: string): Promise<Issue[]> {
+  const file = path.join(contractsDir, "tech.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const section = extractH2Sections(content).get("Architecture");
+  if (section === undefined) return [];
+  return architectureProblems(section.body).map((problem) =>
+    finding("QFAI-STORY-013", `## Architecture of ${file}: ${problem}`, file),
+  );
+}
+
+/** Each section of `constraint.md` and the prefix its IDs carry. */
+const CONSTRAINT_PREFIXES: ReadonlyMap<string, string> = new Map([
+  ["Technical Constraints", "TC"],
+  ["Operational Constraints", "OC"],
+  ["Business Constraints", "BC"],
+]);
+
+/**
+ * A constraint ID is positional: each section numbers its rows from 01 in table
+ * order, with its own prefix, so removing a row closes the gap. The document
+ * schema holds the table's shape but cannot count rows; this reads the IDs.
+ */
+export async function validateConstraintIds(specsDir: string): Promise<Issue[]> {
+  const file = path.join(specsDir, "01_policy", "constraint.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const issues: Issue[] = [];
+  for (const [heading, section] of extractH2Sections(content)) {
+    const prefix = CONSTRAINT_PREFIXES.get(heading);
+    const table = parseAllMarkdownTables(section.body)[0];
+    const column = table?.headers.findIndex((header) => header.trim() === "ID") ?? -1;
+    if (prefix === undefined || table === undefined || column < 0) continue;
+    table.rows.forEach((row, index) => {
+      const id = (row[column] ?? "").trim();
+      const expected = `${prefix}-${String(index + 1).padStart(2, "0")}`;
+      if (id === expected) return;
+      issues.push(
+        finding(
+          "QFAI-STORY-012",
+          `${id || "(empty)"} is row ${index + 1} of ## ${heading} in ${file}; constraint IDs run from ${prefix}-01 in table order, so it is ${expected}`,
+          file,
+          id ? [id] : [],
+        ),
+      );
+    });
+  }
+  return issues;
 }
 
 /**

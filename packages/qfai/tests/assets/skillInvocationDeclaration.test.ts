@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { skillFrontmatterMapping } from "../../src/core/agentFrontmatter.js";
-import { collectCanonicalSkillIds } from "../../src/cli/commands/init.js";
+import { collectCanonicalSkillIds } from "../../src/core/init/integrationDirs.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");

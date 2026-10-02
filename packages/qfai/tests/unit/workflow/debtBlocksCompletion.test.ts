@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-26
+// QFAI:EX-0001-0185-26
 // Fault seeds: FAULT-010, FAULT-011
 
 import { expect, it } from "vitest";
@@ -10,7 +10,7 @@ import { RUN_ID, finish, finishPlan, metFacts, readySnapshot } from "./finishFix
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
@@ -82,7 +82,7 @@ const crossSpecDebt = {
 
 function acceptImplementWithDebt() {
   const accepted = [
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
   ];
   const base = { plan: finishPlan, flowBinding: { flowId: "BF-0007" }, acceptedStages: accepted };
   const issued = decide(
@@ -159,6 +159,7 @@ function finishSameSpecDebt(options: {
   laterResult: boolean;
   reported: boolean;
   reportedAt?: string;
+  failOn?: "never";
 }) {
   const snapshot = readySnapshot();
   const acceptedStages = (snapshot.acceptedStages ?? []).flatMap((stage) => {
@@ -172,6 +173,7 @@ function finishSameSpecDebt(options: {
   const file = options.reportedAt ?? sameSpecDebt.path;
   const finding = { code: sameSpecDebt.findingCode, file, refs: [] };
   completion.validate.findings = options.reported ? [{ ...finding, severity: "warning" }] : [];
+  if (options.failOn) completion.validate.failOn = options.failOn;
   const finished = finish({ ...snapshot, acceptedStages }, facts);
   return { state: finished.verdict.run?.state, unmet: finished.verdict.unmet };
 }
@@ -201,4 +203,17 @@ it("other-path", () => {
   const moved = { laterResult: false, reported: true, reportedAt: "src/notify/sms.ts" };
 
   expect(finishSameSpecDebt(moved)).toEqual({ state: "completed", unmet: [] });
+});
+
+it("still-reported under failOn never", () => {
+  const never: Parameters<typeof finishSameSpecDebt>[0] = {
+    laterResult: false,
+    reported: true,
+    failOn: "never",
+  };
+
+  expect(finishSameSpecDebt(never)).toEqual({
+    state: "ready",
+    unmet: [{ condition: "debt-open", subject: "BF-0007", owner: "qfai-implement" }],
+  });
 });

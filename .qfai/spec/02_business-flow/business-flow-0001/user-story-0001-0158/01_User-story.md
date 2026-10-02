@@ -1,5 +1,5 @@
-# US-0001-0158: Active Design Contract Surface Reduction
+# US-0001-0158: Contract-first verification gates
 
 ## User Story
 
-As a QFAI maintainer, I want `/qfai-sdd` to stop emitting the legacy design contract family (`exploration-brief.yaml`, `evaluation-rubric.yaml`, `evaluator-calibration.yaml`, `selected-direction.yaml`, `reference-pool.yaml`, `brand-design.yaml`), so that root `DESIGN.md` is the only design contract.
+As a maintainer, I want verify to depend on contract-first validate gates rather than implicit discussion-pack runners, so that downstream completion reflects the current execution architecture.

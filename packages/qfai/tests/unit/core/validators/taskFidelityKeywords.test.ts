@@ -27,7 +27,7 @@ describe("QFAI-CRIT-009 required taskFidelity keywords", () => {
     expect(unique.size).toBe(TASK_FIDELITY_REQUIRED_KEYWORDS.length);
   });
 
-  // QFAI:EX-0001-0150-01
+  // QFAI:EX-0001-0145-01
   it("names every missing keyword and section in the actual finding and matching guidance", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-task-fidelity-"));
     try {

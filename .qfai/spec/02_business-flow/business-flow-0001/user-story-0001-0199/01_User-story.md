@@ -1,10 +1,11 @@
-# US-0001-0199: Choose how much the entry does
+# US-0001-0199: Resolve only the unsettled scope as a stage of a run
 
 ## User Story
 
-As an adopter maintainer, I want to set the mode to `off`, `shadow` or `active`, so that I can keep today's manual operation, watch proposed routes before trusting them or run fully chained, and a run that finds the project does not match what the package requires stops chaining rather than checking less.
+As an operator whose request needs a discussion before it can be planned, I want the discussion stage of a run to ask only about what the run has not settled, so that I am not asked again what I already answered.
 
 ## Non-goals
 
-- The core rewriting my configuration to recover.
-- The mode line `qfai init` writes, and the default it leaves on upgrade.
+- How the run continues after the discussion stage, which the plan decides.
+- Grilling inside a run in general.
+- The shared stage-skill rules every skill follows.

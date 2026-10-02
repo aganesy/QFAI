@@ -40,6 +40,20 @@ const identities = (runs: Issue[][]): string[][] =>
       .sort(),
   );
 
+describe("validate is deterministic", () => {
+  // QFAI:EX-0001-0039-12
+  it("gives the same findings on two runs over the same tree and configuration", async () => {
+    await withInitProject(async (root) => {
+      await put(root, ".qfai/spec/01_policy/constraint.md", "# Constraints\n");
+      const first = await issuesOf(root);
+      const second = await issuesOf(root);
+
+      expect(first.flat().length).toBeGreaterThan(0);
+      expect(identities(second)).toEqual(identities(first));
+    });
+  }, 120_000);
+});
+
 describe("validate reads no stage evidence", () => {
   it("gives the same findings with and without a local spec-stage record", async () => {
     await withInitProject(async (root) => {

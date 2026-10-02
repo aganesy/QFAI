@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-33
+// QFAI:EX-0001-0185-33
 
 import { expect, it } from "vitest";
 
@@ -11,15 +11,12 @@ type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
 const flowBinding = { flowId: "BF-0007" };
 const directPlan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const bugfixPlan = {
-  route: "bugfix",
-  stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-verify", "verify", "always"),
-  ],
+  route: "fix-defect",
+  stages: [planStage("bugfix-diagnose", "diagnose"), planStage("bugfix-verify", "verify")],
 };
 
 function acceptChangedFiles(

@@ -220,7 +220,7 @@ describe("validateDbContractApplyOrder", () => {
   });
 
   it("takes only a file declaring one DB- ID as a table owner", async () => {
-    // QFAI:EX-0001-0054-08
+    // QFAI:EX-0001-0052-08
     // A `db/` file declaring an `API-` ID, or two IDs, is a declaration error
     // another check reports. Taken as the owner of what it creates, it would
     // send a correct file to declare a contract that is not a DB contract.
@@ -267,7 +267,7 @@ describe("validateDbContractApplyOrder", () => {
   });
 
   it("gives no finding to a file that does not declare one DB- ID", async () => {
-    // QFAI:EX-0001-0054-08
+    // QFAI:EX-0001-0052-08
     const root = await newRoot();
     const parent = await contract(root, "DB-0070", "CREATE TABLE orders (id TEXT);\n");
     const wrongKind = await contract(

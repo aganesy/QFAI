@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0196-01
-// QFAI:EX-0001-0196-01
+// QFAI:AC-0001-0189-01
+// QFAI:EX-0001-0189-01
 
 import { spawnSync } from "node:child_process";
 import { appendFile, cp, mkdtemp } from "node:fs/promises";
@@ -23,7 +23,7 @@ function git(root: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
-// A discovery run whose discussion work order is outstanding.
+// A decide-design run whose discussion work order is outstanding.
 async function runningRun(root: string): Promise<string> {
   const { runId } = await routedRun(root);
   const issued = workflow(root, ["next", "--run", runId]);

@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0196-20
+// QFAI:EX-0001-0189-19
 
 import { expect, it } from "vitest";
 
@@ -27,7 +27,7 @@ it("A result whose submitted digest of an input differs from the digest in the f
     plan: finishPlan,
     flowBinding: { flowId: "BF-0007" },
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
     outstandingWorkOrder: implementOrder,
   };

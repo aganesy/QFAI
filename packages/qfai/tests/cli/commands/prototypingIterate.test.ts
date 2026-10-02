@@ -190,7 +190,7 @@ async function seedRawPrototypingJson(root: string, body: unknown): Promise<void
 }
 
 describe("runPrototypingIterate cycle 0", () => {
-  // QFAI:EX-0001-0112-01
+  // QFAI:EX-0001-0109-01
   it("returns 0 and creates iter-00/ with iterate-plan.json (target-url provided)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -221,7 +221,7 @@ describe("runPrototypingIterate cycle 0", () => {
     expect(plan.nextActions).toContain("iterate --cycle 1");
   });
 
-  // QFAI:EX-0001-0112-02
+  // QFAI:EX-0001-0109-02
   it("returns 2 when --target-url is missing at cycle 0", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -231,7 +231,7 @@ describe("runPrototypingIterate cycle 0", () => {
 });
 
 describe("runPrototypingIterate convergence (exit 64)", () => {
-  // QFAI:EX-0001-0112-03
+  // QFAI:EX-0001-0109-03
   it("returns 64 when all UX axes are exceptional and nothing blocks the latest iter", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -443,7 +443,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
   // expectedNextCycle gate; this regression test pins that ordering plus
   // the stderr discriminator so any future refactor that flips the gate
   // order is caught here, not at certify time.
-  // QFAI:EX-0001-0127-04
+  // QFAI:EX-0001-0123-04
   it("--cycle 9 on a recorded non-converged tenth iteration exits 65 without a cycle mismatch", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -458,7 +458,7 @@ describe("runPrototypingIterate max-iterations (exit 65)", () => {
     }));
     await seedPrototypingJson(root, iterations);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
@@ -504,7 +504,7 @@ describe("runPrototypingIterate input validation", () => {
     expect(exit).toBe(2);
   });
 
-  // QFAI:EX-0001-0118-05
+  // QFAI:EX-0001-0114-02
   it("returns 0 without creating an iteration when no UI-bearing contracts exist", async () => {
     // Per spec-0012 TDD-0379 / TC-0012-0355: zero-UI-bearing is a
     // deterministic no-op (exit 0), not `exit 2 — no primary spec found`.
@@ -514,7 +514,7 @@ describe("runPrototypingIterate input validation", () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({
@@ -545,7 +545,7 @@ describe("runPrototypingIterate input validation", () => {
 });
 
 describe("runPrototypingIterate continue (exit 0)", () => {
-  // QFAI:EX-0001-0112-04
+  // QFAI:EX-0001-0109-04
   it("returns 0 at cycle 1 when the prior iter has a finding open (no convergence, not at max)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -633,7 +633,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
-  // QFAI:EX-0001-0114-01
+  // QFAI:EX-0001-0111-01
   it("TC-3.5.1: persists designMd { path, sha256 } into prototyping.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1032,7 +1032,10 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       // validatePrototypingDelegationMap reads it, so a stale assignment
       // must not survive the hard reset and block the fresh loop.
       executionPlan: {
-        delegationMap: { スクリーンショット: "frontend-engineer" },
+        // A legacy Japanese category label ("screenshot"), written as escapes.
+        delegationMap: {
+          "\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8": "frontend-engineer",
+        },
         plannedAt: "2025-01-01T00:00:00Z",
       },
     });
@@ -1045,7 +1048,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
   // One property per case. The reset clears three blocks and re-seeds two, and
   // a single case asserting all five reports only the first that fails, so a
   // change that breaks two of them reads as one.
-  // QFAI:EX-0001-0165-01
+  // QFAI:EX-0001-0159-01
   it("cycle 0 deletes fullHarness", async () => {
     const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("fullHarness" in body).toBe(false);
@@ -1371,7 +1374,7 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle >= 1 DESIGN.md drift stderr (TC-0012-0373)", () => {
-  // QFAI:EX-0001-0115-01
+  // QFAI:EX-0001-0112-01
   it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
     // TC-0012-0373 pins the canonical operator-facing stderr phrase
     // "DESIGN.md hash mismatch" plus "re-run from cycle 0" so the
@@ -1397,7 +1400,7 @@ describe("runPrototypingIterate cycle >= 1 DESIGN.md drift stderr (TC-0012-0373)
       { designMd: { path: "DESIGN.md", sha256: "0".repeat(64) } },
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1615,7 +1618,7 @@ describe("runPrototypingIterate cycle 0 frozen SSOT writes", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => {
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it("TC-0012-0371 (TDD-0383): exits 66 with stderr naming the offending URL when imageSources[] has a non-allowlisted source", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1657,7 +1660,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1710,7 +1713,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1776,7 +1779,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     );
   }
 
-  // QFAI:EX-0001-0118-06
+  // QFAI:EX-0001-0114-03
   it("freezes every UI-bearing contract and emits the full set in the plan", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1798,14 +1801,14 @@ describe("runPrototypingIterate UI contract scope", () => {
     expect(plan.uiContracts).toEqual(record.uiContractsCovered);
   });
 
-  // QFAI:EX-0001-0142-01
+  // QFAI:EX-0001-0138-01
   it("lets --primary-ui-contract win over the configured primary UI contract", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     const configPath = path.join(root, "qfai.config.yaml");
     const config = await readFile(configPath, "utf-8");
     await writeFile(configPath, `${config}\nprototyping:\n  primaryUiContract: UI-0002\n`, "utf-8");
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       // The configured pin names a contract that does not exist.
@@ -1826,7 +1829,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     }
   });
 
-  // QFAI:EX-0001-0142-02
+  // QFAI:EX-0001-0138-02
   it("refuses a configured primary UI contract the config loader rejected", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1838,7 +1841,7 @@ describe("runPrototypingIterate UI contract scope", () => {
       `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
       "utf-8",
     );
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(
@@ -1855,13 +1858,13 @@ describe("runPrototypingIterate UI contract scope", () => {
     }
   });
 
-  // QFAI:EX-0001-0125-04
+  // QFAI:EX-0001-0121-03
   it("rejects a newly declared UI contract before honoring convergence", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedPrototypingJson(root, [{ index: 0, blockingFindings: [] }]);
     await addUiContract(root, "UI-0002", "settings");
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
@@ -1905,7 +1908,7 @@ describe("runPrototypingIterate UI contract scope", () => {
 // drifts from the in-memory SSOT `DEFAULT_LICENSE_CATALOG` at cycle ≥ 1,
 // iterate exits 2 with a re-seed instruction rather than silently
 // using the edited catalog as the verifier authority.
-// QFAI:EX-0001-0122-02 — AC-Ref: AC-0012-0043.
+// QFAI:EX-0001-0118-02 — AC-Ref: AC-0012-0043.
 describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-fails (TC-0012-0421)", () => {
   const baseFrozenCatalog = {
     allowedSources: ["unsplash", "pexels"],
@@ -1937,13 +1940,13 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     );
   }
 
-  // QFAI:EX-0001-0122-02
+  // QFAI:EX-0001-0118-02
   it("exits 2 with the re-seed instruction when the record has no frozenLicenseCatalog", async () => {
     const root = await newTempDir();
     // `undefined` drops the key from the serialized record.
     await seedWithCatalog(root, undefined);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
@@ -1961,7 +1964,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
       allowedSources: [...baseFrozenCatalog.allowedSources, "pinterest"],
     });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -1979,7 +1982,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     const { sourceHosts: _omit, ...catalogWithoutHosts } = baseFrozenCatalog;
     await seedWithCatalog(root, catalogWithoutHosts);
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2002,7 +2005,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
       },
     });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2026,7 +2029,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
 // `[]`, skipping the exit-66 license gate entirely. Instead the iterate
 // command returns exit 2 with stderr naming the offending index + field.
 describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop (TC-0012-0413)", () => {
-  // QFAI:EX-0001-0121-02
+  // QFAI:EX-0001-0117-02
   it("exits 2 and names the offending index/field when an imageSources entry is missing 'license'", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -2065,7 +2068,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2102,7 +2105,7 @@ describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop 
     ];
     await writeFile(protoJsonPath, JSON.stringify(proto), "utf-8");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2128,7 +2131,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
     const root = await newTempDir();
     await seedMinimalProject(root, { uiBearing: false });
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({
@@ -2173,7 +2176,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2192,7 +2195,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
     await seedMinimalProject(root, { uiBearing: false });
     // prototyping.json absent — fresh project ran `--cycle 1` first.
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2221,7 +2224,7 @@ describe("runPrototypingIterate zero-UI precheck — cycle ≥ 1 hard-stop discr
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2294,7 +2297,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2361,7 +2364,7 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
       "utf-8",
     );
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({ root, cycle: 1 });
@@ -2399,7 +2402,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
   }
 
   async function refusalMessages(root: string, cycle: number): Promise<string[]> {
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
@@ -2417,7 +2420,7 @@ describe("runPrototypingIterate sealed-loop guard", () => {
     const root = await newTempDir();
     await seedSealedLoop(root, "converged");
 
-    const logger = await import("../../../src/cli/lib/logger.js");
+    const logger = await import("../../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingIterate({

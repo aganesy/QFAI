@@ -1,5 +1,5 @@
-# US-0001-0129: CSS token reference resolution
+# US-0001-0129: Browser tool migration window
 
 ## User Story
 
-As a designer, I want `scanFonts`, `scanRadius` and `scanShadow` to resolve `var(--token)` references against `:root` before judging safety, so that token-driven CSS does not produce false-positive `designMdViolations[]`.
+As a downstream project, I want `prototyping.execution.browserTool` to accept both `"playwright"` (primary) and `"playwright-cli"` (during the deprecation window), so that existing CI scripts keep working through the one-minor-release migration.

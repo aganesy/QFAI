@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-05
+// QFAI:EX-0001-0185-05
 // Fault seeds: FAULT-007
 
 import { createHash } from "node:crypto";
@@ -25,7 +25,7 @@ function freshSnapshot(): Snapshot {
   return {
     run: { id: "run-feature", state: "ready", sequence: 5 },
     plan: {
-      route: "feature",
+      route: "add-feature",
       stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
     },
     scopeDigest: scopeDigestOf(approvedWriteAreas),
@@ -137,7 +137,10 @@ it("Bind the created flow, then issue the next flow-bound work order", () => {
   const bound: Snapshot = {
     ...fresh,
     run: { id: "run-feature", state: "ready", sequence: 9 },
-    plan: { route: "feature", stages: [sdd, implement, verify].flatMap((stage) => stage ?? []) },
+    plan: {
+      route: "add-feature",
+      stages: [sdd, implement, verify].flatMap((stage) => stage ?? []),
+    },
     flowBinding: { flowId: "BF-0007" },
     acceptedStages: [{ stageInstanceId: "feature-sdd", stageKind: "sdd", outcome: "accepted" }],
   };

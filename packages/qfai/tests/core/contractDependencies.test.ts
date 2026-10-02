@@ -73,9 +73,11 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // declaration invisible, so a conforming file earned `QFAI-CONTRACT-015`
     // and its correct index row `QFAI-CONTRACT-033`.
     expect(
-      extractDeclaredDependencies("x-qfai-depends-on: [DB-0001] # DB を先に適用\n", "a.yaml"),
+      extractDeclaredDependencies("x-qfai-depends-on: [DB-0001] # apply DB first\n", "a.yaml"),
     ).toEqual(["DB-0001"]);
-    expect(hasDependencyDeclaration("x-qfai-depends-on: [] # 依存なし\n", "a.yaml")).toBe(true);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: [] # no dependencies\n", "a.yaml")).toBe(
+      true,
+    );
   });
 
   it("reads the key from a JSON contract, quoted and across lines", () => {

@@ -3,10 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Evidence Sampling Confirmation
+Feature: Exploration Brief Authoring
   # AC-0001-0080-01
-  Scenario: Evidence Sampling Produces Matches
-    Given proposed glob patterns
-    When evidence sampling runs
-    Then 5-15 actual test files are listed. Zero matches triggers a stop-and-ask.
+  Scenario: UI-bearing discussion records exploration inputs
+    Given a UI-bearing discussion pack is ready for downstream prototyping
+    When its `04_Sources.md` is finalized
+    Then it records the product intent, must-keep interactions, brand signals, and differentiation targets as explicit exploration constraints
+    And it does not select a winning visual direction or finalize a design system
 ```

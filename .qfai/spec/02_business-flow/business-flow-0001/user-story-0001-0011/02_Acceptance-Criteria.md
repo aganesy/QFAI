@@ -31,4 +31,13 @@ Feature: Story-tree layout described by mdschema
     When the document is checked against its schema
     Then a column the template's table does not have is a violation
     And a pipe line directly above the table's header row is a violation
+
+  # AC-0001-0011-05
+  Scenario: A story-tree Markdown file without exactly one schema entry fails
+    Given a Markdown file under `paths.specsDir` or `paths.contractsDir` that no mdschema manifest entry names, or that two entries name
+    When the document lane or `qfai validate --profile sdd` runs over it
+    Then the lane exits 1 naming the file, under every scope that includes it
+    And `qfai validate` reports it as one `QFAI-DOCSCHEMA-001` error naming the file
+    And a spelling of `paths.specsDir` or `paths.contractsDir` that `qfai validate` resolves to the same directory covers the same files
+    And the lane and `qfai validate` read a `\` in either key as `/` on every platform, so one value names one directory for both
 ```

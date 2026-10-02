@@ -13,7 +13,7 @@ const ID_PATTERNS: Record<StoryTreeIdKind, RegExp> = {
 };
 
 /** A contract ID: the kind its directory names, then a number unique across kinds. */
-const CONTRACT_ID = /^(?:CLI|API|DB|UI|DESIGN)-(\d{4})$/;
+const CONTRACT_ID = /^(?:CLI|API|DB|UI)-(\d{4})$/;
 
 /** The contract kind each directory under `paths.contractsDir` holds. */
 export const CONTRACT_KIND_BY_DIR = {
@@ -21,7 +21,6 @@ export const CONTRACT_KIND_BY_DIR = {
   api: "API",
   db: "DB",
   ui: "UI",
-  design: "DESIGN",
 } as const;
 
 export function isContractId(value: string): boolean {

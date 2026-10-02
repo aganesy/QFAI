@@ -16,7 +16,7 @@ name: Prepare release
 # `check-branch-version-pin.sh` can check the two agree.
 #
 # Writes go through `RELEASE_AUTOMATION_TOKEN`, not through the job token, so this workflow's
-# `permissions:` stays at the minimal `{ contents: read }` and `BR-0017-0016`'s closed departure set
+# `permissions:` stays at the minimal `{ contents: read }` and `BR-0015-0016`'s closed departure set
 # is untouched. The same token is what lets the tag this eventually produces start `release.yml`:
 # GitHub does not raise workflow events for pushes made with `GITHUB_TOKEN`.
 #
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
-          # Shallow, deliberately. `BR-0017-0019` keeps full history job-scoped to the three jobs
+          # Shallow, deliberately. `BR-0015-0019` keeps full history job-scoped to the three jobs
           # that need it, and this is not one: the only history question here is whether a tag
           # already exists, which is a ref lookup rather than a walk. It is asked of the API.
           ref: main

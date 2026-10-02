@@ -1,10 +1,5 @@
-# US-0001-0184: MCP Server Integration for Web Research
+# US-0001-0184: Read-only convergence peek
 
 ## User Story
 
-As a developer, I want ready-made MCP integration templates for Brave Search, Firecrawl and Playwright, so that web research works with minimal setup.
-
-## Non-goals
-
-- Developing a custom MCP server.
-- MCP servers other than the three listed.
+As an `/qfai-prototyping` operator, I want `qfai prototyping iterate --check-convergence` to report whether the loop has converged without running a cycle, so that I can choose between `certify` and another cycle from the recorded state.

@@ -11,8 +11,8 @@
  * There is no lower bound. A screen that does one thing is the shape the
  * ceiling protects, so it passes like any other count under it.
  */
-// QFAI:EX-0001-0161-01
-// QFAI:EX-0001-0161-01
+// QFAI:EX-0001-0155-01
+// QFAI:EX-0001-0155-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -84,7 +84,10 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
 }
 
 function uiContractWithPrimaryTaskCount(count: number): string {
-  const items = Array.from({ length: count }, (_, idx) => `      - task_${idx + 1}`);
+  const items = Array.from(
+    { length: count },
+    (_, idx) => `      - { id: task_${idx + 1}, label: task_${idx + 1}, acceptance: done }`,
+  );
   return [
     "screens:",
     "  - id: dashboard",

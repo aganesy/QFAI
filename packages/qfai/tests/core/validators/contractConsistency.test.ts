@@ -312,7 +312,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
    * the domain are then attributed to one specific API field. Merging the
    * bindings before that attribution let a `status` ENUM on an unrelated table
    * decide the severity of a `status` column bounded by a plain CHECK — and
-   * the message asserted `insert 時に拒絶される物理制約` of a field that has no
+   * the message asserted `a physical constraint rejected at insert time` of a field that has no
    * such constraint.
    */
   describe("a field name several contracts declare", () => {
@@ -529,7 +529,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       // wording says "at least one of them mixes CHECK and ENUM within itself",
       // which is true and must not be what this rejects.
       expect(remedy).not.toContain("ENUM and CHECK both appear in the same contract");
-      // Both files named, and the reader sent to the Contracts 表 first —
+      // Both files named, and the reader sent to the Contracts table first —
       // the contract has to be narrowed before the column can be.
       expect(remedy).toContain("db-0009-both.sql");
       expect(remedy).toContain("db-0011-notifications.sql");

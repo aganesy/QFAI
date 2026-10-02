@@ -3,18 +3,23 @@
 ## Criteria
 
 ```gherkin
-Feature: Optional Side Artifact Neutrality
+Feature: Canonical verification validators
   # AC-0001-0156-01
-  Scenario: No usable source stops SDD preflight
-    Given there is no discussion pack, import-lite input, or explicit user requirement
-    When SDD preflight runs
-    Then SDD stops because it has no usable source.
+  Scenario: Verify runs full-scan validation
+    Given /qfai-verify is invoked
+    When validation scope is selected
+    Then `/qfai-verify` runs full-scan validation rather than a diff-only shortcut.
 
   # AC-0001-0156-02
-  Scenario: An incomplete but usable pack remains source material
-    Given a usable discussion pack has an incomplete markdown file, a blocking OQ, or an optional side artifact such as `prototyping.yaml` that is absent, malformed or in a legacy format
-    When SDD preflight runs
-    Then those defects alone do not block SDD from reading the pack as source material
-    And the optional side artifact's state alone does not change preflight readiness
-    And SDD does not edit or rerun the discussion pack to clear its own gate.
+  Scenario: Verify remains blocked by a validation error
+    Given `/qfai-verify` runs full-scan validation through the canonical validator
+    When validation reports an error
+    Then Verify remains non-pass and surfaces the validation error.
+
+  # AC-0001-0156-03
+  Scenario: Validate uses the canonical validator entrypoint
+    Given the validate command is loaded
+    When its public entrypoint is inspected
+    Then Validate imports and uses the canonical validator entrypoint.
+    And removed compatibility surfaces are not present in the package surface.
 ```

@@ -1,11 +1,12 @@
-// QFAI:EX-0001-0192-38
-// QFAI:EX-0001-0192-49
+// QFAI:EX-0001-0185-38
+// QFAI:EX-0001-0185-49
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import type { PlanStep } from "../../../src/core/workflow/types.js";
 import { KIND_STEPS, planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -30,20 +31,15 @@ function ofKind(stageKind: string): Middle {
   return [stageKind, KIND_STEPS[stageKind] ?? []];
 }
 
-// A stage of a kind carrying exactly the named steps.
-function withSteps(stageKind: string, ...names: string[]): Middle {
-  return [stageKind, names.map((name) => ({ name }))];
-}
-
-// A bounded-change plan whose middle stage is the kind under test.
+// An add-feature plan whose middle stage is the kind under test.
 function boundedPlan(stageKind: string, steps: PlanStep[]) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/notify"],
     stages: [
-      planStage("bounded-sdd-delta", "sdd_delta", "always"),
-      { stageInstanceId: "bounded-middle", stageKind, steps, when: "always" },
-      planStage("bounded-verify", "verify", "always"),
+      planStage("bounded-sdd-delta", "sdd"),
+      { stageInstanceId: "bounded-middle", stageKind, steps },
+      planStage("bounded-verify", "verify"),
     ],
   };
 }
@@ -55,7 +51,7 @@ function issueMiddle(stageKind: string, steps: PlanStep[]) {
     plan: boundedPlan(stageKind, steps),
     flowBinding,
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
   };
   const issued = decide(ready, { operation: "next" }, facts);
@@ -143,13 +139,11 @@ const atddRecords = [".qfai/evidence/atdd-BF-0001.md"];
 const derivations: [string, Middle, string[] | undefined][] = [
   ["implement", implement, implementRecords],
   ["regression-fix", ofKind("regression_fix"), implementRecords],
-  ["test-fix-implement", withSteps("test_fix", "implement-test-fix"), implementRecords],
   ["acceptance", ofKind("acceptance"), atddRecords],
-  ["test-fix-atdd", withSteps("test_fix", "atdd-test-fix"), atddRecords],
+  ["test-fix", ofKind("test_fix"), [...atddRecords, ...implementRecords]],
   ["sdd-append", sddAppend, [`${STORY}/03_Example.md`, CONTRACT, DECISIONS, SDD_EVIDENCE]],
-  ["prototype-not-ui-bearing", ofKind("prototype"), undefined],
+  ["prototype", ofKind("prototype"), undefined],
   ["sdd", ofKind("sdd"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
-  ["sdd-delta", ofKind("sdd_delta"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
   ["discussion", ofKind("discussion"), undefined],
   ["verify", ofKind("verify"), undefined],
   ["diagnose", ofKind("diagnose"), undefined],
@@ -162,7 +156,7 @@ for (const [title, stage, recordAreas] of derivations) {
   });
 }
 
-// The checked plan a routing result becomes, for the same bounded-change stages.
+// The checked plan a routing result becomes, for the same add-feature stages.
 function checkedPlanDocument() {
   const plan = boundedPlan(...implement);
   const routed = decide(
@@ -185,8 +179,8 @@ function checkedPlanDocument() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -194,12 +188,11 @@ function checkedPlanDocument() {
           newStories: [],
           proposedWriteScope: plan.writeScope,
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
     {
-      plans: { "bounded-change": { route: "bounded-change", stages: plan.stages } },
+      plans: { "add-feature": { route: "add-feature", stages: plan.stages } },
       flows: ["BF-0001"],
     },
   );

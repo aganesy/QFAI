@@ -1,5 +1,5 @@
-# US-0001-0054: Contract index and contract-layer validation
+# US-0001-0054: Append-only drift and change-request authorization
 
 ## User Story
 
-As a maintainer of a project on the story tree, I want `qfai validate` to report a contract file that `contracts.md` does not list, and to read the project's steering files from the contract layer, so that the contract index is complete and the quality-gate commands have one home.
+As a reviewer of a change on the story tree, I want the `drift` gate to report a table row that was removed or rewritten, and a protected file changed with no change-request row in force, so that recorded decisions and upstream specifications change only through a recorded change request.

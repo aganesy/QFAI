@@ -62,6 +62,13 @@
  * a reflowed message would silently report every violation as new. The file
  * ratchet uses only the exit status, which the tool does promise.
  *
+ * ── Coverage ──────────────────────────────────────────────────────────────
+ *
+ * Every Markdown file under the two configured roots has exactly one manifest
+ * entry. A file no entry claims would otherwise never be checked, so it fails
+ * the run, named, under every scope that includes it; so does a file two
+ * entries claim.
+ *
  * ── No opt-out ────────────────────────────────────────────────────────────
  *
  * Every document the manifest routes is a spec document, and a spec document
@@ -79,9 +86,12 @@
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
  *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
+ *   node scripts/check-mdschema.mjs --tools <dir> --scope all  # mdschema installed under <dir>
  *
  * The tree defaults to the working directory; the SCHEMAS always come from
  * beside this file, so `--root` moves the documents and never the contract.
+ * `--tools` names a directory whose `node_modules` holds the mdschema package,
+ * searched before the tree and the package this file sits in.
  *
  * Exit codes:
  *   0  no document in scope carries a violation this run is responsible for
@@ -147,9 +157,18 @@ const MDSCHEMA_PACKAGE = "@jackchuka/mdschema";
  * caller turns into a usage error rather than a silent pass.
  *
  * @param {string} from Directory to start the first walk from.
+ * @param {string | null} [tools] A directory whose own `node_modules` is searched first, without walking up.
  * @returns {{ command: string, args: string[] } | null}
  */
-export function findMdschemaCommand(from) {
+export function findMdschemaCommand(from, tools = null) {
+  if (tools !== null) {
+    const entry = mdschemaEntryPoint(
+      path.join(tools, "node_modules", ...MDSCHEMA_PACKAGE.split("/")),
+    );
+    if (entry !== null) {
+      return { command: process.execPath, args: [entry] };
+    }
+  }
   for (const start of [from, SCRIPT_DIR]) {
     let dir = path.resolve(start);
     for (;;) {
@@ -196,6 +215,11 @@ function mdschemaEntryPoint(packageDir) {
     return null;
   }
   const entry = path.resolve(packageDir, relative);
+  // A `bin` that points outside its own package is not an entry point of it.
+  const inside = path.relative(packageDir, entry);
+  if (inside.startsWith("..") || path.isAbsolute(inside)) {
+    return null;
+  }
   return existsSync(entry) ? entry : null;
 }
 
@@ -206,6 +230,13 @@ function mdschemaEntryPoint(packageDir) {
  * runs before (and independently of) the package build, and the value is a
  * single scalar under a single mapping. A missing or unreadable config is not
  * an error — the documented default is what a fresh tree has.
+ *
+ * The value is returned tree-relative with forward slashes, the form the
+ * walked document paths take, so `./.qfai/spec` and `.qfai\spec` name the same
+ * tree as `.qfai/spec`, as they do for `qfai validate`. A backslash is read as a
+ * separator on every platform, which is how the package's configuration loader
+ * reads these two keys too: a directory name holding one is not a spelling
+ * anyone writes on purpose.
  *
  * @returns {string} Configured directory, or its default.
  */
@@ -231,7 +262,11 @@ function readConfiguredDir(root, key, fallback) {
     return fallback;
   }
   const value = found[1].trim();
-  return value === "" ? fallback : value.replace(/\/+$/, "");
+  if (value === "") {
+    return fallback;
+  }
+  const absolute = path.resolve(root, value.replaceAll("\\", "/"));
+  return path.relative(root, absolute).split(path.sep).join("/");
 }
 
 /**
@@ -281,12 +316,39 @@ function expandPattern(pattern, { specsDir, contractsDir }) {
 
 /** Files without exactly one schema entry, in input order. */
 export function documentsWithoutOneEntry(manifestText, files, paths) {
-  const entries = parseManifest(manifestText);
-  return files.filter(
-    (file) =>
-      entries.filter((entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file))
-        .length !== 1,
-  );
+  return coverageViolations(parseManifest(manifestText), files, paths).map(({ file }) => file);
+}
+
+/**
+ * One violation for each Markdown file that does not have exactly one manifest
+ * entry, in input order.
+ *
+ * Every Markdown file of the spec tree conforms to a schema, so a file no entry
+ * claims fails rather than going unchecked, and a file two entries claim would
+ * be held to two contracts.
+ *
+ * @param {{ id: string, pattern: string }[]} entries
+ * @param {string[]} files tree-relative
+ * @param {{ specsDir: string, contractsDir: string }} paths
+ * @returns {{ file: string, line: number, column: number, rule: string, message: string }[]}
+ */
+export function coverageViolations(entries, files, paths) {
+  const patterns = entries.map((entry) => ({
+    id: entry.id,
+    re: patternToRegExp(expandPattern(entry.pattern, paths)),
+  }));
+  const violations = [];
+  for (const file of files) {
+    if (!/\.md$/i.test(file)) continue;
+    const claims = patterns.filter(({ re }) => re.test(file)).map(({ id }) => id);
+    if (claims.length === 1) continue;
+    const message =
+      claims.length === 0
+        ? "no schema covers this document: every Markdown file of the spec tree is one the mdschema manifest names"
+        : `${claims.length} schema entries claim this document (${claims.join(", ")}): a document conforms to exactly one schema`;
+    violations.push({ file, line: 1, column: 1, rule: "coverage", message });
+  }
+  return violations;
 }
 
 /** The opt-out marker a spec document may not carry. */
@@ -923,8 +985,9 @@ function checkEntryDocuments(context, entry, violations) {
  * Checks every document the manifest routes, for a caller rather than a log.
  *
  * `qfai validate` reports what this returns. It applies the same routing, the
- * same root-heading check and the same marker refusal as `main`, over the whole
- * tree: a validation run has no merge base to ratchet against.
+ * same coverage check, the same root-heading check and the same marker refusal
+ * as `main`, over the whole tree: a validation run has no merge base to ratchet
+ * against.
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
@@ -936,8 +999,9 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
   }
   const context = { root, paths, mdschema, universe: documentUniverse(root, paths), checked: 0 };
-  const violations = [];
-  for (const entry of readManifest()) {
+  const entries = readManifest();
+  const violations = coverageViolations(entries, context.universe.toSorted(), paths);
+  for (const entry of entries) {
     const failure = checkEntryDocuments(context, entry, violations);
     if (failure !== null) return { ok: false, reason: failure };
   }
@@ -957,13 +1021,14 @@ function describeRefusedMarker(file) {
 /**
  * Parses the command line into options, or returns an exit code.
  *
- * @returns {{ scope: string, base: string, summary: boolean, root: string, positional: string[] } | number}
+ * @returns {{ scope: string, base: string, summary: boolean, root: string, tools: string | null, positional: string[] } | number}
  */
 function parseArgs(argv) {
   let scope = "changed";
   let base = DEFAULT_BASE;
   let summary = false;
   let root = process.cwd();
+  let tools = null;
   const positional = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -978,6 +1043,13 @@ function parseArgs(argv) {
     }
     if (arg === "--root") {
       root = argv[++i] ?? "";
+      continue;
+    }
+    if (arg === "--tools") {
+      // A following option is not a directory: consuming it would drop that option.
+      const value = argv[i + 1] ?? "";
+      tools = value.startsWith("-") ? "" : value;
+      i += tools === "" ? 0 : 1;
       continue;
     }
     if (arg === "--summary") {
@@ -1003,12 +1075,23 @@ function parseArgs(argv) {
     console.error("check-mdschema: --root needs a directory");
     return 2;
   }
+  if (tools === "") {
+    console.error("check-mdschema: --tools needs a directory");
+    return 2;
+  }
   root = path.resolve(root);
   if (!existsSync(root) || !statSync(root).isDirectory()) {
     console.error(`check-mdschema: --root is not a directory: ${root}`);
     return 2;
   }
-  return { scope, base, summary, root, positional };
+  return {
+    scope,
+    base,
+    summary,
+    root,
+    tools: tools === null ? null : path.resolve(tools),
+    positional,
+  };
 }
 
 export function main() {
@@ -1016,12 +1099,12 @@ export function main() {
   if (typeof options === "number") {
     return options;
   }
-  const { scope, base, summary, root, positional } = options;
+  const { scope, base, summary, root, tools, positional } = options;
   if (!existsSync(MANIFEST)) {
     console.error(`check-mdschema: manifest not found at ${MANIFEST}`);
     return 2;
   }
-  const mdschema = findMdschemaCommand(root);
+  const mdschema = findMdschemaCommand(root, tools);
   if (mdschema === null) {
     console.error(
       "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema, which the qfai package depends on.",
@@ -1080,6 +1163,26 @@ export function main() {
     contents.set(file, text);
     return text;
   };
+
+  // A document no entry routes would otherwise go unchecked and pass, so it is
+  // this run's failure under every scope that includes it, whatever the merge
+  // base held: there is no earlier grade to compare against.
+  const inScope = universe.filter((file) => restrictSet === null || restrictSet.has(file)).sort();
+  const uncovered = coverageViolations(entries, inScope, paths);
+  checked += uncovered.length;
+  if (uncovered.length > 0) {
+    violations++;
+    console.error("\n── coverage (manifest.yml) ──");
+    for (const found of uncovered) {
+      console.error([found.file, `  ✗ 1:1  [${found.rule}] ${found.message}`].join("\n"));
+    }
+  }
+  perEntry.push({
+    id: "coverage",
+    files: inScope.filter((file) => /\.md$/i.test(file)).length,
+    ok: uncovered.length === 0,
+    inherited: 0,
+  });
 
   for (const entry of entries) {
     const schemaPath = path.join(SCHEMA_ROOT, entry.schema);

@@ -1,4 +1,4 @@
-// QFAI:AC-0001-0192-14
+// QFAI:AC-0001-0185-14
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -30,11 +30,11 @@ const git = (root: string, args: string[]) =>
     encoding: "utf8",
   });
 
-// A direct run that edits README.md, with its verify stage accepted: ready to finish.
+// An edit-text run that edits README.md, with its verify stage accepted: ready to finish.
 async function editedRun(root: string): Promise<string> {
   await write(root, "README.md", "# Notifications\n\nYou recieve one email per address.\n");
   commitAll(root);
-  const { runId } = await routedRun(root, proposalFor("direct"));
+  const { runId } = await routedRun(root, proposalFor("edit-text"));
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Notifications\n\nYou receive one email per address.\n");
   await submit(
@@ -77,7 +77,7 @@ it("finish reports uncommitted and leaves the run ready until the run's changes 
   });
 }, 300_000);
 
-// QFAI:EX-0001-0192-41
+// QFAI:EX-0001-0185-41
 it("finish never waits on the run's own records, even where git does not ignore them", async () => {
   const root = await initProject();
   // A stale negation from an earlier managed block leaves the run's records visible to git.

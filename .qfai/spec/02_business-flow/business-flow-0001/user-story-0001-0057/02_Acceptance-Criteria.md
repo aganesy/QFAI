@@ -3,42 +3,23 @@
 ## Criteria
 
 ```gherkin
-Feature: Example, criterion, and rule links
+Feature: Business-flow scoped validation
   # AC-0001-0057-01
-  Scenario: An example with a broken criterion reference is reported
-    Given the story tree, and an EX row whose `AC-Ref` cell names no AC, several ACs, an AC the tree does not define, or an AC of another story
-    When `qfai validate --profile sdd` runs
-    Then an error names the EX ID and the `03_Example.md` that defines it
+  Scenario: A flow-scoped run checks one flow and writes its own result
+    Given the story tree, and `qfai validate --flow BF-NNNN` naming a flow the tree defines
+    When the run completes
+    Then it checks that flow, its stories, their ACs and EXs, and the rules that cite those EXs, and leaves out findings about any other flow
+    And it writes its result to `validate.flow-<ids>.json` beside the configured `validate.json`, where `<ids>` names every flow in the scope, and leaves `validate.json` and `validate-<profile>.json` untouched
 
   # AC-0001-0057-02
-  Scenario: A criterion no example names is reported
-    Given the story tree, and an AC that no EX names in its `AC-Ref` cell
-    When `qfai validate --profile sdd` runs
-    Then an error names the AC ID and the `02_Acceptance-Criteria.md` that defines it
+  Scenario: --spec is refused on the story tree
+    Given the story tree
+    When `qfai validate --spec <spec-id>` runs
+    Then it exits 2, and its message names `--flow BF-NNNN` as the option that scopes a run on the story tree
 
   # AC-0001-0057-03
-  Scenario: Rules are read alike in every contract form
-    Given the story tree, and business rules written in a YAML or JSON contract (`x-qfai-rules`), a SQL contract (`-- Rule` and `-- Examples:` lines) and a Markdown contract (a `## Business rules` table)
-    When `qfai validate --profile sdd` runs
-    Then each rule is read with the same fields in every form — its ID, its statement and its examples — so a rule whose examples all exist raises no BR-to-EX error in any of the three
-
-  # AC-0001-0057-04
-  Scenario: A rule without existing examples is reported
-    Given the story tree, and a rule with no examples, or with an example naming an EX the tree does not define
-    When `qfai validate --profile sdd` runs
-    Then an error names the BR ID and the contract file
-    And a SQL `-- Rule` line with no `-- Examples:` line after it is a rule with no examples
-
-  # AC-0001-0057-05
-  Scenario: An example no rule names is reported
-    Given the story tree, and an EX that no rule names in its examples
-    When `qfai validate --profile sdd` runs
-    Then an error names the EX ID and the `03_Example.md` that defines it
-
-  # AC-0001-0057-07
-  Scenario: A Business rules table is read with three columns
-    Given the story tree, and a Markdown contract whose rules sit under `## Business rules`
-    When `qfai validate --profile sdd` runs
-    Then its table is read with the columns BR-ID, Statement and Examples
-    And a table with other columns is an error naming the contract file
+  Scenario: An invalid --flow value writes no result
+    Given the story tree
+    When `qfai validate --flow <value>` runs with a value that is not a `BF-NNNN` ID, or that names a flow the tree does not define
+    Then an error finding names the value, and no `validate.flow-*.json` file is written
 ```

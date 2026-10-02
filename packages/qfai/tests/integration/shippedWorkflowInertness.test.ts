@@ -3,8 +3,8 @@
  * set.
  *
  * Covers the inertness half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0033
- * and BR-0020-0035): every shipped test lane stays declared but keyed on the
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0033
+ * and BR-0018-0035): every shipped test lane stays declared but keyed on the
  * adopter's own opt-in — the presence of the matching layer-named test
  * script (test:unit, test:component, test:integration, test:api,
  * test:e2e) in package.json — never on a credential attribute. The
@@ -36,7 +36,7 @@ import { captureStdout } from "../helpers/stdout.js";
 const ORCHESTRATOR = "qfai-tests.yml";
 const ORCHESTRATOR_REL = path.join(".github", "workflows", ORCHESTRATOR);
 
-/** The five lane layers (value SSOT in the suite per BR-0020-0023). */
+/** The five lane layers (value SSOT in the suite per BR-0018-0023). */
 const LANE_LAYERS = ["unit", "component", "integration", "api", "e2e"] as const;
 
 /** The detection lane-set output at its widest (the full superset). */

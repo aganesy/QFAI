@@ -429,6 +429,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-004",
     "QFAI-STORY-005",
     "QFAI-STORY-011",
+    "QFAI-STORY-012",
+    "QFAI-STORY-013",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -454,11 +456,7 @@ export const GATE_GROUP_FAMILIES = {
     "R-AUTOPILOT-POLICY-*",
     "R-REJECTED-READOPT",
   ],
-  "reviewer-gate-shared": [
-    "R-MOCK-HREF-DRIFT",
-    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    "R-EVIDENCE-MUTATION-UNLOGGED",
-  ],
+  "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT", "R-EVIDENCE-MUTATION-UNLOGGED"],
   "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
   contracts: [
     "QFAI-CONTRACT-000",
@@ -492,7 +490,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-FLOW-001",
     "QFAI-FLOW-002",
     "QFAI-FLOW-004",
-    "QFAI-BPAP-*",
     "QFAI-CONSISTENCY-*",
     "QFAI-AGENT-*",
     "QFAI-AUD-*",
@@ -813,8 +810,9 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
-  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
-  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  // The effective failOn appeared only in the `--format github` summary line,
+  // so a reviewer reading the default text output could not see why the exit
+  // code is what it is.
   process.stdout.write(`fail-on: ${failOn}\n`);
   const overruns = formatTimingOverruns(result.timings);
   if (overruns) {
@@ -1169,8 +1167,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011":
     "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Each section of `01_policy/constraint.md` numbers its IDs from 01 in table order, with the section's prefix: TC, OC or BC.",
+  "QFAI-STORY-013":
+    "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
   "QFAI-DOCSCHEMA-001":
-    "Every story-tree document has the sections, order and content its shipped schema declares, and none carries the opt-out marker.",
+    "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
@@ -1303,26 +1305,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  // `paths.contractsDir` is configurable, so the expected state names the file
-  // by role rather than pinning the default location: a project that moved its
-  // contracts must not be told to repair a directory it does not use. The
-  // offending path is already on the finding's `target:` line.
-  "QFAI-BPAP-001": "Every BP/AP rule file in the contracts `design/` directory is readable.",
-  "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
-  "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
-  "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
-  "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
-  // The check is `toSafeString(value).trim() === ""`, so a required key that is
-  // present but holds `[]`, `{}`, or `null` fails it exactly like an absent
-  // one. The expected state says "non-empty scalar", not "present", so the
-  // report does not read as if the key were missing when it is not.
-  "QFAI-BPAP-006": "Every BP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
-  "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
-  "QFAI-BPAP-009": "Every AP entry gives each of its required fields a non-empty scalar value.",
-  "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
-  "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
-  "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
@@ -1421,8 +1403,12 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected row or record an in-force change request for the named file change.",
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
+  "QFAI-STORY-012":
+    "Renumber the named section of `constraint.md` from 01 in table order. A constraint ID is positional and is not meant to be cited; where another document cites the old ID, state the limit there in words instead.",
+  "QFAI-STORY-013":
+    "Order the Architecture rows from the uppermost layer down, so each Depends on names only rows below it, and give the diagram one node per layer and one Upper --> Lower edge per Depends on entry, nothing more.",
   "QFAI-DOCSCHEMA-001":
-    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it.",
+    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
@@ -1430,49 +1416,22 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
   "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
-  "QFAI-BPAP-001":
-    "Restore read access to the file, or delete it if it is no longer part of the rule set.",
-  "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
-  // QFAI-BPAP-001/002/003 fire on both `best-practices*.yaml` and
-  // `anti-patterns*.yaml`, so the example ID has to stay neutral: spelling
-  // `BP-0001` here would walk an anti-pattern author straight into
-  // QFAI-BPAP-007, which demands the `AP-XXXX` form.
-  "QFAI-BPAP-003":
-    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` in a best-practices file, `- id: AP-0001` in an anti-patterns file); a mapping at the root is not a rule set.",
-  "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
-  "QFAI-BPAP-005":
-    "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
-  // Both codes fire on a present-but-empty value as well as on an absent key:
-  // the check reads `toSafeString(value).trim()`, and a `description: []` or a
-  // `detection_method: {}` reduces to the empty string. "Add the missing field"
-  // is unusable on that path — the key is already there, and adding a second
-  // one of the same name is a YAML duplicate rather than a repair.
-  "QFAI-BPAP-006":
-    "Give the BP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the practice is no longer needed.",
-  "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
-  "QFAI-BPAP-008":
-    "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
-  "QFAI-BPAP-009":
-    "Give the AP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the anti-pattern is no longer needed.",
-  "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
-  "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
-  "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
   // All four declared-mapping paths (blank cell, several directories, a CAP on
   // two rows, two CAPs on one directory) pass no `suggested_action`, and one
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
   // make each row name exactly one directory that no other row names.
   "QFAI-AGENT-015":
-    "Remove the role from the skill's `roles:`, or bind it in the package defaults (`packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Remove the role from the skill's `roles:`, or bind it in the package defaults (the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-AGENT-016":
     "Repair the `SKILL.md` frontmatter the message names: close the `---` block, and give `roles:` a list of strings and `routing-profile:` a non-empty profile name.",
   "QFAI-AGENT-017":
-    "Add a route with a dispatching phase to `packages/qfai/assets/defaults/agent-routing.yml`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
+    "Add a route with a dispatching phase to the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
   "QFAI-AGENT-018":
     "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile. Define package defaults in `packages/qfai/assets/defaults/review-profiles.yml`; use `qfai.config.yaml#routing` and `#reviewProfiles` for complete project-specific overrides.",
   "QFAI-AGENT-019":
-    "Add the agent to the skill's `roles:`, or remove its binding from `packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+    "Add the agent to the skill's `roles:`, or remove its binding from the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or from `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-SKILLS-016":
-    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the `steps:` list the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep `requires:` to installed `common-*` steps, and add the roles the message names to the skill's `roles:`.",
+    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, list a common step a skill's body runs in that skill's `requires:`, and add the roles the message names to the skill's `roles:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
@@ -1529,7 +1488,7 @@ function resolveIssueTarget(issue: Issue): string {
  * emitting validator uses, instead of drifting from it silently.
  *
  * `issue.rule` is deliberately not a fallback: it holds an internal rule token
- * (`bpApDb.duplicateId`), and printing it in the `expected` field made a missing
+ * (`htmlMock.externalUrl`), and printing it in the `expected` field made a missing
  * catalog entry look like a value rather than an omission.
  */
 export function resolveIssueExpected(issue: Issue): string {

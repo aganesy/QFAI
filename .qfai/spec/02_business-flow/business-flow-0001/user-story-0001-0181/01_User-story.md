@@ -1,5 +1,10 @@
-# US-0001-0181: Cross-skill documentation realignment to implementation
+# US-0001-0181: Research Observability
 
 ## User Story
 
-As a QFAI maintainer, I want every `references/*.md` and each affected SKILL.md rewritten to match the chosen implementation in the same atomic change that lands it, with `qfai validate --report` reporting every stale reference left at HEAD as a warning, so that cross-skill documentation does not drift from the shipped behavior.
+As a developer debugging a failed research workflow, I want structured logs that capture URLs, extraction results and verification outcomes, so that I can trace where the research went wrong.
+
+## Non-goals
+
+- Native OpenTelemetry integration.
+- A real-time monitoring dashboard.

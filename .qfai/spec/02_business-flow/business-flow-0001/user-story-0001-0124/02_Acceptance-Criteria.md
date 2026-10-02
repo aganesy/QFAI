@@ -3,11 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Certification of frozen UI-contract reviews
+Feature: Tailwind-aware design-token validation
   # AC-0001-0124-01
-  Scenario: Certify aggregates per-spec presence
-    Given `qfai prototyping certify --check`,
-    When run after the loop terminates,
-    Then certify iterates the cycle-0 frozen spec set via `readFrozenSpecsCovered()`, asserts that every declared screen of every covered spec has a `<screen>.review.json` at the accepted iter, and exits 0 on full coverage / non-zero with a diagnostic naming the missing `(spec, screen)` pair on any miss.
-    And on the story tree certify iterates the cycle-0 frozen `uiContractsCovered[]`, and the diagnostic names the missing `(UI contract, screen)` pair.
+  Scenario: Tailwind ↔ gate alignment (preflight allowlist + body-scope)
+    Given an iter authored faithfully to the shipped `generator-prompt.md`,
+    When `findDesignMdViolations(html, designMd)` runs with the preflight literal allowlist and the gate scope narrowed to `<body>`,
+    Then `designMdViolations[]` MUST be empty for every preflight literal enumerated in the source pack §B-4 / §3 (Tailwind CDN preflight literals, internal `--tw-*` custom properties, alpha-modifier `rgba()`, standard utility shorthand names).
+    And async fixture loading paths in the scanner unit tests MUST propagate read errors explicitly (no silent swallow).
 ```

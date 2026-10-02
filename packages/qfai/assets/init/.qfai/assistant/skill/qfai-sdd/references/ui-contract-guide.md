@@ -6,30 +6,23 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 ## `screens[].primary_tasks` shape
 
 Each entry in `screens[]` MUST carry a `primary_tasks:` slot. Each
-slot entry may be authored in one of two shapes:
+slot entry is a mapping with exactly three required keys, no additional
+keys allowed:
 
-1. **String-only (legacy)** — a plain bullet such as
-   `- Review pending orders`. Accepted during the deprecation window
-   for backwards compatibility with contracts authored before the
-   structured shape was introduced.
+```yaml
+- id: t1
+  label: Mark order shipped
+  acceptance: order status flips to shipped
+```
 
-2. **Structured (closed schema)** — a mapping with exactly three
-   required keys, no additional keys allowed:
+- `id` — short stable handle for the task.
+- `label` — human-readable task name.
+- `acceptance` — testable acceptance condition, written so a reviewer
+  can tell whether the task is actually done.
 
-   ```yaml
-   - id: t1
-     label: Mark order shipped
-     acceptance: order status flips to shipped
-   ```
-
-   - `id` — short stable handle for the task.
-   - `label` — human-readable task name.
-   - `acceptance` — testable acceptance condition, written so a
-     reviewer can tell whether the task is actually done.
-
-A structured entry missing any of `id` / `label` / `acceptance`, or
-carrying any extra key (e.g. `priority`, `owner`), is rejected at
-validate time. The schema is intentionally closed (no
+An entry that is a plain string, lacks any of `id` / `label` /
+`acceptance`, or carries any extra key (e.g. `priority`, `owner`), is
+rejected at validate time. The schema is intentionally closed (no
 `additionalProperties: true`) for two reasons: a fixed key set lets
 validate name a malformed task deterministically instead of accepting
 a mistyped or invented key in silence; and an open shape invites
@@ -37,7 +30,7 @@ per-project field sprawl (`priority`, `owner`, …), which would leave
 the same contract shape meaning different things in different
 projects.
 
-Validate is currently the only consumer of a structured entry: it
+Validate is currently the only consumer of an entry: it
 reads `label` for the empty-slot and count-band lanes, and requires
 `id` and `acceptance` to be present and non-empty. Nothing generates
 tests from them yet — requiring them now is what lets a generator be

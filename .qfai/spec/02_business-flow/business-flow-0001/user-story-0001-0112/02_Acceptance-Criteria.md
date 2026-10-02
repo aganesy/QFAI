@@ -3,11 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Deterministic iteration stop codes
+Feature: DESIGN.md hash drift rejection
   # AC-0001-0112-01
-  Scenario: CLI iterate exit codes
-    Given `qfai prototyping iterate --cycle <n>` runs,
-    When the cycle completes,
-    Then exit code is `0` for continue or a cycle-0 no-op, `2` for invalid input or frozen-state drift, `64` for convergence or reviewer-session failure, `65` for the ten-cycle budget, or `66` for license verification failure.
-    And a recorded reviewer session status distinguishes its exit `64` from convergence.
+  Scenario: Cycle ≥1 hash gate
+    Given `prototyping.json#designMdSha256 === H_recorded`,
+    When `qfai prototyping iterate --cycle <n>` (n ≥ 1) runs and on-disk `sha256(DESIGN.md) !== H_recorded`,
+    Then it exits with code `2` and stderr contains `"DESIGN.md hash mismatch"`. The user must restore `DESIGN.md` or restart from cycle 0.
 ```

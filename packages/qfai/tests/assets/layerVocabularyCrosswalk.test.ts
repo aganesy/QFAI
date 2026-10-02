@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { LAYER_TAGS } from "../../src/core/testStrategyTags.js";
-
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const RULE = "assistant/rule/test-layers.md";
@@ -25,7 +23,6 @@ describe("story-tree test layer rule", () => {
       ]) {
         expect(text).toContain(`### ${code} ${name}`);
         expect(text).toContain(`\`${tag}\``);
-        expect(LAYER_TAGS.has(tag)).toBe(true);
       }
     });
 

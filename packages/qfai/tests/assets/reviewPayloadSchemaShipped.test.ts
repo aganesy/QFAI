@@ -53,7 +53,7 @@ async function readShipped(relative: string): Promise<string[]> {
 
 describe("shipped reviewer payload schema", () => {
   // The defect this file guards: five `src/` comments named
-  // `.qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md` as the payload SSOT, and
+  // `.qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md` as the payload SSOT, and
   // `qfai init` ships no `contracts/` tree at all — so the reviewer
   // sub-agent, which runs inside the consuming project, could not open the
   // one document that describes the schema its output is parsed against.
@@ -126,7 +126,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
   const OPEN_COUNT =
     "Let `open(r)` be the total length of `r.blockingFindings` plus `r.layoutAntiPatternsDetected`.";
 
-  // QFAI:EX-0001-0108-02
+  // QFAI:EX-0001-0105-02
   it("pivots when the open count is above zero and did not fall across three reviews", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain(OPEN_COUNT);
@@ -136,7 +136,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
     }
   });
 
-  // QFAI:EX-0001-0108-04
+  // QFAI:EX-0001-0105-04
   it("continues when the open count fell from the prior review", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain(
@@ -145,7 +145,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
     }
   });
 
-  // QFAI:EX-0001-0108-03
+  // QFAI:EX-0001-0105-03
   it("refines in every other case", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain("- Else → `refine`.");

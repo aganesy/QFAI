@@ -156,6 +156,7 @@ describe("check-mdschema driver", () => {
     ).toEqual(["docs/spec/open-questions.md"]);
   });
 
+  // QFAI:EX-0001-0011-14
   it("finds only files with zero or several manifest entries", () => {
     const manifest = [
       "documents:",
@@ -347,6 +348,26 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("not a directory");
   });
 
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools names no directory", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--scope", "all", "--tools"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option, which it must not swallow", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--tools", "--scope", "all"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newTempDir();
 
@@ -354,6 +375,71 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("at least one path");
+  });
+});
+
+describe("a Markdown file no schema covers", () => {
+  // QFAI:EX-0001-0011-12
+  it("fails the lane under every scope that includes it, naming the file", async () => {
+    const root = await newTempDir();
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    const notes = ".qfai/contracts/design/notes.md";
+    await mkdir(path.dirname(path.join(root, notes)), { recursive: true });
+    await writeFile(path.join(root, notes), "# Notes\n", "utf-8");
+
+    const all = runDriver(["--root", root, "--scope", "all"]);
+    expect(all.status).toBe(1);
+    expect(all.stderr).toContain(notes);
+    expect(all.stderr).toContain("no schema covers this document");
+
+    const named = runDriver(["--root", root, "--scope", "files", notes]);
+    expect(named.status).toBe(1);
+    expect(named.stderr).toContain(notes);
+
+    const other = runDriver([
+      "--root",
+      root,
+      "--scope",
+      "files",
+      ".qfai/specs/02_business-flow/business-flow-0001/business-flow.md",
+    ]);
+    expect(other.status, other.stderr).toBe(0);
+  });
+
+  // QFAI:EX-0001-0011-15
+  it.each([
+    ["a leading ./", "./.qfai/specs", "./.qfai/contracts/"],
+    ["backslashes", ".qfai\\specs", ".qfai\\contracts\\"],
+  ])(
+    "reads configured directories spelled with %s as the same tree",
+    async (_, specs, contracts) => {
+      const root = await newTempDir();
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `paths:\n  specsDir: ${specs}\n  contractsDir: ${contracts}\n`,
+        "utf-8",
+      );
+      await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+
+      const result = runDriver(["--root", root, "--scope", "all"]);
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("1 file(s) conform");
+      expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    },
+  );
+
+  it("is returned to a caller as a coverage violation", async () => {
+    const root = await newTempDir();
+    const notes = ".qfai/specs/README.md";
+    await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+    await writeFile(path.join(root, notes), "# Readme\n", "utf-8");
+
+    expect(checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 0,
+      violations: [expect.objectContaining({ file: notes, rule: "coverage", line: 1 })],
+    });
   });
 });
 
@@ -573,6 +659,45 @@ describe("check-mdschema command resolution", () => {
     );
 
     expect(findMdschemaCommand(inner)?.args).toEqual([entry]);
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("prefers the installation in the tools directory over the tree's own", async () => {
+    // The shipped document lane installs the checker into a directory of its own
+    // and names it with `--tools`; that copy is the one the lane pinned.
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    await seedPackage(root, { mdschema: "bin/cli.js" });
+    const pinned = await seedPackage(tools, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)).toEqual({ command: process.execPath, args: [pinned] });
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("falls back to the tree's own installation when the tools directory holds none", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("ignores a bin that points outside its own package", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(packageDir, { recursive: true });
+    const outside = path.join(tools, "node_modules", "@jackchuka", "outside.js");
+    await writeFile(outside, "", "utf-8");
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "../outside.js" } }),
+      "utf-8",
+    );
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
   });
 
   it.each([

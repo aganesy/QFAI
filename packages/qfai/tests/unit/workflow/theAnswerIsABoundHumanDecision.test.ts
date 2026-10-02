@@ -1,9 +1,10 @@
-// QFAI:EX-0001-0192-02
-// QFAI:EX-0001-0192-44
+// QFAI:EX-0001-0185-02
+// QFAI:EX-0001-0185-44
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 it("A proceed answer records a bound human decision used by the SDD work order", () => {
   const question = {
@@ -35,11 +36,8 @@ it("A proceed answer records a bound human decision used by the SDD work order",
     },
   };
   const plan = {
-    route: "feature",
-    stages: [
-      { stageInstanceId: "feature-sdd", stageKind: "sdd" },
-      { stageInstanceId: "feature-verify", stageKind: "verify" },
-    ],
+    route: "add-feature",
+    stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
   };
   const awaitingSnapshot = {
     run: { id: "run-feature", state: "awaiting_input", sequence: 4 },
@@ -148,11 +146,8 @@ it("missing persisted CREATE authorization at SDD issue", () => {
   const readySnapshot = {
     run: { id: "run-feature", state: "ready", sequence: 5 },
     plan: {
-      route: "feature",
-      stages: [
-        { stageInstanceId: "feature-sdd", stageKind: "sdd" },
-        { stageInstanceId: "feature-verify", stageKind: "verify" },
-      ],
+      route: "add-feature",
+      stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
     },
     approval: {
       kind: "human_decision",

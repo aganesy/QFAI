@@ -22,7 +22,8 @@ fail=0
 
 # The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
-#     (pre-build, JSDoc → dist/*.d.ts path)
+#     (pre-build, JSDoc → dist/*.d.ts path), except
+#     `local-reference-id-comment`, which only that lint carries
 #   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
 #     pattern array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
@@ -88,8 +89,9 @@ STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$O
 STORY_ID_RE="$STORY_ID_RE|\bBR-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
 # A contract ID stands alone: ERE has no lookbehind, so the character before it
 # is matched instead. The retired `CON-<KIND>-NNNN` form is matched as a whole
-# rather than read as `<KIND>-NNNN`.
-STORY_ID_RE="$STORY_ID_RE|(^|[^A-Za-z0-9_-])(CLI|API|DB|UI|DESIGN)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
+# rather than read as `<KIND>-NNNN`. The lower-case `cli-NNNN` form is the start
+# of a contract file name.
+STORY_ID_RE="$STORY_ID_RE|(^|[^A-Za-z0-9_-])(CLI|API|DB|UI|DESIGN|cli|api|db|ui)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
 STORY_ID_RE="$STORY_ID_RE|\bCON-(CLI|API|DB|UI|DESIGN)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
 
 # Schema version field (any literal "schemaVersion") in distributed

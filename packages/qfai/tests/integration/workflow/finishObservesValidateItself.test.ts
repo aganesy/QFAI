@@ -1,6 +1,6 @@
-// QFAI:AC-0001-0192-06
-// QFAI:EX-0001-0192-19
-// QFAI:EX-0001-0192-36
+// QFAI:AC-0001-0185-06
+// QFAI:EX-0001-0185-19
+// QFAI:EX-0001-0185-36
 
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { validateQuietly } from "../../../src/core/workflow/observe.js";
 import {
   CLI,
@@ -31,13 +32,16 @@ it("Built CLI on a fixture whose validate is clean, asserted first", async () =>
   const { runId, issued } = await featureRunAt(root, "verify");
   const report = path.join(root, ".qfai", "run", "shared", "verify.json");
   await mkdir(path.dirname(report), { recursive: true });
-  await writeFile(report, '{"status":"PASS","scope":"full"}\n');
+  const text = '{"status":"PASS","scope":"full"}\n';
+  await writeFile(report, text);
   await submit(
     root,
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/run/shared/verify.json", digest: "submitted" }],
+      artifactRefs: [
+        { path: ".qfai/run/shared/verify.json", digest: hashAssistantAssetText(text) },
+      ],
       reviewResults: [
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],

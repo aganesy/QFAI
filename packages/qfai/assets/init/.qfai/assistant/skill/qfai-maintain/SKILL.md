@@ -6,12 +6,17 @@ argument-hint: "<the text or comment to change>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator, doc-steward, completion-reviewer]
 steps: [maintain-edit]
+requires: [common-review-cycle]
 mode: execution-focused
 ---
 
 ## /qfai-maintain - Non-normative edits
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 ## Inputs
 
@@ -41,10 +46,8 @@ made. A REVISE sends the finding back to the step's author.
 
 ### Reviewer Gate
 
-The Drift Protocol applies: an edit that would change a story, a contract or a
-decision is not this skill's, and stops. This skill writes no test, so
-`.qfai/assistant/rule/test-layers.md` has nothing to place, and a test-layer
-ratio is a signal, not a gate.
+An edit that would change a story, a contract or a decision is not this
+skill's, and stops.
 
 ## Completion
 
@@ -54,20 +57,17 @@ Markdown and link checks run over the changed files, each exiting 0. A check the
 project does not have is UNRUN, not a pass.
 
 The stage returns what `maintain-edit` lists under "What the stage returns".
+The report ends with a question listing the next actions, as
+`.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - equivalent-option pick
-- ask-user:
-  - scope expansions outside the active envelope
-  - destructive operations (rm / overwrite / force-push)
 - hard-required:
   - edit target (the text or comment to change; an empty target is asked for, never guessed)
 
 project_memory:
 
 - A maintenance edit changes what a reader reads, never what a program or an agent does.
-- A semantic effect found before an edit stops the edit; in a run it goes back for reclassification.
+- A semantic effect found before an edit stops the edit; in a run it blocks the run, naming the owner skill.
 - The reviewer of the diff is never the agent that made it.

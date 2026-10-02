@@ -96,7 +96,6 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     const root = await newTempDir();
     // Minimal UI-bearing project without DESIGN.md.
     await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
-    await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
     await mkdir(path.join(root, ".qfai/spec/02_business-flow"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/contracts/ui/ui.yaml"),

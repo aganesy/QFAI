@@ -3,16 +3,25 @@
 ## Criteria
 
 ```gherkin
-Feature: Design patch zone and hash
+Feature: Discussion-Pack Preflight
   # AC-0001-0148-01
-  Scenario: DESIGN.md patch-zone in-zone edit preserves evidence (DR-0262)
-    Given DESIGN.md with a front-matter `patch_zone:` block declaring editable line ranges / token names,
-    When an edit whose diff is fully contained in the patch zone is made,
-    Then only a new `patchHash` field MUST be updated; `frozenDesignMdHash#majorHash` MUST remain stable and prototyping evidence MUST remain valid.
+  Scenario: No usable source stops SDD
+    Given no discussion pack, import-lite input, or explicit user requirement is usable
+    When SDD starts
+    Then it stops and guides the operator to /qfai-discussion
 
   # AC-0001-0148-02
-  Scenario: DESIGN.md out-of-zone edit invalidates evidence (DR-0262)
-    Given DESIGN.md with a front-matter `patch_zone:` block,
-    When an edit touches any line / token outside the zone (or removes the `patch_zone:` block itself),
-    Then evidence MUST be invalidated as today AND Reviewer Gate MUST emit `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+  Scenario: Validation does not require a pack where SDD would not stop
+    Given a story-tree project with no discussion pack of any name
+    When `qfai validate` runs
+    Then it reports no missing discussion pack, because SDD may start from an explicit user requirement
+    And a misnamed pack still reports its naming finding and the missing pack
+
+  # AC-0001-0148-03
+  Scenario: An incomplete discussion pack remains provenance
+    Given a discussion pack exists but is incomplete, contradictory, or carries a blocking open question
+    When SDD starts
+    Then it continues using that pack as non-normative reference material
+    And it records the discrepancy in SDD-owned decisions, questions, or evidence
+    And it does not edit the discussion pack to clear the discrepancy
 ```

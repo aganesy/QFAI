@@ -18,7 +18,7 @@ const skillPath = path.join(
 );
 
 describe("discussion hardening E2E guidance", () => {
-  it("SKILL.md が UI-bearing artifact family (DESIGN.md + sidecars) を説明している", async () => {
+  it("SKILL.md describes the UI-bearing artifact family (DESIGN.md + sidecars)", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Brand SSOT lives in root DESIGN.md; only screen-level sidecars
@@ -28,7 +28,7 @@ describe("discussion hardening E2E guidance", () => {
     expect(content).toMatch(/50_review_input_bundle\.md/);
   });
 
-  it("SKILL.md が selected direction の前段として planner / brand SSOT を中心にしている", async () => {
+  it("SKILL.md centres on the planner / brand SSOT ahead of the selected direction", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toMatch(/planner/i);

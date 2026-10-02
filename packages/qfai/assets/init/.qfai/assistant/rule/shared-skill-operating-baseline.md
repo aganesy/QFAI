@@ -82,7 +82,7 @@ asks nothing and records explicit assumptions in its stage evidence.
 - If AskUserQuestion is unavailable, ask the same question in a normal message **in the shape its answer has**: explicit numbered choices where there are choices, and a plain request for the value where the answer has no listable set of candidates. Inventing options to make an open answer fit a numbered list is the failure the form rule names, and the fallback is not a licence for it.
 - Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
+- The three buckets of a skill's Default Autopilot Policy say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
   question an invocation can utter, the closed `ask-user` list would contradict that rule. **Two things stay classified by their subject wherever they are asked**: a mandatory approval, and a `hard-required` input the invocation consumes. A session does not reclassify either — a `hard-required` input asked inside one still stops a run that cannot get it, rather than being guessed. Where
   the interview is what the skill performs, the asking stays in `ask-user`: the bucket carries a category for a decision a declared grilling session puts to the user, open to a skill whose own operation is the interview and to no other. That skill holds a user session; a delegated session puts only its critical decisions to the user (`.agents/rules/grilling.md`). The buckets:
   - `auto-decide` — the skill settles it without asking.
@@ -98,6 +98,7 @@ asks nothing and records explicit assumptions in its stage evidence.
   question, not the prompt: a question asked because a document requires a recorded human decision (an SDD triage `Approved By`, a reviewer-gate escalation) is an **approval** and spends nothing, and bundling one into a prompt does not exempt the clarifications beside it. On exhaustion, do not ask a sixth clarification — proceed with explicit, labelled assumptions and record them in the
   output, as `--auto` does; a required approval may still be asked. See `.qfai/assistant/rule/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask via plain text. Proceed with explicit assumptions and record them in the outputs. Proceeding presupposes evidence to assume from — when a step has none, it is a hard blocker: stop there and report it as a blocker instead of asking or guessing.
+  How such a run may end its turn: `#unattended-runs-ending-a-turn` below.
 - Mandatory approval questions and `hard-required` inputs are exempt from the budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this invocation actually consumes** MUST be asked for rather than assumed — if it stays missing, stop instead of guessing. A `hard-required` input the requested path never reads is neither
   asked for nor a blocker. Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so these questions survive both. Under an explicit `--auto` the question is not asked at all — that run stops and names the missing input instead of inventing one. See `.qfai/assistant/rule/constitution.md` Article VI.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside the interview `.agents/rules/grilling.md` defines spends no budget, and a session runs to its own end condition — for a user session an empty frontier and the user's confirmation, which is itself in the exempt class, and for a delegated one no open node and an answer to every critical decision — rather than to a count.
@@ -106,13 +107,35 @@ asks nothing and records explicit assumptions in its stage evidence.
   Under an explicit `--auto` the session asks nothing, a delegated one still adopts every decision that is not critical, and each node it could not settle is opened as a question in the register the stage reads. Each node, not each decision: a fact only
   the user holds cannot be settled from evidence either, and a fact declared undefaultable stops the run rather than taking a value nobody has. Where a document requires the field to hold something, write the defaulted value and label it an assumption beside that open question; what is forbidden is the assumption with no open question against it (Article X, rule 6).
 
+## Unattended Runs: Ending a Turn
+
+Under `--auto` nobody is there to reply. A message with no tool call in it ends the turn, and an ended turn stops the run whether or not the work is done. The Completion Contract below cannot catch this: the stage is incomplete, and nothing is left running to notice.
+
+While work is still owed, a turn MUST NOT end with any of these:
+
+1. A summary that announces the next step and does not take it.
+2. An offer to carry on unless the user would prefer otherwise. Nobody is there to answer it.
+3. A list of decisions for the user when, by the agent's own account, none of them blocks the rest of the work.
+4. A stop because the turn has run long or a milestone is done.
+
+A turn may end with work still owed only when one of these holds:
+
+- nothing can move without the user — a hard blocker, or a `hard-required` input the run cannot read off evidence;
+- the thing blocking the run is deliberately protected from the agent, such as a credential, a permission or a protected branch.
+
+That ending is a stop report under `#gate-failure-autorepair-protocol`, not a completion claim.
+
+A status note or a recommendation is welcome. It goes in the same message as the next action.
+
+This section does not relax the confirmation an irreversible action needs, and it does not apply where a person is there to answer.
+
 ## Default Autopilot Policy (Shared)
 
-Every `qfai-*` `SKILL.md` carries a `## Default Autopilot Policy` section with
-three named buckets. They collapse avoidable per-session prompts to zero or one
-by classifying each decision the skill performs. The prototype below is what a
-skill's section is drawn from; the section lists the entries that skill reaches
-and restates neither this preamble nor the narrowing rule.
+Every `qfai-*` skill works under the prototype below. Its three named buckets
+collapse avoidable per-session prompts to zero or one by classifying each
+decision the skill performs. A skill whose policy adds to the prototype carries
+a `## Default Autopilot Policy` section listing only what it adds. A skill that
+adds nothing carries no section.
 
 | Bucket          | Prototype entries                                                                                                                                                                                                  |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -131,20 +154,22 @@ and restates neither this preamble nor the narrowing rule.
   session puts to the user and the confirmation that closes it. No other skill
   may.
 
-**Narrowing and widening.** A skill MAY narrow any of the three buckets (drop an
-entry the skill cannot reach), and MAY instantiate a category entry —
-`approval-required governance operations` — with the operations its own run
-cannot authorize for itself. `hard-required` also takes the undefaultable inputs
-this skill itself consumes, declared per skill and checked against that
-declaration; the bucket is what a run cannot proceed without, and no prototype
-can enumerate that for a skill it does not know. Otherwise a skill MUST NOT
-introduce an entry outside the prototype's categories. Widening triggers a
-Reviewer-Gate finding.
+**What a skill's own section adds.** An instance of the governance category,
+naming the operations its own run cannot authorize for itself. For an interview
+skill, its frontier. Under `hard-required`, the undefaultable inputs this skill
+itself consumes: they are declared per skill, and the policy check fails when a
+skill's section no longer names one. A skill MUST NOT introduce an entry outside
+the prototype's categories. Widening triggers a Reviewer-Gate finding.
+
+**An entry a skill never reaches costs nothing.** A decision the skill does not
+perform is never asked, and a `hard-required` input it does not consume is
+neither asked for nor a blocker (above). So no skill restates the prototype to
+drop an entry from it.
 
 **Steps.** An entry that only one step of a parent reaches may also be written
-in that step's `## Autopilot` section. The parent's `## Default Autopilot Policy`
-still lists every entry its steps reach, because that section is the one the
-policy check reads.
+in that step's `## Autopilot` section. The parent's section still lists every
+entry its steps add to the prototype, because that section is the one the policy
+check reads.
 
 Route every `ask-user` and `hard-required` item through
 [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol),
@@ -158,7 +183,9 @@ including its `--auto` rule. What each bucket needs inside a workflow run is
   - **A Plug'n'Play install.** Yarn Berry's default `nodeLinker: pnp` writes no `node_modules/.bin`, so the file check alone would report a correctly installed project as UNRUN forever. Accept it when the project has a `.pnp.cjs` / `.pnp.loader.mjs` at its root and lists `qfai` in `package.json` `dependencies` / `devDependencies`; `yarn exec qfai --help` exiting 0 is the direct
     confirmation.
 
-  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. The fix is to install the dependency (`npm i -D qfai`, or the pnpm / yarn equivalent). `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
+  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. `package.json` says which fix applies:
+  - **`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.** A fresh clone or a new worktree has no `node_modules`, and `npx qfai` then resolves the copy of a parent directory, which may be an older version of another checkout. Run the project's install command in this checkout, then run the preflight again.
+  - **`qfai` is not listed.** Install the dependency: `npm i -D qfai`, or the pnpm / yarn equivalent. `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
 
 - Once the preflight passes, invoke every gate through the launcher that proof established:
   - local binary -> `npx qfai …`, which resolves to it. `node_modules/.bin/qfai …` is the same thing spelled out; prefer it when PATH reachability is uncertain.
@@ -274,6 +301,9 @@ runs only from its parent or from a work order.
 
 - **A step's `requires` names only `common-*` steps**, and a `common-*` step
   requires nothing. The deepest chain is parent, step, common step.
+- **A parent's `requires` names the `common-*` steps its own body runs**, such
+  as `common-review-cycle` after the last step. Like a step's, it names no
+  other kind of step.
 - **A step's review profile is its `routing-profile`.** A step without one has
   no review of its own. A parent has no profile of its own.
 - **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
@@ -305,18 +335,35 @@ names, in its `steps:` list, and no other.
 2. For each listed step, in order: read the `STEP.md` at its `path` and no
    other, run it, and pass its gate. A step the parent lists and the work order
    does not is not run. Where the work needs an unlisted step, return the
-   replan outcome rather than run it.
+   replan outcome rather than run it. A step that reports a `branch` ends the
+   work order there: the steps after it do not run, and the result carries the
+   `branch` and no `closure`.
 3. Take what the work order's `settled` field records as settled, and ask none
    of it again.
 4. Run one review through `common-review-cycle` at the end, with the work
-   order's `requiredReviewerRoles`. The run computed that set; do not recompute
-   it or drop a role from it.
+   order's `requiredReviewerRoles`, and none when it names none. The run
+   computed that set; do not recompute it or drop a role from it.
 5. Return the stage result the work order asks for. A finding another owner
    must repair is a debt naming that owner, not an edit made here.
 
+### A pass-through step
+
+A step the work order marks `passThrough` always runs. It first reads what its
+`## Passes when` section names. When that shows it has nothing to write, it
+writes nothing, keeps what it read in a git-ignored record, and returns a pass
+in the result's `passes` as `{ step, reason, evidenceRef }`: `reason` names the
+fact that leaves nothing to write, and `evidenceRef` names the record.
+
+- A pass is not a skip. The step stays in the result, and the stage's reviewers
+  judge its reason.
+- `accept` refuses a pass on a step the work order does not mark, and a pass
+  while the step's obligation remains.
+- Invoked by name, a step with a `## Passes when` section passes the same way,
+  and the report names the pass and its reason.
+
 ## Default Autopilot Policy inside a run
 
-Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
+Inside a run, each bucket of a skill's Default Autopilot Policy is
 satisfied by one kind of authorization the run records:
 
 - An `ask-user` item is satisfied only by a `human_decision` that answers it.
@@ -380,7 +427,8 @@ Reporting the clean run and omitting the red ones satisfies every existing evide
 
 ## Context Summary Contract
 
-A long stage does not fit one context window. When earlier context is replaced by a summary, the next window works from that summary alone. Whatever the summary dropped is not marked missing: it is absent, and the work continues over the gap.
+When context is summarized, preserve the requests, decisions and stage state
+needed to continue.
 
 Every summary that replaces earlier context keeps these six:
 

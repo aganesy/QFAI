@@ -7,7 +7,7 @@ import type { Issue, ValidationProfile, ValidationResult } from "../../core/type
  * separates a filesystem fault from a deliberate refusal: libuv sets both on
  * every error it raises, and an `Error` thrown by this codebase to say "this
  * project is not in a state I can certify" has neither. An error already
- * wrapped with a message naming its path — `cli/lib/fs.ts` does this — also has
+ * wrapped with a message naming its path — `core/fs/templateCopy.ts` does this — also has
  * neither, and passes through unchanged, which is right: it has already said
  * what {@link describeIncompleteRun} would add.
  */

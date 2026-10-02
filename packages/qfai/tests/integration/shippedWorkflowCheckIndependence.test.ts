@@ -152,7 +152,7 @@ describe("delivered document checks run independently and require a complete res
     expect(strategy["max-parallel"]).toBeUndefined();
     expect(strategy["matrix"]).toEqual({ check: ["shape", "mermaid"] });
     const checkerSteps = collectJobSteps(checks ?? {}).filter((step) =>
-      /node node_modules\/qfai\/assets\/scripts\/check-(?:mdschema|mermaid)\.mjs/.test(
+      /node (?:tmp\/qfai-docs-tools\/)?node_modules\/qfai\/assets\/scripts\/check-(?:mdschema|mermaid)\.mjs/.test(
         String(step["run"] ?? ""),
       ),
     );
@@ -166,13 +166,19 @@ describe("delivered document checks run independently and require a complete res
       })),
     ).toEqual([
       {
+        // The second command serves a project with no QFAI of its own, whose copy lives in the
+        // directory the install step filled. Each leg still runs one checker.
         commands: [
-          "node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary",
+          "node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary",
+          "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary",
         ],
         if: "matrix.check == 'shape'",
       },
       {
-        commands: ["node node_modules/qfai/assets/scripts/check-mermaid.mjs"],
+        commands: [
+          "node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
+          "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
+        ],
         if: "matrix.check == 'mermaid'",
       },
     ]);

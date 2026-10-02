@@ -1,9 +1,9 @@
-# US-0001-0060: Markdown report generation
+# US-0001-0060: Repository links
 
 ## User Story
 
-As an operator, I want `qfai report --format md` to write `report.md` under `paths.outDir` with an executive summary, an issue list and a traceability matrix, so that I can read the result of a validation run as one document.
+As an operator, I want `--base-url <url>` to turn the file paths in the report into links to the repository, so that a reader can open each file from the report.
 
 ## Non-goals
 
-- Custom report templates
+- Checking that the links resolve

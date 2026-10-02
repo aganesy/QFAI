@@ -171,18 +171,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CONTRACT-042",
   // validators/contracts.ts — a UI contract that does not parse
   "QFAI-CONTRACT-021",
-  // validators/bpApDb.ts
-  "QFAI-BPAP-001",
-  "QFAI-BPAP-002",
-  "QFAI-BPAP-003",
-  "QFAI-BPAP-004",
-  "QFAI-BPAP-005",
-  "QFAI-BPAP-006",
-  "QFAI-BPAP-007",
-  "QFAI-BPAP-008",
-  "QFAI-BPAP-009",
-  "QFAI-BPAP-010",
-  "QFAI-BPAP-011",
   // validators/researchSummary.ts
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",

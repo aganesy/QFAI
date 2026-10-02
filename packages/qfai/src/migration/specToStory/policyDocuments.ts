@@ -35,12 +35,20 @@ type PolicyRules = {
   suggestions?: Readonly<Record<string, string>>;
 };
 
-const CONSTRAINT_COLUMNS = ["ID", "Constraint", "Rationale", "Impact"] as const;
+const CONSTRAINT_COLUMNS = ["ID", "Constraint", "Rationale"] as const;
 const CONSTRAINT_SECTIONS: Readonly<Record<string, string>> = {
   TC: "Technical Constraints",
   OC: "Operational Constraints",
   BC: "Business Constraints",
 };
+
+/**
+ * What a constraint row may not hold: a backtick, which marks a file name, a command or a
+ * configuration key, and a business rule, example, acceptance-criterion or contract ID.
+ * Policy states a limit in plain words and cites nothing below it.
+ */
+const CONCRETE_CONSTRAINT =
+  /`|(?:^|[^A-Za-z0-9_-])(?:BR-\d{4}|EX-\d{4}-|AC-\d{4}-|(?:CLI|API|DB|UI)-\d{4})/;
 
 const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
   "objective.md": {
@@ -323,7 +331,7 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
   if (table === null) return [rewrite(draft, section, undefined)];
   const person = table.dropped.map(
     (column) =>
-      `${draft.target}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+      `${draft.target}: move what the "${column}" column of "## ${section.heading}" in ${section.source} states to the contract or tech.md that owns it, or drop it (kept at ${section.archive})`,
   );
   for (const row of table.rows) {
     const into = CONSTRAINT_SECTIONS[/^([A-Z]{2})-/.exec(row[0] ?? "")?.[1] ?? ""];
@@ -333,32 +341,37 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
       );
       continue;
     }
+    if (row.some((cell) => CONCRETE_CONSTRAINT.test(cell))) {
+      person.push(
+        `${draft.target} ## ${into}: rewrite ${row[0]} of "## ${section.heading}" in ${section.source} in plain words, with no file name, command or rule ID, by hand (kept at ${section.archive})`,
+      );
+      continue;
+    }
     addUnique(draft.rows, into, [row], sameRow);
   }
   return person;
 }
 
 /**
- * Moves the rows of an old architecture-constraints table that carry a `TC-` ID
- * into the Technical Constraints section of a constraint draft. Returns what a
- * person has to do with the rest.
+ * Numbers each section of a constraint draft from 01 in table order, as the positional
+ * constraint IDs require: a 1.x table may skip numbers, and a row sent to a person leaves
+ * a gap. Returns one line per ID that changed, so a person can update what cites it.
  */
-export function moveTechnicalConstraints(draft: PolicyDraft, section: PolicySection): string[] {
-  const into = "Technical Constraints";
-  const table = tableRows(section.body, CONSTRAINT_COLUMNS);
-  if (table === null) return [rewrite(draft, section, into)];
-  const person = table.dropped.map(
-    (column) =>
-      `${draft.target} ## ${into}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
-  );
-  for (const row of table.rows) {
-    if (/^TC-\d+$/.test(row[0] ?? "")) addUnique(draft.rows, into, [row], sameRow);
-    else
-      person.push(
-        `${draft.target} ## ${into}: give ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} a TC- ID by hand (kept at ${section.archive})`,
+export function renumberConstraints(draft: PolicyDraft): string[] {
+  const changed: string[] = [];
+  for (const [prefix, into] of Object.entries(CONSTRAINT_SECTIONS)) {
+    const rows = draft.rows.get(into) ?? [];
+    rows.forEach((row, index) => {
+      const before = row[0] ?? "";
+      const after = `${prefix}-${String(index + 1).padStart(2, "0")}`;
+      if (before === after) return;
+      row[0] = after;
+      changed.push(
+        `${draft.target} ## ${into}: ${before} is now ${after}, its place in the table; update anything that cites ${before}`,
       );
+    });
   }
-  return person;
+  return changed;
 }
 
 /** A `qfai-sdd` spec template, named by its path under `templates/spec/`. */

@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0195-03
+// QFAI:EX-0001-0188-03
 
 import { expect, it } from "vitest";
 
@@ -9,7 +9,7 @@ type Snapshot = Parameters<typeof decide>[0];
 
 function planDeclaring(effect: string) {
   return {
-    route: "direct",
+    route: "edit-text",
     writeScope: ["docs/guide.md"],
     stages: [
       { ...planStage("direct-edit", "maintenance"), effects: [effect] },

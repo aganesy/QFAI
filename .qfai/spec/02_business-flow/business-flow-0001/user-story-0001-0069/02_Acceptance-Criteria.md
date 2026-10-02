@@ -3,11 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: ATDD Test Volume Estimation
+Feature: API Acceptance Test Implementation
   # AC-0001-0069-01
-  Scenario: The volume estimate counts flows and criteria in scope
-    Given the business flows and stories in scope
-    When the TestVolumeEstimator runs
-    Then the E2E raw count is the number of BFs in scope and the Integration/API raw count is the number of ACs in scope.
-    And volume floors and ratios remain planning signals; completion depends on covering every in-scope BF and AC.
+  Scenario: API Coverage Obligation on the story tree
+    Given an AC in scope that is exercised through the API
+    When the ATDD API implementer runs
+    Then a test file under `<testsDir>/api/**` carries `QFAI:AC-NNNN-NNNN-NN` for that AC.
 ```

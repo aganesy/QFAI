@@ -11,6 +11,7 @@
     "stageInstanceId",
     "attempt",
     "stageKind",
+    "modifiers",
     "scope",
     "recordAreas",
     "inputs",
@@ -27,7 +28,7 @@
         "required": ["stageKind"],
         "properties": {
           "stageKind": {
-            "enum": ["route", "discussion", "maintenance", "verify"]
+            "enum": ["route", "triage", "discussion", "maintenance", "verify"]
           }
         }
       },
@@ -37,12 +38,6 @@
           "properties": {
             "target": true
           }
-        }
-      },
-      "else": {
-        "required": ["target"],
-        "properties": {
-          "target": true
         }
       }
     },
@@ -132,14 +127,34 @@
         }
       }
     },
+    "reroute": {
+      "description": "On a routing work order a re-route issued: the destination route, and the step and outcome that sent the run there.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "fromStep", "outcome"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fromStep": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "steps": {
-      "description": "A plan stage's active steps, in the order they run, each with its entry file's project-relative path.",
+      "description": "Every step of a plan stage, in the order they run, each with its entry file's project-relative path.",
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "path"],
+        "required": ["name", "path", "mode", "passThrough", "decisionPoint", "branchPoint"],
         "properties": {
           "name": {
             "type": "string",
@@ -148,12 +163,36 @@
           "path": {
             "type": "string",
             "pattern": "^\\.qfai/assistant/step/[a-z][a-z0-9-]*/STEP\\.md$"
+          },
+          "mode": {
+            "description": "The mode the plan runs the step in, or null.",
+            "enum": ["settled", "read-only", null]
+          },
+          "passThrough": {
+            "description": "Whether the step may pass with evidence when it has nothing to write.",
+            "type": "boolean"
+          },
+          "decisionPoint": {
+            "description": "Where the step may stop for a person's decision, or null.",
+            "enum": ["user", "release", null]
+          },
+          "branchPoint": {
+            "description": "Whether an outcome of the step can send the run to another route.",
+            "type": "boolean"
           }
         }
       }
     },
+    "modifiers": {
+      "description": "The run's modifiers when the work order was issued.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["review:heavy", "gate:user", "gate:release"]
+      }
+    },
     "target": {
-      "description": "Absent only on the routing, discussion, maintenance and verify work orders, which bind no flow and no new story.",
+      "description": "Absent on the routing, triage, discussion, maintenance and verify work orders, and on every work order of a run that binds no flow.",
       "oneOf": [
         {
           "type": "object",

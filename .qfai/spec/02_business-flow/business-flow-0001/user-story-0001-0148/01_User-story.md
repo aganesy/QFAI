@@ -1,5 +1,5 @@
-# US-0001-0148: Design patch zone and hash
+# US-0001-0148: Discussion-Pack Preflight
 
 ## User Story
 
-As a brand-SSOT maintainer, I want `DESIGN.md` to declare a front-matter `patch_zone:` block in which an edit updates only `patchHash` and leaves `frozenDesignMdHash#majorHash` and the prototyping evidence valid, while an edit outside the zone still invalidates the evidence with an `R-DESIGN-MD-PATCH-OUT-OF-ZONE` warning, so that small token tweaks do not force a full cycle-0 re-run.
+As a QFAI user, I want SDD to use an available discussion pack as reference material and stop only when no usable source exists, so that incomplete or contradictory pack material is resolved in SDD-owned artifacts.

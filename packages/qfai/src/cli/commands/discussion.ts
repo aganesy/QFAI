@@ -9,7 +9,7 @@ import {
   readDiscussionPointer,
   writeDiscussionCurrentId,
 } from "../../core/state.js";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../core/logger.js";
 
 export type DiscussionAction = "list" | "use";
 

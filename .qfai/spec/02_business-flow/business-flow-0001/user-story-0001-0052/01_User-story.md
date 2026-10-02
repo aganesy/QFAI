@@ -1,5 +1,5 @@
-# US-0001-0052: Audit profile task forms
+# US-0001-0052: Contract index and contract-layer validation
 
 ## User Story
 
-As a UI-contract author, I want `auditProfile.ts` to accept both the legacy string-only `primary_tasks` form and the structured `{id, label, acceptance}` form, and `QFAI-AUD-020` to name the recommended count band in its warning, so that I can move to the structured form at my own pace while string-only items keep passing during the deprecation window.
+As a maintainer of a project on the story tree, I want `qfai validate` to report a contract file that `contracts.md` does not list, and to read the project's steering files from the contract layer, so that the contract index is complete and the quality-gate commands have one home.

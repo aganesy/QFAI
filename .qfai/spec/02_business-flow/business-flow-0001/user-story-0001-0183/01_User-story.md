@@ -1,10 +1,10 @@
-# US-0001-0183: Standard Research Pipeline Execution
+# US-0001-0183: Human-in-the-Loop Review Gates
 
 ## User Story
 
-As a developer, I want the CLI agent to follow a standard research pipeline of search, rank, fetch, extract, sanitize, cache, verify and cite, so that web research results are reliable, traceable and reproducible.
+As a developer, I want a review gate showing the diff and its citations before a research conclusion is applied to code, so that I stay in control of what changes.
 
 ## Non-goals
 
-- Custom ordering of pipeline stages.
-- Research tasks that are not web research.
+- Approval of each individual fetch.
+- Applying research results fully automatically.

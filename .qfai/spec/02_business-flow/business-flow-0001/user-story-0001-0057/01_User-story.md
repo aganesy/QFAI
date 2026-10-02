@@ -1,5 +1,5 @@
-# US-0001-0057: Example, criterion, and rule links
+# US-0001-0057: Business-flow scoped validation
 
 ## User Story
 
-As a maintainer of a project on the story tree, I want `qfai validate` to report a broken link between examples, acceptance criteria and business rules, so that every acceptance criterion is illustrated and every rule rests on examples that exist.
+As an agent running a scoped gate on the story tree, I want `qfai validate --flow BF-NNNN` to check one business flow and write its result to a file of its own, so that parallel workers each gate their own flow without overwriting one another's result.

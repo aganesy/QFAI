@@ -1,5 +1,5 @@
-# US-0001-0092: Mock template emits anchor-form hrefs by default
+# US-0001-0092: QA Gatekeeper Confirmation
 
 ## User Story
 
-As a discussion author writing HTML mocks in `03_Story-Workshop.md`, I want the `qfai-discussion` template to emit anchor-form `<a href="#<name>">` links by default and SKILL.md to instruct me accordingly, so that mocks never encode same-origin routes the prototype cannot serve and `QFAI-MOCK-010` keeps passing without relaxing the validator.
+As a project lead, I want RED/GREEN observations confirmed exclusively by the qa-gatekeeper (not self-certified by implementation workers), so that test-first discipline is independently verified.

@@ -1,5 +1,5 @@
-# US-0001-0104: Documented iteration cycle
+# US-0001-0104: Single-prototype evolution
 
 ## User Story
 
-As an evaluator, I want the iteration cycle described in natural language, so that generation, live review, fixes, and re-evaluation happen in a repeatable order, with capture when requested.
+As a designer, I want `/qfai-prototyping` to evolve one prototype through at most ten cycles, so that each revision responds to accumulated critique within the accepted iteration budget.

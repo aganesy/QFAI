@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ensureRootGitignoreEntries } from "../../../../src/cli/commands/init.js";
+import { ensureRootGitignoreEntries } from "../../../../src/core/init/rootGitignore.js";
 import { runStep } from "../../../../src/migration/specToStory/harness.js";
 import type { MigrationContext } from "../../../../src/migration/specToStory/harness.js";
 import { step10 } from "../../../../src/migration/specToStory/step10UpdateGitignore.js";

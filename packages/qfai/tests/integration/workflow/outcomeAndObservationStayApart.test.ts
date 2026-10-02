@@ -1,11 +1,12 @@
-// QFAI:AC-0001-0192-08
-// QFAI:EX-0001-0192-30
+// QFAI:AC-0001-0185-08
+// QFAI:EX-0001-0185-30
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
   featureRunAt,
   field,
@@ -28,7 +29,7 @@ it("Built CLI accept of a verify result naming its verify", async () => {
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/report/verify.json", digest: "submitted" }],
+      artifactRefs: [{ path: ".qfai/report/verify.json", digest: hashAssistantAssetText(report) }],
     }),
   );
   const copy = path.join(root, ".qfai", "run", runId, "reports", "verify", "verify.json");

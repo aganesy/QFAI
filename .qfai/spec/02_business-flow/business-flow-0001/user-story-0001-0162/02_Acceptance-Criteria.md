@@ -3,23 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Canonical verification validators
+Feature: Standard Agent Contract
   # AC-0001-0162-01
-  Scenario: Verify runs full-scan validation
-    Given /qfai-verify is invoked
-    When validation scope is selected
-    Then `/qfai-verify` runs full-scan validation rather than a diff-only shortcut.
-
-  # AC-0001-0162-02
-  Scenario: Verify remains blocked by a validation error
-    Given `/qfai-verify` runs full-scan validation through the canonical validator
-    When validation reports an error
-    Then Verify remains non-pass and surfaces the validation error.
-
-  # AC-0001-0162-03
-  Scenario: Validate uses the canonical validator entrypoint
-    Given the validate command is loaded
-    When its public entrypoint is inspected
-    Then Validate imports and uses the canonical validator entrypoint.
-    And removed compatibility surfaces are not present in the package surface.
+  Scenario: Standard Contract Structure
+    Given any agent definition file
+    When checked
+    Then it contains Mission, Inputs You Must Read, Deliverables, Stop Conditions, and Sign-off Checklist sections.
 ```

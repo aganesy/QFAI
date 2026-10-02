@@ -1,11 +1,10 @@
-# US-0001-0214: Run `/qfai-sdd` as a stage of a run
+# US-0001-0214: Close, answer or hand back a request without a change
 
 ## User Story
 
-As an operator, I want `/qfai-sdd` to do exactly the work order it is handed for exactly the target that work order names, to change the story tree only on an answer I gave for that stage, and to end at SDD when I invoke it directly, so that a run stays inside its scope and the expert path keeps working as it does today.
+As an operator, I want a request that needs no change to be answered, closed, split or handed back through a route that writes nothing to the project, so that questions, duplicates and hand-offs end cleanly instead of running a change they do not need.
 
 ## Non-goals
 
-- Running every flow when a work order names no target
-- Continuing from a direct call into implementation
-- The check the workflow core makes when it accepts the stage's result
+- A follow-up request routed inside the run that found it.
+- Merging, tagging or publishing anything.
