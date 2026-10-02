@@ -2,9 +2,10 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseQuestionInput } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -12,11 +13,10 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
-  specs: { "spec-0007": { lifecycle: "active" } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
+  flows: ["BF-0007"],
 };
 
 const statusChoice = {
@@ -50,17 +50,16 @@ function routeWith(question: unknown) {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: ["spec-0007"],
+          affectedFlowIds: ["BF-0007"],
           unresolvedQuestions: [question],
-          newCapabilities: [],
+          newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
