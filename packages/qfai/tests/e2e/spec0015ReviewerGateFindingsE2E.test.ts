@@ -18,8 +18,8 @@
  * Contract unsatisfiable outside Work Order H. The other codes here keep
  * theirs.
  */
-// QFAI:SPEC-0015:US-0015-0007
-// QFAI:SPEC-0015:US-0015-0008
+// QFAI:BF-0001
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,7 +33,7 @@ import { validateReviewerJustification } from "../../src/core/validators/reviewe
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 const SCANNER_CONTENT = `// Scanner stub.
 export type DesignMdViolation = {

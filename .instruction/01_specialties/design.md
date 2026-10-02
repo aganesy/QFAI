@@ -5,29 +5,29 @@ dependencies: [00_universal/thinking.md, 00_universal/quality.md]
 version: 1.0.0
 ---
 
-# 設計レビュー指針
+# Design Review Guidelines
 
-UI/UX・情報設計・API 設計などの確認ポイント。
+Points to check for UI/UX, information design, API design and similar work.
 
-## 共通チェック
+## Common Checks
 
-- 目的とユーザー行動が明確か。必須入力やエラー時の挙動が定義されているか。
-- 依存関係・データフロー・境界（責務）がシンプルか。
-- アクセシビリティと国際化（必要に応じて）を考慮しているか。
+- Are the purpose and the user's actions clear? Are required inputs and the behaviour on error defined?
+- Are the dependencies, data flow and boundaries (responsibilities) simple?
+- Are accessibility and internationalization considered, where relevant?
 
-## フロントエンド
+## Frontend
 
-- 状態は最小限・単一責務の hooks/コンポーネントに分割。
-- 入力は型とバリデーション（zod など）で検証し、エラー表示を設計。
-- パフォーマンス: 不要な再レンダリングや大きなリスト描画を避け、必要ならメモ化。
+- Keep state minimal, and split it into single-responsibility hooks and components.
+- Validate input with types and validation (such as zod), and design how errors are shown.
+- Performance: Avoid needless re-renders and rendering large lists, and memoize where needed.
 
-## バックエンド / API
+## Backend / API
 
-- スキーマは必要最小限かつ意味のある型名。ブレーク変更時は移行手順を用意。
-- 認証/認可と入力検証があるか。例外時のレスポンスフォーマットを統一。
-- ログ・監視のフックポイントがあるか（過剰でないこと）。
+- Keep schemas to the necessary minimum, with meaningful type names. Provide a migration procedure for breaking changes.
+- Are authentication/authorization and input validation in place? Use one response format for exceptions.
+- Are there hook points for logging and monitoring, without overdoing it?
 
-## 成果物のまとめ
+## Summarizing Deliverables
 
-- アーキテクチャ図・主要フロー・データモデル・エラーハンドリング方針を簡潔に記載。
-- 懸念点/トレードオフ/未決事項を列挙する。
+- Briefly describe the architecture diagram, main flows, data model and error-handling policy.
+- List concerns, trade-offs and undecided items.

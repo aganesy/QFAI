@@ -1329,13 +1329,13 @@ export type TestTodoStubOptions = {
 function reportEmptyTestFileGlobs(): Issue {
   return issue(
     "QFAI-TEST-002",
-    "テストスタブ検出は有効ですが、`validation.traceability.testFileGlobs` が空のため 0 ファイルしか scan していません。クリーンな結果はスタブ不在の証拠になりません",
+    "Test stub detection is enabled, but `validation.traceability.testFileGlobs` is empty, so 0 files were scanned. A clean result is not evidence that no stubs exist",
     "info",
     "qfai.config.yaml",
     "validation.traceability.testFileGlobs",
     ["validation.traceability.testFileGlobs"],
     "canonical",
-    "`/qfai-configure` を実行するか、qfai.config.yaml の `validation.traceability.testFileGlobs` にリポジトリのテスト配置を設定してください。設定するまで QFAI-TEST-001 は 1 件も検出できません。",
+    "Run `/qfai-configure`, or set `validation.traceability.testFileGlobs` in qfai.config.yaml to the repository's test layout. Until it is set, QFAI-TEST-001 cannot detect anything.",
   );
 }
 
@@ -1601,13 +1601,13 @@ export async function validateTestTodoStubs(
     issues.push(
       issue(
         "QFAI-TEST-002",
-        `テストスタブ検出の対象外な拡張子があります: ${extensions.join(", ")}。これらのファイルは QFAI-TEST-001 / QFAI-TEST-003 の対象外なので、クリーンな結果はスタブ不在の証拠になりません`,
+        `Some file extensions are outside test stub detection: ${extensions.join(", ")}. These files are outside QFAI-TEST-001 / QFAI-TEST-003, so a clean result is not evidence that no stubs exist`,
         "info",
         root,
         "validation.testStrategy.stubDialectCoverage",
         extensions,
         "canonical",
-        "対応済みの拡張子は .ts/.js 系 / .py / .go / .java / .kt / .rs / .rb / .cs です。未対応スタックのスタブは別途レビューで確認してください。",
+        "The supported extensions are .ts/.js variants, .py, .go, .java, .kt, .rs, .rb and .cs. Review stubs in unsupported stacks separately.",
       ),
     );
   }

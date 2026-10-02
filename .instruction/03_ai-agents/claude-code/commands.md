@@ -5,35 +5,35 @@ dependencies: none
 version: 1.0.0
 ---
 
-# よく使うコマンド（Claude Code）
+# Common Commands (Claude Code)
 
-## セットアップ
+## Setup
 
-- 依存インストール: `pnpm install`
-- GraphQL 生成: `pnpm generate:graphql`
+- Install dependencies: `pnpm install`
+- Generate GraphQL: `pnpm generate:graphql`
 
-## 開発
+## Development
 
-- フロント開発サーバー: `pnpm dev`
-- バックエンド apply: `pnpm apply:backend`
-- ビルド: `pnpm build`
+- Frontend dev server: `pnpm dev`
+- Backend apply: `pnpm apply:backend`
+- Build: `pnpm build`
 
-## 品質
+## Quality
 
 - Lint: `pnpm lint`
-- フォーマット: `pnpm format` / 検査 `pnpm format:check`
-- 型チェック: `pnpm check-types`
+- Format: `pnpm format`; check only: `pnpm format:check`
+- Type check: `pnpm check-types`
 
-## テスト
+## Tests
 
-- 全テスト: `pnpm test`
-- カバレッジ: `pnpm test:coverage`
+- All tests: `pnpm test`
+- Coverage: `pnpm test:coverage`
 - Backend Unit: `pnpm test:unit`
 - Backend Integration: `pnpm test:integration`
 - E2E: `pnpm test:e2e`
 
-## Seed/データ
+## Seed and Data
 
-- Seed 実行: `pnpm seed`
+- Run seed: `pnpm seed`
 
-> 実行結果は成功/失敗を明示し、失敗時はログ要約と対応を記載する。
+> State whether each run succeeded or failed, and on failure give a log summary and the response.

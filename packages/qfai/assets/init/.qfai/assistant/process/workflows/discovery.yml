@@ -1,7 +1,0 @@
-route: discovery
-stages:
-  - id: discussion
-    kind: discussion
-    skill: qfai-discussion
-    operation: resolve-unsettled-product-scope
-    when: full_discussion_needed

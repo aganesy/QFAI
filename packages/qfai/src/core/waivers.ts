@@ -11,12 +11,6 @@ import {
 } from "./emittedRuleCodes.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
-import {
-  EXCEPTION_PARKED_CODE,
-  EXCEPTION_PARKED_RULE_ID,
-  UNKNOWN_LEVEL_CODE,
-  UNKNOWN_LEVEL_RULE_ID,
-} from "./ruleIds.js";
 import type {
   Issue,
   IssueSeverity,
@@ -36,15 +30,14 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * The shape a waiver's `rule:` may take.
  *
  * `/^[A-Z]+-\d{3}$/` accepts **none** of the identifiers `qfai validate`
- * publishes: an operator copying `QFAI-ATDD-112` out of `validate.json` —
+ * publishes: an operator copying `QFAI-STORY-006` out of `validate.json` —
  * the only spelling the CLI, the JSON report and the GitHub annotations ever
  * print — would get a hard `QFAI-WAIVER-001`, since the form the engine
- * actually keys on (`ATDD-112`, the capture group inside `resolveRuleKeys`)
+ * actually keys on (`STORY-006`, the capture group inside `resolveRuleKeys`)
  * appears in no shipped artifact.
  *
- * It accepts every code shape the package emits: `QFAI-ATDD-112`,
- * `TDDLIST_INVALID_STATUS`, `E_TC_ORPHAN`, `D-SCAFFOLD-PLACEHOLDER`, and the
- * legacy stripped `ATDD-112`.
+ * It accepts every code shape the package emits, including `QFAI-STORY-006`,
+ * `D-SCAFFOLD-PLACEHOLDER`, and the stripped `STORY-006` spelling.
  */
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 
@@ -57,28 +50,6 @@ const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
  * ({@link buildKnownRuleIds}).
  */
 const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\d{3})$/;
-
-/**
- * Rules whose findings are *always* per-row, so the waiver is rejected outright
- * without `match.dl_ids`.
- *
- * Every row of one `tdd/test-list.md` produces `TDDLIST_EXCEPTION_PARKED` with
- * the same rule and the same `file`, so a waiver matched on `rule` +
- * `scope.paths` alone would suppress the unapproved rows next to the approved
- * one. Not one finding of these rules is file-wide, so refusing the waiver at
- * load time costs the operator nothing and says why.
- *
- * A rule whose findings are *mixed* — some naming a row, some naming the whole
- * file — must not be listed here: blocking the waiver would also take away the
- * file-wide finding's only way to be accepted. Those are handled per finding
- * instead, by {@link matchesWaiver}: a waiver that names no `dl_ids` reaches
- * only the findings that name no row.
- *
- * Both spellings {@link resolveRuleKeys} accepts are listed. Holding only the
- * rule id would let the code spelling — the one operators are told to write —
- * skip the `match.dl_ids` requirement entirely.
- */
-const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID]);
 
 /**
  * `scope.paths` spellings that scope a waiver to the whole repository.
@@ -168,7 +139,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        ".qfai/waivers.yaml は非対応です。拡張子を .yml に統一してください。",
+        ".qfai/waivers.yaml is not supported. Rename it to use the .yml extension.",
         "error",
         unsupportedPath,
         "WAIVER-001",
@@ -193,7 +164,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        `waivers.yml の読み込みに失敗しました: ${toErrorMessage(error)}`,
+        `Failed to read waivers.yml: ${toErrorMessage(error)}`,
         "error",
         waiverPath,
         "WAIVER-001",
@@ -215,7 +186,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        `waivers.yml のYAML解析に失敗しました: ${toErrorMessage(error)}`,
+        `Failed to parse the YAML of waivers.yml: ${toErrorMessage(error)}`,
         "error",
         waiverPath,
         "WAIVER-001",
@@ -234,7 +205,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml はオブジェクト形式で記述してください。",
+        "waivers.yml must be written as an object.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -254,7 +225,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml の version は 1 を指定してください。",
+        "The version in waivers.yml must be 1.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -274,7 +245,7 @@ async function loadWaivers(
     validationIssues.push(
       issue(
         "QFAI-WAIVER-001",
-        "waivers.yml の waivers は配列で記述してください。",
+        "The waivers key in waivers.yml must be an array.",
         "error",
         waiverPath,
         "WAIVER-001",
@@ -300,7 +271,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: オブジェクト形式で記述してください。`,
+          `${label}: must be written as an object.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -318,7 +289,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: action は suppress または downgrade を指定してください。`,
+          `${label}: action must be suppress or downgrade.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -341,7 +312,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: id/rule/reason/expires/evidence は必須です。`,
+          `${label}: id/rule/reason/expires/evidence are required.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -356,7 +327,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-ATDD-112'、'TDDLIST_UNKNOWN_LEVEL'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
+          `${label}: rule must be the code a finding reports, as written (for example 'QFAI-STORY-006' or 'QFAI-STORY-008'). Accepted form: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -371,7 +342,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: waiver id '${id}' が重複しています。`,
+          `${label}: waiver id '${id}' is duplicated.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -417,7 +388,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: scope.paths は1件以上の文字列配列で指定してください。`,
+          `${label}: scope.paths must be an array of one or more strings.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -435,7 +406,7 @@ async function loadWaivers(
         validationIssues.push(
           issue(
             "QFAI-WAIVER-001",
-            `${label}: action=downgrade の場合は downgrade_to に Info を指定してください。`,
+            `${label}: when action=downgrade, downgrade_to must be Info.`,
             "error",
             waiverPath,
             "WAIVER-001",
@@ -451,7 +422,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: severity は warning|warn|info のいずれかで指定してください。`,
+          `${label}: severity must be one of warning|warn|info.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -466,7 +437,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: expires は YYYY-MM-DD 形式の有効な日付で指定してください。`,
+          `${label}: expires must be a valid date in YYYY-MM-DD format.`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -497,22 +468,6 @@ async function loadWaivers(
 
     let blocked = false;
 
-    if (ROW_SCOPED_RULES.has(ruleId) && (match.dl_ids?.length ?? 0) === 0) {
-      blocked = true;
-      validationIssues.push(
-        issue(
-          "QFAI-WAIVER-005",
-          `${label}: rule '${ruleId}' は行単位の findings です。scope.paths だけでは同じファイルの未承認行まで抑制されるため、match.dl_ids に承認済みの行 ID を列挙してください。この実行では適用されません。`,
-          "warning",
-          waiverPath,
-          "WAIVER-005",
-          [id, ruleId],
-          "change",
-          "承認された行の ID（例: TDD-0001）だけを match.dl_ids に列挙してください。",
-        ),
-      );
-    }
-
     const ruleSeverity = ruleSeverityIndex.get(ruleId);
     // Unknown means "nothing in this package emits it", not "absent from this
     // run's findings". A rule that exists but stayed quiet — the normal state of
@@ -531,9 +486,9 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: rule '${ruleId}' は存在しますが waiver では抑制できません。` +
-            "この finding は waiver 処理の後に追加されるため、どの waiver とも一致しません。" +
-            "この waiver は訂正ではなく削除してください。",
+          `${label}: rule '${ruleId}' exists but cannot be suppressed by a waiver. ` +
+            "This finding is added after waiver processing, so no waiver can match it. " +
+            "Delete this waiver rather than correcting it.",
           "warning",
           waiverPath,
           "WAIVER-004",
@@ -546,7 +501,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-004",
-          `${label}: 未知の rule '${ruleId}' が指定されています。この実行では適用されません。`,
+          `${label}: unknown rule '${ruleId}' is specified. It is not applied in this run.`,
           "warning",
           waiverPath,
           "WAIVER-004",
@@ -565,7 +520,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-002",
-          `${label}: Error finding を対象にする waiver は禁止です（rule=${ruleId}）。`,
+          `${label}: a waiver that targets an Error finding is forbidden (rule=${ruleId}).`,
           "error",
           waiverPath,
           "WAIVER-002",
@@ -575,12 +530,9 @@ async function loadWaivers(
           // left the reader to discover the alternatives by trying each one.
           // They are declarations in the artifact the obligation lives in, not
           // waivers, and each is narrower than a waiver on purpose.
-          "A waiver cannot clear an error, so the exit is a declaration in the artifact that owes it. " +
-            "A story outside the current slice takes `- x-qfai-status: planned` in its own block. A " +
-            "test case does too, and takes `- x-qfai-status: external` with `- x-qfai-verified-by: " +
-            "<what checks it>` when the obligation is met outside this repository. A contract takes " +
-            "the same `planned` marker at its document root. If none of those fits, the finding is " +
-            "reporting something real and the fix is the thing it names.",
+          "A waiver cannot clear an error. Repair the affected BF, AC, EX or contract, or record " +
+            "the applicable DONE decision exception in the story tree. A contract for a future " +
+            "flow can remain planned at its document root. Otherwise resolve the finding itself.",
         ),
       );
     }
@@ -591,13 +543,13 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-003",
-          `${label}: waiver '${id}' は期限切れです（expires=${expiresOn}, today=${todayJst} JST）。`,
+          `${label}: waiver '${id}' has expired (expires=${expiresOn}, today=${todayJst} JST).`,
           "warning",
           waiverPath,
           "WAIVER-003",
           [id, ruleId],
           "change",
-          "期限を更新する前に根本原因を解消し、waiver の削除を検討してください。",
+          "Resolve the root cause before extending the expiry, and consider deleting the waiver.",
         ),
       );
     }
@@ -708,27 +660,8 @@ function matchesWaiver(root: string, finding: Issue, waiver: ParsedWaiver): bool
     return false;
   }
 
-  const dlIds = match?.dl_ids ?? [];
-
-  // `dl_id` is the finding's way of saying "I am one row of this file, not the
-  // file". A waiver that names no `dl_ids` is therefore a file-wide waiver, and
-  // letting it through here would suppress every row the operator never
-  // approved — including rows added to the file long after the waiver was
-  // written. A file-wide waiver reaches the file-wide findings only.
-  if (dlIds.length === 0) {
-    if (finding.dl_id !== undefined) {
-      return false;
-    }
-    if (!match || !hasMatchScope(match)) {
-      return true;
-    }
-    return (
-      pathMatchers.length === 0 || matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
-    );
-  }
-
-  if (!dlIds.includes(finding.dl_id ?? "")) {
-    return false;
+  if (!match || !hasMatchScope(match)) {
+    return true;
   }
   return (
     pathMatchers.length === 0 || matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
@@ -747,8 +680,7 @@ function matchFindingPath(
     // finding unwaivable at any glob — `**` included — with no diagnostic saying
     // so; treating it as matched at *any* glob would let a one-file waiver
     // suppress a repo-level finding raised over other files. Only an explicitly
-    // repo-wide scope reaches it. The waiver's other predicates (rule, severity,
-    // match.dl_ids) still gate it.
+    // repo-wide scope reaches it. Rule and severity predicates still gate it.
     return repoWideScope;
   }
   const relative = normalizePath(toRelativePath(root, findingFile));
@@ -763,7 +695,7 @@ function hasMatchScope(match: ValidationWaiverMatch | undefined): boolean {
   if (!match) {
     return false;
   }
-  return (match.dl_ids?.length ?? 0) > 0 || (match.paths?.length ?? 0) > 0;
+  return (match.paths?.length ?? 0) > 0;
 }
 
 function parseMatch(value: unknown): {
@@ -774,22 +706,18 @@ function parseMatch(value: unknown): {
     return {};
   }
   if (!isRecord(value)) {
-    return { error: "match はオブジェクトで記述してください。" };
+    return { error: "match must be written as an object." };
+  }
+  if ("dl_ids" in value) {
+    return { error: "match.dl_ids is unsupported. Specify ID targets with scope.paths." };
   }
 
-  const dlIdsResult = toStringArray(value.dl_ids);
-  if (dlIdsResult.error) {
-    return { error: `match.dl_ids: ${dlIdsResult.error}` };
-  }
   const pathsResult = toStringArray(value.paths);
   if (pathsResult.error) {
     return { error: `match.paths: ${pathsResult.error}` };
   }
 
   const match: ValidationWaiverMatch = {};
-  if (dlIdsResult.value.length > 0) {
-    match.dl_ids = uniqueSorted(dlIdsResult.value.map((item) => item.trim()));
-  }
   if (pathsResult.value.length > 0) {
     match.paths = uniqueSorted(pathsResult.value.map((item) => item.trim()));
   }
@@ -811,13 +739,13 @@ function parseScope(
 
   if (scopeValue === undefined || scopeValue === null) {
     if (normalizedFallback.length === 0) {
-      return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+      return { error: "scope.paths must be an array of one or more strings." };
     }
     return { scope: { paths: normalizedFallback } };
   }
 
   if (!isRecord(scopeValue)) {
-    return { error: "scope はオブジェクトで記述してください。" };
+    return { error: "scope must be written as an object." };
   }
 
   const pathsResult = toStringArray(scopeValue.paths);
@@ -827,7 +755,7 @@ function parseScope(
 
   const paths = uniqueSorted(pathsResult.value.map((item) => item.trim()));
   if (paths.length === 0) {
-    return { error: "scope.paths は1件以上の文字列配列で指定してください。" };
+    return { error: "scope.paths must be an array of one or more strings." };
   }
 
   return { scope: { paths } };
@@ -840,9 +768,6 @@ function mergeMatchScope(
   const merged: ValidationWaiverMatch = {
     paths: scope.paths,
   };
-  if (match?.dl_ids && match.dl_ids.length > 0) {
-    merged.dl_ids = uniqueSorted(match.dl_ids.map((item) => item.trim()));
-  }
   return merged;
 }
 
@@ -851,12 +776,12 @@ function toStringArray(value: unknown): { value: string[]; error?: string } {
     return { value: [] };
   }
   if (!Array.isArray(value)) {
-    return { value: [], error: "配列で記述してください。" };
+    return { value: [], error: "must be an array." };
   }
   const out: string[] = [];
   for (const entry of value) {
     if (typeof entry !== "string") {
-      return { value: [], error: "文字列配列で記述してください。" };
+      return { value: [], error: "must be an array of strings." };
     }
     const trimmed = entry.trim();
     if (trimmed.length === 0) {
@@ -978,16 +903,12 @@ function isKnownRuleId(ruleId: string): boolean {
 /**
  * Every id a waiver may name: the generated set of emitted codes, each with its
  * back-compat stripped spelling, plus the rule-id aliases — the spellings
- * ({@link EXCEPTION_PARKED_RULE_ID} and friends) that a finding carries as its
- * `rule` and that no `code` literal would yield.
+ * that a finding carries as its `rule` and that no `code` literal would yield.
  *
  * The aliases come from the generator ({@link RULE_ID_ALIASES}) as well as the
  * static table, because the static table only lists the ids whose severity it
- * has to declare. `tddList.ts`'s `TDDLIST-003` / `TDDLIST-004` are absent from
- * it — nothing about their severity is fixed — so a waiver naming either was
- * refused as a rule that does not exist. Reading the generated set instead
- * keeps a new alias known the moment it is emitted, with no second list to
- * remember.
+ * has to declare. Reading the generated set keeps a new alias known the
+ * moment it is emitted, with no second list to remember.
  *
  * Built lazily so it does not depend on where {@link STATIC_RULE_SEVERITY} sits
  * in this module.
@@ -1217,15 +1138,6 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   readonly keys: readonly string[];
   readonly severity: IssueSeverity;
 }> = [
-  // Both emitted at `error` by core/validate.ts; registered so a waiver aimed at
-  // them is refused as an error-severity target rather than as an unknown rule.
-  { keys: ["QFAI-SCOPE-001", "SCOPE-001"], severity: "error" },
-  { keys: ["QFAI-SCOPE-002", "SCOPE-002"], severity: "error" },
-  // Listed for their rule-id spellings: the findings carry these as `rule`, and
-  // no `code` literal under src/ spells them, so the generated set alone would
-  // not recognise a waiver written against the alias.
-  { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
-  { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
   // `validateTestTodoStubs` runs only under the profiles that include it
   // (`--profile sdd` does not), so on every other profile the rule reaches
   // `buildRuleSeverityIndex` from no finding. Without an entry here a waiver
@@ -1234,10 +1146,24 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // one waiver file. `error` matches the emitter in
   // `validators/testTodoStubs.ts`, so the refusal is the same either way.
   { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
+  // The story-tree structure validator uses a local wrapper with a fixed error
+  // severity. The generated scanner sees its code-first calls but cannot read
+  // through the wrapper to prove that severity. Pin its error-only status so a
+  // quiet run cannot accept an unsafe waiver.
+  ...[
+    "QFAI-STORY-001",
+    "QFAI-STORY-002",
+    "QFAI-STORY-003",
+    "QFAI-STORY-004",
+    "QFAI-STORY-005",
+    "QFAI-STORY-011",
+    "QFAI-STORY-012",
+    "QFAI-STORY-013",
+    "QFAI-SPACK-102",
+  ].map((code) => ({ keys: [code, code.slice("QFAI-".length)], severity: "error" as const })),
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },
   { keys: ["QFAI-WAIVER-003", "WAIVER-003"], severity: "warning" },
   { keys: ["QFAI-WAIVER-004", "WAIVER-004"], severity: "warning" },
-  { keys: ["QFAI-WAIVER-005", "WAIVER-005"], severity: "warning" },
 ];

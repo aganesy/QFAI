@@ -52,7 +52,7 @@ const { replaceGovernedAsset, runInit } = await import("../../src/cli/commands/i
 const { classifyAssistantAsset, hashAssistantAssetFile, readAssistantAssetsLock } =
   await import("../../src/core/assistantAssetProvenance.js");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-const CONSTITUTION = path.join(".qfai", "assistant", "constitution", "constitution.md");
+const CONSTITUTION = path.join(".qfai", "assistant", "rule", "constitution.md");
 const FLOOR = path.join(".agents", "rules", "minimal-implementation.md");
 
 function passThrough(): void {
@@ -86,7 +86,7 @@ describe("governed force repairs retain exclusive publication", () => {
   it("stops before repair when force preflight cannot inspect the occupant", async () => {
     await withProject(async (root) => {
       await init(root);
-      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
       await rm(target);
       await mkdir(target);
       const cause = Object.assign(new Error("occupant inspection denied"), { code: "EACCES" });
@@ -122,7 +122,7 @@ describe("governed force repairs retain exclusive publication", () => {
     async (code) => {
       await withProject(async (root) => {
         await init(root);
-        const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+        const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
         const legacy = path.join(root, ".qfai", "assistant", "instructions", "quality.md");
         await rm(target);
         await mkdir(target);
@@ -171,7 +171,7 @@ describe("governed force repairs retain exclusive publication", () => {
   ])("leaves occupied assets untouched with force=$force and dryRun=$dryRun", async (options) => {
     await withProject(async (root) => {
       await init(root);
-      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
       await rm(target);
       await mkdir(target);
       const receiptPath = path.join(root, ".qfai", "assistant", ".assets.lock.json");
@@ -190,10 +190,10 @@ describe("governed force repairs retain exclusive publication", () => {
   });
 
   for (const scenario of [
-    { relative: "catalog/test-layers.md", kind: "directory" },
-    { relative: "constitution/constitution.md", kind: "directory" },
-    { relative: "constitution/constitution.md", kind: "symlink" },
-    { relative: "catalog/test-layers.md", kind: "fifo" },
+    { relative: "rule/test-layers.md", kind: "directory" },
+    { relative: "rule/constitution.md", kind: "directory" },
+    { relative: "rule/constitution.md", kind: "symlink" },
+    { relative: "rule/test-layers.md", kind: "fifo" },
   ].flatMap((occupant) => [false, true].map((canonical) => ({ ...occupant, canonical })))) {
     it.skipIf(scenario.kind === "fifo" && process.platform === "win32")(
       `preserves concurrent ${scenario.canonical ? "canonical" : "adopter"} bytes after force displacement: ${scenario.kind} ${scenario.relative}`,
@@ -319,10 +319,10 @@ describe("constitution creation preserves a path it cannot claim", () => {
   });
 
   it.each([
-    { relative: "constitution/constitution.md", change: "staging before link" },
-    { relative: "catalog/test-layers.md", change: "staging before link" },
-    { relative: "constitution/constitution.md", change: "destination after link" },
-    { relative: "constitution/constitution.md", change: "destination bytes after link" },
+    { relative: "rule/constitution.md", change: "staging before link" },
+    { relative: "rule/test-layers.md", change: "staging before link" },
+    { relative: "rule/constitution.md", change: "destination after link" },
+    { relative: "rule/constitution.md", change: "destination bytes after link" },
   ])("protects $relative with $change instead of recording a shipped write", async (scenario) => {
     await withProject(async (root) => {
       const target = path.join(root, ".qfai", "assistant", ...scenario.relative.split("/"));
@@ -483,9 +483,9 @@ describe("constitution creation preserves a path it cannot claim", () => {
     await withProject(async (root) => {
       const source = path.join(
         ROOT,
-        "packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md",
+        "packages/qfai/assets/init/.qfai/assistant/rule/test-layers.md",
       );
-      const target = path.join(root, ".qfai", "assistant", "catalog", "test-layers.md");
+      const target = path.join(root, ".qfai", "assistant", "rule", "test-layers.md");
       await replaceGovernedAsset(source, target, undefined, "create-only");
       await writeFile(target, "# Older release\n", "utf-8");
 
@@ -582,8 +582,8 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect(output).toContain(JSON.stringify(staging));
       expect(output).toContain("Do not delete this occupied path");
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      if (scenario.canonical) expect(lock?.files["constitution/constitution.md"]).toBeDefined();
-      else expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+      if (scenario.canonical) expect(lock?.files["rule/constitution.md"]).toBeDefined();
+      else expect(lock?.files["rule/constitution.md"]).toBeUndefined();
     });
   });
 
@@ -597,7 +597,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       const source = path.join(
         ROOT,
         "packages/qfai/assets/init/.qfai/assistant",
-        "constitution",
+        "rule",
         "constitution.md",
       );
       await mkdir(path.dirname(target), { recursive: true });
@@ -623,7 +623,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
     });
   });
 
-  it.each(["catalog/test-layers.md", "constitution/drift-protocol.md"])(
+  it.each(["rule/test-layers.md", "rule/drift-protocol.md"])(
     "keeps a missing %s unpublished when its staged write fails",
     async (relative) => {
       await withProject(async (root) => {
@@ -722,7 +722,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
         expect(failure.cause).toBeInstanceOf(Error);
         if (!(failure.cause instanceof Error))
           throw new Error("The shipped-set cause must remain.");
-        expect(failure.cause.message).toContain("constitution/constitution.md");
+        expect(failure.cause.message).toContain("rule/constitution.md");
         expect((await readdir(root)).sort()).toEqual(rootBefore);
         expect((await readdir(path.dirname(instructions))).sort()).toEqual(assistantBefore);
         expect(await readFile(legacy, "utf-8")).toBe(legacyText);
@@ -973,8 +973,8 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect((await readFile(target)).equals(raced)).toBe(true);
       expect((await readFile(staging)).equals(shipped)).toBe(true);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      if (scenario.canonical) expect(lock?.files["constitution/constitution.md"]).toBeDefined();
-      else expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+      if (scenario.canonical) expect(lock?.files["rule/constitution.md"]).toBeDefined();
+      else expect(lock?.files["rule/constitution.md"]).toBeUndefined();
 
       passThrough();
       await rm(staging);
@@ -1070,7 +1070,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
         expect((await readFile(staging)).equals(shipped)).toBe(true);
         expect((await lstat(staging)).ino).toBe((await lstat(target)).ino);
         const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-        expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+        expect(lock?.files["rule/constitution.md"]).toBeDefined();
 
         passThrough();
         await rm(staging);
@@ -1078,7 +1078,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
         expect((await readFile(target)).equals(shipped)).toBe(true);
         await expect(lstat(staging)).rejects.toMatchObject({ code: "ENOENT" });
         const recovered = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-        expect(recovered?.files["constitution/constitution.md"]).toBeDefined();
+        expect(recovered?.files["rule/constitution.md"]).toBeDefined();
       });
     },
   );
@@ -1279,7 +1279,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect(output).toContain("rerun `qfai init`");
       expect((await lstat(target)).isDirectory()).toBe(true);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+      expect(lock?.files["rule/constitution.md"]).toBeUndefined();
 
       await writeFile(
         path.join(root, FLOOR),
@@ -1290,7 +1290,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
       expect((await readFile(target)).equals(shipped)).toBe(true);
       const recoveredLock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(recoveredLock?.files["constitution/constitution.md"]).toBeDefined();
+      expect(recoveredLock?.files["rule/constitution.md"]).toBeDefined();
     });
   });
 
@@ -1303,7 +1303,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       ]);
       expect(actual.equals(shipped)).toBe(true);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+      expect(lock?.files["rule/constitution.md"]).toBeDefined();
     });
   });
 
@@ -1333,14 +1333,14 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect(failed).toBe(true);
       await expect(lstat(target)).rejects.toMatchObject({ code: "ENOENT" });
       const failedLock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(failedLock?.files["constitution/constitution.md"]).toBeUndefined();
+      expect(failedLock?.files["rule/constitution.md"]).toBeUndefined();
 
       passThrough();
       await init(root);
       const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
       expect((await readFile(target)).equals(shipped)).toBe(true);
       const recovered = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(recovered?.files["constitution/constitution.md"]).toBeDefined();
+      expect(recovered?.files["rule/constitution.md"]).toBeDefined();
     });
   });
 
@@ -1358,7 +1358,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       await init(root);
       expect(inserted).toBe(true);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(lock?.files["constitution/constitution.md"]).toBeDefined();
+      expect(lock?.files["rule/constitution.md"]).toBeDefined();
       const shipped = await readFile(path.join(ROOT, "packages/qfai/assets/init", CONSTITUTION));
       expect((await readFile(target)).equals(shipped)).toBe(true);
     });
@@ -1380,7 +1380,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect(inserted).toBe(true);
       expect(await readFile(target, "utf-8")).toBe(adopterText);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(lock?.files["constitution/constitution.md"]).toBeUndefined();
+      expect(lock?.files["rule/constitution.md"]).toBeUndefined();
       expect(output).toContain("created during initialization");
     });
   });
@@ -1405,9 +1405,7 @@ describe("constitution creation preserves a path it cannot claim", () => {
       expect(output).toContain("existing constitution");
       expect((await readFile(target)).equals(previous)).toBe(true);
       const lock = await readAssistantAssetsLock(path.join(root, ".qfai", "assistant"));
-      expect(lock?.files["constitution/constitution.md"]).toBe(
-        priorLock?.files["constitution/constitution.md"],
-      );
+      expect(lock?.files["rule/constitution.md"]).toBe(priorLock?.files["rule/constitution.md"]);
     });
   });
 });

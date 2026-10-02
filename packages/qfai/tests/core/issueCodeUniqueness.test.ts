@@ -12,6 +12,7 @@ import {
   resolveIssueExpected,
   resolveIssueFix,
 } from "../../src/cli/commands/validate.js";
+import { EMITTED_RULE_CODES } from "../../src/core/emittedRuleCodes.js";
 import { type IssueCodeUsage, collectIssueCodeUsage } from "../helpers/issueCodes.js";
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -184,11 +185,7 @@ describe("issue code uniqueness", () => {
 // those was invisible to an earlier cut of the helper, so the lists were
 // re-baselined each time to name the codes that hole had been hiding.
 //
-// Two kinds of entry leave the lists without an entry being written. The
-// `QFAI-GR-*` codes left because they never belonged: `guardrails check` builds
-// them, `qfai validate` does not return them, and only a census that read
-// `severity` without `category` mistook `GuardrailIssue` for `Issue`.
-// `R-PACK-LOCATION-DRIFT` left the same way — it is a
+// `R-PACK-LOCATION-DRIFT` stays off the lists because it never belonged: it is a
 // `JustificationCatalogEntry` descriptor, not an emission. It does reach
 // `validate`, but only through `validateReviewerJustification` re-emitting a
 // code it read out of a reviewer report, a data-driven path no static census
@@ -197,11 +194,7 @@ describe("issue code uniqueness", () => {
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
-  "D-SURFACE-TYPE-MISSING",
-  "QFAI-AC-001",
-  "QFAI-AGENT-004",
   "QFAI-AGENT-005",
-  "QFAI-AGENT-006",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
   "QFAI-AGENT-009",
@@ -211,8 +204,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-AGENT-013",
   "QFAI-ASSETS-001",
   "QFAI-ASSETS-002",
-  "QFAI-ATDD-104",
-  "QFAI-ATDD-115",
   "QFAI-CONTRACT-010",
   "QFAI-CONTRACT-011",
   "QFAI-CONTRACT-012",
@@ -220,10 +211,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-014",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-COV-101",
-  "QFAI-COV-102",
-  "QFAI-COV-103",
-  "QFAI-COV-104",
   "QFAI-CRIT-001",
   "QFAI-CRIT-002",
   "QFAI-CRIT-003",
@@ -241,25 +228,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-DT-008",
   "QFAI-DT-009",
   "QFAI-DT-010",
-  "QFAI-EX-001",
-  "QFAI-EX-002",
-  "QFAI-EX-003",
-  "QFAI-EX-004",
-  "QFAI-EX-005",
-  "QFAI-EX-007",
-  "QFAI-ID-001",
-  "QFAI-LAYER-100",
-  "QFAI-LAYER-101",
-  "QFAI-LAYER-102",
-  "QFAI-LAYER-103",
-  "QFAI-LAYER-104",
-  "QFAI-LAYER-105",
-  "QFAI-LAYER-106",
-  "QFAI-LEDGER-001",
-  "QFAI-MMD-001",
-  "QFAI-MMD-002",
-  "QFAI-MMD-003",
-  "QFAI-MMD-004",
   "QFAI-MOCK-001",
   "QFAI-MOCK-002",
   "QFAI-MOCK-003",
@@ -268,11 +236,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-NAV-001",
-  "QFAI-NAV-004",
-  "QFAI-NAV-005",
-  "QFAI-PLAN-001",
-  "QFAI-PLAN-005",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -294,49 +257,12 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-RESEARCH-011",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
-  "QFAI-SPACK-090",
-  "QFAI-SPACK-101",
-  "QFAI-SPLIT-100",
-  "QFAI-SPLIT-101",
-  "QFAI-SPLIT-102",
-  "QFAI-SPLIT-103",
-  "QFAI-SPLIT-104",
-  "QFAI-SPLIT-105",
-  "QFAI-STATUS-001",
-  "QFAI-STATUS-002",
-  "QFAI-STATUS-003",
-  "QFAI-STATUS-004",
-  "QFAI-STATUS-005",
-  "QFAI-STATUS-006",
-  "QFAI-TC-001",
-  "QFAI-TRACE-001",
-  "QFAI-TRACE-100",
-  "QFAI-TRACE-101",
-  "QFAI-TRACE-102",
-  "QFAI-TRACE-103",
-  "QFAI-TRACE-104",
-  "QFAI-TRACE-105",
-  "QFAI-TRACE-106",
-  "QFAI-TRACE-107",
-  "QFAI-TRACE-108",
-  "QFAI-TRACE-109",
-  "QFAI-TRACE-110",
-  "QFAI-TRACE-111",
-  "QFAI-TRACE-112",
-  "QFAI-TRACE-113",
-  "QFAI-TRACE-114",
   "QFAI-TRACE-118",
   "QFAI-TRACE-119",
   "QFAI-TRACE-120",
   "QFAI-TRACE-121",
   "QFAI-TRACE-122",
   "QFAI-TRACE-123",
-  "QFAI-TRACE-124",
-  "QFAI-TRIAGE-002",
-  "QFAI-TRIAGE-003",
-  "QFAI-TRIAGE-004",
-  "QFAI-TRIAGE-005",
-  "QFAI-TRIAGE-006",
   "QFAI-WAIVER-001",
   "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
@@ -347,21 +273,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_BLOCKED_MISSING_REF",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_EVIDENCE_EMPTY",
-  "TDDLIST_EXCEPTION_MISSING_DR",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
-  "TRACE_DOWNSTREAM_REF",
-  "TRACE_SHARED_SCOPE_VIOLATION",
   // The `core/uiux/**` validators route every finding through a file-local
   // `Issue` factory rather than calling `issue(...)` directly, so none of these
   // codes reached the census until factory call sites were counted. They are
@@ -408,10 +319,7 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
-  "QFAI-AC-001",
-  "QFAI-AGENT-004",
   "QFAI-AGENT-005",
-  "QFAI-AGENT-006",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
   "QFAI-AGENT-009",
@@ -427,7 +335,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-013",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-DCON-009",
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DT-001",
@@ -437,21 +344,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-DT-008",
   "QFAI-DT-009",
   "QFAI-DT-010",
-  "QFAI-EX-001",
-  "QFAI-EX-002",
-  "QFAI-EX-003",
-  "QFAI-EX-004",
-  "QFAI-EX-005",
-  "QFAI-EX-007",
-  "QFAI-ID-001",
-  "QFAI-LAYER-100",
-  "QFAI-LAYER-101",
-  "QFAI-LAYER-102",
-  "QFAI-LAYER-103",
-  "QFAI-LAYER-104",
-  "QFAI-LAYER-105",
-  "QFAI-LAYER-106",
-  "QFAI-LEDGER-001",
   "QFAI-MOCK-001",
   "QFAI-MOCK-002",
   "QFAI-MOCK-003",
@@ -460,9 +352,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-NAV-001",
-  "QFAI-NAV-004",
-  "QFAI-NAV-005",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -492,29 +381,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-REVIEW-007",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
-  "QFAI-SPLIT-100",
-  "QFAI-SPLIT-101",
-  "QFAI-SPLIT-102",
-  "QFAI-SPLIT-103",
-  "QFAI-SPLIT-104",
-  "QFAI-SPLIT-105",
-  "QFAI-TC-001",
-  "QFAI-TRACE-001",
-  "QFAI-TRACE-100",
-  "QFAI-TRACE-101",
-  "QFAI-TRACE-102",
-  "QFAI-TRACE-103",
-  "QFAI-TRACE-104",
-  "QFAI-TRACE-105",
-  "QFAI-TRACE-106",
-  "QFAI-TRACE-107",
-  "QFAI-TRACE-108",
-  "QFAI-TRACE-109",
-  "QFAI-TRACE-110",
-  "QFAI-TRACE-111",
-  "QFAI-TRACE-112",
-  "QFAI-TRACE-113",
-  "QFAI-TRACE-114",
   "QFAI-TRACE-118",
   "QFAI-TRACE-119",
   "QFAI-TRACE-120",
@@ -530,15 +396,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
-  "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
 ]);
 
@@ -593,33 +450,34 @@ describe("issue report metadata", () => {
     });
   });
 
-  it("counts codes a caller hands to a validator's own emission helper", async () => {
-    const usage = await collectErrorCapableUsage();
-    // `validators/orphanProhibition.ts` raises eight codes through one
-    // `validateParentExists({ …, missingCode, unknownCode })` helper. The code
-    // is a literal at every call site, one frame above the `issue(...)` the
-    // helper writes, so dropping the unresolvable argument hid the whole ladder
-    // behind a helper that only looks dynamic.
-    for (const code of [100, 101, 102, 103, 104, 105, 108, 109]) {
-      expect(usage.has(`QFAI-ORPHAN-${code}`)).toBe(true);
-    }
+  it("counts codes a caller hands to an emission helper", async () => {
+    const usage = await censusOf(`
+      function emit(input: { missingCode: string }): Issue {
+        return issue(input.missingCode, "missing", "error", "f", "r");
+      }
+      export function check() {
+        return emit({ missingCode: "QFAI-SAMPLE-001" });
+      }
+    `);
+    expect(usage.has("QFAI-SAMPLE-001")).toBe(true);
     // The pin: a helper whose code really is runtime data stays out.
     // `designAudit.findingToIssue` forwards `finding.ruleId`, and its call
     // sites pass a value rather than an object literal.
-    expect(usage.has("QFAI-AUD-001")).toBe(false);
+    expect((await collectErrorCapableUsage()).has("QFAI-AUD-001")).toBe(false);
   });
 
   it("counts only object literals that build an Issue, not look-alike records", async () => {
-    const usage = await collectErrorCapableUsage();
-    // `core/decisionGuardrails.ts` builds `GuardrailIssue` records with a
-    // `severity` but no `category`. They are consumed by `guardrails check`
-    // alone, so letting them into the census made the ratchet answer to a CLI
-    // that never prints an `expected:` line.
-    for (const code of ["QFAI-GR-001", "QFAI-GR-003", "QFAI-GR-004", "QFAI-GR-005"]) {
-      expect(usage.has(code)).toBe(false);
-    }
+    // A record with a `severity` but no `category` is not an `Issue`, and
+    // `qfai validate` never returns one.
+    const usage = await censusOf(`
+      export const records = [
+        { code: "C-LOOK-ALIKE", severity: "error", message: "m" },
+        { code: "C-REAL-ISSUE", severity: "error", category: "compatibility", message: "m" },
+      ];
+    `);
+    expect(usage.has("C-LOOK-ALIKE")).toBe(false);
     // The pin: a real `Issue` object literal is still counted.
-    expect(usage.has("QFAI-SKILLS-001")).toBe(true);
+    expect(usage.has("C-REAL-ISSUE")).toBe(true);
   });
 
   it("reads a severity that branches on what the rule found", async () => {
@@ -659,15 +517,6 @@ describe("issue report metadata", () => {
     expect(usage.get("C-UNRESOLVABLE")?.errorCapable).toBe(true);
   });
 
-  it("keeps TDDLIST_MISSING out of the error census", async () => {
-    // The rule reports `warning` for a spec that owes ledger rows and `info`
-    // for one that owes none. Neither branch is an `error`, and the escalation
-    // it carries is `TDDLIST_TC_NOT_COVERED`, which is in the census.
-    const usage = await collectErrorCapableUsage();
-    expect(usage.has("TDDLIST_MISSING")).toBe(false);
-    expect(usage.has("TDDLIST_TC_NOT_COVERED")).toBe(true);
-  });
-
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
     const usage = await collectErrorCapableUsage();
     const missing = [...usage.keys()]
@@ -687,29 +536,6 @@ describe("issue report metadata", () => {
       .filter((code) => !PENDING_FIX_CATALOG_CODES.has(code))
       .sort();
     expect(missing).toEqual([]);
-  });
-
-  it("explains optional-ledger findings without making adoption mandatory", () => {
-    const finding = {
-      code: "QFAI-TRACE-002",
-      severity: "warning",
-      category: "canonical",
-      message: "Traceability ledger not found for spec-0001.",
-    } as const;
-    expect(resolveIssueExpected(finding)).toContain("may omit its optional traceability ledger");
-    expect(resolveIssueFix(finding)).toContain("needs no action");
-  });
-
-  it("gives history-unavailable traceability findings an actionable repair", () => {
-    const finding = {
-      code: "QFAI-TRACE-003",
-      severity: "error",
-      category: "canonical",
-      message: "Could not diff against main.",
-    } as const;
-    expect(resolveIssueExpected(finding)).toContain("configured base and merge-base resolve");
-    expect(resolveIssueFix(finding)).toContain("Fetch the configured base ref");
-    expect(resolveIssueFix(finding)).toContain("paths.specsDir");
   });
 
   it("keeps no stale entries on either pending list", async () => {
@@ -733,11 +559,11 @@ describe("issue report metadata", () => {
       code: "QFAI-NOT-A-CATALOGUED-CODE",
       severity: "error",
       category: "canonical",
-      message: "Duplicate BP ID: BP-0001",
-      rule: "bpApDb.duplicateId",
+      message: "External URL reference in HTML Mock: https://cdn.example.com/style.css",
+      rule: "htmlMock.externalUrl",
     });
     expect(expected).toBe(UNCATALOGUED_EXPECTED);
-    expect(expected).not.toContain("bpApDb");
+    expect(expected).not.toContain("htmlMock");
   });
 
   it("states the skills-integrity expected state without naming a configured path", () => {
@@ -748,42 +574,200 @@ describe("issue report metadata", () => {
       code: "QFAI-SKILLS-001",
       severity: "error",
       category: "change",
-      message: "標準資産 'tools/skills/**' が改変されています（変更: 1）。",
+      message: "Standard asset 'tools/skills/**' has been modified (changes: 1).",
       rule: "skills.integrity",
     });
     expect(expected).not.toBe(UNCATALOGUED_EXPECTED);
     expect(expected).not.toContain(".qfai/");
   });
 
-  it("remediates a BP/AP required field that is present but invalid, not only one that is absent", () => {
-    // `toSafeString(value).trim() === ""` fires on `description: []` as well as
-    // on an absent key, and "add the missing field" cannot repair that entry:
-    // a second key of the same name is a YAML duplicate.
-    const base = { severity: "error", category: "canonical" } as const;
-    for (const code of ["QFAI-BPAP-006", "QFAI-BPAP-009"]) {
-      const fix = resolveIssueFix({
-        ...base,
-        code,
-        message: `Missing required field "description" in entry`,
-      });
-      expect(fix).not.toBe(UNCATALOGUED_FIX);
-      expect(fix).toMatch(/add the key/i);
-      expect(fix).toMatch(/overwrite the value/i);
-    }
-  });
-
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
-    const base = { severity: "error", category: "canonical", message: "Duplicate BP ID" } as const;
+    const base = { severity: "error", category: "canonical", message: "Unknown key" } as const;
     expect(
       resolveIssueFix({
         ...base,
-        code: "QFAI-BPAP-005",
+        code: "QFAI-CFG-001",
         suggested_action: "Do the specific thing.",
       }),
     ).toBe("Do the specific thing.");
-    const catalogued = resolveIssueFix({ ...base, code: "QFAI-BPAP-005" });
+    const catalogued = resolveIssueFix({ ...base, code: "QFAI-CFG-001" });
     expect(catalogued).not.toBe(UNCATALOGUED_FIX);
-    expect(catalogued).toContain("BP ID");
+    expect(catalogued).toContain("Delete the named key");
     expect(resolveIssueFix({ ...base, code: "QFAI-NOT-A-CATALOGUED-CODE" })).toBe(UNCATALOGUED_FIX);
+  });
+});
+
+describe("the form of a finding code", () => {
+  /** Capital letters in hyphen-separated words, then three digits. */
+  const FORM = /^[A-Z]+(?:-[A-Z]+)*-\d{3}$/;
+
+  /**
+   * The codes emitted before a new code had to take the form and an expected
+   * state. A code may leave this set when it is fixed or retired; none may join it.
+   */
+  const PREDATING: ReadonlySet<string> = new Set([
+    "D-DEPRECATED-PATH",
+    "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+    "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
+    "D-SAAS-PACKAGE-VERIFY-SKIPPED",
+    "D-SCAFFOLD-PLACEHOLDER",
+    "I-ASSISTANT-LAYER-UNSEEDED",
+    "QFAI-AGENT-005",
+    "QFAI-AGENT-007",
+    "QFAI-AGENT-008",
+    "QFAI-AGENT-009",
+    "QFAI-AGENT-010",
+    "QFAI-AGENT-011",
+    "QFAI-AGENT-012",
+    "QFAI-AGENT-013",
+    "QFAI-ASSETS-001",
+    "QFAI-ASSETS-002",
+    "QFAI-AUD-001",
+    "QFAI-AUD-004",
+    "QFAI-AUD-020",
+    "QFAI-AUD-021",
+    "QFAI-CONSISTENCY-001",
+    "QFAI-CONSISTENCY-002",
+    "QFAI-CONTRACT-000",
+    "QFAI-CONTRACT-010",
+    "QFAI-CONTRACT-011",
+    "QFAI-CONTRACT-012",
+    "QFAI-CONTRACT-013",
+    "QFAI-CONTRACT-014",
+    "QFAI-CONTRACT-020",
+    "QFAI-CONTRACT-021",
+    "QFAI-CRIT-001",
+    "QFAI-CRIT-002",
+    "QFAI-CRIT-003",
+    "QFAI-CRIT-004",
+    "QFAI-CRIT-005",
+    "QFAI-CRIT-006",
+    "QFAI-CRIT-007",
+    "QFAI-CRIT-008",
+    "QFAI-CRIT-009",
+    "QFAI-CRIT-010",
+    "QFAI-DB-001",
+    "QFAI-DB-002",
+    "QFAI-DT-001",
+    "QFAI-DT-002",
+    "QFAI-DT-003",
+    "QFAI-DT-004",
+    "QFAI-DT-005",
+    "QFAI-DT-006",
+    "QFAI-DT-007",
+    "QFAI-DT-008",
+    "QFAI-DT-009",
+    "QFAI-DT-010",
+    "QFAI-FLOW-001",
+    "QFAI-FLOW-002",
+    "QFAI-FLOW-004",
+    "QFAI-MOCK-001",
+    "QFAI-MOCK-002",
+    "QFAI-MOCK-003",
+    "QFAI-MOCK-004",
+    "QFAI-MOCK-005",
+    "QFAI-MOCK-006",
+    "QFAI-MOCK-007",
+    "QFAI-MOCK-008",
+    "QFAI-MOCK-009",
+    "QFAI-MOCK-010",
+    "QFAI-MOCK-011",
+    "QFAI-MOCK-012",
+    "QFAI-PLATFORM-001",
+    "QFAI-PLATFORM-002",
+    "QFAI-PROT-001",
+    "QFAI-PROT-002",
+    "QFAI-PROT-003",
+    "QFAI-PROT-004",
+    "QFAI-PROT-005",
+    "QFAI-PROT-006",
+    "QFAI-PROT-007",
+    "QFAI-PROT-008",
+    "QFAI-PROT-009",
+    "QFAI-PROT-010",
+    "QFAI-RESEARCH-001",
+    "QFAI-RESEARCH-002",
+    "QFAI-RESEARCH-003",
+    "QFAI-RESEARCH-004",
+    "QFAI-RESEARCH-005",
+    "QFAI-RESEARCH-006",
+    "QFAI-RESEARCH-007",
+    "QFAI-RESEARCH-008",
+    "QFAI-RESEARCH-009",
+    "QFAI-RESEARCH-010",
+    "QFAI-RESEARCH-011",
+    "QFAI-REVIEW-008",
+    "QFAI-REVIEW-009",
+    "QFAI-REVIEW-010",
+    "QFAI-SKILLS-010",
+    "QFAI-SKILLS-011",
+    "QFAI-SKILLS-012",
+    "QFAI-TEST-002",
+    "QFAI-VALIDATE-017",
+    "QFAI-WAIVER-001",
+    "QFAI-WAIVER-002",
+    "QFAI-WAIVER-003",
+    "QFAI-WAIVER-004",
+    "QFAI_CONFIG_INVALID",
+    "R-AUTOPILOT-POLICY-MISSING",
+    "R-AUTOPILOT-POLICY-WIDENED",
+    "R-CERTIFY-VERIFY-CIRCULAR",
+    "R-EVIDENCE-MUTATION-UNLOGGED",
+    "R-HANDOFF-SCHEMA-DRIFT",
+    "R-MOCK-HREF-DRIFT",
+    "R-PROMPT-SCANNER-DRIFT",
+    "R-SKILL-MANIFEST-DRIFT",
+    "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+    "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+    "UIX-VAL-3LAYER-LEGACY-FORMAT",
+    "UIX-VAL-3LAYER-MIXED-FORMAT",
+    "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+    "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+    "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+    "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+    "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
+    "UIX-VAL-CLASSIFICATION-MISSING",
+    "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+    "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+    "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
+    "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+    "UIX-VAL-DIRECTION-HISTORY-MISSING",
+    "UIX-VAL-OQ-OPEN-CRITICAL",
+    "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
+    "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+    "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+    "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
+    "UIX-VAL-SIDECAR-MISSING",
+    "UIX-VAL-SKILL-ASPIRATIONAL",
+    "UIX-VAL-SKILL-BANNED-PHRASE",
+    "UIX-VAL-SKILL-CANONICAL-SURFACE",
+    "UIX-VAL-SKILL-CLI-SURFACE",
+    "UIX-VAL-SKILL-DELEGATION",
+    "UIX-VAL-SKILL-ENV-PRECONDITIONS",
+    "UIX-VAL-SKILL-EVIDENCE-PATHS",
+    "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
+    "UIX-VAL-SKILL-PREFLIGHT",
+    "UIX-VAL-SKILL-SECTION-MISSING",
+    "UIX-VAL-SKILL-STATIC-FIRST",
+    "UIX-VAL-SKILL-UI-BEARING-FALSE",
+    "UIX-VAL-T05",
+    "UIX-VAL-TREND-CATEGORY-MISSING",
+    "UIX-VAL-TREND-ENTRY-MISSING",
+    "UIX-VAL-TREND-FIELD-MISSING",
+    "UIX-VAL-TREND-SCAN-MISSING",
+    "W-ASSISTANT-LAYOUT",
+    "W-SKILL-DOC-BROKEN-REF",
+    "W-SKILL-PROJECT-MEMORY",
+    "W-STALE-REFERENCE",
+  ]);
+
+  // QFAI:EX-0001-0039-13
+  it("gives every new code a letter prefix, three digits and an expected state", () => {
+    const outside = EMITTED_RULE_CODES.filter(
+      (code) => !FORM.test(code) || !(code in ISSUE_EXPECTED_BY_CODE),
+    );
+    expect(outside.filter((code) => !PREDATING.has(code))).toEqual([]);
+    expect("QFAI-STORY-012").toMatch(FORM);
+    expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
   });
 });
