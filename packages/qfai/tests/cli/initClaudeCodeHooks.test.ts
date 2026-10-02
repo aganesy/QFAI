@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0021-09
 /**
  * What `qfai init` does about `.claude/settings.json`.
  *
@@ -104,6 +105,16 @@ async function seedSettings(root: string, settings: unknown): Promise<void> {
   await writeFile(path.join(root, SETTINGS), `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
 }
 
+/** The project's own permission entry is still first; init appends the shipped ones after it. */
+function expectOwnPermissionFirst(settings: Record<string, unknown>): void {
+  const permissions = settings.permissions;
+  const allow: unknown =
+    typeof permissions === "object" && permissions !== null
+      ? Reflect.get(permissions, "allow")
+      : undefined;
+  expect(Array.isArray(allow) ? allow[0] : undefined).toBe("Bash(git status)");
+}
+
 async function readSettings(root: string): Promise<Record<string, unknown>> {
   const parsed: unknown = JSON.parse(await readFile(path.join(root, SETTINGS), "utf-8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -163,7 +174,7 @@ describe("qfai init and the reminder hooks", () => {
       const stdout = await initReporting(root);
 
       const settings = await readSettings(root);
-      expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+      expectOwnPermissionFirst(settings);
       expect(JSON.stringify(settings)).not.toContain("additionalContext");
       const shipped = entriesOf(
         JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
@@ -213,7 +224,7 @@ describe("qfai init and the reminder hooks", () => {
 
       const settings = await readSettings(root);
       // Everything the project had is still there, and still first.
-      expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+      expectOwnPermissionFirst(settings);
       const asText = JSON.stringify(settings);
       expect(asText).toContain("./own.sh");
       expect(asText).toContain(DOCUMENTATION_CLARITY_HOOK_MARKER);
@@ -301,7 +312,7 @@ describe("qfai init and the reminder hooks", () => {
         expect(groups).toHaveLength(3);
         expect(groups.slice(0, 2)).toEqual([own, older]);
         expect(JSON.stringify(groups).split(MINIMAL_IMPLEMENTATION_HOOK_MARKER)).toHaveLength(2);
-        expect(settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+        expectOwnPermissionFirst(settings);
         const text = await readFile(path.join(root, SETTINGS), "utf-8");
         if (previousText !== undefined) expect(text).toBe(previousText);
         previousText = text;

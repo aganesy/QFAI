@@ -5,7 +5,7 @@ import { validateSidecarFlowOrdering } from "../../../src/core/validators/skill/
 const VALID_FRAGMENT = `
 ### Sidecar Generation Flow
 
-並列禁止 (no parallel)
+No parallel execution.
 
 - Step 1c — Populate 04_Sources.md Trend Scan entries. This step MUST finish before Step 1d.
 - Step 1d — Derive TRD axes drawing source_refs from entries completed in Step 1c.
@@ -42,7 +42,7 @@ describe("validateSidecarFlowOrdering", () => {
     const issues = validateSidecarFlowOrdering(PARALLEL_FRAGMENT);
     expect(issues).toHaveLength(1);
     expect(issues[0].rule).toBe("SKILL-SIDECAR-FLOW");
-    expect(issues[0].message).toMatch(/parallel|並列禁止/i);
+    expect(issues[0].message).toMatch(/parallel/i);
   });
 
   it("returns no issues when neither Step 1c nor Step 1d is present", () => {

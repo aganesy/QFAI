@@ -13,8 +13,15 @@ export function normalizeRepoPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
+/** File content at the merge base used by branch-drift checks, if available. */
+export function readFileAtBase(root: string, baseBranch: string, file: string): string | null {
+  const revision = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
+  if (!revision) return null;
+  return gitStdout(root, ["show", `${revision}:${normalizeRepoPath(file)}`]);
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
-function gitStdout(root: string, args: readonly string[]): string | null {
+export function gitStdout(root: string, args: readonly string[]): string | null {
   try {
     return execFileSync("git", [...args], {
       cwd: root,
@@ -110,9 +117,6 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * would then reach the per-path confirmation below as a pathspec matching
  * nothing, read as clean, and drop out of the result — silently exempting
  * exactly the artifacts a non-English project names.
- *
- * A caller that asks "was the file this row points at modified?" wants
- * {@link withoutPathsGoneAtHead} over this set.
  */
 export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> | null {
   const output = gitStdout(root, [
@@ -151,37 +155,6 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
   }
 
   return changed;
-}
-
-/**
- * `changed` without the paths this branch removed.
- *
- * Asking "was the file this ledger row points at modified?" is answered wrongly
- * by any path the branch **removed**: it no longer exists, and finding it in the
- * set let a ledger still naming it pass as though its implementation had been
- * touched. A separate function rather than an option on the listing above,
- * because the same caller needs both sets — the raw one says which spec
- * directories the branch touched, deletions included, and pruning that would
- * hide a spec deleted whole.
- *
- * Keyed on removal rather than on rename detection, because rename detection is
- * a similarity score. A file moved and substantially rewritten in one commit
- * falls under the threshold and is reported as a delete plus an add, so a set
- * that subtracted only detected renames left that source behind — and a ledger
- * row still naming it passed. So does a plain deletion, whose path is equally
- * gone. Removal is the property the caller is actually asking about, and it is
- * not a heuristic.
- */
-export function withoutPathsGoneAtHead(
-  root: string,
-  baseBranch: string,
-  changed: ReadonlySet<string>,
-): Set<string> {
-  const kept = new Set(changed);
-  for (const removed of getRemovedPathsAgainstBase(root, baseBranch)) {
-    kept.delete(removed);
-  }
-  return kept;
 }
 
 /**
@@ -251,39 +224,24 @@ export function changedFilesSince(
 }
 
 /**
- * Every path present on `baseBranch` and gone at `HEAD`.
+ * Every path the working tree holds uncommitted: tracked changes, staged or not, and untracked
+ * files git does not ignore. `null` when `root` is not inside a git repository.
  *
- * `--diff-filter=D` under `--no-renames` is the whole answer: with rename
- * detection off a rename is a deletion plus an addition, so the sources of
- * detected renames, the sources of moves too rewritten to be detected as one,
- * and plain deletions all arrive as `D` rows. One list, no similarity score.
- *
- * `--name-only -z` is used so a path holding a quote or a non-ASCII byte comes
- * back verbatim rather than in git's C-style quoted form.
- *
- * **Three-dot, matching {@link getChangedFilesAgainstBase}.** These paths are
- * subtracted from that function's set, so a removal listed against a different
- * pair of trees removes a path the set never held, or fails to remove one it
- * does — either way this function stops meaning what its caller reads it
- * to mean.
+ * `-z` keeps a path with a space or a non-ASCII name as git wrote it, and `--no-renames` makes a
+ * move report both of its paths.
  */
-function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<string> {
+export function uncommittedPaths(root: string): string[] | null {
   const output = gitStdout(root, [
-    "diff",
-    "--no-renames",
-    "--diff-filter=D",
-    "--name-only",
+    "status",
+    "--porcelain=v1",
     "-z",
-    `${baseBranch}...HEAD`,
+    "--untracked-files=all",
+    "--no-renames",
   ]);
-  const removed = new Set<string>();
-  if (output === null) {
-    return removed;
-  }
-  for (const record of output.split("\0")) {
-    if (record.length > 0) {
-      removed.add(normalizeRepoPath(record));
-    }
-  }
-  return removed;
+  if (output === null) return null;
+  return output
+    .split("\0")
+    .filter((entry) => entry.length > 3)
+    .map((entry) => normalizeRepoPath(entry.slice(3)))
+    .sort();
 }

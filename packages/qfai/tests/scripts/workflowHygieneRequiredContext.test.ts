@@ -1121,12 +1121,11 @@ describe("the values a gated lane expands over are pinned too", () => {
   it("reports a matrix value rewritten into shell the digest cannot see", () => {
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
-        const anchor =
-          "        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]";
+        const anchor = "        slice: [core, validators, integration, e2e, cli, unit, scripts]";
         if (!text.includes(anchor)) throw new Error("the matrix anchor is stale");
         return text.replace(
           anchor,
-          '        slice: [core, validators, integration, e2e, cli, "unit || true #", scripts, pr-fix, pr-merge]',
+          '        slice: [core, validators, integration, e2e, cli, "unit || true #", scripts]',
         );
       });
     });
@@ -1143,12 +1142,11 @@ describe("the values a gated lane expands over are pinned too", () => {
     // The quieter half: no value is rewritten, a whole slice simply stops running.
     const dir = plantedTree((d) => {
       editWorkflow(d, firstContext(d).workflow, (text) => {
-        const anchor =
-          "        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]";
+        const anchor = "        slice: [core, validators, integration, e2e, cli, unit, scripts]";
         if (!text.includes(anchor)) throw new Error("the matrix anchor is stale");
         return text.replace(
           anchor,
-          "        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix]",
+          "        slice: [core, validators, integration, e2e, cli, unit]",
         );
       });
     });

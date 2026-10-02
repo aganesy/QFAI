@@ -108,6 +108,13 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -127,6 +134,7 @@ async function fileExists(p: string): Promise<boolean> {
 }
 
 describe("iterate --capture: (1) CLI flag parses", () => {
+  // QFAI:EX-0001-0130-01
   it("parseArgs sets options.prototypingCapture=true when --capture is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--capture"],
@@ -138,6 +146,7 @@ describe("iterate --capture: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingCapture).toBe(true);
   });
 
+  // QFAI:EX-0001-0130-01
   it("parseArgs leaves prototypingCapture undefined when --capture is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -284,7 +293,7 @@ describe("iterate --capture: (4) no-capture default preserved (DR-0012-0029)", (
   });
 });
 
-describe("iterate --capture: (5) writes evidenceRefs[] bijection on success", () => {
+describe("iterate --capture: (5) writes per-screen capture files on success", () => {
   it("writes a PNG and HTML for each screen captured", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -388,6 +397,7 @@ async function seedUiContract(
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
   const yamlBody = [
+    "# QFAI-CONTRACT-ID: UI-0001",
     "screens:",
     ...screens.flatMap((screen) => {
       const lines = [`  - id: ${screen.id}`, `    route: ${screen.route}`];
@@ -402,6 +412,7 @@ async function seedUiContract(
 }
 
 describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
+  // QFAI:EX-0001-0130-01
   it("derives screens from UI contracts when CLI sets capture=true without DI screens", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -445,9 +456,8 @@ describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
   it("warns and exits 0 when capture=true is set but no UI contracts are present", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
-    // Deliberately no UI contracts — the auto-derivation path returns
-    // an empty list, and `runCapturePath` surfaces the documented
-    // "no screens[] declared" warning + exit 0 (graceful no-op).
+    await rm(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"));
+    // The early UI-contract precheck returns a deterministic no-op.
     const writes: string[] = [];
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
       writes.push(String(c));
@@ -465,7 +475,7 @@ describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
         capture: true,
       });
       expect(exit).toBe(0);
-      expect(writes.join("\n")).toMatch(/no screens\[\] declared/i);
+      expect(writes.join("\n")).toMatch(/no UI-bearing contracts resolved/i);
     } finally {
       stdoutSpy.mockRestore();
       stderrSpy.mockRestore();
@@ -593,6 +603,7 @@ describe("iterate --capture: (9) capture URL composition with targetUrl", () => 
 });
 
 describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contracts", () => {
+  // QFAI:EX-0001-0130-01
   it("derives screens from `.yml` UI contracts (extension parity with `.yaml`)", async () => {
     // Repos that author UI contracts as `.yml` (rather than `.yaml`)
     // were silently producing an empty screens list under `--capture`,
@@ -601,6 +612,7 @@ describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contract
     // point so future regressions in the glob are catchable.
     const root = await newTempDir();
     await seedMinimal(root);
+    await rm(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"));
     await seedUiContract(
       root,
       "spec-0001",
@@ -633,5 +645,53 @@ describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contract
     expect(await fileExists(path.join(iterDir, "home.html"))).toBe(true);
     expect(await fileExists(path.join(iterDir, "settings.png"))).toBe(true);
     expect(await fileExists(path.join(iterDir, "settings.html"))).toBe(true);
+  });
+});
+
+describe("iterate --capture: (11) iterate falls back to the default Playwright runner", () => {
+  afterEach(() => {
+    vi.doUnmock("playwright");
+    vi.resetModules();
+  });
+
+  // QFAI:EX-0001-0130-01
+  it("uses the default runner when no captureScreen is injected, and exits 2 naming Playwright when it is not installed", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    // vitest wraps an error thrown by a mock factory in one of its own, which
+    // the default runner reads as a broken install. Raising the error from the
+    // module's `chromium` export hands the runner the module-not-found error a
+    // missing package raises.
+    const notInstalled = Object.assign(new Error("Cannot find package 'playwright'"), {
+      code: "ERR_MODULE_NOT_FOUND",
+    });
+    vi.resetModules();
+    vi.doMock("playwright", () => ({
+      get chromium(): never {
+        throw notInstalled;
+      },
+    }));
+    const stderrChunks: string[] = [];
+    const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((c) => {
+      stderrChunks.push(String(c));
+      return true;
+    });
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+        capture: true,
+        screens: [{ id: "home", url: "/" }],
+      });
+      expect(exit).toBe(2);
+      expect(stderrChunks.join("")).toContain(
+        "screen home failed (playwright not installed. Install with `npm i -D playwright`",
+      );
+    } finally {
+      stdoutSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
   });
 });

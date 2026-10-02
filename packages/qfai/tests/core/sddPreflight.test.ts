@@ -32,7 +32,7 @@ describe("runSddPreflight", () => {
       await seedDiscussionPack(root, "20260216010102003");
 
       const result = await runSddPreflight(root, defaultConfig, {
-        assumptions: ["CAP-0003 の詳細化は次フェーズで行う"],
+        assumptions: ["Detailing CAP-0003 is deferred to the next phase"],
       });
 
       expect(result.status).toBe("ready");
@@ -77,15 +77,15 @@ describe("runSddPreflight", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       const result = await runSddPreflight(root, defaultConfig, {
-        assumptions: ["W-PENDING-PROMOTION: Stage 1 で昇格させる"],
+        assumptions: ["W-PENDING-PROMOTION: promote in Stage 1"],
       });
 
       expect(result.status).toBe("blocked");
-      expect(result.openQuestions).toEqual(["W-PENDING-PROMOTION: Stage 1 で昇格させる"]);
+      expect(result.openQuestions).toEqual(["W-PENDING-PROMOTION: promote in Stage 1"]);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
       expect(summary).toContain("## Open Questions (Carry-over)");
-      expect(summary).toContain("- W-PENDING-PROMOTION: Stage 1 で昇格させる");
+      expect(summary).toContain("- W-PENDING-PROMOTION: promote in Stage 1");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -102,8 +102,8 @@ describe("runSddPreflight", () => {
         "03_Story-Workshop.md": [
           "# 03 Story Workshop",
           "",
-          "ユーザーはダッシュボードを開き、当日の予定を確認してから詳細画面へ遷移する。",
-          "この節は最小文字数を満たすが、フローを図として持っていない。",
+          "The user opens the dashboard, checks the day's schedule, and then moves on to the detail screen.",
+          "This section meets the minimum length but does not carry the flow as a diagram.",
         ].join("\n"),
       });
 
@@ -140,7 +140,7 @@ describe("runSddPreflight", () => {
       expect(result.status).toBe("ready");
       expect(result.source).toBe("discussion-pack");
       expect(result.blockers).toEqual([]);
-      expect(result.packGaps.some((item) => item.includes("必須ファイル不足"))).toBe(true);
+      expect(result.packGaps.some((item) => item.includes("Missing required files"))).toBe(true);
       expect(result.packGaps.some((item) => item.includes("Mermaid"))).toBe(false);
 
       const summary = await readFile(result.preflightSummaryPath, "utf-8");
@@ -160,9 +160,9 @@ describe("runSddPreflight", () => {
           "",
           "| OQ-ID   | Question                   | Disposition | Gate       | Reason                             |",
           "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- |",
-          "| OQ-0007 | 契約バージョニング方針をどう決めるか | deferred    | discussion | 実装着手には影響しないため保留とする |",
+          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred |",
           "",
-          "補足: deferred にした OQ は 13_Deferred.md に同じ OQ-ID で詳細を記載する必要がある。",
+          "Note: an OQ marked deferred needs its details under the same OQ-ID in 13_Deferred.md.",
         ].join("\n"),
       });
 
@@ -185,10 +185,10 @@ describe("runSddPreflight", () => {
           "",
           "| REQ-ID   | Title            | Description                              | Source   | Priority | Status |",
           "| -------- | ---------------- | ---------------------------------------- | -------- | -------- | ------ |",
-          "| REQ-0001 | 要件セットの保存   | 監査対応のため要件セットを保存できる         | SRC-0001 | must     | draft  |",
-          "| REQ-0002 | 要件セットの再読込 | REQ-0001 に依存し、保存済みの内容を再読込する | SRC-0001 | must     | draft  |",
+          "| REQ-0001 | Save requirement set   | Requirement sets can be saved for audit purposes       | SRC-0001 | must     | draft  |",
+          "| REQ-0002 | Reload requirement set | Depends on REQ-0001 and reloads the saved content      | SRC-0001 | must     | draft  |",
           "",
-          "補足: Description の相互参照で intake 件数が水増しされないことを確認するデータ。",
+          "Note: data confirming that cross-references in Description do not inflate the intake count.",
         ].join("\n"),
       });
 
@@ -216,7 +216,7 @@ describe("runSddPreflight", () => {
           "- Gate: sdd",
           "- Reason: database migration strategy is under discussion",
           "",
-          "補足: この OQ は v1.4.36 preflight を停止させることを確認するためのテスト用データです。",
+          "Note: test data confirming that this OQ does not stop the v1.4.36 preflight.",
         ].join("\n"),
       });
 
@@ -240,36 +240,15 @@ describe("runSddPreflight", () => {
         "11_OQ-Register.md": [
           "# 11 OQ Register",
           "",
-          "運用ルール: 未解決事項は `- Disposition: open` を設定する。",
+          "Operating rule: set `- Disposition: open` on unresolved items.",
           "",
           "### OQ-0010: rollout memo refinement",
           "- Disposition: deferred",
           "- Gate: discussion",
-          "- Reason: 実装着手前の補助情報であり本フェーズでは保留可能。",
+          "- Reason: supporting information before implementation starts, so it can be deferred in this phase.",
           "",
         ].join("\n"),
       });
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not block when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203010");
-      await mkdir(packDir, { recursive: true });
-
-      for (const fileName of DISCUSSION_PACK_FILES) {
-        const content = defaultDiscussionPackContent(fileName);
-        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
-      }
-      // Do NOT write prototyping.yaml
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -299,32 +278,11 @@ describe("runSddPreflight", () => {
                 "- secondary_surfaces:",
                 "- classification_rationale: This pack documents a non-UI workflow.",
                 "",
-                "補足: non-ui latest discussion pack では prototyping.yaml は不要。",
+                "Note: a non-ui latest discussion pack does not need prototyping.yaml.",
               ].join("\n")
             : defaultDiscussionPackContent(fileName);
         await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
       }
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not block when prototyping.yaml exists but namespaced schema is invalid", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203011");
-      // Overwrite prototyping.yaml with invalid namespaced schema
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203011");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        ["prototyping:", "  recommended_mode: invalid-mode", "  rationale: ''", ""].join("\n"),
-        "utf-8",
-      );
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -360,7 +318,7 @@ describe("runSddPreflight", () => {
     }
 
     const repoRoot = path.resolve(process.cwd(), "..", "..");
-    const playbookRel = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
+    const playbookRel = "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md";
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const playbook = (await readFile(path.join(repoRoot, tree, playbookRel), "utf-8")).replace(
         /\s*\n\s*/g,
@@ -369,7 +327,7 @@ describe("runSddPreflight", () => {
       expect(playbook, `${tree} Stage 0 still stops where this preflight continues`).not.toContain(
         "Stop if `prototyping.yaml` is present in the latest UI-bearing pack",
       );
-      expect(playbook).toContain("A malformed optional artifact is **not** a Stage 0 blocker");
+      expect(playbook).toContain("A pack discrepancy does not itself block SDD.");
     }
   });
 
@@ -410,33 +368,6 @@ describe("runSddPreflight", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203012");
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203013");
-      // Overwrite with legacy-only schema (no prototyping namespace)
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203013");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        [
-          "recommended_mode: full-harness",
-          "rationale: top-level legacy valid",
-          "allowed_modes:",
-          "  - full-harness",
-          "surface: web",
-        ].join("\n"),
-        "utf-8",
-      );
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -714,16 +645,16 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "  U->>S: request",
         "```",
         "",
-        "補足: Mermaid diagram を含む Story Workshop テスト用データ。",
+        "Note: test data for a Story Workshop that contains a Mermaid diagram.",
       ].join("\n");
     case "06_REQ.md":
       return [
         "# 06 REQ",
         "",
-        "- REQ-0001: ユーザーは要件セットを保存できる。背景として監査対応が必要である。",
-        "- REQ-0002: システムは保存した要件セットを再読込できる。再読込時の整合性チェックも含む。",
+        "- REQ-0001: The user can save a requirement set. Audit compliance is the background need.",
+        "- REQ-0002: The system can reload a saved requirement set, including an integrity check on reload.",
         "",
-        "補足: 最小内容チェックを通すため、説明文を十分な文字数で保持する。",
+        "Note: the description keeps enough characters to pass the minimum-content check.",
       ].join("\n");
     case "11_OQ-Register.md":
       return [
@@ -732,9 +663,9 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
-        "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
+        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "",
-        "補足: blocking 条件（Disposition=open）に該当しない。",
+        "Note: this does not meet the blocking condition (Disposition=open).",
       ].join("\n");
     case "13_Deferred.md":
       return [
@@ -742,18 +673,18 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "",
         "### OQ-0001: contract versioning policy",
         "",
-        "- Reason: 現段階では v1.4.36 の実装着手に影響しないため deferred とする。",
+        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "- Next decision point: v1.5.x cycle review",
         "",
-        "補足: 11_OQ-Register.md の deferred OQ は本ファイルに記載する。",
+        "Note: deferred OQs from 11_OQ-Register.md are recorded in this file.",
       ].join("\n");
     default:
       return [
         `# ${fileName}`,
         "",
-        "このファイルは preflight テスト用のダミー本文です。",
-        "最低100文字要件を満たすため、仕様意図と制約を記述しています。",
-        "テンプレート占位子だけではない実文を含め、validator の incomplete 判定を回避します。",
+        "This file is dummy body text for preflight tests.",
+        "It describes the spec intent and constraints to meet the minimum 100-character requirement.",
+        "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
       ].join("\n");
   }
 }

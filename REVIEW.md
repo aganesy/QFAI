@@ -26,6 +26,7 @@ Await or return every promise. `.agents/rules/minimal-implementation.md`
 - Test coverage gaps (missing edge cases, incomplete assertions)
 - TODO/FIXME/HACK comments without tracking references
 - Traceability gaps (ID collisions, unregistered references, spec-to-code drift)
+- References against the one-way rule: a BR citing anything but EX, a contract citing another contract's BR, or a contract naming an implementation file
 - Regex or pattern contract mismatches between test and production code
 - Cross-file reference errors (broken paths, wrong anchors)
 - Distributed surface leaks (internal spec IDs, internal version markers, schemaVersion fields appearing under paths listed in `packages/qfai/package.json#files`; see `.claude/rules/distributed-surface.md`)

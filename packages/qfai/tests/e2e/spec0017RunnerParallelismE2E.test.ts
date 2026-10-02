@@ -74,7 +74,7 @@
  * two are complementary and the honest claim is that pair, not this file alone.
  */
 
-// QFAI:SPEC-0017:US-0017-0007
+// QFAI:BF-0002
 
 import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";

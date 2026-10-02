@@ -3,13 +3,12 @@
  *
  * The monorepo root is not the published package. Renaming it to
  * `qfai-monorepo` stops it answering to the *package name* `qfai`, but
- * `"qfai": "github:aganesy/QFAI"` maps a dependency *key* to a git URL, so npm
- * still installs this manifest to `node_modules/qfai` — measured with npm
- * 11.16.0: "added 1 package", `node_modules/qfai` present,
- * `node_modules/.bin/qfai` absent. The root `prepack` guard does not fire,
- * because git-dependency preparation packs the clone without running it.
+ * `"qfai": "github:aganesy/QFAI"` maps a dependency *key* to a git URL that
+ * points at this manifest, which ships no CLI. npm stops earlier, at the root's
+ * `workspace:` dependency, so the spawned user agents below exercise the guard
+ * directly rather than through a real install.
  *
- * This `preinstall` guard aborts that install. Its contract:
+ * This `preinstall` guard aborts an install that reaches it. Its contract:
  *   - npm  -> exit 1 with an explanatory message
  *   - yarn -> exit 1
  *   - pnpm -> exit 0 (the repository's own install must never break)
