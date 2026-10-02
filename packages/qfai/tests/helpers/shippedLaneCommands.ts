@@ -1375,10 +1375,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
-    // The generated action-reversibility bullet has the same authority as the other rules.
-    // The builder strings determine these bytes; removing that bullet reproduces `dfa370bc…`.
+    //
+    // The generated rule list cites action-reversibility and untrusted-content.
+    // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "ef4f245c6732941646e8b6bfe0d18bd458f509bfbad72f59e4c9af9409bd9206",
+    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1463,13 +1464,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // Re-pinned for the removal of the opening line that sent a first free-text change request to
-  // `qfai-run`, and the blank line after it. Putting both back at the top of the two written files
-  // reproduces `6d12562c…` and `1832d267…` byte for byte.
-  // Both seeded files cite action-reversibility. Removing that bullet reproduces `ec22cd82…`
-  // and `8d7086b0…`; each current digest is the SHA-256 of its template, copied unchanged.
-  ["AGENTS.md", "85cdcd208214a65b9bf8e28dfcf607fae358b5735eb44af7db76b2bbb00e974e"],
-  ["CLAUDE.md", "2066dc2c8156c97de076266e834cc65d068af17152bf2e72c346356327b702ff"],
+  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
+  // These digests cover the shipped root templates, which init copies into a fresh project.
+  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
+  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1711,7 +1709,6 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
-  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
@@ -1722,6 +1719,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/untrusted-content.md",
   "root/.agents/rules/user-questions.md",
   "root/.agents/rules/version-discipline.md",
   "root/.gitattributes",
