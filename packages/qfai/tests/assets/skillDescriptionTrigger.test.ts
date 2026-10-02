@@ -29,7 +29,8 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const assistantDir = path.join(packageRoot, "assets", "init", ".qfai", "assistant");
 
 const TRIGGER = /\bUse when\b/;
-const FIRST_OR_SECOND_PERSON = /\bI\b|\b[Yy]ou(?:rs?|rself)?\b/;
+const FIRST_OR_SECOND_PERSON =
+  /\b(?:I|me|my|mine|myself|we|us|our|ours|ourselves|you|your|yours|yourself|yourselves)\b/i;
 const DESCRIPTION_MAX_LENGTH = 1024;
 const RESERVED_NAME_WORD = /anthropic|claude/i;
 
@@ -64,10 +65,45 @@ describe("shipped skill descriptions say when to select the skill", () => {
   });
 
   it("carries a sentence beginning 'Use when' in every description", async () => {
-    const missing = (await selectableSkills())
+    const skills = await selectableSkills();
+    const missing = skills
       .filter(({ description }) => !TRIGGER.test(description))
       .map(({ skill }) => skill);
     expect(missing).toEqual([]);
+
+    const boundaries = {
+      "qfai-atdd": [
+        "qfai-sdd writes the examples and cases; this skill automates them as tests.",
+        "Product code that makes a test pass belongs to qfai-implement.",
+      ],
+      "qfai-implement": [
+        "It is for code to write; a gate on a change with no code left to write belongs to qfai-verify.",
+        "A change to wording or comments alone belongs to qfai-maintain.",
+      ],
+      "qfai-sdd": [
+        "It writes the examples and cases; automating them as tests belongs to qfai-atdd.",
+        "A product idea whose scope is not settled yet belongs to qfai-discussion.",
+      ],
+      "qfai-verify": [
+        "It is a gate with no code to write; code still to write belongs to qfai-implement.",
+      ],
+      "qfai-prototyping": [
+        "Screen sidecars for an idea still being scoped belong to qfai-discussion, and the UI contracts themselves to qfai-sdd.",
+      ],
+      "qfai-discussion": ["Once the scope is settled, writing the story tree belongs to qfai-sdd."],
+      "qfai-maintain": [
+        "An edit with any semantic effect, including rearranging code, belongs to qfai-implement, and a change to a story or a contract to qfai-sdd.",
+      ],
+      "qfai-triage": ["A request that needs a change belongs to another stage."],
+    };
+    for (const [skill, clauses] of Object.entries(boundaries)) {
+      const description = skills.find((entry) => entry.skill === skill)?.description;
+      expect(description, skill).toBeDefined();
+      expect(description, skill).toContain(
+        "A free-text request that names no stage goes to qfai-run.",
+      );
+      for (const clause of clauses) expect(description, skill).toContain(clause);
+    }
   });
 
   it("writes every description in the third person", async () => {

@@ -1,7 +1,12 @@
 ---
 name: qfai-sdd
 title: QFAI SDD (Story Tree)
-description: "Use when invoked by name or handed a QFAI work order to write or change the story tree: policy, business flows, stories, acceptance criteria, examples, and the contracts and business rules that enforce them, or to repair one contract. It writes the examples and cases; automating them as tests belongs to qfai-atdd. A product idea whose scope is not settled yet belongs to qfai-discussion. A free-text request that names no stage goes to qfai-run."
+description: "Use when invoked by name or handed a QFAI work order to write or change the story
+  tree: policy, business flows, stories, acceptance criteria, examples, and the contracts and
+  business rules that enforce them, or to repair one contract. It writes the examples and
+  cases; automating them as tests belongs to qfai-atdd. A product idea whose scope is not
+  settled yet belongs to qfai-discussion. A free-text request that names no stage goes to
+  qfai-run."
 argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
