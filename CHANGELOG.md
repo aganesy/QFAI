@@ -269,11 +269,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout included. The setting itself stays `--local`: scoping it to the
   worktree needs `extensions.worktreeConfig`, which changes the same shared
   file.
-- **`qfai workflow accept` checks the digest of every file a result names
+- **`qfai workflow accept` checks the digest of the artifacts a result names
   (#2327, #2328).** It checked only the changed files. It now also reads each
-  `artifactRefs` entry and refuses a digest that differs from the file as
-  `digest-mismatch`. A file whose real path lies outside the project's real
-  root is given no digest. A reissued work order names each of its inputs at
+  `artifactRefs` entry that is a readable file inside the project's real root,
+  and refuses a digest that differs from that file as `digest-mismatch`. An
+  entry that is missing, unreadable or outside the root gets no digest, so its
+  submitted digest is not compared. A reissued work order names each of its inputs at
   the file's current digest, and the `sdd_append` work order after a
   missing-test diagnosis names the reproduction record as its input.
 - **A fact question may offer its candidates as a choice (#2346).** The route
