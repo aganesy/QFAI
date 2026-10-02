@@ -324,7 +324,7 @@ line `Exit code: N`. Read every report from that directory. No step reads them.
 | 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
 | 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git: the managed block, its re-include lines and the git index.           |
 | 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, `.gitignore` lines and hooks.                    |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project.                        |
+| 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project; list 1.x paths in it.  |
 
 Run a row from the project root in this form:
 
@@ -407,7 +407,8 @@ Every report contains `## Operations`, after the first line of steps 1 to 10.
 Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
 `## Annotations kept`; step 10 contains `## Git index`; step 11 contains
-`## Reminder hooks`. Empty sections say `none`. Exit 0 means the step is
+`## Reminder hooks`; step 12 contains `## Files scanned`. Empty sections say
+`none`. Exit 0 means the step is
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
@@ -553,8 +554,8 @@ replaced, a missing one is written, and an edited one is kept and named under
 `## Reminder hooks`. Run the step rather than editing these files by hand.
 
 Step 12 makes the checks `npx qfai workflow start` makes on the project,
-without starting a run, and checks what step 11 installs. Each failed check is
-reported by name:
+without starting a run, checks what step 11 installs, and lists the project
+files that still name a 1.x path. Each failed check is reported by name:
 
 | Check                 | Fails when                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------ |
@@ -564,11 +565,48 @@ reported by name:
 | `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`, or a line re-includes `.qfai/evidence/`       |
 | `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
 | `evidence-tracked`    | Git tracks a path under `.qfai/evidence/`                                                        |
+| `old-path`            | A line of a tracked project file names a 1.x path                                                |
 
 Run step 11 again for what it installs, and step 10 again for an evidence
 re-include line or a tracked evidence path. A routing override belongs to the
 project, so its owner decides whether to restore the reviewer. Rerun step 12
 until it exits 0.
+
+### Files the project wrote
+
+The migration does not rewrite a skill, agent or document the project wrote.
+One that reads `.qfai/specs/spec-0001/01_Spec.md` still reads it after step 10,
+and fails on its first run. Step 12 lists each line of a tracked file that names
+a 1.x path as an `old-path` item, with the file, the line number and the paths
+the line names. Step 12 prints `## Files scanned` whatever it finds: the number
+of files it read for lines, or that the project is not a git repository. Any
+other failure of git ends the step with exit 2 and git's message.
+
+Step 12 does not scan a file under `.qfai/`, a file under the configured spec
+and contract directories, `.github/copilot-instructions.md`, a symbolic link, a
+binary file or a file git does not track. A skill kept in
+`.qfai/assistant/skill.local/` lies under `.qfai/`, so check it by hand against
+this table:
+
+| 1.x path                                                    | Where its content is now                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.qfai/specs`                                               | `.qfai/spec`                                                                                                                                                                                                                                                                                                                                                                                    |
+| `.qfai/contracts`                                           | `.qfai/spec/03_contract`                                                                                                                                                                                                                                                                                                                                                                        |
+| `.qfai/prototypes`                                          | `.qfai/prototype`                                                                                                                                                                                                                                                                                                                                                                               |
+| `.qfai/assistant/skills` and `.qfai/assistant/skills.local` | `.qfai/assistant/skill` and `.qfai/assistant/skill.local`                                                                                                                                                                                                                                                                                                                                       |
+| `.qfai/assistant/agents`                                    | `.qfai/assistant/agent`                                                                                                                                                                                                                                                                                                                                                                         |
+| `.qfai/assistant/prompts`                                   | `.qfai/assistant/prompt`                                                                                                                                                                                                                                                                                                                                                                        |
+| `.qfai/evidence/decisions`                                  | `.qfai/evidence/decision`                                                                                                                                                                                                                                                                                                                                                                       |
+| `.qfai/report/specs-coverage`                               | `.qfai/report/spec-coverage`                                                                                                                                                                                                                                                                                                                                                                    |
+| `_policies/`                                                | `.qfai/spec/01_policy/`: `01_Objective.md` is `objective.md`, `02_Initiative.md` is `initiative.md`, `06_Glossary.md` is `glossary.md` and `07_Constraints.md` is `constraint.md`; `.qfai/spec/03_contract/contracts.md` (`05_Contracts.md`); `.qfai/spec/02_business-flow/` (`04_Business-Flow.md`); `03_Capabilities.md` stays in `.qfai/evidence/migration-spec-to-story/retired/_policies/` |
+| `spec-NNNN`                                                 | The `business-flow-NNNN/` and `user-story-NNNN-NNNN/` directories of `.qfai/spec/02_business-flow/`; `.qfai/evidence/migration-spec-to-story/id-map.json` pairs each old ID with its new one                                                                                                                                                                                                    |
+| `01_Spec.md`                                                | The copy kept under `.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`                                                                                                                                                                                                                                                                                                                 |
+| `assistant/steering`                                        | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                                                             |
+| `assistant/instructions`                                    | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                                                             |
+
+A person rewords each listed line so that it no longer names the old path.
+The `retired/` copies exist only in this working copy, so a line that points at
+one of them points at a file nobody else has.
 
 After step 12, run `npx qfai validate` from the local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve every
 layout and chain error. Its test-obligation findings identify any business

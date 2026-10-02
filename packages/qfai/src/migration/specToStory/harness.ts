@@ -55,7 +55,12 @@ export type WriteSetArea =
   | "skill-links"
   | "reminder-hooks";
 export type ReportSection =
-  "Cases to examples" | "Git index" | "For a person" | "Annotations kept" | "Reminder hooks";
+  | "Cases to examples"
+  | "Git index"
+  | "Files scanned"
+  | "For a person"
+  | "Annotations kept"
+  | "Reminder hooks";
 
 export type MigrationContext = {
   root: string;
@@ -106,6 +111,7 @@ export type StepPlan = {
   casesToExamples?: string[];
   annotationsKept?: string[];
   reminderHooks?: string[];
+  filesScanned?: string[];
   gitIndex?: GitIndexPlan;
 };
 
@@ -1041,6 +1047,8 @@ function sectionItems(section: ReportSection, plan: StepPlan, dryRun: boolean): 
       return plan.annotationsKept ?? [];
     case "Reminder hooks":
       return plan.reminderHooks ?? [];
+    case "Files scanned":
+      return plan.filesScanned ?? [];
   }
 }
 
