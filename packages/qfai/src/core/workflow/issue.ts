@@ -122,8 +122,6 @@ export function currentStory(snapshot: WorkflowSnapshot): WorkflowStorySlot | un
   return snapshot.stories?.find((story) => story.slotId === slotId);
 }
 
-// SIMPLIFIED: judges staleness only from the facts the snapshot carries.
-// Lift when: the snapshot is rebuilt from the journal, which carries both digests and texts.
 export function approvalIsStale(snapshot: WorkflowSnapshot): boolean {
   const recorded = snapshot.approval?.scopeDigest;
   const approved = snapshot.approval?.target?.story;
