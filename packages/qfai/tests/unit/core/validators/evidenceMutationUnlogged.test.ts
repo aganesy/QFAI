@@ -28,7 +28,7 @@ async function writeSource(rel: string, body: string): Promise<void> {
 }
 
 describe("detectEvidenceMutationUnlogged", () => {
-  // QFAI:EX-0001-0151-02
+  // QFAI:EX-0001-0146-02
   it("fires when a mutation call-site is present but no logEvidence* call is paired", async () => {
     // Seed a source file that calls fs.rename under iter-NN but never
     // funnels through the mutation-log writer.

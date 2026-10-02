@@ -3,8 +3,8 @@
  * hygiene.
  *
  * Covers the operational-bounding half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0030
- * and BR-0020-0001): every shipped job is bounded (reachable least-privilege
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0030
+ * and BR-0018-0001): every shipped job is bounded (reachable least-privilege
  * `permissions:` block, `timeout-minutes:`) and every shipped workflow
  * cancels superseded runs via a ref-scoped `concurrency:` group. The
  * shipped/retired name lists' disjointness invariant (the write/prune sets
@@ -203,7 +203,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
 });
 
 describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist credentials and full history stays job-scoped", () => {
-  // The STATIC half of this TC (BR-0020-0002): checkout
+  // The STATIC half of this TC (BR-0018-0002): checkout
   // credential hygiene asserted directly against the shipped tree. The
   // TC's lane bullets (planted-tree exit 1 / clean exit 0, and the
   // file+job+rule naming in the lane output) are the workflow-hygiene
@@ -295,7 +295,7 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
 
 // QFAI:EX-0002-0006-01
 describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
-  // Realizes this TC (BR-0020-0003: every new shipped file carries the same
+  // Realizes this TC (BR-0018-0003: every new shipped file carries the same
   // install branches, which are never replaced), one it() per verify bullet. Scoping decisions, disclosed:
   //   - Install-shape bullets apply to shipped files that HAVE install
   //     steps. The qfai-tests lanes ship install-less by the skeleton's
@@ -308,7 +308,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   //     at run time (never hardcoded). Prose-form header completeness is
   //     TC-0003-0042's surface.
 
-  /** The five install branches BR-0020-0003 requires, as body markers. */
+  /** The five install branches BR-0018-0003 requires, as body markers. */
   const INSTALL_BRANCH_MARKERS: readonly string[] = [
     "pnpm install --frozen-lockfile",
     "yarn install --immutable",
@@ -543,7 +543,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   });
 
   it("every install-bearing shipped file carries the same five-branch install shape", async () => {
-    // The "every new shipped file" half of BR-0020-0003: a new shipped file
+    // The "every new shipped file" half of BR-0018-0003: a new shipped file
     // that introduces an install step must reproduce the full branch form.
     // Deliberate overlap with the first it (per-step branch presence) —
     // this it judges at file level so a future file with a partial install

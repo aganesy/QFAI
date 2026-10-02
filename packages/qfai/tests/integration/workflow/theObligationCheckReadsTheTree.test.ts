@@ -1,7 +1,7 @@
-// QFAI:AC-0001-0193-03
-// QFAI:EX-0001-0193-05
-// QFAI:EX-0001-0193-06
-// QFAI:EX-0001-0193-12
+// QFAI:AC-0001-0186-03
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0186-06
+// QFAI:EX-0001-0186-12
 // Fault seeds: FAULT-015
 
 import { afterEach, expect, it } from "vitest";
@@ -56,9 +56,9 @@ it("An implement stage adds an example to a story of the bound flow", async () =
   });
 });
 
-it("An sdd_delta stage adds one example and removes another a test annotated", async () => {
+it("An sdd stage adds one example and removes another a test annotated", async () => {
   const root = await storyProject();
-  const { snapshot } = await issued(root, readySnapshot("sdd_delta"));
+  const { snapshot } = await issued(root, readySnapshot("sdd"));
   await write(
     root,
     EXAMPLES,

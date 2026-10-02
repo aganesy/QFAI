@@ -48,7 +48,8 @@ type PatternRule = {
    *     `scripts/check-no-internal-version-leakage.sh` so the same
    *     leakage classes (spec-0010+, internal `vN.M[.P]`, internal
    *     trace IDs) are caught at lint time on source instead of only
-   *     after a build.
+   *     after a build — except `local-reference-id-comment`, which only
+   *     this lint carries.
    */
   appliesTo: ReadonlyArray<Target>;
   /**
@@ -121,6 +122,20 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // path inside one reaches the user as an unopenable citation just
     // like a markdown line does.
     scanShippedComments: true,
+  },
+  {
+    // A requirement or test-design ID in a source comment points at a document
+    // only this repository has, whatever its number, so the sample band does
+    // not apply. This rule enforces `documentation-clarity.md` § 1 and is not
+    // part of the distributed-surface set below: the post-build guard and the
+    // smoke test do not carry it. So a trailing `// TDD-0039` after code, which
+    // this line-start scan does not read, passes every guard. The `REQ-NNNN`
+    // placeholder a comment uses to describe the shape stays legal.
+    name: "local-reference-id-comment",
+    re: /\b(?:REQ|TDD)-\d{4}\b/,
+    suggestion:
+      "Requirement and test-design IDs name documents a reader of the published package cannot open. State the fact the ID stood for in plain words.",
+    appliesTo: ["src-comment"],
   },
   // Catch internal-ID and internal-version leakage in src JSDoc BEFORE it
   // ships via
@@ -261,9 +276,10 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   },
   {
     // A contract ID stands alone, and the retired `CON-<KIND>-NNNN` form is
-    // matched as a whole rather than read as `<KIND>-NNNN`.
+    // matched as a whole rather than read as `<KIND>-NNNN`. The lower-case
+    // `cli-NNNN` form is the start of a contract file name.
     name: "internal-story-contract-id-jsdoc-leak",
-    re: /(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bCON-(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    re: /(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN|cli|api|db|ui)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bCON-(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
     suggestion: "Keep story-tree contract IDs outside shipped source comments.",
     appliesTo: ["src-comment"],
   },

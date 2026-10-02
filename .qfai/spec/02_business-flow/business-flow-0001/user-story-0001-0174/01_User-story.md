@@ -1,5 +1,5 @@
-# US-0001-0174: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
+# US-0001-0174: Cross-skill documentation realignment to implementation
 
 ## User Story
 
-As a Reviewer-Gate consumer, I want the Reviewer Gate to emit `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` naming the modified file, the unpaired counterpart and the unmatched contract clause whenever the SSOT-sync-pair CI lane flags drift between `findDesignMdViolations.ts` and `generator-prompt.md`, so that `qfai validate` ingestion can reject a finding whose justification is empty.
+As a QFAI maintainer, I want every `references/*.md` and each affected SKILL.md rewritten to match the chosen implementation in the same atomic change that lands it, with `qfai validate --report` reporting every stale reference left at HEAD as a warning, so that cross-skill documentation does not drift from the shipped behavior.

@@ -5,18 +5,21 @@ import path from "node:path";
 import { hashAssistantAssetText } from "../../core/assistantAssetProvenance.js";
 import { loadConfig } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
+import { gitStdout } from "../../core/gitChanges.js";
 import { changedSinceStart } from "../../core/workflow/boundary.js";
 import { flowOfRun } from "../../core/workflow/issue.js";
 import {
   completionFacts,
+  heavyReviewerRolesOf,
   identityOf,
+  planFacts,
   policyNowOf,
   receiptValidityOf,
   reviewerRolesOf,
   routingFacts,
 } from "../../core/workflow/observe.js";
 import { isRecord } from "../../core/workflow/parse.js";
-import { changeRequestsOf, storyFactsOf } from "../../core/workflow/storyFacts.js";
+import { changeRequestsOf, decisionRowsOf, storyFactsOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowFacts,
   WorkflowInput,
@@ -72,12 +75,16 @@ export async function readPayload(
   return parsePayload(await readFile(real, "utf8"));
 }
 
-// The paths a result submits as changed, whatever shape the rest of the payload has.
-function changedPathsOf(result: WorkflowResult | undefined): string[] {
-  const changed: unknown = result?.changedFiles;
-  return (Array.isArray(changed) ? changed : []).flatMap((entry: unknown) =>
+// The paths a submitted file list names, whatever shape the rest of the payload has.
+function pathsOf(list: unknown): string[] {
+  return (Array.isArray(list) ? list : []).flatMap((entry: unknown) =>
     isRecord(entry) && typeof entry.path === "string" ? [entry.path] : [],
   );
+}
+
+// The paths a result submits as changed.
+function changedPathsOf(result: WorkflowResult | undefined): string[] {
+  return pathsOf(result?.changedFiles);
 }
 
 // Where each submitted changed path really is: a link or a case variant is judged by the file it
@@ -98,12 +105,17 @@ async function realPathsOf(
   return Object.fromEntries(entries.flat());
 }
 
-// The core's own digest of each file a result or a work order names, after CRLF
-// normalization. A file that cannot be read has none.
+// The core's own digest of each file a result or a work order names (a changed file, an artifact,
+// an input of the outstanding work order, the diagnosis's reproduction record), after CRLF
+// normalization. A file that cannot be read, or whose real path lies outside the project's real
+// root, has none.
 async function fileDigestsOf(root: string, files: readonly string[]) {
+  const realRoot = await realpath(root);
   const entries = await Promise.all(
     [...new Set(files)].map(async (file): Promise<[string, string][]> => {
-      const text = await readFile(path.join(root, file), "utf8").catch(() => undefined);
+      const real = await realpath(path.resolve(root, file)).catch(() => undefined);
+      if (real === undefined || !real.startsWith(`${realRoot}${path.sep}`)) return [];
+      const text = await readFile(real, "utf8").catch(() => undefined);
       return text === undefined ? [] : [[file, hashAssistantAssetText(text)]];
     }),
   );
@@ -111,27 +123,45 @@ async function fileDigestsOf(root: string, files: readonly string[]) {
 }
 
 // What a stage operation reads: the story tree of the flow the run binds, the reviewer roles a
-// work order names, and at `accept` where each changed path really is and its digest.
+// work order names, and at `accept` where each changed path really is, its digest and the plans
+// whose branch points may re-route the run.
 async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { config } = await loadConfig(root);
   const accepting = input.operation === "accept";
   const reproduction = snapshot.diagnosis?.reproductionRef;
-  const changed = changedPathsOf(input.result);
-  const [story, reviewerRoles, changedRealPaths, fileDigests, receiptValidity] = await Promise.all([
+  const named = [
+    ...changedPathsOf(input.result),
+    ...pathsOf(input.result?.artifactRefs),
+    ...(snapshot.outstandingWorkOrder?.inputs ?? []).map((each) => each.path),
+    ...(reproduction ? [reproduction] : []),
+  ];
+  const [
+    story,
+    reviewerRoles,
+    heavyReviewerRoles,
+    changedRealPaths,
+    fileDigests,
+    receiptValidity,
+    plans,
+  ] = await Promise.all([
     storyFactsOf(root, config, flowOfRun(snapshot), snapshot.diagnosis),
     reviewerRolesOf(config),
+    heavyReviewerRolesOf(config),
     accepting ? realPathsOf(root, input.result) : undefined,
-    fileDigestsOf(root, [...changed, ...(reproduction ? [reproduction] : [])]),
+    fileDigestsOf(root, named),
     input.operation === "resume" || input.operation === "next"
       ? receiptValidityOf(root, snapshot)
       : undefined,
+    accepting ? planFacts() : undefined,
   ]);
   return {
     ...story,
     reviewerRoles,
+    heavyReviewerRoles,
     fileDigests,
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
+    ...(plans ? { plans } : {}),
   };
 }
 
@@ -171,9 +201,12 @@ async function boundaryFactsOf(root: string, snapshot: WorkflowSnapshot) {
     throw error;
   });
   const observedChangedPaths = await changedSinceStart(root, snapshot.boundary);
+  const head = gitStdout(root, ["rev-parse", "--verify", "--quiet", "HEAD"])?.trim() || null;
   return {
     observedChangedPaths,
+    head,
     changeRequests: changeRequestsOf(decisions),
+    decisionRows: decisionRowsOf(decisions),
     // A path admitted or to be admitted is held to its digest now.
     fileDigests: await fileDigestsOf(root, observedChangedPaths),
   };

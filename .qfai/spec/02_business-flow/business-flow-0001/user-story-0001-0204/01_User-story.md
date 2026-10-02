@@ -1,11 +1,11 @@
-# US-0001-0204: Author acceptance tests as a stage of a run
+# US-0001-0204: Settle one visual decision as a stage of a run
 
 ## User Story
 
-As an operator who asked for a feature once, I want `/qfai-atdd` to take its acceptance work order from the run, write the acceptance tests for the flow the run binds and report RED honestly, so that the run moves on to implementation without my typing a stage.
+As an operator whose change needs a visual decision, I want the prototype stage of a run to settle that one decision for the business flow the run binds, within the existing root `DESIGN.md` and UI contracts, so that the run does not stop for a separate `/qfai-prototyping` invocation.
 
 ## Non-goals
 
-- Deciding the plan.
-- The `implement-seam` work order itself, which `/qfai-implement` serves.
-- Judging whether the run is complete.
+- When the run dispatches the prototype stage, which the plan decides
+- `qfai prototyping iterate` and `certify`, which a run does not change
+- The shared stage-skill rules every skill follows

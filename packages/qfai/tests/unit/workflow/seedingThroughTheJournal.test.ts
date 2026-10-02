@@ -1,6 +1,6 @@
-// QFAI:EX-0001-0192-50
-// QFAI:EX-0001-0193-05
-// QFAI:EX-0001-0195-13
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0188-13
 
 import { expect, it } from "vitest";
 
@@ -67,16 +67,12 @@ const question = {
   recommendation: "apply",
 };
 
-// A bugfix run seeding an example: its first attempt asks the change question, the operator
+// A fix-defect run seeding an example: its first attempt asks the change question, the operator
 // answers, and the second attempt is issued. Returns the run and the answer's authorization.
 function answered(answeredBy: string) {
   const plan = planOf(
-    "bugfix",
-    [
-      stage("diagnose", "diagnose"),
-      stage("sdd-append", "sdd_append", "missing_example_needed"),
-      stage("verify", "verify"),
-    ],
+    "fix-defect",
+    [stage("diagnose", "diagnose"), stage("sdd-append", "sdd_append"), stage("verify", "verify")],
     [STORY],
   );
   const issue = facts(ISSUED, contract("EX-0001-0005-01"), AT_ISSUE);
@@ -163,8 +159,8 @@ it("Seeding that cites, instead of the new example, an example the story already
 });
 
 it("An implement result accepted while the bound flow's obligations cannot be read", () => {
-  const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta"),
+  const plan = planOf("add-feature", [
+    stage("bounded-sdd-delta", "sdd"),
     stage("bounded-implement", "implement"),
     stage("bounded-verify", "verify"),
   ]);

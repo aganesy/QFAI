@@ -1,5 +1,9 @@
-# US-0001-0059: Business-flow scoped validation
+# US-0001-0059: JSON report generation
 
 ## User Story
 
-As an agent running a scoped gate on the story tree, I want `qfai validate --flow BF-NNNN` to check one business flow and write its result to a file of its own, so that parallel workers each gate their own flow without overwriting one another's result.
+As an operator, I want `qfai report --format json` to write structured report data to `report.json`, so that other tools can read the report.
+
+## Non-goals
+
+- Publishing a JSON Schema for the report

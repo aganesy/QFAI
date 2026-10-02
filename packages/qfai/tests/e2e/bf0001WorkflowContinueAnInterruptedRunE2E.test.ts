@@ -2,7 +2,7 @@
 /**
  * E2E: an interrupted run continues at its pending work.
  *
- * On a `qfai init` project, a feature run is left with its implement work order outstanding
+ * On a `qfai init` project, an add-feature run is left with its implement work order outstanding
  * after the acceptance stage recorded RED. A new session told to continue finds that run with
  * `status`, a second `start` is refused naming it, and `resume` returns the same implement work
  * order at the first example no test annotates, with every prior receipt still valid. No story

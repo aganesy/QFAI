@@ -296,7 +296,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-005")).toBe(true);
   });
 
-  // QFAI:EX-0001-0042-09
+  // QFAI:EX-0001-0042-07
   it("emits QFAI-PROT-002 when designMdViolations contains a malformed entry", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -316,7 +316,7 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
-  // QFAI:EX-0001-0132-01
+  // QFAI:EX-0001-0128-01
   it("emits QFAI-PROT-002 when proseCritique is over the word cap", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -371,7 +371,10 @@ describe("validatePrototypingEvidence", () => {
 
   it("emits no QFAI-PROT-002 when proseCritique is a 600-character Japanese critique", async () => {
     const root = await newTempDir();
-    const japaneseCritique = "情報設計と導線は概ね良好である。".repeat(50);
+    const japaneseCritique =
+      "\u60C5\u5831\u8A2D\u8A08\u3068\u5C0E\u7DDA\u306F\u6982\u306D\u826F\u597D\u3067\u3042\u308B\u3002".repeat(
+        50,
+      );
     expect(japaneseCritique.split(/\s+/u).length).toBe(1);
     const iter = { ...validIter(0), proseCritique: japaneseCritique };
     await seedPrototypingJson(root, {
@@ -385,10 +388,10 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
-  // QFAI:EX-0001-0132-01
+  // QFAI:EX-0001-0128-01
   it("emits QFAI-PROT-002 naming the character cap when a Japanese proseCritique is over it", async () => {
     const root = await newTempDir();
-    const longJapanese = "情報設計は弱い。".repeat(400);
+    const longJapanese = "\u60C5\u5831\u8A2D\u8A08\u306F\u5F31\u3044\u3002".repeat(400);
     await seedPrototypingJson(root, {
       uiContractsCovered: ["UI-0001"],
       iterations: [{ ...validIter(0), proseCritique: longJapanese }],
@@ -413,7 +416,11 @@ describe("validatePrototypingEvidence", () => {
   // cannot do that: the word count being low is never a reason to reject.
   it("emits no QFAI-PROT-002 for a Hangul proseCritique", async () => {
     const root = await newTempDir();
-    const koreanCritique = "정보설계와동선은대체로양호하다.".repeat(50);
+    // Hangul text, written as escapes.
+    const koreanCritique =
+      "\uc815\ubcf4\uc124\uacc4\uc640\ub3d9\uc120\uc740\ub300\uccb4\ub85c\uc591\ud638\ud558\ub2e4.".repeat(
+        50,
+      );
     const iter = { ...validIter(0), proseCritique: koreanCritique };
     await seedPrototypingJson(root, {
       uiContractsCovered: ["UI-0001"],
@@ -451,7 +458,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-007")).toBe(true);
   });
 
-  // QFAI:EX-0001-0042-13
+  // QFAI:EX-0001-0042-10
   it("returns no issues for a valid record", async () => {
     const root = await newTempDir();
     const first = validIter(0);
@@ -626,7 +633,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // The mirror accepts any string here, so this code is invisible on that
   // surface no matter how it is written. Both sides carry the same value, so
   // the only finding available is the registry check on the reviewer's file.
-  // QFAI:EX-0001-0042-07
+  // QFAI:EX-0001-0042-05
   it("emits QFAI-PROT-002 for a lap-* code no registry entry declares", async () => {
     const root = await newTempDir();
     const iter = validIter(0, false, ["lap-999-not-a-real-code"]);
@@ -650,7 +657,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
   });
 
-  // QFAI:EX-0001-0042-14
+  // QFAI:EX-0001-0042-11
   it("accepts every lap-* code the registry declares", async () => {
     // Read from the registry rather than listing codes here. A hardcoded pair
     // says nothing about an entry added later, and the claim being made is
@@ -742,8 +749,8 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(rules).toContain("prototypingEvidence.review.blockingFindings");
   });
 
-  // QFAI:EX-0001-0110-01
-  // QFAI:EX-0001-0108-01
+  // QFAI:EX-0001-0107-01
+  // QFAI:EX-0001-0105-01
   it("requires exactly four valid ordinal scores in both summary and persisted iteration", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
@@ -899,7 +906,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
   // Key order is not evidence. A transcription that writes the same record
   // with its two declared keys the other way round mirrors it faithfully.
-  // QFAI:EX-0001-0042-16
+  // QFAI:EX-0001-0042-13
   it("accepts a designMdViolations entry whose keys are written in the other order", async () => {
     const root = await newTempDir();
     const iter = validIter(0);
@@ -975,7 +982,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   // and `.agents/rules/distributed-surface.md` forbids introducing one. It
   // means a payload carrying the pre-v3 keys and missing the v3 required ones,
   // which is what the example spells out.
-  // QFAI:EX-0001-0042-06
+  // QFAI:EX-0001-0042-04
   it("emits QFAI-PROT-002 listing the required keys a v1.x-shaped review.json omits", async () => {
     const root = await newTempDir();
     const iter = validIter(0);

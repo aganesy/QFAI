@@ -2,7 +2,7 @@ import { parseHeadings } from "./parse/markdown.js";
 import { maskNonSpecRegions } from "./specPackParsers.js";
 import { isContractId } from "./storyTree/ids.js";
 
-const DECLARED_ID = String.raw`(?:CLI|API|DB|UI|DESIGN)-\d{4}`;
+const DECLARED_ID = String.raw`(?:CLI|API|DB|UI)-\d{4}`;
 /** A 1.x `CON-*` ID, which only the 1.x to 2.x migration reads, beside a current one. */
 const LEGACY_DECLARED_ID = String.raw`CON-(?:API|UI|DB)-\d+|${DECLARED_ID}`;
 const declarationPattern = (id: string): RegExp =>
@@ -16,7 +16,7 @@ const CONTRACT_DECLARATION_LINE_RE = new RegExp(
   String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:${DECLARED_ID})\s*(?:\*\/)?\s*$`,
 );
 /** `# CLI-0001: <title>`, the H1 a Markdown contract declares its ID in. */
-const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI|DESIGN)-\d{4}):\s+\S/;
+const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI)-\d{4}):\s+\S/;
 
 /**
  * The `<KIND>-NNNN` ID a contract file declares, or `null` when it declares
@@ -93,7 +93,7 @@ const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+
 /**
  * A trailing `#` comment is part of the line, not part of the value.
  *
- * `x-qfai-depends-on: [DB-0001] # DB を先に適用` is valid YAML and the
+ * `x-qfai-depends-on: [DB-0001] # apply DB first` is valid YAML and the
  * natural way to say *why* the order holds, but an end-of-line anchor stopped
  * matching it. The scalar fallback then read `[DB-0001] # …` as a value that
  * is not one of the "none" spellings, so a conforming declaration produced
@@ -387,7 +387,7 @@ export function hasDependencyDeclaration(text: string, file?: string): boolean {
     return statesJsonDependencies(json.value);
   }
   // `[]` is the flow spelling of "none", with or without a trailing comment; the
-  // scalar fallback below would read `[] # なし` as a value that is neither.
+  // scalar fallback below would read `[] # none` as a value that is neither.
   const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
   if (flow) {
     return (flow[1] ?? "").trim().length === 0;

@@ -24,7 +24,7 @@ async function readSkill(): Promise<string> {
 describe("web-research security", () => {
   // ── MCP Failure Recovery ────────────────────────────────────────────
 
-  // QFAI:EX-0001-0184-03  TDD-0011
+  // QFAI:EX-0001-0177-03  TDD-0011
   it("MCP crash detection within 10s, fallback activates", async () => {
     const content = await readSkill();
     expect(content).toMatch(/crash\s+(detect|detection|recover)/i);
@@ -32,7 +32,7 @@ describe("web-research security", () => {
     expect(content).toMatch(/fallback/i);
   });
 
-  // QFAI:EX-0001-0184-04  TDD-0012
+  // QFAI:EX-0001-0177-04  TDD-0012
   it("rate limit 429 backoff respects Retry-After", async () => {
     const content = await readSkill();
     expect(content).toMatch(/429|rate[_\s-]?limit/i);
@@ -41,32 +41,32 @@ describe("web-research security", () => {
 
   // ── Content Sanitization ───────────────────────────────────────────
 
-  // QFAI:EX-0001-0186-01  TDD-0013
+  // QFAI:EX-0001-0179-01  TDD-0013
   it("injection defense — display:none content removed", async () => {
     const content = await readSkill();
     expect(content).toMatch(/display\s*:\s*none/i);
     expect(content).toMatch(/remov|strip|sanitiz/i);
   });
 
-  // QFAI:EX-0001-0186-02  TDD-0014
+  // QFAI:EX-0001-0179-02  TDD-0014
   it("aria-hidden content removed", async () => {
     const content = await readSkill();
     expect(content).toMatch(/aria[_\s-]?hidden/i);
   });
 
-  // QFAI:EX-0001-0186-05
+  // QFAI:EX-0001-0179-05
   it("control characters removed, except TAB, LF and CR", async () => {
     const content = await readSkill();
     expect(content).toMatch(/U\+0000[–-]U\+001F except TAB\/LF\/CR/);
   });
 
-  // QFAI:EX-0001-0186-03  TDD-0015
+  // QFAI:EX-0001-0179-03  TDD-0015
   it("legitimate content preserved unchanged", async () => {
     const content = await readSkill();
     expect(content).toMatch(/preserv|legitimate|unchanged/i);
   });
 
-  // QFAI:EX-0001-0186-04  TDD-0016
+  // QFAI:EX-0001-0179-04  TDD-0016
   it("sanitizer idempotency — byte-identical", async () => {
     const content = await readSkill();
     expect(content).toMatch(/idempoten/i);
@@ -74,7 +74,7 @@ describe("web-research security", () => {
 
   // ── Domain / URL Allowlist ─────────────────────────────────────────
 
-  // QFAI:EX-0001-0187-01  TDD-0017
+  // QFAI:EX-0001-0180-01  TDD-0017
   it("allowlist happy path — allowed domain passes", async () => {
     const content = await readSkill();
     expect(content).toMatch(/allow[_\s-]?list/i);
@@ -86,14 +86,14 @@ describe("web-research security", () => {
     expect(content).toMatch(/default[_\s-]?deny/i);
   });
 
-  // QFAI:EX-0001-0187-02  TDD-0019
+  // QFAI:EX-0001-0180-02  TDD-0019
   it("redirect to non-allowlisted domain blocked", async () => {
     const content = await readSkill();
     expect(content).toMatch(/redirect/i);
     expect(content).toMatch(/block|deny|reject/i);
   });
 
-  // QFAI:EX-0001-0187-05
+  // QFAI:EX-0001-0180-05
   it("redirect chain followed only while every hop stays on the allowlist", async () => {
     const content = await readSkill();
     expect(content).toContain("followed only while all hops remain on allowlisted domains");

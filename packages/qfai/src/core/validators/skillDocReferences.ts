@@ -41,12 +41,11 @@ const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
   },
 ];
 
-// Every `qfai-*` skill MUST declare a trailing `project_memory:` block.
-// The block surfaces remembered-context invariants the skill expects
-// downstream agents to honor. The validator emits a warning when
-// missing (warning rather than error so projects mid-migration are
-// not broken; it becomes error once the seeded asset templates
-// uniformly carry the block).
+// A `qfai-*` skill MAY end with a `project_memory:` block: the
+// remembered-context invariants that skill expects downstream agents to
+// honor. The block is the skill's own, and no baseline states one for every
+// skill, so a skill with nothing to remember carries none. A declared block
+// that is not the last thing in the file is warned about.
 const QFAI_SKILL_ID_RE = /^qfai-/;
 
 export async function validateSkillDocReferences(
@@ -96,7 +95,7 @@ export async function validateSkillDocReferences(
     // User-defined non-qfai-* skills under the configured skill directory are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
-    // The severity matches the cli-0016-qfai-validate.md contract.
+    // The severity is the one the `qfai validate` contract assigns this finding.
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {
@@ -114,11 +113,11 @@ export async function validateSkillDocReferences(
       }
     }
 
-    // project_memory enforcement (warning-only — opt-in convention).
-    // The block MUST be the trailing structure of the SKILL.md so the
-    // remembered-context declaration is the last thing the loader
+    // project_memory shape (warning-only — opt-in convention).
+    // A declared block MUST be the trailing structure of the SKILL.md so
+    // the remembered-context declaration is the last thing the loader
     // reads. Mid-file `project_memory:` lines followed by other
-    // sections are NOT compliant.
+    // sections are NOT compliant. A SKILL.md that declares no block is.
     //
     // Algorithm:
     //   1. Walk the full body line-by-line and remember the LAST
@@ -156,7 +155,6 @@ export async function validateSkillDocReferences(
         if (line !== undefined && declRe.test(line)) lastDeclIdx = i;
       }
       const isTrailing = (() => {
-        if (lastDeclIdx === -1) return false;
         // YAML-syntactic indented-continuation patterns. Both
         // regexes use `\s+` (one-or-more) to make the indent
         // requirement explicit and symmetric:
@@ -185,11 +183,11 @@ export async function validateSkillDocReferences(
         }
         return true;
       })();
-      if (!isTrailing) {
+      if (lastDeclIdx !== -1 && !isTrailing) {
         issues.push(
           issue(
             "W-SKILL-PROJECT-MEMORY",
-            `${skillId}/SKILL.md is missing a trailing project_memory: block for its remembered context.`,
+            `${skillId}/SKILL.md declares a project_memory: block that is not the last thing in the file. Move the block to the end, or remove it if the skill has nothing to remember.`,
             "warning",
             skillDocRelPath,
             "skillDocReferences.projectMemory",

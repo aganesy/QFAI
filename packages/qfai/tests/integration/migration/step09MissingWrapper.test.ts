@@ -13,7 +13,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit, SKILL_INTEGRATION_DIRS } from "../../../src/cli/commands/init.js";
+import { runInit } from "../../../src/cli/commands/init.js";
+import { SKILL_INTEGRATION_DIRS } from "../../../src/core/init/integrationDirs.js";
 import {
   executePlannedStep,
   type MigrationContext,

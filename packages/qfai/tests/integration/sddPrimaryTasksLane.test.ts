@@ -10,8 +10,8 @@
  *     under a one-minor-release deprecation window (sunset: qfai 1.10.0);
  *     non-blocking so legacy contracts can migrate without a hard break.
  */
-// QFAI:EX-0001-0159-02
-// QFAI:EX-0001-0159-02
+// QFAI:EX-0001-0153-02
+// QFAI:EX-0001-0153-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -170,7 +170,7 @@ function uiContractWithPopulatedPrimaryTasks(): string {
     "    title: Create Order",
     "    route: /orders/new",
     "    primary_tasks:",
-    "      - create_order",
+    "      - { id: create_order, label: Create an order, acceptance: done }",
     "",
   ].join("\n");
 }
@@ -220,13 +220,33 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
 
     const empty = await prototypingPreflight(
       PASSING_UI_CONTRACT.replace(
-        ["    primary_tasks:", "      - Browse the surface"].join(String.fromCharCode(10)),
+        [
+          "    primary_tasks:",
+          "      - { id: browse, label: Browse the surface, acceptance: done }",
+        ].join(String.fromCharCode(10)),
         "    primary_tasks: []",
       ),
     );
     expect(empty.exitCode).toBe(1);
     expect(empty.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
     expect(empty.errors[0]?.message).toContain(".qfai/spec/03_contract/ui/ui-0001.yaml#home");
+  });
+
+  // QFAI:EX-0001-0153-04
+  it("names the entry shape when a screen lists only plain string primary tasks", async () => {
+    const strings = await prototypingPreflight(
+      PASSING_UI_CONTRACT.replace(
+        "      - { id: browse, label: Browse the surface, acceptance: done }",
+        "      - Browse the surface",
+      ),
+    );
+    expect(strings.exitCode).toBe(1);
+    expect(strings.errors.map((check) => check.id)).toEqual(["prototyping.uiContracts"]);
+    const message = strings.errors[0]?.message ?? "";
+    expect(message).toContain(
+      "primary_tasks entries are not {id, label, acceptance} mappings: .qfai/spec/03_contract/ui/ui-0001.yaml#home",
+    );
+    expect(message).not.toContain("with no primary_tasks");
   });
 });
 
@@ -245,7 +265,7 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
   // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
   // authored but `primary_tasks: []`) remains severity=error.
-  // QFAI:EX-0001-0159-03
+  // QFAI:EX-0001-0153-03
   it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
     await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);

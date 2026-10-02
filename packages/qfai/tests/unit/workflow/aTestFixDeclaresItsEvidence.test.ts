@@ -1,17 +1,17 @@
-// QFAI:EX-0001-0194-02
-// QFAI:EX-0001-0194-07
+// QFAI:EX-0001-0187-02
+// QFAI:EX-0001-0187-07
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
-import { issuedSteps, planStage } from "./kindSteps.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "repair-test",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-test-fix", "test_fix"),
+    planStage("bugfix-verify", "verify"),
   ],
 };
 const run = { id: "run-test-fix", state: "running", sequence: 8 };
@@ -21,7 +21,7 @@ const workOrder = {
   attempt: 1,
   stageKind: "test_fix",
   target: { kind: "flow" as const, flowId: "BF-0007" },
-  steps: issuedSteps("implement-test-fix"),
+  steps: kindSteps("test_fix"),
 };
 // An example ID first: the test fix goes to `qfai-implement`.
 const facts = {};

@@ -33,7 +33,7 @@ const CONTRACT_MD = path.resolve(
   process.cwd(),
   "..",
   "..",
-  ".qfai/spec/03_contract/cli/cli-0014-qfai-prototyping-iterate.md",
+  ".qfai/spec/03_contract/cli/cli-0012-qfai-prototyping-iterate.md",
 );
 
 /**

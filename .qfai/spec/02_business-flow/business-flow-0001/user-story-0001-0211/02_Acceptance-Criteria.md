@@ -3,33 +3,45 @@
 ## Criteria
 
 ```gherkin
-Feature: Settle one visual decision as a stage of a run
+Feature: Route a request through a fixed decision table
   # AC-0001-0211-01
-  Scenario: The prototyping skill follows the stage-skill handover
-    Given workflow mode active
-    When qfai-prototyping starts with no name invocation and no work order
-    Then it edits nothing and passes the request to qfai-run
-    And with a valid work order it does only that work
+  Scenario: The routing result carries facts and the core decides the route
+    Given a routing result whose proposal carries an extraction
+    When `accept` checks it
+    Then the core decides the route from the extraction and records the rule that chose it
+    And a proposal that names a route, a stage list or a step list is refused
+    And an extraction value outside its vocabulary is refused
 
   # AC-0001-0211-02
-  Scenario: The prototyping skill lists the steps the plans run for prototyping
-    Given the qfai-prototyping SKILL.md and the built-in plans
-    When its steps frontmatter is read
-    Then it lists every step whose owner is qfai-prototyping
-    And every step a plan gives a prototype stage is one of them
+  Scenario: The first decision rule that holds decides the route
+    Given an extraction that more than one decision rule could read
+    When the core decides the route
+    Then the route is the one the lowest-numbered rule that holds gives
 
   # AC-0001-0211-03
-  Scenario: A prototype stage stays inside the flow its work order binds
-    Given a prototype work order whose target binds one business flow with a UI-bearing contract
-    When qfai-prototyping runs under it
-    Then it settles the one visual decision the plan needs for that flow within the existing root DESIGN.md and UI contracts
-    And it changes no UI contract of another flow and creates no contract
-    And a standalone invocation still resolves every UI-bearing contract
+  Scenario: Every extraction reaches exactly one route
+    Given every combination of intent, entry flags, qualifiers and signals the rules read
+    When each is decided
+    Then each reaches exactly one catalog route
+    And an extraction no rule holds for routes the question route that changes nothing
 
   # AC-0001-0211-04
-  Scenario: A prototype stage on a flow with no UI-bearing contract is blocked
-    Given a prototype work order whose target binds a business flow no UI-bearing contract serves
-    When qfai-prototyping runs under it
-    Then it writes nothing
-    And it returns outcome blocked with the missing UI surface as a debt the operator resolves
+  Scenario: An unreadable request changes nothing
+    Given an extraction with no intent
+    When the core decides the route
+    Then the run takes the route that investigates and answers
+    And no tracked file changes
+
+  # AC-0001-0211-05
+  Scenario: qfai-run extracts facts and never names a route
+    Given the routing reference `qfai-run` ships
+    When `qfai-run` routes a request
+    Then it submits an extraction whose every value the reference defines
+    And it names no route to the core or to the operator
+
+  # AC-0001-0211-06
+  Scenario: One route gives one plan
+    Given two different requests the core routes to the same route
+    When their plans are issued
+    Then both runs issue the same stages and steps in the same order
 ```

@@ -13,12 +13,12 @@ export const TOOL_DIGEST = "a".repeat(64);
 export const CONFIG_DIGEST = "b".repeat(64);
 
 export const finishPlan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/notify"],
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 
@@ -37,7 +37,7 @@ export function readySnapshot(): Snapshot {
     acceptedStages: [
       {
         stageInstanceId: "bounded-sdd-delta",
-        stageKind: "sdd_delta",
+        stageKind: "sdd",
         outcome: "accepted",
         reviewResults: [
           {

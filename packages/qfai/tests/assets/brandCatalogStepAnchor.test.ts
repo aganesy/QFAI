@@ -115,6 +115,18 @@ describe("generated-design anti-patterns", () => {
       expect(sectionOf(doc, aspect), aspect).toMatch(pattern);
     }
 
+    const expectedCounts = [14, 14, 13, 11, 15, 14, 6, 9, 20, 8, 6, 4];
+    const patterns = representatives.flatMap(([aspect], index) => {
+      const entries = sectionOf(doc, aspect)
+        .split(/\n(?=- )/)
+        .slice(1)
+        .map((entry) => entry.trim().replace(/\s+/g, " "));
+      expect(entries.length, aspect).toBe(expectedCounts[index]);
+      expect(new Set(entries).size, aspect).toBe(entries.length);
+      return entries;
+    });
+    expect(patterns).toHaveLength(134);
+
     // The shipped list carries no citation counts, source numbers or links.
     expect(doc).not.toMatch(/https?:\/\//);
     expect(doc).not.toMatch(/\b(?:en|ja|zh|ru):\d/);
@@ -135,7 +147,10 @@ describe("generated-design anti-patterns", () => {
       /tracked all-caps monospace eyebrow labels/,
       /Space Grotesk, Instrument Serif, Geist, Fraunces, Satoshi/,
     ]) {
-      expect(rows.some((row) => substitute.test(row)), String(substitute)).toBe(true);
+      expect(
+        rows.some((row) => substitute.test(row)),
+        String(substitute),
+      ).toBe(true);
     }
   });
 
@@ -146,14 +161,17 @@ describe("generated-design anti-patterns", () => {
     const bundle = await read("qfai-discussion/templates/uiux/50_review_input_bundle.md");
     expect(bundle).not.toMatch(/AI slop/i);
     const item = sectionOf(bundle, "Trend-derived review focus").replace(/\s+/g, " ");
-    expect(item).toContain(antiPatternsInstallPath);
-    expect(item).toContain("name the pattern");
+    expect(item).toContain(
+      `- Neither a reference adopted in \`04_Sources.md\` nor the prototype carries a pattern listed in \`${antiPatternsInstallPath}\` unless the recorded brand direction asks for it. Fail this item on any such pattern, and name the pattern.`,
+    );
 
     const comparison = await readFile(
       path.join(root, "packages/qfai/assets/uix-rev/comparison-review.md"),
       "utf-8",
     );
-    expect(comparison).toContain(antiPatternsInstallPath);
+    expect(comparison.replace(/\s+/g, " ")).toContain(
+      `- No direction shows a pattern listed in \`${antiPatternsInstallPath}\` that the recorded brand direction does not ask for. Name the pattern when flagging one.`,
+    );
     expect(comparison).not.toMatch(/anti-slop pattern list/i);
 
     // The prototyping loop's reviewer keeps its lock on brand values and does
@@ -170,6 +188,32 @@ describe("generated-design anti-patterns", () => {
       .split("\n")
       .filter((line) => line.startsWith("- typeface_candidates:"));
     expect(archetypeCandidates).toHaveLength(8);
+    for (const archetype of [
+      "Minimal",
+      "Bold",
+      "Corporate",
+      "Playful",
+      "Organic",
+      "Tech",
+      "Elegant",
+      "Casual",
+    ]) {
+      const candidateLines = sectionOf(catalog, `Archetype: ${archetype}`)
+        .split("\n")
+        .filter((line) => line.startsWith("- typeface_candidates:"));
+      expect(candidateLines, archetype).toHaveLength(1);
+      const candidates = candidateLines.flatMap((line) =>
+        line
+          .slice("- typeface_candidates:".length)
+          .split(",")
+          .map((family) => family.trim()),
+      );
+      expect(candidates.length, archetype).toBeGreaterThanOrEqual(2);
+      expect(candidates.length, archetype).toBeLessThanOrEqual(3);
+      for (const family of candidates) {
+        expect(family, archetype).not.toBe("");
+      }
+    }
     const scriptCandidates = catalog
       .split("\n")
       .filter((line) => /^- (?:Japanese|Chinese|Cyrillic): /.test(line));

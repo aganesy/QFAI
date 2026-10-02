@@ -27,7 +27,7 @@ const SKILL_PATH = path.resolve(
 const CONFIG_PATH = path.resolve(__dirname, "..", "..", "src", "core", "config.ts");
 
 describe("Repository Analysis Identifies Frameworks", () => {
-  // QFAI:EX-0001-0077-01
+  // QFAI:EX-0001-0075-01
   it("SKILL.md defines repository analysis as primary goal", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/[Aa]nalyze.*repositor/);
@@ -58,7 +58,7 @@ describe("Glob Patterns Cover Test Locations", () => {
 });
 
 describe("Config Update Is Minimal", () => {
-  // QFAI:EX-0001-0078-01
+  // QFAI:EX-0001-0076-01
   it("SKILL.md mandates minimal diff for config changes", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/minimal.*diff/i);
@@ -79,8 +79,8 @@ describe("Project context is populated from evidence", () => {
 });
 
 describe("UI surface paths are configured", () => {
-  // QFAI:AC-0001-0078-04
-  // QFAI:EX-0001-0078-08
+  // QFAI:AC-0001-0076-04
+  // QFAI:EX-0001-0076-07
   it("SKILL.md writes uiux.surfacePaths from the observed paths, or an empty list", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toContain("`uiux.surfacePaths`: the repository-relative globs");

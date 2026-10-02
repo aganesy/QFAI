@@ -8,8 +8,8 @@
  * compares the two.
  */
 
-// QFAI:AC-0001-0135-02
-// QFAI:EX-0001-0135-02
+// QFAI:AC-0001-0131-02
+// QFAI:EX-0001-0131-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -143,7 +143,7 @@ function teardownFailureLines(stdout: string): string[] {
 }
 
 describe("iterate --auto-serve teardown that rejects", () => {
-  // QFAI:EX-0001-0135-02
+  // QFAI:EX-0001-0131-02
   it("reports a rejected auto-serve teardown on stdout and keeps the exit code of a resolving teardown", async () => {
     const resolved = await runCycle(async () => {});
     const rejected = await runCycle(() => Promise.reject(new Error("port 3000 still bound")));

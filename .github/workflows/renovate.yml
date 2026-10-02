@@ -40,7 +40,7 @@ name: Renovate
 # change** — see `.github/renovate.md`.
 #
 # `permissions:` therefore stays at the minimal `{ contents: read }` in both jobs, leaving
-# `BR-0017-0016`'s closed departure set untouched.
+# `BR-0015-0016`'s closed departure set untouched.
 #
 # ## Why it is two jobs and not more
 #
@@ -141,7 +141,7 @@ jobs:
           fi
         shell: bash
 
-      - uses: renovatebot/github-action@9fea9f0fbf80401026d11d03911d62b1f70fef1f # v46.3.3
+      - uses: renovatebot/github-action@1cd96b855fee0da6f230617e89dbff0e06ea393a # v46.3.5
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           # Pinned, like every other version in this tree. The action's own default is the

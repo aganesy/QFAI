@@ -47,7 +47,7 @@ specialization_tags:
 - `rule/**`, especially routing, test layers and drift.
 - The affected BF, US and AC story files under `<paths.specsDir>/02_business-flow/**` and applicable decisions.
 - `<paths.specsDir>/03_contract/tech.md` for Standard commands, and the test globs in `qfai.config.yaml` for test roots.
-- Active API, DB, UI and design contracts under `<paths.contractsDir>` whose business rules cite the flow's examples.
+- Active API, DB and UI contracts under `<paths.contractsDir>` whose business rules cite the flow's examples.
 - Current `.qfai/evidence/atdd-BF-NNNN.md`.
 
 ## Deliverables

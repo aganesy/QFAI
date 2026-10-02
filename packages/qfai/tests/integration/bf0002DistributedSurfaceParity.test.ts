@@ -95,6 +95,7 @@ describe("BF-0002 distributed-surface guard parity", () => {
 
   // QFAI:EX-0002-0009-01
   // QFAI:EX-0002-0009-02
+  // QFAI:EX-0002-0009-03
   it.each(STORY_ID_BOUNDARIES)(
     "keeps %s and rejects %s across pre-build, post-build, and smoke guards",
     async (sample, internal) => {
@@ -111,6 +112,29 @@ describe("BF-0002 distributed-surface guard parity", () => {
       );
       expect(rejected.guard.status, rejected.guard.output).toBe(1);
       expect(rejected.guard.output).toContain("probe.md");
+    },
+  );
+
+  // QFAI:EX-0002-0009-03
+  it.each(["cli-0009", "cli-0001-checkout.md", "ui-nnnn", "sub-cli-0010", "xapi-0100"])(
+    "keeps %s, which names no contract file outside the sample band, in all three guards",
+    async (text) => {
+      const kept = await observe(fixture, text);
+      expect(kept.smokeClasses).toEqual([]);
+      expect(kept.lintPatterns).toEqual([]);
+      expect(kept.guard.status, kept.guard.output).toBe(0);
+    },
+  );
+
+  // QFAI:AC-0002-0012-02
+  // QFAI:EX-0002-0012-03
+  it.each(["REQ-0006", "TDD-0039"])(
+    "rejects %s in a source comment in the pre-build lint alone, outside the shared set",
+    async (id) => {
+      const observed = await observe(fixture, id);
+      expect(observed.lintPatterns).toEqual(["local-reference-id-comment"]);
+      expect(observed.smokeClasses).toEqual([]);
+      expect(observed.guard.status, observed.guard.output).toBe(0);
     },
   );
 

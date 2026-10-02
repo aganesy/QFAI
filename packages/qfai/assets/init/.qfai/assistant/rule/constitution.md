@@ -66,7 +66,7 @@ Outputs MUST align with:
 
 - repository structure and conventions
 - chosen tools / runtimes (`<paths.contractsDir>/tech.md`)
-- architecture boundaries (the Technical Constraints of `<paths.specsDir>/01_policy/constraint.md`)
+- architecture boundaries (the `## Architecture` layers of `<paths.contractsDir>/tech.md`: a new module belongs to one layer and imports only from the layers its row lists)
 
 ---
 
@@ -194,6 +194,10 @@ Default policy:
   — is a decision, not a clarification. Such questions are unbounded and MUST
   still be asked after the budget is exhausted. Skipping a mandatory approval to
   stay under the budget violates this article; it is not compliance with it.
+- **The next-action question is exempt.** The question that ends a turn leaving
+  the next step to the user (`.agents/rules/user-questions.md` § 6) resolves no
+  ambiguity, so it is not a clarification. It is still put after the budget is
+  exhausted.
 - **`hard-required` inputs are exempt — but only where the invocation needs
   them.** An input a skill's `Default Autopilot Policy` lists under
   `hard-required` has no default and MUST NOT be guessed once the budget is

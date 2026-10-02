@@ -64,7 +64,7 @@ describe("story-tree core", () => {
       "constraint.md",
     ]);
     expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md"]);
-    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli", "design"]);
+    expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli"]);
     expect(STORY_TREE_ROOT_ENTRIES).not.toContain(".qfai/decisions");
     expect(STORY_FILES).not.toContain("01_Spec-retired.md");
     expect(STORY_FILES).toEqual(["01_User-story.md", "02_Acceptance-Criteria.md", "03_Example.md"]);
@@ -92,7 +92,7 @@ describe("story-tree core", () => {
     );
   });
 
-  // QFAI:EX-0001-0008-11
+  // QFAI:EX-0001-0008-06
   it("counts only the parent flow's stories when allocating a story ID", () => {
     expect(
       nextId("US", ["US-0001-0001", "US-0001-0002", "US-0001-0003", "US-0002-0007"], "BF-0001"),
@@ -126,7 +126,7 @@ describe("story-tree core", () => {
     });
   });
 
-  // QFAI:EX-0001-0008-09
+  // QFAI:EX-0001-0008-04
   it("reserves IDs named by decision rows when allocating a story ID", () => {
     const files = new Map(storyFiles);
     files.set(

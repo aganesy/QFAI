@@ -28,7 +28,7 @@ import { readImplementFlowSteps } from "../helpers/implementSteps.js";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const ROUTING_FILES = ["packages/qfai/assets/defaults/agent-routing.yml"];
+const ROUTING_FILES = ["packages/qfai/assets/defaults/agent-routing/qfai-implement.yml"];
 
 const ASSISTANT_DIRS = ["packages/qfai/assets/init/.qfai/assistant", ".qfai/assistant"];
 

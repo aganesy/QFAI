@@ -1,5 +1,5 @@
-# US-0001-0090: Design Direction Handoff
+# US-0001-0090: Discussion writes the active session pointer
 
 ## User Story
 
-As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` authors root `DESIGN.md` from my choice rather than from an assistant's guess.
+As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId`, and a missing or ambiguous pointer to raise an error naming the candidate directories and the recovery command, so that the pack just written becomes the active session downstream skills find.

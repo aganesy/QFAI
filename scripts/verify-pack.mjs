@@ -146,6 +146,7 @@ const requiredSkills = [
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
+  "qfai-triage",
   "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
@@ -293,7 +294,7 @@ for (const relative of [
     throw new Error(`init did not seed .qfai/spec/${relative} from its packed template.`);
   }
 }
-for (const kind of ["api", "db", "ui", "cli", "design"]) {
+for (const kind of ["api", "db", "ui", "cli"]) {
   const contractDir = path.join(specDir, "03_contract", kind);
   if (!existsSync(contractDir) || !lstatSync(contractDir).isDirectory()) {
     throw new Error(`init did not generate .qfai/spec/03_contract/${kind} directory.`);
@@ -722,12 +723,19 @@ for (const steeringFile of steeringFiles) {
     );
   }
   const before = readFileSync(steeringFile, "utf-8");
-  // One value for both placeholder forms: they stand for the same thing, and a
-  // reader should not have to compare two strings to see that.
-  const fixtureValue = "verify-pack fixture value";
+  // One value for each placeholder text, so two slots that name different
+  // things, such as two architecture layers, stay different once filled. Every
+  // TODO and TBD shares one value.
+  const fixtureValues = new Map();
+  const fixtureValue = (placeholder) => {
+    if (!fixtureValues.has(placeholder)) {
+      fixtureValues.set(placeholder, `verify-pack fixture value ${fixtureValues.size + 1}`);
+    }
+    return fixtureValues.get(placeholder);
+  };
   const after = before
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
-    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+    .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
       `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +

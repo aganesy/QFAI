@@ -1,9 +1,9 @@
-# US-0001-0064: validate.json input
+# US-0001-0064: Per-unit reports
 
 ## User Story
 
-As an operator, I want `qfai report` to build the report from the `validate.json` named by `--in <path>` or by `config.output.validateJsonPath`, so that the report renders a validation run I already have.
+As an operator, I want `qfai report` on the story tree to write one report per business flow beside the main report, so that each flow's result can be read on its own.
 
 ## Non-goals
 
-- Generating `validate.json` automatically
+- Customising the format of the per-unit reports

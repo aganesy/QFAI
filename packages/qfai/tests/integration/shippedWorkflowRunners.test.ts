@@ -3,15 +3,15 @@
  * completeness.
  *
  * Covers the operability half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0029
- * and BR-0020-0030): every shipped runner selector reads a repository variable whose default
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0029
+ * and BR-0018-0030): every shipped runner selector reads a repository variable whose default
  * is a public GitHub-hosted label, and every shipped file states the
  * operating facts an adopter needs before the first run.
  *
  * Why the indirection earns a row of its own: a runner label GitHub does not
  * know is NOT rejected. The job is queued until somebody cancels it, so the
  * failure mode of a wrong value is silence rather than a red check — which is
- * why BR-0020-0015 puts the risk on the DEFAULT (public, schedulable by any
+ * why BR-0018-0015 puts the risk on the DEFAULT (public, schedulable by any
  * clone or fork) and the knob on a repository variable the adopter owns.
  *
  * This file grows row by row; each describe block is one ledger row.
@@ -42,7 +42,7 @@ type ShippedFile = readonly [string, string];
 /**
  * The repository variable a shipped job that executes reads. One variable for
  * every such job, not one per file: an adopter retargets CI with a single
- * knob. Value SSOT is this suite per BR-0020-0023.
+ * knob. Value SSOT is this suite per BR-0018-0023.
  */
 const RUNNER_VARIABLE = "QFAI_CI_RUNNER";
 
@@ -60,7 +60,7 @@ const LIGHT_RUNNER_VARIABLE = "QFAI_CI_LIGHT_RUNNER";
  * The list has more than one member on purpose: with a single member the
  * predicate below would collapse into an equality check on one literal, and a
  * planted label would then be rejected for "not that string" rather than for
- * "not a public GitHub-hosted label" — the property BR-0020-0015 states.
+ * "not a public GitHub-hosted label" — the property BR-0018-0015 states.
  */
 const PUBLIC_HOSTED_LABELS: readonly string[] = [
   "ubuntu-latest",
@@ -289,7 +289,7 @@ const PRIVATE_LABEL_PLANTS: readonly SelectorPlant[] = [
 // QFAI:EX-0002-0005-01
 describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is rejected", () => {
   // One it() per TC-0003-0041 verify bullet. Scope notes, disclosed:
-  // - The TC's Setup is a REPLICA of the shipped set ("配布 set の複製"), so
+  // - The TC's Setup is a REPLICA of the shipped set ("a copy of the shipped set"), so
   //   no plant ever touches the packaged tree. The predicate's operand is the
   //   file bodies, so the replica is the bodies.
   // - it1's differential baseline (the unplanted set scans clean)
@@ -402,7 +402,7 @@ interface RequiredHeaderField {
 }
 
 /**
- * The closed field list BR-0020-0016 / BR-0020-0029 require of
+ * The closed field list BR-0018-0016 / BR-0018-0029 require of
  * every shipped header. Value SSOT is this suite; neither the spec nor the
  * contract restates it.
  */
@@ -525,8 +525,8 @@ async function declaredNodeFloor(): Promise<string> {
 // QFAI:EX-0002-0005-02
 describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and claims no undeclared Node floor", () => {
   // One it() per TC-0003-0042 verify bullet. Scope notes, disclosed:
-  // - The required-field list above is the closed set BR-0020-0016 names, and
-  //   it is value SSOT here per BR-0020-0023. Extra rows are allowed (a file
+  // - The required-field list above is the closed set BR-0018-0016 names, and
+  //   it is value SSOT here per BR-0018-0023. Extra rows are allowed (a file
   //   may document more); a DUPLICATED required row is not, because two
   //   answers to one question is not a complete statement.
   // - Content obligations are per field and deliberately narrow: the rows

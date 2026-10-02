@@ -1,11 +1,11 @@
-# US-0001-0211: Settle one visual decision as a stage of a run
+# US-0001-0211: Route a request through a fixed decision table
 
 ## User Story
 
-As an operator whose change needs a visual decision, I want the prototype stage of a run to settle that one decision for the business flow the run binds, within the existing root `DESIGN.md` and UI contracts, so that the run does not stop for a separate `/qfai-prototyping` invocation.
+As an operator, I want the route of my request chosen by fixed rules from the facts read out of it, so that the same kind of request always gets the same plan and I can see why a route was chosen.
 
 ## Non-goals
 
-- When the run dispatches the prototype stage, which the plan decides
-- `qfai prototyping iterate` and `certify`, which a run does not change
-- The shared stage-skill rules every skill follows
+- A route proposed by the agent that reads the request.
+- A plan assembled step by step for one request.
+- What the stages of a route do once it is chosen.

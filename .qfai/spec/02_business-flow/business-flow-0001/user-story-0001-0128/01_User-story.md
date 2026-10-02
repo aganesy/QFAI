@@ -1,5 +1,5 @@
-# US-0001-0128: Tailwind-aware design-token validation
+# US-0001-0128: Language-aware critique length
 
 ## User Story
 
-As a `/qfai-prototyping` operator, I want the shipped `generator-prompt.md` and `findDesignMdViolations` to be Tailwind-aware (a preflight literal allowlist plus body-scope narrowing), so that a faithfully generated iteration does not report `designMdViolations[]` for CDN preflight literals, internal `--tw-*` properties, alpha-modifier `rgba()` or standard utility shorthand.
+As a Japanese-language reviewer, I want a Japanese-only `proseCritique` measured in characters and an English one measured in words, each against its own cap and neither against a floor, so that bilingual review payloads converge without a length error on prose that says what it needs to.

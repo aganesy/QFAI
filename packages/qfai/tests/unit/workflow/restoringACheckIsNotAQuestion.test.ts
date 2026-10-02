@@ -1,24 +1,25 @@
-// QFAI:EX-0001-0195-02
+// QFAI:EX-0001-0188-02
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const bugfixStages = [
-  planStage("bugfix-diagnose", "diagnose", "always"),
-  planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
-  planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
-  planStage("bugfix-verify", "verify", "always"),
+  planStage("bugfix-diagnose", "diagnose"),
+  planStage("bugfix-acceptance", "acceptance"),
+  planStage("bugfix-implement", "implement"),
+  planStage("bugfix-verify", "verify"),
 ];
 const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
 const facts = {
-  plans: { bugfix: { route: "bugfix", stages: bugfixStages } },
+  plans: { "fix-defect": { route: "fix-defect", stages: bugfixStages } },
   flows: ["BF-0007"],
   acceptanceObligationsUnmet: true,
   reviewerRoles: {
     "implement-diagnose": runtimeHeavy,
-    "implement-regression-fix": runtimeHeavy,
+    "implement-tdd": runtimeHeavy,
     "atdd-scaffold": ["completion-reviewer"],
     "atdd-author": ["completion-reviewer"],
     "verify-context": runtimeHeavy,
@@ -28,8 +29,8 @@ const facts = {
 };
 const flowBinding = { flowId: "BF-0007" };
 const diagnosis = {
-  verdict: "regression",
-  reproductionRef: "evidence/regression.json",
+  verdict: "missing-test",
+  reproductionRef: "evidence/missing-check.json",
   matchedIds: ["EX-0007-0002-01"],
 };
 
@@ -54,8 +55,8 @@ function routeRestoringACheck() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bugfix",
+          requestKind: "routed",
+          extraction: extractionFor("fix-defect"),
           goal: "Restore the permission check on the export endpoint.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -65,7 +66,6 @@ function routeRestoringACheck() {
           newStories: [],
           proposedWriteScope: ["src/export/**"],
           protectedTargets: [],
-          requiredStages: ["diagnose", "verify"],
         },
       },
     },
@@ -105,8 +105,11 @@ it("A bugfix routing result whose only risk signal is authorization-restored", (
   const heavy = ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"];
   expect(rolesByStage).toEqual([
     [["implement-diagnose"], heavy],
-    [["atdd-scaffold", "atdd-author"], heavy],
-    [["implement-regression-fix"], heavy],
-    [["verify-context", "verify-qfai-gate", "verify-repo-gate"], runtimeHeavy],
+    [["atdd-scaffold", "atdd-credentials", "atdd-author"], heavy],
+    [["implement-tdd", "implement-checkpoint"], heavy],
+    [
+      ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
+      runtimeHeavy,
+    ],
   ]);
 });

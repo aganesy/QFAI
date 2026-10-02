@@ -1,8 +1,8 @@
 // QFAI:BF-0001
 /**
- * E2E: a typo is fixed through the direct route.
+ * E2E: a typo is fixed through the edit-text route.
  *
- * On a `qfai init` project, a typo in prose routes `direct`: the maintenance stage edits the one
+ * On a `qfai init` project, a typo in prose routes `edit-text`: the maintenance stage edits the one
  * file in scope, a full verify follows, and `finish` completes the run from `ready`. A change
  * outside the checked scope is refused at `accept` and leaves the run where it was.
  */
@@ -22,12 +22,13 @@ import {
   workflow,
   write,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
-const DIRECT_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "direct",
+const EDIT_TEXT_PROPOSAL = {
+  requestKind: "routed",
+  extraction: extractionFor("edit-text"),
   goal: "Fix the typo 'recieve' in the README.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [{ kind: "path", ref: "README.md" }],
@@ -37,7 +38,6 @@ const DIRECT_PROPOSAL = {
   newStories: [],
   proposedWriteScope: ["README.md"],
   protectedTargets: [],
-  requiredStages: ["maintenance", "verify"],
   rationale: "A typo in prose only.",
 };
 
@@ -50,9 +50,9 @@ async function readmeProject(): Promise<string> {
   return root;
 }
 
-it("the direct plan edits the one file, verifies in full, and finish completes the run from ready", async () => {
+it("the edit-text plan edits the one file, verifies in full, and finish completes the run from ready", async () => {
   const root = await readmeProject();
-  const { runId, routed } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId, routed } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "README.md", "# Orders\n\nYou receive one email per order.\n");
   const edited = await submit(
@@ -91,15 +91,15 @@ it("the direct plan edits the one file, verifies in full, and finish completes t
     states: ["ready", "running", "ready", "running", "ready", "completed"],
     stages: [
       ["maintenance", ["maintain-edit"]],
-      ["verify", ["verify-context", "verify-qfai-gate", "verify-repo-gate"]],
+      ["verify", ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"]],
     ],
     target: [0, "qfai_done"],
   });
 }, 300_000);
 
-it("a typo that turns out to change behaviour is returned for a new route before any edit", async () => {
+it("a typo that turns out to change behaviour stops the run before any edit, naming the skill that owns it", async () => {
   const root = await readmeProject();
-  const { runId } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   const semantic = {
     findingCode: "maintain-semantic-effect",
@@ -120,20 +120,21 @@ it("a typo that turns out to change behaviour is returned for a new route before
       debts: [semantic],
     }),
   );
-  const routing = workflow(root, ["next", "--run", runId]);
+  const stopped = workflow(root, ["next", "--run", runId]);
 
   expect({
     returned: [returned.status, field(returned.json, "run.state")],
-    routing: [
-      field(routing.json, "workOrder.stageKind"),
-      field(routing.json, "workOrder.executor.skill"),
+    stopped: [
+      field(stopped.json, "workOrder"),
+      field(stopped.json, "halt.blocker"),
+      field(stopped.json, "halt.owner"),
     ],
-  }).toEqual({ returned: [0, "routing"], routing: ["route", "qfai-run"] });
+  }).toEqual({ returned: [0, "blocked"], stopped: [null, "stage-blocked", "qfai-sdd"] });
 }, 300_000);
 
 it("a maintenance result changing a file outside the checked scope is refused, and the run stays running", async () => {
   const root = await readmeProject();
-  const { runId } = await routedRun(root, DIRECT_PROPOSAL, TYPO_INPUT);
+  const { runId } = await routedRun(root, EDIT_TEXT_PROPOSAL, TYPO_INPUT);
   const edit = workflow(root, ["next", "--run", runId]);
   await write(root, "src/orders.ts", "export const orders = [];\n");
   const refused = await submit(

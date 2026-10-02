@@ -3,17 +3,22 @@
 ## Criteria
 
 ```gherkin
-Feature: Explicit critique evidence keywords
+Feature: Validate Gate Integration
   # AC-0001-0150-01
-  Scenario: `taskFidelity` keyword documentation + error text (REQ-0162)
-    Given the `QFAI-CRIT-009` validator and `references/evidence-requirements.md`,
-    When `taskFidelity` evidence is missing a required keyword,
-    Then `QFAI-CRIT-009` error text MUST name every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the current implementation) and the expected document section.
-    And `references/evidence-requirements.md` MUST enumerate the keywords with example markdown structure.
+  Scenario: Validate Gate error=0
+    Given SDD completion
+    When `qfai validate --fail-on error` runs
+    Then error count is 0.
 
   # AC-0001-0150-02
-  Scenario: `iterate --capture` emits `taskFidelity` template skeleton (REQ-0162)
-    Given `qfai prototyping iterate --capture`,
-    When the evidence template skeleton is emitted,
-    Then the skeleton MUST include every required `taskFidelity` keyword as a placeholder so the keyword set cannot be silently forgotten.
+  Scenario: Validate Pipeline Validator Registration Integrity
+    Given the current story-tree structure, contract-reference, test-obligation and drift validators
+    When the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded
+    Then each validator's public export and direct pipeline registration hold as one complete outcome, including invocation in its owning profile.
+
+  # AC-0001-0150-03
+  Scenario: Scoped Completion Gate Per Business Flow
+    Given the story tree,
+    When `/qfai-sdd` gates the business flows it wrote or changed before completion,
+    Then it runs `qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each of those flows, so that a parallel worker gates only on its own flow, and it does not pass `--spec <spec-id>`.
 ```

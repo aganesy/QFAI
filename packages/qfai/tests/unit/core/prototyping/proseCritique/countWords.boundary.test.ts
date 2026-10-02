@@ -22,7 +22,8 @@ function englishOfNWords(n: number): string {
 }
 
 function cjkOfNChars(n: number): string {
-  return "あ".repeat(n);
+  // Hiragana "a" (U+3042), repeated: a whitespace-free CJK fixture.
+  return "\u3042".repeat(n);
 }
 
 describe("English boundary — 199 / 200 / 500 / 501 words", () => {

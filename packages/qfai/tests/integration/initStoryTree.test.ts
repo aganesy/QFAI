@@ -28,7 +28,7 @@ const seedPaths = [
   "02_business-flow/business-flows.md",
   "03_contract/contracts.md",
 ] as const;
-const contractKinds = ["api", "db", "ui", "cli", "design"] as const;
+const contractKinds = ["api", "db", "ui", "cli"] as const;
 const templateRoot = path.join(
   getInitAssetsDir(),
   ".qfai",

@@ -13,9 +13,11 @@ export {
   validateStoryTreeObligationsModel,
 } from "./storyTreeObligations.js";
 export {
+  validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
+  validateTechArchitecture,
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
@@ -35,7 +37,6 @@ export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
-export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -81,7 +82,6 @@ export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.j
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
-export { detectDesignMdPatchOutOfZone, validateDesignMdPatchZone } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";

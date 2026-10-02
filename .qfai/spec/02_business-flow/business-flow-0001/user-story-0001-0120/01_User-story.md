@@ -1,5 +1,5 @@
-# US-0001-0120: Qualitative screen impressions
+# US-0001-0120: Certification of frozen UI-contract reviews
 
 ## User Story
 
-As a reviewer, I want to write short-prose impressions of `operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel` and `menuReachabilityFeel` for each UI contract and screen, so that design and operability are judged qualitatively rather than as AC-pass or transition-pass percentages.
+As a maintainer, I want `qfai prototyping certify` to check review-payload presence for each UI contract in the cycle-0 frozen `uiContractsCovered[]`, so that a missing `<screen>.review.json` for any UI contract at the accepted iteration rejects certification.

@@ -1,5 +1,5 @@
-# US-0001-0095: QA Gatekeeper Confirmation
+# US-0001-0095: Simplified Handoff Schema
 
 ## User Story
 
-As a project lead, I want RED/GREEN observations confirmed exclusively by the qa-gatekeeper (not self-certified by implementation workers), so that test-first discipline is independently verified.
+As an implementation worker, I want to read the prototyping handoff from `prototyping.json#handoff`, beside its image-source provenance, so that I receive the final prototype, the procurement record and the implementation notes without relying on the retired `mustPreserve`/`mayAdapt`/`mustNotCopy` triplets.

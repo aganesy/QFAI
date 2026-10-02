@@ -1,5 +1,5 @@
-# US-0001-0167: Agent Cards
+# US-0001-0167: Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check
 
 ## User Story
 
-As a QFAI maintainer, I want each of the 19 agents defined once in its card's frontmatter, with routing and review-profile defaults built into the package and whole-entry project overrides in `qfai.config.yaml`, so that agent delegation is standardized without a second copy of an agent definition or default.
+As a QFAI maintainer, I want the Reviewer Gate to emit `R-CERTIFY-VERIFY-CIRCULAR` at severity info whenever a change reintroduces the cycle where certify reads validator output that requires `/qfai-atdd` or `/qfai-implement` artifacts at the prototyping phase, while `qfai prototyping certify` itself refuses the wrong-phase verdict with exit 2, so that the certify path that completes at the prototyping phase cannot silently regress to the old circular contract.

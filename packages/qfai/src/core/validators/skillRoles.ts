@@ -19,7 +19,7 @@ import { issue } from "./utils.js";
  */
 export type RoutingBinding = "required" | "conditional";
 
-/** What `agent-routing.yml` says about one step or skill, collected across its phases. */
+/** What the routing says about one step or skill, collected across its phases. */
 export type SkillRouting = {
   /** A `- step:` entry is checked against its `STEP.md`, a `- skill:` entry against its `SKILL.md`. */
   kind: "skill" | "step";
@@ -259,10 +259,10 @@ async function readSkillFrontmatter(skillPath: string): Promise<SkillFrontmatter
 }
 
 /**
- * Everything about a skill's review gate that `agent-routing.yml` and
+ * Everything about a skill's review gate that the routing and
  * `review-profiles.yml` decide between themselves — two route blocks claiming
  * different gates, a `review_profile:` that is not a usable name, and a name
- * neither file defines.
+ * neither defines.
  *
  * None of it needs the skill's own `SKILL.md`, and running it behind that read
  * meant a route through an undefined profile went unreported whenever the
@@ -286,7 +286,7 @@ function reportManifestGateDefects(
     issues.push(
       issue(
         "QFAI-AGENT-018",
-        `agent-routing.yml routes "${skill}" through two different review profiles ("${first}" and "${second}"); one skill has one review gate.`,
+        `The routing sends "${skill}" through two different review profiles ("${first}" and "${second}"); one skill has one review gate.`,
         crossCheckSeverity,
         rel,
         "agentDefinition.conflictingReviewProfile",
@@ -310,7 +310,7 @@ function reportManifestGateDefects(
     issues.push(
       issue(
         "QFAI-AGENT-018",
-        `agent-routing.yml routes "${skill}" through review profile "${routed}", which review-profiles.yml does not define.`,
+        `The routing sends "${skill}" through review profile "${routed}", which review-profiles.yml does not define.`,
         crossCheckSeverity,
         rel,
         "agentDefinition.unknownReviewProfile",
@@ -379,7 +379,7 @@ function reportSkillGateDefects(
   issues.push(
     issue(
       "QFAI-AGENT-018",
-      `${rel} declares routing-profile: ${declared} but the agent-routing.yml route for "${skill}" ${found}.`,
+      `${rel} declares routing-profile: ${declared} but the route for "${skill}" ${found}.`,
       crossCheckSeverity,
       rel,
       "agentDefinition.routingProfileMismatch",
@@ -406,7 +406,7 @@ function collectSelections(
   for (const [agent, binding] of entry.agents) {
     selected.set(agent, {
       binding,
-      source: `agent-routing.yml binds it to ${skill} as ${binding}`,
+      source: `the routing binds it to ${skill} as ${binding}`,
     });
   }
   const profileName = entry.reviewProfile;
@@ -545,7 +545,7 @@ async function reportUnroutedSkills(
     issues.push(
       issue(
         "QFAI-AGENT-017",
-        `${rel} declares routing-profile: ${profile} but agent-routing.yml routes no phases to "${name}".`,
+        `${rel} declares routing-profile: ${profile} but the routing sends no phases to "${name}".`,
         crossCheckSeverity,
         rel,
         "agentDefinition.skillNotRouted",

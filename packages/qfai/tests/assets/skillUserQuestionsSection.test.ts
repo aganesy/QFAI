@@ -88,3 +88,41 @@ describe("every shipped skill and step runs under the AskUserQuestion protocol",
     }
   });
 });
+
+describe("a stage skill's final report ends with the next-action question", () => {
+  // A stage that finishes on a report leaves the next step to the user, and a
+  // session ending on prose sits idle with nothing saying it waits.
+  const STAGES: ReadonlyArray<readonly [string, string]> = [
+    ["qfai-discussion", "## Completion Message & Next Actions (MUST)"],
+    ["qfai-sdd", "## Completion"],
+    ["qfai-prototyping", "## Completion"],
+    ["qfai-atdd", "## Completion"],
+    ["qfai-implement", "## Completion"],
+    ["qfai-verify", "## Completion"],
+    ["qfai-maintain", "## Completion"],
+  ];
+
+  it.each(STAGES)("%s ends its report with the question", async (skill, heading) => {
+    for (const root of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const content = await readFile(
+        path.join(repoRoot, root, "assistant", "skill", skill, "SKILL.md"),
+        "utf-8",
+      );
+      const start = content.indexOf(`\n${heading}\n`);
+      expect(start, `${root}/${skill} has no ${heading}`).toBeGreaterThan(-1);
+      const next = content.indexOf("\n## ", start + heading.length + 1);
+      const section = content.slice(start, next === -1 ? undefined : next).replace(/\s+/g, " ");
+      expect(section).toMatch(/ends? (?:the turn )?with a question listing (?:every|the|those)/i);
+      expect(section).toContain("`.agents/rules/user-questions.md` § 6");
+      // A no-question mode asks nothing, so the report carries the actions.
+      expect(section).toMatch(
+        /under a no-question mode,? (?:it )?lists? them in the report instead/i,
+      );
+      // The adopted decisions are reported, not asked, so the one question the
+      // report ends with is the next-action question.
+      if (skill === "qfai-verify") {
+        expect(section).toContain("None of them is put as a question.");
+      }
+    }
+  });
+});

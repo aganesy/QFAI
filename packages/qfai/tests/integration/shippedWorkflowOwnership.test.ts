@@ -3,7 +3,7 @@
  *
  * Covers the ownership boundary `qfai init` holds over an adopter's
  * `.github/workflows/` directory (contract:
- * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0019 to BR-0020-0022). The reserved
+ * `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0019 to BR-0018-0022). The reserved
  * `qfai-` filename prefix is a reservation notice, not a selector: writes
  * come from the shipped-name list and removals from the retired-name list,
  * never from globbing `qfai-*` on the adopter's disk.
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
-import { copyTemplatePaths } from "../../src/cli/lib/fs.js";
+import { copyTemplatePaths } from "../../src/core/fs/templateCopy.js";
 import {
   readInstallProvenance,
   resolveWorkflowFileState,

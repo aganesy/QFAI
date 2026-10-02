@@ -1,5 +1,5 @@
-# US-0001-0118: Project-wide UI-contract resolution
+# US-0001-0118: Unattended prototyping execution
 
 ## User Story
 
-As an AI developer operating the skill, I want one `/qfai-prototyping` invocation to resolve every UI-bearing UI contract (`UI-NNNN`) in the consumer project, so that the project-wide prototype set evolves in a single run without per-invocation primary-contract selection.
+As a CI operator, I want `/qfai-prototyping` to run from cycle 0 through cycle 9 with no per-cycle prompt and to exit non-zero with a deterministic code on lock drift, reviewer Playwright-session failure, license-verify failure (exit 66) or a mid-run change to the UI contract set, so that pipelines never block on stdin.

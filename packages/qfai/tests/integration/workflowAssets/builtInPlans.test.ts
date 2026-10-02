@@ -1,19 +1,32 @@
 /**
- * Integration: the five plans the package ships under `assets/defaults/workflows/`.
+ * Integration: the plans the package ships under `assets/defaults/workflows/`, one per route.
  *
  * Reads each plan as YAML and holds it to the plan format and vocabulary of the workflow file
  * contract: one file per route, each stage's steps drawn from the ones its kind may run, and every
- * change route ending in a verify stage. How the core loads a plan is not this module's.
+ * change route ending in the verify block. How the core loads a plan is not this module's.
  */
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 import { PLAN_ROUTES, planStageSteps, readDefault } from "../../helpers/shippedAssistant.js";
 
+const VERIFY = ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
+
 /** The stage kinds, and the steps a stage of each kind may run. */
 const VOCABULARY: Record<string, string[]> = {
+  triage: [
+    "triage-close",
+    "triage-answer",
+    "triage-investigate",
+    "triage-request-info",
+    "triage-dedupe",
+    "triage-decompose",
+    "triage-cluster",
+    "triage-security-intake",
+    "triage-handoff",
+  ],
   maintenance: ["maintain-edit"],
-  diagnose: ["implement-diagnose"],
+  diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
   sdd_append: ["sdd-story", "sdd-gate"],
   test_fix: ["atdd-test-fix", "implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
@@ -26,14 +39,6 @@ const VOCABULARY: Record<string, string[]> = {
     "sdd-cycle",
     "sdd-gate",
   ],
-  sdd_delta: [
-    "sdd-triage",
-    "sdd-flow",
-    "sdd-story",
-    "sdd-contract",
-    "common-design-md",
-    "sdd-gate",
-  ],
   prototype: [
     "prototyping-grill",
     "prototyping-preflight",
@@ -41,8 +46,28 @@ const VOCABULARY: Record<string, string[]> = {
     "prototyping-handoff",
   ],
   acceptance: ["atdd-scaffold", "atdd-credentials", "atdd-author"],
-  implement: ["implement-tdd", "implement-checkpoint"],
-  verify: ["verify-context", "verify-qfai-gate", "verify-repo-gate"],
+  implement: [
+    "implement-tdd",
+    "implement-checkpoint",
+    "implement-refactor",
+    "implement-retire",
+    "implement-sweep",
+    "implement-quarantine",
+    "implement-dep-bump",
+    "implement-tooling",
+    "implement-backport",
+    "implement-revert",
+    "implement-stress-harness",
+    "implement-oracle-parity",
+  ],
+  verify: [
+    ...VERIFY,
+    "verify-repeat-run",
+    "verify-advisory",
+    "verify-external",
+    "verify-manual",
+    "verify-release-notes",
+  ],
   discussion: [
     "discussion-research",
     "discussion-interview",
@@ -52,24 +77,38 @@ const VOCABULARY: Record<string, string[]> = {
   ],
 };
 
-const PREDICATES = [
-  "always",
-  "missing_example_needed",
-  "diagnosis_missing_test",
-  "test_defect_found",
-  "regression_found",
-  "acceptance_obligations_unmet",
-  "prototype_decision_needed",
-  "full_discussion_needed",
+/** The steps a plan may mark pass-through. */
+const PASS_THROUGH = [
+  "sdd-flow",
+  "sdd-contract",
+  "sdd-cycle",
+  "sdd-story",
+  "common-design-md",
+  "atdd-credentials",
+  "atdd-author",
+  "discussion-uiux",
+  "atdd-test-fix",
+  "implement-test-fix",
+  "maintain-edit",
+  "verify-change-note",
 ];
 
-const STEP_PREDICATES = ["proposed", "test_defect_acceptance_layer", "test_defect_example_layer"];
+const PLAN_KEYS = [
+  "route",
+  "family",
+  "stages",
+  "defaultModifiers",
+  "decisionPoints",
+  "releasePoint",
+  "branchPoints",
+];
 
-const STAGE_KEYS = ["id", "kind", "steps", "when", "after", "effects"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 
-const VERIFY = VOCABULARY.verify;
-
-/** The order the delivery contract fixes for the skills a plan's steps belong to. */
+/**
+ * The order the delivery contract fixes for the skills a plan's steps belong to. A triage stage
+ * may open a route and closes one, so it holds no place in this order.
+ */
 const OWNER_ORDER = ["qfai-discussion", "qfai-sdd", "qfai-prototyping", "qfai-atdd", "qfai-verify"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -131,9 +170,8 @@ function expectStageInVocabulary(route: string, stage: Stage, ids: string[]) {
   expect(stage.steps.length, `${where}: runs a step`).toBeGreaterThan(0);
   for (const step of stage.steps) {
     expect(allowed, `${where}: step ${step.name}`).toContain(step.name);
-    if (step.when !== undefined) expect(STEP_PREDICATES, where).toContain(step.when);
+    if (step.passThrough) expect(PASS_THROUGH, where).toContain(step.name);
   }
-  expect(PREDICATES, where).toContain(stage.when);
   for (const dependency of stage.after) {
     expect(ids, `${where}: after ${dependency}`).toContain(dependency);
   }
@@ -144,7 +182,10 @@ describe("the built-in plans", () => {
     for (const route of PLAN_ROUTES) {
       const { raw, keys, stageKeys, route: named, stages } = await plan(route);
       expect(named, `${route}.yml names its route`).toBe(route);
-      expect(keys.sort(), route).toEqual(["route", "stages"]);
+      expect(
+        keys.filter((key) => !PLAN_KEYS.includes(key)),
+        route,
+      ).toEqual([]);
       expect(stages.length, route).toBeGreaterThan(0);
       expect(
         stageKeys.flat().filter((key) => !STAGE_KEYS.includes(key)),
@@ -153,65 +194,84 @@ describe("the built-in plans", () => {
       const ids = stages.map((stage) => stage.id);
       expect(new Set(ids).size, `${route}: stage IDs are unique`).toBe(ids.length);
       for (const stage of stages) expectStageInVocabulary(route, stage, ids);
-      expect(raw, `${route}: no version marker or schema field`).not.toMatch(
-        /schema_version|schemaVersion|\$id|\bv\d+\.\d+/,
+      expect(raw, `${route}: no version marker, schema field or predicate`).not.toMatch(
+        /schema_version|schemaVersion|\$id|\bv\d+\.\d+|\bwhen:/,
       );
     }
   });
 
-  it("makes the direct plan a maintenance stage, then verify", async () => {
-    const { stages } = await plan("direct");
+  it("makes the edit-text plan a maintenance stage, then verify", async () => {
+    const { stages } = await plan("edit-text");
     expect(stages.map((stage) => [stage.kind, names(stage)])).toEqual([
       ["maintenance", ["maintain-edit"]],
       ["verify", VERIFY],
     ]);
   });
 
-  // QFAI:AC-0001-0192-05
-  // QFAI:EX-0001-0192-13
-  it("orders the feature plan story authoring, prototyping, acceptance, implement, verify", async () => {
-    const { stages } = await plan("feature");
-    expect(stages.map((stage) => [stage.kind, stage.when])).toEqual([
-      ["sdd", "always"],
-      ["prototype", "prototype_decision_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "always"],
-      ["verify", "always"],
+  // QFAI:AC-0001-0185-05
+  // QFAI:EX-0001-0185-13
+  it("orders the add-feature and prototype-feature plans", async () => {
+    const kinds = async (route: string) => (await plan(route)).stages.map((stage) => stage.kind);
+    expect(await kinds("add-feature")).toEqual([
+      "sdd",
+      "acceptance",
+      "implement",
+      "maintenance",
+      "verify",
     ]);
-    expect(names(stages.at(-1))).toEqual(VERIFY);
+    expect(await kinds("prototype-feature")).toEqual([
+      "sdd",
+      "prototype",
+      "acceptance",
+      "implement",
+      "maintenance",
+      "verify",
+    ]);
+    expect(names((await plan("prototype-feature")).stages.at(-1))).toEqual(VERIFY);
   });
 
-  // QFAI:AC-0001-0193-01
-  // QFAI:EX-0001-0193-13
-  it("runs the bugfix plan's implement stage on every missing-test diagnosis", async () => {
-    const { stages } = await plan("bugfix");
-    expect(stages.map((stage) => [stage.kind, stage.when])).toEqual([
-      ["diagnose", "always"],
-      ["sdd_append", "missing_example_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "diagnosis_missing_test"],
-      ["regression_fix", "regression_found"],
-      ["test_fix", "test_defect_found"],
-      ["verify", "always"],
+  // QFAI:AC-0001-0186-01
+  // QFAI:EX-0001-0186-13
+  it("holds the fix-defect plan's append, acceptance and implement stages after the diagnosis", async () => {
+    const { raw, stages } = await plan("fix-defect");
+    expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
+      ["diagnose", []],
+      ["sdd_append", ["diagnose"]],
+      ["acceptance", ["spec"]],
+      ["implement", ["acceptance"]],
+      ["verify", ["implement"]],
+    ]);
+    expect(stages[1]?.steps).toEqual([
+      { name: "sdd-story", passThrough: true },
+      { name: "sdd-gate" },
     ]);
     expect(names(stages.at(-1))).toEqual(VERIFY);
+    expect(raw).not.toMatch(/\bwhen:/);
   });
 
-  // QFAI:EX-0001-0192-14
-  it("ends every change route in a verify stage that every stage reaches", async () => {
-    for (const route of ["direct", "bugfix", "bounded-change", "feature"]) {
+  // QFAI:EX-0001-0185-14
+  it("ends every change route in the verify block that every stage reaches", async () => {
+    let changeRoutes = 0;
+    for (const route of PLAN_ROUTES) {
       const { stages } = await plan(route);
-      const verify = stages.filter((stage) => stage.kind === "verify");
+      const verify = stages.filter((stage) => names(stage).includes("verify-repo-gate"));
+      if (verify.length === 0) continue;
+      changeRoutes += 1;
       expect(verify.map(names), route).toEqual([VERIFY]);
       const last = verify[0]?.id ?? "";
-      expect(
-        stages.filter((stage) => stage.after.includes(last)),
-        `${route}: nothing runs after verify`,
-      ).toEqual([]);
+      const following = stages.filter((stage) => stage.after.includes(last));
+      expect(following.map(names), `${route}: only verify-external follows verify`).toEqual(
+        route === "fix-env-bound" ? [["verify-external"]] : [],
+      );
+      const external = new Set(following.map((stage) => stage.id));
       expect([...reaching(stages, last)].sort(), `${route}: every stage reaches verify`).toEqual(
-        stages.map((stage) => stage.id).sort(),
+        stages
+          .map((stage) => stage.id)
+          .filter((id) => !external.has(id))
+          .sort(),
       );
     }
+    expect(changeRoutes).toBe(26);
   });
 
   // QFAI:AC-0001-0003-02
@@ -242,15 +302,15 @@ describe("the built-in plans", () => {
     }
   });
 
-  // QFAI:AC-0001-0195-05
-  // QFAI:EX-0001-0195-08
-  it("names no qfai-grill, and holds a discussion only under full_discussion_needed", async () => {
+  // QFAI:AC-0001-0188-05
+  // QFAI:EX-0001-0188-08
+  it("names no qfai-grill, and holds a discussion only in the three decide plans", async () => {
+    const discussing: string[] = [];
     for (const route of PLAN_ROUTES) {
       const { stages } = await plan(route);
       expect(stages.flatMap(names).map(ownerOf), route).not.toContain("qfai-grill");
-      for (const stage of stages.filter((each) => each.kind === "discussion")) {
-        expect(stage.when, `${route}/${stage.id}`).toBe("full_discussion_needed");
-      }
+      if (stages.some((stage) => stage.kind === "discussion")) discussing.push(route);
     }
+    expect(discussing).toEqual(["decide-acceptance", "decide-design", "decompose-epic"]);
   });
 });

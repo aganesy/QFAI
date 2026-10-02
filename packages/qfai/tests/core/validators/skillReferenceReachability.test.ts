@@ -27,6 +27,8 @@ import type { Issue } from "../../../src/core/types.js";
 const REACHABILITY_CODE = "QFAI-SKILLS-013";
 const READ_FAILURE_CODE = "QFAI-SKILLS-014";
 const repoRoot = path.resolve(process.cwd(), "..", "..");
+// A non-ASCII file stem (the Japanese word for "design").
+const DESIGN_STEM = "\u8A2D\u8A08";
 
 /** Shipped surface plus its generated root mirror. */
 const SHIPPED_ROOTS = [path.join(repoRoot, "packages/qfai/assets/init"), repoRoot];
@@ -119,12 +121,14 @@ async function writeCharsetSkillFixture(root: string): Promise<string> {
       "",
       "[DRIFT-PROTOCOL:MANDATORY]",
       "",
-      "設計は `references/設計.md`、手順は `references/Guide.MD` を読む。",
+      "Read `references/" +
+        DESIGN_STEM +
+        ".md` for the design and `references/Guide.MD` for the procedure.",
       "",
     ].join("\n"),
     "utf-8",
   );
-  await writeFile(path.join(referencesDir, "設計.md"), "# 設計\n", "utf-8");
+  await writeFile(path.join(referencesDir, `${DESIGN_STEM}.md`), `# ${DESIGN_STEM}\n`, "utf-8");
   await writeFile(path.join(referencesDir, "Guide.MD"), "# Guide\n", "utf-8");
   await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
   return referencesDir;
@@ -163,7 +167,7 @@ async function writeSpacedNameSkillFixture(root: string): Promise<string> {
 /**
  * A skill citing its non-ASCII reference through a percent-encoded link.
  *
- * `[設計](references/%E8%A8%AD%E8%A8%88.md)` is how a Markdown link spells the
+ * `[design](references/%E8%A8%AD%E8%A8%88.md)` is how a Markdown link spells the
  * very path the previous fixture writes literally, so it has to reach the same
  * file.
  */
@@ -178,12 +182,12 @@ async function writePercentEncodedSkillFixture(root: string): Promise<string> {
       "",
       "[DRIFT-PROTOCOL:MANDATORY]",
       "",
-      "まず [設計](references/%E8%A8%AD%E8%A8%88.md) を読む。",
+      "First, read [design](references/%E8%A8%AD%E8%A8%88.md).",
       "",
     ].join("\n"),
     "utf-8",
   );
-  await writeFile(path.join(referencesDir, "設計.md"), "# 設計\n", "utf-8");
+  await writeFile(path.join(referencesDir, `${DESIGN_STEM}.md`), `# ${DESIGN_STEM}\n`, "utf-8");
   await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
   return referencesDir;
 }
@@ -348,10 +352,9 @@ describe("citation tokens", () => {
   });
 
   it("still reads the forms it already read", () => {
-    expect(citationTokensIn("`references/設計.md` and `references/%E8%A8%AD.md`")).toEqual([
-      "references/設計.md",
-      "references/%E8%A8%AD.md",
-    ]);
+    expect(
+      citationTokensIn(`\`references/${DESIGN_STEM}.md\` and \`references/%E8%A8%AD.md\``),
+    ).toEqual([`references/${DESIGN_STEM}.md`, "references/%E8%A8%AD.md"]);
   });
 
   it("reads the tokens the citation pattern reads, over generated text", () => {
@@ -364,7 +367,7 @@ describe("citation tokens", () => {
     const pieces = [
       ...["a", "C", "x", "m", "d", "M", "D", "y", "Y", "l", "L", "4", "F", "f", "g", "0"],
       ...[".", ".", "/", "\\", ":", "%", "~", "-", "_", " ", "`", "!", "(", "]"],
-      ...["é", "ſ", "K", "\u{1D400}", "́", "設", "\uD800", "\uDC00"],
+      ...["é", "ſ", "K", "\u{1D400}", "́", "\u8A2D", "\uD800", "\uDC00"],
       ...[".md", ".yml", ".yaml", ".MD", ".Yaml", "%E8", "C:", "/.md", "..", "//"],
     ];
     let seed = 1;

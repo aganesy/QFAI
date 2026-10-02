@@ -1,9 +1,10 @@
-// QFAI:EX-0001-0192-45
+// QFAI:EX-0001-0185-45
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs: unknown[] }) {
   const snapshot = {
@@ -29,8 +30,8 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
             expectedSequence: 2,
             outcome: "accepted",
             proposal: {
-              requestKind: "change",
-              candidateRoute: "feature",
+              requestKind: "routed",
+              extraction: extractionFor("add-feature"),
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
               newStories: [
@@ -42,7 +43,6 @@ function acceptRouting(proposal: { expectedBehaviorRefs: unknown[]; observedRefs
                   flowId: "BF-0001",
                 },
               ],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },

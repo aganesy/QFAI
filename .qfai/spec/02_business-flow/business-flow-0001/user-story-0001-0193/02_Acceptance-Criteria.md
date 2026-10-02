@@ -3,34 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: Repair a bug the stories already describe without uncovering an example
+Feature: Run only on a host that can carry the run
   # AC-0001-0193-01
-  Scenario: A missing test is written against the example that states the case
-    Given diagnosis returns the missing-test verdict
-    When the plan continues
-    Then an example that already states the case needs no story-authoring stage, and acceptance or implement writes its test
-    And when no example states it, the next stage is `sdd_append`, carrying the diagnosis as the reason
-    And acceptance runs under `acceptance_obligations_unmet`, then implement and a full verify follow
+  Scenario: A host that cannot carry the run is refused at start
+    Given an unknown host, or a capability report that declares a gap in the required set
+    When `start` is called
+    Then `start` is refused `unsupported-capability`
+    And no run exists
 
   # AC-0001-0193-02
-  Scenario: A regression caught by an existing test is fixed against its covered example
-    Given diagnosis returns the regression verdict for an example a test annotates
-    When the plan continues
-    Then the next stage is `regression_fix`, then a full verify
-    And the example stays annotated
-    And the fix is accepted only with the same test's GREEN re-run and an independent review
-
-  # AC-0001-0193-03
-  Scenario: No stage uncovers an example or adds one it does not own
-    Given a bugfix run over a flow whose covering example a test annotates
-    When a stage result leaves that example with no annotating test, or adds an example from a stage other than story authoring
-    Then `accept` refuses the result
-    And the obligation set is unchanged
-
-  # AC-0001-0193-04
-  Scenario: A different expectation is routed as a bounded change
-    Given a bug report whose stated expectation differs from the stories, or that no story covers
-    When routing or diagnosis reaches that finding
-    Then the run is reclassified to `bounded-change` before any edit
-    And no unfinished obligation is dropped by the reclassification
+  Scenario: A failed first delegation leaves the run blocked
+    Given a run whose capability report passed
+    When its first required delegation fails
+    Then the run is `blocked` with the missing capability named
+    And whether the release claims the host as supported changes nothing in this outcome
 ```

@@ -18,7 +18,7 @@ const CONTRACT = path.join(
   "spec",
   "03_contract",
   "cli",
-  "cli-0014-qfai-prototyping-iterate.md",
+  "cli-0012-qfai-prototyping-iterate.md",
 );
 
 async function ruleStartingWith(opening: string): Promise<string> {

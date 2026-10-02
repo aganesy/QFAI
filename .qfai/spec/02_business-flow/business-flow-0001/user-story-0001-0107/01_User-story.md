@@ -1,5 +1,5 @@
-# US-0001-0107: Single-prototype evolution
+# US-0001-0107: User-experience review axes
 
 ## User Story
 
-As a designer, I want `/qfai-prototyping` to evolve one prototype through at most ten cycles, so that each revision responds to accumulated critique within the accepted iteration budget.
+As a product-surface reviewer, I want to score each iteration on the user-experience axes `informationArchitecture`, `navigationFlow`, `usability` and `functionality`, so that iterations are not judged on subjective visual-aesthetic axes.

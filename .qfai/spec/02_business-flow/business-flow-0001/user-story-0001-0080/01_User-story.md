@@ -1,5 +1,5 @@
-# US-0001-0080: Evidence Sampling Confirmation
+# US-0001-0080: Exploration Brief Authoring
 
 ## User Story
 
-As a QFAI user, I want to see 5-15 sample test files matching the proposed globs, so that I can confirm the configuration is correct before proceeding.
+As a discussion facilitator, I want product intent, must-keep interactions, brand signals and differentiation targets recorded in `04_Sources.md`, so that prototyping starts from explicit exploration constraints.

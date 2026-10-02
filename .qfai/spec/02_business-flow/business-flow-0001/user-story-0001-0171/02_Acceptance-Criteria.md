@@ -3,20 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Pattern-Doubler Reviewer
+Feature: Cross-skill `handoff.yaml` schema
   # AC-0001-0171-01
-  Scenario: Concrete additions have rationale without a numeric target
-    Given optional advisory pattern review of concrete behavior
-    When the mode proposes additions
-    Then each addition concerns business-flow, US, AC, EX or TC coverage
-    And each addition includes a rationale
-    And no numeric growth target is required
-
-  # AC-0001-0171-02
-  Scenario: Abstract-only artifacts do not require more patterns
-    Given an empty artifact or only BR, NFR, policy, decision or architectural items
-    When optional pattern review evaluates the artifact
-    Then the mode returns N/A even if those items carry IDs
-    And no increase in abstract items is required
-    And missing mandatory pairings and independently required obligations and gates remain required
+  Scenario: Cross-skill handoff schema is the single canonical writer/reader
+    Given any skill that produces or consumes handoff state,
+    When it writes a handoff file,
+    Then the file MUST conform to the canonical CLI-HANDOFF schema in `packages/qfai/src/core/schemas/handoff.ts` (documented in `references/handoff.md`) whose minimum field set is `companyName?` / `primarySpecId?` / `startDate?` / `signature?` / `entryPattern?` / `productScope?` with `additionalProperties: true`. No other handoff file, such as a per-skill `session-handoff.yaml`, is read. A non-conforming write, or an asymmetric edit of the SSOT-sync Pair IV (schema ↔ all skill writers), emits `R-HANDOFF-SCHEMA-DRIFT` at severity error with a non-empty `justification:`.
 ```

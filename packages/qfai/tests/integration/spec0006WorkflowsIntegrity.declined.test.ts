@@ -3,18 +3,18 @@
  * and a declined-only tree still raises no drift finding — the `ok` check itself
  * stays registered, which the boundary row asserts.
  *
- * TC-0006-0034 (AC-0006-0026 / EX-0006-0027) — Setup 「temp dir に init した adopter
- * tree で、provenance entry を持つ shipped workflow の 1 つを手編集し (modified)、別の
- * 1 つを install 後に削除する (declined)」, Action 「`qfai doctor --format json` を
- * 実行する」, Assert 「`details` が `workflowsDir` / `modified` / `declined` /
- * `packagedDir` の 4 key を持つこと」ほか。
+ * TC-0006-0034 (AC-0006-0026 / EX-0006-0027) — Setup "in a temp dir, in an init-ed adopter
+ * tree, hand-edit one of the shipped workflows that has a provenance entry (modified) and
+ * delete another after install (declined)", Action "run `qfai doctor --format json`",
+ * Assert "`details` has the four keys `workflowsDir` / `modified` / `declined` /
+ * `packagedDir`", among others.
  *
  * ## What `declined` is, and why it is payload rather than a trigger
  *
  * `shared/provenance.ts` `resolveWorkflowFileState` gives the state its meaning:
  * a name with a provenance ENTRY whose file is ABSENT on disk was deliberately
  * removed — "never recreated, never reported as stale, never pruned". The
- * shipped-workflows contract's BR-0020-0021 says `declined` is never reported again, so it
+ * shipped-workflows contract's BR-0018-0021 says `declined` is never reported again, so it
  * cannot become a reason to emit. It is information the operator needs while a
  * finding is being emitted for some OTHER reason: without it, an operator reading
  * a drift report cannot tell that QFAI knows the missing file is missing and is
@@ -42,8 +42,8 @@
  *
  * ## The message must not name the declined file
  *
- * TC-0006-0034's Assert closes with 「message body は declined file を stale として
- * 名指ししないこと」, and it is asserted negatively here. The contract reason: the
+ * TC-0006-0034's Assert closes with "the message body does not name a declined file as
+ * stale", and it is asserted negatively here. The contract reason: the
  * message's repair instruction tells the operator to replace each listed file with
  * the packaged copy, and a declined file listed there would instruct the operator
  * to undo a removal QFAI has promised never to undo.
@@ -148,8 +148,8 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
       "this row reads the drift emission, so the run must have taken that arm",
     ).toBe("info");
 
-    // CLAIM 1 — 「`details` が `workflowsDir` / `modified` / `declined` /
-    // `packagedDir` の 4 key を持つこと」. Exact, for the reason the header gives.
+    // CLAIM 1 — "`details` has the four keys `workflowsDir` / `modified` / `declined` /
+    // `packagedDir`". Exact, for the reason the header gives.
     expect
       .soft(
         sortedDetailsKeys(check?.details),
@@ -157,7 +157,7 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
       )
       .toEqual(["declined", "modified", "packagedDir", "workflowsDir"]);
 
-    // CLAIM 2 — 「`details.modified` が手編集 file を名指しすること」.
+    // CLAIM 2 — "`details.modified` names the hand-edited file".
     expect
       .soft(
         readStringArray(check?.details, "modified"),
@@ -165,7 +165,7 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
       )
       .toContain(adopterPath(STALE_NAME));
 
-    // CLAIM 3 — 「`details.declined` が削除 file を名指しすること」. Asserted as an
+    // CLAIM 3 — "`details.declined` names the deleted file". Asserted as an
     // exact list rather than by containment: the deleted name is the only
     // recorded name absent from disk, so containment would also pass on a
     // `declined` that swept in every recorded name.
@@ -173,7 +173,7 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
       .soft(readStringArray(check?.details, "declined"), "`declined` must name the deleted file")
       .toEqual([adopterPath(DECLINED_NAME)]);
 
-    // CLAIM 4 — 「message body は declined file を stale として名指ししないこと」.
+    // CLAIM 4 — "the message body does not name the declined file as stale".
     // Negative and scoped to the file NAME rather than to the whole path, which
     // is the stronger form: the path's directory prefix appears in the message
     // legitimately, so a needle on the full path would be satisfied by a message
@@ -187,7 +187,7 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
 
     const run = await runDoctorText(dir, "error");
 
-    // CLAIM 5 — 「finding severity は `info` のままで exit code は不変であること」.
+    // CLAIM 5 — "the finding severity stays `info` and the exit code is unchanged".
     // The severity half is guard #3; this is the exit-code half, read from a run
     // that renders the finding so the exit code cannot belong to `runDoctor`'s
     // `--autoremediate` CI-off early return.
@@ -276,18 +276,18 @@ describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
     ).toHaveLength(1);
     const check = findings[0];
 
-    // CLAIM 1 — 「check severity は `ok` であること」, and by the doctor contract's
+    // CLAIM 1 — "the check severity is `ok`", and by the doctor contract's
     // emission table that is also the statement that no drift finding was
     // emitted: the drift arm is the only producer of severity `info` for this id
     // on a resolvable packaged copy, so `ok` here excludes it.
     expect
       .soft(
         check?.severity,
-        "a declined name is never reported again — BR-0020-0021 — so a tree that has only declined names is `ok`",
+        "a declined name is never reported again — BR-0018-0021 — so a tree that has only declined names is `ok`",
       )
       .toBe("ok");
 
-    // CLAIM 2 — 「したがって `details.declined` も出力に現れないこと」. The ok arm's
+    // CLAIM 2 — "so `details.declined` does not appear in the output either". The ok arm's
     // payload is `workflowsDir` only. Asserted as an exact key list rather than
     // as `declined`-absent, because that is the form `TDD-0030` pins on this same
     // arm and a second, weaker assertion on the same object would be the loosening

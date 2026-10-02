@@ -1,5 +1,5 @@
-# US-0001-0100: Prototyping delegation scope
+# US-0001-0100: Shared screenshot capture guidance
 
 ## User Story
 
-As a QFAI maintainer, I want `/qfai-prototyping` to define a Delegation Scope Table, so that role ownership is explicit before implementation and evaluation begin.
+As a maintainer, I want screenshot capture guidance to remain documented as a shared utility contract, so that evidence generation stays consistent without a dedicated runtime entrypoint.

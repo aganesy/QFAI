@@ -5,29 +5,29 @@ dependencies: none
 version: 1.0.0
 ---
 
-# Claude Code ベストプラクティス
+# Claude Code Best Practices
 
-Claude Code を使うときの共通ルール。
+Common rules for working with Claude Code.
 
-## 関連ドキュメント
+## Related Documents
 
-- 共通品質基準: [../../00_universal/development-principles-checklist.md](../../00_universal/development-principles-checklist.md)
-- メトリクス: [../../01_specialties/development-principles-metrics.md](../../01_specialties/development-principles-metrics.md)
+- Common quality criteria: [../../00_universal/development-principles-checklist.md](../../00_universal/development-principles-checklist.md)
+- Metrics: [../../01_specialties/development-principles-metrics.md](../../01_specialties/development-principles-metrics.md)
 
-## トーンとスタイル
+## Tone and Style
 
-- 余計な前置きは省き、4行以内で要点を回答（コードやツール出力は除く）。
-- 質問や確認が必要な場合は最小の問いで聞く。
+- Skip unnecessary preamble and answer the key points in four lines or fewer (code and tool output excepted).
+- When a question or confirmation is needed, ask the smallest question that settles it.
 
-## 進め方
+## Workflow
 
-1. 関連ファイルと仕様を読む（すぐにコードを書かない）。
-2. 複雑な作業は Plan を提示し、承認後に実装。
-3. 変更は小さくまとめ、テストを実行・報告。
-4. 残リスクや不明点があれば必ず記載する。
+1. Read the relevant files and specifications (do not start writing code straight away).
+2. For complex work, present a plan and implement after approval.
+3. Keep changes small, then run the tests and report the results.
+4. Always state any remaining risks or open points.
 
-## 禁止事項
+## Prohibited
 
-- 秘密情報の埋め込み・露出。
-- ユーザー許可なしの `eslint-disable*` / `@ts-ignore` の追加・使用。
-- テスト失敗を無視したままの完了報告。
+- Embedding or exposing secrets.
+- Adding or using `eslint-disable*` / `@ts-ignore` without the user's permission.
+- Reporting completion while ignoring a test failure.

@@ -8,6 +8,10 @@ import {
 import { collectFilesByGlobs } from "../../core/fs.js";
 import { parseHeadings } from "../../core/parse/markdown.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../../core/storyTree/ids.js";
+import {
+  markdownOutsideContractForm,
+  NON_MARKDOWN_CONTRACT_FORMS,
+} from "../../core/storyTree/layout.js";
 import { shapeCliContract } from "./cliContract.js";
 import { MigrationInputError, type MigrationContext, type MigrationOperation } from "./harness.js";
 import {
@@ -39,37 +43,88 @@ export type ContractPlan = {
 
 const KIND_DIRS = Object.keys(CONTRACT_KIND_BY_DIR);
 const EXTENSIONS = /\.(?:md|ya?ml|json|sql)$/i;
-/** The design files a 1.x release generated beside its contracts; none of them is a contract. */
-const NOT_CONTRACTS = new Set([
-  "design/DESIGN.md.lock.yaml",
-  "design/design-system.yaml",
-  "design/prototype-handoff.yaml",
-]);
+/** A 1.x directory under the contracts directory that 2.x does not have. */
+const DESIGN = "design";
 const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
-export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+\b/g;
+export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+(?!-?\w)/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
-const DEPENDS_COMMENT = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:/i;
-const DEPENDS_KEY = /^\s*"?x-qfai-depends-on"?\s*:(.*)$/i;
 const FILE_LIMIT = 200_000;
-/** Where the original of a contract step 3 could not reshape whole is kept. */
+/** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired/contract";
+
+/**
+ * Why step 3 writes no contract from a file under the contracts directory, or
+ * null when the file is a contract. `relative` is posix.
+ */
+export function notAContract(relative: string): string | null {
+  if (relative.split("/")[0] === DESIGN)
+    return `${DESIGN}/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract`;
+  const directory = markdownOutsideContractForm(relative);
+  return directory === null
+    ? null
+    : `Markdown is not a contract: ${directory}/ holds ${NON_MARKDOWN_CONTRACT_FORMS[directory]} contracts`;
+}
 
 function kindOf(relative: string): string {
   const directory = relative.split("/")[0] ?? "";
   return Object.entries(CONTRACT_KIND_BY_DIR).find(([name]) => name === directory)?.[1] ?? "";
 }
 
-async function contractFiles(context: MigrationContext): Promise<string[]> {
+/**
+ * Every file under a kind directory or `design/`, relative to the contracts
+ * directory. A dot-prefixed path counts only under `design/`: that directory
+ * moves whole, so every file the move carries is named for a person.
+ */
+async function contractDirectoryFiles(context: MigrationContext): Promise<string[]> {
+  const relativeOf = (file: string) =>
+    path.relative(context.contractsDir, file).split(path.sep).join("/");
   const selected = await collectFilesByGlobs(context.contractsDir, {
-    globs: KIND_DIRS.map((directory) => `${directory}/**/*`),
+    globs: [...new Set([...KIND_DIRS, DESIGN])].map((directory) => `${directory}/**/*`),
     limit: FILE_LIMIT,
+    dot: true,
+    filter: (file) => {
+      const segments = relativeOf(file).split("/");
+      return segments[0] === DESIGN || !segments.some((segment) => segment.startsWith("."));
+    },
   });
   if (selected.truncated)
     throw new MigrationInputError(`Contract selection exceeds ${FILE_LIMIT} files`);
-  return selected.files
-    .map((file) => path.relative(context.contractsDir, file).split(path.sep).join("/"))
-    .filter((relative) => EXTENSIONS.test(relative) && !NOT_CONTRACTS.has(relative))
-    .sort();
+  return selected.files.map(relativeOf).sort();
+}
+
+async function contractFiles(context: MigrationContext): Promise<string[]> {
+  return (await contractDirectoryFiles(context)).filter(
+    (relative) => EXTENSIONS.test(relative) && notAContract(relative) === null,
+  );
+}
+
+/**
+ * Moves every 1.x file step 3 writes no contract from to `retired/contract/`,
+ * and names each for a person: a Markdown file under `api/`, `db/` or `ui/`,
+ * and every file of `design/`, which moves as one directory.
+ */
+async function retireNonContracts(
+  context: MigrationContext,
+): Promise<{ operations: MigrationOperation[]; forAPerson: string[] }> {
+  const operations: MigrationOperation[] = [];
+  const forAPerson: string[] = [];
+  let design = false;
+  for (const relative of await contractDirectoryFiles(context)) {
+    const reason = notAContract(relative);
+    if (reason === null) continue;
+    const source = contractRepoPath(context, relative);
+    const archive = `${RETIRED}/${relative}`;
+    if (relative.startsWith(`${DESIGN}/`)) design = true;
+    else operations.push({ kind: "move", source, target: archive });
+    forAPerson.push(`${source}: ${reason}; rewrite what it states by hand (kept at ${archive})`);
+  }
+  if (design)
+    operations.unshift({
+      kind: "move",
+      source: contractRepoPath(context, DESIGN),
+      target: `${RETIRED}/${DESIGN}`,
+    });
+  return { operations, forAPerson };
 }
 
 /** `api/api-0001-orders.yaml` for API-0001 at `api/orders.yaml`. */
@@ -89,7 +144,7 @@ type Candidate = { relative: string; kind: string; old: string | null };
 
 /**
  * Numbers every contract that declares no `<KIND>-NNNN` ID: in the kind order
- * cli, api, db, ui, design, then by the number of its old `CON-*` ID, then by
+ * cli, api, db, ui, then by the number of its old `CON-*` ID, then by
  * path. Numbers run on from the highest a contract already declares.
  */
 async function assignContractIds(
@@ -142,8 +197,9 @@ function contractRepoPath(context: MigrationContext, relative: string): string {
   return repositoryRelative(context.root, path.join(context.contractsDir, relative));
 }
 
-function replaceTokens(line: string, oldIds: Record<string, string>): string {
-  return line.replace(OLD_CONTRACT_TOKEN, (token) => oldIds[token] ?? token);
+/** Every old `CON-*` ID the contract map translates, replaced as a whole ID. */
+function replaceTokens(text: string, oldIds: Record<string, string>): string {
+  return text.replace(OLD_CONTRACT_TOKEN, (token) => oldIds[token] ?? token);
 }
 
 function declarationLine(relative: string, id: string): string {
@@ -153,38 +209,17 @@ function declarationLine(relative: string, id: string): string {
   return `# QFAI-CONTRACT-ID: ${id}`;
 }
 
-/**
- * The contract with its new ID declared, and the old IDs its dependency
- * declaration names replaced. Any other old ID is left for a person.
- */
-function rewriteStructured(
-  text: string,
-  relative: string,
-  id: string,
-  oldIds: Record<string, string>,
-): string {
+/** The contract with its new ID declared. */
+function rewriteStructured(text: string, relative: string, id: string): string {
   const lines = text.split("\n");
   if (!lines.some((line) => DECLARATION.test(line)))
-    return rewriteStructured(`${declarationLine(relative, id)}\n${text}`, relative, id, oldIds);
-  let list: "array" | "block" | null = null;
-  const rewritten = lines.map((line) => {
-    const declaration = DECLARATION.exec(line);
-    if (declaration) return `${declaration[1] ?? ""}${id}${declaration[3] ?? ""}`;
-    const key = DEPENDS_KEY.exec(line);
-    if (key) {
-      const value = (key[1] ?? "").replace(/#.*$/, "").trim();
-      list = value === "" ? "block" : value.includes("[") && !value.includes("]") ? "array" : null;
-      return replaceTokens(line, oldIds);
-    }
-    if (list === "array") {
-      if (line.includes("]")) list = null;
-      return replaceTokens(line, oldIds);
-    }
-    if (list === "block" && /^\s*-\s/.test(line)) return replaceTokens(line, oldIds);
-    list = null;
-    return DEPENDS_COMMENT.test(line) ? replaceTokens(line, oldIds) : line;
-  });
-  return rewritten.join("\n");
+    return rewriteStructured(`${declarationLine(relative, id)}\n${text}`, relative, id);
+  return lines
+    .map((line) => {
+      const declaration = DECLARATION.exec(line);
+      return declaration ? `${declaration[1] ?? ""}${id}${declaration[3] ?? ""}` : line;
+    })
+    .join("\n");
 }
 
 /** A Markdown contract declares its ID in its H1: `# API-0001: <title>`. */
@@ -213,21 +248,29 @@ function rewriteContract(
   id: string,
   oldIds: Record<string, string>,
 ): string {
-  return relative.toLowerCase().endsWith(".md")
+  const declared = relative.toLowerCase().endsWith(".md")
     ? rewriteMarkdown(text, relative, id)
-    : rewriteStructured(text, relative, id, oldIds);
+    : rewriteStructured(text, relative, id);
+  return replaceTokens(declared, oldIds);
 }
 
-/** Every old `CON-*` ID still in a rewritten contract, one item per line. */
-function leftoverIds(text: string, repoPath: string, oldIds: Record<string, string>): string[] {
-  return text.split("\n").flatMap((line, index) =>
-    [...new Set(line.match(OLD_CONTRACT_TOKEN) ?? [])].map((token) => {
-      const next = oldIds[token];
-      return next
-        ? `${repoPath}:${index + 1}: ${token} is now ${next}; write ${next} here and wherever the project uses ${token}`
-        : `${repoPath}:${index + 1}: ${token} is declared by no contract, so it has no new ID`;
-    }),
-  );
+/**
+ * Every old `CON-*` ID still in a rewritten contract, one item per line: an ID the
+ * contract map does not translate. `declared` holds the old IDs some contract declared.
+ */
+function leftoverIds(text: string, repoPath: string, declared: ReadonlySet<string>): string[] {
+  return text
+    .split("\n")
+    .flatMap((line, index) =>
+      [...new Set(line.match(OLD_CONTRACT_TOKEN) ?? [])].map(
+        (token) =>
+          `${repoPath}:${index + 1}: ${token} is ${
+            declared.has(token)
+              ? "declared by more than one contract, so it has no single new ID"
+              : "declared by no contract, so it has no new ID"
+          }`,
+      ),
+    );
 }
 
 function contractTitle(text: string, relative: string): string {
@@ -238,15 +281,17 @@ function contractTitle(text: string, relative: string): string {
 
 /**
  * Step 3's contract work: the contract map, read back when an earlier run wrote
- * it, and for each 1.x contract still at its old path the write of its renamed
- * copy and the removal of the old file.
+ * it, for each 1.x contract still at its old path the write of its renamed
+ * copy and the removal of the old file, and the archiving of every file that is
+ * no contract.
  */
 export async function planContracts(context: MigrationContext): Promise<ContractPlan> {
   const existing = await readContractMap(context.root);
   const assigned = existing === null ? await assignContractIds(context) : null;
   const map = existing ?? assigned?.map ?? {};
-  const forAPerson = [...(assigned?.forAPerson ?? [])];
-  const operations: MigrationOperation[] = [];
+  const retired = await retireNonContracts(context);
+  const forAPerson = [...retired.forAPerson, ...(assigned?.forAPerson ?? [])];
+  const operations: MigrationOperation[] = [...retired.operations];
   if (existing === null && Object.keys(map).length > 0)
     operations.push({
       kind: "write",
@@ -254,6 +299,7 @@ export async function planContracts(context: MigrationContext): Promise<Contract
       content: serializeContractMap(map),
     });
   const oldIds = oldContractIds(map);
+  const declared = new Set(Object.values(map).flatMap((entry) => (entry.old ? [entry.old] : [])));
   const contracts: IndexedContract[] = [];
   const renamed = new Set(Object.values(map).map((entry) => entry.path));
   for (const [relative, entry] of Object.entries(map)) {
@@ -275,7 +321,7 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));
-    forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), oldIds));
+    forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), declared));
     contracts.push(indexed(entry.path, entry.id, text, entry.old, relative));
   }
   for (const relative of await contractFiles(context)) {

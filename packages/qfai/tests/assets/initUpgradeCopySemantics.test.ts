@@ -9,7 +9,7 @@ import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const readRepo = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
 
-const CONTRACT = ".qfai/spec/03_contract/cli/cli-0011-qfai-init.md";
+const CONTRACT = ".qfai/spec/03_contract/cli/cli-0009-qfai-init.md";
 const IMPL = "packages/qfai/src/cli/commands/init.ts";
 
 /** The init contract's business-rule statement that holds `needle`. */

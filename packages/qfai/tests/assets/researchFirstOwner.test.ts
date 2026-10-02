@@ -7,7 +7,10 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const defaults = path.join(repoRoot, "packages/qfai/assets/defaults/agent-routing.yml");
+const defaults = path.join(
+  repoRoot,
+  "packages/qfai/assets/defaults/agent-routing/qfai-discussion.yml",
+);
 
 async function framingAgents(): Promise<string[]> {
   const parsed: unknown = parseYaml(await readFile(defaults, "utf8"));
