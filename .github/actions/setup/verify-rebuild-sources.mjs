@@ -55,6 +55,36 @@ function allowedNames(listPath) {
 }
 
 /**
+ * Refuse a root key this scan cannot be sure it reads the way the package manager does.
+ *
+ * A root key is read only as a bare identifier at column zero. A quoted key, an escaped spelling,
+ * the explicit `? key` form and a root mapping that is indented all name `allowBuilds` to the
+ * manager and name nothing to a line scan, so each would pass as "no list" with a permission
+ * standing. Rather than enumerate those spellings, any root line that is not the one plain form is
+ * refused. Indented lines belong to the key above them and are read there.
+ *
+ * @param {string[]} lines the workspace configuration, split into lines
+ * @param {string} workspacePath the file the lines came from, for the message
+ */
+function refuseUnreadableRoots(lines, workspacePath) {
+  let rooted = false;
+  for (const line of lines) {
+    if (line.trim() === "" || /^\s*#/.test(line)) continue;
+    if (/^---\s*(?:#.*)?$/.test(line)) {
+      rooted = false;
+      continue;
+    }
+    const indented = /^\s/.test(line);
+    const plain = /^-(?:\s|$)/.test(line) || /^[A-Za-z_][A-Za-z0-9_-]*\s*:(?:\s|$)/.test(line);
+    if (indented ? rooted : plain) {
+      rooted = true;
+      continue;
+    }
+    throw new Error(`${workspacePath} holds a root line this check cannot read: ${line.trim()}`);
+  }
+}
+
+/**
  * The packages the package manager's own configuration permits to build, or `null` where it keeps
  * no such list.
  *
@@ -80,17 +110,7 @@ function allowedNames(listPath) {
  */
 function permittedNames(workspacePath) {
   const lines = readFileSync(workspacePath, "utf-8").split(/\r?\n/);
-  // The key is read only in its bare, unindented spelling. A quoted key, or one an indented
-  // root mapping carries, is the same key to the manager and an absent list to this scan, so
-  // it is refused rather than reported as no list at all.
-  const respelled = lines.find(
-    (line) => /^\s*["']?allowBuilds["']?\s*:/.test(line) && !/^allowBuilds\s*:/.test(line),
-  );
-  if (respelled !== undefined) {
-    throw new Error(
-      `allowBuilds in ${workspacePath} is spelled in a way this check cannot read: ${respelled.trim()}`,
-    );
-  }
+  refuseUnreadableRoots(lines, workspacePath);
   const names = [];
   let inBlock = false;
   for (const line of lines) {
