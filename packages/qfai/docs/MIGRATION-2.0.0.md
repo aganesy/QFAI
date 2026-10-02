@@ -122,6 +122,15 @@ node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs
 ```
 
+Steps 1 to 10 each print one line before their report, in a dry run and a real
+run. It is `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` when
+the tree shows no trace of the old layout, `1.x layout found, migrating` when it
+shows one or the step has work of its own, and
+`already migrated (id-map.json present)` when an earlier run finished. If every
+one of steps 1 to 10 prints the first, nothing was found to migrate in the
+directory it names: check that your specs live there. Step 10 also ends with a `Summary:` line
+for the first two cases. Steps 11 and 12 print neither line.
+
 Step 10 removes every `.gitignore` negation that re-includes `.qfai/evidence/`
 and takes that directory out of the git index. The files stay on disk. Commit
 the resulting deletions with the rest of the migration.

@@ -107,6 +107,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is none, says to run the project's install command, or `npm i -D qfai` when `package.json` does not
   list `qfai`. The launcher preflight in the shared operating baseline separates the same two cases,
   and the migration guide says each checkout and worktree needs its own install.
+- **Steps 1 to 10 of `qfai-migration-v1-to-v2` open their report with a verdict line.** The line
+  is `no 1.x layout found under <specsDir> (paths.specsDir=<value>)`, `1.x layout found, migrating`
+  or `already migrated (id-map.json present)`, followed by an empty line and `## Operations`. The
+  directory is written from the project root, never as an absolute path. Step 10 also ends with a
+  `Summary:` line for the first two cases, and the already-done line stays last on a migrated
+  project. Steps 11 and 12 are unchanged. The skill and the migration guide name the three lines
+  and tell the AI to report that there is nothing to migrate in the directory the line names, and
+  to ask the person to check that the specs live there. Fixes #2727.
 
 ### Fixed
 
