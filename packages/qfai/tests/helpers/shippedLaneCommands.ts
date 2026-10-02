@@ -1709,6 +1709,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
