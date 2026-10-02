@@ -66,7 +66,7 @@ it("The READMEs claim exactly the hosts with a passing eval record for this vers
   const all = await readmes();
   const recorded = recordedHosts(await records(), current);
 
-  // Each README claims exactly the hosts with a passing record: none until one is committed.
+  // `recorded` is the hosts with a passing record for this version; each README claims exactly those.
   expect({
     claimed: Object.values(all).map((readme) => claimedHosts(readme)?.sort()),
     problems: claimProblems(all, await records(), current),
