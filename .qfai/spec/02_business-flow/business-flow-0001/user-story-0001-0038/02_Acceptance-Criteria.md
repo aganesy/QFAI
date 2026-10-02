@@ -35,4 +35,11 @@ Feature: Story-tree seeding
     Given an empty project directory, which `qfai init` lays out as the story tree
     When `qfai init` runs
     Then `.qfai/spec/01_policy/objective.md`, `initiative.md` and `principle.md` and `.qfai/spec/03_contract/tech.md` are written, and none of `catalog/product.md`, `catalog/manifest.md`, `catalog/tech.md` and `catalog/structure.md` is, so no fact is seeded in two places
+
+  # AC-0001-0038-06
+  Scenario: A clone of a freshly initialised project is still the untouched seed
+    Given a project on which `qfai init` has just run and whose four empty directories `03_contract/api/`, `cli/`, `db/` and `ui/` are absent, as in a clone or a CI checkout
+    When `qfai validate --profile full --fail-on error` runs
+    Then it raises no `QFAI-ASSETS-003`, exactly as it does on the directory `qfai init` ran in
+    And once a seeded file is edited, the finding is raised whether or not those directories exist
 ```

@@ -424,6 +424,155 @@ describe("automerge is declared together with the check that decides whether any
         "describes is the only thing standing between a dependency bump and the default branch",
     ).not.toHaveLength(0);
   });
+
+  it("names every package the policy above does not reach, and why each is out", () => {
+    // The row above reads `automerge` at the top level, and a rule that switches a package off
+    // leaves it passing over a key that no longer decides that package. Its own comment says so.
+    // So the exceptions are enumerated here: one entry per package the bot may not offer, and
+    // nothing else may carry `enabled: false`.
+    //
+    // The list is the claim. A rule that later widened to another package, or narrowed an
+    // exception to one update type, changes what this reads and fails here rather than passing
+    // green over an invariant it no longer holds.
+    const EXEMPT = ["@vitest/coverage-v8", "vitest"];
+
+    // The config without its comments. A commented-out property is not a property Renovate
+    // reads, so every assertion below reads this text and not the file's.
+    const withoutComments = (text: string): string => {
+      let out = "";
+      let quote = "";
+      for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i] ?? "";
+        const next = text[i + 1] ?? "";
+        if (quote !== "") {
+          out += ch;
+          if (ch === "\\") {
+            out += next;
+            i += 1;
+          } else if (ch === quote) quote = "";
+        } else if (ch === "/" && next === "/") {
+          while (i < text.length && text[i] !== "\n") i += 1;
+          out += "\n";
+        } else if (ch === "/" && next === "*") {
+          const close = text.indexOf("*/", i + 2);
+          i = close === -1 ? text.length : close + 1;
+        } else {
+          if (ch === '"' || ch === "'") quote = ch;
+          out += ch;
+        }
+      }
+      return out;
+    };
+
+    // Each `packageRules` entry, WHOLE. A bounded lookahead from `matchPackageNames` reads a
+    // window rather than an object, and JSON5 fixes no property order — so a `matchUpdateTypes`
+    // written after `enabled: false` falls outside the window and the narrowing it performs is
+    // invisible. This walks braces instead, skipping strings, so the block a claim below reads
+    // is the rule Renovate reads. It takes comment-free text.
+    const ruleObjects = (config: string): string[] => {
+      const at = config.indexOf("packageRules:");
+      if (at === -1) return [];
+      const open = config.indexOf("[", at);
+      if (open === -1) return [];
+      const rules: string[] = [];
+      let depth = 0;
+      let from = -1;
+      let quote = "";
+      for (let i = open; i < config.length; i += 1) {
+        const ch = config[i] ?? "";
+        if (quote !== "") {
+          if (ch === "\\") i += 1;
+          else if (ch === quote) quote = "";
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+        } else if (ch === "{") {
+          if (depth === 0) from = i;
+          depth += 1;
+        } else if (ch === "}") {
+          depth -= 1;
+          if (depth === 0 && from !== -1) {
+            rules.push(config.slice(from, i + 1));
+            from = -1;
+          }
+        } else if (ch === "]" && depth === 0) break;
+      }
+      return rules;
+    };
+
+    const config = withoutComments(configText());
+    const disablingRules = ruleObjects(config).filter((rule) => /enabled:\s*false/.test(rule));
+    const disabled = disablingRules
+      .flatMap((rule) => [
+        ...(/matchPackageNames:\s*\[([^\]]*)\]/.exec(rule)?.[1] ?? "").matchAll(/"([^"]+)"/g),
+      ])
+      .map((match) => match[1])
+      .filter((name): name is string => name !== undefined)
+      .sort();
+
+    expect(
+      disabled,
+      "a package switched off is an exception to the automerge policy the row above pins, and " +
+        "the policy is read from a top-level key that says nothing about it. Adding one means " +
+        "adding it here, where the set is what a reader checks",
+    ).toEqual([...EXEMPT].sort());
+
+    // And the exception is a refusal to offer the package at all, not a narrowing to one update
+    // type or one dependency type. A narrowing leaves the same pairing broken on every update it
+    // does not name, which is the reading the provider's own peer range makes unsafe. So the
+    // package names are the only selector such a rule may carry.
+    for (const rule of disablingRules) {
+      const selectors = [...rule.matchAll(/\b((?:match|exclude)[A-Z]\w*)\s*:/g)].map(
+        (match) => match[1],
+      );
+      expect(
+        selectors,
+        "a package switched off must be switched off outright: any selector besides " +
+          "`matchPackageNames` in the same rule, such as `matchUpdateTypes`, `matchDepTypes` or " +
+          "`excludePackageNames`, " +
+          "leaves the updates it does not name arriving exactly as before",
+      ).toEqual(["matchPackageNames"]);
+    }
+
+    // And a security fix still reaches them. The vulnerability block is applied as a forced
+    // override, so its own `enabled` is the one thing that outranks the refusal above — without
+    // it, the manual-update exception silently becomes an exception to that policy too.
+    expect(
+      /vulnerabilityAlerts:\s*\{[\s\S]*?\n {2}\}/.exec(config)?.[0] ?? "",
+      "the vulnerability policy must state `enabled: true`, or a package switched off above " +
+        "stops receiving security fixes as well as ordinary ones",
+    ).toMatch(/enabled:\s*true/);
+
+    // And the guide a maintainer reads says the same, because the rule alone tells nobody that
+    // the package now moves by hand.
+    const guide = readFileSync(path.join(REPO_ROOT, ".github/renovate.md"), "utf-8");
+    for (const name of EXEMPT) {
+      expect(
+        guide,
+        `.github/renovate.md promises that nothing waits for a human, so it has to name ${name} ` +
+          "as a package that does",
+      ).toContain(name);
+    }
+
+    // The names alone can survive the section that says what to do about them, so the section
+    // is read too: its own heading, and the manual step it exists to describe.
+    const section =
+      /^### The test runner and its coverage provider\s*$([\s\S]*?)(?=^#{1,3} )/m.exec(
+        guide,
+      )?.[1] ?? "";
+    for (const name of EXEMPT) {
+      expect(
+        section,
+        `the guide's section on the held-back pair has to name ${name} and say how it is raised`,
+      ).toContain(name);
+    }
+    expect(
+      section,
+      "the guide's section on the held-back pair has to say that raising it is a manual step, " +
+        "because Renovate sends no pull request that would remind anyone",
+    ).toMatch(/manual step/);
+  });
 });
 
 describe("only one of the two files schedules this bot", () => {

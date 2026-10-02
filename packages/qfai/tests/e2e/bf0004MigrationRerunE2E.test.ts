@@ -21,6 +21,12 @@ import process from "node:process";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
+import {
+  isMigrationReportPath,
+  migrationReportFiles,
+  readMigrationReport,
+} from "../helpers/migrationReport.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -139,6 +145,7 @@ async function snapshot(root: string): Promise<Map<string, string>> {
     const file = path.join(entry.parentPath, entry.name);
     const relative = path.relative(root, file).split(path.sep).join("/");
     if (/^(?:\.git|node_modules)(?:\/|$)/.test(relative) || entry.isDirectory()) continue;
+    if (isMigrationReportPath(relative)) continue;
     found.set(
       relative,
       entry.isSymbolicLink()
@@ -242,6 +249,29 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
       expect(result.stdout).not.toContain(ALREADY_DONE);
     }
     expect(applied.every((result) => result.status === 0 || result.status === 3)).toBe(true);
+    // Each of the twelve steps kept the report of its dry run and of its real run, and the exit code.
+    for (let number = 1; number <= 12; number += 1) {
+      for (const [kind, results] of [
+        ["dry-run", preview],
+        ["run", applied],
+      ] as const) {
+        const kept = await migrationReportFiles(root, kind, number);
+        expect(kept, `step ${number} ${kind}`).toHaveLength(1);
+        const text = await readMigrationReport(root, kept[0] ?? "");
+        const last = text
+          .split(/\r?\n/)
+          .filter((line) => line.trim() !== "")
+          .at(-1);
+        expect(last, `step ${number} ${kind}`).toBe(`Exit code: ${results[number - 1]?.status}`);
+      }
+    }
+    // Steps 1 to 10 say what they found before they report; steps 11 and 12 open on their report.
+    for (const [position, result] of [...preview, ...applied].entries()) {
+      const index = position % 12;
+      expect(result.stdout.split(/\r?\n/)[0], `step ${index + 1}`).toBe(
+        index < 10 ? "1.x layout found, migrating" : "## Operations",
+      );
+    }
     expect(applied[11]?.status, applied[11]?.stdout).toBe(0);
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),
@@ -265,7 +295,7 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         "assistant/skill/qfai-run",
       );
     }
-    expect(await textOrNull(root, "AGENTS.md")).toContain("`qfai-run`");
+    expect((await textOrNull(root, "AGENTS.md")) ?? "").not.toContain("`qfai-run`");
     expect(await textOrNull(root, ".gitignore")).toContain(".qfai/run/\n");
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
@@ -281,6 +311,7 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     const test = "tests/integration/order.test.ts";
     await reannotate(root, test, "CON-API-0001", "API-0001");
     await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+    await deleteE2eCaseAnnotation(root, "tests/e2e/order.test.ts");
     await rm(path.join(root, ".claude/settings.json"));
     await cp(EARLIER_CODEX_HOOKS, path.join(root, ".codex/hooks.json"));
     const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
@@ -300,9 +331,15 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         expect(real.status, `pass ${pass} step ${number}: ${real.stdout}${real.stderr}`).toBe(0);
         expect(real.stdout, `pass ${pass} step ${number}`).toBe(dryRun.stdout);
         if (number <= 10) {
+          expect(real.stdout.split(/\r?\n/).slice(0, 3), `step ${number}`).toEqual([
+            "already migrated (id-map.json present)",
+            "",
+            "## Operations",
+          ]);
           expect(real.stdout.endsWith(`\n${ALREADY_DONE}\n`), `step ${number}`).toBe(true);
         } else {
           expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
+          expect(real.stdout.split(/\r?\n/)[0], `step ${number}`).toBe("## Operations");
         }
         if (number === 11) {
           expect(section(real.stdout, "Reminder hooks").join("\n")).not.toContain("edited here");

@@ -32,4 +32,13 @@ Feature: Managed `.gitignore` block
     And it reports `.qfai/evidence/workflow/x/summary.json` ignored
     And the marker line and `.qfai/run/` each occur once, and `!.qfai/evidence/workflow/` does not occur
     And the second run leaves `.gitignore` byte-identical
+
+  # AC-0001-0033-04
+  Scenario: The managed block does not repeat an ignore the project already has
+    Given a `.gitignore` with no managed block whose own lines already ignore the repository-root `tmp/` staging directory, as `/tmp/` or as `tmp/`
+    When `qfai init` runs, and then runs again
+    Then the managed block holds no `/tmp/` line and the file ignores `tmp/scratch.txt` through the project's line alone
+    And one output line names the lines left out of the block
+    And the second run leaves `.gitignore` byte-identical
+    And when the project's own lines do not ignore that directory, for instance because a later `!/tmp/` cancels them, the block carries `/tmp/`
 ```

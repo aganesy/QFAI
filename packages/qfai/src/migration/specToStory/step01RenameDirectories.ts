@@ -1,7 +1,7 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parseDocument } from "yaml";
+import { isMap, parseDocument, type Document } from "yaml";
 
 import { isEnoent } from "../../core/fs/errno.js";
 import {
@@ -86,6 +86,24 @@ async function availableLegacyTarget(
   }
 }
 
+/** The traceability keys no check reads any longer, which step 1 removes. */
+const RETIRED_TRACEABILITY_KEYS = ["scMustHaveTest", "unknownContractIdSeverity"] as const;
+
+/** Removes the retired keys, and a mapping the removal leaves empty; returns the keys removed. */
+function removeRetiredTraceabilityKeys(document: Document): string[] {
+  const removed: string[] = [];
+  for (const key of RETIRED_TRACEABILITY_KEYS) {
+    if (!document.hasIn(["validation", "traceability", key])) continue;
+    document.deleteIn(["validation", "traceability", key]);
+    removed.push(`validation.traceability.${key}`);
+  }
+  for (const mapping of [["validation", "traceability"], ["validation"]]) {
+    const node = document.getIn(mapping, true);
+    if (removed.length > 0 && isMap(node) && node.items.length === 0) document.deleteIn(mapping);
+  }
+  return removed;
+}
+
 async function planConfigRewrite(root: string): Promise<MigrationOperation | null> {
   const target = "qfai.config.yaml";
   let original: string;
@@ -106,7 +124,14 @@ async function planConfigRewrite(root: string): Promise<MigrationOperation | nul
     document.setIn(["paths", key], newPath);
     changed = true;
   }
-  return changed ? { kind: "write", target, content: String(document) } : null;
+  const removed = removeRetiredTraceabilityKeys(document);
+  if (!changed && removed.length === 0) return null;
+  return {
+    kind: "write",
+    target,
+    content: String(document),
+    notes: removed.map((key) => `${target}: remove ${key}`),
+  };
 }
 
 export const step01: MigrationStep = {
