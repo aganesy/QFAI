@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Step 12 of `qfai-migration-v1-to-v2` lists the project files that still
+  name a 1.x path.** A skill, agent or document the project wrote is not
+  rewritten, and it kept reading `.qfai/specs/`, `_policies/`, `spec-NNNN`,
+  `assistant/steering` and the other 1.x paths after every step passed. Step 12
+  now reads each tracked file outside `.qfai/`, the configured spec and contract
+  directories and `.github/copilot-instructions.md`, and prints one item per
+  line, `old-path: <file>:<line>: still names 1.x paths: ...`; any such item
+  makes step 12 exit 3. A new `## Files scanned` section says how many files it checked, or
+  that the project is not a git repository. Any other git failure is exit 2.
+  The migration guide gives the 2.x location of each of the thirteen paths, and
+  `SKILL.md` has the AI reword each listed line with the person who wrote the
+  file. Fixes #2726.
 - **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
   writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
   or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
