@@ -257,7 +257,10 @@ it("An adopted feature re-routes to the route triage-close names and keeps gate:
 // QFAI:EX-0001-0215-10
 it("A defect found while investigating re-routes by the decision rules", async () => {
   const run = await routed({ intent: "question-why" }, { proposedWriteScope: [] });
-  await settle(run, { branch: { outcome: "defect-found", extraction: DEFECT } });
+  await settle(run, {
+    branch: { outcome: "defect-found", extraction: DEFECT },
+    closure: undefined,
+  });
 
   expect(run.snapshot.pendingReroute).toEqual({
     route: "fix-defect",
@@ -371,7 +374,10 @@ it("A carried receipt satisfying one step of a longer first stage leaves the sta
 // A request re-routed twice: investigated, found a defect, then found to expect something else.
 async function reroutedTwice(): Promise<JournalRun> {
   const run = await routed({ intent: "question-why" }, { proposedWriteScope: [] });
-  await settle(run, { branch: { outcome: "defect-found", extraction: DEFECT } });
+  await settle(run, {
+    branch: { outcome: "defect-found", extraction: DEFECT },
+    closure: undefined,
+  });
   await routeAgain(run);
   await settle(run, diagnosed("expectation-differs"));
   await routeAgain(run, { proposedWriteScope: [] });

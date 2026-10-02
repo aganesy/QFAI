@@ -42,7 +42,7 @@ import {
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
 import { reportedRoute } from "../../core/workflow/routes.js";
-import { obligationFilesOf } from "../../core/workflow/storyFacts.js";
+import { obligationOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowDecision,
   WorkflowDependency,
@@ -449,8 +449,13 @@ async function acceptedDependencies(
   const target = workOrder.target;
   const flowId = target?.kind === "flow" ? target.flowId : snapshot.flowBinding?.flowId;
   const { config } = await loadConfig(root);
-  const obligation = flowId ? await obligationFilesOf(root, config, flowId) : [];
-  return receiptDependenciesOf(root, workOrder, input.result, obligation);
+  const obligation = flowId ? await obligationOf(root, config, flowId) : undefined;
+  return receiptDependenciesOf(
+    root,
+    workOrder,
+    input.result,
+    flowId && obligation ? { flowId, ...obligation } : undefined,
+  );
 }
 
 // The decision's events, the files they reference, and the journal records that publish them.
