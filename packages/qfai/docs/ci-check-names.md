@@ -6,9 +6,9 @@ result even when it produces several check runs.
 
 ## Full and documentation-only runs
 
-A full run expands both `test` and `node-floor` over the same nine slices:
-`cli`, `core`, `e2e`, `integration`, `pr-fix`, `pr-merge`, `scripts`, `unit`, and
-`validators`. Their check names have the form `test (core)` and
+A full run expands both `test` and `node-floor` over the same seven slices:
+`cli`, `core`, `e2e`, `integration`, `scripts`, `unit`, and `validators`.
+Their check names have the form `test (core)` and
 `node-floor (core)`.
 
 The detector selects the documentation-only path for changes confined to its

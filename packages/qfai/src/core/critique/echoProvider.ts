@@ -1,6 +1,6 @@
 /**
  * Echo provider — returns a predefined critique response for testing
- * and demonstration purposes (BR-0029-0006).
+ * and demonstration purposes.
  */
 
 import type { CritiqueInput, CritiqueProvider, CritiqueResponse } from "./types.js";

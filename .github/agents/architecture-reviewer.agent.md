@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/architecture-reviewer.md
+../../.qfai/assistant/agent/architecture-reviewer.md

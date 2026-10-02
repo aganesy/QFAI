@@ -4,14 +4,9 @@
  * `packages/qfai/assets/init/root/.github/workflows/**`, which belongs to a
  * different spec and a different contract.
  *
- * This file is the home the ledger names for spec-0017's rows, so it grows one
- * describe per row as the nine sequenced changes land. It now carries changes 1, 4,
- * 7, 8 and 9 — the derived verdict, the shared setup definition, the retirement of
- * the duplicate validate workflow, change detection and lane selection, and the
- * check-name invariants layer separation must preserve. The sentence that stood
- * here said "the first change only", which stopped being true four changes ago; a
- * count maintained in prose is a count that goes stale, so this one names the
- * changes instead.
+ * This file covers workflow topology and script-level behavior. The CI matrix,
+ * check-name, slice-alignment and release-operation acceptance rows run in the
+ * integration project. Both projects read the same workflow sources.
  *
  * ## How a YAML `run:` body is evaluated rather than read
  *
@@ -42,33 +37,6 @@
  * a developer machine without jq, and an unverifiable gate is what the derived
  * verdict exists to replace.
  */
-// QFAI:SPEC-0017:TC-0017-0001
-// QFAI:SPEC-0017:TC-0017-0002
-// QFAI:SPEC-0017:TC-0017-0003
-// QFAI:SPEC-0017:TC-0017-0004
-// QFAI:SPEC-0017:TC-0017-0005
-// QFAI:SPEC-0017:TC-0017-0027
-// QFAI:SPEC-0017:TC-0017-0028
-// QFAI:SPEC-0017:TC-0017-0029
-// QFAI:SPEC-0017:TC-0017-0031
-// QFAI:SPEC-0017:TC-0017-0071
-// QFAI:SPEC-0017:TC-0017-0072
-// QFAI:SPEC-0017:TC-0017-0073
-// QFAI:SPEC-0017:TC-0017-0006
-// QFAI:SPEC-0017:TC-0017-0007
-// QFAI:SPEC-0017:TC-0017-0008
-// QFAI:SPEC-0017:TC-0017-0009
-// QFAI:SPEC-0017:TC-0017-0010
-// QFAI:SPEC-0017:TC-0017-0011
-// QFAI:SPEC-0017:TC-0017-0012
-// QFAI:SPEC-0017:TC-0017-0041
-// QFAI:SPEC-0017:TC-0017-0042
-// QFAI:SPEC-0017:TC-0017-0043
-// QFAI:SPEC-0017:TC-0017-0036
-// QFAI:SPEC-0017:TC-0017-0038
-// QFAI:SPEC-0017:TC-0017-0039
-// QFAI:SPEC-0017:TC-0017-0040
-
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -82,12 +50,34 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
+import {
+  acceptsRelease,
+  classify,
+  classifyTag,
+  currentPackage,
+  currentRoot,
+  declaredSlices,
+  gateJobs,
+  gatePaths,
+  invocations,
+  manifestWith,
+  matrixSlices,
+  operationJobs,
+  operationScripts,
+  releaseDocument,
+  releaseJobs,
+  runsUnder,
+  scriptKeys,
+  steps,
+  suiteRuns,
+  TAGGED_MANIFESTS,
+  TAGS,
+  type ReleaseNeeds,
+} from "../helpers/spec0017Release.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -248,6 +238,7 @@ function allNeeds(result: string): Record<string, { result: string }> {
   return Object.fromEntries(verdictNeeds().map((name) => [name, { result }]));
 }
 
+// QFAI:EX-0002-0013-01
 describe("TC-0017-0001 (TDD-0001): the verdict derives its result from the serialized needs map", () => {
   it("reads the serialized map and evaluates a need name that appears nowhere in its body", () => {
     const step = verdictStep();
@@ -296,6 +287,7 @@ describe("TC-0017-0001 (TDD-0001): the verdict derives its result from the seria
   });
 });
 
+// QFAI:EX-0002-0013-03
 describe("TC-0017-0002 (TDD-0002): a failed need and a cancelled need each drive the verdict to 1", () => {
   it("rejects a failure and a cancellation, naming the need in both", () => {
     for (const state of ["failure", "cancelled"]) {
@@ -332,6 +324,7 @@ describe("TC-0017-0003 (TDD-0003): no need is outside the verdict derivation and
   });
 });
 
+// QFAI:EX-0002-0013-02
 describe("TC-0017-0004 (TDD-0004): all-succeeded and all-skipped are both accepting", () => {
   it("returns 0 for an all-success map and for an all-skipped one", () => {
     // Two accepting states and not one: an all-skipped run is what change
@@ -352,6 +345,7 @@ describe("TC-0017-0004 (TDD-0004): all-succeeded and all-skipped are both accept
   });
 });
 
+// QFAI:EX-0002-0013-04
 describe("TC-0017-0005 (TDD-0005): an unrecognized need state fails closed", () => {
   it("rejects every token outside the accepting set, including ones that look benign", () => {
     // The rule is that the ACCEPTING set is closed, not that a known-bad list is
@@ -396,7 +390,7 @@ describe("TC-0017-0005 (TDD-0005): an unrecognized need state fails closed", () 
 //
 // The preamble was duplicated six times in `ci.yml`: enable the corepack shim,
 // set up Node, re-shim pnpm against the toolcache Node, install with a frozen
-// lockfile. `BR-0017-0024`'s obligation is SINGLE-DEFINITION, and a
+// lockfile. `BR-0016-0024`'s obligation is SINGLE-DEFINITION, and a
 // repository-internal composite action is the mechanism that satisfies it today
 // — a reusable workflow was rejected because per-job dispatch overhead
 // contradicts the cost objective this whole spec exists to serve.
@@ -461,6 +455,7 @@ function ciWorkflowText(): string {
   return readFileSync(CI_WORKFLOW, "utf-8");
 }
 
+// QFAI:EX-0002-0015-01
 describe("TC-0017-0027 (TDD-0027): the frozen-lockfile literal appears once, in one definition", () => {
   it("holds zero occurrences in ci.yml and exactly one in the shared definition", () => {
     // Counted over the RAW TEXT rather than the parsed document, because the
@@ -477,6 +472,7 @@ describe("TC-0017-0027 (TDD-0027): the frozen-lockfile literal appears once, in 
   });
 });
 
+// QFAI:EX-0002-0015-02
 describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inline", () => {
   it("consumes the shared definition from every toolchain job and inlines none of its steps", () => {
     const jobs = toolchainJobs();
@@ -515,6 +511,7 @@ describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inl
   });
 });
 
+// QFAI:EX-0002-0015-03
 describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step order and the re-shim", () => {
   it("runs shim, Node setup with cache and dependency path, re-shim, frozen install — in that order", () => {
     const steps = setupActionSteps();
@@ -561,7 +558,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
       .toBeLessThan(runOf(3).indexOf("pnpm rebuild"));
 
     // CLAIM 2 — the Node step carries the package-manager cache AND an EXPLICIT
-    // cache-dependency path. `BR-0017-0026` names both; today's inline preamble
+    // cache-dependency path. `BR-0016-0026` names both; today's inline preamble
     // has only the first, so the explicit path is new here rather than carried
     // over, and asserting it is what stops the extraction from silently dropping
     // half the rule.
@@ -653,11 +650,12 @@ describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shippe
 // The repository shipped a validate workflow to adopters AND kept its own copy of it.
 // The copy was never a mirror — it ran `--profile full` while the repository's own CI ran
 // `tdd` and `sdd` — so deleting it would have dropped coverage rather than removed a
-// duplicate. `BR-0017-0059` is what makes the deletion safe: the full-profile run moves
+// duplicate. `BR-0016-0058` is what makes the deletion safe: the full-profile run moves
 // into the `build` job first.
 //
-// Why the fold and not a repoint at the shipped file: the root manifest declares no
-// dependency on the package and provides no local binary, so `npx qfai` from the root
+// Why the fold and not a repoint at the shipped file: the root reaches the package only
+// through a workspace link, and the shipped workflow installs without building it. pnpm
+// links no binary for a package whose `bin` target is missing, so `npx qfai` from the root
 // resolves to the PUBLISHED package. That inverts the dogfooding — CI would validate a
 // release instead of the change under review.
 
@@ -744,6 +742,7 @@ const stepName = (step: Record<string, unknown>): string =>
 const stepRun = (step: Record<string, unknown>): string =>
   typeof step["run"] === "string" ? step["run"] : "";
 
+// QFAI:EX-0002-0020-01
 describe("TC-0017-0071 (TDD-0071): exactly one workflow is triggered by a pull request", () => {
   it("has removed the duplicate and leaves a single pull-request-triggered workflow", () => {
     const files = ownWorkflowFiles();
@@ -764,6 +763,7 @@ describe("TC-0017-0071 (TDD-0071): exactly one workflow is triggered by a pull r
   });
 });
 
+// QFAI:EX-0002-0020-02
 describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the published one", () => {
   it("runs the full profile from the build job against the repository root, via the built binary", () => {
     const steps = buildJobSteps();
@@ -781,9 +781,9 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
     const run = stepRun(only);
 
     // CLAIM 2 — it runs through the ratchet guard, and the guard targets the repository root
-    // with the LOCAL binary. The binary is the half that matters: the root manifest declares
-    // no dependency on the package, so any resolution through the package name would reach
-    // the published release instead of the build under review.
+    // with the LOCAL binary. The binary is the half that matters: every job installs before it
+    // builds, so pnpm links no `node_modules/.bin/qfai`, and any resolution through the package
+    // name would reach the published release instead of the build under review.
     expect
       .soft(run, `the folded run must go through the ratchet: ${JSON.stringify(run)}`)
       .toContain(DOGFOOD_GUARD);
@@ -813,9 +813,11 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       .soft(published, "a resolver-based invocation would reach the published package")
       .toEqual([]);
 
-    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest really
-    // does not depend on the package. If that ever changes, CLAIM 3's rationale changes with
-    // it and this row should be revisited rather than silently kept.
+    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest reaches
+    // the package only through the workspace link, which has no binary until the package is
+    // built. A registry range would put the published copy in `node_modules/.bin` of every job
+    // instead. If that ever changes, CLAIM 3's rationale changes with it and this row should
+    // be revisited rather than silently kept.
     const rootManifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
     );
@@ -827,17 +829,20 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       : {};
     expect
       .soft(
-        Object.keys(declared).filter((name) => name === "qfai"),
-        "the root manifest declaring a dependency on qfai would change why a repoint is unsafe",
+        Object.entries(declared).filter(
+          ([name, specifier]) => name === "qfai" && specifier !== "workspace:*",
+        ),
+        "the root manifest may depend on qfai only through the workspace link",
       )
       .toEqual([]);
   });
 });
 
+// QFAI:EX-0002-0020-03
 describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verification set", () => {
   it("enumerates the build job's verifications and requires each of them, the folded run included", () => {
     // THE enumeration. Keeping it here, as literals, is what makes removing any member a
-    // failing test rather than a tidy diff — which is precisely what `BR-0017-0060` asks
+    // failing test rather than a tidy diff — which is precisely what `BR-0016-0059` asks
     // for ("removing it later is a release blocker rather than a cleanup"). A set derived
     // from the workflow would agree with the workflow by construction and assert nothing.
     const REQUIRED = [
@@ -882,8 +887,8 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     // assertion above kept passing — and it is the only copy that checks the can-it-fail
     // property, so a member that drifted out of it would lose that check silently.
     //
-    // Pinned by EQUALITY rather than by sharing a constant, deliberately. `BR-0017-0060` and
-    // `BR-0017-0032` are different obligations over the same list, and a shared constant would
+    // Pinned by EQUALITY rather than by sharing a constant, deliberately. `BR-0016-0059` and
+    // `BR-0016-0032` are different obligations over the same list, and a shared constant would
     // let one row's edit satisfy the other by construction — the reason `VERIFICATION_SET`
     // restates rather than imports. Equality keeps three copies and makes divergence fail.
     const declared: unknown = JSON.parse(
@@ -937,7 +942,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
 // the same reason: a rule that is only read is a rule nobody has tested. The heredoc
 // is quoted, so the bytes GitHub executes are the bytes these tests execute.
 //
-// Why the classifier decides even the failure case: `BR-0017-0008` requires a failed
+// Why the classifier decides even the failure case: `BR-0016-0008` requires a failed
 // diff to emit an annotation naming the reason AND to select the full set. If that
 // decision lived in the shell around the program it would be the one part of the rule
 // no test could reach. So the workflow only ATTEMPTS the diff — paths to one file,
@@ -1078,6 +1083,7 @@ function runClassifier(input: {
   }
 }
 
+// QFAI:EX-0002-0013-07
 describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout sum match the pin", () => {
   it("agrees with the committed pin and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
@@ -1156,53 +1162,13 @@ describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout su
   });
 });
 
-describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, never removed", () => {
-  it("keeps every matrix leg declared and puts the condition on the job, not the list", () => {
-    const test = ciJobs()["test"];
-    expect(test, "ci.yml must declare a `test` job").not.toBeUndefined();
-    if (test === undefined) return;
-
-    // CLAIM 1 — the leg list is untouched. `BR-0017-0006` forbids removing a leg to
-    // achieve a narrower run: a removed leg takes its check name with it, and branch
-    // protection then needs a repository setting change.
-    const strategy = test["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
-    expect
-      .soft(
-        Array.isArray(slices) ? [...slices].sort() : slices,
-        "every declared slice must stay in the matrix so its check name persists",
-      )
-      .toEqual([
-        "cli",
-        "core",
-        "e2e",
-        "integration",
-        "pr-fix",
-        "pr-merge",
-        "scripts",
-        "unit",
-        "validators",
-      ]);
-
-    // CLAIM 2 — and the condition sits on the JOB. A condition inside the matrix would
-    // change the leg set, which is CLAIM 1's removal by another route.
-    expect
-      .soft(conditionOf(test), "the selection condition belongs on the job")
-      .toContain(`needs.${DETECT_JOB}.outputs.full`);
-    expect
-      .soft(JSON.stringify(strategy ?? null), "no selection condition may live inside the matrix")
-      .not.toContain("needs.");
-  });
-});
-
 /**
- * The lanes `BR-0017-0011` exempts from selection, by the command that runs each.
+ * The lanes `BR-0016-0011` exempts from selection, by the command that runs each.
  *
  * A literal list, and that is the row's whole point: the rule's subject is the LANE, not the
  * job hosting it, so a lane keeps its exemption when it moves. Derived from the aggregate
  * script this list would lose exactly the lane that left the aggregate — which is the case
- * the rule's own Notes name as satisfying `BR-0017-0007` while the guard stops running.
+ * the rule's own Notes name as satisfying `BR-0016-0007` while the guard stops running.
  *
  * Five, one per guard the rule enumerates: the formatter, the linter, the document and
  * shipped-surface structure checks, the repository scans, and the agent-integration mirror.
@@ -1224,6 +1190,7 @@ function runsCommand(body: string, command: string): boolean {
   return new RegExp(`(^|[\\s;&|])${escaped}($|[\\s;&|])`, "m").test(body);
 }
 
+// QFAI:EX-0002-0013-11
 describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditioned or listed", () => {
   it("resolves each exempt lane to one host that carries no condition and is listed nowhere", () => {
     const jobs = ciJobs();
@@ -1265,7 +1232,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
         "pnpm lint: lint",
       ]);
 
-    // CLAIM 2 — no host carries a condition. `BR-0017-0011`'s second sentence: a lane moved
+    // CLAIM 2 — no host carries a condition. `BR-0016-0011`'s second sentence: a lane moved
     // into a job of its own MUST NOT acquire one.
     const conditioned = [...hostsOf.values()]
       .flat()
@@ -1277,7 +1244,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
 
     // CLAIM 3 — and no host appears in `dependencyConditions`. The pair is what the rule
     // forbids: a condition alone is CLAIM 2's, an entry alone declares a skip the job cannot
-    // take, and together they satisfy `BR-0017-0007` while the guard stops running.
+    // take, and together they satisfy `BR-0016-0007` while the guard stops running.
     const declaration: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
     );
@@ -1307,6 +1274,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
   });
 });
 
+// QFAI:EX-0002-0013-08
 describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set with no annotation", () => {
   it("selects the narrow set for a documentation-only list and annotates nothing", () => {
     const result = runClassifier({ paths: ["REVIEW.md", "packages/qfai/docs/anything.md"] });
@@ -1357,6 +1325,7 @@ describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set wi
   });
 });
 
+// QFAI:EX-0002-0013-08
 describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref both fail open", () => {
   it("selects the full set and names the reason when the diff produced nothing", () => {
     // Two shapes of one failure. A shallow clone makes git refuse; an unreachable base
@@ -1381,10 +1350,11 @@ describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref b
   });
 });
 
+// QFAI:EX-0002-0013-10
 describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-only", () => {
   it("selects everything for the assistant tree and narrows for the agent mirrors", () => {
     // The assistant tree is excluded from the documentation-only set by name
-    // (`BR-0017-0010`) because what lives there changes validate output — the same
+    // (`BR-0016-0010`) because what lives there changes validate output — the same
     // reason the catalog is loaded rather than merely shipped.
     const assistant = runClassifier({ paths: [".qfai/assistant/catalog/test-layers.md"] });
     expect
@@ -1402,7 +1372,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // path. The list was inert — the same decoration defect as a project matching zero
     // files and a knob the runner ignores, and this time it was in my own code.
     //
-    // `BR-0017-0010` requires the exclusion to be explicit ("MUST exclude the assistant
+    // `BR-0016-0010` requires the exclusion to be explicit ("MUST exclude the assistant
     // catalog tree BECAUSE changes there alter validate output"), so the reason is what
     // makes the rule enforced rather than incidental. Asserting it also keeps the
     // exclusion working if `.qfai/` is ever admitted to the documentation set.
@@ -1413,17 +1383,12 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       )
       .toMatch(/validate output/i);
 
-    // And the mirrors are documentation-only, which is what `BR-0017-0010` and `AC-0017-0005`
-    // say and what the user approved when they took `CR-20260820-0004` **option A**: the mirror
+    // And the mirrors are documentation-only, which is what `BR-0016-0010` says
+    // and what the user approved when they took `CR-20260820-0004` **option A**: the mirror
     // guards move into the lint lane, which selection never skips, so the mirrors keep their
     // saving without losing their guard.
     //
-    // A round of this work implemented option B instead — the four members were removed — on the
-    // measurement that `lint:mirror-surface` did not cover the tests that read the mirrors. The
-    // measurement was right and the conclusion was not: the CR had already been decided, by the
-    // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
-    // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
-    // `core/prFixSkillDocs` and `core/prMergeSkillDocs`.
+    // The lane runs every remaining test whose subject is a root mirror tree.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
@@ -1450,13 +1415,6 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       "tests/core/integrationSurfaceReadErrors.test.ts",
       "tests/assets/reviewerVerdictVocabulary.test.ts",
       "tests/codex/agents.test.ts",
-      // The `pr-fix` prose assertions, in their own file. `../pr-fix/prFixMonitor.test.ts`
-      // holds the rest of that coverage and reads nothing from a mirror tree but
-      // the script — an executable, which the classifier keeps out of the
-      // documentation-only set, so the test job runs for a change to it.
-      "tests/core/prFixSkillDocs.test.ts",
-      // The `pr-merge` prose assertions, in their own file, for the same reason.
-      "tests/core/prMergeSkillDocs.test.ts",
     ]) {
       expect
         .soft(
@@ -1485,10 +1443,8 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     const docs = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
     expect.soft(docs.full, "the docs directory still selects nothing").toBe(false);
 
-    // The executable half still holds, and it is doing real work again now that the directory
-    // is documentation-only: a PowerShell script is not a mirror, so a change to one selects
-    // everything. `CR-20260820-0004` calls this the half that needed no decision.
-    const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
+    // An executable under a documentation directory selects full CI.
+    const script = runClassifier({ paths: [".agents/skills/example/scripts/run.ps1"] });
     expect
       .soft(script.full, "an executable under an instruction mirror must select everything")
       .toBe(true);
@@ -1510,6 +1466,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
   });
 });
 
+// QFAI:EX-0002-0013-09
 describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects everything", () => {
   it("selects the full set and says the path was unrecognized, not that it was source", () => {
     const result = runClassifier({ paths: ["some/directory/nobody/declared.txt"] });
@@ -1524,6 +1481,18 @@ describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects eve
         "the reason must identify the path as outside every recognized directory",
       )
       .toMatch(/unrecognized|not in any recognized/i);
+  });
+
+  // QFAI:EX-0002-0013-09
+  it("selects the full set when an unrecognized path is paired with a documentation-only path", () => {
+    const docsOnly = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
+    expect.soft(docsOnly.full, "the documentation path alone selects the narrow set").toBe(false);
+
+    const result = runClassifier({
+      paths: ["packages/qfai/docs/anything.md", "some/directory/nobody/declared.txt"],
+    });
+    expect.soft(result.status, `the classifier must exit 0:\n${result.raw}`).toBe(0);
+    expect.soft(result.full, "a documentation path must not mask an unrecognized one").toBe(true);
   });
 });
 
@@ -1588,7 +1557,7 @@ function codePathCost(jobs: Record<string, Record<string, unknown>>): {
   return { instances, timeoutMinutesSum, installInstances, buildJobs };
 }
 
-// QFAI:SPEC-0017:TC-0017-0087
+// QFAI:EX-0002-0017-04
 describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
   it("matches every pinned figure against this file's own reading of the workflow", () => {
     const cost = codePathCost(ciJobs());
@@ -1617,10 +1586,10 @@ describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committe
   });
 });
 
-// `TC-0017-0012`'s own row is the lane-host one further up: `BR-0017-0011` was restated over
-// every lane of the lint aggregate, whichever job hosts it, so the claim that reads one job's
-// condition is no longer the whole of what that test case asks for. What survives here is the
-// half about `BR-0017-0012` — the required-context job and its closure — plus the lint lane read
+// The lane-host row further up is the main one: `BR-0016-0011` covers every lane of the lint
+// aggregate, whichever job hosts it, so a claim that reads one job's condition is not the
+// whole of what the rule asks for. What survives here is the
+// half about `BR-0016-0012` — the required-context job and its closure — plus the lint lane read
 // directly, which is the cheapest check on the tree and needs no lane resolution to make.
 describe("the required-context job and the lint lane both stay unconditional", () => {
   it("leaves the lint lane and the required-context job unconditional", () => {
@@ -1629,7 +1598,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
     expect(lint, "ci.yml must declare a `lint` job").not.toBeUndefined();
     if (lint === undefined) return;
 
-    // `BR-0017-0011`: the lint lane carries the formatter, the Markdown linter, the
+    // `BR-0016-0011`: the lint lane carries the formatter, the Markdown linter, the
     // leakage guard and the pin guard — all of which a documentation-only change can
     // break. Skipping it would make those gates vacuous for exactly the changes most
     // likely to trip them.
@@ -1638,7 +1607,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
       .soft(needsOf(lint), "the lint lane must not depend on detection")
       .not.toContain(DETECT_JOB);
 
-    // And the required-context job. `BR-0017-0012` is about what branch protection
+    // And the required-context job. `BR-0016-0012` is about what branch protection
     // sees: a skipped job reports success, so a condition on the job carrying a
     // required context — or on anything it depends on — turns the gate into a rubber
     // stamp. Asserted as an EMPTY needs set rather than "no conditional need",
@@ -1659,15 +1628,15 @@ describe("the required-context job and the lint lane both stay unconditional", (
 
 // ── change 9: layer separation stays inside the file, and no check name moves ─
 //
-// The layer split ALREADY exists: nine matrix legs of the `test` job, one per runner
-// project. `BR-0017-0035` is what keeps it that way — "test-layer separation MUST be
+// The layer split has seven matrix legs of the `test` job, one per runner
+// project. `BR-0016-0035` is what keeps it that way — "test-layer separation MUST be
 // expressed as jobs and matrix legs inside the existing own-CI workflow file", with the
 // file count and the aggregate check name unchanged.
 //
 // What change 9 does NOT do is repartition those legs by cost. `10_Plan.md` puts that
 // last "because the partition is the only part of this spec that needs a measurement it
 // does not itself take", and step 6 landed structure only: no timing artifact exists, and
-// `BR-0017-0049` forbids adopting a value without one. So these three rows are the
+// `BR-0016-0048` forbids adopting a value without one. So these three rows are the
 // invariant that repartition will have to satisfy, landed BEFORE it rather than after —
 // which is the only order in which a guard can reject the change it guards against.
 //
@@ -1682,7 +1651,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
 /**
  * The own-CI workflow files.
  *
- * `BR-0017-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
+ * `BR-0016-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
  * separation must be jobs and matrix legs inside the existing file, and a new workflow file PER
  * LAYER must be rejected. It is not a freeze on the repository ever gaining a workflow — the row
  * below says so in as many words, that it asserts the count layer separation must not change
@@ -1719,101 +1688,7 @@ const OWN_WORKFLOW_FILES = [
   "tag-release.yml",
 ] as const;
 
-/**
- * The full-run check names, pinned independently of the workflow parser.
- *
- * Both sliced jobs report expanded names on a full run. When their job-level
- * condition is false, GitHub reports one skipped check under each bare job name.
- * `packages/qfai/docs/ci-check-names.md` records both observations and API totals.
- *
- * Only `ci-pass` is required. Its needs map receives one rolled-up result per
- * matrix, so neither selection state requires a branch-protection change.
- */
-const FULL_CI_CHECK_NAMES = [
-  "build",
-  "check-types",
-  "check-types-future",
-  "ci-pass",
-  "detect",
-  "lint",
-  "mirror-surface",
-  "node-floor (cli)",
-  "node-floor (core)",
-  "node-floor (e2e)",
-  "node-floor (integration)",
-  "node-floor (pr-fix)",
-  "node-floor (pr-merge)",
-  "node-floor (scripts)",
-  "node-floor (unit)",
-  "node-floor (validators)",
-  "scanner-coverage",
-  "test (cli)",
-  "test (core)",
-  "test (e2e)",
-  "test (integration)",
-  "test (pr-fix)",
-  "test (pr-merge)",
-  "test (scripts)",
-  "test (unit)",
-  "test (validators)",
-] as const;
-
-const CI_CHECK_NAMES = {
-  full: FULL_CI_CHECK_NAMES,
-  "documentation-only": [
-    "build",
-    "check-types",
-    "check-types-future",
-    "ci-pass",
-    "detect",
-    "lint",
-    "mirror-surface",
-    "node-floor",
-    "scanner-coverage",
-    "test",
-  ],
-} as const;
-
-type CiSelection = keyof typeof CI_CHECK_NAMES;
-
-/**
- * The check names one workflow file reports.
- *
- * A job's check name is its `name:` when it declares one and its key otherwise; a matrix
- * job reports one per leg when selected, or one bare name when skipped before expansion.
- * Both states are modelled, so a future `name:` override is visible to
- * `TC-0017-0043` rather than silently renaming a check.
- */
-function checkNames(file: string, selection: CiSelection): string[] {
-  const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
-  if (!isRecord(doc) || !isRecord(doc["jobs"])) {
-    throw new Error(`${file} declares no jobs`);
-  }
-  const names: string[] = [];
-  for (const [id, job] of Object.entries(doc["jobs"])) {
-    if (!isRecord(job)) continue;
-    const label = typeof job["name"] === "string" ? job["name"] : id;
-    const strategy = job["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const legs = isRecord(matrix) ? Object.values(matrix).filter(isStringArray).flat() : [];
-    const condition = job["if"];
-    if (
-      legs.length > 0 &&
-      condition !== undefined &&
-      condition !== "${{ needs.detect.outputs.full == 'true' }}"
-    ) {
-      throw new Error(`${id} has an unmodelled matrix selection condition: ${String(condition)}`);
-    }
-    const selected = selection === "full" || condition === undefined;
-    if (legs.length > 0 && selected) {
-      for (const leg of legs) names.push(`${label} (${leg})`);
-    } else {
-      names.push(label);
-    }
-  }
-  return names.sort();
-}
-
+// QFAI:EX-0002-0017-03
 describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
   it("keeps the layer split inside the existing file as matrix legs of one job", () => {
     // CLAIM 1 — this exact set, and no member of it is a per-layer workflow. A per-layer
@@ -1822,25 +1697,25 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     //
     // The set has both shrunk and grown since the spec was written, which is the point:
     // change 7 deleted the repository's own duplicate of the shipped validate workflow
-    // (`BR-0017-0058`, recorded in `DR-0017-0007`), and the release-automation and Renovate
+    // (`BR-0016-0057`), and the release-automation and Renovate
     // files were added. Each move had to be argued past the docblock above. This row asserts
     // the set layer separation must not change — not a set frozen at that moment.
     expect
       .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
       .toEqual([...OWN_WORKFLOW_FILES]);
 
-    // CLAIM 2 — the layers are legs of a job, not one job each. Nine jobs would satisfy
-    // "inside the existing file" and still create eight new check names, so the shape is
+    // CLAIM 2 — the layers are legs of a job, not one job each. Seven jobs would satisfy
+    // "inside the existing file" and still create six new check names, so the shape is
     // asserted and not just the location.
     //
     // Two jobs express the split: `test`, and `node-floor` running the same slices on the
     // engines floor. That is the same shape applied twice rather than an exception to it —
     // what `AC-0017-0018` rejects is a layer becoming a job of its own, and each lane is
-    // ONE job whose legs are the layers. Expressing either lane as nine jobs would create
-    // nine check names the same way, and the axis claim below is what refuses it.
+    // ONE job whose legs are the layers. Expressing either lane as seven jobs would create
+    // seven check names the same way, and the axis claim below is what refuses it.
     //
     // A LITERAL list, so a third sliced lane arrives as a failing test naming the new member
-    // rather than as a diff to interpret — the reason `CI_CHECK_NAMES` is a literal too.
+    // rather than as a diff to interpret — the integration check-name test also pins a literal list.
     const jobs = ciJobs();
     const matrixJobs = Object.entries(jobs)
       .filter(([, job]) => {
@@ -2029,7 +1904,7 @@ describe("one lane runs on the floor `engines.node` declares", () => {
     // The ORDER is asserted, not just the presence: a build after the test step is a build that
     // ran too late.
     //
-    // And the CONDITION. The build runs on two of nine legs, so "a build step exists" does not
+    // And the CONDITION. The build runs on two of seven legs, so "a build step exists" does not
     // imply that the legs reading `dist/` get one: a condition narrowed to one slice, or widened
     // to a slice that reads nothing, is invisible to the order claim. It is asserted against the
     // `test` job's rather than restated, because the two jobs run the same slices over the same
@@ -2068,13 +1943,13 @@ describe("one lane runs on the floor `engines.node` declares", () => {
 
   it("runs one slice per leg, over the set the `test` job declares", () => {
     // The lane's claim is about the WHOLE package suite on the engines floor. Slicing it keeps
-    // that claim only while the legs partition the suite, and the nine names are the partition
+    // that claim only while the legs partition the suite, and the seven names are the partition
     // `sliceSurfaceAlignment` holds against the runner workspace. A value dropped here stops a
     // slice being exercised on the floor while the `test` job still runs it on the resolved
     // release, and every remaining leg reports green.
     //
     // Read from the `test` job rather than written out, for the reason the build condition is:
-    // two lists of the same nine names drift one edit at a time, and the drift is silent.
+    // two lists of the same seven names drift one edit at a time, and the drift is silent.
     const jobs = ciJobs();
     const sliceList = (job: unknown): unknown => {
       const strategy = isRecord(job) ? job["strategy"] : undefined;
@@ -2136,11 +2011,12 @@ describe("one lane runs on the floor `engines.node` declares", () => {
   });
 });
 
+// QFAI:EX-0002-0017-01
 describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable", () => {
   it("keeps the verdict's key and declares no name that could rename it", () => {
     const jobs = ciJobs();
 
-    // CLAIM 1 — the key is unchanged. `BR-0017-0004` forbids renaming it across every
+    // CLAIM 1 — the key is unchanged. `BR-0016-0004` forbids renaming it across every
     // change in this spec, and eight changes have now touched this file.
     expect
       .soft(Object.keys(jobs), `the verdict job key must stay \`${VERDICT_JOB}\``)
@@ -2167,19 +2043,9 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
   });
 });
 
-describe("TC-0017-0043 (TDD-0043): each selection state preserves its reported check names", () => {
-  it("reports the complete pinned set for full and documentation-only runs", () => {
-    for (const selection of ["full", "documentation-only"] as const) {
-      expect
-        .soft(checkNames("ci.yml", selection), `${selection} must retain its observed check names`)
-        .toEqual([...CI_CHECK_NAMES[selection]].sort());
-    }
-  });
-});
-
 // ── the required-context job's integrity, and upload hygiene ─────────────────
 //
-// `BR-0017-0032` is unusually explicit about what it is not satisfied by: "Any split, fold
+// `BR-0016-0032` is unusually explicit about what it is not satisfied by: "Any split, fold
 // or restructuring MUST leave a job of the exact name `build` that is unconditional and
 // that still performs — or depends on jobs that perform — every item of its enumerated
 // verification set. **Keeping the name alone is explicitly not sufficient.**"
@@ -2191,7 +2057,7 @@ describe("TC-0017-0043 (TDD-0043): each selection state preserves its reported c
 // migrate to a job `build` needs, and that is legal.
 
 /**
- * The exact name `BR-0017-0032` requires. A literal — the rule is about this string.
+ * The exact name `BR-0016-0032` requires. A literal — the rule is about this string.
  *
  * `build` declares no `needs` at all, so requiring it and nothing else would let every test lane
  * fail with the merge condition satisfied.
@@ -2211,7 +2077,7 @@ const BUILD_JOB_NAME = "build";
  * The items of the required-context job's enumerated verification set.
  *
  * The same literals `TC-0017-0073` pins, restated here on purpose rather than imported
- * from that row: `BR-0017-0060` and `BR-0017-0032` are different obligations over the same
+ * from that row: `BR-0016-0059` and `BR-0016-0032` are different obligations over the same
  * list, and a shared constant would let one row's edit silently satisfy the other.
  */
 const VERIFICATION_SET = [
@@ -2262,7 +2128,7 @@ function stepsOf(jobId: string): Record<string, unknown>[] {
 /**
  * The steps of the required-context job and of every job it transitively needs.
  *
- * This is what makes `BR-0017-0032`'s "or depends on jobs that perform" clause real rather
+ * This is what makes `BR-0016-0032`'s "or depends on jobs that perform" clause real rather
  * than decorative: an item that moved into a dependency still counts, and one that moved
  * into an unrelated job does not.
  */
@@ -2285,11 +2151,12 @@ function reachableSteps(jobId: string): { jobId: string; step: Record<string, un
 const named = (step: Record<string, unknown>): string =>
   typeof step["name"] === "string" ? step["name"] : "(unnamed)";
 
+// QFAI:EX-0002-0016-04
 describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and unconditionality", () => {
   it("keeps the exact name, no condition, and every verification item within reach", () => {
     const jobs = ciJobs();
 
-    // CLAIM 1 — the exact name. `BR-0017-0032` says "a job of the exact name", so this is a
+    // CLAIM 1 — the exact name. `BR-0016-0032` says "a job of the exact name", so this is a
     // string equality against the key set and not a search for something build-like.
     expect
       .soft(Object.keys(jobs), `a job of the exact name \`${REQUIRED_CONTEXT_NAME}\` must exist`)
@@ -2374,6 +2241,7 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
   });
 });
 
+// QFAI:EX-0002-0016-05
 describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by continue-on-error", () => {
   it("leaves no verification item able to fail without failing the job", () => {
     const weakened = reachableSteps(REQUIRED_CONTEXT_NAME)
@@ -2384,7 +2252,7 @@ describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by conti
     // `!== undefined` and not `=== true`, deliberately. `continue-on-error` accepts an
     // expression, so `${{ github.event_name == 'push' }}` is neither `true` nor `false` at
     // parse time and would slip past an equality check while doing exactly what
-    // `BR-0017-0033` forbids on the runs where it evaluates true. A verification item has no
+    // `BR-0016-0033` forbids on the runs where it evaluates true. A verification item has no
     // legitimate reason to carry the key at all.
     expect
       .soft(
@@ -2395,6 +2263,7 @@ describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by conti
   });
 });
 
+// QFAI:EX-0002-0016-06
 describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and ages out sooner", () => {
   it("declines to run on a cancelled run, tolerates a missing file, and expires within a week", () => {
     const uploads = stepsOf(BUILD_JOB_NAME).filter(
@@ -2430,6 +2299,7 @@ describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and a
   });
 });
 
+// QFAI:EX-0002-0016-06
 describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an unconditional run fail", () => {
   it("holds the retention boundary at seven days", () => {
     const uploads = stepsOf(BUILD_JOB_NAME).filter(
@@ -2440,7 +2310,7 @@ describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an uncond
     if (upload === undefined) return;
     const withBlock = isRecord(upload["with"]) ? upload["with"] : {};
 
-    // The boundary, asserted as a boundary. `BR-0017-0034` says "at most seven days", so
+    // The boundary, asserted as a boundary. `BR-0016-0034` says "at most seven days", so
     // seven passes and eight fails — and an ABSENT value is not a pass either, because the
     // action's own default is ninety.
     const retention = withBlock["retention-days"];
@@ -3432,7 +3302,7 @@ describe("release automation performs decisions rather than making them", () => 
     ).toMatch(/grep[^\n]*release\/v\$\{claimed}/);
 
     // …and the permission surface must not have widened to pay for it. Asking the API needs
-    // `pull-requests: read`, and granting it here would make `BR-0017-0016`'s closed departure
+    // `pull-requests: read`, and granting it here would make `BR-0016-0016`'s closed departure
     // set four. Reading through the secret is what keeps that set at three.
     expect(
       tagWorkflow["permissions"],
@@ -3617,7 +3487,7 @@ describe("release automation performs decisions rather than making them", () => 
 
   it("keeps both workflows at the minimal permission scope", () => {
     // The writes go through a token in a secret, not through the job token, which is what keeps
-    // `BR-0017-0016`'s closed departure set at three. The row above that enforces the set would
+    // `BR-0016-0016`'s closed departure set at three. The row above that enforces the set would
     // catch a regression here too; this one says why it holds, so a later reader does not
     // "simplify" it by granting `contents: write` and widening the set.
     for (const name of ["prepare-release.yml", "tag-release.yml"]) {
@@ -3788,7 +3658,7 @@ describe("release automation performs decisions rather than making them", () => 
  *
  * So the rows below assert a MULTISET, not a set: every package test script the gate jobs would
  * invoke for one tag, counted, must be exactly one cover of the suite — `test` alone, or the
- * nine slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
+ * declared slices. A second copy of `test` shows up as a duplicate, a dropped slice as a short list,
  * and a mixed run as neither.
  *
  * ## Executed, not pattern-matched
@@ -3800,549 +3670,15 @@ describe("release automation performs decisions rather than making them", () => 
  * ## Where the manifests come from
  *
  * The program reads two manifests and looks up script keys, so the script key set is the whole of
- * what a manifest is to it. Each tag's sets are recorded below, read off the tags themselves, and
- * a tag is immutable — so these are a record rather than an approximation. They are recorded
+ * what a manifest is to it. Each tag's sets are recorded in the shared release helper,
+ * read off the tags themselves. Tags are immutable, so these are a record rather
+ * than an approximation. They are recorded
  * because the job that runs this file checks out at depth 2 and fetches no tags, and a row that
  * needs `git show v1.10.0:package.json` would be skipped in exactly the place it has to run. The
  * last row re-derives them from the tags wherever the tags are reachable.
  */
 describe("the release gate runs what the tag's tree declares, and runs the suite once", () => {
-  const RELEASE_WORKFLOW = path.join(WORKFLOWS_DIR, "release.yml");
-
-  /**
-   * The script key sets three real tags declare, and the body of the aggregate each one carries.
-   *
-   * Three and not all of them: these are the three shapes. Every tag from `v1.11.0` on matches
-   * `v1.12.0`, the `v1.9.x` and `v1.10.x` line matches `v1.10.0`, and everything before matches
-   * `v1.8.0`.
-   */
-  const TAGGED_MANIFESTS = {
-    "v1.12.0": {
-      root: [
-        "preinstall",
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "ci:coverage",
-        "lint",
-        "lint:md",
-        "lint:mermaid",
-        "lint:mdschema",
-        "lint:doc-clarity",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "lint:branch-version",
-        "lint:shipping",
-        "lint:workflow-shape",
-        "lint:mirror-surface",
-        "generate:rule-codes",
-        "generate:governed-manifest",
-        "check-types",
-        "test",
-        "test:coverage",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:unit",
-        "test:scripts",
-        "test:assets",
-        "self-validate",
-      ],
-    },
-    "v1.10.0": {
-      root: [
-        "preinstall",
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "ci:coverage",
-        "lint",
-        "lint:md",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "lint:branch-version",
-        "lint:shipping",
-        "check-types",
-        "test",
-        "test:coverage",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:assets",
-        "self-validate",
-      ],
-    },
-    "v1.8.0": {
-      root: [
-        "build",
-        "sync:ssot",
-        "ci:gate",
-        "ci:lint",
-        "ci:build-verify",
-        "lint",
-        "lint:md",
-        "format",
-        "format:check",
-        "check-types",
-        "check-types:future",
-        "test:assets",
-        "verify:pack",
-        "prepack",
-      ],
-      package: [
-        "build",
-        "prepack",
-        "lint",
-        "check-types",
-        "test",
-        "test:core",
-        "test:validators",
-        "test:integration",
-        "test:e2e",
-        "test:cli",
-        "test:assets",
-      ],
-    },
-  } as const;
-
-  /** The tag keys, narrowed once so every row below indexes the record rather than a string. */
-  const TAGS = Object.keys(TAGGED_MANIFESTS) as Array<keyof typeof TAGGED_MANIFESTS>;
-
-  /**
-   * A manifest carrying exactly these script keys.
-   *
-   * The bodies are a placeholder because the classifier never reads one: it asks whether the
-   * lookup yields a string. Writing the real bodies here would record something no row checks and
-   * invite a reader to trust it.
-   */
-  const manifestWith = (keys: readonly string[]): string =>
-    JSON.stringify({ scripts: Object.fromEntries(keys.map((key) => [key, "…"])) });
-
-  const releaseDocument = (): Record<string, unknown> => {
-    const parsed: unknown = parseYaml(readFileSync(RELEASE_WORKFLOW, "utf-8"));
-    if (!isRecord(parsed)) throw new Error("release.yml did not parse to a mapping");
-    return parsed;
-  };
-
-  const releaseJobs = (): Record<string, Record<string, unknown>> => {
-    const jobs = releaseDocument()["jobs"];
-    if (!isRecord(jobs)) throw new Error("release.yml declares no jobs");
-    const out: Record<string, Record<string, unknown>> = {};
-    for (const [id, job] of Object.entries(jobs)) {
-      if (!isRecord(job)) throw new Error(`release.yml's ${id} job did not parse to a mapping`);
-      out[id] = job;
-    }
-    return out;
-  };
-
-  const steps = (job: Record<string, unknown>): Array<Record<string, unknown>> => {
-    const value = job["steps"];
-    if (!Array.isArray(value)) return [];
-    return value.filter((step): step is Record<string, unknown> => isRecord(step));
-  };
-
-  /** The `verify` step that decides, identified by the id its output expression names. */
-  const shapeStep = (): Record<string, unknown> => {
-    const verify = releaseJobs()["verify"];
-    if (verify === undefined) throw new Error("release.yml declares no verify job");
-    const step = steps(verify).find((candidate) => candidate["id"] === "shape");
-    if (step === undefined) throw new Error("release.yml's verify job declares no `shape` step");
-    return step;
-  };
-
-  /** The slice list the decision is made against, read off the step rather than restated here. */
-  const declaredSlices = (): string[] => {
-    const env = shapeStep()["env"];
-    const value = isRecord(env) ? env["SUITE_SLICES"] : undefined;
-    if (typeof value !== "string") throw new Error("the shape step declares no SUITE_SLICES");
-    return value.trim().split(/\s+/).filter(Boolean);
-  };
-
-  /**
-   * The classifier, out of its quoted heredoc.
-   *
-   * Quoted is what makes the extraction sound: bash expands nothing inside `<<'SHAPE'`, so the
-   * bytes the runner executes and the bytes below are the same bytes. Exactly one well-ordered
-   * delimiter pair is accepted — a silent zero-match would hand every row an empty program, and
-   * `node ""` exits 0, so every row that expects a refusal would fail and every row that expects
-   * a classification would fail for the wrong reason.
-   */
-  const classifierProgram = (): string => {
-    const body = shapeStep()["run"];
-    if (typeof body !== "string") throw new Error("the shape step has no run body");
-    const lines = body.split(/\r?\n/);
-    const opens = lines.flatMap((line, index) => (line === "node - <<'SHAPE'" ? [index] : []));
-    const closes = lines.flatMap((line, index) => (line === "SHAPE" ? [index] : []));
-    if (opens.length !== 1 || closes.length !== 1) {
-      throw new Error(
-        `the shape step must hold exactly one quoted SHAPE heredoc; found ${opens.length} ` +
-          `openings and ${closes.length} terminators`,
-      );
-    }
-    const [open] = opens;
-    const [close] = closes;
-    if (open === undefined || close === undefined || close <= open + 1) {
-      throw new Error("the shape step's SHAPE heredoc is empty or its delimiters are out of order");
-    }
-    return `${lines.slice(open + 1, close).join("\n")}\n`;
-  };
-
-  type Classification = { status: number; shape: string; checks: string; output: string };
-  const operationScripts = ["ci:gate:ssot", "ci:gate:lint", "ci:gate:types", "ci:gate:build"];
-  const operationJobs = ["gate-ssot", "gate-lint", "gate-types"];
-  const gatePaths = [
-    { shape: "whole", checks: "aggregate" },
-    { shape: "sliced", checks: "aggregate" },
-    { shape: "sliced", checks: "operations" },
-  ];
-
-  /**
-   * The classifier, run against two manifests.
-   *
-   * `.cjs`, because the workflow feeds it to `node -` on stdin, which Node reads as CommonJS.
-   * A `.js` file in a directory with no manifest is read the same way today; naming the module
-   * system is what keeps the two from drifting apart on a future Node.
-   */
-  const classify = (
-    root: string,
-    pkg: string,
-    slices: string[] = declaredSlices(),
-  ): Classification => {
-    const dir = mkdtempSync(path.join(tmpdir(), "qfai-gate-shape-"));
-    try {
-      const program = path.join(dir, "classify.cjs");
-      const outputFile = path.join(dir, "github-output");
-      writeFileSync(program, classifierProgram(), "utf-8");
-      writeFileSync(outputFile, "", "utf-8");
-      const run = spawnSync("node", [program], {
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          ROOT_MANIFEST: root,
-          PACKAGE_MANIFEST: pkg,
-          SUITE_SLICES: slices.join(" "),
-          GITHUB_OUTPUT: outputFile,
-        },
-      });
-      if (run.error !== undefined) throw run.error;
-      const written = readFileSync(outputFile, "utf-8");
-      const match = /^suite-shape=(.*)$/m.exec(written);
-      return {
-        status: run.status ?? -1,
-        shape: match?.[1] ?? "",
-        checks: /^checks-shape=(.*)$/m.exec(written)?.[1] ?? "",
-        output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
-      };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  };
-
-  const classifyTag = (tag: keyof typeof TAGGED_MANIFESTS): Classification =>
-    classify(manifestWith(TAGGED_MANIFESTS[tag].root), manifestWith(TAGGED_MANIFESTS[tag].package));
-
-  /** This tree's own manifests, which are the sliced shape by construction. */
-  const currentRoot = (): string => readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8");
-  const currentPackage = (): string =>
-    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "package.json"), "utf-8");
-
-  const scriptKeys = (manifest: string): string[] => {
-    const parsed: unknown = JSON.parse(manifest);
-    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
-      throw new Error("a manifest under test declares no scripts");
-    }
-    return Object.keys(parsed["scripts"]);
-  };
-
-  /**
-   * Which shape a job or a step runs under.
-   *
-   * A condition that never mentions the decision is orthogonal to it — the two build steps select
-   * on `matrix.slice` — and counts as running under both. A condition that DOES mention it must
-   * use the restricted release-condition grammar. Unknown syntax throws rather than silently
-   * treating an unrecognized condition as an unconditional step.
-   */
-  const runsUnder = (
-    owner: Record<string, unknown>,
-    where: string,
-    shape: string,
-    checks: string,
-  ): boolean => {
-    const condition = owner["if"];
-    if (condition === undefined) return true;
-    if (typeof condition !== "string") throw new Error(`${where} carries a non-string condition`);
-    const text = condition.trim();
-    if (!text.includes("suite-shape") && !text.includes("checks-shape")) return true;
-    try {
-      return acceptsRelease(
-        text,
-        { verify: { outputs: { "suite-shape": shape, "checks-shape": checks } } },
-        "push",
-      );
-    } catch (error) {
-      throw new Error(`${where} has an unsupported shape condition`, { cause: error });
-    }
-  };
-
-  /** The gate jobs, discovered by prefix and checked against the declared set below. */
-  const gateJobs = (): Record<string, Record<string, unknown>> =>
-    Object.fromEntries(Object.entries(releaseJobs()).filter(([id]) => id.startsWith("gate")));
-
-  const matrixSlices = (job: Record<string, unknown>): string[] => {
-    const strategy = job["strategy"];
-    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
-    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
-    if (slices === undefined) return [""];
-    if (!Array.isArray(slices) || !slices.every((s) => typeof s === "string")) {
-      throw new Error("a gate job declares a matrix.slice that is not a list of strings");
-    }
-    return slices;
-  };
-
-  /** Whether a job resolves the engines floor, read off the setup step's inputs. */
-  const pinsFloor = (job: Record<string, unknown>): boolean =>
-    steps(job).some((step) => {
-      const inputs = step["with"];
-      return isRecord(inputs) && inputs["pin-engines-floor"] === "true";
-    });
-
-  type Invocation = { jobId: string; where: string; manifest: "root" | "package"; script: string };
-
-  /**
-   * Every script a gate job would invoke for a tag of this shape.
-   *
-   * `pnpm <name>` reads from the root manifest and `pnpm -C packages/qfai <name>` from the
-   * package's. No gate step calls a pnpm built-in, so every match is a script that has to exist;
-   * a `-C` naming any other directory throws rather than being dropped.
-   */
-  const invocations = (shape: string, checks: string): Invocation[] => {
-    const out: Invocation[] = [];
-    for (const [jobId, job] of Object.entries(gateJobs())) {
-      if (!runsUnder(job, `release.yml#${jobId}`, shape, checks)) continue;
-      for (const step of steps(job)) {
-        const name = String(step["name"] ?? "(unnamed)");
-        const where = `release.yml#${jobId}: ${name}`;
-        if (!runsUnder(step, where, shape, checks)) continue;
-        const body = step["run"];
-        if (typeof body !== "string") continue;
-        for (const slice of matrixSlices(job)) {
-          const text = body.split("${{ matrix.slice }}").join(slice);
-          for (const match of text.matchAll(/\bpnpm (?:-C (\S+) )?([A-Za-z][\w:.-]*)/g)) {
-            const directory = match[1];
-            const script = match[2];
-            if (script === undefined) continue;
-            if (directory !== undefined && directory !== "packages/qfai") {
-              throw new Error(`${where} runs pnpm -C ${directory}, which this row cannot resolve`);
-            }
-            out.push({
-              jobId,
-              where,
-              manifest: directory === undefined ? "root" : "package",
-              script,
-            });
-          }
-        }
-      }
-    }
-    return out;
-  };
-
-  /**
-   * The suite call every tag's `ci:gate` ends in.
-   *
-   * Recorded rather than read, because the rows that need it run where the tags are not fetched.
-   * The last row in this block re-derives it from the tags themselves wherever they are
-   * reachable, and all three carry this call verbatim.
-   */
-  const TAGGED_AGGREGATE_BODY = "pnpm -C packages/qfai test";
-
-  /**
-   * What the root aggregate a gate step names would itself run.
-   *
-   * On the old path it is the tag's own `ci:gate`, recorded above. On the sliced path the gate
-   * names either the checks aggregate or an operation entry point. Each invoked script is
-   * resolved transitively so a check reaching the suite through another script is counted too.
-   */
-  const aggregateBody = (shape: string, script: string): string => {
-    if (shape === "whole") return TAGGED_AGGREGATE_BODY;
-    const resolved: unknown = invokedScriptBodies(`pnpm ${script}`, REPO_ROOT);
-    if (!Array.isArray(resolved)) {
-      throw new Error(`the script reader returned no list for pnpm ${script}`);
-    }
-    return resolved.map((entry) => (Array.isArray(entry) ? String(entry[1] ?? "") : "")).join("\n");
-  };
-
-  /**
-   * The package test scripts one tag's gate would run, counted, on one Node resolution.
-   *
-   * A root script contributes what IT runs: on the old path the gate runs `ci:gate`, whose body
-   * ends in `pnpm -C packages/qfai test`, so the aggregate's suite run is counted here as one.
-   * That is the whole reason a count is taken rather than the job list read — the aggregate's
-   * suite and a sliced leg are the same suite arriving by two routes, and a set would swallow the
-   * second.
-   */
-  const suiteRuns = (shape: string, checks: string, floor: boolean): string[] => {
-    const onFloor = new Set(
-      Object.entries(gateJobs())
-        .filter(([, job]) => pinsFloor(job) === floor)
-        .map(([id]) => id),
-    );
-    const runs: string[] = [];
-    for (const invocation of invocations(shape, checks)) {
-      if (!onFloor.has(invocation.jobId)) continue;
-      if (invocation.manifest === "package") {
-        if (invocation.script === "test" || invocation.script.startsWith("test:")) {
-          runs.push(invocation.script);
-        }
-        continue;
-      }
-      if (!invocation.script.startsWith("ci:gate")) continue;
-      for (const match of aggregateBody(shape, invocation.script).matchAll(
-        /\bpnpm -C packages\/qfai (test(?::[\w-]+)?)\b/g,
-      )) {
-        const script = match[1];
-        if (script !== undefined) runs.push(script);
-      }
-    }
-    return runs.sort();
-  };
-
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0099): classifies complete operation capabilities and legacy trees", () => {
-    const current = classify(currentRoot(), currentPackage());
-    expect(current.status, current.output).toBe(0);
-    expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
-    for (const tag of TAGS) expect(classifyTag(tag).checks, tag).toBe("aggregate");
-    const legacy = classify(
-      manifestWith(scriptKeys(currentRoot()).filter((key) => !operationScripts.includes(key))),
-      currentPackage(),
-    );
-    expect([legacy.shape, legacy.checks]).toEqual(["sliced", "aggregate"]);
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0099): preserves the complete ordered release checks", () => {
-    const parsed: unknown = JSON.parse(currentRoot());
-    if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
-    const scripts = parsed["scripts"];
-    expect(scripts["ci:gate:checks"]).toBe(
-      operationScripts.map((script) => `pnpm ${script}`).join(" && "),
-    );
-    const bodies = operationScripts.map((script) => {
-      const body = scripts[script];
-      if (typeof body !== "string") throw new Error(`${script} missing`);
-      return body;
-    });
-    expect(bodies.join(" && ")).toBe(
-      "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml packages/qfai/assets/init/.qfai/ && bash ./scripts/run-lint-checks.sh gate && pnpm check-types && node ./scripts/check-build-warnings.mjs && pnpm verify:pack",
-    );
-    const selected = invocations("sliced", "operations")
-      .filter((entry) => entry.manifest === "root")
-      .map((entry) => entry.script);
-    expect(selected.sort()).toEqual([...operationScripts].sort());
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0100): incomplete operation capabilities retain aggregate checks", () => {
-    const root = scriptKeys(currentRoot());
-    for (const dropped of operationScripts) {
-      expect(root).toContain(dropped);
-      for (const value of [undefined, 1, null, {}]) {
-        const scripts = Object.fromEntries(
-          root.map((key) => [key, key === dropped ? value : "declared"]),
-        );
-        const result = classify(JSON.stringify({ scripts }), currentPackage());
-        expect(result.status, `${dropped}: ${result.output}`).toBe(0);
-        expect([result.shape, result.checks]).toEqual(["sliced", "aggregate"]);
-      }
-    }
-    const whole = classify(currentRoot(), manifestWith(["test"]));
-    expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0100): refuses missing unknown and incompatible checks outputs", () => {
-    for (const id of ["github-release", "publish"]) {
-      const condition = releaseJobs()[id]?.["if"];
-      if (typeof condition !== "string") throw new Error(`${id} has no release condition`);
-      for (const { shape, checks } of gatePaths) {
-        const needs: ReleaseNeeds = {
-          verify: { result: "success", outputs: { "suite-shape": shape, "checks-shape": checks } },
-          gate: { result: "success" },
-          "gate-tests": { result: shape === "sliced" ? "success" : "skipped" },
-          "gate-floor": { result: shape === "sliced" ? "success" : "skipped" },
-          "gate-floor-whole": { result: shape === "whole" ? "success" : "skipped" },
-          ...Object.fromEntries(
-            operationJobs.map((name) => [
-              name,
-              { result: checks === "operations" ? "success" : "skipped" },
-            ]),
-          ),
-        };
-        for (const invalid of [
-          undefined,
-          "",
-          "unknown",
-          checks === "operations" ? "aggregate" : "operations",
-        ]) {
-          const changed = {
-            ...needs,
-            verify: {
-              result: "success",
-              outputs: { "suite-shape": shape, "checks-shape": invalid },
-            },
-          };
-          expect
-            .soft(
-              acceptsRelease(condition, changed, "push"),
-              `${id} ${shape} ${checks} -> ${invalid}`,
-            )
-            .toBe(false);
-        }
-      }
-      const impossible: ReleaseNeeds = Object.fromEntries(
-        Object.keys(gateJobs()).map((name) => [
-          name,
-          { result: ["gate-tests", "gate-floor"].includes(name) ? "skipped" : "success" },
-        ]),
-      );
-      impossible["verify"] = {
-        result: "success",
-        outputs: { "suite-shape": "whole", "checks-shape": "operations" },
-      };
-      expect(acceptsRelease(condition, impossible, "push"), `${id} whole operations`).toBe(false);
-    }
-  });
-
-  // QFAI:SPEC-0017:TC-0017-0092
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
     for (const id of ["gate", ...operationJobs]) {
       const job = gateJobs()[id];
@@ -4390,16 +3726,20 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
       expect.soft(result.status, `${tag}: ${result.output}`).toBe(0);
       seen.set(tag, result.shape);
     }
-    // Every tag cut so far predates `ci:gate:checks`, so all three read as the old shape. The
-    // current tree is the other one, and asserting it here is what keeps the row from passing on
-    // a classifier that answers `whole` to everything.
+    // Recorded older tags, including the nine-slice release, use the whole gate.
+    // The current tree uses the seven-slice gate.
     expect(
       Object.fromEntries(seen),
       "an existing tag must read as the shape its tree carries",
-    ).toEqual({ "v1.12.0": "whole", "v1.10.0": "whole", "v1.8.0": "whole" });
+    ).toEqual({
+      "v1.12.3": "whole",
+      "v1.12.0": "whole",
+      "v1.10.0": "whole",
+      "v1.8.0": "whole",
+    });
     expect(
       classify(currentRoot(), currentPackage()).shape,
-      "this tree declares ci:gate:checks and all nine slices, so it is the sliced shape",
+      "this tree declares ci:gate:checks and all seven slices, so it is the sliced shape",
     ).toBe("sliced");
   });
 
@@ -4481,7 +3821,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
             isCover,
             `${tag} takes the ${shape} path and its ${floor ? "floor" : "range"} jobs run the ` +
               `suite as [${runs.join(", ")}] — one cover is the whole suite exactly once, either ` +
-              "`test` or the nine slices, so this is a double run, a partial one, or none at all",
+              "`test` or the seven slices, so this is a double run, a partial one, or none at all",
           )
           .toBe(true);
       }
@@ -4514,6 +3854,16 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
+  it("runs a tag with retired slice scripts through the whole-suite gate", () => {
+    const packageScripts = [...scriptKeys(currentPackage()), "test:pr-fix", "test:pr-merge"];
+    const result = classify(currentRoot(), manifestWith(packageScripts));
+    expect(result.status, result.output).toBe(0);
+    expect(result.shape).toBe("whole");
+    expect(result.checks).toBe("aggregate");
+    expect(suiteRuns(result.shape, result.checks, false)).toEqual(["test"]);
+    expect(suiteRuns(result.shape, result.checks, true)).toEqual(["test"]);
+  });
+
   it("refuses rather than passing when it can classify the tree as neither shape", () => {
     const slices = declaredSlices();
     const allSlices = slices.map((slice) => `test:${slice}`);
@@ -4523,6 +3873,11 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
         "the sliced aggregate, a slice short, and no fallback aggregate",
         manifestWith(["ci:gate:checks"]),
         manifestWith(["test", ...allSlices.slice(1)]),
+      ],
+      [
+        "an extra retired slice and no fallback aggregate",
+        manifestWith(["ci:gate:checks"]),
+        manifestWith(["test", ...allSlices, "test:pr-fix"]),
       ],
       [
         "the old aggregate with no package test script behind it",
@@ -4615,75 +3970,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  type ReleaseNeed = {
-    result?: string | undefined;
-    outputs?: { "suite-shape"?: string | undefined; "checks-shape"?: string | undefined };
-  };
-  type ReleaseNeeds = Record<string, ReleaseNeed>;
-
-  /** Evaluates the release conditions' lowercase string fixtures and Boolean operators only. */
-  const acceptsRelease = (
-    condition: string,
-    needs: ReleaseNeeds,
-    event: string,
-    cancelled = false,
-  ): boolean => {
-    const expression = condition.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/, "$1");
-    const token =
-      /\s+|contains\(needs\.\*\.result,\s*'([^']*)'\)|cancelled\(\)|github\.event_name|needs\.([a-z][a-z-]*)\.(result|outputs\.(?:suite|checks)-shape)|'[^']*'|&&|\|\||==|!=|[!()]/gy;
-    const translated: string[] = [];
-    let offset = 0;
-    while (offset < expression.length) {
-      token.lastIndex = offset;
-      const match = token.exec(expression);
-      if (match === null) {
-        throw new Error(`Unsupported release condition syntax at ${expression.slice(offset)}`);
-      }
-      offset = token.lastIndex;
-      const text = match[0];
-      if (/^\s+$/.test(text)) continue;
-      if (match[1] !== undefined) {
-        translated.push(String(Object.values(needs).some((need) => need.result === match[1])));
-      } else if (text === "cancelled()") {
-        translated.push(String(cancelled));
-      } else if (text === "github.event_name") {
-        translated.push(JSON.stringify(event));
-      } else if (match[2] !== undefined) {
-        if (
-          ![
-            "verify",
-            "gate",
-            "gate-tests",
-            "gate-floor",
-            "gate-floor-whole",
-            ...operationJobs,
-          ].includes(match[2])
-        ) {
-          throw new Error(`Unsupported release need ${match[2]}`);
-        }
-        const need = needs[match[2]];
-        translated.push(
-          JSON.stringify(
-            (match[3] === "result"
-              ? need?.result
-              : need?.outputs?.[
-                  match[3] === "outputs.checks-shape" ? "checks-shape" : "suite-shape"
-                ]) ?? "",
-          ),
-        );
-      } else if (text.startsWith("'")) {
-        translated.push(JSON.stringify(text.slice(1, -1)));
-      } else {
-        translated.push(text);
-      }
-    }
-    // Only literals and the operators above reach the VM; unsupported syntax never evaluates.
-    const result: unknown = runInNewContext(translated.join(" "), {}, { timeout: 100 });
-    if (typeof result !== "boolean") throw new Error("Release condition must return a Boolean");
-    return result;
-  };
-
-  // QFAI:SPEC-0017:TC-0017-0088
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -4711,7 +3998,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -4771,7 +4058,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 release prerequisites evaluator refuses unsupported expressions", () => {
     for (const expression of [
       "always()",

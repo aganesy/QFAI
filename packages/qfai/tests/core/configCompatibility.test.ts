@@ -61,9 +61,7 @@ describe("config legacy promptsDir alias (promptsDir -> skillsDir)", () => {
       expect(config.paths.skillsDir).toBe(defaultConfig.paths.skillsDir);
       expect(config.paths.promptsDir).toBe(defaultConfig.paths.promptsDir);
       expect(
-        issues.some((issue) =>
-          issue.message.includes("paths.promptsDir は文字列である必要があります。"),
-        ),
+        issues.some((issue) => issue.message.includes("paths.promptsDir must be a string.")),
       ).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });

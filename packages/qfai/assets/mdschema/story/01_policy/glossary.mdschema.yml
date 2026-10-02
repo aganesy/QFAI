@@ -1,0 +1,32 @@
+# Document schema: <specsDir>/01_policy/glossary.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Glossary$"
+      regex: true
+    description: The terms this project's documents use, one definition each.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Terms$"
+          regex: true
+        description: One row per term; value sets and rules stay in their contracts.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Term, Definition]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true

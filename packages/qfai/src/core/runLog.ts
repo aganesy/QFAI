@@ -42,9 +42,10 @@ export async function writeValidateRunLog(input: {
   command?: string;
   status?: RunLogResultStatus;
   /**
-   * この run の pass/fail を決めた実効しきい値。呼び出し側でフラグと config を
-   * 突き合わせた結果であり、成果物だけを読む下流が status の根拠を再現できる
-   * よう記録する。渡されなければ `null`。
+   * The effective threshold that decided this run's pass/fail. It is the result
+   * of the caller reconciling the flag with the config, recorded so a downstream
+   * consumer that reads only the artifact can reproduce the basis for `status`.
+   * `null` when not passed.
    */
   failOn?: FailOn;
 }): Promise<ValidateRunLog> {

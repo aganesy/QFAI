@@ -3,8 +3,8 @@
  * directions.
  *
  * Covers the portability half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5 dimension 2 and
- * §6): the shipped setup-install column resolves the adopter's Node version
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0017, BR-0018-0018
+ * and BR-0018-0029): the shipped setup-install column resolves the adopter's Node version
  * and the adopter's package manager from the adopter's own tree, and the two
  * resolutions degrade in OPPOSITE directions — an absent Node version file
  * falls OPEN to the documented literal with a warning annotation and the
@@ -35,7 +35,7 @@ import {
 
 /**
  * The Node version the shipped setup falls open to when the adopter pins
- * none. Value SSOT is this suite per CLI-WFSET §5; the shipped header block
+ * none. Value SSOT is this suite per BR-0018-0023; the shipped header block
  * must document the same literal.
  */
 const DOCUMENTED_NODE_VERSION = "20";
@@ -263,7 +263,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     return job;
   }
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body", async () => {
     const job = await documentAggregate();
     expect(await aggregateFailureViolations(job, ["checks"])).toEqual([]);
@@ -276,7 +276,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     expect(await aggregateFailureViolations(job, ["checks"])).toHaveLength(6);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate", async () => {
     const job = await documentAggregate();
     const step = job.steps[0];
@@ -287,7 +287,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     ]);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it.each([
     { if: "false" },
     { shell: "bash {0} || true" },
@@ -306,7 +306,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
     ]);
   });
 
-  // QFAI:SPEC-0003:TC-0003-0058
+  // QFAI:EX-0002-0003-06
   it.each<[string, (job: ShippedJob) => void]>([
     [
       "a second step that does work of its own",
@@ -332,7 +332,7 @@ describe("TC-0003-0058: aggregate failure protection", () => {
   );
 });
 
-// QFAI:SPEC-0003:TC-0003-0043
+// QFAI:EX-0002-0006-02
 describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the documented literal", () => {
   // One it() per TC-0003-0043 verify bullet. Scope notes, disclosed:
   // - `actions/setup-node` cannot run off-runner, so the resolution the
@@ -341,12 +341,12 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   //   `node-version-file:` input is present — so a resolution that runs
   //   but feeds nothing cannot pass this row.
   // - The version-file list and the fall-open literal are value SSOT in
-  //   this suite per CLI-WFSET §5. Header-block COMPLETENESS is
+  //   this suite per BR-0018-0023. Header-block COMPLETENESS is
   //   TC-0003-0042's surface; that the header documents THIS literal is
   //   this row's, asserted in it1.
   // - The `node-version-file:` half of it3 is the fail-closed form the
   //   TC's third bullet forbids: it fails the job for every adopter
-  //   without such a file, which is the whole hazard BR-0003-0037 names.
+  //   without such a file, which is the whole hazard BR-0018-0017 names.
 
   /** The Node-version resolution body of one job, asserted extractable. */
   function resolutionBody(job: ShippedJob): string {
@@ -470,7 +470,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0044
+// QFAI:EX-0002-0006-03
 describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with an actionable annotation", () => {
   // One it() per TC-0003-0044 verify bullet. This is the OPPOSITE degrade
   // direction from TDD-0043 on the same setup-install column. Scope notes,
@@ -483,7 +483,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   //   manifest field is its only source. Yarn Classic and npm ship with
   //   the runner and DO resolve without the field, so failing closed
   //   there would fail closed on a resolvable case, which AC-0003-0033
-  //   ("解決不能" = unresolvable) does not ask for.
+  //   ("unresolvable") does not ask for.
   // - Observation handed to the orchestrator rather than implemented
   //   here: a pnpm lockfile with a `packageManager` naming a DIFFERENT
   //   manager (`yarn@…`) is also unresolvable for this route and would end
@@ -832,7 +832,7 @@ describe("TC-0003-0044 (TDD-0044): absent packageManager field fails closed with
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0053
+// QFAI:EX-0002-0006-02
 describe("TC-0003-0053 (TDD-0053): version file plus packageManager field is the non-degrading happy path", () => {
   // One it() per TC-0003-0053 verify bullet. This row is the BOUNDARY that
   // keeps TDD-0043's and TDD-0044's degrade oracles from being vacuously
