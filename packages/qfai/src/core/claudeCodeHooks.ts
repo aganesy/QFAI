@@ -103,8 +103,9 @@ export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * Its program decides whether to print: it reads the command out of the hook's
- * own input and stays silent unless the command mentions the forge. The matcher alone would fire on every compound command,
- * which is the reason the writing rule's hook stays off the shell entirely.
+ * own input and stays silent unless the command mentions the forge. The matcher
+ * alone would fire on every compound command, which is the reason the writing
+ * rule's hook stays off the shell entirely.
  */
 export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
 
