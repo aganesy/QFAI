@@ -513,7 +513,7 @@ describe("widestMeasurableLine", () => {
   it("measures characters, not bytes", () => {
     // These assets carry em dashes and Japanese. A byte count would report a
     // compliant line as three times its width and fail it for its alphabet.
-    expect(widestMeasurableLine("日本語のテキスト")).toBe(8);
+    expect(widestMeasurableLine("\u65E5\u672C\u8A9E\u306E\u30C6\u30AD\u30B9\u30C8")).toBe(8);
     expect(widestMeasurableLine("a — b")).toBe(5);
   });
 

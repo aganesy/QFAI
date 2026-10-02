@@ -10,17 +10,34 @@ roles:
     delivery-planner,
     qa-strategist,
     devops-ci-engineer,
+    doc-steward,
     qa-gatekeeper,
     completion-reviewer,
     implementation-reviewer,
   ]
-steps: [verify-context, verify-qfai-gate, verify-repo-gate]
+steps:
+  [
+    verify-repeat-run,
+    verify-advisory,
+    verify-change-note,
+    verify-context,
+    verify-qfai-gate,
+    verify-repo-gate,
+    verify-external,
+    verify-manual,
+    verify-release-notes,
+  ]
+requires: [common-review-cycle]
 mode: evidence-focused
 ---
 
 ## /qfai-verify — Quality Gates and Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 ## Inputs
 
@@ -34,13 +51,20 @@ The run's evidence is `.qfai/evidence/verify-<run-id>.md`, and its verdict is
 
 ## Steps
 
-Every step runs, in this order:
+The steps run in this order. Invoked by name, a step is skipped only when its
+condition holds:
 
-| Step               | Runs                                                                     |
-| ------------------ | ------------------------------------------------------------------------ |
-| `verify-context`   | First: reads the inputs, fixes the scope, finds a command for each gate  |
-| `verify-qfai-gate` | Second: the QFAI validation of the scope                                 |
-| `verify-repo-gate` | Last: the repository gates, the fix loop, the evidence and `verify.json` |
+| Step                   | What it does                                                     | Skipped when                                    |
+| ---------------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| `verify-repeat-run`    | Runs the named tests a recorded number of times in a row         | No test is named to show stable                 |
+| `verify-advisory`      | Prepares the advisory and disclosure of a vulnerability fix      | The change fixes no vulnerability               |
+| `verify-change-note`   | The changelog entry, the migration steps, the breaking changes   | Never; it passes when there is nothing to write |
+| `verify-context`       | Reads the inputs, fixes the scope, finds a command for each gate | Never                                           |
+| `verify-qfai-gate`     | The QFAI validation of the scope                                 | Never                                           |
+| `verify-repo-gate`     | The repository gates, the fix loop, the evidence, `verify.json`  | Never                                           |
+| `verify-external`      | Asks the reporter or a real environment to confirm the fix       | The gates here can confirm the fix              |
+| `verify-manual`        | Follows a written test plan on each environment                  | No written test plan is handed in               |
+| `verify-release-notes` | Drafts the release notes                                         | Release notes were not asked for                |
 
 Read `.qfai/assistant/step/<step>/STEP.md` for the current step only, run it,
 then move to the next. Each step names the common steps it runs in
@@ -51,15 +75,14 @@ user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
 Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it. The entry check is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`.
+this file adds nothing to it.
 
 ## Review
 
 After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran: `qa-gatekeeper` and
-`completion-reviewer`, and `implementation-reviewer` when the fix loop changed
-code. Each step's `## Gate` section says what its reviewers check.
+union of the reviewers of the steps that ran: `completion-reviewer`, with
+`qa-gatekeeper` when a gate step or `verify-repeat-run` ran, and
+`implementation-reviewer` when the fix loop changed code. Each step's `## Gate` section says what its reviewers check.
 
 - Gate execution (`devops-ci-engineer`) and completion approval
   (`completion-reviewer`) are separate agents. Completion is approved by a
@@ -67,17 +90,10 @@ code. Each step's `## Gate` section says what its reviewers check.
 - `qa-gatekeeper` confirms gate coverage before approval.
 - Do not hand off until all routed blocking reviewers return `PASS`.
 
-### Reviewer Gate
-
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-gate counts and ratios are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
-
 ## Completion
 
-The invocation completes on the gate of `verify-repo-gate` and a PASS of the
-review above.
+The invocation completes on the gate of the last step that ran and a PASS of
+the review above.
 
 When declaring DONE, include:
 
@@ -95,8 +111,10 @@ the user to answer. This skill does not write `open-questions.md`.
 
 The completion message lists each adopted decision — every
 `grilling(<Session>@<run key>/agents)` row — with its reason and any
-disagreeing position, and does not wait for an answer. It then lists every
-next action:
+disagreeing position. None of them is put as a question. The message then
+ends with a question listing every next action, as
+`.agents/rules/user-questions.md` § 6 sets out; under a no-question mode it lists
+them in the report instead:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
   verification evidence summary as its description.
@@ -108,16 +126,6 @@ next action:
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick
-- ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
-  - destructive operations (rm / overwrite / force-push)
-  - version-pin changes (`package.json#version`, branch pin)
-  - scope expansions outside the active envelope
 - hard-required:
   - brand intent when a prototyping-scoped run consumes an unresolved visual design decision
   - a full `UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract from the invocation or current evidence

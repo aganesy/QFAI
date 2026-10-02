@@ -116,7 +116,7 @@ const pool = useAdopterTreePool();
 
 /**
  * The installed shipped workflow this row hand-edits. The edit is what makes
- * "drift として報告しない" a LIVE claim instead of a vacuous one: the tree really
+ * "do not report it as drift" a LIVE claim instead of a vacuous one: the tree really
  * does carry a recorded, stale file, so a skip that leaked a drift report has
  * something to leak.
  */
@@ -204,7 +204,7 @@ describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory 
       .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
       .toHaveLength(1);
 
-    // Severity, verbatim from leg (c) 「severity `info` で skip し」. `toBe`
+    // Severity, verbatim from leg (c) "skip with severity `info`". `toBe`
     // rather than `not.toBe("ok")`: the exact value is what the leg states, and
     // it COLLIDES with the drift finding's — the collision this row's steering
     // entry recorded against TDD-0032's guard #2.
@@ -217,7 +217,7 @@ describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory 
       .soft(check?.severity, "an unresolvable packaged copy is an info-severity skip")
       .toBe("info");
 
-    // 「drift として報告しない」, first half: the PAYLOAD carries no drift list.
+    // "Do not report it as drift", first half: the PAYLOAD carries no drift list.
     //
     // Absence of the ONE key, deliberately NOT a key-set `toEqual`:
     // BR-0008-0022's four-key payload is TDD-0036's to pin and that row is
@@ -234,7 +234,7 @@ describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory 
       )
       .toBeUndefined();
 
-    // 「drift として報告しない」, second half: no rendered field names the stale
+    // "Do not report it as drift", second half: no rendered field names the stale
     // file. The needle is the bare FILE name over every rendered field of EVERY
     // registered finding, so payload growth can only produce a false RED here,
     // never a false GREEN. It OVERLAPS the payload claim above without subsuming
@@ -254,7 +254,7 @@ describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory 
       )
       .not.toContain(STALE_NAME);
 
-    // 「drift として報告しない」, third half — the one the two above miss, and it
+    // "Do not report it as drift", third half — the one the two above miss, and it
     // is not hypothetical: a drift-arm copy-paste asserts a DIFFERENCE while
     // naming no file, its `modified.join(", ")` rendering empty.
     //

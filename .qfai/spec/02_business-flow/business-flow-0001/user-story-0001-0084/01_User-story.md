@@ -1,5 +1,5 @@
-# US-0001-0084: Design Anti-Goals
+# US-0001-0084: Evaluator Calibration
 
 ## User Story
 
-As a reviewer, I want explicit anti-goals and recurrence prevention notes recorded in `04_Sources.md`, so that bland or generic directions are easier to reject later.
+As a maintainer, I want the shipped reviewer prompt to show a concrete actionable critique and an overly lenient critique beside the fixed review guidance, so that a reviewer can identify a blocking finding instead of hiding it behind a favorable score or vague praise.

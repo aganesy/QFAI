@@ -65,8 +65,6 @@ const KNOWN_LOCAL_FACTORIES: readonly string[] = [
  */
 const LEGACY_FINDING_CODES: readonly string[] = [
   "D-DEPRECATED-PATH",
-  "D-DEPRECATED-SCHEMA",
-  "D-HANDOFF-LEGACY-FORMAT",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
   "D-SAAS-PACKAGE-VERIFY-SKIPPED",
@@ -149,7 +147,7 @@ async function collectTsFiles(dir: string): Promise<string[]> {
 /**
  * The value an `as const` / parenthesis wrapper is hiding.
  *
- * `const DEPRECATED_SCHEMA_CODE = "D-DEPRECATED-SCHEMA" as const` is how
+ * `const HANDOFF_SCHEMA_DRIFT_CODE = "R-HANDOFF-SCHEMA-DRIFT" as const` is how
  * several code constants are written, and reading the declaration's initializer
  * without unwrapping sees an `AsExpression`, not a literal.
  */

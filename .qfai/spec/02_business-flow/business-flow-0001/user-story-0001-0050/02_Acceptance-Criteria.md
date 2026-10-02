@@ -3,10 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Prompt-scanner drift justification
+Feature: Audit profile task forms
   # AC-0001-0050-01
-  Scenario: An unjustified R-PROMPT-SCANNER-DRIFT finding fails validation
-    Given a Reviewer-Gate report containing an `R-PROMPT-SCANNER-DRIFT` finding whose `justification:` field is empty, missing, or whitespace-only
-    When `qfai validate` ingests the reviewer report
-    Then validate rejects the run with severity error (advisory-failing); a finding with a non-empty `justification:` naming (a) the modified file, (b) the un-paired counterpart, and (c) the specific contract clause whose match cannot be confirmed passes
+  Scenario: Only the structured primary_tasks form passes and QFAI-AUD-020 names the ceiling
+    Given a UI contract whose `primary_tasks` items use the string-only form, and a sibling contract whose items are structured
+    When `auditProfile.ts` evaluates both contracts
+    Then each string-only item is rejected with `QFAI-AUD-021`, AND the structured `{id, label, acceptance}` form (all three required, `additionalProperties: false` per DR-0268) is accepted
+    And the `QFAI-AUD-020` warning text names the recommended ceiling `at most 7`
 ```

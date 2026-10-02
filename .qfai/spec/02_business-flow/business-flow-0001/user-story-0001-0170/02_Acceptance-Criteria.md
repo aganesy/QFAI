@@ -3,17 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Devils-Advocate Reviewer
+Feature: Envelope-deviation `AskUserQuestion` audit-log
   # AC-0001-0170-01
-  Scenario: A FAIL verdict carries a concrete alternative
-    Given a devils-advocate FAIL verdict
-    When checked
-    Then it includes a concrete alternative proposal. Bare negation FAIL triggers re-judgment.
-
-  # AC-0001-0170-02
-  Scenario: Devils-Advocate Is Advisory
-    Given the built-in review profiles
-    When the `devils-advocate` optional mode is read
-    Then it is advisory and does not block completion by default
-    And it requires a concrete alternative on FAIL and treats a bare negation as invalid
+  Scenario: Envelope-deviation `AskUserQuestion` writes a decision record
+    Given an `AskUserQuestion` whose template names one of the four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion),
+    When the skill body resolves the answer,
+    Then it MUST write `.qfai/evidence/decision/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270; An `AskUserQuestion` that names none of the four contexts MUST NOT write a record (no fail-open false-positive).
 ```

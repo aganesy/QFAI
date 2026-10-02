@@ -1,5 +1,5 @@
-# US-0001-0133: Browser tool migration window
+# US-0001-0133: Prototyping-phase certification check
 
 ## User Story
 
-As a downstream project, I want `prototyping.execution.browserTool` to accept both `"playwright"` (primary) and `"playwright-cli"` (during the deprecation window), so that existing CI scripts keep working through the one-minor-release migration.
+As a prototyping-only operator, I want `qfai prototyping certify --check` to accept a `verify.json` with `scope: "prototyping"` as satisfying the prototyping-phase gate, so that completing the prototyping slice does not wait on ATDD or implementation artifacts that cannot exist yet.

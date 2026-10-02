@@ -40,14 +40,14 @@ export function parseExamplesFeature(text: string, filePath: string): ParsedExam
   const errors: string[] = [];
   const featureCount = text.match(FEATURE_LINE_RE)?.length ?? 0;
   if (featureCount !== 1) {
-    errors.push(`Feature 定義は1件のみ許可されます（検出: ${featureCount}）。`);
+    errors.push(`Exactly one Feature definition is allowed (found: ${featureCount}).`);
   }
 
   const parsed = parseScenarioDocument(text, filePath);
   if (!parsed.document || parsed.errors.length > 0) {
     return {
       scenarios: [],
-      errors: [...errors, ...parsed.errors.map((error) => `Gherkin 解析失敗: ${error}`)],
+      errors: [...errors, ...parsed.errors.map((error) => `Gherkin parse failure: ${error}`)],
     };
   }
 
@@ -69,8 +69,8 @@ export function parseExamplesFeature(text: string, filePath: string): ParsedExam
  * Matches the template heading `## Test Case Table (required)` and its bare
  * `## Test Case Table` form — and nothing else.
  *
- * The suffix is limited to a single parenthesised qualifier (so a translated
- * `(必須)` still matches) and the heading must then end. A trailing word makes
+ * The suffix is limited to a single parenthesised qualifier (so a qualifier in
+ * another language still matches) and the heading must then end. A trailing word makes
  * it a different section: `## Test Case Table Format` / `## Test Case Table
  * Notes` document the format, and treating one of those as the named section
  * hands the validators an illustration table — or, when it holds no `TC-ID`

@@ -1,5 +1,10 @@
-# US-0001-0178: New Reviewer-Gate finding-code catalog
+# US-0001-0178: Research Skill Packaging
 
 ## User Story
 
-As a Reviewer-Gate consumer, I want the seven second-wave finding codes registered as a catalog that governs membership only, each code keeping the severity its own detector emits and carrying a mandatory non-empty `justification:` whose empty or whitespace-only value is rejected at severity error, so that every capability is tied to Reviewer-Gate enforcement under a single justification-text contract.
+As a developer, I want reusable SKILL.md definitions that encode research procedures with progressive disclosure, so that research steps are consistent.
+
+## Non-goals
+
+- A runtime skill execution engine.
+- IDE-specific skill integration.

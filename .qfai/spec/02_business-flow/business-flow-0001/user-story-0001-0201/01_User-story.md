@@ -1,10 +1,11 @@
-# US-0001-0201: Claim a host as supported only with evidence
+# US-0001-0201: Diagnose a reported defect without changing product code
 
 ## User Story
 
-As a QFAI release maintainer, I want to claim a host as supported only when its adapter test passes and its routing eval has been recorded for the release, with everything that can run without a model running on every pull request and the README an adopter lands on putting the free-text entry first, so that every support claim rests on evidence.
+As an operator reporting a defect against behaviour the tree already states, I want `/qfai-implement` to reproduce it and name its cause without changing any code, so that the run picks the right repair from one verdict.
 
 ## Non-goals
 
-- A routing eval on every pull request.
-- A support claim raised from a documentation table alone.
+- Repairing anything
+- Adding the missing example, which `/qfai-sdd` does
+- Choosing the plan branch a verdict leads to

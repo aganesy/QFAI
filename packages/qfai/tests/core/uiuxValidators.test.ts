@@ -207,7 +207,7 @@ describe("uiux validators", () => {
       // `published`.
       const codes = await codesForSources([
         "  - id: SRC-0001",
-        "    title: 商材管理一覧のスクリーンショット",
+        "    title: Screenshot of the product management list",
         "    type: primary",
         "    locator: page=pods-manage-syozai",
         "    observed: 2026-09-01",
@@ -222,7 +222,7 @@ describe("uiux validators", () => {
       // Only the fields carrying them move.
       const codes = await codesForSources([
         "  - id: SRC-0001",
-        "    title: 商材管理一覧のスクリーンショット",
+        "    title: Screenshot of the product management list",
         "    type: primary",
       ]);
 
@@ -276,7 +276,7 @@ describe("uiux validators", () => {
       // entry alone it is 0%, which is the true answer for this pack.
       const primary = (n: number): string[] => [
         `  - id: SRC-000${String(n)}`,
-        "    title: 画面キャプチャ",
+        "    title: Screen capture",
         "    type: primary",
         "    locator: page=pods-manage-syozai",
         "    observed: 2026-09-01",

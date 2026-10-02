@@ -11,17 +11,18 @@ export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
 /**
- * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
- * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
- * 静的解析抑制コメントを足す羽目になるため。この内部型は互換受理をやめる
- * ときに削除する。
+ * The value set of the retired orphanContractsPolicy. Compatibility fields
+ * annotate their type with this one: referencing the public alias would trigger
+ * `@typescript-eslint/no-deprecated` and force a lint-suppression comment. Delete
+ * this internal type when the compatibility acceptance ends.
  */
 type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
 
 /**
- * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
- * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
- * が import している場合に型検査が壊れないよう、互換期間中のみ残す。
+ * @deprecated validation.traceability.orphanContractsPolicy is retired.
+ * No check reads it, so setting it changes nothing. It stays for the
+ * compatibility period only, so existing TypeScript consumers that import it
+ * keep type-checking.
  */
 export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
@@ -32,8 +33,8 @@ export type QfaiPaths = {
   outDir: string;
   skillsDir: string;
   /**
-   * @deprecated paths.skillsDir を使用する。
-   * 互換性のため読み込みのみ継続し、検証の主経路では使用しない。
+   * @deprecated Use paths.skillsDir.
+   * It is still read for compatibility and is not used on the main validation path.
    */
   promptsDir: string;
   srcDir: string;
@@ -62,15 +63,16 @@ export type QfaiValidationConfig = {
      */
     forbidTestTodoStubs: boolean;
     /**
-     * @deprecated 検証側の読み取り箇所が存在しない dead knob。true にしても
-     * 診断は出ない。shipped な `qfai.config.yaml` からは除外済みで、次の
-     * major で型からも削除する。paths.promptsDir と同じ扱いで、それまでは
-     * 既定値・パースともに従来どおり維持する (公開型なので既存の
-     * TypeScript 利用者が `boolean` として参照できる状態を保つ)。
+     * @deprecated A dead knob: no validation reads it, so setting it to true
+     * raises no diagnostic. It is already removed from the shipped
+     * `qfai.config.yaml` and will be removed from the type in the next major
+     * release. As with paths.promptsDir, the default and the parsing stay as
+     * they were until then (this is a public type, so existing TypeScript
+     * consumers can keep referring to it as a `boolean`).
      */
     requireLayerTags: boolean;
     /**
-     * @deprecated `testStrategy.requireLayerTags` と同じ扱い。
+     * @deprecated Treated the same as `testStrategy.requireLayerTags`.
      */
     requireSizeTags: boolean;
   };
@@ -78,19 +80,22 @@ export type QfaiValidationConfig = {
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
     /**
-     * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
-     * 読み込み時に QFAI-CFG-001 が error として出る。既存の設定
-     * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
+     * @deprecated Retired. No check reads it, so setting it changes nothing,
+     * and loading it reports QFAI-CFG-001 as an error. It stays as an optional
+     * field for the compatibility period only, so existing config object
+     * literals keep type-checking.
      */
     brMustHaveSc?: boolean;
     /**
-     * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
-     * いるため、この値は読まれない。互換期間中のみ optional で残す。
+     * @deprecated Retired. The finding for a missing SC test reference has a
+     * fixed severity, so this value is not read. It stays as an optional field
+     * for the compatibility period only.
      */
     scNoTestSeverity?: TraceabilitySeverity;
     /**
-     * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
-     * この値は読まれない。互換期間中のみ optional で残す。
+     * @deprecated Retired. The orphan-contract finding no longer exists, so
+     * this value is not read. It stays as an optional field for the
+     * compatibility period only.
      */
     orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
@@ -214,7 +219,7 @@ export type QfaiAtddConfig = {
   /**
    * Number of consecutive un-skip + re-skip cycles tolerated before the
    * scaffold-cycle escalation fires. Default (when unset) is applied at
-   * the call-site. Pre-positioned for the spec-0008 ATDD scaffold slice.
+   * the call-site.
    */
   scaffoldEscalateCycles?: number;
 };
@@ -413,7 +418,7 @@ export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey
 
 function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): QfaiConfig {
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "設定ファイルの形式が不正です。"));
+    issues.push(configIssue(configPath, "The configuration file format is invalid."));
     return defaultConfig;
   }
 
@@ -523,7 +528,7 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "paths はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "paths must be an object."));
     return base;
   }
 
@@ -546,14 +551,14 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
 
   return {
     ...(migrationsDir !== undefined ? { migrationsDir } : {}),
-    contractsDir: readDirString(
+    contractsDir: readTreeDirString(
       raw.contractsDir,
       base.contractsDir,
       "paths.contractsDir",
       configPath,
       issues,
     ),
-    specsDir: readDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
+    specsDir: readTreeDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
     discussionDir: readDirString(
       raw.discussionDir,
       base.discussionDir,
@@ -581,7 +586,7 @@ function normalizeValidation(
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "validation はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "validation must be an object."));
     return base;
   }
 
@@ -591,9 +596,7 @@ function normalizeValidation(
   } else if (isRecord(raw.traceability)) {
     traceabilityRaw = raw.traceability;
   } else {
-    issues.push(
-      configIssue(configPath, "validation.traceability はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "validation.traceability must be an object."));
     traceabilityRaw = undefined;
   }
 
@@ -603,9 +606,7 @@ function normalizeValidation(
   } else if (isRecord(raw.testStrategy)) {
     testStrategyRaw = raw.testStrategy;
   } else {
-    issues.push(
-      configIssue(configPath, "validation.testStrategy はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "validation.testStrategy must be an object."));
     testStrategyRaw = undefined;
   }
 
@@ -667,7 +668,7 @@ function normalizeOutput(raw: unknown, configPath: string, issues: Issue[]): Qfa
     return base;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "output はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "output must be an object."));
     return base;
   }
 
@@ -691,7 +692,7 @@ function normalizePrototyping(
     return undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "prototyping はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "prototyping must be an object."));
     return undefined;
   }
 
@@ -732,7 +733,7 @@ function normalizePrototypingMode(
   issues.push(
     configIssue(
       configPath,
-      `prototyping.mode は "convergence" または "exploration" のみ有効です。受け取った値: ${JSON.stringify(raw)}`,
+      `prototyping.mode must be "convergence" or "exploration". Received: ${JSON.stringify(raw)}`,
     ),
   );
   return undefined;
@@ -780,9 +781,7 @@ function normalizePrototypingCalibration(
     return base ? { ...base } : undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "prototyping.calibration はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "prototyping.calibration must be an object."));
     return base ? { ...base } : undefined;
   }
 
@@ -808,9 +807,7 @@ function normalizePrototypingExecution(
     return base ? { ...base } : undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "prototyping.execution はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "prototyping.execution must be an object."));
     return base ? { ...base } : undefined;
   }
 
@@ -820,8 +817,8 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.${legacyKey} は廃止されました。` +
-            ` prototyping.execution.browserTool: playwright に置き換えてください。`,
+          `prototyping.execution.${legacyKey} is retired.` +
+            ` Replace it with prototyping.execution.browserTool: playwright.`,
         ),
       );
     }
@@ -834,8 +831,8 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool は "playwright" または "playwright-cli" のみ有効です。` +
-            ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
+          `prototyping.execution.browserTool must be "playwright" or "playwright-cli".` +
+            ` Received: ${JSON.stringify(browserToolRaw)}`,
         ),
       );
     } else if (browserToolRaw === "playwright-cli") {
@@ -845,8 +842,8 @@ function normalizePrototypingExecution(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool: "playwright-cli" は qfai 1.10.0 で廃止されました。` +
-            ` "playwright" を指定し、\`npm i -D playwright\` でインストールしてください。`,
+          `prototyping.execution.browserTool: "playwright-cli" was retired in qfai 1.10.0.` +
+            ` Set "playwright" and install it with \`npm i -D playwright\`.`,
         ),
       );
     } else {
@@ -877,7 +874,7 @@ function normalizeReview(
     return undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "review はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "review must be an object."));
     return undefined;
   }
   const result: QfaiReviewConfig = {};
@@ -891,7 +888,10 @@ function normalizeReview(
       result.staleTtlDays = raw.staleTtlDays;
     } else {
       issues.push(
-        configIssue(configPath, "review.staleTtlDays は 0 以上の整数である必要があります。"),
+        configIssue(
+          configPath,
+          "review.staleTtlDays must be an integer greater than or equal to 0.",
+        ),
       );
     }
   }
@@ -907,7 +907,7 @@ function readNonNegativeInteger(
   if (typeof raw === "number" && Number.isFinite(raw) && Number.isInteger(raw) && raw >= 0) {
     return raw;
   }
-  issues.push(configIssue(configPath, `${field} は 0 以上の整数である必要があります。`));
+  issues.push(configIssue(configPath, `${field} must be an integer greater than or equal to 0.`));
   return undefined;
 }
 
@@ -920,7 +920,7 @@ function normalizeReport(
     return undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "report はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "report must be an object."));
     return undefined;
   }
   const result: QfaiReportConfig = {};
@@ -958,7 +958,7 @@ function normalizeAtdd(
     return undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "atdd はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "atdd must be an object."));
     return undefined;
   }
   const result: QfaiAtddConfig = {};
@@ -974,7 +974,7 @@ function normalizeAtdd(
       issues.push(
         configIssue(
           configPath,
-          "atdd.scaffoldEscalateCycles は 0 以上の整数である必要があります。",
+          "atdd.scaffoldEscalateCycles must be an integer greater than or equal to 0.",
         ),
       );
     }
@@ -998,7 +998,7 @@ function validateObsoleteCalibrationFields(
       issues.push(
         configIssue(
           configPath,
-          `prototyping.calibration.${field} は廃止されました。calibration pack のみを使用し、prototyping.calibration.packPath だけを設定してください。`,
+          `prototyping.calibration.${field} is retired. Use the calibration pack only, and set just prototyping.calibration.packPath.`,
         ),
       );
     }
@@ -1016,7 +1016,7 @@ function readString(
     return value;
   }
   if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は文字列である必要があります。`));
+    issues.push(configIssue(configPath, `${label} must be a string.`));
   }
   return fallback;
 }
@@ -1046,6 +1046,25 @@ function readDirString(
   return trimmed.length > 0 ? trimmed : raw;
 }
 
+/**
+ * A story-tree root, with every backslash read as `/` on every platform.
+ *
+ * The shipped document-schema checker reads these two keys itself, outside the
+ * package, and takes a backslash as a separator. Folding here as well keeps
+ * `qfai validate` and that checker on one directory for one value: on Linux and
+ * macOS the platform's own path rules would otherwise read `.qfai\spec` as a
+ * single directory name.
+ */
+function readTreeDirString(
+  value: unknown,
+  fallback: string,
+  label: string,
+  configPath: string,
+  issues: Issue[],
+): string {
+  return readDirString(value, fallback, label, configPath, issues).replace(/\\/g, "/");
+}
+
 function readOptionalString(
   value: unknown,
   label: string,
@@ -1058,7 +1077,7 @@ function readOptionalString(
   if (typeof value === "string" && value.trim().length > 0) {
     return value;
   }
-  issues.push(configIssue(configPath, `${label} は空でない文字列である必要があります。`));
+  issues.push(configIssue(configPath, `${label} must be a non-empty string.`));
   return undefined;
 }
 
@@ -1073,7 +1092,7 @@ function readStringArray(
     return value;
   }
   if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は文字列配列である必要があります。`));
+    issues.push(configIssue(configPath, `${label} must be an array of strings.`));
   }
   return fallback;
 }
@@ -1089,7 +1108,7 @@ function readBoolean(
     return value;
   }
   if (value !== undefined) {
-    issues.push(configIssue(configPath, `${label} は真偽値である必要があります。`));
+    issues.push(configIssue(configPath, `${label} must be a boolean.`));
   }
   return fallback;
 }
@@ -1105,9 +1124,7 @@ function readFailOn(
     return value;
   }
   if (value !== undefined) {
-    issues.push(
-      configIssue(configPath, `${label} は never|warning|error のいずれかである必要があります。`),
-    );
+    issues.push(configIssue(configPath, `${label} must be one of never|warning|error.`));
   }
   return fallback;
 }
@@ -1146,9 +1163,9 @@ function reportRetiredTraceabilityKeys(
     issues.push(
       configDeprecatedIssue(
         configPath,
-        `validation.traceability.${key} は廃止されました。` +
-          `どの検証も参照しないため、設定しても挙動は変わりません。` +
-          `qfai.config.yaml から削除してください。`,
+        `validation.traceability.${key} is retired.` +
+          ` No check reads it, so setting it changes nothing.` +
+          ` Remove it from qfai.config.yaml.`,
       ),
     );
   }
@@ -1163,7 +1180,7 @@ function normalizeUiux(
     return undefined;
   }
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "uiux はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "uiux must be an object."));
     return undefined;
   }
   const result: QfaiUiuxConfig = {};
@@ -1171,16 +1188,14 @@ function normalizeUiux(
     if (typeof raw.platform === "string" && raw.platform.trim().length > 0) {
       result.platform = raw.platform;
     } else {
-      issues.push(configIssue(configPath, "uiux.platform は空でない文字列である必要があります。"));
+      issues.push(configIssue(configPath, "uiux.platform must be a non-empty string."));
     }
   }
   if (raw.designTokensDir !== undefined) {
     if (typeof raw.designTokensDir === "string" && raw.designTokensDir.trim().length > 0) {
       result.designTokensDir = raw.designTokensDir;
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.designTokensDir は空でない文字列である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.designTokensDir must be a non-empty string."));
     }
   }
   if (raw.htmlMockTimeout !== undefined) {
@@ -1191,7 +1206,7 @@ function normalizeUiux(
     ) {
       result.htmlMockTimeout = raw.htmlMockTimeout;
     } else {
-      issues.push(configIssue(configPath, "uiux.htmlMockTimeout は正の数値である必要があります。"));
+      issues.push(configIssue(configPath, "uiux.htmlMockTimeout must be a positive number."));
     }
   }
   if (raw.qualityProfile !== undefined) {
@@ -1202,10 +1217,7 @@ function normalizeUiux(
       result.qualityProfile = raw.qualityProfile as "strict" | "high" | "default";
     } else {
       issues.push(
-        configIssue(
-          configPath,
-          "uiux.qualityProfile は strict|high|default のいずれかである必要があります。",
-        ),
+        configIssue(configPath, "uiux.qualityProfile must be one of strict|high|default."),
       );
     }
   }
@@ -1213,9 +1225,7 @@ function normalizeUiux(
     if (typeof raw.requireResearchSummary === "boolean") {
       result.requireResearchSummary = raw.requireResearchSummary;
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.requireResearchSummary はブール値である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.requireResearchSummary must be a boolean."));
     }
   }
   if (raw.competitive_refs_min !== undefined) {
@@ -1231,7 +1241,10 @@ function normalizeUiux(
       result.competitive_refs_min = raw.competitive_refs_min;
     } else {
       issues.push(
-        configIssue(configPath, "uiux.competitive_refs_min は0以上の整数である必要があります。"),
+        configIssue(
+          configPath,
+          "uiux.competitive_refs_min must be an integer greater than or equal to 0.",
+        ),
       );
     }
   }
@@ -1326,7 +1339,7 @@ function normalizeUiuxAudit(
   issues: Issue[],
 ): QfaiUiuxAuditConfig | undefined {
   if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "uiux.audit はオブジェクトである必要があります。"));
+    issues.push(configIssue(configPath, "uiux.audit must be an object."));
     return undefined;
   }
   const result: QfaiUiuxAuditConfig = {};
@@ -1334,16 +1347,14 @@ function normalizeUiuxAudit(
     if (typeof raw.enabled === "boolean") {
       result.enabled = raw.enabled;
     } else {
-      issues.push(configIssue(configPath, "uiux.audit.enabled はブール値である必要があります。"));
+      issues.push(configIssue(configPath, "uiux.audit.enabled must be a boolean."));
     }
   }
   if (raw.slopDetection !== undefined) {
     if (typeof raw.slopDetection === "boolean") {
       result.slopDetection = raw.slopDetection;
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.audit.slopDetection はブール値である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.audit.slopDetection must be a boolean."));
     }
   }
   if (raw.maxPrimaryCtas !== undefined) {
@@ -1355,7 +1366,10 @@ function normalizeUiuxAudit(
       result.maxPrimaryCtas = raw.maxPrimaryCtas;
     } else {
       issues.push(
-        configIssue(configPath, "uiux.audit.maxPrimaryCtas は0以上の数値である必要があります。"),
+        configIssue(
+          configPath,
+          "uiux.audit.maxPrimaryCtas must be a number greater than or equal to 0.",
+        ),
       );
     }
   }
@@ -1370,7 +1384,7 @@ function normalizeUiuxAudit(
       issues.push(
         configIssue(
           configPath,
-          "uiux.audit.maxRawTokenLiteralWarnings は0以上の数値である必要があります。",
+          "uiux.audit.maxRawTokenLiteralWarnings must be a number greater than or equal to 0.",
         ),
       );
     }
@@ -1386,7 +1400,7 @@ function normalizeUiuxAudit(
       issues.push(
         configIssue(
           configPath,
-          "uiux.audit.maxDuplicateFindingsPerRule は0以上の数値である必要があります。",
+          "uiux.audit.maxDuplicateFindingsPerRule must be a number greater than or equal to 0.",
         ),
       );
     }
@@ -1400,9 +1414,7 @@ function normalizeRenderEvidence(
   issues: Issue[],
 ): RenderEvidenceConfig | undefined {
   if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "uiux.renderEvidence はオブジェクトである必要があります。"),
-    );
+    issues.push(configIssue(configPath, "uiux.renderEvidence must be an object."));
     return undefined;
   }
 
@@ -1412,9 +1424,7 @@ function normalizeRenderEvidence(
     if (typeof raw.enabled === "boolean") {
       result.enabled = raw.enabled;
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.renderEvidence.enabled はブール値である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.renderEvidence.enabled must be a boolean."));
     }
   }
 
@@ -1423,7 +1433,7 @@ function normalizeRenderEvidence(
       result.viewports = normalizeRenderViewports(raw.viewports);
     } else {
       issues.push(
-        configIssue(configPath, "uiux.renderEvidence.viewports は文字列配列である必要があります。"),
+        configIssue(configPath, "uiux.renderEvidence.viewports must be an array of strings."),
       );
     }
   }
@@ -1432,9 +1442,7 @@ function normalizeRenderEvidence(
     if (typeof raw.out === "string" && raw.out.trim().length > 0) {
       result.out = raw.out.trim();
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.renderEvidence.out は空でない文字列である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.renderEvidence.out must be a non-empty string."));
     }
   }
 
@@ -1443,10 +1451,7 @@ function normalizeRenderEvidence(
       result.baseUrl = raw.baseUrl.trim();
     } else {
       issues.push(
-        configIssue(
-          configPath,
-          "uiux.renderEvidence.baseUrl は空でない文字列である必要があります。",
-        ),
+        configIssue(configPath, "uiux.renderEvidence.baseUrl must be a non-empty string."),
       );
     }
   }
@@ -1455,9 +1460,7 @@ function normalizeRenderEvidence(
     if (typeof raw.failOpen === "boolean") {
       result.failOpen = raw.failOpen;
     } else {
-      issues.push(
-        configIssue(configPath, "uiux.renderEvidence.failOpen はブール値である必要があります。"),
-      );
+      issues.push(configIssue(configPath, "uiux.renderEvidence.failOpen must be a boolean."));
     }
   }
 

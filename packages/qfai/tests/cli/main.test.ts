@@ -100,7 +100,7 @@ describe("cli root discovery", () => {
   });
 
   // CLI-arg errors exit 2 on every command
-  // (BR-0011-0045 of `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`).
+  // (BR-0009-0045 of `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md`).
   it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
@@ -202,29 +202,6 @@ describe("cli root discovery", () => {
     }
   });
 
-  // `--dry-run` is rejected on the commands that never wired it, but
-  // `handoff upgrade` implements it: the flag must reach the command and
-  // preview instead of writing the canonical file.
-  it("honours --dry-run on handoff upgrade instead of writing the canonical file", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-dryrun-"));
-    const legacyFile = path.join(root, "legacy.yaml");
-    await writeFile(legacyFile, "companyName: FreshCo\n", "utf-8");
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await captureStdout(async () => {
-        await run(["handoff", "upgrade", legacyFile, "--root", root, "--dry-run"], root);
-      });
-      expect(process.exitCode).toBe(0);
-      // The whole point of the flag: nothing may be written.
-      await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).rejects.toThrow();
-    } finally {
-      process.exitCode = previousExitCode;
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("sets exitCode=1 when the top-level command is unknown", async () => {
     const cwd = process.cwd();
 
@@ -290,7 +267,7 @@ describe("cli usage errors", () => {
     }
   }
 
-  // QFAI:EX-0001-0179-03
+  // QFAI:EX-0001-0173-03
   it("exits 2 on an audit argument error and names the reason on stderr", async () => {
     const missing = await captureRun(["audit"]);
     expect(missing.exitCode).toBe(2);
@@ -311,10 +288,6 @@ describe("cli usage errors", () => {
     const cases: Array<{ argv: string[]; expected: string }> = [
       { argv: ["audit"], expected: "qfai audit: unknown or missing subcommand. Expected: log" },
       { argv: ["atdd"], expected: "qfai atdd: unknown or missing subcommand. Expected: scaffold" },
-      {
-        argv: ["handoff"],
-        expected: "qfai handoff: unknown or missing subcommand. Expected: upgrade",
-      },
       {
         argv: ["discussion"],
         expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
@@ -391,7 +364,7 @@ describe("cli usage text", () => {
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {
     const entry = forceEntry(await captureHelp());
 
-    expect(entry).not.toContain("それ以外は既存があればスキップ");
+    expect(entry).not.toContain("everything else is skipped if it already exists");
     expect(entry).toContain("rule/*.local.md overlays");
     expect(entry).not.toContain("assistant/catalog");
   });

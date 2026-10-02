@@ -1,9 +1,9 @@
-// QFAI:AC-0001-0193-02
-// QFAI:AC-0001-0193-04
-// QFAI:AC-0001-0194-01
-// QFAI:AC-0001-0194-02
-// QFAI:AC-0001-0194-03
-// QFAI:EX-0001-0194-06
+// QFAI:AC-0001-0186-02
+// QFAI:AC-0001-0186-04
+// QFAI:AC-0001-0187-01
+// QFAI:AC-0001-0187-02
+// QFAI:AC-0001-0187-03
+// QFAI:EX-0001-0187-06
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -29,18 +29,24 @@ afterEach(removeProjects);
 const CRITERION = "AC-0001-0001-01";
 const EXAMPLE = EXAMPLE_IDS[0] ?? "";
 const PRODUCTION = "src/notification-addresses.ts";
-const VERIFY_STEPS = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY_STEPS = [
+  "verify-change-note",
+  "verify-context",
+  "verify-qfai-gate",
+  "verify-repo-gate",
+];
 
 const reasons = (document: unknown) =>
   list(document, "error.reasons").map((each) => field(each, "reason"));
 
-it("A regression on an annotated example is fixed by regression_fix, which needs its re-run and review", async () => {
+it("A regression on an annotated example is fixed by the fix-red-main fix stage, which needs its re-run and review", async () => {
   const root = await flowProject();
   const testBefore = await readFile(path.join(root, UNIT_TEST));
-  const { runId, next: fix } = await diagnosed(root, {
-    verdict: "regression",
-    matchedIds: [EXAMPLE],
-  });
+  const { runId, next: fix } = await diagnosed(
+    root,
+    { verdict: "regression", matchedIds: [EXAMPLE] },
+    "fix-red-main",
+  );
   await write(root, PRODUCTION, "export const add = (known: string[]) => known.length < 5;\n");
   const changedFiles = [await fileRef(root, PRODUCTION)];
   const bare = await submit(
@@ -80,7 +86,7 @@ it("A regression on an annotated example is fixed by regression_fix, which needs
   });
 }, 300_000);
 
-it("An expectation that differs from the story sends the run back to routing before any edit", async () => {
+it("An expectation that differs from the story re-routes the run to decide-acceptance before any edit", async () => {
   const root = await flowProject();
   const { runId, accepted, next } = await diagnosed(root, {
     verdict: "expectation-differs",
@@ -96,20 +102,28 @@ it("An expectation that differs from the story sends the run back to routing bef
   expect({
     state: field(accepted.json, "run.state"),
     next: [orderOf(next.json).stageKind, field(next.json, "workOrder.executor.skill")],
+    destination: field(next.json, "workOrder.reroute.route"),
     implement: kinds.includes("implement"),
-  }).toEqual({ state: "routing", next: ["route", "qfai-run"], implement: false });
+  }).toEqual({
+    state: "routing",
+    next: ["route", "qfai-run"],
+    destination: "decide-acceptance",
+    implement: false,
+  });
 }, 300_000);
 
-it("A defective test goes to the owner of its layer: qfai-atdd for a criterion, qfai-implement for an example", async () => {
-  const byCriterion = await diagnosed(await flowProject(), {
-    verdict: "defective-test",
-    matchedIds: [CRITERION],
-  });
+it("The repair-test fix stage runs both layers' steps for a criterion and for an example", async () => {
+  const byCriterion = await diagnosed(
+    await flowProject(),
+    { verdict: "defective-test", matchedIds: [CRITERION] },
+    "repair-test",
+  );
   const exampleRoot = await flowProject();
-  const byExample = await diagnosed(exampleRoot, {
-    verdict: "defective-test",
-    matchedIds: [EXAMPLE],
-  });
+  const byExample = await diagnosed(
+    exampleRoot,
+    { verdict: "defective-test", matchedIds: [EXAMPLE] },
+    "repair-test",
+  );
   const cited = { ids: [EXAMPLE], digest: "c".repeat(64) };
   const fixed = await submit(
     exampleRoot,
@@ -126,17 +140,15 @@ it("A defective test goes to the owner of its layer: qfai-atdd for a criterion, 
     "ready",
     VERIFY_STEPS,
   ]);
+  // Both layers' steps run; the one that does not own the layer passes.
+  const testFix = {
+    stageKind: "test_fix",
+    steps: ["atdd-test-fix", "implement-test-fix"],
+    target: { kind: "flow", flowId: FLOW_ID },
+  };
   expect([orderOf(byCriterion.next.json), orderOf(byExample.next.json)]).toEqual([
-    {
-      stageKind: "test_fix",
-      steps: ["atdd-test-fix"],
-      target: { kind: "flow", flowId: FLOW_ID },
-    },
-    {
-      stageKind: "test_fix",
-      steps: ["implement-test-fix"],
-      target: { kind: "flow", flowId: FLOW_ID },
-    },
+    testFix,
+    testFix,
   ]);
 }, 600_000);
 
@@ -144,10 +156,11 @@ const CITED = { ids: [FLOW_ID, CRITERION], digest: "a".repeat(64) };
 
 it("A test fix keeping what its test cites, with its review and re-run, is accepted and verify follows", async () => {
   const root = await flowProject();
-  const { runId, next: fix } = await diagnosed(root, {
-    verdict: "defective-test",
-    matchedIds: [CRITERION],
-  });
+  const { runId, next: fix } = await diagnosed(
+    root,
+    { verdict: "defective-test", matchedIds: [CRITERION] },
+    "repair-test",
+  );
   const accepted = await submit(
     root,
     runId,
@@ -165,16 +178,16 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
   ]);
 }, 300_000);
 
-// No active stage of the bugfix plan can change a criterion: its one story-authoring stage only
-// appends examples, and the run skipped it. So the repair goes back to routing, which settles a
-// plan that can.
-// QFAI:EX-0001-0194-04
-it("A test fix that changes what its test checks is refused, and its repair returns the run to routing", async () => {
+// No stage of the repair-test plan can change a criterion: it has no story-authoring stage. So the
+// run stops on the finding, naming the skill that owns it, and stays on its route.
+// QFAI:EX-0001-0187-04
+it("A test fix that changes what its test checks is refused, and its repair blocks the run on qfai-sdd", async () => {
   const root = await flowProject();
-  const { runId, next: fix } = await diagnosed(root, {
-    verdict: "defective-test",
-    matchedIds: [CRITERION],
-  });
+  const { runId, next: fix } = await diagnosed(
+    root,
+    { verdict: "defective-test", matchedIds: [CRITERION] },
+    "repair-test",
+  );
   const changed = { ...CITED, digest: "b".repeat(64) };
   const refused = await submit(
     root,
@@ -206,20 +219,26 @@ it("A test fix that changes what its test checks is refused, and its repair retu
   expect({
     refused: [field(refused.json, "error.code"), reasons(refused.json)],
     unchanged,
-    repair: [field(repair.json, "run.state"), orderOf(repair.json).stageKind],
+    repair: [
+      field(repair.json, "run.state"),
+      field(repair.json, "workOrder"),
+      field(repair.json, "halt.blocker"),
+      field(repair.json, "halt.owner"),
+    ],
   }).toEqual({
     refused: ["invalid-input", ["test-fix-meaning"]],
     unchanged: "running",
-    repair: ["routing", "route"],
+    repair: ["blocked", null, "stage-blocked", "qfai-sdd"],
   });
 }, 300_000);
 
 it("A test fix without its review receipt, or without its re-run receipt, is refused", async () => {
   const root = await flowProject();
-  const { runId, next: fix } = await diagnosed(root, {
-    verdict: "defective-test",
-    matchedIds: [CRITERION],
-  });
+  const { runId, next: fix } = await diagnosed(
+    root,
+    { verdict: "defective-test", matchedIds: [CRITERION] },
+    "repair-test",
+  );
   const without = async (resultId: string, testFix: object) =>
     reasons(
       (

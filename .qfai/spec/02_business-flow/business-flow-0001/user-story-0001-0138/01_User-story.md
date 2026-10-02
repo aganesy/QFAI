@@ -1,5 +1,5 @@
-# US-0001-0138: UI-contract terminology in prototyping
+# US-0001-0138: Canonical primary UI-contract pin
 
 ## User Story
 
-As a downstream consumer, I want the public `/qfai-prototyping` skill surface to name the UI contract as its unit and to leave `resolveSurfaceUnion()` out, so that SKILL.md and the contracts stop drifting from the implementation.
+As an operator, I want the `primaryUiContract` pin to accept only the full `UI-NNNN` form and to fail with one deterministic error naming that shape, so that the input-validation surface is unambiguous.

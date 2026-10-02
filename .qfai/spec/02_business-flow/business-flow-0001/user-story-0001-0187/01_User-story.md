@@ -1,10 +1,11 @@
-# US-0001-0187: Domain and URL Allowlisting
+# US-0001-0187: Repair a defective test with example coverage untouched
 
 ## User Story
 
-As a team lead, I want declarative domain and URL allowlists and denylists in configuration files, so that agents only access approved sources.
+As an operator, I want a bug report whose cause is a broken test fixed at the test, so that no example of the bound flow changes whether a test annotates it, because the obligation it states has not changed.
 
 ## Non-goals
 
-- Changing the allowlist at runtime.
-- Integration with an organization's IAM.
+- A test edit that changes what the expectation means.
+- A fix accepted with no independent review or re-run.
+- The stage skill that makes the fix.

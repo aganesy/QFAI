@@ -21,6 +21,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -131,7 +132,8 @@ function requireComplete(result: Result, stage: string, listsFlows: boolean): vo
 }
 
 function operations(report: string): string[] {
-  const section = /^## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
+  // A report opens with its verdict line, so the heading is found at the start of a line.
+  const section = /(?:^|\n)## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
   return section.split(/\r?\n/).filter((line) => line.trim() !== "" && line.trim() !== "none");
 }
 
@@ -149,12 +151,14 @@ async function hashTree(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const item = path.join(directory, name);
       const relative = path.relative(root, item).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stat = await lstat(item);
-      hash.update(`${relative}\0${stat.mode}\0`);
+      const holdsOnlyReports = isMigrationReportAncestor(relative);
+      if (!holdsOnlyReports) hash.update(`${relative}\0${stat.mode}\0`);
       if (stat.isSymbolicLink()) {
         hash.update(`link\0${await readlink(item)}\0`);
       } else if (stat.isDirectory()) {
-        hash.update("directory\0");
+        if (!holdsOnlyReports) hash.update("directory\0");
         await visit(item);
       } else {
         hash.update("file\0");
@@ -364,6 +368,23 @@ describe("BF-0004 migration cutover", () => {
     expect(journey.dry.map((result) => operations(result.stdout))).toEqual(
       journey.real.map((result) => operations(result.stdout)),
     );
+    // Each step says what it found before it reports, and step 10 closes with a summary.
+    for (const result of [...journey.dry, ...journey.real]) {
+      expect(result.stdout.split(/\r?\n/).slice(0, 3)).toEqual([
+        "1.x layout found, migrating",
+        "",
+        "## Operations",
+      ]);
+    }
+    for (const results of [journey.dry, journey.real]) {
+      const summaries = results.map((result) =>
+        result.stdout.split(/\r?\n/).filter((line) => line.startsWith("Summary")),
+      );
+      expect(summaries).toEqual([
+        ...Array(9).fill([]),
+        ["Summary: a 1.x layout was found, so the steps are migrating it."],
+      ]);
+    }
     expect(journey.rerunUnchanged).toBe(true);
     expect(journey.map.version).toBe(1);
     expect(journey.map.ids["spec-0001"]).toMatchObject({

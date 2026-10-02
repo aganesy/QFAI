@@ -337,7 +337,7 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
-  // QFAI:EX-0001-0125-03
+  // QFAI:EX-0001-0121-02
   it("exits 2 when show-ui-contract receives legacy prototyping state", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "qfai-show-ui-contract-legacy-"));
     tempDirs.push(dir);

@@ -37,7 +37,7 @@ contracts and evidence only.
 ## Writes
 
 - `.qfai/evidence/verify-<run-id>.md`, opened as `common-evidence-record`
-  says: the Objective with the declared scope, the inputs reviewed, and this
+  says where `verify-change-note` has not opened it already: the Objective with the declared scope, the inputs reviewed, and this
   invocation's `## Grilling Session` block.
 - Gate commands found here, in
   `.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`.

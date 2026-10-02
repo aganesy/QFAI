@@ -1,4 +1,5 @@
-import { moveTechnicalConstraints, type PolicyDraft } from "./policyDocuments.js";
+import type { PolicyDraft } from "./policyDocuments.js";
+import { moveArchitectureSection } from "./techDocument.js";
 
 /**
  * The story tree has no structure document. Step 3 routes each section of an
@@ -20,13 +21,13 @@ export type StructureSource = {
   sections: { heading: string; body: string }[];
   /** The entrypoint-to-command pairs the old `tech.md` Smoke or Skeleton lines give. */
   commands: ReadonlyMap<string, string>;
-  /** The draft of `01_policy/constraint.md` that takes the architecture constraints. */
-  constraints: () => PolicyDraft;
+  /** The draft of `tech.md`, whose `## Architecture` table takes the layers. */
+  tech: () => PolicyDraft;
   techTarget: string;
 };
 
 const ENTRYPOINT_SECTION = /^(?:key packages \/ entrypoints|entry points)$/i;
-const CONSTRAINT_SECTION = /^architecture constraints$/i;
+const ARCHITECTURE_SECTION = /^architecture(?: constraints)?$/i;
 const UI_SECTION = /^ui surface paths\b/i;
 
 /** The entrypoint-to-command pairs of `- Smoke:` and `- Skeleton:` lines. */
@@ -97,9 +98,9 @@ export function routeStructureCatalog(input: StructureSource): StructureRouting 
       const entrypoints = routeEntrypoints(input, heading, body);
       routing.skeletonLines.push(...entrypoints.skeletonLines);
       routing.forAPerson.push(...entrypoints.forAPerson);
-    } else if (CONSTRAINT_SECTION.test(heading)) {
+    } else if (ARCHITECTURE_SECTION.test(heading)) {
       routing.forAPerson.push(
-        ...moveTechnicalConstraints(input.constraints(), {
+        ...moveArchitectureSection(input.tech(), {
           source: input.source,
           archive: input.archive,
           heading,

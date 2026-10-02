@@ -224,7 +224,7 @@ describe("checkCompletionCertificate", () => {
     }
   });
 
-  // QFAI:EX-0001-0140-02
+  // QFAI:EX-0001-0136-02
   it("leaves a cycle-0 reset's backups out of the digest tree", async () => {
     // They hold the previous loop's evidence, and removing one after certify
     // must not read as this loop's evidence changing.

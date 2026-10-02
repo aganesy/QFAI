@@ -1,5 +1,5 @@
-# US-0001-0137: Prototyping-phase certification check
+# US-0001-0137: Actionable blocked-cycle summary
 
 ## User Story
 
-As a prototyping-only operator, I want `qfai prototyping certify --check` to accept a `verify.json` with `scope: "prototyping"` as satisfying the prototyping-phase gate, so that completing the prototyping slice does not wait on ATDD or implementation artifacts that cannot exist yet.
+As an operator on a non-converged cycle, I want a one-screen `[BLOCKED]` summary naming the top three exit-64 blockers with concrete offenders, so that I can act on the next iteration without scrolling through evidence diffs.

@@ -5,42 +5,42 @@ dependencies: none
 version: 1.0.0
 ---
 
-# よく使うコマンド（GitHub Copilot）
+# Common Commands (GitHub Copilot)
 
-## セットアップ
+## Setup
 
-- 依存インストール: pnpm install
-- GraphQL 型生成: pnpm generate:graphql
+- Install dependencies: pnpm install
+- Generate GraphQL types: pnpm generate:graphql
 
-## 開発
+## Development
 
-- フロント開発サーバー: pnpm dev
-- バックエンド apply: pnpm apply:backend
-- ビルド: pnpm build
+- Frontend dev server: pnpm dev
+- Backend apply: pnpm apply:backend
+- Build: pnpm build
 
-## 品質
+## Quality
 
 - Lint: pnpm lint
-- フォーマット: pnpm format / 検査のみ pnpm format:check
-- 型チェック: pnpm check-types
+- Format: pnpm format; check only: pnpm format:check
+- Type check: pnpm check-types
 
-## テスト
+## Tests
 
-- 全テスト: pnpm test
-- カバレッジ: pnpm test:coverage
+- All tests: pnpm test
+- Coverage: pnpm test:coverage
 - Backend Unit: pnpm test:unit
 - Backend Integration: pnpm test:integration
 - E2E: pnpm test:e2e
 
-## Seed/データ
+## Seed and Data
 
-- Seed 実行: pnpm seed
+- Run seed: pnpm seed
 
-## MCP（推奨）
+## MCP (recommended)
 
-- MCP 一覧/使いどころ: `.instruction/02_project/mcp.md`
-- VS Code での確認（コマンドパレット）:
-  - `MCP: List Servers`（必要なら `Start/Restart`）
-  - `MCP: Reset Cached Tools`（ツールが出ない時）
+- MCP list and when to use each: `.instruction/02_project/mcp.md`
+- Check in VS Code (command palette):
+  - `MCP: List Servers` (use `Start/Restart` if needed)
+  - `MCP: Reset Cached Tools` (when tools do not appear)
 
-> 実行結果は成功/失敗を明示し、失敗時はログ要約と対応を記載する。
+> State whether each run succeeded or failed, and on failure give a log summary and the response.

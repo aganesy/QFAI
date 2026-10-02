@@ -17,12 +17,17 @@ roles:
     implementation-reviewer,
   ]
 steps: [atdd-scaffold, atdd-credentials, atdd-author, atdd-test-fix]
+requires: [common-review-cycle]
 mode: execution-focused
 ---
 
 ## /qfai-atdd — Author acceptance tests
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 The active scope is one `BF-NNNN` business flow. Its evidence file is
 `.qfai/evidence/atdd-BF-NNNN.md`. Send a decision, a question for the user or
@@ -56,25 +61,21 @@ Questions to the user follow
 ### Reviewer Gate
 
 The one review after the last step checks what the `Review` section of each
-step that ran names. The test author cannot sign off their own work.
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-test volume and planning estimates are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
+step that ran names.
 
 ## Completion
 
 The invocation completes on the gate of its last step and a PASS of that
-review. Report what that gate names.
+review. Report what that gate names. The report ends with a question listing the
+next actions, `/qfai-implement` recommended, as
+`.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 
-- auto-decide: test selectors, fixture organization, and output formatting
-  within the active BF and its declared contracts.
-- ask-user: approval-required operations, scope expansion, and product
-  decisions not settled by the story tree. In `--auto`, report these as
-  pending instead of supplying an answer.
-- hard-required:
+- auto-decide: test selectors and fixture organization within the active BF
+  and its declared contracts.
+- ask-user: product decisions the story tree does not settle.
 
 project_memory:
 

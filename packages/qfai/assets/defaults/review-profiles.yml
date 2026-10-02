@@ -26,6 +26,12 @@ profiles:
   implementation-heavy:
     always_required: [completion-reviewer, qa-gatekeeper, implementation-reviewer]
     conditional_required: []
+  # No step names this profile. A run carrying `review:heavy` adds its
+  # reviewers, all blocking, to every stage's own.
+  heavy:
+    always_required:
+      [completion-reviewer, architecture-reviewer, requirements-reviewer, implementation-reviewer]
+    conditional_required: []
 
 optional_modes:
   devils-advocate:

@@ -53,7 +53,7 @@
  * together would STILL be wrong, because they answer different questions.
  * `entry.sha256` answers "has the adopter edited this file since install?";
  * the packaged comparison answers "is this adopter behind the copy the
- * running package ships?". REQ-0022 asks for the second, and an adopter who
+ * running package ships?". This check answers the second, and an adopter who
  * never touched a file still has to be told that the package moved on.
  * Do not fold the two together.
  *
@@ -98,32 +98,18 @@ const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
 /**
- * EVERY member of this type is consumed at this revision, and the paragraph that
- * opened here recorded the one that was not — corrected in place rather than
- * appended to, because a reader who stops at the first sentence would otherwise
- * be told the opposite of what the code does. `status === "skipped_unresolved"`
- * was claimed-but-unconsumed, held for the unresolvable-packaged-copy skip of
- * the unresolved-copy rule; TDD-0039 landed that skip, so `doctor.ts` now reads
- * the member on
- * an arm of its own and the claim is discharged rather than pending.
- *
- * What that paragraph CONSTRAINED still holds, and the arm is now what enforces
- * it: widening this status widens the skip, so a second route into
+ * EVERY member of this type is consumed. `doctor.ts` reads
+ * `status === "skipped_unresolved"` on an arm of its own: the skip the
+ * unresolved-copy rule requires when the packaged copy cannot be resolved.
+ * Widening this status widens that skip, so a second route into
  * `skipped_unresolved` must be one where the unresolved-copy rule requires a
- * skip. The longer argument is version controlled at
- * `.qfai/evidence/implement-spec-0006.md`.
+ * skip.
  *
- * `packagedDir` left that list one row EARLIER, and its departure is still worth
- * stating, because the consumer is not the one this comment used to predict: the
- * drift advisory's MESSAGE names it as the packaged source path to copy from, per
- * the message rule of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`. Its
- * `details` slot has since landed with TDD-0036 / TC-0006-0034, so
- * the field now has TWO consumers, and the older sentence here — which said the
- * slot was "still outstanding" — was true when written and false from that commit
- * onward. It is corrected rather than annotated, because this paragraph's whole
- * job is to be the checkable inventory.
+ * `packagedDir` has TWO consumers: the drift advisory's MESSAGE names it as the
+ * packaged source path to copy from, per the message rule of the `qfai doctor`
+ * contract, and the advisory's `details` carries it.
  *
- * THE CONVENTION THAT ROW LANDED: `details` carries `packagedDir` beside
+ * THE CONVENTION FOR THAT SLOT: `details` carries `packagedDir` beside
  * `workflowsDir`, which puts an ABSOLUTE NATIVE path next to a ROOT-RELATIVE
  * POSIX one in a single JSON object. That mix is intended and is keyed to the
  * ROOT the path belongs to, not to the key it sits under — in-tree paths are
@@ -186,11 +172,10 @@ export type WorkflowsIntegrityDiff = {
    *
    * Reported as PAYLOAD and never as a trigger. `status` is keyed on `modified`
    * alone, so a tree whose recorded names were all removed stays `ok` and emits
-   * NO DRIFT FINDING — the `ok` check itself is still registered, which
-   * TC-0006-0035 pins with a guard. (An earlier draft of this sentence said it
-   * "emits nothing", which is measurably false: the run prints
+   * NO DRIFT FINDING — the `ok` check itself is still registered, and a test
+   * pins that with a guard: the run prints
    * `[ok] workflows.integrity: installed shipped workflow(s) match the packaged
-   * copy`.) Reporting no drift finding is what the contract's "never reported again"
+   * copy`. Reporting no drift finding is what the contract's "never reported again"
    * requires. This field exists so that an operator reading a finding raised for
    * some OTHER name can see that QFAI knows the missing file is missing and is
    * leaving it alone.
@@ -563,8 +548,8 @@ export async function diffInstalledShippedWorkflows(
   // and emits NO DRIFT FINDING — the `ok` check itself is still registered; see
   // the `declined` field's docstring above, which carries the measurement. The
   // shipped-workflows contract says a declined name is never reported again,
-  // so promoting it to a trigger here would report it forever. TC-0006-0035 is
-  // the boundary that pins this.
+  // so promoting it to a trigger here would report it forever. A declined-only
+  // test pins this boundary.
   return {
     status: modified.length > 0 ? "modified" : "ok",
     workflowsDir: WORKFLOWS_DIR_RELATIVE,

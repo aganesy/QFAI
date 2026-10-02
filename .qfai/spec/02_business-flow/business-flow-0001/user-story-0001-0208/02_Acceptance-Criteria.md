@@ -3,27 +3,55 @@
 ## Criteria
 
 ```gherkin
-Feature: Diagnose a reported defect without changing product code
+Feature: Verify as the final stage of a run
   # AC-0001-0208-01
-  Scenario: A diagnose-only operation changes no tracked project file
-    Given a diagnose-only work order with the expected-behaviour reference and the scope
-    When /qfai-implement serves it
-    Then no file git tracks is changed, so no product code, test or story file differs
-    And a file it writes that git ignores, such as its reproduction record, is named as an artifact, not as a changed file
+  Scenario: The stage result names this run's verify.json and its independent review
+    Given an orchestrated verify work order
+    When the verify stage returns
+    Then its artifact references name the verify.json this stage wrote
+    And the qa-gatekeeper verdict is a review result from a reviewer independent of the authors
+    And its own gate results are reported as information, never as the gate decision
 
   # AC-0001-0208-02
-  Scenario: A diagnosis returns one verdict and what supports it
-    Given a diagnose-only work order
-    When the stage returns
-    Then the result carries exactly one verdict: a missing test, a defective test, a regression, or an expectation that differs from the request
-    And it names the BF, AC or EX IDs of the bound flow that the next work order acts on
-    And the reproduction, the cause candidates and the impact are in the record the result references
+  Scenario: A report from elsewhere is never offered as this run's
+    Given a verify.json written by another run, scoped to another flow, or kept in a shared location
+    When the verify stage returns
+    Then that file is not named as this stage's report
 
   # AC-0001-0208-03
-  Scenario: A diagnosed missing test raises no change request from implement
-    Given diagnosis found a missing test on behaviour an existing AC states
-    When /qfai-implement handles that scope gap
-    Then it appends no change request row to decisions.md and adds no EX
-    And the skill's statement of what goes to /qfai-sdd as a change request states that carve-out
-    And any other scope gap still goes to /qfai-sdd as a change request
+  Scenario: Validation that did not run is reported unrun
+    Given a verify stage in which a required gate did not run
+    When the stage returns
+    Then its outcome and its test observation are reported apart
+    And the gate that did not run is unrun, never a pass
+
+  # AC-0001-0208-04
+  Scenario: verify.json keeps its fields and values
+    Given the verify stage of a run
+    When it writes verify.json
+    Then the file carries no field it did not carry before
+    And its status and scope take only the values they took before
+    And no stage outcome or test observation value is written into it
+
+  # AC-0001-0208-05
+  Scenario: Verify sends each finding to its owner
+    Given the final gates report findings verify did not cause
+    When the verify stage returns
+    Then a story or contract gap, an acceptance-test defect and an implementation defect are listed as needs_repair findings, with qfai-sdd, qfai-atdd and qfai-implement as their resolving owners
+    And a missing environment returns the stage blocked, with the blocker stage-blocked and the operator as the one who clears it
+    And verify edits no artifact another owner holds
+
+  # AC-0001-0208-06
+  Scenario: The verify stage follows the stage-skill handover
+    Given workflow mode active
+    When /qfai-verify is selected with no work order and not by name
+    Then it edits nothing and passes the request to qfai-run
+    And a worker handed a work order checks the run, stage and work-order IDs and does only that work
+
+  # AC-0001-0208-07
+  Scenario: qfai-verify lists the steps every verify stage runs
+    Given the qfai-verify SKILL.md and the built-in plans
+    When its steps frontmatter is read
+    Then it lists every step whose owner is qfai-verify
+    And the verify block of every change route names `verify-change-note`, `verify-context`, `verify-qfai-gate` and `verify-repo-gate`, in that order, and every other verify stage names steps from that list
 ```

@@ -73,6 +73,13 @@ Before anything is generated from `DESIGN.md`:
 Once a prototyping loop has started, `DESIGN.md` stays as cycle 0 recorded it.
 To change it, edit it and start the loop again from cycle 0.
 
+## Passes when
+
+Read first: the flow's classified surface set and root `DESIGN.md`. The step
+passes when the flow is not on a visual prototyping surface, or when root
+`DESIGN.md` exists, is not the unreplaced sample, and parses and validates with
+no issue. The pass names the surface set and the validation result.
+
 ## Writes
 
 - Root `DESIGN.md`, only when it was missing.

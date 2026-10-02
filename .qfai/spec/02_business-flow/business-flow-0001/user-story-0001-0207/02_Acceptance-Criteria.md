@@ -3,48 +3,49 @@
 ## Criteria
 
 ```gherkin
-Feature: Implement as a stage of a run
+Feature: Run `/qfai-sdd` as a stage of a run
   # AC-0001-0207-01
-  Scenario: The implement stage follows the stage-skill handover
-    Given workflow mode active
-    When /qfai-implement is selected with no work order and not by name
-    Then it edits nothing and passes the request to qfai-run
-    And a worker handed a work order checks the run, stage and work-order IDs and does only that work
+  Scenario: No target never means every flow
+    Given an orchestrated /qfai-sdd work order
+    When the work order names no target
+    Then /qfai-sdd refuses it and does not run the no-argument batch
+    And a flow target scopes the stage to that business flow
+    And a new_story target makes the result report the binding of the flow and the stories it created
 
   # AC-0001-0207-02
-  Scenario: qfai-implement lists the steps the plans and seam requests run
-    Given the qfai-implement SKILL.md and the built-in plans
-    When its steps frontmatter is read
-    Then it lists every step whose owner is qfai-implement, implement-seam included
-    And every step a plan gives a diagnose, implement or regression_fix stage, and the example-layer step of a test_fix stage, is one of them
+  Scenario: Invoked by name, /qfai-sdd runs standalone
+    Given the operator invokes /qfai-sdd by name
+    When SDD completes
+    Then the skill stops and creates no run
+    And a request to go to the end is handed to a whole run
 
   # AC-0001-0207-03
-  Scenario: The bound flow supplies the flow scope without asking
-    Given an implement work order whose target binds a business flow
-    When the stage starts
-    Then that flow is the stage's --flow scope and no question chooses it
-    And with no work order the flow is chosen as it is when the skill is invoked by name
+  Scenario: /qfai-sdd checks how it was invoked before it edits anything
+    Given /qfai-sdd is selected in active mode
+    When it holds no work order and was not invoked by name, or holds one that matches no issued work order
+    Then it edits nothing
+    And a worker holding a valid work order does only that work
 
   # AC-0001-0207-04
-  Scenario: A long stage resumes at an example boundary
-    Given an implement work order carrying a checkpoint reference
-    When the stage resumes
-    Then it starts at the EX the checkpoint names
-    And its result names EX IDs and records no progress state of its own
-    And the order of the TDD cycle within each example is unchanged
+  Scenario: /qfai-sdd lists the steps the plans run for story authoring
+    Given the /qfai-sdd SKILL.md and the built-in plans
+    When its steps frontmatter is read
+    Then it lists every step whose owner is qfai-sdd
+    And every step a plan gives an sdd or sdd_append stage is one of them
 
   # AC-0001-0207-05
-  Scenario: The next-example check is never served from the shared snapshot
-    Given an active run whose shared preflight snapshot is valid
-    When the implement stage starts
-    Then it may reuse the snapshot for the inputs the snapshot covers
-    And it runs its own flow-scoped validate to find the examples no test annotates
+  Scenario: Stage 0 reuses the shared snapshot but not SDD's own check
+    Given a run whose Stage 0 shared snapshot is recorded
+    When /qfai-sdd starts a work order in that run
+    Then it reuses the snapshot once its key still matches, and refreshes only what changed
+    And the sdd preflight readiness check of the selected source runs again and is never served from the snapshot
 
   # AC-0001-0207-06
-  Scenario: An implement-seam work order lands only the minimal connection
-    Given an implement-seam work order naming the acceptance test that cannot reach its assertion
-    When /qfai-implement serves it
-    Then it lands only the minimal connection, through the implement-seam step
-    And the target test still fails at its assertion
-    And the main implementation waits until the acceptance stage has taken RED
+  Scenario: An SDD-kind stage changes the tree only on the operator's answer
+    Given an sdd or sdd_append work order
+    When the stage has a proposal for the story-tree and contract files it would change
+    Then it asks once and changes nothing: it opens one decision question showing the change target and the proposal, with outcome awaiting_input
+    And the attempt holding the human_decision makes the change and appends one Change request row naming every protected file it changed, at WIP, with an Approach citing that answer
+    And that attempt moves the row to DONE once every change it names is written, leaving it at WIP only while changes remain for a later attempt of the same stage
+    And a row citing only request_scope is refused record-unauthorized
 ```

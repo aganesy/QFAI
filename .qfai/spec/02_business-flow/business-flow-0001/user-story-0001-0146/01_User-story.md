@@ -1,5 +1,5 @@
-# US-0001-0146: Out-of-range cycle guidance
+# US-0001-0146: Prototyping mutation log
 
 ## User Story
 
-As an operator, I want `iterate --cycle N` with N outside `0..9` to fail with a deterministic error that names the supported range and recommends the peek-mode equivalent, so that off-by-one CLI mistakes are self-diagnosable.
+As a maintainer auditing evidence churn, I want `iterate` and `certify` to append a `{ ts, caller, path, action, priorSize, newSize }` line to the git-ignored `.qfai/evidence/prototyping/mutation-log.jsonl` for every delete, overwrite or move under `iter-NN/`, including each file moved by `--cycle 0 --force`, so that lost iteration evidence can be traced and a code path that mutates `iter-NN/` without logging is reported as `R-EVIDENCE-MUTATION-UNLOGGED`.

@@ -4,10 +4,10 @@
  *
  * CRLF comes from the fixture, never from `core.autocrlf`.
  */
-// QFAI:AC-0001-0203-06
-// QFAI:EX-0001-0203-16
-// QFAI:EX-0001-0203-17
-// QFAI:EX-0001-0203-18
+// QFAI:AC-0001-0196-06
+// QFAI:EX-0001-0196-16
+// QFAI:EX-0001-0196-17
+// QFAI:EX-0001-0196-18
 import { spawnSync } from "node:child_process";
 import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";

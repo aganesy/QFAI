@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0195-08
-// QFAI:AC-0001-0195-09
+// QFAI:AC-0001-0188-08
+// QFAI:AC-0001-0188-09
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -43,7 +43,7 @@ it("Drift outside the checked scope blocks the run on scope-dependency, naming e
   const root = await flowProject();
   await withOtherFlows(root);
   const decisionsBefore = await readFile(path.join(root, DECISIONS), "utf8");
-  const { runId, issued } = await runAt(root, "bounded-change", "verify");
+  const { runId, issued } = await runAt(root, "add-feature", "verify");
   const blocked = await submit(
     root,
     runId,
@@ -73,7 +73,7 @@ it("Drift outside the checked scope blocks the run on scope-dependency, naming e
 
 it("Drift inside the checked scope is a repair owned by story authoring, not a halt", async () => {
   const root = await flowProject();
-  const { runId, issued } = await runAt(root, "bounded-change", "verify");
+  const { runId, issued } = await runAt(root, "add-feature", "verify");
   const repair = await submit(
     root,
     runId,
@@ -94,7 +94,7 @@ it("Drift inside the checked scope is a repair owned by story authoring, not a h
 
   expect([field(repair.json, "run.state"), stepNames(next.json)]).toEqual([
     "ready",
-    ["sdd-triage", "sdd-story", "sdd-gate"],
+    ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"],
   ]);
 }, 300_000);
 
@@ -108,7 +108,7 @@ async function changeExamples(root: string) {
 
 it("A story-authoring result that changes the tree while it still asks for approval is refused", async () => {
   const root = await flowProject();
-  const { runId, issued } = await runAt(root, "bounded-change", "sdd_delta");
+  const { runId, issued } = await runAt(root, "add-feature", "sdd");
   const question = {
     kind: "decision",
     text: `Add ${NEW_ROW} to the story's examples?`,
@@ -148,7 +148,7 @@ it("A story-authoring result that changes the tree while it still asks for appro
 
 it("A change request citing no answer of this run is refused", async () => {
   const root = await flowProject();
-  const { runId, issued } = await runAt(root, "bounded-change", "sdd_delta");
+  const { runId, issued } = await runAt(root, "add-feature", "sdd");
   const changed = await changeExamples(root);
   await write(
     root,

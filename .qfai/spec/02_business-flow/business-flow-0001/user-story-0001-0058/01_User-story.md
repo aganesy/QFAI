@@ -1,5 +1,9 @@
-# US-0001-0058: Layer-specific test obligations
+# US-0001-0058: Markdown report generation
 
 ## User Story
 
-As a QA engineer on the story tree, I want `qfai validate` to report each business flow, acceptance criterion and example that has no test at its layer, with a recorded exception as the only way out, so that test coverage follows the layer each obligation belongs to.
+As an operator, I want `qfai report --format md` to write `report.md` under `paths.outDir` with an executive summary, an issue list and a traceability matrix, so that I can read the result of a validation run as one document.
+
+## Non-goals
+
+- Custom report templates

@@ -159,7 +159,7 @@ describe("prototyping rescope refuses", () => {
     expect(await run(root, { remove: ["UI-0099"] })).toBe(2);
   });
 
-  // QFAI:EX-0001-0122-09
+  // QFAI:EX-0001-0118-09
   it("a surface that STILL RESOLVES — the refusal that keeps this from being drift", async () => {
     // `0001` has a UI-bearing marker, so nothing has retired it. Removing it
     // here would be the silent narrowing the frozen union exists to detect;
@@ -209,7 +209,7 @@ describe("the two refusals say different things", () => {
 });
 
 describe("prototyping rescope applies", () => {
-  // QFAI:EX-0001-0122-09
+  // QFAI:EX-0001-0118-09
   it("removes the retired surface and records why", async () => {
     const root = await reducedScope();
     expect(await run(root)).toBe(0);
@@ -224,7 +224,7 @@ describe("prototyping rescope applies", () => {
     expect(log[0]?.cycle).toBe(3);
   });
 
-  // QFAI:EX-0001-0122-09
+  // QFAI:EX-0001-0118-09
   it("leaves the loop where it was", async () => {
     // This changes what the loop is ABOUT, not where it is. `--force` was the
     // only route before and it discarded the cycles; a reduction that reset
@@ -278,7 +278,7 @@ describe("a --reason that does not read as an id", () => {
   // reduction — worse than a weak field, because it blocks the operation this
   // exists to provide. So both rows assert exit 0 and differ only in whether
   // the operator was told.
-  // `lib/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
+  // `core/logger.ts` sends `warn` to STDOUT, not stderr — the CLI keeps one
   // stream so a piped run sees the whole narrative in order. Spying on stderr
   // captured nothing, which is how this row found out.
   const captureWarnings = (): string[] => {
@@ -345,7 +345,7 @@ describe("prototyping rescope and the recorded review", () => {
     return abs;
   }
 
-  const PROSE = "All twelve declared screens render, including the 禁止リスト sidebar.";
+  const PROSE = "All twelve declared screens render, including the prohibited-items sidebar.";
 
   it("annotates the review WITHOUT touching the critique", async () => {
     // The issue's second point. What a reviewer saw at cycle N is a historical
@@ -408,7 +408,7 @@ describe("prototyping rescope and the recorded review", () => {
     expect(plan.cycle).toBe(0);
   });
 
-  // QFAI:EX-0001-0122-09
+  // QFAI:EX-0001-0118-09
   it("keeps a shared captured screen while another UI contract declares it", async () => {
     const root = await reducedScope();
     const dir = path.join(evidenceDir(root), "iter-00");

@@ -1,5 +1,5 @@
-# US-0001-0160: Resolve active discussion pack via single helper
+# US-0001-0160: Scoped SaaS package certificate
 
 ## User Story
 
-As a `/qfai-sdd` downstream skill, I want to resolve the active discussion pack through one helper that reads `.qfai/state.json#discussion.currentId`, which `/qfai-discussion` writes, so that I never guess the active pack from filesystem timestamps and I report an error naming the candidate directories and the recovery command `qfai discussion use <id>` when the pointer is missing or ambiguous.
+As a delivery lead shipping a SaaS-tenant project, I want `qfai prototyping certify --scope saas-package` to seal a `completion-certificate.json` that explicitly carries `scope: "saas-package"` and a `notes:` field naming every skipped gate, so that the certificate never overstates completion as full DONE and an `--upgrade-scope full` path exists once the missing gates land.

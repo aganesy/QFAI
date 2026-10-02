@@ -234,20 +234,39 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     });
 
     it(`${path.relative(repoRoot, protocolPath)}: descriptions mark any phrase kept from the source`, async () => {
-      const quotation = section(await readFile(protocolPath, "utf-8"), "## Quotation Rule");
-      expect(quotation).toContain("analyst's own words");
-      expect(quotation).toContain("marked as a quotation");
-      expect(quotation).toContain("ordinary quotation marks");
+      const quotation = section(await readFile(protocolPath, "utf-8"), "## Quotation Rule").replace(
+        /\s+/g,
+        " ",
+      );
+      expect(quotation).toContain(
+        "Each `best_practices` and `anti_patterns` `description` is written in the analyst's own words. " +
+          "A phrase kept from the source is marked as a quotation with ordinary quotation marks.",
+      );
       // The rule is taught by one worked example: the source, the entry, and why.
-      expect(quotation).toContain("The source says:");
-      expect(quotation).toContain("description:");
-      expect(quotation).toContain("This is correct because");
+      expect(quotation).toContain(
+        'The source says: "Retry idempotent requests with exponential backoff and jitter; ' +
+          'never retry a non-idempotent write."',
+      );
+      expect(quotation).toContain(
+        "description: >- Only a request that is safe to repeat is retried, and the wait between " +
+          'attempts grows and is randomized, which the source calls "exponential backoff and jitter".',
+      );
+      expect(quotation).toContain(
+        "This is correct because the claim is restated in the analyst's words, and the one phrase " +
+          "kept verbatim is in quotation marks, so a reader can tell which words are the source's.",
+      );
     });
 
     it(`${path.relative(repoRoot, protocolPath)}: a recognized name is still searched`, async () => {
-      const names = section(await readFile(protocolPath, "utf-8"), "## Name Verification Rule");
-      expect(names).toContain("Search it as it was");
-      expect(names).toContain("not grounds to skip the search");
+      const names = section(
+        await readFile(protocolPath, "utf-8"),
+        "## Name Verification Rule",
+      ).replace(/\s+/g, " ");
+      expect(names).toContain(
+        "Where a query centers on a name — a framework, a model, a CLI tool, a component catalogue, " +
+          "a theme — that name is what gets verified. Search it as it was written.",
+      );
+      expect(names).toContain("Recognizing the name is not grounds to skip the search.");
       // The lookup is a source like any other, so a verified name is told apart
       // from one answered from memory.
       expect(names).toContain("Record what the search found in the summary's `sources`");

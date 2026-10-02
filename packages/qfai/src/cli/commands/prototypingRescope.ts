@@ -9,7 +9,7 @@ import { loadConfig } from "../../core/config.js";
 import { readFrozenScopeState } from "../../core/prototyping/frozenScope.js";
 import { PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { readUiContractsCovered } from "../../core/prototyping/specsCovered.js";
-import { info, warn } from "../lib/logger.js";
+import { info, warn } from "../../core/logger.js";
 
 /** What the caller asked for. */
 export type RescopeOptions = {

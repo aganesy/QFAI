@@ -65,7 +65,7 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
-  it("states the same two verdicts in the review step and the sdd skill body", async () => {
+  it("states the same two verdicts in the review step and the reviewer gate baseline", async () => {
     for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toMatch(/`?PASS`?\s*(?:\/|or)\s*`?REVISE`?/);
@@ -73,7 +73,7 @@ describe("reviewer verdict vocabulary", () => {
       }
     }
 
-    for (const content of await readShipped("skill/qfai-sdd/SKILL.md")) {
+    for (const content of await readShipped("rule/shared-skill-delegation-baseline.md")) {
       expect(content).toContain("PASS or REVISE for the reviewed revision");
     }
   });

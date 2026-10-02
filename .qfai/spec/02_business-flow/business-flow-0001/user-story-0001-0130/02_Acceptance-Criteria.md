@@ -3,11 +3,12 @@
 ## Criteria
 
 ```gherkin
-Feature: Safe CSS-wide keywords
+Feature: Optional prototype capture
   # AC-0001-0130-01
-  Scenario: SAFE_LITERALS covers CSS-wide keywords
-    Given a declaration whose value is any of `inherit`, `initial`, `unset`, `revert`, `currentColor`,
-    When any of the four scanners (`scanColors` / `scanFonts` / `scanRadius` / `scanShadow`) inspects the declaration,
-    Then `designMdViolations[]` MUST NOT contain an entry naming that keyword.
-    And the unit test matrix MUST assert `5 keywords × 4 scanners = 20` pass cells.
+  Scenario: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
+    Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
+    When the loop runs,
+    Then no PNG / HTML artifacts MUST be written (the existing DR-0012-0029 no-capture posture is preserved; amendment pinned by `DR-0012-0031`).
+    And when invoked WITH `--capture`, iterate MUST drive Playwright per the Capture contract in `iterate-plan.json` and write `iter-NN/<screen-id>.{png,html}` for every `screens[]` entry, copying source HTML from `.qfai/prototypes/iter-NN/<screen-id>.html` (`.qfai/prototype/iter-NN/<screen-id>.html` with the `rule/ skill/ agent/ prompt/` assistant tree) when `htmlSourceCopy: true`.
+    And async capture errors MUST be surfaced with explicit per-screen error context (no silent skip).
 ```

@@ -1,5 +1,5 @@
-# US-0001-0165: Removed compatibility namespaces
+# US-0001-0165: Pattern-Doubler Reviewer
 
 ## User Story
 
-As a maintainer, I want legacy compatibility namespaces to remain removed, so that verify guidance matches the actual package surface.
+As a QFAI user, I want optional advisory review that proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale, so that real behavior is covered without numeric targets or demands for more abstract rules.

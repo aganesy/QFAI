@@ -42,16 +42,20 @@
  *   node scripts/check-mermaid.mjs            # scan the repository
  *   node scripts/check-mermaid.mjs <paths...> # scan the named files/dirs
  *   node scripts/check-mermaid.mjs --list     # report what would be scanned
+ *   node scripts/check-mermaid.mjs --tools <dir> [<paths...>]
+ *                                             # take Mermaid and jsdom from <dir>/node_modules first
  *
  * Exit codes:
  *   0  every diagram parsed (or none was found)
  *   1  at least one diagram failed to parse
  *   2  usage error (unknown flag, unreadable path)
  */
+import { realpathSync } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 /**
  * The tree being scanned, and the base every reported path is relative to.
@@ -236,16 +240,53 @@ async function collectMarkdown(target) {
 }
 
 /**
+ * Imports a package from the tools directory when one is named and holds it,
+ * and the way this script always resolved it otherwise.
+ *
+ * The shipped document lane installs Mermaid and jsdom into a directory of its
+ * own, because npm cannot install into a `node_modules` that a different
+ * package manager laid out. A bare `import()` looks from this file's location,
+ * which is inside the project's tree, so the directory is named explicitly.
+ * Resolution goes through `createRequire`, which takes the `default` condition
+ * of a package's exports, as Mermaid's own entry declares. It also walks every
+ * ancestor `node_modules`, so a result outside the named directory's own
+ * `node_modules` is not accepted: a project's unpinned copy must not stand in
+ * for the pinned one.
+ *
+ * @param {string} name
+ * @param {string | null} tools
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function importTool(name, tools) {
+  if (tools !== null) {
+    let resolved = null;
+    try {
+      // `resolve` returns real paths, so the directory it is compared with is one too.
+      const own = path.join(realpathSync(tools), "node_modules") + path.sep;
+      const found = createRequire(path.join(tools, "noop.cjs")).resolve(name);
+      resolved = found.startsWith(own) ? found : null;
+    } catch {
+      // Not installed there: resolve it the way this script always did.
+    }
+    if (resolved !== null) {
+      return import(pathToFileURL(resolved).href);
+    }
+  }
+  return import(name);
+}
+
+/**
  * Boots Mermaid against a jsdom window.
  *
  * The globals are assigned before `mermaid` is imported: the module reads
  * `document` while registering its diagram types, so an import that runs first
  * throws at load rather than at parse.
  *
+ * @param {string | null} tools Directory whose `node_modules` is searched first.
  * @returns {Promise<(diagram: string) => Promise<void>>} A parse function that rejects on invalid input.
  */
-async function bootMermaid() {
-  const { JSDOM } = await import("jsdom");
+async function bootMermaid(tools) {
+  const { JSDOM } = await importTool("jsdom", tools);
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
 
   globalThis.window = dom.window;
@@ -267,7 +308,7 @@ async function bootMermaid() {
     }
   }
 
-  const mermaid = (await import("mermaid")).default;
+  const mermaid = (await importTool("mermaid", tools)).default;
   // `startOnLoad: false` keeps the module from scanning the jsdom document for
   // diagrams to render; `strict` is the shipping default and is stated rather
   // than inherited so a Mermaid default change cannot loosen what CI accepts.
@@ -292,7 +333,17 @@ function describeError(error) {
 export async function main() {
   const argv = process.argv.slice(2);
   const listOnly = argv.includes("--list");
-  const targets = argv.filter((arg) => arg !== "--list");
+  const toolsAt = argv.indexOf("--tools");
+  const toolsValue = toolsAt === -1 ? null : (argv[toolsAt + 1] ?? "");
+  if (toolsValue === "" || toolsValue?.startsWith("-")) {
+    console.error("check-mermaid: --tools needs a directory");
+    return 2;
+  }
+  const tools = toolsValue === null ? null : path.resolve(toolsValue);
+  const targets = argv.filter(
+    (arg, index) =>
+      arg !== "--list" && index !== toolsAt && (toolsAt === -1 || index !== toolsAt + 1),
+  );
 
   const unknownFlag = targets.find((arg) => arg.startsWith("-"));
   if (unknownFlag !== undefined) {
@@ -351,7 +402,7 @@ export async function main() {
 
   let parse;
   try {
-    parse = await bootMermaid();
+    parse = await bootMermaid(tools);
   } catch (error) {
     // A toolchain that cannot boot must not report a green lane: it established
     // nothing about the diagrams it never read.

@@ -1,9 +1,5 @@
-# US-0001-0068: Flow-scoped report
+# US-0001-0068: E2E Acceptance Test Implementation
 
 ## User Story
 
-As an agent running a scoped gate on the story tree, I want `qfai report --flow BF-NNNN` to render the result of a flow-scoped validate run to report files of its own, so that parallel workers each render their own flow without overwriting the shared report.
-
-## Non-goals
-
-- A scope finer than one business flow
+As a QA engineer, I want one E2E test for each business flow in scope, carrying `QFAI:BF-NNNN`, so that business-flow coverage is traceable and verifiable.

@@ -7,11 +7,11 @@
  * production functions directly (no reliance on repo live state or a
  * rebuilt dist binary).
  */
-// QFAI:EX-0001-0092-01
-// QFAI:EX-0001-0092-02
-// QFAI:EX-0001-0092-03
-// QFAI:EX-0001-0093-01
-// QFAI:EX-0001-0093-02
+// QFAI:EX-0001-0089-01
+// QFAI:EX-0001-0089-02
+// QFAI:EX-0001-0089-03
+// QFAI:EX-0001-0090-01
+// QFAI:EX-0001-0090-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -67,7 +67,7 @@ describe("spec-0010 mock anchor-form hrefs CHG-006", () => {
     expect(drift?.severity).toBe("error");
   });
 
-  // QFAI:EX-0001-0092-04
+  // QFAI:EX-0001-0089-04
   it("the shipped template's mock link is anchor-form, and the template and the discussion skill both name that form", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");
     const templateAbs = path.join(repoRoot, MOCK_HREF_TEMPLATE_REL);

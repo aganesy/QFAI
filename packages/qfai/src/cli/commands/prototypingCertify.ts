@@ -3,7 +3,7 @@
  *
  * `certify` is the only writer of `.qfai/evidence/prototyping/completion-certificate.json`.
  * It refuses to write the artifact unless every gate passes:
- *   - prototyping.json.fullHarness.runId is present
+ *   - prototyping.json.runId is present
  *   - .qfai/output/validate.json exists with counts.error === 0
  *   - .qfai/output/verify.json exists with status === "PASS"
  *   - prototyping.json.reviewerGate.result === "PASS"
@@ -95,7 +95,7 @@ import {
 import { readUiContractInventory } from "../../core/prototyping/specResolution.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../core/logger.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { profileSuffixedReportPath } from "./validate.js";
 
@@ -199,9 +199,6 @@ const ROOT_DESIGN_MD_REL = "DESIGN.md";
  */
 const CANONICAL_SPEC_ID = /^UI-\d{4}$/u;
 
-/** Legacy `prototyping.json` shape (OC-60). Named so the code is greppable. */
-const DEPRECATED_SCHEMA_CODE = "D-DEPRECATED-SCHEMA" as const;
-
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
 ): Promise<number> {
@@ -290,28 +287,8 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // Accept the new top-level `runId` (written by `iterate` at cycle 0) and
-  // fall back to the legacy `fullHarness.runId` shape for projects whose
-  // prototyping.json predates the UX-loop schema rewrite.
-  //
-  // The fallback used to be silent. A hybrid record — modern `iterations[]`,
-  // legacy `fullHarness.runId` — sealed a completion certificate with
-  // `counts.error === 0` and no operator signal at all, while the migration
-  // memo told the same operator the shape was retired. Reporting it follows
-  // the legacy `verify.json` branch below: say so, and still seal. Refusing
-  // outright would delete the acceptance path, which OC-60 forbids.
-  const canonicalRunId = extractString(protoJson, "runId");
-  const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
-  const runId = canonicalRunId ?? legacyRunId;
-  if (!canonicalRunId && legacyRunId) {
-    // The shape is retired and nothing reads it any more, so this is an error
-    // outright.
-    error(
-      `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
-        `\`fullHarness.runId\` shape instead of a top-level \`runId\`. ` +
-        `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`,
-    );
-  }
+  // The top-level `runId` is written by `iterate` at cycle 0.
+  const runId = extractString(protoJson, "runId");
   if (!runId) {
     error(
       "qfai prototyping certify: prototyping.json#runId is required " +

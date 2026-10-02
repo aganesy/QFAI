@@ -274,7 +274,7 @@ describe("validation config keys are wired", () => {
 
   it("does not accept a bare key name in prose, a string or a same-named local", () => {
     const decoys = [
-      "// validation の enabled をいつか読む",
+      "// someday read the enabled flag of validation",
       "/* enabled */",
       'issues.push({ rule: "validation.enabled" });',
       "const enabled = options.enabled;",
@@ -289,7 +289,7 @@ describe("validation config keys are wired", () => {
 
   it("keeps code that lives next to comments and strings", () => {
     const prose = [
-      "// config.validation.traceability.testFileGlobs はコメント",
+      "// config.validation.traceability.testFileGlobs is a comment",
       'const label = "validation.traceability.testFileGlobs";',
     ].join("\n");
     const withCode = [prose, "const on = config.validation.traceability.testFileGlobs;"].join("\n");
@@ -339,15 +339,15 @@ describe("validation config keys are wired", () => {
     // A deprecation message naming a key reads exactly like a property access
     // once the backticks are ignored, so the raw text must never count.
     const message = [
-      "const message = `validation.traceability.newKey は廃止されました`;",
+      "const message = `validation.traceability.newKey is retired`;",
       "const nested = `${label}: `.concat(`.traceability.newKey`);",
     ].join("\n");
     const key = "validation.traceability.newKey";
 
     expect(readsPath(message, key)).toBe(false);
-    expect(
-      readsPath("const m = `見つかりません: ${config.validation.traceability.newKey}`;", key),
-    ).toBe(true);
+    expect(readsPath("const m = `not found: ${config.validation.traceability.newKey}`;", key)).toBe(
+      true,
+    );
   });
 
   it("does not accept a write-only access as a consumer", () => {

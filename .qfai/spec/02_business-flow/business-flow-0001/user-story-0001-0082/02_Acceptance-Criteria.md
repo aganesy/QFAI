@@ -3,11 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: Exploration Brief Authoring
+Feature: Design Anti-Goals
   # AC-0001-0082-01
-  Scenario: UI-bearing discussion records exploration inputs
-    Given a UI-bearing discussion pack is ready for downstream prototyping
-    When its `04_Sources.md` is finalized
-    Then it records the product intent, must-keep interactions, brand signals, and differentiation targets as explicit exploration constraints
-    And it does not select a winning visual direction or finalize a design system
+  Scenario: UI-bearing discussion records rejected design patterns
+    Given a UI-bearing discussion rejects a generic or unsuitable visual direction
+    When `04_Sources.md` is finalized
+    Then it records the anti-goal and the reason the direction was rejected
+    And it records a concrete cue that will prevent the rejected pattern from recurring in downstream design review
 ```
