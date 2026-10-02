@@ -1,6 +1,6 @@
-// QFAI:EX-0001-0192-50
-// QFAI:EX-0001-0193-05
-// QFAI:EX-0001-0195-13
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0188-13
 
 import { expect, it } from "vitest";
 
@@ -20,14 +20,14 @@ function table(rows: string[]): string {
 
 function contract(first: string, second = "EX-0001-0005-02"): string {
   return [
-    "# Notify",
+    "# CLI-0001: Notify",
     "",
-    "## Rules",
+    "## Business rules",
     "",
     "| BR-ID | Statement | Examples |",
     "| --- | --- | --- |",
-    `| BR-0001 | One email per customer | ${first} |`,
-    `| BR-0002 | Emails are unique | ${second} |`,
+    `| BR-0001-0001 | One email per customer | ${first} |`,
+    `| BR-0001-0002 | Emails are unique | ${second} |`,
     "",
   ].join("\n");
 }
@@ -58,7 +58,7 @@ function facts(rows: string[], text: string, exampleIds: string[]) {
 
 const question = {
   kind: "decision",
-  text: "Add the empty-value example and cite it from BR-0001?",
+  text: "Add the empty-value example and cite it from BR-0001-0001?",
   options: [
     { optionId: "apply", label: "Apply it", description: "Writes both.", effect: "proceed" },
     { optionId: "skip", label: "Leave it", description: "The run stops.", effect: "stop" },
@@ -67,22 +67,12 @@ const question = {
   recommendation: "apply",
 };
 
-// A bugfix run seeding an example: its first attempt asks the change question, the operator
+// A fix-defect run seeding an example: its first attempt asks the change question, the operator
 // answers, and the second attempt is issued. Returns the run and the answer's authorization.
 function answered(answeredBy: string) {
   const plan = planOf(
-    "bugfix",
-    [
-      stage("diagnose", "diagnose", "qfai-implement", "diagnose-only"),
-      stage(
-        "sdd-append",
-        "sdd_append",
-        "qfai-sdd",
-        "defect-example-seeding",
-        "missing_example_needed",
-      ),
-      stage("verify", "verify", "qfai-verify", "verify-full"),
-    ],
+    "fix-defect",
+    [stage("diagnose", "diagnose"), stage("sdd-append", "sdd_append"), stage("verify", "verify")],
     [STORY],
   );
   const issue = facts(ISSUED, contract("EX-0001-0005-01"), AT_ISSUE);
@@ -129,31 +119,50 @@ function seeded(answeredBy: string, citation: (id: string) => string, text: stri
 
 const withNewExample = contract("EX-0001-0005-01, EX-0001-0005-03");
 
+// The approval the row carries: the answer cited, who gave it, when, and the option chosen.
+const ANSWERED_AT = "2026-09-26T00:00:00.000Z";
+const approval = (who: string) => (id: string) =>
+  `Answered ${RUN}/${id} by ${who} at ${ANSWERED_AT}: Apply it`;
+
 it("A change request citing the answer and the operator who gave it", () => {
-  expect(
-    seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-1`, withNewExample),
-  ).toBeUndefined();
+  expect(seeded("operator-1", approval("operator-1"), withNewExample)).toBeUndefined();
 });
 
 it("A change request naming someone whose name only begins with the operator's", () => {
-  expect(
-    seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-12`, withNewExample),
-  ).toEqual(expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]));
+  expect(seeded("operator-1", approval("operator-12"), withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
+});
+
+it("A change request that does not say when the answer was recorded", () => {
+  const citation = (id: string) => `Answered ${RUN}/${id} by operator-1: Apply it`;
+
+  expect(seeded("operator-1", citation, withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
+});
+
+it("A change request that does not name the option the operator chose", () => {
+  const citation = (id: string) => `Answered ${RUN}/${id} by operator-1 at ${ANSWERED_AT}`;
+
+  expect(seeded("operator-1", citation, withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
 });
 
 it("Seeding that cites, instead of the new example, an example the story already had", () => {
   const cited = contract("EX-0001-0005-01, EX-0001-0005-02");
 
-  expect(seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-1`, cited)).toEqual([
+  expect(seeded("operator-1", approval("operator-1"), cited)).toEqual([
     { reason: "rule-changed", subject: CONTRACT },
   ]);
 });
 
 it("An implement result accepted while the bound flow's obligations cannot be read", () => {
-  const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-    stage("bounded-implement", "implement", "qfai-implement", "implement"),
-    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+  const plan = planOf("add-feature", [
+    stage("bounded-sdd-delta", "sdd"),
+    stage("bounded-implement", "implement"),
+    stage("bounded-verify", "verify"),
   ]);
   const read = { flows: [FLOW], obligations: obligations(AT_ISSUE) };
   const run = new JournalRun(readyWith(plan, FLOW, RUN));

@@ -2,15 +2,20 @@ import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { everyStageResult, scopeDigestOf, skillOwnerOf } from "./common.js";
+import { withModifiers } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { writeRecord } from "./persistence.js";
+import { isSeamOrder, stepNamesOf, stepServes } from "./steps.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
 import type {
+  WorkflowAcceptedStage,
   WorkflowActor,
+  WorkflowAuthorization,
   WorkflowDecision,
   WorkflowDependency,
   WorkflowEvent,
   WorkflowInput,
+  WorkflowReusedStep,
   WorkflowSnapshot,
 } from "./types.js";
 
@@ -70,8 +75,9 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     acceptedStages: _replaced,
     repairedStages: _repaired,
     repairRequest: _left,
-    skippedStages: _skipped,
     issuedStages: _issued,
+    pendingReroute: _settled,
+    reusedStep: _earlier,
     ...rest
   } = withoutWorkOrder(snapshot);
   const prior = [
@@ -79,15 +85,73 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(snapshot.acceptedStages ?? []),
     ...(snapshot.repairedStages ?? []),
   ];
+  const extraction = record.proposal?.extraction ?? snapshot.extraction;
   return {
     ...rest,
     ...(prior.length > 0 ? { priorStages: prior } : {}),
     ...(plan ? { plan } : {}),
+    ...(extraction ? { extraction } : {}),
+    ...(record.candidates ? { routeCandidates: record.candidates } : {}),
     ...(record.settled ? { settled: record.settled } : {}),
     ...(writeScope ? { scopeDigest: scopeDigestOf(writeScope) } : {}),
     ...(record.resultRef
       ? { routingReceiptRef: record.resultRef, routingDependencies: record.dependencies ?? [] }
       : {}),
+    ...reusedOf(plan, record.reused),
+  };
+}
+
+// The destination step a carried receipt satisfies. When it is its stage's only step, the
+// stage is recorded as satisfied by that receipt and never issued; otherwise the stage is issued
+// without it.
+function reusedOf(
+  plan: Snapshot["plan"],
+  reused: WorkflowReusedStep | undefined,
+): Partial<Snapshot> {
+  const first = plan?.stages[0];
+  if (!reused || !first || first.stageInstanceId !== reused.stageInstanceId) return {};
+  const steps = (first.steps ?? []).map((step) => step.name);
+  if (steps.join(",") !== reused.step) return { reusedStep: reused };
+  const satisfied = {
+    stageInstanceId: first.stageInstanceId,
+    stageKind: first.stageKind,
+    outcome: "accepted",
+    steps,
+    reused: reused.receiptRef,
+  };
+  return { acceptedStages: [satisfied] };
+}
+
+// A re-route a branch point declared, or the operator approved past the cap: the run records it
+// and holds its destination until routing settles the destination's plan.
+function foldDeclaredReroute(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const held = record.resultRef ? foldAccepted(snapshot, record) : snapshot;
+  const reroute = record.reroute ?? snapshot.pendingReroute;
+  if (!reroute) return held;
+  const made = {
+    from: snapshot.plan?.route ?? "",
+    to: reroute.route,
+    step: reroute.fromStep,
+    outcome: reroute.outcome,
+  };
+  return { ...held, pendingReroute: reroute, reroutes: [...(snapshot.reroutes ?? []), made] };
+}
+
+// A re-route past the cap: the stage is accepted, and the destination waits on the operator.
+function foldRerouteAsked(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const held = foldAccepted(snapshot, record);
+  return record.reroute ? { ...held, pendingReroute: record.reroute } : held;
+}
+
+// The route the decision rules chose, or the candidate question's answer fixed, and its plan.
+function foldRouteDecided(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const { routeCandidates: _answered, ...rest } = snapshot;
+  const extraction = record.extraction ?? snapshot.extraction;
+  return {
+    ...rest,
+    ...(record.route ? { routeDecision: { route: record.route, rule: record.rule ?? null } } : {}),
+    ...(extraction ? { extraction } : {}),
+    ...(record.plan ? { plan: record.plan } : {}),
   };
 }
 
@@ -108,17 +172,37 @@ function foldQuestion(snapshot: Snapshot, record: JournalRecord): Snapshot {
   };
 }
 
+// The labels of the options an answer chose; a value answer chose none.
+function chosenLabels(authorization: WorkflowAuthorization): string[] {
+  const { answer, question } = authorization;
+  if (!("optionIds" in answer)) return [];
+  return question.options
+    .filter((option) => answer.optionIds.includes(option.optionId))
+    .map((option) => option.label);
+}
+
 function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const authorization = record.authorization;
   if (!authorization) return snapshot;
   const openQuestions = (snapshot.openQuestions ?? []).filter(
     (question) => question.questionId !== authorization.questionId,
   );
-  const { authorizationId, kind, operation, answeredBy } = authorization;
+  const { authorizationId, kind, operation, answeredBy, recordedAt } = authorization;
   const authorizations = [
     ...(snapshot.authorizations ?? []),
-    { authorizationId, kind, operation, answeredBy },
+    {
+      authorizationId,
+      kind,
+      operation,
+      answeredBy,
+      recordedAt,
+      chosen: chosenLabels(authorization),
+    },
   ];
+  const release = snapshot.openQuestions?.find(
+    (question) => question.questionId === authorization.questionId,
+  )?.purpose;
+  const approved = release === "release" && authorization.effect === "proceed";
   const approval =
     authorization.operation === "CREATE"
       ? {
@@ -135,6 +219,7 @@ function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot 
     openQuestions,
     authorizations,
     ...(approval ? { approval } : {}),
+    ...(approved ? { releaseApproval: authorizationId } : {}),
     ...(record.settled ? { settled: record.settled } : {}),
   };
 }
@@ -154,7 +239,7 @@ function foldSeam(snapshot: Snapshot, record: JournalRecord): Snapshot | undefin
     };
     return { ...withoutWorkOrder(snapshot), seamRequest };
   }
-  if (order.operation !== "seam-only" || !snapshot.seamRequest) return undefined;
+  if (!isSeamOrder(order) || !snapshot.seamRequest) return undefined;
   const { seamRequest: _closed, ...rest } = withoutWorkOrder(snapshot);
   return rest;
 }
@@ -200,8 +285,11 @@ function foldRepaired(snapshot: Snapshot, record: JournalRecord): Snapshot | und
   if (!request || !record.stageInstanceId || record.stageInstanceId === request.stageInstanceId) {
     return undefined;
   }
-  const owner = snapshot.outstandingWorkOrder?.executor?.skill;
-  const debts = request.debts.filter((debt) => skillOwnerOf(debt) !== owner);
+  const steps = stepNamesOf(snapshot.outstandingWorkOrder);
+  const debts = request.debts.filter((debt) => {
+    const owner = skillOwnerOf(debt);
+    return !owner || !steps.some((step) => stepServes(step, owner));
+  });
   const { halt: _cleared, repairRequest: _repaired, ...rest } = withoutWorkOrder(snapshot);
   return {
     ...rest,
@@ -219,9 +307,15 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
     ...(record.gateResults ? { gateResults: record.gateResults } : {}),
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
+    ...(record.passes ? { passes: record.passes } : {}),
+    ...(record.closure ? { closure: record.closure } : {}),
     ...(record.reports ? { reports: record.reports } : {}),
     ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
+    ...(snapshot.outstandingWorkOrder?.steps
+      ? { steps: stepNamesOf(snapshot.outstandingWorkOrder) }
+      : {}),
+    ...(record.revision ? { revision: record.revision } : {}),
   };
 }
 
@@ -280,20 +374,18 @@ const withHalt = (snapshot: Snapshot, record: JournalRecord): Snapshot =>
 const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snapshot> = {
   "work-order-issued": foldIssued,
   "plan-accepted": foldRouted,
+  "route-decided": foldRouteDecided,
   "unsettled-material-input": foldRouted,
   "question-opened": foldQuestion,
   "authorization-recorded": foldAuthorization,
   "accept-nonfinal-result": foldAccepted,
   "scope-or-obligation-revision": foldAccepted,
+  "declared-reroute": foldDeclaredReroute,
+  "reroute-asked": foldRerouteAsked,
   "binding-recorded": foldBinding,
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     withAppendedRows(withHalt(snapshot, record), record),
   "material-decision": withAppendedRows,
-  // A stage `next` passed over because its predicate did not hold stays skipped.
-  "receipt-recorded": (snapshot, record) =>
-    record.notRun?.kind === "not_applicable" && record.stageInstanceId
-      ? { ...snapshot, skippedStages: [...(snapshot.skippedStages ?? []), record.stageInstanceId] }
-      : snapshot,
   "answer-changes-scope": countReplan,
   "required-plan-revision": countReplan,
   "missing-capability": withHalt,
@@ -332,7 +424,7 @@ export function foldRecord(snapshot: Snapshot | null, record: JournalRecord): Sn
   };
   const fold = FOLDS[record.event];
   const stepped = fold ? fold({ ...snapshot, run }, record) : { ...snapshot, run };
-  const folded = withActors(stepped, record);
+  const folded = withRecorded(withActors(stepped, record), record);
   return record.replay ? foldReplay(folded, record.replay) : folded;
 }
 
@@ -352,6 +444,7 @@ const STATE_AFTER_EVENT: Record<string, string> = {
   "budget-exhausted": "blocked",
   "observed-session-interruption": "interrupted",
   "scope-or-obligation-revision": "routing",
+  "declared-reroute": "routing",
   "valid-answer-no-replan": "ready",
   "answer-changes-scope": "routing",
   "blocker-cleared-and-revalidated": "ready",
@@ -392,7 +485,14 @@ export function recordsOf(
   return records;
 }
 
-const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
+// The events that record an accepted stage result. A journal an earlier version wrote may hold
+// `scope-or-obligation-revision`, which no decision appends any more.
+export const ACCEPTED_EVENTS = [
+  "accept-nonfinal-result",
+  "declared-reroute",
+  "reroute-asked",
+  "scope-or-obligation-revision",
+];
 
 // What the journal keeps beside an event that the decision does not carry itself: the plan an
 // unsettled routing result proposed, and for an accepted stage result its kind, observation,
@@ -439,6 +539,18 @@ function actorOf(
   return { actor: { role, agentInstance, ...(stageInstanceId ? { stageInstanceId } : {}) } };
 }
 
+// The modifiers an event adds, which only ever grow the run's, and the decisions it records as
+// adopted.
+function withRecorded(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const modifiers = record.modifiers?.length
+    ? { modifiers: withModifiers(snapshot.modifiers, record.modifiers) }
+    : {};
+  const adopted = record.adopted?.length
+    ? { adopted: [...(snapshot.adopted ?? []), ...record.adopted] }
+    : {};
+  return { ...snapshot, ...modifiers, ...adopted };
+}
+
 // Each result's actor, and each reviewer an accepted result names, joins the run's history.
 function withActors(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const reviewers = ACCEPTED_EVENTS.includes(record.event) ? (record.reviewResults ?? []) : [];
@@ -454,13 +566,15 @@ function withActors(snapshot: Snapshot, record: JournalRecord): Snapshot {
   return { ...snapshot, actorHistory: [...(snapshot.actorHistory ?? []), ...joined] };
 }
 
-export const TRACKED_DIR = path.join(".qfai", "evidence", "workflow");
+// Where a run keeps its local records: a summary and a copy of each answer. The directory is
+// ignored; nothing here reaches a commit.
+export const RUN_RECORDS_DIR = path.join(".qfai", "evidence", "workflow");
 
 const ACCEPTED_OUTCOMES = ["accepted", "accepted_with_debt"];
 
-// Tracked evidence begins at the run's first `proceed` authorization or its first result accepted
-// as `accepted` or `accepted_with_debt`. A run that ends before either tracks nothing.
-function trackingBegun(records: readonly JournalRecord[]): boolean {
+// A run's records begin at its first `proceed` authorization or its first result accepted as
+// `accepted` or `accepted_with_debt`. A run that ends before either writes none.
+function recordingBegun(records: readonly JournalRecord[]): boolean {
   return records.some(
     (record) =>
       (record.event === "authorization-recorded" && record.authorization?.effect === "proceed") ||
@@ -468,7 +582,14 @@ function trackingBegun(records: readonly JournalRecord[]): boolean {
   );
 }
 
-// The tracked summary, from the journal: IDs, digests and outcomes, never request text, an
+// How the run's `triage-close` stage closed the request, with the number of further requests it
+// found, or `null` in a run that closed none.
+function closureOf(accepted: readonly WorkflowAcceptedStage[]) {
+  const closure = [...accepted].reverse().find((stage) => stage.closure)?.closure;
+  return closure ? { outcome: closure.outcome, followUps: closure.followUps.length } : null;
+}
+
+// The run summary, from the journal: IDs, digests and outcomes, never request text, an
 // answer or anything the run settled.
 // SIMPLIFIED: a stage's receipt digests are those of its report copies.
 // Lift when: the core writes each accepted result under `results/` and digests it.
@@ -478,6 +599,8 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
     runId: snapshot.run.id,
     qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
     route: snapshot.plan?.route ?? null,
+    modifiers: (snapshot.modifiers ?? []).map(({ modifier, source }) => ({ modifier, source })),
+    reroutes: snapshot.reroutes ?? [],
     completionTarget: snapshot.completionTarget ?? "qfai_done",
     state: snapshot.run.state,
     targetBindings: records.flatMap((record) =>
@@ -493,6 +616,7 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
         .filter((review) => review.verdict === "PASS")
         .map((review) => review.role),
     })),
+    closure: closureOf(accepted),
     authorizationIds: (snapshot.authorizations ?? []).map((each) => each.authorizationId),
     debts: everyStageResult(snapshot).flatMap((stage) => stage.debts ?? []),
     requestDigest: snapshot.executionContext?.requestDigest ?? "",
@@ -517,24 +641,24 @@ async function writeNew(file: string, content: string): Promise<IoRefusal | unde
   return exists ? undefined : writeRecord(file, content);
 }
 
-// Rewrites the tracked summary when the journal says something it does not, and writes each
+// Rewrites the run summary when the journal says something it does not, and writes each
 // authorization record once. The record itself is never rewritten.
-export async function writeTracked(
-  trackedDir: string,
+export async function writeRunRecords(
+  recordsDir: string,
   records: readonly JournalRecord[],
   snapshot: WorkflowSnapshot,
 ): Promise<IoRefusal | undefined> {
-  if (!trackingBegun(records)) return undefined;
-  await mkdir(path.join(trackedDir, "authorizations"), { recursive: true });
+  if (!recordingBegun(records)) return undefined;
+  await mkdir(path.join(recordsDir, "authorizations"), { recursive: true });
   for (const record of records) {
     const authorization = record.authorization;
     if (record.event !== "authorization-recorded" || !authorization) continue;
-    const file = path.join(trackedDir, "authorizations", `${authorization.authorizationId}.json`);
+    const file = path.join(recordsDir, "authorizations", `${authorization.authorizationId}.json`);
     const refused = await writeNew(file, `${JSON.stringify(authorization, null, 2)}\n`);
     if (refused) return refused;
   }
   const summary = summaryOf(records, snapshot);
-  const file = path.join(trackedDir, "summary.json");
+  const file = path.join(recordsDir, "summary.json");
   const existing = parseObject(await readFile(file).catch(() => Buffer.from("")));
   const { updatedAt: _written, ...kept } = existing ?? { updatedAt: "" };
   if (JSON.stringify(kept) === JSON.stringify(summary)) return undefined;

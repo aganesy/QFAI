@@ -17,12 +17,20 @@ export const RESULT_ID = /^[A-Za-z0-9._-]{1,64}$/;
 export const TERMINAL_STATES = ["completed", "cancelled", "failed"];
 
 // The stage kinds that author the story tree, and so record rows of its two tables.
-export const STORY_AUTHORING_KINDS = ["sdd", "sdd_append", "sdd_delta"];
+export const STORY_AUTHORING_KINDS = ["sdd", "sdd_append"];
 
 // The stage kinds whose work order binds no flow and no new story.
-export const UNTARGETED_KINDS = ["route", "discussion", "maintenance", "verify"];
+export const UNTARGETED_KINDS = ["route", "triage", "discussion", "maintenance", "verify"];
 
 export const DEFAULT_SPECS_DIR = ".qfai/spec";
+
+// The runtime tree and the runs' own records are local, so nothing under them is a run change,
+// whether or not git ignores them.
+const LOCAL_TREES = [".qfai/run/", ".qfai/evidence/workflow/"];
+
+export function isRunChange(file: string): boolean {
+  return !LOCAL_TREES.some((tree) => file.startsWith(tree));
+}
 
 export function areaCovers(area: string, filePath: string): boolean {
   return (
@@ -114,36 +122,8 @@ export function everyStageResult(snapshot: WorkflowSnapshot) {
   ];
 }
 
-// The skills a plan stage can be issued to: its executor, and each skill a stage naming two has.
-export function stageSkills(stage: PlanStage, diagnosis: WorkflowSnapshot["diagnosis"]): string[] {
-  const executor = executorSkill(stage, diagnosis);
-  return [...new Set([...(executor ? [executor] : []), ...(stage.skills ?? [])])];
-}
-
-// The first active stage `skill` can serve, which is where a finding it owns is repaired.
-export function servingStage(
-  selected: readonly PlanStage[],
-  skill: string,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): PlanStage | undefined {
-  return selected.find((stage) => stageSkills(stage, diagnosis).includes(skill));
-}
-
-// The skill a finding names as its owner, when a skill rather than the operator owns it.
+// The step or skill a finding names as its owner, when the operator does not own it.
 export function skillOwnerOf(debt: { resolvingOwner?: string | undefined }): string | undefined {
   const owner = debt.resolvingOwner?.trim();
   return owner && owner !== "operator" ? owner : undefined;
-}
-
-// A `test_fix` stage goes to `qfai-atdd` when the diagnosis's first matched ID is a BF or an
-// AC, and to `qfai-implement` when it is an EX.
-export function executorSkill(
-  stage: PlanStage,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-): string | undefined {
-  if (stage.stageKind !== "test_fix") return stage.skill;
-  const kind = firstMatchedKind(diagnosis);
-  if (kind === "EX") return "qfai-implement";
-  if (kind === "BF" || kind === "AC") return "qfai-atdd";
-  return stage.skill;
 }

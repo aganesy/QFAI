@@ -40,6 +40,7 @@ specialization_tags:
 - Coordinate with test and CI agents on runtime and integration implications.
 - Implement with SOLID: prefer simple contracts and explicit invariants.
 - Keep business logic, transport, persistence, and infrastructure concerns separated to reduce coupling and surprise.
+- Place new code in one layer of the `## Architecture` table of `<paths.contractsDir>/tech.md`, and import only from the layers its row lists.
 - Apply fail-fast validation, defensive programming, and least-privilege thinking to inputs, permissions, data access, and operational behavior.
 - Apply `.agents/rules/minimal-implementation.md`: check this codebase before the
   standard library, native platform features and installed dependencies. Mark
@@ -48,7 +49,7 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md

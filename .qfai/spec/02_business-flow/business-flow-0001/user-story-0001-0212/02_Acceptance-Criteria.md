@@ -3,41 +3,72 @@
 ## Criteria
 
 ```gherkin
-Feature: Stage 1 checks a routing-time CREATE approval instead of asking
+Feature: Raise review and gates without changing the steps
+  # AC-0001-0212-01
+  Scenario: Heavy review adds reviewers and nothing else
+    Given a run that carries `review:heavy`
+    When the core issues its work orders
+    Then every stage requires the heavy reviewers besides its steps' own
+    And the stages and steps are those of the same route without the modifier
 
-# AC-0001-0212-01
-# Parent: US-0001-0212
-Scenario: A fresh, matching human decision approves the CREATE triage row
-  Given an SDD work order whose target is a new_story slot and whose authorizationRefs cite a human_decision answering that slot's create question
-  And the decision matches the triage row's operation and the slot it creates, and is not stale
-  When Stage 1 triages the row
-  Then Stage 1 does not put the CREATE question again
-  And the attempt that writes the stage's change appends the CREATE row to decisions.md already at WIP, with an Approach citing the record as runId/authorizationId and naming its answeredBy
-  And decisions.md keeps its four columns
+  # AC-0001-0212-02
+  Scenario: A user gate stops the run only at routing and at declared decision points
+    Given a run that carries `gate:user`
+    When it reaches routing and each decision point its route declares
+    Then it waits there for the operator's answer
+    And it stops nowhere else
+    And without `gate:user` each decision is taken, recorded as adopted and reported
 
-# AC-0001-0212-02
-# Parent: US-0001-0212
-Scenario: A missing, mismatched or stale approval stops Stage 1
-  Given a CREATE triage row whose cited human_decision is missing, does not match the row, or is stale
-  When Stage 1 triages the row
-  Then no triage row is appended
-  And the stage returns awaiting_input naming the row and the reason
-  And Stage 1 asks the operator nothing itself
+  # AC-0001-0212-03
+  Scenario: A release gate asks for release approval at the release point
+    Given a run that carries `gate:release`
+    When it reaches its release point
+    Then it asks the operator to approve the release and records who answered
+    And `finish` does not complete until the approval is recorded
+    And the approval pushes, merges and publishes nothing
 
-# AC-0001-0212-03
-# Parent: US-0001-0212
-Scenario: A routing-time approval answers only a CREATE
-  Given a DELETE, SPLIT, MERGE, SUPERSEDE or UPDATE:REMOVE triage row inside a run
-  When Stage 1 triages the row
-  Then no routing-time CREATE approval is cited for it
-  And Stage 1 asks once and appends nothing: the stage result opens the approval question as a decision question with outcome awaiting_input
-  And the attempt holding the human_decision appends the row already at WIP, with an Approach citing that answer
+  # AC-0001-0212-04
+  Scenario: No set of modifiers changes a route's steps
+    Given any route and any set of modifiers
+    When its plan is issued
+    Then its stages and steps equal those of the route with no modifier
 
-# AC-0001-0212-04
-# Parent: US-0001-0212
-Scenario: --auto neither asks nor approves
-  Given an approval-required triage row with no human_decision that answers it
-  When Stage 1 runs under --auto, inside a run or outside one
-  Then Stage 1 asks no question and the row does not reach WIP
-  And it stops before every write that depends on the row and reports the row with its operation and target
+  # AC-0001-0212-05
+  Scenario: Modifiers only grow during a run
+    Given a run with modifiers from routing
+    When a result raises another, or the run is re-routed or replanned
+    Then the run keeps every modifier it had and gains the new ones
+    And no payload can remove one
+
+  # AC-0001-0212-06
+  Scenario: Each modifier attaches on its signals
+    Given an extraction and a route
+    When the core sets the run's modifiers
+    Then each modifier attaches when any one of its signals holds, and not otherwise
+
+  # AC-0001-0212-07
+  Scenario: A route's default modifiers always apply
+    Given a route that declares default modifiers
+    When a run takes it, whatever its extraction says
+    Then the run carries them from routing
+
+  # AC-0001-0212-08
+  Scenario: A cited approved record answers the decision it settled
+    Given a request that cites an approved decision row, on a run that carries `gate:user`
+    When the decision point that row settles is reached
+    Then the link answers it and the run does not stop there
+    And a cited row that does not exist or is not in force stops the run there
+
+  # AC-0001-0212-09
+  Scenario: The set of modifiers is closed
+    Given a plan or a result naming a modifier outside the three
+    When it is loaded or submitted
+    Then it is refused
+
+  # AC-0001-0212-10
+  Scenario: A critical decision reaches the operator whatever the modifiers
+    Given a run without `gate:user`
+    When a step at a decision point meets a critical decision
+    Then the decision is put to the operator
+    And the run carries `gate:user` from then on
 ```

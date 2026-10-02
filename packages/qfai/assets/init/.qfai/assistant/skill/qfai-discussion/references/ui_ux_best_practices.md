@@ -99,7 +99,7 @@ Brand-level direction is not authored as a sidecar. For UI-bearing packs it
 resolves through:
 
 - design direction (product intent, brand signals, anti-goals, deviate-from reference pool):
-  the two reference registries in `04_Sources.md`, which `/qfai-sdd`'s `03_contract` step turns into
+  the two reference registries in `04_Sources.md`, which `/qfai-sdd`'s `common-design-md` step turns into
   root `DESIGN.md`
 - sidecar manifest: `uiux/00_index.md`
 - screen behavior contracts: `uiux/40_screen_contracts.md`

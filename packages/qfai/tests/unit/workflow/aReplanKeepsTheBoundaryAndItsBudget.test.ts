@@ -1,6 +1,6 @@
-// QFAI:EX-0001-0196-22
-// QFAI:EX-0001-0193-10
-// QFAI:EX-0001-0196-25
+// QFAI:EX-0001-0189-21
+// QFAI:EX-0001-0186-10
+// QFAI:EX-0001-0189-24
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -10,12 +10,13 @@ import { expect, it } from "vitest";
 
 import { receiptValidityOf, routingDependenciesOf } from "../../../src/core/workflow/observe.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const FLOW = "BF-0007";
 const bounded = [
-  stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-  stage("bounded-implement", "implement", "qfai-implement", "implement"),
-  stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+  stage("bounded-sdd-delta", "sdd"),
+  stage("bounded-implement", "implement"),
+  stage("bounded-verify", "verify"),
 ];
 const obligations = {
   flowId: FLOW,
@@ -25,30 +26,24 @@ const obligations = {
   digest: "1".repeat(64),
 };
 
-// A bounded run over `src/**` whose implement stage found a finding only acceptance authoring
-// repairs, so routing settled a narrower plan over `src/api/**`.
+// An add-feature run over `src/**` whose routing receipt went stale after its first stage, so
+// routing settled a narrower plan over `src/api/**`.
 function narrowed() {
   const facts = { flows: [FLOW], obligations };
-  const run = new JournalRun(readyWith(planOf("bounded-change", bounded, ["src/**"]), FLOW));
-  run.next(facts);
-  run.accept({}, facts);
-  run.next(facts);
-  const finding = {
-    findingCode: "QFAI-TRACE-002",
-    path: "src/ui/button.ts",
-    cause: "The criterion has no acceptance test",
-    owningFlow: FLOW,
-    detectingCommand: "qfai validate",
-    resolvingOwner: "qfai-atdd",
-    blockingExtent: "run",
-  };
-  expect(run.accept({ outcome: "needs_repair", debts: [finding] }, facts).verdict.run?.state).toBe(
-    "routing",
+  const seed = readyWith(planOf("add-feature", bounded, ["src/**"]), FLOW).map((record) =>
+    record.event === "plan-accepted"
+      ? { ...record, resultRef: "results/route-0.json", dependencies: [] }
+      : record,
   );
+  const run = new JournalRun(seed);
+  run.next({ ...facts, receiptValidity: { "results/route-0.json": "valid" } });
+  run.accept({}, facts);
+  const stale = { ...facts, receiptValidity: { "results/route-0.json": "stale" as const } };
+  expect(run.apply({ operation: "next" }, stale).verdict.run?.state).toBe("routing");
   run.next(facts);
   const proposal = {
-    requestKind: "change",
-    candidateRoute: "bounded-change",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Change the API only.",
     expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
     observedRefs: [],
@@ -56,9 +51,8 @@ function narrowed() {
     newStories: [],
     proposedWriteScope: ["src/api/**"],
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   };
-  const plans = { "bounded-change": { route: "bounded-change", stages: bounded } };
+  const plans = { "add-feature": { route: "add-feature", stages: bounded } };
   expect(run.accept({ proposal }, { flows: [FLOW], plans }).verdict.run?.state).toBe("ready");
   return { run, facts, routing: run.snapshot.routingReceiptRef ?? "" };
 }
@@ -73,7 +67,7 @@ it("next after a replan that narrowed the write scope, with a file changed under
     ).verdict;
 
   const earlier = under(["src/ui/button.ts"]);
-  expect(earlier.workOrder?.stageKind).toBe("sdd_delta");
+  expect(earlier.workOrder?.stageKind).toBe("sdd");
 });
 
 it("A file outside every scope the run was ever issued, after the replan", () => {
@@ -92,7 +86,7 @@ it("A file outside every scope the run was ever issued, after the replan", () =>
 
 // A run in `ready` whose journal holds `replans` replans already, each settled by routing.
 function replanned(replans: number) {
-  const plan = planOf("bounded-change", bounded, ["src/**"]);
+  const plan = planOf("add-feature", bounded, ["src/**"]);
   const seed = readyWith(plan, FLOW);
   for (let index = 1; index <= replans; index += 1) {
     seed.push(
@@ -213,7 +207,7 @@ it("resume of a run blocked on its spent replan budget, with the routing receipt
   }).toEqual({
     still: ["blocked", 0, 0],
     halt: { blocker: "budget-exhausted", owner: "operator", subjects: ["replan"] },
-    released: ["running", "sdd_delta"],
+    released: ["running", "sdd"],
   });
 });
 

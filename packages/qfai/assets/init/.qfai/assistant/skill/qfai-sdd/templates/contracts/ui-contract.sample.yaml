@@ -1,8 +1,9 @@
-# QFAI-CONTRACT-ID: CON-UI-0001
-# Replace the sample BR and EX IDs with allocated IDs from the story tree.
+# QFAI-CONTRACT-ID: UI-0003
+# Replace the sample IDs: the contract takes the next contract number, its
+# rules are numbered under it, and its examples come from the story tree.
 x-qfai-depends-on: []
 x-qfai-rules:
-  - id: BR-0003
+  - id: BR-0003-NNNN
     statement: Submitting an invalid order displays a field-level error.
     examples: [EX-NNNN-NNNN-NN]
 prototype:
@@ -14,7 +15,7 @@ prototype:
   # Only the markers declared here are inspected; nothing derives them.
   markers:
     - id: mk_customer_id_input
-      selector: "[data-qfai='CON-UI-0001:customer_id_input']"
+      selector: "[data-qfai='UI-0003:customer_id_input']"
       purpose: customer id field on the order create form
 screens:
   - id: order_create
@@ -25,10 +26,8 @@ screens:
     # More than 7 warns at validate time. The required minimum is one: a screen
     # that does one thing lists one task.
     # See references/ui-contract-guide.md for the rationale.
-    # Each entry may be either a plain string (legacy shape, e.g.
-    # `- submit a new order`) or a structured `{id, label, acceptance}`
-    # object (closed schema — no other keys). Prefer the structured shape:
-    # `id` and `acceptance` are what ATDD scaffolding anchors on.
+    # Each entry is a `{id, label, acceptance}` mapping (closed schema — no
+    # other keys). A plain string entry is rejected.
     primary_tasks:
       - id: t1
         label: Submit a new order

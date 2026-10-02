@@ -8,7 +8,7 @@
  * | Obligation                               | Owner                                                     |
  * | ---------------------------------------- | --------------------------------------------------------- |
  * | Trigger, finder, adjudication, routes    | `references/concrete-abstract-cycle.md`                   |
- * | What each attempt of a run does          | `references/orchestrated-mode.md`, its cycle section      |
+ * | What each attempt of a run does          | `step/sdd-cycle/STEP.md`, its run section                 |
  * | The REVISE grounds                       | `references/sdd-quality-gate.md`, its cycle-record section |
  * | The record's columns and empty-cycle row | `templates/evidence/sdd-flow.md`                          |
  *
@@ -21,7 +21,8 @@ import { flat, readShipped, rowOf, sectionOf } from "../helpers/shippedAssistant
 import { expectSentence } from "../helpers/shippedSentences.js";
 
 const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
-const ORCHESTRATED = "skill/qfai-sdd/references/orchestrated-mode.md";
+const CYCLE_STEP = "step/sdd-cycle/STEP.md";
+const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
 const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
 
@@ -38,8 +39,7 @@ const applying = (): Promise<string> => section(CYCLE, "## Applying an adopted f
 const loop = (): Promise<string> => section(CYCLE, "## Two cycles at most");
 const rejected = (): Promise<string> => section(CYCLE, "## Rejected findings");
 const record = (): Promise<string> => section(CYCLE, "## The record");
-const inRun = (): Promise<string> =>
-  section(ORCHESTRATED, "## The concrete-abstract cycle in a run");
+const inRun = (): Promise<string> => section(CYCLE_STEP, "## Inside a workflow run");
 const revise = (): Promise<string> => section(GATE, "## Concrete-abstract cycle record");
 const template = (): Promise<string> => section(EVIDENCE, "## Concrete-Abstract Cycle");
 
@@ -56,7 +56,7 @@ const KINDS = [
 const REWRITE = [/rewrite each BR they affect/i, /from its updated EXs/i] as const;
 
 describe("when a cycle runs, and what the finder raises", () => {
-  // QFAI:EX-0001-0152-12
+  // QFAI:EX-0001-0147-12
   it("has a test-design-analyst that wrote none of the rules raise an unstated case, changing no file", async () => {
     const text = await finder();
     expectSentence(text, "the finder", /`test-design-analyst`/, /wrote none of the BRs it reads/i);
@@ -75,7 +75,7 @@ describe("when a cycle runs, and what the finder raises", () => {
     expectSentence(await adjudication(), "one griller decides", /Each cycle has one griller/i);
   });
 
-  // QFAI:EX-0001-0152-13
+  // QFAI:EX-0001-0147-13
   it("raises a cited example the Statement does not explain as a third-kind finding, not a missing citation", async () => {
     const text = await finder();
     expect(rowOf(text, "example no rule explains")).toMatch(/cited EX/i);
@@ -89,18 +89,18 @@ describe("when a cycle runs, and what the finder raises", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-14
-  it("runs no cycle for a defect example seeding work order", async () => {
+  // QFAI:EX-0001-0147-14
+  it("runs no cycle in a stage that appends a defect's example", async () => {
     expectSentence(
       await when(),
       "no cycle under seeding",
       /No cycle runs/i,
       /no cycle row/i,
-      /operation is `defect-example-seeding`/,
+      /stage is of kind `sdd_append`/,
     );
   });
 
-  // QFAI:EX-0001-0152-30
+  // QFAI:EX-0001-0147-30
   it("runs no cycle when no rule Statement or Examples cell changed, even if an example did", async () => {
     const text = await when();
     expectSentence(
@@ -121,7 +121,7 @@ describe("when a cycle runs, and what the finder raises", () => {
 });
 
 describe("who decides a finding", () => {
-  // QFAI:EX-0001-0152-15
+  // QFAI:EX-0001-0147-15
   it("adopts the griller's recommendation after two rounds with dissent kept, and sends product intent to the user", async () => {
     const text = await adjudication();
     expectSentence(text, "griller independence", /neither the finder nor an author of an item/i);
@@ -143,7 +143,7 @@ describe("who decides a finding", () => {
     expectSentence(text, "the user decides it", /goes to the user/i, /no agent decides it/i);
   });
 
-  // QFAI:EX-0001-0152-16
+  // QFAI:EX-0001-0147-16
   it("rejects a proposed example nothing implies and records it as one REJECTED row", async () => {
     const text = await adjudication();
     expectSentence(
@@ -172,7 +172,7 @@ describe("who decides a finding", () => {
 });
 
 describe("how an adopted finding changes the tree", () => {
-  // QFAI:EX-0001-0152-17
+  // QFAI:EX-0001-0147-17
   it("narrows a rule this invocation wrote directly, then rewrites the rule from its examples", async () => {
     const text = await applying();
     expect(rowOf(text, "An AC, EX or BR this invocation wrote")).toMatch(
@@ -181,7 +181,7 @@ describe("how an adopted finding changes the tree", () => {
     expectSentence(text, "rules follow the examples", ...REWRITE);
   });
 
-  // QFAI:EX-0001-0152-18
+  // QFAI:EX-0001-0147-18
   it("holds a change to an approved example behind a TODO change request and a REMOVE triage row", async () => {
     const text = await applying();
     const existing = rowOf(text, "existed when the invocation started");
@@ -195,14 +195,14 @@ describe("how an adopted finding changes the tree", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-19
+  // QFAI:EX-0001-0147-19
   it("keeps the triage approval for splitting a story this invocation wrote", async () => {
     const row = rowOf(await applying(), "splitting, merging or retiring a BF or US");
     expect(row).toMatch(/Keeps its triage approval/i);
     expect(row).toMatch(/even when this invocation wrote the item/i);
   });
 
-  // QFAI:EX-0001-0152-20
+  // QFAI:EX-0001-0147-20
   it("under --contract asks for a wider change request and leaves the story file unchanged", async () => {
     const text = await applying();
     expectSentence(
@@ -220,7 +220,7 @@ describe("how an adopted finding changes the tree", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-31
+  // QFAI:EX-0001-0147-31
   it("splits a criterion this invocation wrote directly, with no triage row", async () => {
     const text = await applying();
     const wrote = rowOf(text, "An AC, EX or BR this invocation wrote");
@@ -229,7 +229,7 @@ describe("how an adopted finding changes the tree", () => {
     expectSentence(text, "rules follow the split", ...REWRITE);
   });
 
-  // QFAI:EX-0001-0152-32
+  // QFAI:EX-0001-0147-32
   it("does not let a change request cover a change it did not describe", async () => {
     const text = await applying();
     expectSentence(
@@ -247,7 +247,7 @@ describe("how an adopted finding changes the tree", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-39
+  // QFAI:EX-0001-0147-39
   it("applies a change the in-force change request describes, with no new row", async () => {
     const text = await applying();
     const covered = rowOf(text, "existed when the invocation started");
@@ -261,7 +261,7 @@ describe("how an adopted finding changes the tree", () => {
 });
 
 describe("the cycle inside a workflow run", () => {
-  // QFAI:EX-0001-0152-21
+  // QFAI:EX-0001-0147-21
   it("runs the cycle before the one change question and writes nothing in the first attempt", async () => {
     const text = await inRun();
     expectSentence(
@@ -283,13 +283,13 @@ describe("the cycle inside a workflow run", () => {
     );
     expectSentence(text, "nothing is written", /attempt still writes nothing/i);
     expectSentence(
-      await section(ORCHESTRATED, "## A change to the story tree"),
+      await section(TRIAGE, "### A change to the story tree"),
       "the first attempt's rule",
       /first attempt asks once and changes nothing/i,
     );
   });
 
-  // QFAI:EX-0001-0152-22
+  // QFAI:EX-0001-0147-22
   it("blocks on an adopted finding outside the checked scope, with no change request", async () => {
     const text = await inRun();
     expectSentence(
@@ -307,7 +307,7 @@ describe("the cycle inside a workflow run", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-33
+  // QFAI:EX-0001-0147-33
   it("lets the answering attempt run no cycle and write the first attempt's rejections and evidence", async () => {
     const text = await inRun();
     expectSentence(text, "no further cycle", /attempt holding the answers runs no further cycle/i);
@@ -331,7 +331,7 @@ describe("the cycle inside a workflow run", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-38
+  // QFAI:EX-0001-0147-38
   it("applies the user's answers and opens an Unadjudicated row for each finding left open", async () => {
     const text = await inRun();
     expectSentence(
@@ -351,7 +351,7 @@ describe("the cycle inside a workflow run", () => {
 });
 
 describe("how many cycles run", () => {
-  // QFAI:EX-0001-0152-23
+  // QFAI:EX-0001-0147-23
   it("stops after a cycle that raised nothing, and records that cycle", async () => {
     expectSentence(await loop(), "the stop", /cycle that adopts nothing ends the loop/i);
     expectSentence(
@@ -367,7 +367,7 @@ describe("how many cycles run", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-24
+  // QFAI:EX-0001-0147-24
   it("runs no third cycle even when the second adopted a finding", async () => {
     const text = await loop();
     expectSentence(
@@ -379,7 +379,7 @@ describe("how many cycles run", () => {
     expectSentence(await applying(), "rules follow the second cycle", ...REWRITE);
   });
 
-  // QFAI:EX-0001-0152-25
+  // QFAI:EX-0001-0147-25
   it("under --auto asks nothing and opens the Unadjudicated row in the cycle that raised it", async () => {
     const text = await loop();
     expectSentence(text, "silence", /`--auto`/, /outside a run/i, /nothing is asked/i);
@@ -393,7 +393,7 @@ describe("how many cycles run", () => {
     expectSentence(await template(), "the record's form", /no decision has `none` in Decision/i);
   });
 
-  // QFAI:EX-0001-0152-34
+  // QFAI:EX-0001-0147-34
   it("opens an Unadjudicated row for a finding the user left open", async () => {
     const text = await loop();
     expectSentence(
@@ -406,7 +406,7 @@ describe("how many cycles run", () => {
     expectSentence(text, "the gate", /`QFAI-SPACK-102` until it is decided/i);
   });
 
-  // QFAI:EX-0001-0152-35
+  // QFAI:EX-0001-0147-35
   it("stops after a cycle whose only finding was rejected, recording the finding and no empty-cycle row", async () => {
     expectSentence(
       await loop(),
@@ -422,7 +422,7 @@ describe("how many cycles run", () => {
 });
 
 describe("a decided finding is not raised again", () => {
-  // QFAI:EX-0001-0152-26
+  // QFAI:EX-0001-0147-26
   it("does not raise a finding a TODO change request already answers", async () => {
     expectSentence(
       await rejected(),
@@ -432,7 +432,7 @@ describe("a decided finding is not raised again", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-27
+  // QFAI:EX-0001-0147-27
   it("does not raise a rejected case, or one including it, whatever the wording, until a reopening lifts it", async () => {
     const text = await rejected();
     expectSentence(
@@ -452,7 +452,7 @@ describe("a decided finding is not raised again", () => {
     expectSentence(text, "reopening", /decision appended to reopen a REJECTED row lifts it/i);
   });
 
-  // QFAI:EX-0001-0152-36
+  // QFAI:EX-0001-0147-36
   it("does not raise a case the rejected case includes", async () => {
     expectSentence(
       await rejected(),
@@ -463,7 +463,7 @@ describe("a decided finding is not raised again", () => {
     );
   });
 
-  // QFAI:EX-0001-0152-37
+  // QFAI:EX-0001-0147-37
   it("treats a declined change request as the user's decision until a reopening lifts it", async () => {
     const text = await rejected();
     expectSentence(
@@ -482,7 +482,7 @@ describe("a decided finding is not raised again", () => {
 });
 
 describe("the record the completion reviewer checks", () => {
-  // QFAI:EX-0001-0152-28
+  // QFAI:EX-0001-0147-28
   it("returns REVISE on a missing cycle row, a finder that wrote a rule, and a dependent adjudicator", async () => {
     const text = await revise();
     expectSentence(
@@ -516,7 +516,7 @@ describe("the record the completion reviewer checks", () => {
     expectSentence(form, "the finder is named", /Name the finder in the Work Orders Summary/i);
   });
 
-  // QFAI:EX-0001-0152-29
+  // QFAI:EX-0001-0147-29
   it("returns REVISE on a change to an approved example with no change request covering it", async () => {
     expectSentence(
       await revise(),

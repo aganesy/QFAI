@@ -10,7 +10,7 @@
  * filters narrows the result.
  */
 import { readDecisionRecords } from "../../core/decisionRecord.js";
-import { error as logError, info as logInfo } from "../lib/logger.js";
+import { error as logError, info as logInfo } from "../../core/logger.js";
 
 /**
  * `--format table` emits a tab-separated (TSV) layout — header row

@@ -21,7 +21,6 @@ replaces:
 owned_artifacts:
   - coverage-plan
   - layer-boundaries
-  - coverage-depth-matrix
 tool_profile: testing
 permission_profile: authoring
 specialization_tags:
@@ -40,10 +39,10 @@ coverage depth before a stage claims completion.
 ## Domain Responsibilities
 
 - During SDD, review BF → US → AC → EX links and BR → EX links. Read the
-  current story tree and its contract bindings under configured
-  `paths.specsDir` and `paths.contractsDir`. Report missing, ambiguous or
-  contradictory obligations to the owning SDD stage. The tests and Coverage
-  Depth Matrix are not yet authored.
+  current story tree under configured `paths.specsDir`, and the contracts
+  under `paths.contractsDir` whose business rules cite its examples. Report
+  missing, ambiguous or contradictory obligations to the owning SDD stage. The
+  tests are not yet authored.
 - During SDD, an instance that wrote none of the BRs it reads is the finder of
   the concrete-abstract cycle, under
   `skill/qfai-sdd/references/concrete-abstract-cycle.md`. It reads each BR whose
@@ -56,14 +55,11 @@ coverage depth before a stage claims completion.
   and target IDs and changes no file. The finder does not raise again a finding
   already decided, rejected, or answered by a pending or declined change
   request, and it does not decide its own findings.
-- During ATDD, author one Coverage Depth Matrix per BF at
-  `.qfai/evidence/coverage-depth-BF-NNNN.md`. Record the BF E2E obligation
-  in its header and one row for every US, AC and EX in that flow. Keep gaps
-  visible even when another stage owns their tests. Follow
-  `skill/qfai-atdd/references/test-case-depth-checklist.md`.
+- During ATDD, review the BF E2E test and the AC integration or API tests
+  for depth. Report every gap with its owner, including an EX gap that
+  `/qfai-implement` will close.
 - During implementation, review the selected EX and its test against the
-  existing BF matrix. Report a new matrix gap to ATDD. Do not replace or
-  silently rescore the ATDD artifact.
+  flow's acceptance tests. Report a new acceptance gap to ATDD.
 - Treat volume estimates as planning signals. A high count alone does not
   make an obligation invalid. Use
   `skill/qfai-atdd/references/volume-signals.md`.
@@ -83,8 +79,8 @@ A test must exercise behavior with a discriminating oracle. A file name,
 annotation, scaffold or assertion that cannot fail for the requirement does
 not establish coverage. Confirm the runner and
 `validation.traceability.testFileGlobs` both collect each proposed test.
-A DONE `Test exception:` decision may resolve a declared obligation; the
-matrix still names its ID and decision. Do not create a local exemption.
+A DONE `Test exception:` decision may resolve a declared obligation; name its
+ID and decision in your review. Do not create a local exemption.
 
 Score normal, error, boundary, special, state transition and combinatorial
 cases where the active AC, EX, BR or contract makes them meaningful. A kept
@@ -98,11 +94,11 @@ before a dependent stage proceeds.
 
 - `rule/agent-selection.md`, `rule/test-layers.md` and
   `rule/shared-skill-delegation-baseline.md`.
-- The selected BF, its US, AC, EX and BR records and the contracts they cite.
-- `<paths.contractsDir>/tech.md#standard-commands` for the project's Test,
-  Lint, Typecheck and Build commands.
-- Current ATDD evidence and matrix when reviewing acceptance or
-  implementation work.
+- The selected BF, its US, AC and EX records, and the contracts whose BRs cite
+  those examples.
+- `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for the
+  project's Test, Lint, Typecheck and Build commands.
+- Current ATDD evidence when reviewing acceptance or implementation work.
 - Current validation findings, test paths, selectors and observed results.
 
 Read only what the active scope requires; follow linked obligations into
@@ -111,9 +107,9 @@ another flow when a shared contract changes.
 ## Deliverables
 
 For SDD, return obligation mapping, layer decisions, and concrete gaps with
-their owning stage. For ATDD, write the BF matrix and report its path, covered
-IDs, missing cases and oracle risks. For implementation, return an EX-level
-review of the test layer, selector, oracle and matrix alignment.
+their owning stage. For ATDD, report the covered IDs, missing cases and oracle
+risks. For implementation, return an EX-level review of the test layer,
+selector and oracle.
 
 Use PASS only when the in-scope mapping and applicable depth are supported by
 current artifacts. Return REVISE with the ID, missing behavior and owner when
@@ -129,5 +125,5 @@ missing.
 
 ## Sign-off
 
-Name the reviewed flow, obligation IDs, test layers, matrix path, findings,
-and the evidence supporting PASS or REVISE.
+Name the reviewed flow, obligation IDs, test layers, findings, and the
+evidence supporting PASS or REVISE.

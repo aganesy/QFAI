@@ -13,8 +13,8 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 describe("packaging verification is conditional on distribution", () => {
   for (const tree of TREES) {
     it(tree + ": ATDD completion is scoped to the active flow", async () => {
-      const atdd = flat(await read(tree, "assistant/skill/qfai-atdd/SKILL.md"));
-      expect(atdd).toContain("The stage may report PASS only when");
+      const atdd = flat(await read(tree, "assistant/step/atdd-author/STEP.md"));
+      expect(atdd).toContain("may report PASS only when");
       expect(atdd).toContain(
         "Every BF and AC obligation in scope has an executed, behavior-checking test",
       );
@@ -28,7 +28,7 @@ describe("packaging verification is conditional on distribution", () => {
         read(tree, "assistant/rule/constitution.md"),
         read(tree, "assistant/rule/workflow.md"),
         read(tree, "assistant/rule/quality.md"),
-        read(tree, "assistant/skill/qfai-verify/SKILL.md"),
+        read(tree, "assistant/step/verify-repo-gate/STEP.md"),
       ]);
       expect(flat(constitution)).toContain("packaging verification (if distributed)");
       expect(flat(workflow)).toContain("pack/verify (if distributed)");

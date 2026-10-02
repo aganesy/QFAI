@@ -1,15 +1,11 @@
 /**
- * Prototype handoff schema validation.
+ * Image-source schema validation.
  *
- * `.qfai/contracts/design/prototype-handoff.yaml` is the post-loop
- * handoff artifact written by `/qfai-prototyping` and consumed by
- * `/qfai-implement`. It carries a pointer to the final iteration
- * artifact plus the `imageSources[]` license catalog so downstream
- * gates can re-verify license provenance without re-walking the
- * prototype tree.
+ * `prototyping.json#imageSources[]` records where every image the
+ * prototype shows came from, so downstream gates can re-verify license
+ * provenance without re-walking the prototype tree.
  *
- * This module exposes a pure validator for the `imageSources[]`
- * portion of that schema. Every entry must carry exactly
+ * This module exposes a pure validator for that list. Every entry must carry exactly
  * `{url, license, attribution, source}` — extra fields are rejected
  * (closed schema; protects against schema drift and typos). The
  * validator aggregates every named-field violation in one pass so
@@ -20,7 +16,7 @@
  */
 
 /**
- * Closed schema for a single `prototype-handoff.yaml#imageSources[]`
+ * Closed schema for a single `prototyping.json#imageSources[]`
  * entry. All four fields are required strings.
  */
 export type ImageSourceEntry = {
@@ -59,10 +55,9 @@ function isCompleteImageSource(
 /**
  * Returns `true` when the URL parses as an HTTPS URL.
  *
- * Mirrors the same predicate in `licenseVerify.ts` — handoff schema
- * validation rejects non-https `url` fields up-front so the certify
- * gate does not have to re-run scheme verification on already-validated
- * handoff entries. Per the prototyping CLI contract, every
+ * Mirrors the same predicate in `licenseVerify.ts` — schema validation
+ * rejects non-https `url` fields up-front so the certify gate does not
+ * have to re-run scheme verification on already-validated entries. Per the prototyping CLI contract, every
  * `imageSources[]` row must reference an HTTPS resource.
  */
 function isHttpsUrl(url: string): boolean {

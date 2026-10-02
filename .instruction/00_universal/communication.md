@@ -5,23 +5,23 @@ dependencies: none
 version: 1.1.0
 ---
 
-# コミュニケーションと確認プロセス
+# Communication and Confirmation Process
 
-効果的に合意形成し、手戻りを防ぐための連絡タイミングと進め方を定義する。
+Defines when to reach out and how to proceed so that agreement is reached early and rework is avoided.
 
-## 基本原則
+## Basic Principles
 
-- **不明点は即質問**: 憶測や仮定で進める作業は禁止。
+- **Ask about anything unclear right away**: Do not proceed on guesses or assumptions.
 
-## 作業を止めて確認すべきケース
+## Cases Where You Should Stop and Confirm
 
-1. **要件が不明確**: 複数解釈がありうる、完了条件が曖昧。
-2. **技術選択が分岐する**: 実装案が複数ありトレードオフ判断が必要、既存パターンから外れる。
-3. **高リスク変更**: 影響範囲が広い、大規模改修、データ不整合の懸念がある。
-4. **前提変更が発生**: 依存更新、要件追加/変更、新しい制約の発覚。
-5. **抽象的な指示**: 「適切に」「効率的に」など具体基準や測定可能な完了条件がない。
+1. **Unclear requirements**: More than one interpretation is possible, or the completion criteria are vague.
+2. **A technical choice forks**: Several implementation options exist and a trade-off must be judged, or the work departs from existing patterns.
+3. **High-risk changes**: The impact is wide, the change is a large-scale overhaul, or there is a risk of data inconsistency.
+4. **A premise changes**: A dependency is updated, a requirement is added or changed, or a new constraint comes to light.
+5. **Abstract instructions**: Words such as "appropriately" or "efficiently" come with no concrete standard or measurable completion condition.
 
-## 質問の書き方（型）
+## How to Write a Question
 
 The shape of a question is owned by `.agents/rules/user-questions.md`: what parts
 it carries, when it offers choices, and when it recommends one. Follow that file.

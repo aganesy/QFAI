@@ -1,124 +1,98 @@
-// QFAI:EX-0001-0193-03
+// QFAI:EX-0001-0186-03
 
 import { expect, it } from "vitest";
 
-import { decide } from "../../../src/core/workflow/decide.js";
+import { planFacts } from "../../../src/core/workflow/observe.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
+import { JournalRun, planOf, readyWith } from "./journalRun.js";
 
-type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
+type WorkOrder = ReturnType<JournalRun["next"]>;
 
-const flowBinding = { flowId: "BF-0007" };
-const plan = {
-  route: "bugfix",
-  stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-example-seeding",
-      "missing_example_needed",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
-    [
-      "bugfix-regression-fix",
-      "regression_fix",
-      "qfai-implement",
-      "regression-fix",
-      "regression_found",
-    ],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
-};
+const FLOW = "BF-0007";
 const diagnosis = {
   verdict: "regression",
   reproductionRef: "evidence/regression-reproduction.json",
   matchedIds: ["EX-0007-0002-01"],
 };
 // The regressed example is annotated by a test, and stays so through the fix.
-const facts = {
-  obligations: {
-    flowId: "BF-0007",
-    ids: ["AC-0007-0002-01", "BF-0007", "EX-0007-0002-01", "EX-0007-0002-02"],
-    exampleIds: ["EX-0007-0002-01", "EX-0007-0002-02"],
-    annotated: ["EX-0007-0002-01"],
-    digest: "d".repeat(64),
-  },
+const obligations = {
+  flowId: FLOW,
+  ids: ["AC-0007-0002-01", FLOW, "EX-0007-0002-01", "EX-0007-0002-02"],
+  exampleIds: ["EX-0007-0002-01", "EX-0007-0002-02"],
+  annotated: ["EX-0007-0002-01"],
+  digest: "d".repeat(64),
+};
+const SCOPE = ["src/**", "tests/**"];
+
+// The routing result the re-route asks for, which settles the fix-red-main plan.
+const proposal = {
+  requestKind: "routed",
+  extraction: extraction({ intent: "ci", qualifiers: ["red-since-change"] }),
+  goal: "The default branch accepts a sixth address again; refuse it.",
+  expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
+  observedRefs: [],
+  affectedFlowIds: [FLOW],
+  riskSignals: [],
+  unresolvedQuestions: [],
+  newStories: [],
+  proposedWriteScope: SCOPE,
+  protectedTargets: [],
+  rationale: "The diagnosis found a regression a correct test catches.",
 };
 
-function resultFor(workOrder: WorkOrder, expectedSequence: number) {
-  return {
-    resultId: `result-${workOrder.stageInstanceId}`,
-    workOrderId: workOrder.workOrderId,
-    stageInstanceId: workOrder.stageInstanceId,
-    attempt: workOrder.attempt,
-    expectedSequence,
-    outcome: "accepted",
-    ...(workOrder.stageKind === "diagnose" ? { diagnosis } : {}),
-    ...(workOrder.stageKind === "regression_fix"
-      ? {
-          regressionFix: {
-            testId: "TC-0007-0004",
-            rerunRef: "evidence/rerun-green.json",
-            reviewRef: "evidence/independent-review.json",
-          },
-        }
-      : {}),
+const stepNames = (workOrder: WorkOrder) => (workOrder.steps ?? []).map((step) => step.name);
+
+// The receipts a canned accepted result of the work order carries.
+function fieldsFor(workOrder: WorkOrder): Record<string, unknown> {
+  if (workOrder.stageKind === "route") return { proposal };
+  if (stepNames(workOrder).includes("implement-diagnose")) return { diagnosis };
+  if (workOrder.stageKind !== "regression_fix") return {};
+  const regressionFix = {
+    testId: "TC-0007-0004",
+    rerunRef: "evidence/rerun-green.json",
+    reviewRef: "evidence/independent-review.json",
   };
+  return { regressionFix };
 }
 
-it("A diagnose result regression for an annotated example", () => {
-  let run = { id: "run-regression", state: "ready", sequence: 4 };
-  let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
-  let recordedDiagnosis: typeof diagnosis | null = null;
+it("A diagnose result regression for an annotated example", async () => {
+  const plans = await planFacts();
+  const run = new JournalRun(
+    readyWith(planOf("fix-defect", plans["fix-defect"]?.stages ?? [], SCOPE), FLOW),
+  );
+  const facts = () => {
+    const routing = run.snapshot.routingReceiptRef;
+    const receiptValidity = routing ? { [routing]: "valid" as const } : {};
+    return { plans, flows: [FLOW], obligations, receiptValidity };
+  };
   const issued: WorkOrder[] = [];
-  for (let index = 0; index < plan.stages.length; index++) {
-    const context = { plan, flowBinding, diagnosis: recordedDiagnosis };
-    const next = decide({ ...context, run, acceptedStages }, { operation: "next" }, facts);
+  for (let at = 0; at < 8; at += 1) {
+    const next = run.apply({ operation: "next" }, facts());
     const workOrder = next.verdict.workOrder;
-    if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
+    if (!workOrder) break;
     issued.push(workOrder);
-    const accepted = decide(
-      { ...context, run: next.verdict.run, acceptedStages, outstandingWorkOrder: workOrder },
-      { operation: "accept", result: resultFor(workOrder, next.verdict.run.sequence) },
-      facts,
-    );
-    if (!accepted.verdict.ok || !accepted.verdict.run) break;
-    if (workOrder.stageKind === "diagnose") recordedDiagnosis = diagnosis;
-    acceptedStages = [
-      ...acceptedStages,
-      {
-        stageInstanceId: workOrder.stageInstanceId,
-        stageKind: workOrder.stageKind,
-        outcome: "accepted",
-      },
-    ];
-    run = accepted.verdict.run;
+    const accepted = run.accept(fieldsFor(workOrder), facts());
+    if (!accepted.verdict.ok) throw new Error(JSON.stringify(accepted.verdict));
   }
   const regressionFix = issued.find((workOrder) => workOrder.stageKind === "regression_fix");
   const diagnose = issued.find((workOrder) => workOrder.stageKind === "diagnose");
 
   expect({
-    issued: issued.map(({ stageKind, executor, operation }) => [
-      stageKind,
-      executor?.skill,
-      operation,
-    ]),
-    digestRecorded: typeof regressionFix?.obligations?.digest === "string",
+    issued: issued.map((workOrder) => [workOrder.stageKind, stepNames(workOrder)]),
+    route: run.snapshot.plan?.route,
+    state: run.snapshot.run.state,
     digestUnchanged: regressionFix?.obligations?.digest === diagnose?.obligations?.digest,
   }).toEqual({
     issued: [
-      ["diagnose", "qfai-implement", "diagnose-only"],
-      ["regression_fix", "qfai-implement", "regression-fix"],
-      ["verify", "qfai-verify", "verify-full"],
+      ["diagnose", ["implement-diagnose"]],
+      ["route", []],
+      ["diagnose", ["implement-bisect"]],
+      ["diagnose", ["implement-diagnose"]],
+      ["regression_fix", ["implement-regression-fix"]],
+      ["verify", ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"]],
     ],
-    digestRecorded: true,
+    route: "fix-red-main",
+    state: "ready",
     digestUnchanged: true,
   });
 });

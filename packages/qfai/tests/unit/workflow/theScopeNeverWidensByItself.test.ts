@@ -1,32 +1,18 @@
-// QFAI:EX-0001-0192-34
+// QFAI:EX-0001-0185-34
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "feature",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "feature-sdd",
-      stageKind: "sdd",
-      skill: "qfai-sdd",
-      operation: "new-story",
-    },
-    {
-      stageInstanceId: "feature-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-    },
-    {
-      stageInstanceId: "feature-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
+    planStage("feature-sdd", "sdd"),
+    planStage("feature-implement", "implement"),
+    planStage("feature-verify", "verify"),
   ],
 };
 const approval = {

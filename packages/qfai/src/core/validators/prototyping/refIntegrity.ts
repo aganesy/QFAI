@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
 
-import type { QfaiConfig } from "../../config.js";
 import { isUntouchedCycleZeroSeed } from "../../prototyping/iteration.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
@@ -10,10 +8,7 @@ import { exists, issue } from "../utils.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 
-export async function validatePrototypingArtifactRefIntegrity(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validatePrototypingArtifactRefIntegrity(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const doc = await readJsonObject(path.join(root, PROTO_JSON_REL));
 
@@ -89,29 +84,11 @@ export async function validatePrototypingArtifactRefIntegrity(
     }
   }
 
-  const handoffPath = path.join(
-    root,
-    config.paths.contractsDir,
-    "design",
-    "prototype-handoff.yaml",
-  );
-  const handoffRel = path.relative(root, handoffPath).split(path.sep).join("/");
-  const handoff = await readYamlObject(handoffPath);
+  const handoff = asRecord(doc?.handoff);
   if (handoff) {
-    await validateArtifactRef(
-      root,
-      handoff.finalArtifact,
-      "prototype-handoff.finalArtifact",
-      issues,
-      { required: true, sourcePath: handoffRel },
-    );
-    await validateArtifactRef(
-      root,
-      handoff.designSystemMirror,
-      "prototype-handoff.designSystemMirror",
-      issues,
-      { required: true, sourcePath: handoffRel },
-    );
+    await validateArtifactRef(root, handoff.finalArtifact, "handoff.finalArtifact", issues, {
+      required: true,
+    });
   }
 
   return issues;
@@ -122,12 +99,10 @@ async function validateArtifactRef(
   value: unknown,
   field: string,
   issues: Issue[],
-  options: { required?: boolean; sourcePath?: string } = {},
+  options: { required?: boolean } = {},
 ): Promise<void> {
-  // The Issue#path tells the operator WHICH file to edit. Default to
-  // prototyping.json for fields that live there, but let
-  // prototype-handoff.yaml callers point at the actual handoff file.
-  const issuePath = options.sourcePath ?? PROTO_JSON_REL;
+  // Every field this reads lives in prototyping.json, the file to edit.
+  const issuePath = PROTO_JSON_REL;
   if (typeof value !== "string" || value.trim().length === 0) {
     if (options.required) {
       issues.push(
@@ -178,14 +153,6 @@ function resolveRepoRef(root: string, value: string): string | undefined {
 async function readJsonObject(filePath: string): Promise<Record<string, unknown> | undefined> {
   try {
     return asRecord(JSON.parse(await readFile(filePath, "utf-8")));
-  } catch {
-    return undefined;
-  }
-}
-
-async function readYamlObject(filePath: string): Promise<Record<string, unknown> | undefined> {
-  try {
-    return asRecord(parseYaml(await readFile(filePath, "utf-8")));
   } catch {
     return undefined;
   }

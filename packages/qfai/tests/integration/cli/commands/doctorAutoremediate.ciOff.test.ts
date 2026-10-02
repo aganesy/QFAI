@@ -6,7 +6,7 @@
 // The `--dry-run` flag preview-only path performs zero side effects on
 // install / archive / config-write.
 //
-// AC-0006-0018 / BR-0006-0015 speak of "standard CI env vars", with
+// BR-0008-0015 speaks of "standard CI env vars", with
 // `CI=true` given only as an example, so the CLI-level cases below pin the
 // kill-switch to the convention (any truthy `CI`, plus `GITHUB_ACTIONS`)
 // rather than to one spelling.
@@ -25,6 +25,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-doctor-ci-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 

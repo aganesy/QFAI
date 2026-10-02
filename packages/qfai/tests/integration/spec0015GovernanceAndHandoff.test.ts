@@ -1,8 +1,8 @@
 /**
  * Integration acceptance for spec-0015 CHG-006 test cases
  * TC-0015-0020..0033 (autopilot policy gate, envelope-deviation
- * audit-log, handoff schema drift, eight-code finding catalog,
- * `qfai audit log` CLI, `qfai handoff upgrade` legacy adapter, doc
+ * audit-log, handoff schema drift, seven-code finding catalog,
+ * `qfai audit log` CLI, doc
  * realignment / stale-reference report).
  *
  * Deterministic temp-fixture form: each `it` seeds a `mkdtemp` root
@@ -11,21 +11,19 @@
  * the earlier `execFile`-against-dist-binary approach with an
  * isolation-safe variant.
  */
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0175-01
-// QFAI:EX-0001-0176-01
-// QFAI:EX-0001-0176-01
-// QFAI:EX-0001-0177-01
-// QFAI:EX-0001-0177-01
-// QFAI:EX-0001-0178-01
-// QFAI:EX-0001-0178-01
-// QFAI:EX-0001-0179-01
-// QFAI:EX-0001-0179-01
-// QFAI:EX-0001-0180-01
-// QFAI:EX-0001-0180-01
-// QFAI:EX-0001-0181-01
-// QFAI:EX-0001-0181-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0170-01
+// QFAI:EX-0001-0170-01
+// QFAI:EX-0001-0171-01
+// QFAI:EX-0001-0171-01
+// QFAI:EX-0001-0172-01
+// QFAI:EX-0001-0172-01
+// QFAI:EX-0001-0173-01
+// QFAI:EX-0001-0173-01
+// QFAI:EX-0001-0174-01
+// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -34,7 +32,6 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAuditLog } from "../../src/cli/commands/auditLog.js";
-import { runHandoffUpgrade } from "../../src/cli/commands/handoffUpgrade.js";
 import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
 import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
@@ -65,43 +62,54 @@ async function writeSkillMd(skillId: string, body: string): Promise<void> {
   await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }
 
-const POLICY_3_BUCKET = `# qfai-fixture
+/** The shared prototype every qfai-* skill works under, as `qfai init` ships it. */
+const BASELINE_3_BUCKET = `# Shared Skill Operating Baseline
+
+## Default Autopilot Policy (Shared)
+
+| Bucket          | Prototype entries                                                                   |
+| --------------- | ----------------------------------------------------------------------------------- |
+| \`auto-decide\`   | output formatting; ID / sequence numbering; equivalent-option pick                  |
+| \`ask-user\`      | approval-required governance operations; destructive operations; scope expansions |
+| \`hard-required\` | brand intent                                                                        |
+`;
+
+async function writeBaseline(body: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "assistant", "rule");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "shared-skill-operating-baseline.md"), body, "utf-8");
+}
+
+/** A skill's own section: only what it adds to the prototype. */
+const SKILL_OWN_POLICY = `# qfai-fixture
 
 ## Default Autopilot Policy
 
 - auto-decide:
   - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
   - equivalent-option pick
-- ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage ops
-  - destructive operations
-  - version-pin changes
-  - scope expansions
 - hard-required:
-  - companyName
   - brand intent
-  - primarySpecId
 `;
 
 describe("spec-0015 autopilot policy CHG-006", () => {
-  it("QFAI:EX-0001-0175-01 — error: SKILL.md without ## Default Autopilot Policy emits R-AUTOPILOT-POLICY-MISSING", async () => {
+  it("QFAI:EX-0001-0169-01 — error: a baseline without the shared section emits R-AUTOPILOT-POLICY-MISSING", async () => {
+    await writeBaseline("# Shared Skill Operating Baseline\n");
     await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
+    expect(f?.file).toBe(".qfai/assistant/rule/shared-skill-operating-baseline.md");
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0175-01 — error: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
-    // Section heading present but body lacks all required buckets.
-    // The validator must fire R-AUTOPILOT-POLICY-MISSING (error) and
-    // name the missing buckets in the justification per the
-    // BR-0015-0010 / AC-0015-0015 two-condition trigger
-    // (present-but-incomplete case).
-    const headingOnly = "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
-    await writeSkillMd("qfai-x", headingOnly);
+  it("QFAI:EX-0001-0169-01 — error: a shared section missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
+    // Heading present, buckets gone: every skill loses the prototype at once,
+    // so the finding names each missing bucket against the baseline.
+    await writeBaseline(
+      "# Shared Skill Operating Baseline\n\n## Default Autopilot Policy (Shared)\n\nbody without buckets.\n",
+    );
+    await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
@@ -110,26 +118,40 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toMatch(/hard-required/);
   });
 
-  // QFAI:EX-0001-0175-04
-  it("QFAI:EX-0001-0175-01 — normal: 3-bucket SKILL.md passes; widened auto-decide flagged as warning", async () => {
-    await writeSkillMd("qfai-x", POLICY_3_BUCKET);
+  it("QFAI:EX-0001-0169-01 — error: a skill whose section drops a declared input emits R-AUTOPILOT-POLICY-MISSING naming it", async () => {
+    await writeBaseline(BASELINE_3_BUCKET);
+    await writeSkillMd(
+      "qfai-sdd",
+      SKILL_OWN_POLICY.replace("  - brand intent", "  - an identifiable affected flow"),
+    );
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
+    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(f?.file).toBe(".qfai/assistant/skill/qfai-sdd/SKILL.md");
+    expect(f?.message).toContain("requirement source");
+  });
+
+  // QFAI:EX-0001-0169-04
+  it("QFAI:EX-0001-0169-01 — normal: the baseline and a skill adding only its own entries pass; widened auto-decide flagged as warning", async () => {
+    await writeBaseline(BASELINE_3_BUCKET);
+    await writeSkillMd("qfai-x", SKILL_OWN_POLICY);
+    await writeSkillMd("qfai-z", "# qfai-z\nNo policy of its own.\n");
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues).toEqual([]);
 
     // Widening: add an extra non-canonical entry to auto-decide.
-    const widened = POLICY_3_BUCKET.replace(
+    const widened = SKILL_OWN_POLICY.replace(
       "  - equivalent-option pick",
       "  - equivalent-option pick\n  - destructive operations",
     );
     await writeSkillMd("qfai-y", widened);
     const issues2 = await validateAutopilotPolicy(root);
-    expect(issues2.some((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")).toBe(true);
+    expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
     expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")?.severity).toBe("warning");
   });
 });
 
 describe("spec-0015 envelope audit-log CHG-006", () => {
-  it("QFAI:EX-0001-0176-01 — normal: an envelope AskUserQuestion writes a shaped JSON record", async () => {
+  it("QFAI:EX-0001-0170-01 — normal: an envelope AskUserQuestion writes a shaped JSON record", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "Adopt option X?",
@@ -149,7 +171,7 @@ describe("spec-0015 envelope audit-log CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0176-01 — boundary: non-envelope question writes no record", async () => {
+  it("QFAI:EX-0001-0170-01 — boundary: non-envelope question writes no record", async () => {
     const r = await writeDecisionRecord({
       root,
       question: "format pick?",
@@ -163,7 +185,7 @@ describe("spec-0015 envelope audit-log CHG-006", () => {
 });
 
 describe("spec-0015 handoff schema CHG-006", () => {
-  it("QFAI:EX-0001-0177-01 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+  it("QFAI:EX-0001-0171-01 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
     await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
     await writeFile(
       path.join(root, HANDOFF_SCHEMA_REL),
@@ -185,7 +207,7 @@ describe("spec-0015 handoff schema CHG-006", () => {
     expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:EX-0001-0177-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
+  it("QFAI:EX-0001-0171-01 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
     const issues = validateHandoff({
       companyName: "Acme",
       primarySpecId: "spec-0012",
@@ -196,33 +218,15 @@ describe("spec-0015 handoff schema CHG-006", () => {
 });
 
 describe("spec-0015 finding-code catalog CHG-006", () => {
-  it("QFAI:EX-0001-0178-01 — normal: 8 catalog codes registered; the catalog declares membership only, no severity", () => {
+  it("QFAI:EX-0001-0172-01 — normal: 7 catalog codes registered; the catalog declares membership only, no severity", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
-    expect(codes.length).toBe(8);
-    expect(codes).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+    expect(codes.length).toBe(7);
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(Object.keys(entry).sort()).toEqual(["code", "description"]);
     }
   });
 
-  it("QFAI:EX-0001-0178-01 — normal: ingestion rejects an empty justification at error even for a code its own detector emits at warning", async () => {
-    const dir = path.join(root, ".qfai", "review");
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "out-of-zone.json"),
-      JSON.stringify({
-        findings: [{ code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE", justification: "" }],
-      }),
-      "utf-8",
-    );
-    const { config } = await loadConfig(root);
-    const issues = await validateReviewerJustification(root, config);
-    const flagged = issues.filter((i) => i.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE");
-    expect(flagged.length).toBe(1);
-    expect(flagged[0]?.severity).toBe("error");
-  });
-
-  it("QFAI:EX-0001-0178-01 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
+  it("QFAI:EX-0001-0172-01 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
     const dir = path.join(root, ".qfai", "review");
     await mkdir(dir, { recursive: true });
     // Empty justification → rejected for every catalog code.
@@ -271,12 +275,12 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
    * live contract and must not be rewritten to match.
    */
   const repoRoot = path.resolve(__dirname, "../../../..");
-  it("QFAI:EX-0001-0178-01 — the active routing contract keeps membership and severity separate", async () => {
+  it("QFAI:EX-0001-0172-01 — the active routing contract keeps membership and severity separate", async () => {
     const text = await readFile(
-      path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "assistant-routing.md"),
+      path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "cli-0001-assistant-routing.md"),
       "utf-8",
     );
-    const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0354 |"));
+    const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0001-0014 |"));
     expect(rule).toBeDefined();
     expect(rule).toMatch(/membership only/i);
     expect(rule).toMatch(/per-code severity/i);
@@ -287,7 +291,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
 });
 
 describe("spec-0015 audit log CLI CHG-006", () => {
-  it("QFAI:EX-0001-0179-01 — normal: audit log lists newest-first + --scope/--operator/--clause filter; --format json works", async () => {
+  it("QFAI:EX-0001-0173-01 — normal: audit log lists newest-first + --scope/--operator/--clause filter; --format json works", async () => {
     await writeDecisionRecord({
       root,
       question: "Q1",
@@ -320,7 +324,7 @@ describe("spec-0015 audit log CLI CHG-006", () => {
     expect(parsed[0]?.scope).toBe("scope-expansion");
   });
 
-  it("QFAI:EX-0001-0179-01 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
+  it("QFAI:EX-0001-0173-01 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
     const written: string[] = [];
     const errs: string[] = [];
     const exit = await runAuditLog({
@@ -335,46 +339,8 @@ describe("spec-0015 audit log CLI CHG-006", () => {
   });
 });
 
-describe("spec-0015 handoff upgrade CHG-006", () => {
-  it("QFAI:EX-0001-0180-01 — normal: emits conforming .qfai/handoff.yaml with legacy: preserved", async () => {
-    await writeFile(
-      path.join(root, "session-handoff.yaml"),
-      "companyName: Acme\nprimarySpecId: spec-0012\ncustomField: legacy-data\n",
-      "utf-8",
-    );
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "session-handoff.yaml",
-      write: () => undefined,
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/legacy:/);
-    expect(body).toMatch(/customField/);
-  });
-
-  it("QFAI:EX-0001-0180-01 — error: malformed input fails without partial overwrite", async () => {
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: original\n", "utf-8");
-    await writeFile(path.join(root, "malformed.yaml"), "   \n", "utf-8");
-    const errs: string[] = [];
-    const exit = await runHandoffUpgrade({
-      root,
-      legacyFile: "malformed.yaml",
-      write: () => undefined,
-      writeErr: (m) => errs.push(m),
-    });
-    expect(exit).not.toBe(0);
-    expect(errs.join("\n")).toMatch(/malformed|no recognizable/i);
-    const after = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
-    expect(after).toBe("companyName: original\n");
-  });
-});
-
 describe("spec-0015 stale-ref report CHG-006", () => {
-  it("QFAI:EX-0001-0181-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
+  it("QFAI:EX-0001-0174-01 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
@@ -382,7 +348,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
     expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
   });
 
-  it("QFAI:EX-0001-0181-01 — error: a stale ref at HEAD reports warning", async () => {
+  it("QFAI:EX-0001-0174-01 — error: a stale ref at HEAD reports warning", async () => {
     const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(

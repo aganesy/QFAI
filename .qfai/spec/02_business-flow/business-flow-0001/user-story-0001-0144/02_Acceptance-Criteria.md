@@ -3,14 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Exploration and convergence modes
+  # AC-0001-0144-01
+  Scenario: `prototyping.mode` discriminator + `--mode` override (DR-0263)
+    Given `qfai.config.yaml#prototyping.mode` and the `qfai prototyping iterate --mode <convergence|exploration>` flag,
+    When iterate resolves the effective mode,
+    Then `--mode` MUST override the config value; absence of both MUST default to `convergence` (backwards-compatible).
+    And `prototyping.json#mode` MUST record the per-iteration mode.
+    And under `mode: exploration`, `QFAI-CRIT-008` (convergence) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
 
-# AC-0001-0144-01
-# Parent: US-0001-0144
-Scenario: `--license-patch` add-only path (SHOULD)
-  Given `qfai prototyping iterate --license-patch <file>` invoked with an add-only diff,
-  When the patch is applied,
-  Then the new frozen catalog MUST be written AND an audit row MUST be appended to `prototyping.json#licensePatchAudit[]` carrying `{appliedAt, patchSha256, addedSources[]}`.
-  And deletions or modifications MUST be rejected with the hint to use the cycle-0-restart path.
-  And async patch I/O errors MUST be surfaced with explicit operator-facing diagnostic.
+  # AC-0001-0144-02
+  Scenario: Certify rejects exploration-mode iterations (DR-0263)
+    Given a loop where one or more iterations were produced under `mode: exploration`,
+    When `qfai prototyping certify` runs,
+    Then certify MUST reject sealing with `R-EXPLORATION-CERTIFY-ATTEMPT` AND `acceptedIterationIndex` MUST reference a convergence-mode iteration only.
 ```

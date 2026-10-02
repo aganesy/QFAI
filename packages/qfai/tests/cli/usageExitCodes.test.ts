@@ -64,7 +64,6 @@ describe("qfai --help exit-code section", () => {
     const section = help.slice(help.indexOf("Exit codes:"));
 
     expect(section).toContain("validate / doctor");
-    expect(section).toContain("guardrails");
     expect(section).toContain("prototyping iterate");
     expect(section).toContain("prototyping certify");
     expect(section).toMatch(
@@ -72,21 +71,10 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
-  it("states why guardrails alone returns 2 for a usage error", async () => {
-    const help = await captureHelp();
-    const section = help.slice(help.indexOf("Exit codes:"));
-
-    expect(section).toMatch(/guardrails[\s\S]*a usage error/);
-  });
-
   it("records the non-usage exit codes the other commands actually return", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));
 
-    // guardrails check reports a violation with 1, not only 0 / 2.
-    expect(section).toMatch(
-      new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check found a violation`),
-    );
     // report / show-ui-contract exit 2 on missing or malformed input — the
     // catch-all "1 = a usage error" row would misreport them.
     expect(section).toMatch(
@@ -288,7 +276,7 @@ describe("qfai --help exit-code section", () => {
     );
     const preflightRow = section.slice(
       section.indexOf("prototyping preflight"),
-      section.indexOf("guardrails"),
+      section.indexOf("db-drift"),
     );
 
     // emitJson() (validate) and the --out writeFile() (doctor / preflight)
@@ -349,7 +337,7 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
-  // QFAI:EX-0001-0125-03
+  // QFAI:EX-0001-0121-02
   it("exits 2 when show-ui-contract receives legacy prototyping state", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "qfai-show-ui-contract-legacy-"));
     tempDirs.push(dir);

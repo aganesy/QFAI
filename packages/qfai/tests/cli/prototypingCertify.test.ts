@@ -112,7 +112,7 @@ async function seedMinimalProject(root: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
+    "# QFAI-CONTRACT-ID: UI-0012\nscreens: [{id: index, route: /}]\n",
     "utf-8",
   );
 }
@@ -144,8 +144,8 @@ async function seedAllGatesPass(root: string): Promise<void> {
       surface: "web",
       runId: "run-test-2026",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-      uiContractsCovered: ["CON-UI-0012"],
-      frozenSurfaceUnion: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -159,11 +159,11 @@ async function seedAllGatesPass(root: string): Promise<void> {
     "{}\n",
     "utf-8",
   );
-  const reviewDir = path.join(root, ".qfai/evidence/prototyping/iter-01/CON-UI-0012");
+  const reviewDir = path.join(root, ".qfai/evidence/prototyping/iter-01/UI-0012");
   await mkdir(reviewDir, { recursive: true });
   await writeFile(
     path.join(reviewDir, "index.review.json"),
-    reviewPayload("CON-UI-0012", "index"),
+    reviewPayload("UI-0012", "index"),
     "utf-8",
   );
 }
@@ -187,7 +187,7 @@ describe("qfai prototyping certify (generate)", () => {
       iterationCount: number;
     };
     expect(body.runId).toBe("run-test-2026");
-    expect(body.uiContractsCovered).toEqual(["CON-UI-0012"]);
+    expect(body.uiContractsCovered).toEqual(["UI-0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
     expect(body.iterationCount).toBe(2);
   });
@@ -252,7 +252,7 @@ describe("qfai prototyping certify (generate)", () => {
       await rm(path.join(root, rel), { force: true });
     }
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errors: string[] = [];
     const errorSpy = vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
       errors.push(args.map(String).join(" "));
@@ -281,7 +281,7 @@ describe("qfai prototyping certify (generate)", () => {
     // never readable.
     await writeFile(path.join(root, ".qfai/report/verify.json"), "{ not json", "utf-8");
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -310,8 +310,8 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        uiContractsCovered: ["CON-UI-0012"],
-        frozenSurfaceUnion: ["CON-UI-0012"],
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -320,7 +320,7 @@ describe("qfai prototyping certify (generate)", () => {
       }),
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -357,7 +357,7 @@ describe("qfai prototyping certify (generate)", () => {
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/extra.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens:\n  - id: extra\n",
+      "# QFAI-CONTRACT-ID: UI-0007\nscreens:\n  - id: extra\n",
       "utf-8",
     );
 
@@ -391,7 +391,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
-  // QFAI:EX-0001-0122-04
+  // QFAI:EX-0001-0118-04
   it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -415,6 +415,40 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
+  // QFAI:EX-0001-0118-10
+  it("exits 2 when prototyping.json carries no top-level runId, even with fullHarness.runId", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        fullHarness: { runId: "run-x" },
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/core/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain("prototyping.json#runId is required");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -426,8 +460,8 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-x",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        uiContractsCovered: ["CON-UI-0012"],
-        frozenSurfaceUnion: ["CON-UI-0012"],
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -460,7 +494,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0012",
+        "# QFAI-CONTRACT-ID: UI-0012",
         "screens:",
         "  - id: home",
         '    route: "/home"',
@@ -484,11 +518,11 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -533,7 +567,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Plant settings.html in an OLDER iter dir; certify must not
@@ -553,7 +587,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Add the two screen HTML files into the accepted iter dir.
@@ -563,20 +597,20 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     // AC-0012-0047: certify also requires
     // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
     // declared screen pair. The fixture's frozen spec set is
-    // `["CON-UI-0012"]` (seeded by seedAllGatesPass), and the UI contracts
+    // `["UI-0012"]` (seeded by seedAllGatesPass), and the UI contracts
     // above declare home + settings, so seed both review.jsons.
-    const specDir = path.join(acceptedDir, "CON-UI-0012");
+    const specDir = path.join(acceptedDir, "UI-0012");
     await mkdir(specDir, { recursive: true });
     // certify parses each payload against the shipped closed reviewer
     // schema, so the fixtures must be schema-valid, not merely present.
     await writeFile(
       path.join(specDir, "home.review.json"),
-      `${reviewPayload("CON-UI-0012", "home")}\n`,
+      `${reviewPayload("UI-0012", "home")}\n`,
       "utf-8",
     );
     await writeFile(
       path.join(specDir, "settings.review.json"),
-      `${reviewPayload("CON-UI-0012", "settings")}\n`,
+      `${reviewPayload("UI-0012", "settings")}\n`,
       "utf-8",
     );
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
@@ -619,16 +653,16 @@ describe("qfai prototyping show-ui-contract", () => {
     await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(record), "utf-8");
   }
 
-  // QFAI:EX-0001-0125-02
+  // QFAI:EX-0001-0121-01
   it("shows the frozen and live UI contract IDs with a full primary descriptor", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedShowRecord(root, {
       runId: "test-run-id",
-      uiContractsCovered: ["CON-UI-0012"],
-      frozenSurfaceUnion: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
     });
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
       expect(await runPrototypingShowUiContract({ root })).toBe(0);
@@ -636,11 +670,11 @@ describe("qfai prototyping show-ui-contract", () => {
         string,
         unknown
       >;
-      expect(payload.uiContractsCovered).toEqual(["CON-UI-0012"]);
-      expect(payload.frozenSurfaceUnion).toEqual(["CON-UI-0012"]);
-      expect(payload.liveUiBearing).toEqual(["CON-UI-0012"]);
+      expect(payload.uiContractsCovered).toEqual(["UI-0012"]);
+      expect(payload.frozenSurfaceUnion).toEqual(["UI-0012"]);
+      expect(payload.liveUiBearing).toEqual(["UI-0012"]);
       expect(payload.primary).toEqual({
-        uiContractId: "CON-UI-0012",
+        uiContractId: "UI-0012",
         contractPath: ".qfai/spec/03_contract/ui/home.yaml",
         source: "contract-scan",
       });
@@ -650,15 +684,15 @@ describe("qfai prototyping show-ui-contract", () => {
   });
 
   it.each([
-    { label: "missing", record: { frozenSurfaceUnion: ["CON-UI-0012"] } },
+    { label: "missing", record: { frozenSurfaceUnion: ["UI-0012"] } },
     { label: "legacy", record: { specsCovered: ["0012"], frozenSpecsCovered: ["0012"] } },
     {
       label: "malformed",
-      record: { uiContractsCovered: null, frozenSurfaceUnion: ["CON-UI-0012"] },
+      record: { uiContractsCovered: null, frozenSurfaceUnion: ["UI-0012"] },
     },
     {
       label: "invalid ID",
-      record: { uiContractsCovered: ["0012"], frozenSurfaceUnion: ["CON-UI-0012"] },
+      record: { uiContractsCovered: ["0012"], frozenSurfaceUnion: ["UI-0012"] },
     },
   ])("rejects $label scope with exit 2", async ({ record }) => {
     const root = await newTempDir();
@@ -667,10 +701,41 @@ describe("qfai prototyping show-ui-contract", () => {
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 
+  // QFAI:EX-0001-0138-02
+  it("refuses a configured primary UI contract the config loader rejected", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedShowRecord(root, {
+      runId: "test-run-id",
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
+    });
+    const configPath = path.join(root, "qfai.config.yaml");
+    const config = await readFile(configPath, "utf-8");
+    await writeFile(
+      configPath,
+      `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
+      "utf-8",
+    );
+    const logger = await import("../../src/core/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingShowUiContract({ root })).toBe(2);
+      const text = errorSpy.mock.calls.flat().join(" ");
+      expect(text).toContain("prototyping.primaryUiContract");
+      expect(text).toContain('"CON-UI-0002"');
+      expect(infoSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
+  });
+
   it("rejects a missing frozen surface union", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedShowRecord(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedShowRecord(root, { uiContractsCovered: ["UI-0012"] });
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 });
@@ -734,7 +799,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
       '<span style="color:#abcdef">stale</span>\n',
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -746,38 +811,11 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     }
   });
 
-  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable", async () => {
-    // Pin the new `unreadable` LockGateResult branch added to loadLockGate
-    // for the lock fail-closed posture. Symmetric with the
-    // iterate test of the same name. Trigger the unreadable branch
-    // portably by creating the lock path as a *directory* — Node raises
-    // EISDIR on `readFile`, which routes through the new `unreadable`
-    // kind exactly as EACCES / EPERM / EIO would. Works cross-platform.
-    const root = await newTempDir();
-    await seedMinimalProject(root);
-    await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), {
-      recursive: true,
-    });
-
-    const logger = await import("../../src/cli/lib/logger.js");
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
-    try {
-      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
-      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
-    } finally {
-      errorSpy.mockRestore();
-    }
-  });
-
   it("findStaleIterDirs propagates non-ENOENT readdir errors", async () => {
-    // Symmetric pin with the lock-unreadable test: verify the
-    // fail-closed posture in findStaleIterDirs's readdir catch
+    // Verify the fail-closed posture in findStaleIterDirs's readdir catch
     // (`if (isEnoent(err)) return []; throw err;`). A future revert
     // to a bare `catch { return []; }` would let a permission flip
-    // silently bypass the stale-iter guard — the same vector the
-    // round-9 lock fix closed. Trigger a non-ENOENT readdir error
+    // silently bypass the stale-iter guard. Trigger a non-ENOENT readdir error
     // portably by passing a path that is a file, not a directory:
     // Node raises ENOTDIR which is non-ENOENT and must propagate.
     const root = await newTempDir();

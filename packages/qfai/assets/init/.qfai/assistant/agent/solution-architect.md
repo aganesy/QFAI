@@ -37,7 +37,8 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Define architecture boundaries, non-goals, and major trade-offs.
-- Design UI, API, and DB contracts that make requirements executable.
+- Design UI, API, and DB contracts that make requirements executable. Give each one a `<KIND>-NNNN` ID from its directory and the next contract number, and number its business rules `BR-<contract number>-NNNN`.
+- Keep references one way: a business rule cites only examples, and a contract never names an implementation file.
 - Prevent rejected options from being reintroduced without RE-OPEN.
 - Align architecture and contract decisions with implementation and test strategy.
 - Apply SOLID, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.
@@ -48,7 +49,7 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - <paths.specsDir>/decisions.md and open-questions.md
 - <paths.specsDir>/02_business-flow/** (affected flow and stories)

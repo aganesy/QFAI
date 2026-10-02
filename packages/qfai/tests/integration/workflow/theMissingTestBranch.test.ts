@@ -1,27 +1,21 @@
-// QFAI:AC-0001-0193-01
-// QFAI:EX-0001-0193-01
-// QFAI:EX-0001-0193-13
+// QFAI:AC-0001-0186-01
+// QFAI:EX-0001-0186-01
+// QFAI:EX-0001-0186-13
 
 import { expect, it } from "vitest";
 
 import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
 
-it("Load the shipped bugfix", async () => {
-  const { bugfix } = await loadBuiltInPlans();
+it("Load the shipped fix-defect", async () => {
+  const fixDefect = (await loadBuiltInPlans()).find((plan) => plan.route === "fix-defect");
 
   expect({
-    stages: bugfix.stages.map((stage) => [stage.kind, stage.when]),
-    last: bugfix.stages.at(-1)?.operation,
+    stages: fixDefect?.stages.map((stage) => stage.kind),
+    append: fixDefect?.stages[1]?.steps,
+    last: fixDefect?.stages.at(-1)?.steps.map((step) => step.name),
   }).toEqual({
-    stages: [
-      ["diagnose", "always"],
-      ["sdd_append", "missing_example_needed"],
-      ["acceptance", "acceptance_obligations_unmet"],
-      ["implement", "diagnosis_missing_test"],
-      ["regression_fix", "regression_found"],
-      ["test_fix", "test_defect_found"],
-      ["verify", "always"],
-    ],
-    last: "verify-full",
+    stages: ["diagnose", "sdd_append", "acceptance", "implement", "verify"],
+    append: [{ name: "sdd-story", passThrough: true }, { name: "sdd-gate" }],
+    last: ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
   });
 });

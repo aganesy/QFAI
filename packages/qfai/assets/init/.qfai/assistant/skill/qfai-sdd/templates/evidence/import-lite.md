@@ -35,7 +35,10 @@ Record the imported work's surface when no discussion pack supplies it. `primary
 
 ## Imported requirements
 
-Number source requirements here only when the imported material lacks stable IDs. Preserve the source wording. A decision row or `.qfai/evidence/sdd-BF-NNNN.md` cites a requirement as `import-lite-<ts>#IMP-001`; where source IDs already exist, cite those IDs instead. Do not rewrite this file after a downstream citation exists.
+Number source requirements here only when the imported material lacks stable IDs. Preserve the source wording.
+`.qfai/evidence/sdd-BF-NNNN.md` cites a requirement as `import-lite-<ts>#IMP-001`; where source IDs already exist, cite
+those IDs instead. This file is local, so a decision row quotes the requirement it relies on rather than citing this file.
+Do not rewrite this file after a downstream citation exists.
 
 - IMP-001: <requirement as the source states it>
 - IMP-002: <requirement as the source states it>

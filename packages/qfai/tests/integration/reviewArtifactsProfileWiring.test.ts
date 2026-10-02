@@ -86,7 +86,7 @@ describe("review artifact profile wiring", () => {
   it("the shipped layout doc points at the profiles that actually report them", async () => {
     const doc = await readFile(LAYOUT_DOC, "utf-8");
     expect(doc).toContain("Use the full verify profile to check review packs");
-    expect(doc).toContain("A present malformed pack fails validation");
+    expect(doc).toContain("A malformed pack fails validation");
     expect(doc).toContain("Every required reviewer judges");
   });
 });

@@ -7,7 +7,10 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const defaults = path.join(repoRoot, "packages/qfai/assets/defaults/agent-routing.yml");
+const defaults = path.join(
+  repoRoot,
+  "packages/qfai/assets/defaults/agent-routing/qfai-discussion.yml",
+);
 
 async function framingAgents(): Promise<string[]> {
   const parsed: unknown = parseYaml(await readFile(defaults, "utf8"));
@@ -15,11 +18,11 @@ async function framingAgents(): Promise<string[]> {
   const routing = (parsed as { routing?: unknown }).routing;
   if (!Array.isArray(routing)) return [];
   const discussion = routing.find(
-    (entry): entry is { skill: string; phases?: unknown } =>
+    (entry): entry is { step: string; phases?: unknown } =>
       typeof entry === "object" &&
       entry !== null &&
-      "skill" in entry &&
-      (entry as { skill?: unknown }).skill === "qfai-discussion",
+      "step" in entry &&
+      (entry as { step?: unknown }).step === "discussion-research",
   );
   if (!Array.isArray(discussion?.phases)) return [];
   const framing = discussion.phases.find(

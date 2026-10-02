@@ -5,12 +5,14 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
+
 /**
  * CLI contracts must not use a release version as their tracking mechanism.
  *
  * A note of the shape "NOT YET IMPLEMENTED in vX.Y.Z — scheduled for vA.B.C+"
  * expires silently: the only way to notice the deadline arrived is to diff the
- * contract against `packages/qfai/package.json#version`. `qfai-init.md` carried
+ * contract against `packages/qfai/package.json#version`. `cli-0009-qfai-init.md` carried
  * two such notes (`--allow-dirty`, exit 65) whose target version shipped with
  * neither behaviour implemented. Either a contract describes what the code does
  * today, or it points at a tracking issue — never at a version number.
@@ -99,17 +101,24 @@ describe("CLI contracts do not defer behaviour to a version number", () => {
   });
 });
 
-describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
-  const contractPath = path.join(CONTRACTS_DIR, "cli", "qfai-init.md");
+describe("cli-0009-qfai-init.md matches the additive assistant-tree upgrade", () => {
+  const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0009-qfai-init.md");
   const initSourcePath = path.join(ROOT, "packages", "qfai", "src", "cli", "commands", "init.ts");
 
+  /** The business rule that states what `--upgrade-assistant-tree` copies. */
+  async function upgradeRule(): Promise<string> {
+    const scan = parseContractRules(contractPath, await readFile(contractPath, "utf-8"));
+    const rule = scan.rules.find((candidate) =>
+      candidate.statement.includes("`--upgrade-assistant-tree` copies each file"),
+    );
+    expect(rule, "the init contract states the upgrade copy as a business rule").toBeDefined();
+    return rule?.statement ?? "";
+  }
+
   it("copies only named legacy steering and instruction files", async () => {
-    const [contract, source] = await Promise.all([
-      readFile(contractPath, "utf-8"),
-      readFile(initSourcePath, "utf-8"),
-    ]);
-    expect(contract).toMatch(/A file the relocation table names is copied to its destination/);
-    expect(contract).toMatch(/An unrecognised file stays at its legacy path/);
+    const [rule, source] = await Promise.all([upgradeRule(), readFile(initSourcePath, "utf-8")]);
+    expect(rule).toMatch(/copies each file the relocation table names/);
+    expect(rule).toMatch(/A file the table does not recognise stays at its legacy path/);
     expect(source).toMatch(
       /const legacySurfaces: Array<\{ name: "steering" \| "instructions"; dir: string \}>/,
     );
@@ -117,33 +126,30 @@ describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
   });
 
   it("preserves adopter-owned spec files and unsupported legacy paths", async () => {
-    const [contract, source] = await Promise.all([
-      readFile(contractPath, "utf-8"),
-      readFile(initSourcePath, "utf-8"),
-    ]);
+    const [rule, source] = await Promise.all([upgradeRule(), readFile(initSourcePath, "utf-8")]);
     for (const name of ["product.md", "manifest.md", "tech.md", "structure.md"]) {
-      expect(contract).toContain(name);
+      expect(rule).toContain(name);
     }
-    expect(contract).toMatch(/are not copied\. Migration step 3 merges them into the spec tree/);
+    expect(rule).toMatch(/which migration step 3 merges into the spec tree/);
     expect(source).toMatch(
       /Unknown files and other legacy surfaces remain where the project put them/,
     );
   });
 
   it("does not write the retired assistant directories or a migration memo", async () => {
-    const contract = await readFile(contractPath, "utf-8");
-    expect(contract).toMatch(
-      /writes nothing under `constitution\/`, `manifest\/`, `catalog\/` or\s+`process\/`/,
+    const rule = await upgradeRule();
+    expect(rule).toMatch(
+      /writes nothing under `constitution\/`, `manifest\/`, `catalog\/` or `process\/`/,
     );
-    expect(contract).toMatch(/writes no migration memo/);
+    expect(rule).toMatch(/writes no migration memo/);
   });
 
   it("keeps the copy additive and respects existing destinations", async () => {
     const [contract, source] = await Promise.all([
-      readFile(contractPath, "utf-8"),
+      upgradeRule(),
       readFile(initSourcePath, "utf-8"),
     ]);
-    expect(contract).toMatch(/no legacy path is deleted and no destination is\s+overwritten/);
+    expect(contract).toMatch(/no legacy path is deleted and no destination is overwritten/);
     expect(source).toMatch(/if \(await pathExists\(newPath\)\)/);
     expect(source).toMatch(/skipped\.push\(newPath\)/);
     expect(source).toMatch(/if \(!dryRun\)/);
@@ -154,7 +160,7 @@ describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
  * A finding code documented with no emitter is the same failure mode as a
  * version-pinned deferral: the contract promises behaviour, nothing produces
  * it, and no mechanism notices. `E-WORKLOG-SECRET` sat in the delta table as a
- * security hard block that no validator raises, so the table is now checked
+ * security hard block that no validator raises, so every code a rule names is checked
  * against the source that would have to emit each code.
  *
  * "Appears under src/" would not have caught it: a bare substring search is
@@ -166,6 +172,13 @@ describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
  */
 
 const SRC_DIR = path.join(ROOT, "packages", "qfai", "src");
+
+/**
+ * Codes a CI lane prints rather than a validator. They reach an operator
+ * through a script under `packages/qfai/scripts/`, which the runner never
+ * imports, so the emission check below does not apply to them.
+ */
+const LANE_CODES = new Set(["R-PACK-LOCATION-DRIFT"]);
 
 /** The shipped `Issue` factory, seeded so the scan is never silently empty. */
 const SHARED_ISSUE_FACTORY = "issue";
@@ -387,15 +400,19 @@ function carriesCode(node: ts.Node, code: string): boolean {
   return found;
 }
 
-describe("qfai-validate.md documents only finding codes the source can emit", () => {
-  it("every code in the delta table is emitted by a module the runner invokes", async () => {
-    const contract = await readFile(path.join(CONTRACTS_DIR, "cli", "qfai-validate.md"), "utf-8");
-    const section = contract.split("## New finding codes (this delta)")[1] ?? "";
-    const table = section.split(/^## /m)[0] ?? "";
+describe("cli-0014-qfai-validate.md documents only finding codes the source can emit", () => {
+  it("every code the business rules name is emitted by a module the runner invokes", async () => {
+    const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0014-qfai-validate.md");
+    const scan = parseContractRules(contractPath, await readFile(contractPath, "utf-8"));
+    expect(scan.errors).toEqual([]);
 
-    const codes = [...table.matchAll(/^\|\s*`([A-Z]-[A-Z0-9-]+)`/gm)]
-      .map((match) => match[1] ?? "")
-      .filter((code) => code.length > 0);
+    const codes = [
+      ...new Set(
+        scan.rules.flatMap((rule) =>
+          [...rule.statement.matchAll(/`([A-Z]-[A-Z0-9-]+)`/g)].map((match) => match[1] ?? ""),
+        ),
+      ),
+    ].filter((code) => code.length > 0 && !LANE_CODES.has(code));
     expect(codes.length).toBeGreaterThan(5);
 
     const modules = await parseSourceModules();

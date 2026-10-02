@@ -14,9 +14,9 @@ No cycle runs, and the evidence gets no cycle row, when:
 
 - the invocation wrote or changed no BR Statement and no Examples cell, even if
   it changed an AC or an EX;
-- the work order's operation is `defect-example-seeding`. That operation may not
-  change a US, an AC, a BR Statement or an existing EX, which is what most
-  findings would change.
+- the stage is of kind `sdd_append`, which appends one example for a diagnosed
+  defect. That stage may not change a US, an AC, a BR Statement or an existing
+  EX, which is what most findings would change.
 
 ## The finder
 
@@ -114,7 +114,7 @@ The finder does not raise a finding again when either holds:
 - The proposed change of a `Change request:` row at TODO or REJECTED already
   answers it. A declined change request is the user deciding that finding.
 
-Matching never goes by wording. A row at REJECTED for `BR-0003` and
+Matching never goes by wording. A row at REJECTED for `BR-0003-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order
 of 20 000 in any currency other than the default", however either is worded. It
 does not bar a finding on the same IDs for an order of exactly 10 000.
@@ -127,8 +127,8 @@ The cycle runs in the first attempt, on the proposal, before the change
 question. A finding for the user becomes a further `decision` question in the
 same result, and the attempt holding the answers applies them and writes the
 records. That attempt runs no further cycle, because a later cycle would change
-the proposal the answer approved. `orchestrated-mode.md` states what each
-attempt writes.
+the proposal the answer approved. `.qfai/assistant/step/sdd-cycle/STEP.md#inside-a-workflow-run`
+states what each attempt writes.
 
 ## The record
 

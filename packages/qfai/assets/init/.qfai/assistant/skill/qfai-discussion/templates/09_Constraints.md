@@ -4,8 +4,9 @@
 
 ## Technical Constraints
 
-> IDs use the `DTC-` prefix for discussion technical constraints. Story-tree
-> `BF-`, `US-`, `AC-`, `EX-`, and `BR-` IDs have separate roles.
+> IDs use the `DTC-`, `DOC-` and `DLC-` prefixes. `/qfai-sdd` carries each
+> constraint into the story tree's `constraint.md`, where it takes a `TC-`, `OC-`
+> or `BC-` ID; legal, budget and timeline constraints are business constraints.
 
 | ID    | Constraint | Rationale | Impact |
 | ----- | ---------- | --------- | ------ |
@@ -13,15 +14,15 @@
 
 ## Operational Constraints
 
-| ID   | Constraint | Rationale | Impact |
-| ---- | ---------- | --------- | ------ |
-| OC-1 | TBD        | TBD       | TBD    |
+| ID    | Constraint | Rationale | Impact |
+| ----- | ---------- | --------- | ------ |
+| DOC-1 | TBD        | TBD       | TBD    |
 
 ## Legal / Compliance Constraints
 
-| ID   | Constraint | Regulation / Standard | Impact |
-| ---- | ---------- | --------------------- | ------ |
-| LC-1 | TBD        | TBD                   | TBD    |
+| ID    | Constraint | Regulation / Standard | Impact |
+| ----- | ---------- | --------------------- | ------ |
+| DLC-1 | TBD        | TBD                   | TBD    |
 
 ## Budget Constraints
 

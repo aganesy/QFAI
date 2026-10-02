@@ -1,4 +1,6 @@
 // QFAI:EX-0003-0009-01
+// QFAI:EX-0003-0009-08
+// QFAI:EX-0003-0009-09
 //
 // Integration: `qfai doctor --autoremediate --yes` orchestrates three
 // remediations: install missing runtimeDependencies, archive stale

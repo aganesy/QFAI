@@ -1,18 +1,28 @@
 import {
   DEFAULT_SPECS_DIR,
-  executorSkill,
   refusedInput,
   REPLAN_BUDGET,
   scopeOf,
-  servingStage,
-  skillOwnerOf,
   STORY_AUTHORING_KINDS,
   UNTARGETED_KINDS,
   type PlanStage,
 } from "./common.js";
-import { activeStages, planNotReady } from "./stages.js";
+import { carries, modifierNames } from "./modifiers.js";
+import { releaseQuestion } from "./routeDecision.js";
+import { flowBindingOf, planNotReady } from "./stages.js";
+import {
+  isReadOnlyStage,
+  issuableSteps,
+  ownerOfStep,
+  repairOwnerOf,
+  SEAM_STEP,
+  servingStage,
+  servingSteps,
+  stepRefs,
+} from "./steps.js";
 import type {
   PlanStages,
+  PlanStep,
   WorkflowDecision,
   WorkflowEvent,
   WorkflowFacts,
@@ -32,19 +42,29 @@ const IMPLEMENTATION_HEAVY_ROLES = [
   "implementation-reviewer",
 ];
 
-// A run that restores an authorization check reviews its implementation work harder, and
-// asks nobody first.
+const UPGRADED_OWNERS = ["qfai-implement", "qfai-atdd"];
+
+// The reviewers of every step the work order runs, reviewed once at the end of the stage. A run
+// that restores an authorization check reviews its implementation work harder, and asks nobody
+// first. A run carrying `review:heavy` adds the heavy review profile's reviewers to every stage.
+// A stage its plan marks `review: none` has no step reviewers, and only `review:heavy` gives it any.
 function requiredReviewerRoles(
-  skill: string | undefined,
+  steps: readonly string[],
+  snapshot: WorkflowSnapshot,
   plan: Plan,
+  stage: PlanStage,
   facts: WorkflowFacts,
 ): string[] | undefined {
-  if (!skill) return undefined;
   const restored = (plan.riskSignals ?? []).includes("authorization-restored");
-  if (restored && (skill === "qfai-implement" || skill === "qfai-atdd")) {
-    return IMPLEMENTATION_HEAVY_ROLES;
-  }
-  return facts.reviewerRoles?.[skill];
+  const perStep = steps.flatMap((step) => {
+    if (stage.review === "none") return [];
+    const upgraded = restored && UPGRADED_OWNERS.includes(ownerOfStep(step));
+    const roles = upgraded ? IMPLEMENTATION_HEAVY_ROLES : facts.reviewerRoles?.[step];
+    return roles ? [roles] : [];
+  });
+  if (carries(snapshot, "review:heavy")) perStep.push(facts.heavyReviewerRoles ?? []);
+  const roles = [...new Set(perStep.flat())];
+  return roles.length > 0 ? roles : undefined;
 }
 
 // An external effect is allowed only where a project policy names it. A request that asks
@@ -102,8 +122,6 @@ export function currentStory(snapshot: WorkflowSnapshot): WorkflowStorySlot | un
   return snapshot.stories?.find((story) => story.slotId === slotId);
 }
 
-// SIMPLIFIED: judges staleness only from the facts the snapshot carries.
-// Lift when: the snapshot is rebuilt from the journal, which carries both digests and texts.
 export function approvalIsStale(snapshot: WorkflowSnapshot): boolean {
   const recorded = snapshot.approval?.scopeDigest;
   const approved = snapshot.approval?.target?.story;
@@ -124,8 +142,8 @@ export function flowOfRun(snapshot: WorkflowSnapshot): string | undefined {
   return snapshot.flowBinding?.flowId ?? snapshot.approval?.target?.story?.flowId ?? undefined;
 }
 
-// SIMPLIFIED: an input whose digest the facts do not carry is left out of the work order.
-// Lift when: the command adapter supplies the digest of every file a work order names.
+// An `sdd_append` work order names the diagnosis's reproduction record as its input, at the
+// digest the file has now. A record that names no readable file has no digest, and is not named.
 function diagnosisInputs(stageKind: string, snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
   const diagnosis = snapshot.diagnosis;
   const digest = diagnosis ? facts.fileDigests?.[diagnosis.reproductionRef] : undefined;
@@ -146,16 +164,14 @@ function recordAreasOf(
   const specs = facts.specsDir ?? DEFAULT_SPECS_DIR;
   const tables = [`${specs}/decisions.md`, `${specs}/open-questions.md`];
   const implement = flowId ? [`.qfai/evidence/implement-${flowId}.md`] : [];
-  const atdd = flowId
-    ? [`.qfai/evidence/atdd-${flowId}.md`, `.qfai/evidence/coverage-depth-${flowId}.md`]
-    : [];
+  const atdd = flowId ? [`.qfai/evidence/atdd-${flowId}.md`] : [];
   const sddEvidence = flowId ? [`.qfai/evidence/sdd-${flowId}.md`] : [];
   switch (workOrder.stageKind) {
     case "implement":
     case "regression_fix":
       return implement;
     case "test_fix":
-      return workOrder.executor?.skill === "qfai-atdd" ? atdd : implement;
+      return [...atdd, ...implement];
     case "acceptance":
       return atdd;
     case "sdd_append": {
@@ -165,23 +181,35 @@ function recordAreasOf(
       return [...example, ...contract, `${specs}/decisions.md`, ...sddEvidence];
     }
     case "sdd":
-    case "sdd_delta":
       return [...tables, ...sddEvidence];
     default:
       return [];
   }
 }
 
-// The base of every plan stage's work order: identity, executor, scope and history.
+// A stage that runs only read-only steps writes nothing; every other stage may write the checked
+// scope.
+function writeAreasOf(plan: Plan, steps: readonly PlanStep[]): string[] {
+  return isReadOnlyStage(steps) ? [] : (plan.writeScope ?? []);
+}
+
+// The base of every plan stage's work order: identity, steps, scope and history.
 function baseWorkOrder(
   snapshot: WorkflowSnapshot,
   plan: Plan,
   stage: PlanStage,
   facts: WorkflowFacts,
+  steps: PlanStep[],
 ): WorkflowWorkOrder {
   const attempt = (snapshot.attempts?.[stage.stageInstanceId] ?? 0) + 1;
-  const skill = executorSkill(stage, snapshot.diagnosis);
-  const reviewerRoles = requiredReviewerRoles(skill, plan, facts);
+  const reviewerRoles = requiredReviewerRoles(
+    steps.map((step) => step.name),
+    snapshot,
+    plan,
+    stage,
+    facts,
+  );
+  const modifiers = modifierNames(snapshot.modifiers);
   const actorHistory = snapshot.actorHistory ?? [];
   const receiptRefs = snapshot.receiptRefs ?? [];
   return {
@@ -189,10 +217,10 @@ function baseWorkOrder(
     stageInstanceId: stage.stageInstanceId,
     attempt,
     stageKind: stage.stageKind,
-    ...(skill ? { executor: { skill } } : {}),
-    ...(stage.operation ? { operation: stage.operation } : {}),
+    ...(steps.length > 0 ? { steps: stepRefs(steps) } : {}),
+    ...(modifiers.length > 0 ? { modifiers } : {}),
     ...(plan.writeScope
-      ? { scope: scopeOf(plan.writeScope, allowedEffects(stage, snapshot)) }
+      ? { scope: scopeOf(writeAreasOf(plan, steps), allowedEffects(stage, snapshot)) }
       : {}),
     ...(reviewerRoles ? { requiredReviewerRoles: reviewerRoles } : {}),
     ...(actorHistory.length > 0 ? { actorHistory } : {}),
@@ -229,13 +257,18 @@ function newStoryTarget(
   };
 }
 
-// The target a stage's work order binds: none for the four untargeted kinds, the slot for a
-// new story, and otherwise the run's one bound flow.
+// The target a stage's work order binds: none for the untargeted kinds or in a run that binds no
+// flow, the slot for a new story, and otherwise the run's one bound flow.
 function withTarget(
   snapshot: WorkflowSnapshot,
+  plan: Plan,
   workOrder: WorkflowWorkOrder,
 ): WorkflowWorkOrder | WorkflowDecision {
   if (UNTARGETED_KINDS.includes(workOrder.stageKind)) return workOrder;
+  if (flowBindingOf(plan.stages) !== "required") {
+    const bound = snapshot.flowBinding?.flowId;
+    return bound ? { ...workOrder, target: { kind: "flow", flowId: bound } } : workOrder;
+  }
   if (workOrder.stageKind === "sdd" && !snapshot.flowBinding) {
     return newStoryTarget(snapshot, workOrder);
   }
@@ -256,35 +289,12 @@ function obligationsOf(flowId: string | undefined, facts: WorkflowFacts) {
   };
 }
 
-// SIMPLIFIED: a stage whose predicate does not hold is recorded as a receipt carrying
-// `not_applicable` and the predicate as its reason, when `next` issues the stage after it.
-// Lift when: the run evidence gains its own record of skipped stages.
-function skippedBefore(
-  plan: Plan,
-  selected: PlanStages,
-  lastAccepted: string | undefined,
-  issuing: string,
-): WorkflowEvent[] {
-  const ids = plan.stages.map((stage) => stage.stageInstanceId);
-  const from = lastAccepted === undefined ? 0 : ids.indexOf(lastAccepted) + 1;
-  return plan.stages
-    .slice(from, ids.indexOf(issuing))
-    .filter((stage) => !selected.includes(stage))
-    .map((stage) => ({
-      type: "receipt-recorded",
-      stageInstanceId: stage.stageInstanceId,
-      notRun: { kind: "not_applicable", reason: `predicate ${stage.when ?? "none"} does not hold` },
-    }));
-}
-
 export function issueWorkOrder(
   run: WorkflowRun,
   workOrder: WorkflowWorkOrder,
-  skipped: WorkflowEvent[] = [],
   extras: Partial<WorkflowEvent> = {},
 ): WorkflowDecision {
   const events: WorkflowEvent[] = [
-    ...skipped,
     { type: "work-order-issued", workOrder, ...extras },
     { type: "dispatch-work-order" },
   ];
@@ -307,8 +317,7 @@ function issueSeamOnly(snapshot: WorkflowSnapshot, seam: WorkflowSeamRequest): W
     attempt: 1,
     stageKind: "implement",
     target: { kind: "flow", flowId },
-    executor: { skill: "qfai-implement" },
-    operation: "seam-only",
+    steps: stepRefs([SEAM_STEP]),
     parentWorkOrderId: seam.parentWorkOrderId,
   });
 }
@@ -333,17 +342,24 @@ function planRevision(
   return { verdict: { ok: true, run }, events: [{ type: "required-plan-revision" }] };
 }
 
-// The stage `next` issues: a repair's owner, or the first selected stage not yet accepted.
-// While a repair is open, the active stage its next finding's owner serves, issued to that owner.
-// A repair owned by no active stage never reaches here: `accept` sends it back to routing.
+// The stage `next` issues, and the steps it runs: the first stage not yet accepted, with every
+// step. While a repair is open, the first stage holding a step that serves the next finding's
+// owner, with only the steps that serve it; the stage that found it runs whole, less a step a
+// carried receipt satisfied. A repair owned by no stage of the plan never reaches here: `accept`
+// blocks the run on it.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
   selected: PlanStages,
-): { stage?: PlanStage | undefined; executor?: string; refused?: true } {
-  const owner = snapshot.repairRequest?.debts.map(skillOwnerOf).find(Boolean);
-  if (!owner) return { stage: selected[(snapshot.acceptedStages ?? []).length] };
-  const stage = servingStage(selected, owner, snapshot.diagnosis);
-  return stage ? { stage, executor: owner } : { refused: true };
+): { stage?: PlanStage | undefined; steps: PlanStep[]; refused?: true } {
+  const owner = repairOwnerOf(snapshot);
+  const serving = owner ? servingStage(selected, owner) : undefined;
+  if (owner && !serving) return { steps: [], refused: true };
+  const stage = serving ?? selected[(snapshot.acceptedStages ?? []).length];
+  if (!stage) return { steps: [] };
+  const detecting = stage.stageInstanceId === snapshot.repairRequest?.stageInstanceId;
+  const steps = owner && !detecting ? servingSteps(stage, owner) : issuableSteps(snapshot, stage);
+  const declared = (stage.steps ?? []).length > 0;
+  return declared && steps.length === 0 ? { steps, refused: true } : { stage, steps };
 }
 
 // The work order for one plan stage, with its target, inputs, obligations and records.
@@ -351,13 +367,10 @@ function stageWorkOrder(
   snapshot: WorkflowSnapshot,
   plan: Plan,
   stage: PlanStage,
-  selected: PlanStages,
   facts: WorkflowFacts,
-  executor?: string,
+  steps: PlanStep[],
 ): WorkflowDecision {
-  const base = baseWorkOrder(snapshot, plan, stage, facts);
-  const issuedTo = executor ? { ...base, executor: { skill: executor } } : base;
-  const targeted = withTarget(snapshot, issuedTo);
+  const targeted = withTarget(snapshot, plan, baseWorkOrder(snapshot, plan, stage, facts, steps));
   if ("verdict" in targeted) return targeted;
   const flowId = targeted.target?.kind === "flow" ? targeted.target.flowId : flowOfRun(snapshot);
   const inputs = diagnosisInputs(stage.stageKind, snapshot, facts);
@@ -370,12 +383,34 @@ function stageWorkOrder(
     ...(recordAreas.length > 0 ? { recordAreas } : {}),
   };
   const records = STORY_AUTHORING_KINDS.includes(stage.stageKind) ? facts.records : undefined;
-  const lastAccepted = (snapshot.acceptedStages ?? []).at(-1)?.stageInstanceId;
-  const skipped = skippedBefore(plan, selected, lastAccepted, stage.stageInstanceId);
-  return issueWorkOrder(snapshot.run, workOrder, skipped, {
+  return issueWorkOrder(snapshot.run, workOrder, {
     ...(obligationSet ? { obligationSet } : {}),
     ...(records ? { recordsAtIssue: records } : {}),
   });
+}
+
+// Whether `gate:release` stops the run before this stage: the stage runs the route's release
+// point, or, on a route that names none, every stage is in. Once a release approval is recorded,
+// nothing stops the run.
+function releaseDue(snapshot: WorkflowSnapshot, plan: Plan, stage: PlanStage | undefined) {
+  if (!carries(snapshot, "gate:release") || snapshot.releaseApproval) return false;
+  const atPoint = (each: PlanStage) =>
+    (each.steps ?? []).some((step) => step.decisionPoint === "release");
+  return stage ? atPoint(stage) : !plan.stages.some(atPoint);
+}
+
+// The release question, opened by `next` where the route's release point is reached.
+function openRelease(run: WorkflowRun, plan: Plan): WorkflowDecision {
+  const question = releaseQuestion(`question-${run.sequence + 1}-1`, plan.goal ?? plan.route);
+  return {
+    verdict: {
+      ok: true,
+      run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
+      questions: [question],
+      workOrder: null,
+    },
+    events: [{ type: "question-opened", question }, { type: "material-decision" }],
+  };
 }
 
 // `next` on a run in `ready`: the next work order of the plan, or none once every stage is in.
@@ -384,11 +419,11 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   const revision = planRevision(snapshot, facts);
   if (revision) return revision;
   const plan = snapshot.plan;
-  if (!plan || planNotReady(snapshot, facts)) return refusedInput(run, "The plan is not ready.");
+  if (!plan || planNotReady(snapshot)) return refusedInput(run, "The plan is not ready.");
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
-  const selected = activeStages(plan, snapshot, facts);
-  const next = stageToIssue(snapshot, selected);
-  if (next.refused) return refusedInput(run, "The repair work order is not ready.");
+  const next = stageToIssue(snapshot, plan.stages);
+  if (next.refused) return refusedInput(run, "The work order is not ready.");
+  if (releaseDue(snapshot, plan, next.stage)) return openRelease(run, plan);
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
-  return stageWorkOrder(snapshot, plan, next.stage, selected, facts, next.executor);
+  return stageWorkOrder(snapshot, plan, next.stage, facts, next.steps);
 }

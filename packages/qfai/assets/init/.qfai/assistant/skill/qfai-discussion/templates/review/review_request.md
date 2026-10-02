@@ -27,7 +27,7 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 ## Review Focus
 
 - Verify repository-fact lookup evidence under
-  `.qfai/assistant/skill/qfai-discussion/SKILL.md#reviewer-gate-must`.
+  `.qfai/assistant/step/discussion-pack/STEP.md#gate`.
 - Judge planning-stage decisions under
   `.qfai/assistant/rule/review-convergence.md#discussion-review-precision`.
 - Correctness against source requirements
@@ -44,7 +44,7 @@ Evidence. An unaccepted reply does not resolve a blocking demand.
 - Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`) (when UI-bearing)
 - Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
-- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`qfai-discussion/SKILL.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `qfai-prototyping/SKILL.md` (when UI-bearing)
+- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`.qfai/assistant/step/discussion-pack/STEP.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `.qfai/assistant/step/prototyping-loop/STEP.md` (when UI-bearing)
 - Screen contract sufficiency and strong schema completeness (when UI-bearing)
 - Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)

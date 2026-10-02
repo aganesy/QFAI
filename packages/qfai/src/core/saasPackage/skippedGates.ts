@@ -14,7 +14,6 @@
  */
 export const SAAS_PACKAGE_SKIPPED_GATES = [
   "validateStoryTreeObligations",
-  "validateStoryTreeCoverageDepth",
   "validateTestTodoStubs",
   "validateStoryTreeDrift",
 ] as const;
@@ -46,7 +45,6 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
       "QFAI-STORY-009",
       "QFAI-SCAN-002",
     ],
-    validateStoryTreeCoverageDepth: ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
     validateTestTodoStubs: ["QFAI-TEST-*"],
     validateStoryTreeDrift: ["QFAI-DRIFT-001", "QFAI-STORY-010"],
   };

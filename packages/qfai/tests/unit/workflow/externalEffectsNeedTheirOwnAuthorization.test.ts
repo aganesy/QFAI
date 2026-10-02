@@ -1,29 +1,19 @@
-// QFAI:EX-0001-0195-03
+// QFAI:EX-0001-0188-03
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
 function planDeclaring(effect: string) {
   return {
-    route: "direct",
+    route: "edit-text",
     writeScope: ["docs/guide.md"],
     stages: [
-      {
-        stageInstanceId: "direct-edit",
-        stageKind: "maintenance",
-        skill: "qfai-maintain",
-        operation: "non-normative-edit",
-        effects: [effect],
-      },
-      {
-        stageInstanceId: "direct-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-      },
+      { ...planStage("direct-edit", "maintenance"), effects: [effect] },
+      planStage("direct-verify", "verify"),
     ],
   };
 }

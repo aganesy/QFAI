@@ -9,7 +9,7 @@
  * The pure-function bucket parser is the unit-level surface; the
  * integration-level Reviewer-Gate emission is tested separately.
  */
-// QFAI:EX-0001-0175-01
+// QFAI:EX-0001-0169-01
 
 import { describe, expect, it } from "vitest";
 
@@ -130,7 +130,7 @@ describe("hard-required names with hyphens", () => {
       retired: [],
       unknown: [],
     });
-    expect(classifyHardRequiredEntries(["a full `CON-UI-NNNN`"], "qfai-verify")).toEqual({
+    expect(classifyHardRequiredEntries(["a full `UI-NNNN`"], "qfai-verify")).toEqual({
       retired: [],
       unknown: [],
     });
@@ -138,13 +138,20 @@ describe("hard-required names with hyphens", () => {
       classifyHardRequiredEntries(
         [
           "brand intent when a prototyping-scoped run consumes an unresolved visual design decision",
-          "a full `CON-UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract",
+          "a full `UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract",
           "a usable story source when a flow-scoped run cannot resolve it",
           "an affected `BF-NNNN` when a flow-scoped run cannot resolve it",
         ],
         "qfai-verify",
       ),
     ).toEqual({ retired: [], unknown: [] });
+  });
+
+  it("does not read a longer name that ends in a declared one as that name", () => {
+    // QFAI:EX-0001-0169-05
+    for (const entry of ["a full `CON-UI-NNNN`", "a full CON_UI-NNNN", "a full `UI-NNNN-X`"]) {
+      expect(classifyHardRequiredEntries([entry], "qfai-verify").unknown).toEqual([entry]);
+    }
   });
 
   it("still checks a separate name after a spaced dash", () => {

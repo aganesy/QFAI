@@ -23,6 +23,7 @@ import {
   type ProseCritiqueValidationResult,
 } from "../../../../../src/core/prototyping/evaluatorReview.js";
 
+// The fixtures pass hiragana "a" (U+3042) as `ch`: whitespace-free Japanese text.
 function repeatChars(ch: string, count: number): string {
   return ch.repeat(count);
 }
@@ -35,7 +36,7 @@ function buildEnglishWords(count: number): string {
 
 describe("countWords / validateProseCritiqueBand — Japanese-only fixture (1200 chars)", () => {
   it("passes when proseCritique is 1200 Japanese characters with no whitespace", () => {
-    const text = repeatChars("あ", 1200);
+    const text = repeatChars("\u3042", 1200);
     const result: ProseCritiqueValidationResult = validateProseCritiqueBand(text);
     expect(result.ok).toBe(true);
     expect(result.measuredCharacters).toBe(1200);
@@ -54,7 +55,7 @@ describe("countWords / validateProseCritiqueBand — English fixture (350 words)
 
 describe("countWords / validateProseCritiqueBand — over-cap Japanese (3000 chars)", () => {
   it("rejects with error text naming count form (characters), the cap (2500), and actual count (3000)", () => {
-    const text = repeatChars("あ", 3000);
+    const text = repeatChars("\u3042", 3000);
     const result = validateProseCritiqueBand(text);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected ok=false");

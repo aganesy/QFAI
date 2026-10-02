@@ -2,10 +2,10 @@
 /**
  * E2E: a clear new feature is delivered from one request.
  *
- * On a `qfai init` project, a feature run asks one `create` question at routing. The
+ * On a `qfai init` project, an add-feature run asks one `create` question at routing. The
  * story-authoring stage asks for its change once, and the attempt holding the answer writes the
  * new flow and story with the rows that cite both answers. Acceptance takes the seam round trip,
- * implement and verify follow, and `finish` completes the run `qfai_done` on the tree the run
+ * implement, docs and verify follow, and `finish` completes the run `qfai_done` on the tree the run
  * left, which validates clean. Declining the question cancels the run with nothing tracked, and a
  * result for a work order the run never issued changes nothing.
  */
@@ -24,6 +24,7 @@ import {
   STORY_ID,
   approvedFeature,
   authorStory,
+  docsPass,
   implementGreen,
   throughAcceptance,
   verifyPass,
@@ -50,6 +51,8 @@ import { discussedProject } from "./workflowProjectInputs.js";
 afterEach(removeProjects);
 
 const BOUND = { kind: "flow", flowId: FLOW_ID };
+const BASELINE = "shared-skill-operating-baseline.md";
+const ACCEPTANCE = ["atdd-scaffold", "atdd-credentials", "atdd-author"];
 
 it("one create question, one change approval, every stage from its work order, and finish qfai_done", async () => {
   const root = await discussedProject();
@@ -57,7 +60,8 @@ it("one create question, one change approval, every stage from its work order, a
   const { runId, routed, create, waiting, approved, sdd } = await approvedFeature(root);
   const story = await authorStory(root, runId, sdd.json, field(create, "questionId"));
   const stages = await throughAcceptance(root, runId, story.next.json);
-  const { next: verify } = await implementGreen(root, runId, stages.implement);
+  const { next: docs } = await implementGreen(root, runId, stages.implement);
+  const { next: verify } = await docsPass(root, runId, docs.json);
   const { next: done } = await verifyPass(root, runId, verify.json);
   commitAll(root);
   const summary = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
@@ -83,9 +87,14 @@ it("one create question, one change approval, every stage from its work order, a
       field(record, "operation"),
       field(record, "capture"),
     ]),
-    later: [stages.acceptance, stages.seam, stages.again, stages.implement, verify.json].map(
-      (document) => orderOf(document),
-    ),
+    later: [
+      stages.acceptance,
+      stages.seam,
+      stages.again,
+      stages.implement,
+      docs.json,
+      verify.json,
+    ].map((document) => orderOf(document)),
     seamParent:
       field(stages.seam, "workOrder.parentWorkOrderId") ===
       field(stages.acceptance, "workOrder.workOrderId"),
@@ -106,8 +115,15 @@ it("one create question, one change approval, every stage from its work order, a
     approved: "ready",
     sdd: {
       stageKind: "sdd",
-      skill: "qfai-sdd",
-      operation: "new-story",
+      steps: [
+        "sdd-triage",
+        "sdd-flow",
+        "sdd-story",
+        "sdd-contract",
+        "common-design-md",
+        "sdd-cycle",
+        "sdd-gate",
+      ],
       target: { kind: "new_story", slotId: expect.any(String) },
     },
     slotBound: true,
@@ -118,21 +134,19 @@ it("one create question, one change approval, every stage from its work order, a
       ["human_decision", "CHANGE_REQUEST", "agent_captured"],
     ],
     later: [
+      { stageKind: "acceptance", steps: ACCEPTANCE, target: BOUND },
+      { stageKind: "implement", steps: ["implement-seam"], target: BOUND },
+      { stageKind: "acceptance", steps: ACCEPTANCE, target: BOUND },
       {
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
+        stageKind: "implement",
+        steps: ["implement-tdd", "implement-checkpoint"],
         target: BOUND,
       },
-      { stageKind: "implement", skill: "qfai-implement", operation: "seam-only", target: BOUND },
+      { stageKind: "maintenance", steps: ["maintain-edit"] },
       {
-        stageKind: "acceptance",
-        skill: "qfai-atdd",
-        operation: "author-acceptance-tests",
-        target: BOUND,
+        stageKind: "verify",
+        steps: ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
       },
-      { stageKind: "implement", skill: "qfai-implement", operation: "implement", target: BOUND },
-      { stageKind: "verify", skill: "qfai-verify", operation: "verify-full" },
     ],
     seamParent: true,
     attempts: [1, 2],
@@ -208,11 +222,10 @@ it("a result for a work order never issued is refused and changes nothing, and t
   const skills = path.join(root, ".qfai", "assistant", "skill");
   const handover = await Promise.all(
     ["qfai-sdd", "qfai-atdd", "qfai-implement", "qfai-verify"].map(async (skill) =>
-      (
-        await readFile(path.join(skills, skill, "references", "orchestrated-mode.md"), "utf8")
-      ).includes("qfai-run"),
+      (await readFile(path.join(skills, skill, "SKILL.md"), "utf8")).includes(BASELINE),
     ),
   );
+  const baseline = await readFile(path.join(root, ".qfai", "assistant", "rule", BASELINE), "utf8");
   const shipped = (await filesUnder(root)).filter(
     (rel) =>
       /(^|\/)(direct|bugfix|bounded-change|feature|discovery)\.yml$/.test(rel) ||
@@ -224,6 +237,7 @@ it("a result for a work order never issued is refused and changes nothing, and t
     reasons: list(refused.json, "error.reasons").map((reason) => field(reason, "reason")),
     journal: (await treeDigest(root, outsideJournal)) === before,
     handover,
+    passesOn: baseline.includes("Pass the request to `qfai-run`"),
     entry: existsSync(path.join(skills, "qfai-run", "SKILL.md")),
     shipped,
   }).toEqual({
@@ -231,6 +245,7 @@ it("a result for a work order never issued is refused and changes nothing, and t
     reasons: ["work-order"],
     journal: true,
     handover: [true, true, true, true],
+    passesOn: true,
     entry: true,
     shipped: [],
   });

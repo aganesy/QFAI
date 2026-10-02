@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
-
-# AC-0001-0174-01
-# Parent: US-0001-0174
-Scenario: Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with non-empty `justification:`
-  Given the upstream SSOT-sync-pair CI lane (owned by spec-0004) flags drift between `findDesignMdViolations.ts` and `generator-prompt.md` on a PR,
-  When the Reviewer Gate processes that signal,
-  Then it emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` text naming (a) the modified file path, (b) the un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. Empty / whitespace-only / missing `justification:` MUST be treated by spec-0004's validate ingestion as an advisory-failing error (mirror of the `R-REJECTED-READOPT` pattern).
+Feature: Cross-skill documentation realignment to implementation
+  # AC-0001-0174-01
+  Scenario: Cross-skill docs realigned to implementation with zero stale references
+    Given a change to cross-skill behaviour is implemented,
+    When the implementing PR lands,
+    Then `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten in the same atomic PR to match the chosen implementations, and `qfai validate --report` MUST report every stale reference remaining at HEAD, at severity warning. spec-0015 owns this cross-skill documentation-governance obligation.
 ```

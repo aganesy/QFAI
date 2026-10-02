@@ -33,8 +33,8 @@ The questions behind those answers are in
 ## Output mapping
 
 The result is **one root `DESIGN.md`** at `<consuming-project-root>/DESIGN.md`.
-It is the brand SSOT: the design stage freezes its sha256, and `/qfai-prototyping`
-iterates under its tokens.
+It is the brand SSOT: `/qfai-prototyping` iterates under its tokens, and
+`/qfai-implement` reads them from it.
 
 Fill the fields in this order. The archetype is chosen by scoring against the
 three intent fields, so those come first.
@@ -73,7 +73,7 @@ For the schema (12 colors, 3 fonts, 4 radii, 3 shadows, 8 archetypes), read
 ## Taking the values from the theme
 
 Twelve colours, three families, four radii and three shadows. Do not compose
-them. Everything downstream treats them as exact — the lock hashes them,
+them. Everything downstream treats them as exact — the prototyping loop hashes them,
 `certify` re-scans them, every literal in every capture is checked against
 them — so a number arrived at by taste puts that exactness on top of a guess.
 
@@ -112,5 +112,5 @@ to touch a colour has nothing to be consistent with.
 
 `npx qfai init` seeds the sample at the project root and never overwrites it,
 and a project may have authored its own. Write only when the file is missing.
-An existing file is validated and frozen as it stands, except that an
-unreplaced sample is refused rather than frozen.
+An existing file is validated as it stands, except that an unreplaced sample
+is refused.

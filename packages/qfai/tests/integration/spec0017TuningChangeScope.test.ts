@@ -1,5 +1,5 @@
 /**
- * `BR-0017-0053`: one parallelism tuning change per pull request, largest project first, behind three
+ * `BR-0016-0052`: one parallelism tuning change per pull request, largest project first, behind three
  * green runs of the lanes that tuning affects.
  *
  * ## Two rows, because the example carried two obligations
@@ -13,7 +13,7 @@
  *
  * The split keeps clause 2's subject **bound** to clause 1's change — the CR records that its own first
  * attempt unbound them, which would have turned one guard into two independently satisfiable ones and
- * lost the attributability `OC-80` is about.
+ * lost the attributability `BR-0016-0078` is about.
  *
  * ## Why a green run here is not a vacuous one
  *
@@ -36,15 +36,12 @@ import workspace from "../../vitest.workspace";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
-const DECISIONS = path.join(
-  REPO_ROOT,
-  ".qfai",
-  "evidence",
-  "migration-spec-to-story",
-  "retired",
-  "spec-0017",
-  "07_Decisions.md",
-);
+/** The decision register, one table row per decision. */
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
+
+/** Every decision row in the register. */
+const decisionRows = (text: string): string[] =>
+  text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
 
 /** A GitHub Actions run identifier: a long bare integer. */
 const RUN_ID = /\b\d{9,14}\b/g;
@@ -167,7 +164,7 @@ describe("at most one runner project is moved off the declared parallelism value
     const described = moved.map((project) => `${project.name}: ${project.departures.join(", ")}`);
     expect(
       described.length > 1 ? described : [],
-      "one tuning change per pull request (OC-80): batching two makes an emergent race unattributable, " +
+      "one tuning change per pull request (BR-0016-0078): batching two makes an emergent race unattributable, " +
         "so a second departing project fails this however the run history reads",
     ).toEqual([]);
 
@@ -195,7 +192,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
     const moved = projects.filter((project) => project.departures.length > 0);
 
     const text = await readFile(DECISIONS, "utf8");
-    const sections = text.split(/^### /m).slice(1);
+    const sections = decisionRows(text);
     expect(
       sections.length,
       "the decision record must be readable for this to check it",
@@ -207,7 +204,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
         sections,
       ),
       "a project moved off the declared value without three recorded runs is a parallelism claim " +
-        "landing on argument, which is the thing BR-0017-0030 and this rule both forbid",
+        "landing on argument, which is the thing BR-0016-0030 and this rule both forbid",
     ).toEqual([]);
 
     // **The antecedent is empty today, so the assertion above is vacuous, so it is not the whole
@@ -236,7 +233,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
 });
 
 /**
- * `BR-0017-0054`, the post-merge half of the flake budget.
+ * `BR-0016-0053`, the post-merge half of the flake budget.
  *
  * The signature is the rule: there is no parameter for the pre-merge greens, because "three greens
  * before merge do not close it permanently" means they are not an input to this question at all. A
@@ -262,10 +259,10 @@ describe("a rerun-to-green rate above one in twenty reopens the setting", () => 
   // QFAI:EX-0002-0019-08
   it("holds the post-merge budget open, and finds no merged tuning change owing it anything", async () => {
     // The antecedent, read rather than assumed: a merged tuning change would be recorded, because
-    // `BR-0017-0053` requires the record. None is, so nothing is owed — and the enumeration says that
+    // `BR-0016-0052` requires the record. None is, so nothing is owed — and the enumeration says that
     // positively instead of leaving an empty loop to stand for it.
     const text = await readFile(DECISIONS, "utf8");
-    const sections = text.split(/^### /m).slice(1);
+    const sections = decisionRows(text);
     const projectNames = readProjects().map((project) => project.name);
     const tuningRecords = sections.filter((section) =>
       projectNames.some((name) => section.includes(`tuned \`${name}\``)),

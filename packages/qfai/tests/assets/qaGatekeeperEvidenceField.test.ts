@@ -20,7 +20,10 @@ describe("qa-gatekeeper evidence in the shipped implementation skill", () => {
   });
 
   it("assigns RED and GREEN observation to the qa-gatekeeper", async () => {
-    const skill = await readFile(path.join(skillDir, "SKILL.md"), "utf-8");
+    const skill = await readFile(
+      path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant/step/implement-tdd/STEP.md"),
+      "utf-8",
+    );
     expect(skill).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(skill).toContain("Write `.qfai/evidence/implement-BF-NNNN.md`");
   });

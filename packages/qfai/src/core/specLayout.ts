@@ -168,7 +168,7 @@ export type SpecEntry = {
   requiredSharedFiles: Partial<Record<string, string>>;
   requiredSharedFileNames: readonly string[];
   deltaCandidates: string[];
-  // 内部参照用の互換プロパティ
+  // Compatibility properties for internal references
   specPath: string;
   scenarioPath: string;
   caseCataloguePath: string;

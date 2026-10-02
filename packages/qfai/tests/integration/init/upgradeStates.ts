@@ -17,9 +17,14 @@ import { captureStdout } from "../../helpers/stdout.js";
 
 /**
  * Runs `qfai init` on `root` with its report captured rather than printed. `yes` is `false` for a
- * run without `--yes`.
+ * run without `--yes`, and `dryRun` is `true` for one with `--dry-run`.
  */
-export async function initQuietly(root: string, force = false, yes = true): Promise<string> {
+export async function initQuietly(
+  root: string,
+  force = false,
+  yes = true,
+  dryRun = false,
+): Promise<string> {
   const lines: string[] = [];
   const capture = (...args: unknown[]): void => {
     lines.push(args.map(String).join(" "));
@@ -33,7 +38,7 @@ export async function initQuietly(root: string, force = false, yes = true): Prom
   });
   let stdout: string;
   try {
-    stdout = await captureStdout(() => runInit({ dir: root, force, dryRun: false, yes }));
+    stdout = await captureStdout(() => runInit({ dir: root, force, dryRun, yes }));
   } finally {
     log.mockRestore();
     warn.mockRestore();
@@ -94,12 +99,16 @@ const OVERLAYS: Record<string, (root: string) => Promise<void>> = {
       }
     }
   },
+  // A block an earlier release wrote: no run-state ignore, and the negations that re-included
+  // records under the evidence directory.
   "older-gitignore": async (root) => {
     const file = path.join(root, ".gitignore");
     const kept = (await readFile(file, "utf-8"))
+      .replace(/\n+$/, "")
       .split("\n")
-      .filter((line) => line !== ".qfai/run/" && line !== "!.qfai/evidence/workflow/");
-    await writeFile(file, kept.join("\n"), "utf-8");
+      .filter((line) => line !== ".qfai/run/");
+    const retired = ["!.qfai/evidence/", "!.qfai/evidence/decision/", "!.qfai/evidence/workflow/"];
+    await writeFile(file, [...kept, ...retired, ""].join("\n"), "utf-8");
   },
 };
 

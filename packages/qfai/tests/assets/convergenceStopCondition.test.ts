@@ -24,6 +24,7 @@ import { EXIT_CODES, formatExitCodesSection } from "../../src/cli/lib/exitCodes.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL_DIR = "assistant/skill/qfai-prototyping";
+const LOOP_STEP = "assistant/step/prototyping-loop/STEP.md";
 
 /** The three arrays, in the order every statement of the condition lists them. */
 const FINDING_ARRAYS = [
@@ -40,9 +41,11 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 describe("the convergence stop condition is stated as the three finding arrays", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: the skill's exit-code line names all three arrays`, async () => {
-      const text = flat(await read(path.join(tree, SKILL_DIR, "SKILL.md")));
-      const stopLine = text.slice(text.indexOf("**Exit codes**"), text.indexOf("`65`"));
+    it(`${tree}: the loop step's exit-code line names all three arrays`, async () => {
+      const text = flat(await read(path.join(tree, LOOP_STEP)));
+      const start = text.indexOf("**Exit codes**");
+      expect(start, "the loop step has no exit-code line").toBeGreaterThan(-1);
+      const stopLine = text.slice(start, text.indexOf("`65`", start));
 
       for (const array of FINDING_ARRAYS) {
         expect(stopLine, `the exit-code line omits ${array}`).toContain(`\`${array}\``);

@@ -274,7 +274,7 @@ describe("validateAssistantAnchorReferences", () => {
         ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "See `03_contract/tech.md#standard-commands` for the project commands.",
+          "See `03_contract/tech.md#standard-commands-copy-paste` for the project commands.",
           "",
         ].join("\n"),
       },
@@ -388,7 +388,7 @@ describe("validateAssistantAnchorReferences", () => {
         ".qfai/assistant/skill/qfai-implement/SKILL.md": [
           "# qfai-implement",
           "",
-          "Read commands in `03_contract/tech.md#standard-commands`.",
+          "Read commands in `03_contract/tech.md#standard-commands-copy-paste`.",
           "",
         ].join("\n"),
       },

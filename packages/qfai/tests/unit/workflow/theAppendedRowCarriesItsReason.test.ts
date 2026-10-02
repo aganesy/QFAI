@@ -1,29 +1,18 @@
-// QFAI:EX-0001-0193-02
+// QFAI:EX-0001-0186-02
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "fix-defect",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-example-seeding",
-      "missing_example_needed",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-sdd-append", "sdd_append"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
+  ],
   writeScope: ["src/forms/**"],
 };
 const reproductionRef = "evidence/empty-value-reproduction.json";

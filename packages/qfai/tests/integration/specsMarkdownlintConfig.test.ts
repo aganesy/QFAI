@@ -35,7 +35,7 @@ describe("nested markdownlint config under .qfai/spec/", () => {
       const specPackDir = path.join(specsDir, "01_policy");
       await mkdir(specPackDir, { recursive: true });
       const overLongLine = "decision: " + "x".repeat(150);
-      const markdownBody = ["# 07 Decisions", "", "### DR-0001", "", `- ${overLongLine}`, ""].join(
+      const markdownBody = ["# 07 Decisions", "", "## DR-0001", "", `- ${overLongLine}`, ""].join(
         "\n",
       );
       await writeFile(path.join(specPackDir, "decision.md"), markdownBody, "utf-8");
@@ -46,7 +46,7 @@ describe("nested markdownlint config under .qfai/spec/", () => {
         error: (...args: unknown[]) => outputLog.push(args.map((x) => String(x)).join(" ")),
       };
 
-      await markdownlintCli2Main({
+      const exitCode = await markdownlintCli2Main({
         directory: tempRoot,
         argv: [".qfai/spec/**/*.md"],
         logMessage: logger.info,
@@ -54,8 +54,7 @@ describe("nested markdownlint config under .qfai/spec/", () => {
         noRequire: true,
       });
 
-      const md013Hits = outputLog.filter((line) => /MD013/.test(line));
-      expect(md013Hits, outputLog.join("\n")).toEqual([]);
+      expect(exitCode, outputLog.join("\n")).toBe(0);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

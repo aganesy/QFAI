@@ -15,7 +15,7 @@ const ASSISTANT_ROOTS = [
 
 const SCHEMA_REL = "skill/qfai-prototyping/references/review-payload-schema.md";
 const PROMPT_REL = "skill/qfai-prototyping/references/reviewer-prompt.md";
-const SKILL_REL = "skill/qfai-prototyping/SKILL.md";
+const LOOP_STEP_REL = "step/prototyping-loop/STEP.md";
 
 /**
  * The prototyping sources that cite a shipped document as the authority
@@ -53,7 +53,7 @@ async function readShipped(relative: string): Promise<string[]> {
 
 describe("shipped reviewer payload schema", () => {
   // The defect this file guards: five `src/` comments named
-  // `.qfai/contracts/cli/qfai-prototyping.md` as the payload SSOT, and
+  // `.qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md` as the payload SSOT, and
   // `qfai init` ships no `contracts/` tree at all — so the reviewer
   // sub-agent, which runs inside the consuming project, could not open the
   // one document that describes the schema its output is parsed against.
@@ -102,17 +102,17 @@ describe("shipped reviewer payload schema", () => {
     }
   });
 
-  // A cycle-0 review can itself converge. When the C0 row asks only for
-  // the flat `iter-00/review.json`, that run reaches certify with no
-  // per-screen payload at all and is rejected (exit 64) — a loop that
-  // succeeded cannot be sealed. Both outputs have to be named in the row
-  // that actually performs the capture + review, not only in C1..9.
+  // A cycle-0 review can itself converge. When C0 asks only for the flat
+  // `iter-00/review.json`, that run reaches certify with no per-screen payload
+  // at all and is rejected (exit 64) — a loop that succeeded cannot be sealed.
+  // Both outputs have to be named in the cycle that actually performs the
+  // capture + review, not only in C1..9.
   it("makes cycle 0 emit the per-screen payloads, not only the flat summary", async () => {
-    for (const skill of await readShipped(SKILL_REL)) {
-      const c0Row = skill.split("\n").find((line) => line.startsWith("| C0"));
-      expect(c0Row, "SKILL.md has no C0 loop row").toBeDefined();
-      expect(c0Row).toContain("iter-00/<ui-contract-id>/<screen>.review.json");
-      expect(c0Row).toContain("iter-00/review.json");
+    for (const step of await readShipped(LOOP_STEP_REL)) {
+      const c0 = /^### C0\b([\s\S]*?)^### /m.exec(step)?.[1];
+      expect(c0, "the loop step has no C0 section").toBeDefined();
+      expect(c0).toContain("iter-00/<ui-contract-id>/<screen>.review.json");
+      expect(c0).toContain("iter-00/review.json");
     }
   });
 });
@@ -126,7 +126,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
   const OPEN_COUNT =
     "Let `open(r)` be the total length of `r.blockingFindings` plus `r.layoutAntiPatternsDetected`.";
 
-  // QFAI:EX-0001-0108-02
+  // QFAI:EX-0001-0105-02
   it("pivots when the open count is above zero and did not fall across three reviews", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain(OPEN_COUNT);
@@ -136,7 +136,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
     }
   });
 
-  // QFAI:EX-0001-0108-04
+  // QFAI:EX-0001-0105-04
   it("continues when the open count fell from the prior review", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain(
@@ -145,7 +145,7 @@ describe("the pivotDirective rule the shipped reviewer prompt states", () => {
     }
   });
 
-  // QFAI:EX-0001-0108-03
+  // QFAI:EX-0001-0105-03
   it("refines in every other case", async () => {
     for (const prompt of await readPromptFlat()) {
       expect(prompt).toContain("- Else → `refine`.");

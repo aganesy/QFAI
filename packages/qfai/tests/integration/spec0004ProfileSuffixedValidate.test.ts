@@ -5,13 +5,13 @@
  *
  * Covers TC-0004-0055..0066.
  */
-// QFAI:EX-0001-0049-01
-// QFAI:EX-0001-0049-01
-// QFAI:EX-0001-0049-02
-// QFAI:EX-0001-0049-02
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0047-02
 // QFAI:EX-0002-0010-02
-// QFAI:EX-0001-0050-01
-// QFAI:EX-0001-0050-01
+// QFAI:EX-0001-0048-01
+// QFAI:EX-0001-0048-01
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -118,7 +118,8 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
     expect(body.profile).toBe("tdd");
   });
 
-  // QFAI:EX-0001-0049-01
+  // QFAI:AC-0001-0047-01
+  // QFAI:EX-0001-0047-01
   it("records a run with no profile as the full profile", async () => {
     await runValidate({ root, strict: false });
     const full = JSON.parse(
@@ -295,8 +296,8 @@ describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-D
 // Certify + post-sunset consumer
 // ────────────────────────────────────────────────────────────────────────────
 
-// QFAI:AC-0001-0049-01
-// QFAI:EX-0001-0049-04
+// QFAI:AC-0001-0047-03
+// QFAI:EX-0001-0047-04
 describe("certify reads the prototyping-profile validate report", () => {
   it("rejects the prototyping report's error even when the latest tdd report passed", async () => {
     // Seed the same prerequisite evidence as a normal certify invocation.
@@ -304,7 +305,7 @@ describe("certify reads the prototyping-profile validate report", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0004.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0004\nscreens:\n  - id: home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0004\nscreens:\n  - id: home\n    route: /\n",
       "utf-8",
     );
     const protoDir = path.join(root, ".qfai/evidence/prototyping");
@@ -317,8 +318,8 @@ describe("certify reads the prototyping-profile validate report", () => {
         designMd: { sha256: "0".repeat(64) },
         reviewerGate: { result: "PASS" },
         iterations: [{}],
-        uiContractsCovered: ["CON-UI-0004"],
-        frozenSurfaceUnion: ["CON-UI-0004"],
+        uiContractsCovered: ["UI-0004"],
+        frozenSurfaceUnion: ["UI-0004"],
       }),
       "utf-8",
     );
@@ -364,8 +365,8 @@ describe("certify reads the prototyping-profile validate report", () => {
   });
 });
 
-// QFAI:AC-0001-0049-02
-// QFAI:EX-0001-0049-03
+// QFAI:AC-0001-0047-02
+// QFAI:EX-0001-0047-03
 describe("legacy validate path becomes an error after the sunset", () => {
   it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk

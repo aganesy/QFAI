@@ -1,32 +1,27 @@
-// QFAI:EX-0001-0195-12
+// QFAI:EX-0001-0188-12
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage, servedSteps } from "./kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Debt = NonNullable<Result["debts"]>[number];
 
 const stages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-  ["bounded-implement", "implement", "qfai-implement", "implement"],
-  ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when: "always",
-}));
+  planStage("bounded-sdd-delta", "sdd"),
+  planStage("bounded-implement", "implement"),
+  planStage("bounded-verify", "verify"),
+];
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/notify/**", ".qfai/specs/BF-0001/**"],
   stages,
 };
 const facts = { flows: ["BF-0001", "BF-0002", "BF-0003"] };
 
-// A run of the bounded-change plan bound to BF-0001, with its first `accepted` stages done
+// A run of the add-feature plan bound to BF-0001, with its first `accepted` stages done
 // and the next one issued.
 function issued(accepted: number, extra: Partial<Snapshot> = {}): Snapshot {
   const ready: Snapshot = {
@@ -134,9 +129,9 @@ it("drift inside the checked scope goes to qfai-sdd", () => {
     facts,
   );
 
-  expect({ state: run.state, executor: next.verdict.workOrder?.executor }).toEqual({
+  expect({ state: run.state, steps: next.verdict.workOrder?.steps }).toEqual({
     state: "ready",
-    executor: { skill: "qfai-sdd" },
+    steps: servedSteps("sdd", "qfai-sdd"),
   });
 });
 

@@ -305,7 +305,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
 
   it("AGENTS.md references the master rules directory and version-discipline", async () => {
     const text = await readFile(path.join(ROOT, "AGENTS.md"), "utf-8");
-    expect(text).toMatch(/バージョン規律/);
+    expect(text).toMatch(/Version discipline/);
     expect(text).toMatch(/\.agents\/rules\/version-discipline\.md/);
     expect(text).toMatch(/\.agents\/rules\//);
   });
@@ -321,7 +321,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     expect(text).toMatch(/version-discipline/);
   });
 
-  // A repository-only rule, like `document-schema.md`: it governs what this
+  // A repository-only rule, like `repository-language.md`: it governs what this
   // tree stores, and `packages/qfai/assets/init/root/.agents/rules/` does not
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
@@ -439,7 +439,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "packages/qfai/assets/init/root/AGENTS.md",
         "packages/qfai/assets/init/root/CLAUDE.md",
       ];
-      const enumerates = /issue\/PR 番号|issue 番号 \/ PR 番号|issue or pull request numbers/;
+      const enumerates = /issue or pull request numbers/;
       const contradicting: string[] = [];
       for (const rel of entryPoints) {
         const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -672,7 +672,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // places an agent is already reading when it is about to write the
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
-      ".qfai/spec/03_contract/cli/qfai-validate.md",
+      ".qfai/spec/03_contract/cli/cli-0014-qfai-validate.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
@@ -808,6 +808,31 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/inventing\s+one\s+to\s+fill\s+the\s*\n?\s*slot/i);
     });
 
+    // A turn that leaves the next step to the user and ends on a report leaves
+    // the session idle with nothing saying it waits. One token per clause: the
+    // question is owed, it lists the next actions recommended first, the
+    // fallback carries it, it is not a clarification, a stop asks nothing, and
+    // a no-question mode reports the actions instead of asking.
+    it.each(MASTERS)("%s ends a turn that waits on the user with the next actions", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /A\s+turn\s+that\s+leaves\s+the\s+next\s+step\s+to\s+the\s+user\s+ends\s+with\s+a\s+question\s+listing\s+the\s+next\s+actions/,
+      );
+      expect(text).toMatch(/recommended\s+action\s+comes\s+first/);
+      expect(text).toMatch(/§\s+5's\s+fallback\s+carries\s+the\s+same\s+list/);
+      expect(text).toMatch(/It\s+is\s+not\s+a\s+clarification:\s+it\s+resolves\s+no\s+ambiguity/);
+      expect(text).toMatch(/A\s+user's\s+stop\s+is\s+not\s+such\s+a\s+turn/);
+      expect(text).toMatch(
+        /confirmed\s+in\s+one\s+line,\s+every\s+open\s+decision\s+is\s+listed\s+as\s+open,\s+and\s+nothing\s+is\s+asked/,
+      );
+      // A halt's form is the halt notice `qfai-run` sets out, not this question.
+      expect(text).toMatch(/Neither\s+is\s+a\s+`qfai-run`\s+halt/);
+      expect(text).toMatch(/records\s+the\s+next\s+actions\s+in\s+its\s+report\s+instead/);
+      // The introduction states the same exception, or it promises a question
+      // the mode forbids.
+      expect(text).toMatch(/always\s+put,\s+except\s+under\s+a\s+no-question\s+mode/);
+    });
+
     // The form and the count are independent. Without this the rule reads as a
     // licence to ask more, and a well-shaped question that should not be asked
     // is still one that should not be asked.
@@ -835,6 +860,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/in\s+the\s+shape\s+its\s+answer\s+has/);
       expect(text).toMatch(/a\s+plain\s+request/);
       expect(text).not.toMatch(/numbered\s+plain-text\s+choices\s+keep\s+the\s+same\s+parts/);
+    });
+
+    // The entry points `qfai init` writes are where an adopter's agent meets
+    // the rule, so their summary names the turn that waits on the user too.
+    it.each([
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the next-action question", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /user-questions\.md` — [^\n]*a turn that waits on the user ends with a question listing the next actions/,
+      );
     });
 
     // The two rules divide one subject: which questions to ask, and what each
@@ -1013,6 +1051,16 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/never\s+because\s+the\s+answer\s+is\s+a\s+value/);
     });
 
+    // Outside a session a question is a clarification and capped, but the one
+    // that ends a turn waiting on the user resolves no ambiguity. Without its
+    // own row the scope table caps the question the question-form rule owes.
+    it.each(MASTERS)("%s does not cap the question ending a waiting turn", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(
+        /\|\s*The question ending a turn that waits on the user\s*\|\s*Not a clarification, and not capped/,
+      );
+    });
+
     // The frontier empties while a lookup is in flight, so an end condition
     // reading the frontier alone closes the session before the lookup can raise
     // the questions it was dispatched to answer.
@@ -1168,6 +1216,64 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("api-budget.md");
     });
   });
+
+  // An adopter's spec tree is held to the same closed schemas, by the same
+  // checker, in `qfai validate` and in the docs lane. So the master ships, and
+  // what only this repository has — its lanes and how a schema is changed — is
+  // in the overlay.
+  describe("document-schema rule", () => {
+    const MASTER = "packages/qfai/assets/init/root/.agents/rules/document-schema.md";
+    const OVERLAY = ".agents/rules/document-schema.local.md";
+
+    it("states every clause in the shipped master", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      for (const clause of [
+        /Every document has one schema/,
+        /no entry names fails/,
+        /The schemas are closed/,
+        /A section the schema does not name fails/,
+        /An empty section is still there/,
+        /The template is the shape/,
+        /No history in a document/,
+        /`<!-- mdschema:ignore -->` is refused/,
+        /QFAI-DOCSCHEMA-001/,
+        /The lane is required/,
+        /What a schema cannot say/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("keeps what only this repository has in the overlay", async () => {
+      const text = await readFile(path.join(ROOT, OVERLAY), "utf-8");
+      for (const clause of [
+        /lint:mdschema/,
+        /lint:mermaid/,
+        /check-markdownlint-config\.mjs/,
+        /One implementation, three entry points/,
+        /One content kind per section/,
+        /A required section may hold a header-only table/,
+        /mdschemaSchemas\.test\.ts/,
+        /`max: 0` means no upper limit/,
+        /mermaid-lint:ignore/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+      expect(text).not.toMatch(/`when:`/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("document-schema.md");
+    });
+  });
 });
 
 describe("the question shape has one owner", () => {
@@ -1241,10 +1347,16 @@ describe("the reporting contract covers what an agent says while it works", () =
     const text = await readFile(path.join(ROOT, rel), "utf-8");
     expect(text).toMatch(/^Lead with the outcome\./m);
     expect(text).toMatch(/^## While the work runs$/m);
-    expect(text).toMatch(/Before the first tool call, say in one sentence/);
-    expect(text).toMatch(/something important is found or the direction\s+changes/);
+    expect(text).toMatch(
+      /^- Before\s+the\s+first\s+tool\s+call,\s+say\s+in\s+one\s+sentence\s+what\s+is\s+about\s+to\s+happen\.$/m,
+    );
+    expect(text).toMatch(
+      /^- Give\s+a\s+brief\s+update\s+when\s+something\s+important\s+is\s+found\s+or\s+the\s+direction\s+changes\.\s+Stay\s+quiet\s+otherwise\.$/m,
+    );
     expect(text).toMatch(/^## Correcting an earlier statement$/m);
-    expect(text).toMatch(/would change the user's code,\s+conclusions or decisions/);
+    expect(text).toMatch(
+      /^- Correct\s+an\s+earlier\s+statement\s+when\s+the\s+error\s+would\s+change\s+the\s+user's\s+code,\s+conclusions\s+or\s+decisions\.\s+State\s+the\s+correction\s+plainly\s+and\s+continue\.$/m,
+    );
     expect(text).toMatch(/Fix a slip that changes none of those without mentioning it/);
   });
 
@@ -1405,7 +1517,11 @@ describe("rule overlays", () => {
         "AC-NNNN-NNNN-NN",
         "EX-NNNN-NNNN-NN",
         "BR-NNNN",
+        "BR-NNNN-NNNN",
+        "DESIGN-NNNN",
+        "`cli-NNNN`, `api-NNNN`",
         "every four-digit segment",
+        "is not read as `UI-NNNN`",
         // The three exceptions — the sample IDs, the manifest version and the
         // story-tree sample band — and the absence of any file-name exemption.
         "spec-0001",

@@ -9,7 +9,7 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const driftPath = path.join(assistantDir, "rule", "drift-protocol.md");
 const baselinePath = path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md");
-const skillPath = path.join(assistantDir, "skill", "qfai-implement", "SKILL.md");
+const skillPath = path.join(assistantDir, "step", "implement-tdd", "STEP.md");
 const classificationPath = path.join(
   assistantDir,
   "skill",
@@ -52,10 +52,10 @@ describe("reviewer finding provenance", () => {
   it("requires precise provenance and full contract IDs", async () => {
     const drift = await readFile(driftPath, "utf-8");
     expect(drift).toMatch(
-      /Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,/,
+      /Every reviewer finding names either the governing AC, BR, or full contract ID, a shared rule, a concrete deliverable defect,/,
     );
     expect(drift).toMatch(/Use full contract IDs, including every numeric segment/);
-    expect(drift).toMatch(/Do not shorten CON-API, CON-DB,\s+or CON-UI references/);
+    expect(drift).toMatch(/Do not shorten API, DB,\s+or UI references/);
   });
 
   it("makes record defects advisory only where a queue and drain exist", async () => {
@@ -70,7 +70,9 @@ describe("reviewer finding provenance", () => {
     expect(baseline).toMatch(/record:\*.*none.*MUST be recorded as .advisory./);
     expect(baseline).toMatch(/today .\/qfai-implement. alone/);
     expect(drift).toMatch(/Completion waits for the queue to drain/);
-    expect(skill).toMatch(/A record correction follows\s+.rule\/drift-protocol\.md./);
+    expect(skill).toMatch(
+      /A record correction follows\s+`\.qfai\/assistant\/rule\/drift-protocol\.md`/,
+    );
   });
 
   it("repairs a record against run proof and seals a new review pack", async () => {

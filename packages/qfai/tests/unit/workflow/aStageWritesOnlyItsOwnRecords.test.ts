@@ -1,9 +1,12 @@
-// QFAI:EX-0001-0192-38
-// QFAI:EX-0001-0192-49
+// QFAI:EX-0001-0185-38
+// QFAI:EX-0001-0185-49
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type { PlanStep } from "../../../src/core/workflow/types.js";
+import { KIND_STEPS, planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -20,34 +23,35 @@ const facts = {
   seeding: { exampleFile: `${STORY}/03_Example.md`, contractFiles: [CONTRACT] },
 };
 
-// A bounded-change plan whose middle stage is the kind under test.
-function boundedPlan(stageKind: string, skill: string, operation: string) {
-  const stage = (id: string, kind: string, by: string, op: string) => ({
-    stageInstanceId: id,
-    stageKind: kind,
-    skill: by,
-    operation: op,
-    when: "always",
-  });
+// The kind of the stage under test, and the steps it runs.
+type Middle = [string, PlanStep[]];
+
+// A stage of a kind carrying the steps a built-in plan gives it.
+function ofKind(stageKind: string): Middle {
+  return [stageKind, KIND_STEPS[stageKind] ?? []];
+}
+
+// An add-feature plan whose middle stage is the kind under test.
+function boundedPlan(stageKind: string, steps: PlanStep[]) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/notify"],
     stages: [
-      stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-      stage("bounded-middle", stageKind, skill, operation),
-      stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+      planStage("bounded-sdd-delta", "sdd"),
+      { stageInstanceId: "bounded-middle", stageKind, steps },
+      planStage("bounded-verify", "verify"),
     ],
   };
 }
 
 // Issues the middle stage's work order, bound to BF-0001.
-function issueMiddle(stageKind: string, skill: string, operation: string) {
+function issueMiddle(stageKind: string, steps: PlanStep[]) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-records", state: "ready", sequence: 8 },
-    plan: boundedPlan(stageKind, skill, operation),
+    plan: boundedPlan(stageKind, steps),
     flowBinding,
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
   };
   const issued = decide(ready, { operation: "next" }, facts);
@@ -58,8 +62,8 @@ function issueMiddle(stageKind: string, skill: string, operation: string) {
 }
 
 // Accepts a result of the middle stage that changed exactly `paths`.
-function acceptChanging(stageKind: string, skill: string, operation: string, paths: string[]) {
-  const { snapshot, workOrder, run } = issueMiddle(stageKind, skill, operation);
+function acceptChanging(stageKind: string, steps: PlanStep[], paths: string[]) {
+  const { snapshot, workOrder, run } = issueMiddle(stageKind, steps);
   const decision = decide(
     snapshot,
     {
@@ -84,8 +88,8 @@ function acceptChanging(stageKind: string, skill: string, operation: string, pat
   };
 }
 
-const implement: [string, string, string] = ["implement", "qfai-implement", "implement"];
-const sddAppend: [string, string, string] = ["sdd_append", "qfai-sdd", "defect-example-seeding"];
+const implement = ofKind("implement");
+const sddAppend = ofKind("sdd_append");
 
 function refusedWriteScope(path: string) {
   return { ok: false, reasons: [{ reason: "write-scope", subject: path }] };
@@ -113,7 +117,7 @@ it("the decisions table refused write-scope", () => {
   expect({ ok, reasons }).toEqual(refusedWriteScope(path));
 });
 
-const outsideRecords: [string, [string, string, string], string][] = [
+const outsideRecords: [string, Middle, string][] = [
   ["decision-record", implement, ".qfai/evidence/decision/decision-0001.md"],
   ["workflow-evidence", implement, ".qfai/evidence/workflow/run-records/summary.json"],
   ["acceptance-criteria", sddAppend, `${STORY}/02_Acceptance-Criteria.md`],
@@ -130,31 +134,20 @@ for (const [title, stage, path] of outsideRecords) {
 
 const SDD_EVIDENCE = ".qfai/evidence/sdd-BF-0001.md";
 const implementRecords = [IMPLEMENT_EVIDENCE];
-const atddRecords = [".qfai/evidence/atdd-BF-0001.md", ".qfai/evidence/coverage-depth-BF-0001.md"];
+const atddRecords = [".qfai/evidence/atdd-BF-0001.md"];
 
-const derivations: [string, [string, string, string], string[] | undefined][] = [
+const derivations: [string, Middle, string[] | undefined][] = [
   ["implement", implement, implementRecords],
-  ["regression-fix", ["regression_fix", "qfai-implement", "regression-fix"], implementRecords],
-  ["test-fix-implement", ["test_fix", "qfai-implement", "test-fix"], implementRecords],
-  ["acceptance", ["acceptance", "qfai-atdd", "author-acceptance-tests"], atddRecords],
-  ["test-fix-atdd", ["test_fix", "qfai-atdd", "test-fix"], atddRecords],
+  ["regression-fix", ofKind("regression_fix"), implementRecords],
+  ["acceptance", ofKind("acceptance"), atddRecords],
+  ["test-fix", ofKind("test_fix"), [...atddRecords, ...implementRecords]],
   ["sdd-append", sddAppend, [`${STORY}/03_Example.md`, CONTRACT, DECISIONS, SDD_EVIDENCE]],
-  [
-    "prototype-not-ui-bearing",
-    ["prototype", "qfai-prototyping", "existing-runtime-contract"],
-    undefined,
-  ],
-  ["sdd", ["sdd", "qfai-sdd", "new-story"], [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
-  [
-    "sdd-delta",
-    ["sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-    [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE],
-  ],
-  ["discussion", ["discussion", "qfai-discussion", "resolve-unsettled-product-scope"], undefined],
-  ["verify", ["verify", "qfai-verify", "verify-full"], undefined],
-  ["diagnose", ["diagnose", "qfai-implement", "diagnose-only"], undefined],
-  ["maintenance", ["maintenance", "qfai-maintain", "non-normative-edit"], undefined],
-  ["route", ["route", "qfai-run", "route"], undefined],
+  ["prototype", ofKind("prototype"), undefined],
+  ["sdd", ofKind("sdd"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
+  ["discussion", ofKind("discussion"), undefined],
+  ["verify", ofKind("verify"), undefined],
+  ["diagnose", ofKind("diagnose"), undefined],
+  ["maintenance", ofKind("maintenance"), undefined],
 ];
 
 for (const [title, stage, recordAreas] of derivations) {
@@ -163,7 +156,7 @@ for (const [title, stage, recordAreas] of derivations) {
   });
 }
 
-// The checked plan a routing result becomes, for the same bounded-change stages.
+// The checked plan a routing result becomes, for the same add-feature stages.
 function checkedPlanDocument() {
   const plan = boundedPlan(...implement);
   const routed = decide(
@@ -186,8 +179,8 @@ function checkedPlanDocument() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -195,12 +188,11 @@ function checkedPlanDocument() {
           newStories: [],
           proposedWriteScope: plan.writeScope,
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
     {
-      plans: { "bounded-change": { route: "bounded-change", stages: plan.stages } },
+      plans: { "add-feature": { route: "add-feature", stages: plan.stages } },
       flows: ["BF-0001"],
     },
   );
@@ -209,11 +201,7 @@ function checkedPlanDocument() {
 
 it("scope digest leaves recordAreas out", () => {
   const implementOrder = issueMiddle(...implement).workOrder;
-  const acceptanceOrder = issueMiddle(
-    "acceptance",
-    "qfai-atdd",
-    "author-acceptance-tests",
-  ).workOrder;
+  const acceptanceOrder = issueMiddle(...ofKind("acceptance")).workOrder;
   const plan = checkedPlanDocument();
 
   expect({

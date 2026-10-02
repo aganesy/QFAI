@@ -16,7 +16,7 @@ to `/qfai-implement`; show their count as a handoff, outside ATDD's total.
 `round(100 × layer count / ATDD total)` with halves rounded up. If total
 is zero, write `-` for shares and explain that no active ATDD obligation
 is declared. A DONE decision exception is named in Notes and excluded
-from work still to author; do not remove the ID from the coverage matrix.
+from work still to author.
 
 Signals are planning observations, not quality gates. Record an unusual
 distribution and its cause without moving a BF or AC to a different layer

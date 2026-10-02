@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0201-19
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-19
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -16,6 +16,7 @@ import {
 } from "../../../src/core/workflow/parse.js";
 import { stageResultVariants } from "./stageResultVariants.js";
 import { workOrderDocument } from "../../../src/core/workflow/decide.js";
+import { stepRefs } from "../../../src/core/workflow/steps.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -152,11 +153,12 @@ it("Validate every payload example and fixture with the parser and with the five
     accepted: cases.filter((entry) => entry.parser).map((entry) => entry.name),
     disagreements,
   }).toEqual({
-    examples: ["Start input", "Routing result", "Question input", "Decision input"],
+    examples: ["Start input", "Routing result", "Question input", "Decision input", "Work order"],
     accepted: [
       "routing result",
       "stage result with a flowless debt",
       "stage result measured with nulls",
+      "stage result reporting a branch",
       "proposal",
       "question",
       "measurement",
@@ -181,7 +183,43 @@ it("A planted payload with an unknown key", async () => {
   }).toEqual({ reference: [false, false], measurement: [false, false] });
 });
 
-it("A work order carries a target unless it binds no flow and no new story", async () => {
+// QFAI:EX-0001-0209-05
+it("A stage work order names its steps, and only the routing work order its executor", async () => {
+  const validate = await loadValidator();
+  const example = (await payloadExamples()).find((entry) => entry.heading === "Work order");
+  const order = (fields: object) =>
+    workOrderDocument("run-20260925000000000", 3, {
+      workOrderId: "work-order-implement-1",
+      stageInstanceId: "implement",
+      attempt: 1,
+      stageKind: "implement",
+      target: { kind: "flow", flowId: "BF-0001" },
+      ...fields,
+    });
+  const steps = stepRefs(["implement-tdd", "implement-checkpoint"]);
+  const executor = { skill: "qfai-implement" };
+  const routing = { stageKind: "route", stageInstanceId: "route", target: undefined };
+
+  expect({
+    example: validate(WORK_ORDER, example?.payload),
+    steps: validate(WORK_ORDER, order({ steps })),
+    stepsAndExecutor: validate(WORK_ORDER, order({ steps, executor })),
+    stepsAndOperation: validate(WORK_ORDER, order({ steps, operation: "implement" })),
+    noSteps: validate(WORK_ORDER, order({})),
+    wrongPath: validate(WORK_ORDER, order({ steps: [{ name: "implement-tdd", path: "x.md" }] })),
+    routingWithSteps: validate(WORK_ORDER, order({ ...routing, steps, executor })),
+  }).toEqual({
+    example: true,
+    steps: true,
+    stepsAndExecutor: false,
+    stepsAndOperation: false,
+    noSteps: false,
+    wrongPath: false,
+    routingWithSteps: false,
+  });
+});
+
+it("A work order carries no target where its kind or its run binds no flow", async () => {
   const validate = await loadValidator();
   const order = (stageKind: string, target?: { kind: "flow"; flowId: string }) =>
     workOrderDocument("run-20260925000000000", 3, {
@@ -189,8 +227,9 @@ it("A work order carries a target unless it binds no flow and no new story", asy
       stageInstanceId: stageKind,
       attempt: 1,
       stageKind,
-      executor: { skill: "qfai-run" },
-      operation: stageKind,
+      ...(stageKind === "route"
+        ? { executor: { skill: "qfai-run" }, operation: "route" }
+        : { steps: stepRefs([`${stageKind}-step`]) }),
       ...(target ? { target } : {}),
     });
   const flow = { kind: "flow" as const, flowId: "BF-0001" };
@@ -200,6 +239,8 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     discussion: validate(WORK_ORDER, order("discussion")),
     maintenance: validate(WORK_ORDER, order("maintenance")),
     verify: validate(WORK_ORDER, order("verify")),
+    triage: validate(WORK_ORDER, order("triage")),
+    triageWithTarget: validate(WORK_ORDER, order("triage", flow)),
     implementWithTarget: validate(WORK_ORDER, order("implement", flow)),
     implementWithout: validate(WORK_ORDER, order("implement")),
     maintenanceWithTarget: validate(WORK_ORDER, order("maintenance", flow)),
@@ -209,8 +250,10 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     discussion: true,
     maintenance: true,
     verify: true,
+    triage: true,
+    triageWithTarget: false,
     implementWithTarget: true,
-    implementWithout: false,
+    implementWithout: true,
     maintenanceWithTarget: false,
     verifyWithTarget: false,
   });

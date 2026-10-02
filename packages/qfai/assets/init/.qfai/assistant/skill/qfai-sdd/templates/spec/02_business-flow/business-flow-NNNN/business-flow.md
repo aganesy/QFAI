@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Describe the purpose.
+`<Who carries out this flow, and the outcome it reaches.>`
 
 ## Flow
 
@@ -10,3 +10,7 @@
 flowchart LR
   Start --> Finish
 ```
+
+## Alternate and exception paths
+
+- `<branch, failure, interruption or resumption, and where it leads>`

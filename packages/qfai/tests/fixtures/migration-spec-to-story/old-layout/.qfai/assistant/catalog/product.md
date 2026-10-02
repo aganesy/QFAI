@@ -1,5 +1,5 @@
 # Product
 
-## Purpose
+## Non-goals
 
-Give buyers a reliable receipt.
+- Selling without a reliable receipt.

@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Parallel Slice Dispatch
-
-# AC-0001-0096-01
-# Parent: US-0001-0096
-Scenario: Parallel Dispatch Authorization
-  Given a request for parallel execution
-  When delivery-planner evaluates
-  Then it authorizes only when all allow conditions are met and no deny conditions exist.
+Feature: Design System As Input
+  # AC-0001-0096-01
+  Scenario: Design System Read From DESIGN.md
+    Given a UI implementation after the prototyping loop
+    When `/qfai-implement` reads token tables
+    Then it reads them from root `DESIGN.md` (color / typography / radius / shadow), the file the loop hashed at cycle 0, and no copy of them exists to drift from it.
 ```

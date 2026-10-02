@@ -8,6 +8,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStorySteeringPlaceholders } from "../../src/core/validators/assistantAssets.js";
+import { resolveImportLiteEntrypoint } from "../../src/core/preflight/importLiteEvidence.js";
 import { validateDiscussionPackReadiness } from "../../src/core/validators/discussionPack.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -43,17 +44,41 @@ describe("fresh story seed validation", () => {
     });
   });
 
+  // QFAI:EX-0001-0038-10
+  it("reads a clone that lost the empty contract directories as the same untouched seed", async () => {
+    await withInit(async (root) => {
+      // A clone has none of these: version control tracks no empty directory.
+      for (const kind of ["api", "cli", "db", "ui"]) {
+        await rm(path.join(root, ".qfai", "spec", "03_contract", kind), { recursive: true });
+      }
+
+      expect(await validateStorySteeringPlaceholders(root, defaultConfig)).toEqual([]);
+    });
+  });
+
+  // QFAI:EX-0001-0038-10
+  it("still reads the seed as edited when a file changed and the empty directories are gone", async () => {
+    await withInit(async (root) => {
+      await editObjective(root);
+      await rm(path.join(root, ".qfai", "spec", "03_contract", "api"), { recursive: true });
+
+      expect(
+        (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
+      ).toEqual(["QFAI-ASSETS-003"]);
+    });
+  });
+
   it("enforces the steering obligation after any seed content is edited", async () => {
     await withInit(async (root) => {
       await editObjective(root);
 
       expect(
         (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
-      ).toEqual(["QFAI-ASSETS-003", "QFAI-ASSETS-003"]);
+      ).toEqual(["QFAI-ASSETS-003"]);
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("needs no discussion pack on a story-tree project whose seed was edited", async () => {
     await withInit(async (root) => {
       await editObjective(root);
@@ -64,7 +89,7 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("still requires a correctly named pack on a story-tree project that holds a misnamed one", async () => {
     await withInit(async (root) => {
       await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
@@ -75,10 +100,47 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  // QFAI:EX-0001-0153-02
+  // QFAI:EX-0001-0148-02
   it("still requires a discussion pack where no story tree exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-"));
     try {
+      expect(
+        (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
+      ).toContain("QFAI-DPACK-001");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0148-02
+  it("still requires a discussion pack where only a local import-lite record stands in for one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-import-lite-"));
+    try {
+      const specDir = path.join(root, ".qfai", "spec", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n\nAuthored content.\n", "utf-8");
+      const evidenceDir = path.join(root, ".qfai", "evidence");
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(
+        path.join(evidenceDir, "import-lite.md"),
+        [
+          "# Import-lite evidence",
+          "",
+          "## Metadata",
+          "",
+          "- generated_at: 2026-04-01T00:00:00Z",
+          "- entrypoint: import-lite",
+          "",
+          "## Sources",
+          "",
+          "- URLs: https://example.com/requirements",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // The local preflight still takes the record as its input source.
+      expect(await resolveImportLiteEntrypoint(root, defaultConfig)).not.toBeNull();
       expect(
         (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
       ).toContain("QFAI-DPACK-001");

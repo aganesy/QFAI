@@ -12,7 +12,7 @@
  * Playwright's own runtime style injections).
  */
 
-// QFAI:EX-0001-0134-01
+// QFAI:EX-0001-0130-01
 
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -101,7 +101,7 @@ async function seedMinimal(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");

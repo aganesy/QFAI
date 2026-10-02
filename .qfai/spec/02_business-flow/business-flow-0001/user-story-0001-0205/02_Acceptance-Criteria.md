@@ -3,32 +3,36 @@
 ## Criteria
 
 ```gherkin
-Feature: Fix a defective acceptance test with example coverage untouched
+Feature: Stage 1 checks a routing-time CREATE approval instead of asking
+  # AC-0001-0205-01
+  Scenario: A fresh, matching human decision approves the CREATE triage row
+    Given an SDD work order whose target is a new_story slot and whose authorizationRefs cite a human_decision answering that slot's create question
+    And the decision matches the triage row's operation and the slot it creates, and is not stale
+    When Stage 1 triages the row
+    Then Stage 1 does not put the CREATE question again
+    And the attempt that writes the stage's change appends the CREATE row to decisions.md already at WIP, with an Approach citing the record as runId/authorizationId and stating its answeredBy, its recordedAt and the label of the chosen option
+    And decisions.md keeps its four columns
 
-# AC-0001-0205-01
-# Parent: US-0001-0205
-Scenario: A test fix leaves example coverage untouched
-  Given diagnosis found a defective existing test that checks a BF or an AC
-  When /qfai-atdd fixes the test in a test_fix stage
-  Then the result names the ID the expectation checks before and after the fix
-  And it carries an independent review and a re-run of the test
-  And the fixed test annotates the same IDs it annotated before the fix
-  And no story, contract or decisions.md file changes
-  And the re-run is recorded in the flow's ATDD evidence file
+  # AC-0001-0205-02
+  Scenario: A missing, mismatched or stale approval stops Stage 1
+    Given a CREATE triage row whose cited human_decision is missing, does not match the row, or is stale
+    When Stage 1 triages the row
+    Then no triage row is appended
+    And the stage returns awaiting_input naming the row and the reason
+    And Stage 1 asks the operator nothing itself
 
-# AC-0001-0205-02
-# Parent: US-0001-0205
-Scenario: A fix that changes the expectation's meaning goes back to SDD
-  Given a test fix after which the expectation would check a different ID
-  When the acceptance stage returns
-  Then the result is needs_repair listing that finding with qfai-sdd as its resolving owner
-  And no accepted test fix is returned
+  # AC-0001-0205-03
+  Scenario: A routing-time approval answers only a CREATE
+    Given a DELETE, SPLIT, MERGE, SUPERSEDE or UPDATE:REMOVE triage row inside a run
+    When Stage 1 triages the row
+    Then no routing-time CREATE approval is cited for it
+    And Stage 1 asks once and appends nothing: the stage result opens the approval question as a decision question with outcome awaiting_input
+    And the attempt holding the human_decision appends the row already at WIP, with an Approach citing that answer and stating its answeredBy, its recordedAt and the label of the chosen option
 
-# AC-0001-0205-03
-# Parent: US-0001-0205
-Scenario: ATDD takes a test fix only for a test that checks a BF or an AC
-  Given a diagnosis with the verdict defective-test
-  When the first ID it matches is a BF or an AC
-  Then /qfai-atdd serves the test_fix work order
-  And it serves none when the first ID matched is an EX
+  # AC-0001-0205-04
+  Scenario: --auto neither asks nor approves
+    Given an approval-required triage row with no human_decision that answers it
+    When Stage 1 runs under --auto, inside a run or outside one
+    Then Stage 1 asks no question and the row does not reach WIP
+    And it stops before every write that depends on the row and reports the row with its operation and target
 ```

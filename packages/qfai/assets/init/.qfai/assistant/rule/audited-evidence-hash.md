@@ -56,6 +56,7 @@ is already pinned by `Reviewed revision` and is not duplicated here.
 A reviewer response also records `Reviewed revision`. The evidence hash and
 revision serve different purposes; neither replaces the other. The review
 pack seal in `../skill/qfai-implement/references/evidence-revision.md` pins
-the response and summary after they are written. Recompute a present
-subject before accepting a PASS. If the subject changed, repeat the
-reviewer's judgment over the current evidence and issue a new verdict.
+the response and summary after they are written. The subject is local
+evidence, read in the working tree during the work. Recompute it before
+accepting a PASS. If the subject changed, repeat the reviewer's judgment over
+the current evidence and issue a new verdict.

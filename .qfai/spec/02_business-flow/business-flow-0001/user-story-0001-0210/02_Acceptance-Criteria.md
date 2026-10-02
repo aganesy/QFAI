@@ -3,32 +3,42 @@
 ## Criteria
 
 ```gherkin
-Feature: Fix a defective example test with example coverage untouched
+Feature: Refuse a step tree that a run or a stage skill cannot use
+  # AC-0001-0210-01
+  Scenario: The shipped step tree passes
+    Given the assistant tree `qfai init` writes
+    When `qfai validate` runs
+    Then it reports no step-tree finding
 
-# AC-0001-0210-01
-# Parent: US-0001-0210
-Scenario: A test fix leaves example coverage untouched
-  Given diagnosis found a defective existing test that checks an EX
-  When /qfai-implement fixes the test in a test_fix stage
-  Then the result names the ID the expectation checks before and after the fix
-  And it carries an independent review and a re-run of the test
-  And the fixed test annotates the same IDs it annotated before the fix
-  And no story, contract or decisions.md file changes
-  And the re-run is recorded in the flow's implement evidence file
+  # AC-0001-0210-02
+  Scenario: A step placed or named wrongly is refused
+    Given a step tree under `.qfai/assistant/step/`
+    When `qfai validate` runs
+    Then it reports an error for a `SKILL.md` anywhere under `.qfai/assistant/step/`
+    And for a step directory without a `STEP.md`
+    And for a `STEP.md` whose `name` differs from its directory name
 
-# AC-0001-0210-02
-# Parent: US-0001-0210
-Scenario: A fix that changes the expectation's meaning goes back to SDD
-  Given a test fix after which the expectation would check a different ID
-  When the implement stage returns
-  Then the result is needs_repair listing that finding with qfai-sdd as its resolving owner
-  And no accepted test fix is returned
+  # AC-0001-0210-03
+  Scenario: A step no owner or list accounts for is refused
+    Given a step tree, the installed parent skills and the built-in plans
+    When `qfai validate` runs
+    Then it reports an error for an `owner` that is neither `common` nor an installed skill
+    And for a parent `steps:` entry or a plan step that names no installed step
+    And for a step that is not `common-*` and that its owner's `steps:` does not list
+    And for a step that no parent lists or requires, no plan uses and no step requires
 
-# AC-0001-0210-03
-# Parent: US-0001-0210
-Scenario: Implement takes a test fix only for a test that checks an EX
-  Given a diagnosis with the verdict defective-test
-  When the first ID it matches is an EX
-  Then /qfai-implement serves the test_fix work order
-  And it serves none when the first ID matched is a BF or an AC
+  # AC-0001-0210-04
+  Scenario: A step requires at most one hop
+    Given a step's or a parent's `requires`
+    When `qfai validate` runs
+    Then it reports an error when `requires` is not a list
+    And when `requires` names a step that is not `common-*` or is not installed
+    And when a `common-*` step's `requires` is not empty
+
+  # AC-0001-0210-05
+  Scenario: A run does not start on a plan whose step is missing
+    Given a project missing a step a built-in plan names
+    When `npx qfai workflow start` runs
+    Then it refuses as fail-closed with cause `contract-undeclared`, naming the step
+    And it creates no run
 ```

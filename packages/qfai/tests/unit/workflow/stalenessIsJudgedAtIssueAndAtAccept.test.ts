@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-05
+// QFAI:EX-0001-0185-05
 // Fault seeds: FAULT-007
 
 import { createHash } from "node:crypto";
@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -24,21 +25,8 @@ function freshSnapshot(): Snapshot {
   return {
     run: { id: "run-feature", state: "ready", sequence: 5 },
     plan: {
-      route: "feature",
-      stages: [
-        {
-          stageInstanceId: "feature-sdd",
-          stageKind: "sdd",
-          skill: "qfai-sdd",
-          operation: "new-story",
-        },
-        {
-          stageInstanceId: "feature-verify",
-          stageKind: "verify",
-          skill: "qfai-verify",
-          operation: "verify-full",
-        },
-      ],
+      route: "add-feature",
+      stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
     },
     scopeDigest: scopeDigestOf(approvedWriteAreas),
     stories: [{ ...story, slotId: "slot-3-1" }],
@@ -145,16 +133,14 @@ it("widening-replan-at-accept", () => {
 it("Bind the created flow, then issue the next flow-bound work order", () => {
   const fresh = freshSnapshot();
   const [sdd, verify] = fresh?.plan?.stages ?? [];
-  const implement = {
-    stageInstanceId: "feature-implement",
-    stageKind: "implement",
-    skill: "qfai-implement",
-    operation: "implement",
-  };
+  const implement = planStage("feature-implement", "implement");
   const bound: Snapshot = {
     ...fresh,
     run: { id: "run-feature", state: "ready", sequence: 9 },
-    plan: { route: "feature", stages: [sdd, implement, verify].flatMap((stage) => stage ?? []) },
+    plan: {
+      route: "add-feature",
+      stages: [sdd, implement, verify].flatMap((stage) => stage ?? []),
+    },
     flowBinding: { flowId: "BF-0007" },
     acceptedStages: [{ stageInstanceId: "feature-sdd", stageKind: "sdd", outcome: "accepted" }],
   };

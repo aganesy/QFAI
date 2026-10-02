@@ -2,7 +2,9 @@
 
 ## Round block
 
-Record one section headed ### EX-NNNN-NNNN-NN in .qfai/evidence/implement-BF-NNNN.md. Inside it, use #### Round N in increasing order, starting at 1. A blocking REVISE opens the next round for changed behavior or proof. A new attempt to review unchanged proof receives a separate review pack and a numbered attempt in the current round.
+Record one section headed ### EX-NNNN-NNNN-NN in .qfai/evidence/implement-BF-NNNN.md. Inside it, use #### Round N in increasing order, starting at 1.
+A blocking REVISE opens the next round for changed behavior or proof.
+The stage review covers every example the stage implemented in one pack. A new attempt to review unchanged proof receives a separate review pack and a numbered attempt in the current round of each example it covers.
 
 Each round records the exact test selector and test file, the acceptance criterion and example IDs, and the following phase observations as applicable:
 
@@ -12,7 +14,7 @@ Each round records the exact test selector and test file, the acceptance criteri
 - Round N: Replacement proof revision when a changed test takes a fresh proof.
 - Round N: Revision, GREEN command, GREEN result, and Oracle proof.
 - Round N: Refactor verify revision, command, and result.
-- Round N: Review pack, Review pack seal, and reviewer verdict for each review attempt.
+- Round N: the stage Review pack, Review pack seal, and each reviewer verdict on this example, for each review attempt.
 
 A value containing several lines belongs in a fenced block. The fence must be longer than any fence printed by the command output, so headings in that output cannot end the example section. Preserve the command and output verbatim.
 

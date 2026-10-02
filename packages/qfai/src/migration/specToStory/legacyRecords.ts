@@ -1,5 +1,10 @@
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { parseAllMarkdownTables } from "../../core/specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  parseAllMarkdownTables,
+  splitMarkdownRow,
+} from "../../core/specPackParsers.js";
 import { MigrationInputError } from "./harness.js";
 
 export type LegacyKind = "BR" | "EX" | "TC";
@@ -10,12 +15,43 @@ export type LegacyRecord = {
     kind: "table" | "heading" | "table+heading";
     startLine: number;
     endLine: number;
+    /** The record's own line ranges: one for a table row or a heading, two where it holds both. */
+    ranges: { startLine: number; endLine: number }[];
     raw: string;
   };
 };
 
 export function retiredLegacyStatus(value: string): boolean {
   return /^(?:superseded|deprecated|removed)\b/i.test(value.trim());
+}
+
+const LEADING_STEP = /^(?:Given|When|Then|And)\s+/;
+const FURTHER_STEP = /(?:^|\s)(?:Given|When|Then|And|But)\s/;
+
+export type PlainExampleCells = {
+  input: string;
+  expected: string;
+  /** The columns that still hold Gherkin steps and are written as they stand. */
+  notPlain: ("Input" | "Expected")[];
+};
+
+/**
+ * An example's Input and Expected as the plain values a story's `03_Example.md` holds. A leading
+ * `Given`, `When`, `Then` or `And` is removed where what follows is one plain value; a cell holding
+ * a further step keeps its text and is named in `notPlain`.
+ */
+export function plainExampleCells(input: string, expected: string): PlainExampleCells {
+  const notPlain: PlainExampleCells["notPlain"] = [];
+  const plain = (value: string, column: "Input" | "Expected"): string => {
+    const trimmed = value.trim();
+    const keyword = LEADING_STEP.exec(trimmed)?.[0];
+    if (keyword === undefined) return value;
+    const rest = trimmed.slice(keyword.length);
+    if (!FURTHER_STEP.test(rest)) return rest;
+    notPlain.push(column);
+    return value;
+  };
+  return { input: plain(input, "Input"), expected: plain(expected, "Expected"), notPlain };
 }
 
 function field(body: string, name: string): string {
@@ -32,6 +68,46 @@ function field(body: string, name: string): string {
   return "";
 }
 
+/** A field line that ends a `Rule` field's continuation. */
+const OTHER_FIELD =
+  /^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Contracts?|Status|Notes?|NFRs?)\s*:/i;
+
+/** A line as a field reads it: no bold markers, no list bullet. */
+function cleanLine(line: string): string {
+  return line
+    .replace(/\*\*/g, "")
+    .replace(/^\s*-\s*/, "")
+    .trim();
+}
+
+/**
+ * The value of a section's `Rule` field: its own line and each line after it up to the next bullet,
+ * bold field line or blank line, trimmed and joined with one space. Empty where there is no field.
+ */
+function ruleField(body: string): string {
+  const lines = body.split("\n");
+  const start = lines.findIndex((line) => /^Rule\s*:/i.test(cleanLine(line)));
+  if (start < 0) return "";
+  // Only the bullet and the label's own bold markers go; the value keeps its own formatting.
+  const parts = [
+    (lines[start] ?? "").replace(
+      /^\s*(?:-\s*)?(?:\*\*Rule:\*\*|\*\*Rule\*\*\s*:|Rule\s*:)\s*/i,
+      "",
+    ),
+  ];
+  for (const line of lines.slice(start + 1)) {
+    if (
+      line.trim() === "" ||
+      /^\s*[-*]\s/.test(line) ||
+      /^\s*\*\*[^*]+\*\*\s*:/.test(line) ||
+      OTHER_FIELD.test(cleanLine(line))
+    )
+      break;
+    parts.push(line.trim());
+  }
+  return parts.join(" ").trim();
+}
+
 function headingCells(
   kind: LegacyKind,
   id: string,
@@ -42,7 +118,7 @@ function headingCells(
     .split("\n")
     .filter(
       (line) =>
-        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Refs|AC Refs|Status)\s*:/i.test(
+        !/^(?:BR-Ref|EX-Ref|EX Refs|AC-Ref|AC-Refs|AC Refs|Contract-Refs?|Status)\s*:/i.test(
           line
             .replace(/\*\*/g, "")
             .replace(/^\s*-\s*/, "")
@@ -55,7 +131,8 @@ function headingCells(
     return {
       "BR-ID": id,
       Status: field(body, "Status"),
-      Rule: [title, content].filter(Boolean).join("\n\n"),
+      "Contract-Refs": field(body, "Contract-Refs") || field(body, "Contract-Ref"),
+      Rule: ruleField(body) || [title, content].filter(Boolean).join("\n\n"),
     };
   }
   if (kind === "EX") {
@@ -67,6 +144,7 @@ function headingCells(
       "EX-ID": id,
       Status: field(body, "Status"),
       "BR-Ref": field(body, "BR-Ref"),
+      "AC-Ref": field(body, "AC-Ref"),
       Input: input || [title, content].filter(Boolean).join("\n\n"),
       Expected: expected,
     };
@@ -80,39 +158,185 @@ function headingCells(
   };
 }
 
-function refs(value: string, prefix: "AC" | "EX"): string[] {
-  return [...new Set(value.match(new RegExp(`${prefix}-\\d{4}-\\d{4}`, "g")) ?? [])].sort();
+const COMPARED_FIELDS = ["Status", "BR-Ref", "AC-Ref", "AC-Refs", "EX-Ref", "Contract-Refs"];
+
+function fieldKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/s$/, "");
 }
 
-function mergeCase(table: LegacyRecord, heading: LegacyRecord, file: string): LegacyRecord {
-  for (const [column, prefix] of [
-    ["AC-Refs", "AC"],
-    ["EX-Ref", "EX"],
-  ] as const) {
-    const fromTable = refs(table.cells[column] ?? "", prefix);
-    const fromHeading = refs(heading.cells[column] ?? "", prefix);
-    if (fromTable.length && fromHeading.length && fromTable.join() !== fromHeading.join()) {
-      throw new MigrationInputError(
-        `${file}:${heading.source.startLine}: conflicting ${column} for ${heading.id}; table line ${table.source.startLine}`,
-      );
-    }
+function sameFieldValue(a: string, b: string): boolean {
+  const ids = (value: string): string[] =>
+    [...new Set(value.match(/[A-Z]{2}-\d{4}-\d{4}(?:-\d{2})?/g) ?? [])].sort();
+  const idsA = ids(a);
+  const idsB = ids(b);
+  if (idsA.length || idsB.length) return idsA.join() === idsB.join();
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** The wording of a step, without its Gherkin keyword, bullet, case or punctuation. */
+function stepWording(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(?:given|when|then|and|but)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * The wording of a rule: every character kept, so a sign, an operator or a unit still tells two
+ * rules apart. Only case, bold markers, runs of whitespace and a closing full stop are ignored.
+ */
+function ruleWording(value: string): string {
+  return value.toLowerCase().replace(/\*\*/g, "").replace(/\s+/g, " ").trim().replace(/\.+$/, "");
+}
+
+/**
+ * The fields whose text both forms hold. A TC heading's `Expected` falls back to its whole body
+ * when no `Expected` or `Verify` line is written, so it is compared only where one is.
+ */
+function wordingFields(heading: LegacyRecord): string[] {
+  if (heading.cells["EX-ID"] !== undefined) return ["Input", "Expected"];
+  // A BR heading's `Rule` falls back to its whole section, so it is compared only where written.
+  if (heading.cells["BR-ID"] !== undefined)
+    return /^\s*(?:-\s*)?(?:\*\*Rule:\*\*|\*\*Rule\*\*\s*:|Rule\s*:)/im.test(heading.source.raw)
+      ? ["Rule"]
+      : [];
+  const written = /^\s*(?:-\s*)?\**(?:Expected|Verify)\**\s*:/im.test(heading.source.raw);
+  return written ? ["Expected"] : [];
+}
+
+function mergeRecords(table: LegacyRecord, heading: LegacyRecord, file: string): LegacyRecord {
+  const wording = wordingFields(heading);
+  for (const [column, fromHeading] of Object.entries(heading.cells)) {
+    const byWording = wording.includes(column);
+    if (!byWording && !COMPARED_FIELDS.some((name) => fieldKey(name) === fieldKey(column)))
+      continue;
+    if (!fromHeading.trim()) continue;
+    const match = Object.entries(table.cells).find(([name]) => fieldKey(name) === fieldKey(column));
+    if (!match?.[1].trim()) continue;
+    const wordingOf = column === "Rule" ? ruleWording : stepWording;
+    const same = byWording
+      ? wordingOf(match[1]) === wordingOf(fromHeading)
+      : sameFieldValue(match[1], fromHeading);
+    if (same) continue;
+    throw new MigrationInputError(
+      `${file}:${table.source.startLine} and ${file}:${heading.source.startLine}: ${heading.id} holds a different ${column} in its table row and in its heading section; an ID may be written as an index table row, a heading section or both, with equal values`,
+    );
+  }
+  const cells = { ...table.cells };
+  for (const [column, value] of Object.entries(heading.cells)) {
+    if (value.trim() || cells[column] === undefined) cells[column] = value;
   }
   return {
     id: table.id,
-    cells: {
-      ...table.cells,
-      "AC-Refs": heading.cells["AC-Refs"] || table.cells["AC-Refs"] || "",
-      "EX-Ref": heading.cells["EX-Ref"] || table.cells["EX-Ref"] || "",
-      Steps: heading.cells.Steps || table.cells.Steps || "",
-      Expected: heading.cells.Expected || table.cells.Expected || "",
-    },
+    cells,
     source: {
       kind: "table+heading",
-      startLine: table.source.startLine,
-      endLine: heading.source.endLine,
-      raw: `${table.source.raw}\n\n${heading.source.raw}`,
+      startLine: Math.min(table.source.startLine, heading.source.startLine),
+      endLine: Math.max(table.source.endLine, heading.source.endLine),
+      ranges: [...table.source.ranges, ...heading.source.ranges],
+      raw: `${table.source.raw}
+
+${heading.source.raw}`,
     },
   };
+}
+
+/** A table header read as the hyphen spelling of its kind's ID header where it is written with a space. */
+function canonicalHeader(header: string, kind: LegacyKind): string {
+  return header.trim() === `${kind} ID` ? `${kind}-ID` : header;
+}
+
+/** The line, from 1, of each table's header row, in the order `parseAllMarkdownTables` returns them. */
+function headerLines(
+  lines: readonly string[],
+  tables: ReturnType<typeof parseAllMarkdownTables>,
+): number[] {
+  const found: number[] = [];
+  let from = 0;
+  for (const table of tables) {
+    const wanted = table.headers.join("\u0000");
+    let index = from;
+    // A header line is a table row followed by a separator row, as the parser reads a table.
+    while (
+      index < lines.length &&
+      !(
+        looksLikeTableRow(lines[index] ?? "") &&
+        isTableSeparator(lines[index + 1] ?? "") &&
+        splitMarkdownRow(lines[index] ?? "").join("\u0000") === wanted
+      )
+    )
+      index += 1;
+    found.push(index + 1);
+    from = index + 2 + table.rows.length;
+  }
+  return found;
+}
+
+function kindIdPattern(kind: LegacyKind): RegExp {
+  return new RegExp(`^${kind}-\\d{4}-\\d{4}$`);
+}
+
+/** Whether a table without the kind's ID header holds only IDs of the kind in its first column. */
+function isUnnamedIdTable(rows: readonly string[][], kind: LegacyKind): boolean {
+  const idPattern = kindIdPattern(kind);
+  return rows.length > 0 && rows.every((row) => idPattern.test(row[0]?.trim() ?? ""));
+}
+
+function tableRecords(
+  markdown: string,
+  lines: readonly string[],
+  kind: LegacyKind,
+  file: string,
+): LegacyRecord[] {
+  const idHeader = `${kind}-ID`;
+  const idPattern = kindIdPattern(kind);
+  const records: LegacyRecord[] = [];
+  const tables = parseAllMarkdownTables(markdown);
+  const headerAt = headerLines(lines, tables);
+  for (const [tableIndex, table] of tables.entries()) {
+    const headers = table.headers.map((header) => canonicalHeader(header, kind));
+    const idColumn = headers.indexOf(idHeader);
+    if (idColumn < 0) {
+      if (isUnnamedIdTable(table.rows, kind))
+        throw new MigrationInputError(
+          `${file}:${headerAt[tableIndex]}: the first column holds ${kind} IDs under the header "${table.headers[0] ?? ""}"; write the header as ${idHeader}`,
+        );
+      continue;
+    }
+    for (const [rowIndex, row] of table.rows.entries()) {
+      const id = row[idColumn]?.trim() ?? "";
+      // The header line, the separator line, then the rows: the position holds whichever column
+      // carries the ID.
+      const lineIndex = (headerAt[tableIndex] ?? 0) + 1 + rowIndex;
+      const line = lineIndex + 1;
+      if (!idPattern.test(id))
+        throw new MigrationInputError(`${file}:${line}: invalid ${kind} ID ${id}`);
+      if (splitMarkdownRow(lines[lineIndex] ?? "")[idColumn]?.trim() !== id)
+        throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
+      const cells = Object.fromEntries(
+        headers.map((header, column) => [header, row[column] ?? ""]),
+      );
+      if (kind === "EX" && cells.Input === undefined && cells["Given / Input"] !== undefined) {
+        cells.Input = cells["Given / Input"] ?? "";
+      }
+      records.push({
+        id,
+        cells,
+        source: {
+          kind: "table",
+          startLine: line,
+          endLine: line,
+          ranges: [{ startLine: line, endLine: line }],
+          raw: lines[lineIndex] ?? "",
+        },
+      });
+    }
+  }
+  return records;
 }
 
 export function parseLegacyRecords(
@@ -121,8 +345,7 @@ export function parseLegacyRecords(
   file: string,
 ): LegacyRecord[] {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  const idHeader = `${kind}-ID`;
-  const idPattern = new RegExp(`^${kind}-\\d{4}-\\d{4}$`);
+  const idPattern = kindIdPattern(kind);
   const records: LegacyRecord[] = [];
   const headings = parseHeadings(markdown).filter((heading) => heading.level === 2);
   for (let index = 0; index < headings.length; index++) {
@@ -142,34 +365,16 @@ export function parseLegacyRecords(
     records.push({
       id,
       cells: headingCells(kind, id, title, body),
-      source: { kind: "heading", startLine: heading.line, endLine, raw },
+      source: {
+        kind: "heading",
+        startLine: heading.line,
+        endLine,
+        ranges: [{ startLine: heading.line, endLine }],
+        raw,
+      },
     });
   }
-  for (const table of parseAllMarkdownTables(markdown)) {
-    const idColumn = table.headers.indexOf(idHeader);
-    if (idColumn < 0) continue;
-    for (const row of table.rows) {
-      const id = row[idColumn]?.trim() ?? "";
-      const lineIndex = lines.findIndex((line) =>
-        new RegExp(`^\\|\\s*${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|`).test(line),
-      );
-      const line = lineIndex + 1;
-      if (!idPattern.test(id))
-        throw new MigrationInputError(`${file}:${line}: invalid ${kind} ID ${id}`);
-      if (lineIndex < 0) throw new MigrationInputError(`${file}: cannot locate ${id} table row`);
-      const cells = Object.fromEntries(
-        table.headers.map((header, column) => [header, row[column] ?? ""]),
-      );
-      if (kind === "EX" && cells.Input === undefined && cells["Given / Input"] !== undefined) {
-        cells.Input = cells["Given / Input"] ?? "";
-      }
-      records.push({
-        id,
-        cells,
-        source: { kind: "table", startLine: line, endLine: line, raw: lines[lineIndex] ?? "" },
-      });
-    }
-  }
+  records.push(...tableRecords(markdown, lines, kind, file));
   const byId = new Map<string, LegacyRecord>();
   for (const record of records.sort((a, b) => a.source.startLine - b.source.startLine)) {
     const previous = byId.get(record.id);
@@ -177,11 +382,11 @@ export function parseLegacyRecords(
       byId.set(record.id, record);
       continue;
     }
-    if (kind === "TC" && previous.source.kind !== record.source.kind) {
+    if (previous.source.kind !== record.source.kind) {
       const table = previous.source.kind === "table" ? previous : record;
       const heading = previous.source.kind === "heading" ? previous : record;
       if (table.source.kind === "table" && heading.source.kind === "heading") {
-        byId.set(record.id, mergeCase(table, heading, file));
+        byId.set(record.id, mergeRecords(table, heading, file));
         continue;
       }
     }
@@ -200,8 +405,8 @@ export function withoutLegacyRecords(
   const removedLines = new Set<number>();
   for (const record of records) {
     if (!removedIds.has(record.id)) continue;
-    for (let line = record.source.startLine; line <= record.source.endLine; line++) {
-      removedLines.add(line);
+    for (const range of record.source.ranges) {
+      for (let line = range.startLine; line <= range.endLine; line++) removedLines.add(line);
     }
   }
   return markdown

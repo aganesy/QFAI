@@ -1,23 +1,18 @@
-// QFAI:EX-0001-0194-04
+// QFAI:EX-0001-0187-04
 // Fault seeds: FAULT-016
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "repair-test",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-test-fix", "test_fix"),
+    planStage("bugfix-verify", "verify"),
+  ],
 };
 const run = { id: "run-test-fix", state: "running", sequence: 8 };
 const target: { kind: "flow"; flowId: string } = { kind: "flow", flowId: "BF-0007" };
@@ -27,8 +22,7 @@ const workOrder = {
   attempt: 1,
   stageKind: "test_fix",
   target,
-  executor: { skill: "qfai-implement" },
-  operation: "test-fix",
+  steps: kindSteps("test_fix"),
 };
 // An example ID first: the test fix goes to `qfai-implement`.
 const facts = {};

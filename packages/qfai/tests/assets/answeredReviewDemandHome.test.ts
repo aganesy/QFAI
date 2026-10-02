@@ -62,23 +62,11 @@ describe("answered review demands are carried into the next existing request", (
       expect(text).toContain("Advisory reports alone do not require rework");
     });
 
-    it.each(["qfai-discussion", "qfai-sdd"])(
-      `${tree}: %s carries answers before reviewer dispatch`,
-      async (skill) => {
-        const text = await read(
-          tree,
-          `assistant/skill/${skill}/references/review-cycle-playbook.md`,
-        );
-        if (skill === "qfai-discussion") {
-          expect(text).toContain("review-convergence.md#answered-demands-must");
-          expect(text).toContain("Carry prior answers and newly answered demands");
-          expect(text).toContain("next cycle's `review_request.md` before dispatching reviewers");
-        } else {
-          expect(text).toContain("review-convergence.md");
-          expect(text).toContain("previous answered demands");
-          expect(text).toContain("next cycle's request before dispatch");
-        }
-      },
-    );
+    it(`${tree}: the review step carries answers before reviewer dispatch`, async () => {
+      const text = await read(tree, "assistant/step/common-review-cycle/STEP.md");
+      expect(text).toContain("review-convergence.md#answered-demands-must");
+      expect(text).toContain("Carry prior answers and newly answered demands");
+      expect(text).toContain("next cycle's `review_request.md` before dispatching reviewers");
+    });
   }
 });

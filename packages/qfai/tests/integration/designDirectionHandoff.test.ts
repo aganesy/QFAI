@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0090-01
-// QFAI:AC-0001-0090-02
+// QFAI:AC-0001-0087-01
+// QFAI:AC-0001-0087-02
 
 /**
  * The design direction reaches `/qfai-sdd` through the pack, in the tree `qfai init` installs:
@@ -68,7 +68,7 @@ it("/qfai-sdd authors root DESIGN.md from the recorded direction, and asks when 
     reads: authoring.includes("`01_Context.md#Design Direction` is the decision the user made"),
     asks: authoring.includes("stop and ask rather than pick one"),
     writtenBySdd: intake.includes(
-      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `03_contract` step, which reads those records",
+      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads those records",
     ),
   }).toEqual({ reads: true, asks: true, writtenBySdd: true });
 });
