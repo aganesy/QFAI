@@ -491,29 +491,46 @@ function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[
   return { stage, steps: servingSteps(stage, owner) };
 }
 
-// Whether the result names the plan stage the run is at, with the fields that stage needs.
-function stageResultIsBroken(
+// Whether the outstanding work order is the plan stage the run is at, with the steps that stage
+// issues.
+function issuedStageIsNext(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   stage: PlanStage,
-  result: WorkflowResult,
   steps: string[],
 ): boolean {
   const flowTarget = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
-  const diagnosis = result.diagnosis;
   return (
-    workOrder.stageInstanceId !== stage.stageInstanceId ||
-    workOrder.stageKind !== stage.stageKind ||
-    stepNamesOf(workOrder).join(",") !== steps.join(",") ||
-    (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
-    (needsDiagnosis({ ...stage, steps: stageSteps(stage).filter((s) => steps.includes(s.name)) }) &&
-      (!diagnosis ||
-        !DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) ||
-        !diagnosis.reproductionRef ||
-        !Array.isArray(diagnosis.matchedIds))) ||
-    !outcomeIsAcceptable(result, stage.stageKind) ||
-    result.proposal !== undefined
+    workOrder.stageInstanceId === stage.stageInstanceId &&
+    workOrder.stageKind === stage.stageKind &&
+    stepNamesOf(workOrder).join(",") === steps.join(",") &&
+    (flowTarget === undefined || flowTarget === snapshot.flowBinding?.flowId)
   );
+}
+
+// The fields of a stage result whose presence depends on the stage it answers.
+function stageFieldRefusals(
+  stage: PlanStage,
+  result: WorkflowResult,
+  steps: string[],
+): InputRefusal[] {
+  const refusals: InputRefusal[] = [];
+  const diagnosis = result.diagnosis;
+  const diagnosed =
+    diagnosis !== undefined &&
+    DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) &&
+    Boolean(diagnosis.reproductionRef) &&
+    Array.isArray(diagnosis.matchedIds);
+  const needed = needsDiagnosis({
+    ...stage,
+    steps: stageSteps(stage).filter((s) => steps.includes(s.name)),
+  });
+  if (needed && !diagnosed) refusals.push({ reason: "schema", subject: "diagnosis" });
+  if (!outcomeIsAcceptable(result, stage.stageKind)) {
+    refusals.push({ reason: "schema", subject: "outcome" });
+  }
+  if (result.proposal !== undefined) refusals.push({ reason: "schema", subject: "proposal" });
+  return refusals;
 }
 
 // A gate verdict a result submits is informative only; the core never decides a gate from it.
@@ -683,11 +700,15 @@ export function acceptStageResult(
   const stage = repair?.stage ?? selected[accepted.length];
   if (!plan || !workOrder || !stage) return notReady(run, "stage result");
   const steps = (repair?.steps ?? issuableSteps(snapshot, stage)).map((step) => step.name);
-  if (stageResultIsBroken(snapshot, workOrder, stage, result, steps)) {
-    return notReady(run, "stage result");
+  if (!issuedStageIsNext(snapshot, workOrder, stage, steps)) {
+    return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
   }
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
-  const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
+  const refusals = [
+    ...stageFieldRefusals(stage, result, steps),
+    ...resultRefusals(snapshot, result, workOrder, facts),
+    ...storyTree.refusals,
+  ];
   if (refusals.length > 0) return refusedWith(run, refusals);
   const revision = revisionOf(facts);
   const extras = { ...storyTree.extras, ...(revision ? { revision } : {}) };

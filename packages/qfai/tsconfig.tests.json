@@ -441,6 +441,7 @@
     "tests/integration/workflow/theRunStopsForTheOperator.test.ts",
     "tests/unit/workflow/evalFixtures.test.ts",
     "tests/unit/workflow/evalScoring.test.ts",
+    "tests/unit/workflow/everyAcceptRefusalNamesItsCheck.test.ts",
     "tests/cli/commands/initStorySeedSecurity.test.ts",
     "tests/fixtures/bf0004MigrationCutover/order.e2e.test.ts",
     "tests/fixtures/bf0004MigrationCutover/order.integration.test.ts",
