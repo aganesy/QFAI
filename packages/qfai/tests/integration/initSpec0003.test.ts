@@ -1,6 +1,6 @@
 /** Init integration traceability and assistant-tree wiring. */
 // QFAI:EX-0001-0020-01
-import { lstat, mkdtemp, readdir, readFile, realpath } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -39,6 +39,10 @@ describe("TC-0003-0001: Empty directory initialization", () => {
     }
   }
 
+  async function isCanonicalSkillLink(link: string, canonical: string): Promise<boolean> {
+    return (await kindOf(link)) === "symlink" && (await realpath(link)) === canonical;
+  }
+
   it("writes the singular assistant tree and skill links without project artifacts", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tc0001-"));
     try {
@@ -68,16 +72,39 @@ describe("TC-0003-0001: Empty directory initialization", () => {
       // dangling link, or one into a copy outside the project, can end in the
       // same characters.
       const unlinked: string[] = [];
-      for (const linkDir of SKILL_LINK_DIRS) {
-        for (const skill of skills) {
+      for (const skill of skills) {
+        const canonical = await realpath(path.join(dir, ".qfai", "assistant", "skill", skill));
+        for (const linkDir of SKILL_LINK_DIRS) {
           const link = path.join(dir, linkDir, skill);
-          const canonical = await realpath(path.join(dir, ".qfai", "assistant", "skill", skill));
-          const resolved =
-            (await kindOf(link)) === "symlink" ? await realpath(link).catch(() => "") : "";
-          if (resolved !== canonical) unlinked.push(`${linkDir}/${skill}`);
+          if (!(await isCanonicalSkillLink(link, canonical))) unlinked.push(`${linkDir}/${skill}`);
         }
       }
       expect(unlinked, "a skill is not linked to its canonical directory").toEqual([]);
+    } finally {
+      await removeTempTree(dir);
+    }
+  });
+
+  it("rejects dangling skill links and links into an outside copy with the same suffix", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-skill-link-controls-"));
+    try {
+      const skillPath = [".qfai", "assistant", "skill", "qfai-sdd"];
+      const canonicalDir = path.join(dir, "project", ...skillPath);
+      const outsideDir = path.join(dir, "elsewhere", ...skillPath);
+      const missingDir = path.join(dir, "missing", ...skillPath);
+      await mkdir(canonicalDir, { recursive: true });
+      await cp(canonicalDir, outsideDir, { recursive: true });
+      const canonical = await realpath(canonicalDir);
+      const outsideLink = path.join(dir, "outside-link");
+      const danglingLink = path.join(dir, "dangling-link");
+      const linkType = process.platform === "win32" ? "junction" : "dir";
+      await symlink(outsideDir, outsideLink, linkType);
+      await symlink(missingDir, danglingLink, linkType);
+
+      expect(await isCanonicalSkillLink(outsideLink, canonical)).toBe(false);
+      await expect(isCanonicalSkillLink(danglingLink, canonical)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     } finally {
       await removeTempTree(dir);
     }
