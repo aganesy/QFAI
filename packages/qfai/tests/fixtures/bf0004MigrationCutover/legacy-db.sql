@@ -1,0 +1,3 @@
+-- QFAI-CONTRACT-ID: CON-DB-0001
+-- Depends on: -
+CREATE TABLE orders (id TEXT PRIMARY KEY);

@@ -13,6 +13,10 @@
 //
 // MD024 is configured rather than disabled: a template repeats `Entry 1` under
 // each distinct category heading, which is correct under every parent.
+//
+// MD041 allows a preamble. `qfai init` puts the review directive above the
+// top-level heading of an existing `AGENTS.md` or `CLAUDE.md`. The first
+// heading must still be level 1.
 {
   "config": {
     "default": true,
@@ -22,6 +26,6 @@
     "MD029": false,
     "MD033": false,
     "MD038": false,
-    "MD041": true,
+    "MD041": { "allow_preamble": true },
   },
 }

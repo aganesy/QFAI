@@ -1,1 +1,0 @@
-../../../packages/qfai/assets/init/.qfai/assistant/catalog/worklog-entry.schema.md

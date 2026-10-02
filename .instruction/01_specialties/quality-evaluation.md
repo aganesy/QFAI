@@ -5,19 +5,19 @@ dependencies: [00_universal/quality.md]
 version: 1.0.0
 ---
 
-# 品質評価の観点
+# Perspectives for Quality Evaluation
 
-リリース可否を判断するためのチェックポイント。
+Checkpoints for deciding whether a release can go ahead.
 
-## 主要観点
+## Main Perspectives
 
-- **正確性**: 仕様を満たすか、境界値・例外もカバーしているか。
-- **安全性**: 認証/認可、入力検証、秘密情報の保護ができているか。
-- **性能**: 不要な待ち・N+1・大きなレスポンスがないか。
-- **可用性/運用**: ログ・監視・エラー復旧が適切か。設定で切り替え可能か。
-- **可読性/保守性**: 責務が明確か、テストとドキュメントが揃っているか。
+- **Correctness**: Does it meet the specification, and does it cover boundary values and exceptions?
+- **Safety**: Are authentication/authorization, input validation and the protection of secrets in place?
+- **Performance**: Is there any needless waiting, N+1 querying or oversized response?
+- **Availability/operations**: Are logging, monitoring and error recovery adequate? Can behaviour be switched through configuration?
+- **Readability/maintainability**: Are responsibilities clear, and are the tests and documentation complete?
 
-## レポートの型
+## Report Template
 
-- 重大/高/中/低 の順に懸念を列挙し、根拠と場所を示す。
-- テストカバレッジの穴や再現性の不足はリスクとして明記する。
+- List concerns in the order critical / high / medium / low, and give the grounds and the location.
+- State gaps in test coverage and a lack of reproducibility as risks.

@@ -5,41 +5,41 @@ dependencies: none
 version: 1.0.1
 ---
 
-# 品質基準と自信度ルール
+# Quality Standards and the Confidence Rule
 
-全エージェントが共通で従う品質基準を定義する。
+Defines the quality standards that every agent follows.
 
-## 基本原則
+## Basic Principles
 
-- 変更の目的と完了条件を明確化し、テストで裏付ける。
-- 自信度 95% 未満のままマージしない。不明点は質問し、テストや証跡を追加する。
-- 既存の型・パターンを優先して再利用し、逸脱する場合は理由を記載する。
+- Clarify the purpose and completion criteria of each change, and back them with tests.
+- Do not merge while confidence is below 95%. Ask about anything unclear, and add tests or evidence.
+- Prefer reusing existing types and patterns, and state the reason when departing from them.
 
-## 静的解析の抑制（原則禁止）
+## Suppressing Static Analysis (Prohibited by Default)
 
-- ユーザーの明示的な許可なしに、抑制コメント/ディレクティブを追加・使用しない。
-  - 例: `eslint-disable*`, `@ts-ignore`
-- 既存コードに抑制がある場合は、削除/型定義修正/実装方針の見直し等の是正案を提示し、対応するかはユーザー判断を仰ぐ。
-- 例外が必要な場合は「理由・代替案・影響範囲」を短く明記し、最小範囲（対象行のみ等）に限定する。
+- Do not add or use suppression comments or directives without the user's explicit permission.
+  - Examples: `eslint-disable*`, `@ts-ignore`
+- When existing code already has a suppression, propose a remedy such as removing it, fixing the type definitions or rethinking the implementation approach, and leave the decision to act to the user.
+- When an exception is necessary, state the reason, the alternatives and the impact briefly, and limit it to the smallest scope (for example, the target line only).
 
-## テストと検証
+## Testing and Verification
 
-- 仕様が変わるときは再現テストを先に書き、修正後に通す。
-- 近傍にテストを追加・更新し、結果を報告（コマンドと成功/失敗を明示）。
-- 実行できなかった場合は理由と代替確認手段を記載する。
+- When the specification changes, write a reproduction test first and make it pass after the fix.
+- Add or update tests nearby, and report the results (state the command and whether it passed or failed).
+- If a test could not be run, state the reason and the alternative means of confirmation.
 
-## ログとエラーハンドリング
+## Logging and Error Handling
 
-- 具体的なメッセージで、過剰なログは避ける。
-- ユーザーに不要な内部情報や機密を出さない。
-- 例外は握りつぶさず、復旧可能性と影響範囲を示す。
+- Use specific messages and avoid excessive logging.
+- Do not expose unnecessary internal information or secrets to users.
+- Do not swallow exceptions; show whether recovery is possible and how far the impact reaches.
 
-## パフォーマンスとセキュリティ
+## Performance and Security
 
-- N+1 や不要な全件取得を避け、必要に応じてバッチ/キャッシュを検討。
-- 入力バリデーションと認証/認可を徹底。秘密情報を平文で保持・出力しない。
+- Avoid N+1 queries and needless full-table fetches, and consider batching or caching where needed.
+- Enforce input validation and authentication/authorization. Do not hold or output secrets in plain text.
 
-## レビュー・報告の型
+## Review and Report Template
 
-- 変更概要 / 影響範囲 / 実行したテスト / 残リスク を箇条書きで提示。
-- 重大な懸念は優先度順に列挙し、未解決の質問を明示する。
+- Present the change summary, impact, tests run and remaining risks as bullet points.
+- List serious concerns in priority order, and state unresolved questions explicitly.

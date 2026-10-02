@@ -1,0 +1,28 @@
+route: fix-red-main
+family: upkeep
+stages:
+  - id: bisect
+    kind: diagnose
+    steps: [implement-bisect]
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [bisect]
+  - id: fix
+    kind: regression_fix
+    steps: [implement-regression-fix]
+    after: [diagnose]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [fix]
+defaultModifiers: []
+decisionPoints: []
+branchPoints:
+  - step: implement-bisect
+    outcomes:
+      - { outcome: revert, routes: [revert-culprit] }

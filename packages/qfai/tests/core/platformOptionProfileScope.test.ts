@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-09
 /**
  * `--platform` parses on every `validate` run, but only four of the eight
  * profiles forward it to `detectPlatform`. On `discussion`, `sdd`, `atdd` and
