@@ -69,10 +69,10 @@ keep authors separate from reviewers.
    the project already has the story tree and no migration ID map, run steps 1
    to 10. When every one of them prints
    `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` first, then
-   `none` under every section, and exits 0, report that there is nothing to
-   migrate in the directory that line names and ask the person to check that
-   the specs live there; step 10 also says under `## Git index` why it left the
-   index alone. Then continue at item 6. A step that prints another first line
+   `none` under every section but step 10's `## Git index`, and exits 0, report
+   that there is nothing to migrate in the directory that line names and ask
+   the person to check that the specs live there; step 10 says under
+   `## Git index` why it left the index alone. Then continue at item 6. A step that prints another first line
    has found work: read its report as in item 2. If it has the story tree and
    the ID map, an earlier run migrated it, whole or in part: run steps 1 to 10
    all the same, each with `--dry-run` first. When each says the migration is

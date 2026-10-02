@@ -349,6 +349,7 @@ describe("the verdict line of migration steps 1 to 10", () => {
         const result = await stepIn(root, step, args);
         expect([0, 3], `${label}: ${result.errors}`).toContain(result.code);
         expect(result.output.split(/\r?\n/)[0], label).toBe("## Operations");
+        if (step === 12) expect(result.output, label).toContain("## Files scanned\n- ");
         expect(summaries(result.output), label).toEqual([]);
         for (const verdict of [FOUND, DONE, "no 1.x layout found"]) {
           expect(result.output, label).not.toContain(verdict);
