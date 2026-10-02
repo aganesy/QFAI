@@ -121,6 +121,7 @@
     "tests/assets/traceabilityChainLayered.test.ts",
     "tests/assets/uiContractGuideRationale.test.ts",
     "tests/assets/uiContractGuideReachability.test.ts",
+    "tests/assets/unattendedTurnEnding.test.ts",
     "tests/assets/verifyEvidenceSections.test.ts",
     "tests/assets/verifyJsonWritePath.test.ts",
     "tests/cli/commands/sddPreflight.test.ts",
