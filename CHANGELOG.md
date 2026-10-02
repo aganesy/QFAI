@@ -74,6 +74,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The research-first protocol governs quotation and name lookups** (#2245).
+  - A `best_practices` or `anti_patterns` description is written in the
+    analyst's own words. A phrase kept from the source is put in ordinary
+    quotation marks. One worked example shows the source, the entry and why it
+    is correct.
+  - Where a query centers on a name, the name is searched as written, even
+    when it is recognized. What the search found is recorded in the summary's
+    `sources` like any other source, so a verified name can be told from one
+    answered from memory.
+  - The `web-research` skill points to both rules in the protocol.
+
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work
   nobody asked for. A new section names the four shapes that takes: wider
@@ -678,17 +689,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
-
-- **The research-first protocol governs quotation and name lookups** (#2245).
-  - A `best_practices` or `anti_patterns` description is written in the
-    analyst's own words. A phrase kept from the source is put in ordinary
-    quotation marks. One worked example shows the source, the entry and why it
-    is correct.
-  - Where a query centers on a name, the name is searched as written, even
-    when it is recognized. What the search found is recorded in the summary's
-    `sources` like any other source, so a verified name can be told from one
-    answered from memory.
-  - The `web-research` skill points to both rules in the protocol.
 
 - **The repository is written in English throughout.** Every Japanese comment,
   message, test description, document and changelog entry is now English, and
