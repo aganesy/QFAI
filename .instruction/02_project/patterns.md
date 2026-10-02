@@ -5,36 +5,36 @@ dependencies: [02_project/architecture.md]
 version: 1.0.0
 ---
 
-# 実装パターン（QFAI Toolkit）
+# Implementation Patterns (QFAI Toolkit)
 
-QFAI Toolkit の実装は CLI とコア検証エンジンを分離し、最小の責務で追加できるように設計する。
+The QFAI Toolkit implementation keeps the CLI and the core validation engine separate, so that each addition carries the smallest possible responsibility.
 
-## CLI（`packages/qfai/src/cli`）
+## CLI (`packages/qfai/src/cli`)
 
-- コマンドは `cli/commands/*` に追加し、`cli/main.ts` で dispatch する
-- 引数解析は `cli/lib/args.ts` の `ParsedArgs` と `parseArgs` を拡張する
-- Usage は `cli/main.ts` の `usage()` を更新する
-- CLI の挙動は `packages/qfai/tests/cli` で検証する
+- Add a command under `cli/commands/*` and dispatch it in `cli/main.ts`
+- Extend `ParsedArgs` and `parseArgs` in `cli/lib/args.ts` for argument parsing
+- Update `usage()` in `cli/main.ts` for the usage text
+- Verify CLI behavior in `packages/qfai/tests/cli`
 
-## 検証ロジック（`packages/qfai/src/core`）
+## Validation Logic (`packages/qfai/src/core`)
 
-- 追加の検証は `core/validators/*` に実装し、`validateProject` に集約する
-- 返却は `Issue[]` に統一し、`Issue.code` と `Issue.rule` を既存命名に合わせる
-- パス解決は `core/config.resolvePath` を使い、独自のパス結合を避ける
-- ファイル収集は `core/fs.collectFiles` を使い、除外ディレクトリの規約に従う
+- Implement additional validation in `core/validators/*` and aggregate it in `validateProject`
+- Return `Issue[]` uniformly, and match `Issue.code` and `Issue.rule` to the existing naming
+- Resolve paths with `core/config.resolvePath` and avoid joining paths by hand
+- Collect files with `core/fs.collectFiles` and follow its convention for excluded directories
 
-## 設定（`core/config.ts`）
+## Configuration (`core/config.ts`)
 
-- 追加の設定キーは `defaultConfig` と `normalize*` を同時に更新する
-- 既定値と検証エラーのメッセージは具体的に記述する
+- When adding a configuration key, update `defaultConfig` and `normalize*` together
+- Write default values and validation error messages concretely
 
-## テンプレート（`packages/qfai/assets/init`）
+## Templates (`packages/qfai/assets/init`)
 
-- `init` テンプレートは assets が SSOT
-- テンプレート変更時は `packages/qfai/tests/cli/init.test.ts` を更新する
+- For the `init` templates, assets are the single source of truth
+- When a template changes, update `packages/qfai/tests/cli/init.test.ts`
 
-## テスト
+## Tests
 
-- コア: `packages/qfai/tests/core` で境界/異常系を優先
-- CLI: `packages/qfai/tests/cli` で引数/出力/テンプレートを検証
-- 変更した層の近傍テストを必ず更新する
+- Core: prioritize boundary and error cases in `packages/qfai/tests/core`
+- CLI: verify arguments, output and templates in `packages/qfai/tests/cli`
+- Always update the tests nearest to the layer you changed

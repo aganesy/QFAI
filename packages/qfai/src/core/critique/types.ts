@@ -1,7 +1,7 @@
 /**
  * Critique adapter types for external critique providers.
  *
- * Provider interface is minimal (BR-0029-0001). Each provider implements
+ * Provider interface is minimal. Each provider implements
  * `request()` and the adapter wraps it with fail-open semantics (NFR-0002).
  */
 

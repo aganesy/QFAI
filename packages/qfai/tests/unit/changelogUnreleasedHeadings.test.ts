@@ -36,6 +36,16 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const CHANGE_TYPES = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"];
 
 /**
+ * The one group that is not a change type: what a major release leads with.
+ *
+ * It holds a short entry per headline change, pointing at the typed entries
+ * that carry the detail, so a reader sees the release's shape before the
+ * groups. It is allowed once and only first, and it is absent from a section
+ * that has nothing to lead with.
+ */
+const LEADING_GROUP = "Highlights";
+
+/**
  * Types this section is allowed more than one heading of.
  *
  * Empty, which is the finished state: every type is held at one. It is a record
@@ -73,14 +83,25 @@ function entriesAboveFirstGroup(changelog: string): string[] {
 
 /** Group headings the six change types do not name. */
 function unknownGroups(changelog: string): string[] {
-  return headings(unreleasedSection(changelog)).filter((text) => !CHANGE_TYPES.includes(text));
+  return headings(unreleasedSection(changelog)).filter(
+    (text) => text !== LEADING_GROUP && !CHANGE_TYPES.includes(text),
+  );
+}
+
+/** Whether the leading group appears more than once, or anywhere but first. */
+function misplacedLeadingGroup(changelog: string): boolean {
+  const found = headings(unreleasedSection(changelog));
+  const at = found.indexOf(LEADING_GROUP);
+  return at > 0 || found.lastIndexOf(LEADING_GROUP) !== at;
 }
 
 /** Types whose heading count differs from the number recorded for them. */
 function countDrift(changelog: string): string[] {
   const counted = new Map<string, number>();
   for (const text of headings(unreleasedSection(changelog))) {
-    counted.set(text, (counted.get(text) ?? 0) + 1);
+    if (text !== LEADING_GROUP) {
+      counted.set(text, (counted.get(text) ?? 0) + 1);
+    }
   }
   const recorded = new Map(CHANGE_TYPES.map((type) => [type, HEADING_BACKLOG[type] ?? 1] as const));
   return [...counted]
@@ -128,6 +149,13 @@ describe("the unreleased section groups its entries by type", () => {
       unknownGroups(await changelog()),
       `a group heading outside ${CHANGE_TYPES.join(" / ")}`,
     ).toEqual([]);
+  });
+
+  it("keeps a leading group, when there is one, first and single", async () => {
+    expect(
+      misplacedLeadingGroup(await changelog()),
+      `\`### ${LEADING_GROUP}\` is only ever the first group, once`,
+    ).toBe(false);
   });
 
   it("carries the recorded number of each, and no more", async () => {

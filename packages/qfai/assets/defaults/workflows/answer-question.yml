@@ -1,0 +1,10 @@
+route: answer-question
+family: close
+stages:
+  - id: answer
+    kind: triage
+    steps: [triage-answer, triage-close]
+    review: none
+defaultModifiers: []
+decisionPoints: []
+branchPoints: []

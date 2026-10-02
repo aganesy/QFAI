@@ -500,8 +500,8 @@ describe("the ATDD gate's file selection", () => {
   const scaffolded = (): string =>
     [
       `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
-      "// TODO: implement assertion for TC-0001-0001",
-      "it.skip('TC-0001-0001: pays', () => {});",
+      "// TODO: implement assertion for AC-0001-0001-01",
+      "it.skip('AC-0001-0001-01: pays', () => {});",
       "",
     ].join("\n");
 
@@ -510,7 +510,7 @@ describe("the ATDD gate's file selection", () => {
   const progressed = (): string =>
     [
       `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
-      "it.skip('TC-0001-0001: pays', () => {",
+      "it.skip('AC-0001-0001-01: pays', () => {",
       "  expect(pay()).toBe(true);",
       "});",
       "",

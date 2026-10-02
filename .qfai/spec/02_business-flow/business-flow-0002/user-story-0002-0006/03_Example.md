@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                              | Expected                                                                                                                                                                                                                        |
+| --------------- | --------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0006-01 | AC-0002-0006-01 | A lockfile fixture each for pnpm, yarn Berry, yarn Classic and npm, and a fixture with no lockfile | The install branch resolves in all five cases, and the `cache:` expression short-circuits from the left. Nothing has been replaced by a single-package-manager form. New shipped files carry install branches of the same shape |
+| EX-0002-0006-02 | AC-0002-0006-02 | Run the shipped setup step on an adopter fixture with no Node version file                         | The documented literal is used, a warning annotation is emitted and the step succeeds with exit 0. On a fixture that has a version file, that file's value takes precedence                                                     |
+| EX-0002-0006-03 | AC-0002-0006-02 | Run the install on an adopter fixture that has a pnpm lockfile but no `packageManager` field       | The step fails closed with an annotation naming the `packageManager` field as the thing to fix. It does not end in an opaque resolution error, and no later lane reports a result it did not compute                            |

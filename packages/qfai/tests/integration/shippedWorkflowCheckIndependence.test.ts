@@ -130,7 +130,7 @@ const CLOSE_GATE = "${{ github.event.action != 'closed' }}";
 const ALWAYS_UNLESS_CLOSED = "${{ always() && github.event.action != 'closed' }}";
 
 describe("delivered document checks run independently and require a complete result", () => {
-  // QFAI:SPEC-0003:TC-0003-0056
+  // QFAI:EX-0002-0003-05
   it("TC-0003-0056 (TDD-0058): delivers both isolated native matrix units without changing checker commands", async () => {
     const jobs = await jobsOf(DOCS);
     const checks = jobs[`${DOCS}#checks`];
@@ -152,7 +152,7 @@ describe("delivered document checks run independently and require a complete res
     expect(strategy["max-parallel"]).toBeUndefined();
     expect(strategy["matrix"]).toEqual({ check: ["shape", "mermaid"] });
     const checkerSteps = collectJobSteps(checks ?? {}).filter((step) =>
-      /node node_modules\/qfai\/assets\/scripts\/check-(?:mdschema|mermaid)\.mjs/.test(
+      /node (?:tmp\/qfai-docs-tools\/)?node_modules\/qfai\/assets\/scripts\/check-(?:mdschema|mermaid)\.mjs/.test(
         String(step["run"] ?? ""),
       ),
     );
@@ -166,20 +166,27 @@ describe("delivered document checks run independently and require a complete res
       })),
     ).toEqual([
       {
+        // The second command serves a project with no QFAI of its own, whose copy lives in the
+        // directory the install step filled. Each leg still runs one checker.
         commands: [
-          "node node_modules/qfai/assets/scripts/check-mdschema.mjs --scope all --summary",
+          "node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary",
+          "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary",
         ],
         if: "matrix.check == 'shape'",
       },
       {
-        commands: ["node node_modules/qfai/assets/scripts/check-mermaid.mjs"],
+        commands: [
+          "node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
+          "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-docs-tools",
+        ],
         if: "matrix.check == 'mermaid'",
       },
     ]);
     for (const step of checkerSteps) expect(step["continue-on-error"]).toBeUndefined();
   });
 
-  // QFAI:SPEC-0003:TC-0003-0056
+  // QFAI:EX-0002-0003-05
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0056 (TDD-0059): keeps the existing external check name and always runs its matrix aggregate", async () => {
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
@@ -190,6 +197,7 @@ describe("delivered document checks run independently and require a complete res
     expect(collectJobSteps(docs ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
   });
 
+  // QFAI:EX-0002-0003-06
   it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
     "executes the delivered aggregate for matrix result %j",
     async (result) => {
@@ -212,6 +220,7 @@ describe("delivered document checks run independently and require a complete res
     },
   );
 
+  // QFAI:EX-0002-0003-06
   it.each([
     ["skipped", "false", 0],
     ["skipped", "true", 1],
@@ -238,7 +247,7 @@ describe("delivered document checks run independently and require a complete res
 });
 
 describe("delivered validation profiles run independently and require a complete result", () => {
-  // QFAI:SPEC-0003:TC-0003-0057
+  // QFAI:EX-0002-0003-05
   it("TC-0003-0057 (TDD-0060): delivers full validation and PR-only drift in isolated native matrix jobs", async () => {
     const validate = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
     expect(validate?.["name"]).toBe("qfai validate check (${{ matrix.profile }})");
@@ -280,7 +289,8 @@ describe("delivered validation profiles run independently and require a complete
     for (const step of profiles) expect(step["continue-on-error"]).toBeUndefined();
   });
 
-  // QFAI:SPEC-0003:TC-0003-0057
+  // QFAI:EX-0002-0003-05
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0057 (TDD-0061): keeps the existing external validation check as an always-run complete verdict", async () => {
     const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
     expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
@@ -291,6 +301,7 @@ describe("delivered validation profiles run independently and require a complete
     expect(collectJobSteps(verdict ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
   });
 
+  // QFAI:EX-0002-0003-06
   it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
     "executes the delivered validation verdict for profile result %j",
     async (result) => {

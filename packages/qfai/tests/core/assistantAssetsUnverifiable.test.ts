@@ -39,14 +39,13 @@ const { getInitAssetsDir: realInitAssetsDir } = await vi.importActual<typeof Ass
 const projectRoots: string[] = [];
 
 beforeAll(async () => {
-  // `constitution/` extracted, `catalog/` not — the shape a partial unpack or a
+  // One rule extracted, the rest missing — the shape a partial unpack or a
   // library consumer without the package assets leaves behind.
   const assistant = path.join(truncatedInstall, ".qfai", "assistant");
-  await mkdir(assistant, { recursive: true });
+  await mkdir(path.join(assistant, "rule"), { recursive: true });
   await cp(
-    path.join(realInitAssetsDir(), ".qfai", "assistant", "constitution"),
-    path.join(assistant, "constitution"),
-    { recursive: true },
+    path.join(realInitAssetsDir(), ".qfai", "assistant", "rule", "constitution.md"),
+    path.join(assistant, "rule", "constitution.md"),
   );
 });
 
@@ -65,11 +64,10 @@ describe("assistant asset provenance against an unreadable install", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-truncated-project-"));
     projectRoots.push(root);
     const assistant = path.join(root, ".qfai", "assistant");
-    await mkdir(path.join(assistant, "catalog"), { recursive: true });
+    await mkdir(path.join(assistant, "rule"), { recursive: true });
     await cp(
-      path.join(realInitAssetsDir(), ".qfai", "assistant", "constitution"),
-      path.join(assistant, "constitution"),
-      { recursive: true },
+      path.join(realInitAssetsDir(), ".qfai", "assistant", "rule", "constitution.md"),
+      path.join(assistant, "rule", "constitution.md"),
     );
 
     const issues = await validateAssistantAssets(root, defaultConfig);

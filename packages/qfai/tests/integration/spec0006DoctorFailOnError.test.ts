@@ -33,7 +33,7 @@ import { runDoctorText, useAdopterTreePool } from "../helpers/workflowsIntegrity
 
 const pool = useAdopterTreePool();
 
-const AGENTS_DIR = path.join(".qfai", "assistant", "agents");
+const AGENTS_DIR = path.join(".qfai", "assistant", "agent");
 
 /** Every canonical agent markdown file the frontmatter check reads, by the same rule it uses. */
 async function agentFiles(dir: string): Promise<string[]> {
@@ -44,7 +44,7 @@ async function agentFiles(dir: string): Promise<string[]> {
     .sort();
 }
 
-// QFAI:SPEC-0006:TC-0006-0036
+// QFAI:EX-0003-0011-09
 describe("TC-0006-0036: an error-severity finding exits non-zero under `--fail-on error`", () => {
   it("exits 0 while the tree carries no error, and 1 the moment it carries one", async () => {
     const dir = await pool.seedAdopterTree();
