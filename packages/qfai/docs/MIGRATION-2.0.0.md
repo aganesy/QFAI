@@ -100,20 +100,20 @@ Run each script from the project root with `--dry-run`, inspect its complete
 report and write targets, then run it without the flag. Save both reports and
 exit codes. Run the next step only after the preceding one has completed.
 
-| Step | Script                       | Result                                                                                   |
-| ---- | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| 1    | `01-rename-directories.mjs`  | Move owned directories and update old default paths.                                     |
-| 2    | `02-merge-tables.mjs`        | Combine decisions, questions and change records.                                         |
-| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; number and rename the contracts.                      |
-| 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the ID map.                                      |
-| 5    | `05-cases-to-examples.mjs`   | Preserve test-case-only behavior as examples.                                            |
-| 6    | `06-derive-ac-refs.mjs`      | Link examples to acceptance criteria when the source establishes one.                    |
-| 7    | `07-rules-to-contracts.mjs`  | Place rules in the planned enforcing contracts.                                          |
-| 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                                       |
-| 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                                       |
-| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`.              |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host links, entry directive and `.gitignore` block. |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.                        |
+| Step | Script                       | Result                                                                      |
+| ---- | ---------------------------- | --------------------------------------------------------------------------- |
+| 1    | `01-rename-directories.mjs`  | Move owned directories and update old default paths.                        |
+| 2    | `02-merge-tables.mjs`        | Combine decisions, questions and change records.                            |
+| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; number and rename the contracts.         |
+| 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the ID map.                         |
+| 5    | `05-cases-to-examples.mjs`   | Preserve test-case-only behavior as examples.                               |
+| 6    | `06-derive-ac-refs.mjs`      | Link examples to acceptance criteria when the source establishes one.       |
+| 7    | `07-rules-to-contracts.mjs`  | Place rules in the planned enforcing contracts.                             |
+| 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                          |
+| 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                          |
+| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`. |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, links, `.gitignore` and the hooks.     |
+| 12   | `12-check-entry.mjs`         | Check, without writing, the free-text entry and the project's 1.x paths.    |
 
 For example:
 
@@ -121,6 +121,17 @@ For example:
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs --dry-run
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs
 ```
+
+Steps 1 to 10 each print one line before their report, in a dry run and a real
+run. It is `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` when
+the tree shows no trace of the old layout, `1.x layout found, migrating` when it
+shows one or the step has work of its own, and
+`already migrated (id-map.json present)` when an earlier run finished. If every
+one of steps 1 to 10 prints the first, nothing was found to migrate in the
+directory it names: check that your specs live there. Step 10 also ends with a `Summary:` line
+for the first two cases. Steps 11 and 12 print neither line. A script that reads
+the report from its first line should start at `## Operations`, which still
+opens the rest of the report.
 
 Step 10 removes every `.gitignore` negation that re-includes `.qfai/evidence/`
 and takes that directory out of the git index. The files stay on disk. Commit
@@ -131,16 +142,36 @@ the project changed is moved whole to
 `.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/` first, never
 deleted. Step 12 lists under `## For a person` each check
 `npx qfai workflow start` would fail, such as a `qfai.config.yaml` routing
-override that drops a reviewer the defaults require. Rerunning step 11 settles
-what it installs; a routing override is yours to change.
+override that drops a reviewer the defaults require. It also lists, as an
+`old-path` item, each line of a tracked project file that still names a 1.x
+path, and it prints `## Files scanned` with the number of files it read, or a note that the project
+is not a git repository. The
+migration does not rewrite skills, agents or documents you wrote. The path table
+in `references/migration-guide.md` of the migration skill gives the 2.x path for
+each 1.x path. Rerunning step 11 settles what it installs; a routing override is
+yours to change. Step 11 also installs
+the reminder hooks `qfai init` installs, in `.claude/settings.json` and
+`.codex/hooks.json`, through the same merge, and brings the text they print,
+`.agents/rules/reminders.json`, to this release unless you edited it.
+
+A project already migrated with an earlier 2.x release runs the skill again
+after upgrading. Steps 1 to 10 say the migration is already done and change
+nothing; step 11 adds only what that release lacked, such as the hooks. The
+installed skill is still the earlier release's copy, and plain `qfai init`
+leaves it as it is, so bring it up to date first:
+
+1. Run the locally installed `qfai init` without `--force`. It installs the
+   hooks and `.agents/rules/reminders.json`, and names the older skill copies.
+2. Run step 11 of the installed skill, `--dry-run` first. Its script runs the
+   upgraded package and replaces the older skill copies with this release's.
+3. Then run `/qfai-migration-v1-to-v2` again.
 
 Exit 0 completes a step. Exit 2 refuses before writing; fix the stated input
 or order. Exit 3 completes the step but leaves items in `## For a person`.
 Resolve those items before declaring migration complete. Completed steps are
 safe to rerun and should make no further changes. The scripts make no network
 calls, but can write configured paths outside `.qfai/`, test annotations,
-host integration links, `AGENTS.md`, `CLAUDE.md`, `.gitignore` and the git
-index. Read the skill guide's write-boundary table before approving a dry run.
+host integration links, `.gitignore` and the git index. Read the skill guide's write-boundary table before approving a dry run.
 
 ## Review decisions and verify
 
@@ -163,7 +194,11 @@ listed for a person with its file and line; replace it by hand. Record a permitt
 exception in `decisions.md` when a test is intentionally absent.
 
 Update project CI to use the new tree and annotation patterns. On pull
-requests, run full validation and the drift profile; run document-shape and
+requests, run full validation and the drift profile. A checkout without
+`.qfai/evidence/prototyping/` passes full validation with no prototyping
+evidence; the `prototyping` and `saas-package` profiles are the local checks
+that need it. Run
+document-shape and
 Mermaid checks against the configured story-tree path. Keep test jobs for
 the applicable layers. The workflows installed by `qfai init` are
 create-only: compare a project's edited copies with the new shipped
@@ -193,8 +228,8 @@ complete run, rerun the steps and confirm that they change no files.
 ## Start with a free-text request
 
 Once step 12 exits 0 and validation passes, send the project's first
-free-text change request to `qfai-run`. The entry directive step 11 added to
-`AGENTS.md` and `CLAUDE.md` points agents there.
+free-text change request to `qfai-run`. The prompt-time hook step 11 installed
+points agents there.
 
 ## Workflow routes and payloads
 

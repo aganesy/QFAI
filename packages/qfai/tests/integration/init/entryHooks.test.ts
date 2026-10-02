@@ -1,14 +1,18 @@
 /**
- * Integration: init seeds the prompt-time reminders for Claude Code and Codex, merges them into a
+ * Integration: init seeds the reminder hooks for Claude Code and Codex, merges them into a
  * hook file the project already has, and says once that Codex runs its hooks only once trusted.
  */
 // QFAI:AC-0001-0196-11
+// QFAI:AC-0001-0196-12
 // QFAI:EX-0001-0196-26
 // QFAI:EX-0001-0196-28
 // QFAI:EX-0001-0196-29
 // QFAI:EX-0001-0196-30
 // QFAI:EX-0001-0196-31
 // QFAI:EX-0001-0196-32
+// QFAI:EX-0001-0196-34
+// QFAI:EX-0001-0196-39
+// QFAI:EX-0001-0196-42
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -18,6 +22,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   FREE_TEXT_ENTRY_HOOK_MARKER,
+  INSTALL_CHECK_HOOK_MARKER,
   STRUCTURED_QUESTION_HOOK_MARKER,
 } from "../../../src/core/claudeCodeHooks.js";
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
@@ -61,8 +66,8 @@ async function promptMarkers(root: string, rel: string): Promise<unknown[][]> {
 }
 
 /**
- * A structured-question group as a release wrote it into `.claude/settings.json`. No release
- * wrote a Codex hook file, so this stands for a group copied across from the Claude Code settings.
+ * A structured-question group as a release wrote it into `.claude/settings.json`, standing for a
+ * group copied across from the Claude Code settings into the Codex hook file.
  */
 async function claudeStructuredQuestionGroup(): Promise<unknown> {
   const fixture: unknown = JSON.parse(
@@ -102,6 +107,7 @@ describe("the prompt-time reminder hooks", () => {
       expect(await promptMarkers(root, CODEX)).toEqual([
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       expect(await promptMarkers(root, CLAUDE)).toContainEqual([FREE_TEXT_ENTRY_HOOK_MARKER]);
       for (const rel of [CODEX, CLAUDE]) {
@@ -138,6 +144,7 @@ describe("the prompt-time reminder hooks", () => {
       expect(await promptMarkers(root, CLAUDE)).toEqual([
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       const codex: unknown = JSON.parse(await readFile(path.join(root, CODEX), "utf-8"));
       expect(codex).toMatchObject({ model: "kept" });
@@ -146,6 +153,7 @@ describe("the prompt-time reminder hooks", () => {
         [undefined],
         [STRUCTURED_QUESTION_HOOK_MARKER],
         [FREE_TEXT_ENTRY_HOOK_MARKER],
+        [INSTALL_CHECK_HOOK_MARKER],
       ]);
       expect(trustLines(first)).toEqual([TRUST_LINE]);
 
@@ -155,6 +163,59 @@ describe("the prompt-time reminder hooks", () => {
       const second = await initQuietly(root);
       const after = await Promise.all([CLAUDE, CODEX].map((rel) => readFile(path.join(root, rel))));
       expect(after).toEqual(before);
+      expect(trustLines(second)).toEqual([]);
+    });
+  });
+
+  it("A Codex file with only the prompt-time groups gains the tool-time ones, once", async () => {
+    await withEmptyRepo(async (root) => {
+      const templateText = await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8");
+      const template: unknown = JSON.parse(templateText);
+      const hooks: unknown =
+        typeof template === "object" && template !== null
+          ? Reflect.get(template, "hooks")
+          : undefined;
+      const prompt: unknown =
+        typeof hooks === "object" && hooks !== null
+          ? Reflect.get(hooks, "UserPromptSubmit")
+          : undefined;
+      if (!Array.isArray(prompt)) throw new Error("the shipped Codex file has no prompt groups");
+      await seed(root, CODEX, { hooks: { UserPromptSubmit: prompt } });
+
+      const first = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(trustLines(first)).toEqual([TRUST_LINE]);
+
+      const second = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(trustLines(second)).toEqual([]);
+    });
+  });
+
+  it("A Codex file an earlier release wrote is brought to this release's, once", async () => {
+    await withEmptyRepo(async (root) => {
+      const templateText = await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8");
+      await seed(
+        root,
+        CODEX,
+        await readFile(
+          path.join(packageRoot, "tests", "fixtures", "codex-hooks", "earlier-hooks.json"),
+          "utf-8",
+        ),
+      );
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toContain("commandWindows");
+
+      const first = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
+      expect(first).not.toContain("(edited here)");
+      expect(trustLines(first)).toEqual([TRUST_LINE]);
+
+      const second = await initQuietly(root);
+
+      expect(await readFile(path.join(root, CODEX), "utf-8")).toBe(templateText);
       expect(trustLines(second)).toEqual([]);
     });
   });
@@ -208,7 +269,7 @@ describe("the prompt-time reminder hooks", () => {
         expect(trustLines(output)).toEqual([]);
         // The run went on past it.
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
     }
@@ -234,7 +295,7 @@ describe("the prompt-time reminder hooks", () => {
         expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
         expect(trustLines(output)).toEqual([]);
         await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
-          "qfai-run",
+          "Cross-AI rules",
         );
       });
 
@@ -248,6 +309,34 @@ describe("the prompt-time reminder hooks", () => {
         expect(await readdir(outside)).not.toContain("missing.json");
         expect(output).toContain("WARNING: .codex/hooks.json was left unchanged");
         expect(trustLines(output)).toEqual([]);
+      });
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("A linked `.claude` gets no settings file at its target", async (ctx) => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-claude-outside-"));
+    try {
+      await withEmptyRepo(async (root) => {
+        try {
+          await symlink(
+            outside,
+            path.join(root, ".claude"),
+            process.platform === "win32" ? "junction" : "dir",
+          );
+        } catch {
+          ctx.skip();
+        }
+
+        const output = await initQuietly(root);
+
+        // Nothing at all: not the settings file, and not the skill or agent links either.
+        expect(await readdir(outside)).toEqual([]);
+        expect(output).toContain("WARNING: .claude/settings.json was left unchanged");
+        await expect(readFile(path.join(root, "AGENTS.md"), "utf-8")).resolves.toContain(
+          "Cross-AI rules",
+        );
       });
     } finally {
       await rm(outside, { recursive: true, force: true });

@@ -115,6 +115,8 @@ union of their reviewers
 
 - Final completion gate must be delegated to an independent reviewer.
 - Each reviewer records an explicit PASS or REVISE for the reviewed revision.
+- The one exception: a work order that names no required reviewer is reviewed
+  by none, and the two bullets above then have nothing to apply to.
 
 ### Definition: independent reviewer (NORMATIVE)
 

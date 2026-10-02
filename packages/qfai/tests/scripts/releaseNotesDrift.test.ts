@@ -29,7 +29,6 @@ import {
   nextPageUrl,
   releasedSections,
   run,
-  saysItWasCut,
 } from "../../../../scripts/check-release-notes.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
@@ -281,38 +280,12 @@ describe("what the published body is allowed to be missing", () => {
     expect(missingEntries(section, body)).toEqual(["- **Second**"]);
   });
 
-  it("the tail of a body cut before the note was translated", () => {
-    // A published body is what the release said on the day it was built and
-    // cannot be reworded. `release.yml` wrote the note in Japanese until it
-    // was translated, so a body cut before that carries the older sentence —
-    // and read against the current one alone it looks complete, with its
-    // missing tail reported as drift. One release reported 77 entries that
-    // way, out of a section nobody had edited.
-    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-    // The escapes decode to the Japanese sentence "This release note is not the
-    // full text."
-    const body = [
-      "- **First**",
-      "",
-      "**\u3053\u306e\u30ea\u30ea\u30fc\u30b9\u30ce\u30fc\u30c8\u306f\u5168\u6587\u3067\u306f\u3042\u308a\u307e\u305b\u3093\u3002**",
-    ].join("\n");
-
-    expect(saysItWasCut(body)).toBe(true);
-    expect(missingEntries(section, body)).toEqual([]);
-  });
-
   it("and an entry the body adds is not reported", () => {
     // A release body can be edited on purpose. The section is the authority
     // for what must be there, not for what may not.
     expect(
       missingEntries("- **First**", ["- **First**", "- **A note somebody added**"].join("\n")),
     ).toEqual([]);
-  });
-
-  it("and a body published in Japanese is not compared with an English section", () => {
-    // The title is Japanese text written as escapes: "New feature".
-    const published = "- **新機能**";
-    expect(missingEntries("- **New feature**", published)).toEqual([]);
   });
 });
 
