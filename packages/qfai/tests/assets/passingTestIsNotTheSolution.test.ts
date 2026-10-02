@@ -37,7 +37,9 @@ describe("an example is not met by code written for its test", () => {
     expect(body).toContain("other valid inputs");
     expect(body).toContain("Do not hard-code a value to match a test case");
     expect(body).toContain("do not branch on a test's own inputs");
-    expect(body).toContain("stand in for the standard tools the task calls for");
+    expect(body).toContain(
+      "- Do not let a helper script or a workaround stand in for the standard tools the task calls for.",
+    );
     expect(body).toContain("Where the task cannot be done as specified");
     expect(body).toContain("a test case is itself wrong, stop and report it");
     expect(body).toContain("Change Request");
