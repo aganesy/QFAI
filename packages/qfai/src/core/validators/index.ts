@@ -4,20 +4,24 @@
 
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
-export { validateDensityHints } from "./densityHints.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
-export { validateImportLiteEvidencePresence } from "./importLite.js";
-export { validateLayerCoverage } from "./layerCoverage.js";
-export { validateLayeredTraceability } from "./layeredTraceability.js";
-export { validateMermaidEnforcement } from "./mermaidEnforcement.js";
-export { validateBusinessFlowTraceability } from "./businessFlowTraceability.js";
-export { validateContractReferences } from "./contractReferences.js";
-export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
-export { validateAtddCoverageDepth } from "./atddCoverageDepth.js";
+export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
+export { validateStoryTreeContractReferences } from "./contractReferences.js";
+export {
+  validateStoryTreeObligations,
+  validateStoryTreeObligationsModel,
+} from "./storyTreeObligations.js";
+export {
+  validateConstraintIds,
+  validateStoryDirectories,
+  validateStoryTreeStructure,
+  validateStoryTreeStructureModel,
+  validateTechArchitecture,
+} from "./storyTreeStructure.js";
+export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
+export { validateDocumentSchema } from "./documentSchema.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
-export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export {
   validateDelegationMapIssues,
@@ -29,14 +33,10 @@ export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegr
 export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
-export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
-export { validateSpecSections } from "./specSections.js";
-export { validateStatusInSpecs } from "./statusInSpecs.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
-export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -46,8 +46,7 @@ export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";
-export { validateTddList, validateTddListSeedShape } from "./tddList.js";
-export { validateNavigationFlow } from "./navigationFlow.js";
+export { validateStepTree } from "./stepTree.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
@@ -72,11 +71,6 @@ export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
-export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
-export { validateMarkdownTableArity } from "./markdownTableArity.js";
-export { validateTraceability } from "./traceability.js";
-export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
-export { validateUpstreamSsotGuard } from "./upstreamSsotGuard.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export {
   STUB_SOURCE_FILE_PATTERN,
@@ -88,8 +82,6 @@ export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.j
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
-export { validateSurfaceTypeDrift } from "./surfaceTypeDrift.js";
-export { detectDesignMdPatchOutOfZone, validateDesignMdPatchZone } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
@@ -104,7 +96,6 @@ export {
   validateAutopilotPolicy,
 } from "./autopilotPolicy.js";
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
-export { GRILLING_TRACE_CODES, validateGrillingTrace } from "./grillingTrace.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,

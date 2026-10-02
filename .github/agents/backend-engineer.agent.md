@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/backend-engineer.md
+../../.qfai/assistant/agent/backend-engineer.md

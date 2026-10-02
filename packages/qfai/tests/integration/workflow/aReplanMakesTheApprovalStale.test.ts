@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0006
+// QFAI:EX-0001-0185-05
 // Fault seeds: FAULT-007
 
 import { afterEach, expect, it } from "vitest";
@@ -59,8 +59,8 @@ async function answer(root: string, runId: string, at: unknown, question: unknow
 }
 
 // Each call decides on the snapshot the CLI folds from the run's journal, so the approval's
-// scope digest and capability text reach the staleness check only through that journal.
-it("TC-0018-0006: an approval given before a widening replan is asked again at issue", async () => {
+// scope digest and approved story reach the staleness check only through that journal.
+it("an approval given before a widening replan is asked again at issue", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);
   const proposal = { ...FEATURE_PROPOSAL, unresolvedQuestions: [scopeQuestion] };
@@ -101,14 +101,14 @@ it("TC-0018-0006: an approval given before a widening replan is asked again at i
     kept: field(kept.json, "run.state"),
     state: field(issued.json, "run.state"),
     workOrder: field(issued.json, "workOrder"),
-    reaskedGoal: field(reasked, "capability.goal"),
-    reaskedSlot: field(reasked, "capability.slotId"),
+    reaskedGoal: field(reasked, "story.goal"),
+    reaskedSlot: field(reasked, "story.slotId"),
   }).toEqual({
     replanned: "routing",
     kept: "ready",
     state: "awaiting_input",
     workOrder: null,
-    reaskedGoal: FEATURE_PROPOSAL.newCapabilities[0].goal,
-    reaskedSlot: field(questionOf(routed.json, "create"), "capability.slotId"),
+    reaskedGoal: FEATURE_PROPOSAL.newStories[0].goal,
+    reaskedSlot: field(questionOf(routed.json, "create"), "story.slotId"),
   });
 });

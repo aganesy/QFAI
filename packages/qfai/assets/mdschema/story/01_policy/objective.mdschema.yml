@@ -1,0 +1,79 @@
+# Document schema: <specsDir>/01_policy/objective.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Objective$"
+      regex: true
+    description: The outcome this project seeks and how its success is judged.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Objective$"
+          regex: true
+        description: The change this project seeks, and the source that shows it is needed.
+        allow_additional: false
+        lists:
+          - min: 1
+        required_text:
+          - pattern: "(?m)^- Outcome: "
+            regex: true
+          - pattern: "(?m)^- Evidence: "
+            regex: true
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+      - heading:
+          pattern: "^## Users$"
+          regex: true
+        description: One item per user role, naming what that role does with the product.
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+      - heading:
+          pattern: "^## Success criteria$"
+          regex: true
+        description: Observable results and how each is measured.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [Observable result, Measurement]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+      - heading:
+          pattern: "^## Non-goals$"
+          regex: true
+        description: What this project explicitly does not do.
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true

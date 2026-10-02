@@ -8,10 +8,9 @@ export type IdPrefix =
  * into, and sweeping `DR-*` into that walk would make every citation of a
  * decision look like an undeclared spec item to the traceability rules.
  *
- * What was missing is the *format*. `qfai-implement` makes a non-empty `DR-ID`
- * the hard precondition for the `exception` status and `tddList.ts` enforces it
- * at `error`, but no ID class existed — so any non-empty string satisfied the
- * gate, including a token the operator invented on the spot.
+ * What it needs is a *format*. Without an ID class any non-empty string would
+ * pass as a `DR-*` citation, including a token the operator invented on the
+ * spot.
  */
 /**
  * `BF` joins them for the same reason, from the other end of the layering.
@@ -47,7 +46,7 @@ export const ID_PREFIXES: IdPrefix[] = [
 const DIGIT_AHEAD = "(?=[A-Za-z0-9_-]*\\d)";
 
 /**
- * A wildcard segment written after an ID base, e.g. the `-*` of `AC-0017-*`.
+ * A wildcard segment written after an ID base, e.g. the `-*` of `AC-0007-*`.
  *
  * The loose patterns end on `\b`, and `-` is not a word character, so
  * `US-0006-*` backtracks to `US-0006` — a truncation artifact that is also the
@@ -276,7 +275,7 @@ export function extractInvalidIdOccurrences(
 }
 
 /**
- * True when `candidate` is the base of a prose wildcard such as `AC-0017-*`,
+ * True when `candidate` is the base of a prose wildcard such as `AC-0007-*`,
  * i.e. the wildcard stands in for one more numeric segment and the result is a
  * canonical ID.
  *

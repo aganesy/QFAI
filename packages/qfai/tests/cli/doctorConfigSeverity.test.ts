@@ -6,7 +6,7 @@
  * an unknown key, a value the loader can substitute — but not of an error. Once
  * `browserTool: "playwright-cli"` passed its sunset the loader started
  * reporting it at `error`, and `qfai doctor --fail-on error` still exited 0,
- * against `.qfai/contracts/cli/qfai-doctor.md`, which calls a current-minor
+ * against `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which calls a current-minor
  * invalid value blocking.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -60,6 +60,28 @@ describe("doctor config.load severity", () => {
       expect(check, "expected a config.load check").toBeDefined();
       expect(check?.severity).toBe("error");
     });
+  });
+
+  it("escapes line separators and bidirectional controls in the listed issues", async () => {
+    // The line separator and the right-to-left override, built from their code
+    // points so no such character sits in this file.
+    const separator = String.fromCodePoint(0x2028);
+    const override = String.fromCodePoint(0x202e);
+    // The YAML key spells both as escapes its parser decodes.
+    const escapeOf = (character: string): string =>
+      `\\u${character.codePointAt(0)?.toString(16).padStart(4, "0")}`;
+    const yamlKey = `a${escapeOf(separator)}b${escapeOf(override)}c`;
+    await withConfig(
+      ["uiux:", "  registries:", `    "${yamlKey}": 5`, ""].join("\n"),
+      async (root) => {
+        const data = await createDoctorData({ startDir: root, rootExplicit: true });
+        const message = findCheck(data, "config.load")?.message ?? "";
+
+        expect(message).toContain(yamlKey);
+        expect(message).not.toContain(separator);
+        expect(message).not.toContain(override);
+      },
+    );
   });
 
   it("reports ok on a clean config", async () => {
