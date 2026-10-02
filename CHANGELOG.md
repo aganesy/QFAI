@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-10-03
+
 ### Added
 
 - **The shared skill baseline says how an unattended run may end its turn**
@@ -267,6 +269,58 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout included. The setting itself stays `--local`: scoping it to the
   worktree needs `extensions.worktreeConfig`, which changes the same shared
   file.
+- **`qfai workflow accept` checks the digest of every file a result names
+  (#2327, #2328).** It checked only the changed files. It now also reads each
+  `artifactRefs` entry and refuses a digest that differs from the file as
+  `digest-mismatch`. A file whose real path lies outside the project's real
+  root is given no digest. A reissued work order names each of its inputs at
+  the file's current digest, and the `sdd_append` work order after a
+  missing-test diagnosis names the reproduction record as its input.
+- **A fact question may offer its candidates as a choice (#2346).** The route
+  proposal schema allowed options on a fact question, but the parser refused
+  them. A fact is now either a choice, with options and a selection and no
+  recommendation, or a value request with one effect and no selection.
+  `decide` answers the choice by option IDs.
+- **A stage receipt depends on the obligation it covers and on what it ran
+  under (#2342, #2343).** A receipt for a result that observed a test held one
+  dependency per file declaring the bound flow, its criteria and its examples,
+  each digested whole. It now holds one obligation digest for the flow: the
+  flow and story files, each criterion's scenario block, each example's table
+  row, and each business rule citing one of the flow's examples. An edit
+  elsewhere in a criteria or example file leaves the digest as it was. Every
+  receipt also holds `qfai.config.yaml`, the root lockfiles, the assistant rule
+  tree, the skill that owns the work order's steps, each step's directory, the
+  tool, and the selected discussion pack with its files. A changed file the
+  stage deleted is held as absent, so the receipt goes stale when the file
+  comes back.
+- **Under `failOn: never`, `finish` keeps the validate findings (#2340,
+  #2344).** No finding fails the gate, and a debt whose finding remains stays
+  open. Before, every finding was dropped, so every debt closed.
+- **A route proposal cannot reach a protected path by spelling it differently
+  (#2458).** A write area such as `./src/notify/**`, `.qfai\runs\**`, or one
+  with a doubled or trailing `/`, was compared as written and not refused. Both
+  the fixed protected paths and the protected targets are now compared after
+  the area is normalized. The refusal still names the area as written.
+- **`qfai workflow accept` names every check a refused stage result fails
+  (#2338).** A result for a work order the plan does not issue next, a missing
+  bug diagnosis, an outcome the stage cannot take and an invalid route proposal
+  were refused as `invalid-input` with no `reasons[]`. Each is now named:
+  `work-order`, or `schema` on `diagnosis`, `outcome` or `proposal`, beside the
+  reasons of the other checks.
+- **`qfai validate` no longer reports `QFAI-TOOL-002` in a worktree whose
+  `node_modules` links to another checkout's (#2262).** The `qfai` that link
+  resolves to is the project's own copy. A worktree with no `node_modules`,
+  where `npx` finds another checkout's copy, is still reported.
+- **The question-form reminder stays silent on a turn the host starts
+  (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
+  of the prompt opens with `<task-notification>` or `<wake>`. A typed prompt,
+  and input it cannot read, still get the reminder. `qfai init` replaces an
+  unedited copy of the earlier hook group.
+- **`qfai init` rewrites an earlier wording of the `REVIEW.md` directive
+  instead of adding a second line (#2266).** The two lines disagreed on which
+  branch to read `REVIEW.md` from. The earlier line is replaced where it
+  stands, keeping its list marker and line ending. A line carrying emphasis,
+  inline HTML, a link or a code span is left alone.
 
 ## [2.0.1] - 2026-09-30
 
