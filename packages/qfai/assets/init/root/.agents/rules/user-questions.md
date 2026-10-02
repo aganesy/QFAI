@@ -3,16 +3,19 @@
 The form every question to the user arrives in.
 
 This rule does not decide how many questions to ask, or whether a question is
-worth asking. It decides only what a question looks like when it is put.
+worth asking. It decides what a question looks like when it is put, and one
+place a question is always put, except under a no-question mode: the end of a
+turn that waits on the user.
 
 ## Scope
 
-| Target                                      | Applies                                     |
-| ------------------------------------------- | ------------------------------------------- |
-| Any question put to the user                | Always                                      |
-| The tool is callable in this invocation     | The tool, every time                        |
-| The tool is not callable in this invocation | The fallback below, carrying the same parts |
-| How many questions to ask                   | Outside this rule — see § 6                 |
+| Target                                       | Applies                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| Any question put to the user                 | Always                                      |
+| The tool is callable in this invocation      | The tool, every time                        |
+| The tool is not callable in this invocation  | The fallback below, carrying the same parts |
+| A turn that leaves the next step to the user | Ends with a question — see § 6              |
+| How many questions to ask                    | Outside this rule — see § 7                 |
 
 **Callable, not present.** A host may carry a structured-question capability
 that this invocation cannot use — a mode that offers no structured tool, a
@@ -183,7 +186,33 @@ Say why the tool was not callable. Otherwise the fallback reads as a choice the
 agent made about how to ask, and the next reader cannot tell a limitation from a
 preference.
 
-## 6. What this rule is not
+## 6. A turn that waits on the user
+
+A turn that leaves the next step to the user ends with a question listing the
+next actions. A phase approved, a plan ready, a stage finished and a fork in the
+work each end such a turn.
+
+- Each option is one concrete next action, and says what choosing it does.
+- The recommended action comes first, under § 3.
+- Where the tool is not callable, § 5's fallback carries the same list.
+
+A status report, or an offer written in prose, does not end that turn. Nothing
+tells the user the session is waiting, so it sits idle until they come back to
+ask whether anything is happening.
+
+It is not a clarification: it resolves no ambiguity in the request, and the
+work it follows did not need its answer.
+
+**A user's stop is not such a turn.** The stop is confirmed in one line, every
+open decision is listed as open, and nothing is asked.
+
+**Neither is a `qfai-run` halt.** A blocked, fail-closed or failed run ends with
+the halt notice `qfai-run` sets out, which says what clears it.
+
+**Under a no-question mode nothing is asked.** The run records the next actions
+in its report instead.
+
+## 7. What this rule is not
 
 - Not a question budget. How many questions are worth asking is a separate
   subject, and the two are independent: one bounds the count, this bounds the
@@ -195,8 +224,8 @@ preference.
 
 ## The reminder
 
-`.claude/settings.json` puts this rule in front of the agent on every turn,
-through a `UserPromptSubmit` hook.
+`.claude/settings.json` and `.codex/hooks.json` put this rule in front of the
+agent on every turn, through a `UserPromptSubmit` hook.
 
 Every turn rather than once, because the moment a question forms is
 unpredictable and a session-start reminder is gone by the time the context is
@@ -204,19 +233,23 @@ compacted — which is when a long session starts reaching for an exception.
 
 Every turn the user types, that is. A turn the host starts on its own — a
 background task's notification, a scheduled wake-up, a sub-agent's report — is
-not one where a question to the user forms. The hook reads the prompt from its
-input and stays silent when a line of it opens with a `<task-notification>` or
-`<wake>` wrapper. Any other prompt, and input it cannot read, gets the reminder.
+not one where a question to the user forms. The Claude Code hook reads the prompt
+from its input and stays silent when a line of it opens with a `<task-notification>`
+or `<wake>` wrapper. Any other prompt, and input it cannot read, gets the reminder.
+The Codex hook prints on every turn.
 
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
-every turn stops the session outright. It runs `node` directly, with no shell and
-no network, and prints one message from `.agents/rules/reminders.json`. A missing
+every turn stops the session outright. Claude Code runs `node` directly, with
+no shell and no network. Codex runs one command line, the same under every
+shell, whose program finds the message file by looking upward from where it
+runs, once the project's hooks are trusted.
+Either way it prints one message from `.agents/rules/reminders.json`. A missing
 or unreadable file prints nothing, so it cannot fail the session it is attached
 to.
 
-What it carries is where this rule lives and the line an agent reaches past when
-it would rather not ask. The rest is here.
+What it carries is where this rule lives, the line an agent reaches past when it
+would rather not ask, and the turn that waits on the user. The rest is here.
 
 ## Related
 
