@@ -438,6 +438,7 @@
     "tests/integration/workflow/storyTreeChangesWaitForTheOperator.test.ts",
     "tests/integration/workflow/theCheckedPlanIsAnnounced.test.ts",
     "tests/integration/workflow/theDiagnosisSelectsTheRepair.test.ts",
+    "tests/integration/workflow/aWorkOrderNamesItsInputsByTheirDigest.test.ts",
     "tests/integration/workflow/theRunStopsForTheOperator.test.ts",
     "tests/unit/workflow/evalFixtures.test.ts",
     "tests/unit/workflow/evalScoring.test.ts",
