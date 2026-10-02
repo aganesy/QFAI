@@ -163,15 +163,17 @@ export async function reachedThroughLinkedNodeModules(
  * what resolved it. That link is a choice the project made, not a parent walk
  * by `npx`, so the copy behind it counts as the project's own.
  *
- * `packageDir` must already be a real path. A `node_modules` that does not
- * exist resolves to itself and contains nothing outside `dir`.
+ * Only a `node_modules` that really lies outside `dir` counts, so a real
+ * directory under `dir`, or one that does not exist, never does: a copy hoisted
+ * into a real parent `node_modules` is not a choice this project made.
+ * `packageDir` must already be a real path.
  */
 export async function resolvesThroughOwnNodeModules(
   dir: string,
   packageDir: string,
 ): Promise<boolean> {
   const ownModules = await toRealPath(path.join(dir, "node_modules"));
-  return !classifyAgainstDeclaration(ownModules, packageDir);
+  return isOutside(dir, ownModules) && !classifyAgainstDeclaration(ownModules, packageDir);
 }
 
 /**

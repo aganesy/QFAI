@@ -433,6 +433,22 @@ describe("reachedThroughLinkedNodeModules", () => {
     });
   });
 
+  it("does not count a copy hoisted into the declaring directory's real node_modules", async () => {
+    await withTempDir(async (dir) => {
+      const worktree = path.join(dir, "worktree");
+      const packageDir = path.join(worktree, "node_modules", "qfai");
+      const outDir = path.join(worktree, "out");
+      await mkdir(packageDir, { recursive: true });
+      await mkdir(outDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(outDir, packageDir)).toBe(false);
+    });
+  });
+
   it("does not count a copy when neither directory links to it", async () => {
     await withTempDir(async (dir) => {
       const packageDir = path.join(dir, "main", "node_modules", "qfai");
