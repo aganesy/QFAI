@@ -76,7 +76,13 @@ function answer(
   const question = questions[0];
   if (!run || !question) throw new Error("routing opens the fact question");
   return decide(
-    { run, openQuestions: questions, scopeDigest: "a".repeat(64), digestKey: "b".repeat(64) },
+    {
+      run,
+      openQuestions: questions,
+      scopeDigest: "a".repeat(64),
+      digestKey: "b".repeat(64),
+      settled: { routingResultId: "routing-result-1", answers: [] },
+    },
     {
       operation: "decision",
       questionId: question.questionId,
@@ -94,11 +100,18 @@ it("A fact whose candidates can be listed is read as a choice, and never with a 
     recommended: parseQuestionInput({ ...statusChoice, recommendation: "404" }),
     withEffect: parseQuestionInput({ ...statusChoice, effect: "proceed" }),
     noSelection: parseQuestionInput({ ...statusChoice, selection: undefined }),
+    valueWithSelection: parseQuestionInput({
+      kind: "fact",
+      text: statusChoice.text,
+      effect: "proceed",
+      selection: statusChoice.selection,
+    }),
   }).toEqual({
     choice: statusChoice,
     recommended: undefined,
     withEffect: undefined,
     noSelection: undefined,
+    valueWithSelection: undefined,
   });
 });
 
@@ -107,6 +120,7 @@ it("A routing result asking for a fact among listed candidates opens a choice, a
   const chosen = answer(routed, { optionIds: ["410"] });
   const byValue = answer(routed, { value: "410" });
   const authorizations = chosen.events.flatMap((event) => event.authorization ?? []);
+  const settled = chosen.events.flatMap((event) => event.settled?.answers ?? []);
 
   expect({
     state: routed.verdict.run?.state,
@@ -117,12 +131,14 @@ it("A routing result asking for a fact among listed candidates opens a choice, a
     })),
     answeredState: chosen.verdict.run?.state,
     authorizations: authorizations.map(({ answer: given, effect }) => ({ answer: given, effect })),
+    settled: settled.map(({ text, chosen }) => ({ text, chosen })),
     byValue: byValue.verdict.error,
   }).toEqual({
     state: "awaiting_input",
     questions: [{ kind: "fact", optionIds: ["404", "410"], recommendation: undefined }],
     answeredState: "ready",
     authorizations: [{ answer: { optionIds: ["410"] }, effect: "proceed" }],
+    settled: [{ text: statusChoice.text, chosen: ["410"] }],
     byValue: expect.objectContaining({
       code: "invalid-input",
       reasons: [{ reason: "option", subject: "answer" }],

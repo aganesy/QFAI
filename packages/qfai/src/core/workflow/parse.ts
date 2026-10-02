@@ -145,6 +145,7 @@ function parseFactQuestion(value: Record<string, unknown>): FactQuestionInput | 
       selection: choice.selection,
     };
   }
+  if (value.selection !== undefined) return undefined;
   if (typeof text !== "string" || !text.trim() || !isEffect(effect)) return undefined;
   return { kind: "fact", text, options: [], effect };
 }
