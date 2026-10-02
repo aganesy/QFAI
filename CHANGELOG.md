@@ -47,6 +47,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The slice alignment test refuses a sliced matrix that holds anything but
+  its slice list** (#2213). An `include` or `exclude` beside `slice` changes the
+  legs a job runs without changing the list the test compared, so a matrix
+  could drift from the runner projects and still pass. Each sliced job's
+  `strategy.matrix` must now have `slice` as its only key.
 - **`qfai init` no longer writes the `qfai-run` line into `AGENTS.md` and
   `CLAUDE.md`.** The prompt-time hook states the rule, so the seeded files
   open with their heading, and an existing file gains no such line. A line an
