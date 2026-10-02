@@ -396,8 +396,6 @@ async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
 // What `finish` observes: validate run in process, this run's verify report, the tool and
 // policy it runs under, the run's changes since `start` and those not yet committed, the change
 // requests in force and the bound flow's obligations.
-// SIMPLIFIED: under `failOn: never` no finding is reported, so no debt stays open.
-// Lift when: a `never` project runs a workflow.
 export async function completionFacts(
   root: string,
   runDir: string,
@@ -412,7 +410,6 @@ export async function completionFacts(
     verifyReportOf(runDir, snapshot),
     storyFactsOf(root, loaded.config, snapshot.flowBinding?.flowId),
   ]);
-  const failOn = loaded.config.validation.failOn;
   const findings = result.issues.map((issue) => ({
     code: issue.code,
     file: issue.file ?? "",
@@ -424,10 +421,8 @@ export async function completionFacts(
   // Only the run's own changes wait on a commit; a path the operator left uncommitted before
   // `start` is not the run's to deliver, and neither are the runs' own local records.
   const uncommitted = dirty.filter((file) => changed.includes(file));
-  const validate =
-    failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
   const completion = {
-    validate,
+    validate: { failOn: loaded.config.validation.failOn, findings },
     ...(verifyReport ? { verifyReport } : {}),
     toolVersion,
     cliEntryDigest: entryDigest,
