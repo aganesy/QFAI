@@ -520,14 +520,17 @@ describe("automerge is declared together with the check that decides whether any
     ).toEqual([...EXEMPT].sort());
 
     // And the exception is a refusal to offer the package at all, not a narrowing to one update
-    // type. A narrowing leaves the same pairing broken on every other update type, which is the
-    // reading the provider's own peer range makes unsafe.
+    // type or one dependency type. A narrowing leaves the same pairing broken on every update it
+    // does not name, which is the reading the provider's own peer range makes unsafe. So the
+    // package names are the only selector such a rule may carry.
     for (const rule of disablingRules) {
+      const selectors = [...rule.matchAll(/\b(match[A-Z]\w*)\s*:/g)].map((match) => match[1]);
       expect(
-        rule,
-        "a package switched off must be switched off outright: a `matchUpdateTypes` anywhere in " +
-          "the same rule leaves the update types it does not name arriving exactly as before",
-      ).not.toMatch(/matchUpdateTypes/);
+        selectors,
+        "a package switched off must be switched off outright: any selector besides " +
+          "`matchPackageNames` in the same rule, such as `matchUpdateTypes` or `matchDepTypes`, " +
+          "leaves the updates it does not name arriving exactly as before",
+      ).toEqual(["matchPackageNames"]);
     }
 
     // And a security fix still reaches them. The vulnerability block is applied as a forced
