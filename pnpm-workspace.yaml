@@ -12,5 +12,5 @@ packages:
 # manager adds the package back as an open question on every install, and an answer nobody
 # recorded is one the next person answers again.
 allowBuilds:
-  '@jackchuka/mdschema': false
+  "@jackchuka/mdschema": false
   esbuild: true
