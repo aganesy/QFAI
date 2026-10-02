@@ -91,6 +91,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The implementation reviewer checks silent failure and type design**
+  (#2248). It reads the whole of every file a change touches, not only the
+  lines the change adds or alters.
+
+  - Silent failure: an empty catch or a silent return, a catch that also
+    catches errors it did not expect, a fallback that masks the problem, a
+    failure that should propagate instead, a log entry too thin to debug from,
+    and user feedback that does not say what to do next.
+  - Type design: mutable internals exposed, an invariant held only by
+    documentation, validation missing at construction, enforcement that
+    differs between mutations, and outside code left to maintain an invariant
+    the type should own.
+  - A finding on what the change added or altered can block. A finding on code
+    that was already there is recorded and deferred, never blocking. Findings
+    are concrete problems, with no rating per check.
+  - The `/qfai-implement` row of the reviewer remit table says the same.
+
+- **Review is the detector for a security defect** (#2252). No repository gate
+  scans for a security or data-integrity defect, and the Drift Protocol now
+  says so. It names the implementation reviewer as that class's detector: a
+  finding the reviewer demonstrates traces to `defect:security` and blocks.
+
+  - The reviewer card replaces the single word "security" with concrete
+    checks: the three shapes the protocol names, and injection, cross-site
+    scripting, server-side request forgery, hardcoded secrets, insecure direct
+    object reference, auth bypass, unsafe deserialization and path traversal.
+  - Validation at a trust boundary is judged against the minimal
+    implementation rule.
+  - The check falls under the reviewer's existing scope: the whole of every
+    touched file is read, and only a finding on what the change added or
+    altered blocks.
+  - The reviewer also follows every input the change adds or alters to where
+    it is used, across files the change did not touch. A path the change opens
+    there blocks.
+  - The `/qfai-implement` row of the reviewer remit table names the check.
+
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work
   nobody asked for. A new section names the four shapes that takes: wider
@@ -695,42 +731,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
-
-- **The implementation reviewer checks silent failure and type design**
-  (#2248). It reads the whole of every file a change touches, not only the
-  lines the change adds or alters.
-
-  - Silent failure: an empty catch or a silent return, a catch that also
-    catches errors it did not expect, a fallback that masks the problem, a
-    failure that should propagate instead, a log entry too thin to debug from,
-    and user feedback that does not say what to do next.
-  - Type design: mutable internals exposed, an invariant held only by
-    documentation, validation missing at construction, enforcement that
-    differs between mutations, and outside code left to maintain an invariant
-    the type should own.
-  - A finding on what the change added or altered can block. A finding on code
-    that was already there is recorded and deferred, never blocking. Findings
-    are concrete problems, with no rating per check.
-  - The `/qfai-implement` row of the reviewer remit table says the same.
-
-- **Review is the detector for a security defect** (#2252). No repository gate
-  scans for a security or data-integrity defect, and the Drift Protocol now
-  says so. It names the implementation reviewer as that class's detector: a
-  finding the reviewer demonstrates traces to `defect:security` and blocks.
-
-  - The reviewer card replaces the single word "security" with concrete
-    checks: the three shapes the protocol names, and injection, cross-site
-    scripting, server-side request forgery, hardcoded secrets, insecure direct
-    object reference, auth bypass, unsafe deserialization and path traversal.
-  - Validation at a trust boundary is judged against the minimal
-    implementation rule.
-  - The check falls under the reviewer's existing scope: the whole of every
-    touched file is read, and only a finding on what the change added or
-    altered blocks.
-  - The reviewer also follows every input the change adds or alters to where
-    it is used, across files the change did not touch. A path the change opens
-    there blocks.
-  - The `/qfai-implement` row of the reviewer remit table names the check.
 
 - **The repository is written in English throughout.** Every Japanese comment,
   message, test description, document and changelog entry is now English, and

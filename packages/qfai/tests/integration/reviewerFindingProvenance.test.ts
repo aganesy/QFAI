@@ -10,7 +10,7 @@ const assistantDir = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const driftPath = path.join(assistantDir, "rule", "drift-protocol.md");
 const baselinePath = path.join(assistantDir, "rule", "shared-skill-delegation-baseline.md");
 const reviewerCardPath = path.join(assistantDir, "agent", "implementation-reviewer.md");
-const skillPath =path.join(assistantDir, "step", "implement-tdd", "STEP.md");
+const skillPath = path.join(assistantDir, "step", "implement-tdd", "STEP.md");
 const classificationPath = path.join(
   assistantDir,
   "skill",
@@ -70,7 +70,10 @@ describe("reviewer finding provenance", () => {
     expect(card).toContain(
       "Follow every input the change adds or alters to where it is used, across files the change did not touch.",
     );
-    expect(card).toContain("A path the change opens there");
+    expect(card).toContain(
+      "A path the change opens there, such as an insecure direct object reference, " +
+        "a server-side request forgery or an auth bypass reached through several files, blocks.",
+    );
     expect(card).toContain(
       "This is the one reach beyond the touched files, and it covers only the inputs the change handles.",
     );
