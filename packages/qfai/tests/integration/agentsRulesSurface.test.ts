@@ -1295,10 +1295,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Pull\s+request\s+and\s+issue\s+bodies/,
         /\|\s*Text a user pasted\s*\|/,
         // Data, and the one condition under which an instruction there is followed.
+        /Text\s+the\s+repository\s+did\s+not\s+author\s+is\s+data,\s+not\s+instruction\./,
         /Read\s+it\s+as\s+data/,
         /followed\s+only\s+where\s+the\s+user's\s+own\s+request\s+asks\s+for\s+it/,
+        /only\s+as\s+far\s+as\s+the\s+request\s+reaches/,
         // Promotion into a rule, and where the research protocol applies it.
         /becomes\s+a\s+rule\s+only\s+through\s+a\s+check/,
+        /against\s+the\s+repository,\s+and\s+says\s+what\s+it\s+checked\./,
         /rule\/research-first-protocol\.md/,
         // The marking convention for pasted text.
         /short\s+random\s+id,\s+new\s+for\s+each\s+prompt/,

@@ -54,8 +54,6 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
-  addEntryDirective,
-  addEntryPointDirectives,
   addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
@@ -111,7 +109,7 @@ import {
 import {
   refuseUnsafeEntryPointRewrite,
   replaceEntryPointFile,
-} from "../../core/init/entryDirective.js";
+} from "../../core/init/entryPointFile.js";
 import {
   SIDECAR_RE,
   claimSidecar,
@@ -146,7 +144,8 @@ import {
   collectCanonicalAgentNames,
   collectCanonicalSkillIds,
 } from "../../core/init/integrationDirs.js";
-import { ensureSymlink } from "../../core/init/managedLink.js";
+import { checkWorkflowPreconditions } from "../../core/doctor/workflowPreconditions.js";
+import { ensureSymlink, requireSymlinkCreation } from "../../core/init/managedLink.js";
 import type { WrapperSyncOptions } from "../../core/init/managedLink.js";
 import { formatReportPath } from "../../core/init/reportPath.js";
 import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
@@ -347,6 +346,7 @@ export async function runInit(
   }
 
   if (!options.dryRun) {
+    await requireSymlinkCreation(symlinkRuntime);
     await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
 
@@ -620,7 +620,8 @@ export async function runInit(
     info(note);
   }
 
-  // Symlink-based integration generation (prune old wrappers, create symlinks, generate README / copilot-instructions)
+  // Prune retired wrappers, write the Copilot instruction files, link skills
+  // and agents into each tool's directory, and write the Codex agent profiles.
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
@@ -788,6 +789,13 @@ export async function runInit(
   }
 
   info(await workflowModeLine(destRoot));
+  const unmet = (await checkWorkflowPreconditions(destRoot)).length;
+  if (unmet > 0) {
+    info(
+      `Shipped workflows: ${unmet} repository fact${unmet === 1 ? " they rely" : "s they rely"} on ` +
+        `${unmet === 1 ? "is" : "are"} not met. Run qfai doctor for what to change.`,
+    );
+  }
   if (codexHooksResult.copied.length > 0 && !options.dryRun) {
     info(CODEX_HOOKS_TRUST_NOTE);
   }
@@ -804,9 +812,10 @@ export async function runInit(
     info(note);
   }
 
-  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
-  // the report summary so the warning stays at the bottom of the
-  // terminal output and is not buried by the skipped-paths list.
+  // A legacy steering/ or instructions/ tree is reported as a
+  // D-DEPRECATED-PATH error on stderr. Emitted AFTER the report summary so
+  // it stays at the bottom of the terminal output and is not buried by the
+  // skipped-paths list.
   // Skip when the user is currently running
   // --upgrade-assistant-tree (the helper will move the directory
   // itself); skip on dry-run; skip when no legacy dir exists.
@@ -2193,8 +2202,7 @@ async function ensureAgentEntryPointRules(
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
       const cited = addRuleCitations(refreshed.text, section, toCite);
-      const reviewed = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
-      const merged = addEntryDirective(reviewed, template);
+      const merged = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
@@ -2207,11 +2215,7 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(
-          cited !== refreshed.text,
-          { review: reviewed !== cited, entry: merged !== reviewed },
-          refreshed.refreshed,
-        ),
+        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2234,7 +2238,7 @@ async function ensureAgentEntryPointRules(
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
       const rulesAdded = addRuleCitationsToList(existing, section, uncited);
-      const merged = addEntryPointDirectives(rulesAdded, template, hasReviewPolicy);
+      const merged = hasReviewPolicy ? addReviewPointer(rulesAdded, template) : rulesAdded;
       if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
         // numbered list, an indented bullet. Name the missing masters instead
@@ -2298,7 +2302,9 @@ async function ensureAgentEntryPointRules(
           : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      addEntryPointDirectives(`${existing}${separator}${section}${end}`, template, hasReviewPolicy),
+      hasReviewPolicy
+        ? addReviewPointer(`${existing}${separator}${section}${end}`, template)
+        : `${existing}${separator}${section}${end}`,
       destRoot,
       existing,
     );
@@ -2418,11 +2424,7 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(
-      merged !== refreshed.text,
-      { review: false, entry: false },
-      refreshed.refreshed,
-    ),
+    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2499,7 +2501,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  directives: { review: boolean; entry: boolean },
+  reviewDirective: boolean,
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -2510,14 +2512,10 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  for (const [added, name] of [
-    [directives.entry, "entry"],
-    [directives.review, "review"],
-  ] as const) {
-    if (!added) continue;
-    planned.push(`add the ${name} directive`);
-    done.push(`added the ${name} directive`);
-    byHand.push(`add the ${name} directive`);
+  if (reviewDirective) {
+    planned.push("add the review directive");
+    done.push("added the review directive");
+    byHand.push("add the review directive");
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
@@ -2683,7 +2681,7 @@ async function ensureReminderHooks(
     return { copied: [], skipped: [target] };
   }
 
-  const detail = reminderHooksUpdateDetail(plan.events);
+  const detail = reminderHooksUpdateDetail(plan.events, plan.permissionsAdded);
   if (dryRun) {
     info(`  would update: ${relativePath} (${detail})`);
     return { copied: [target], skipped: [] };
@@ -3033,6 +3031,30 @@ async function gitSymlinksEnabled(
   }
 }
 
+/**
+ * True inside a linked worktree, where the git dir of the working tree differs
+ * from the common one that holds the `config` file `--local` writes.
+ */
+async function inLinkedWorktree(probeDir: string): Promise<boolean> {
+  const [gitDir, commonDir] = await Promise.all([
+    runGitRevParse("git rev-parse --git-dir", probeDir),
+    runGitRevParse("git rev-parse --git-common-dir", probeDir),
+  ]);
+  return (
+    gitDir !== null &&
+    commonDir !== null &&
+    path.resolve(probeDir, gitDir) !== path.resolve(probeDir, commonDir)
+  );
+}
+
+/**
+ * Said beside a `--local` write made from a linked worktree. The setting is not
+ * scoped to `--worktree`, which needs `extensions.worktreeConfig`, itself a
+ * change to the same shared file that alters how every worktree reads config.
+ */
+const SHARED_CONFIG_NOTE =
+  "  note: that file is shared by every worktree of this repository, the main checkout included.";
+
 /** Disclosed when the local pin is in place but something outranks it. */
 const WORKTREE_OVERRIDE_NOTE =
   "  warning: the effective value of core.symlinks is still false (a worktree-scope override). " +
@@ -3063,8 +3085,9 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     return lines;
   }
 
+  const sharedNote = (await inLinkedWorktree(probeDir)) ? [SHARED_CONFIG_NOTE] : [];
   if (dryRun) {
-    return [`  would set: git config --local core.symlinks true (${configPath})`];
+    return [`  would set: git config --local core.symlinks true (${configPath})`, ...sharedNote];
   }
 
   try {
@@ -3085,7 +3108,7 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     );
   }
 
-  const lines = [`  git config: core.symlinks=true (${configPath})`];
+  const lines = [`  git config: core.symlinks=true (${configPath})`, ...sharedNote];
   if (!(await gitSymlinksEnabled(probeDir, "effective"))) {
     // The write landed in the common config but does not govern: only a
     // higher-precedence scope can do that, and per-worktree config is the one

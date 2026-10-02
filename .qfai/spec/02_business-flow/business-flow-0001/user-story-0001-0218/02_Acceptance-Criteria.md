@@ -35,4 +35,11 @@ Feature: Refuse a route catalog a run cannot use
     Given a plan with a `when` key, an unknown mode or an unknown modifier
     When the core loads it
     Then it is refused
+
+  # AC-0001-0218-06
+  Scenario: A stage drops its reviewers only when it is a triage stage
+    Given a plan whose stage carries `review`
+    When the core loads it
+    Then `none` on a triage stage is admitted
+    And any other value, or `none` on a stage of another kind, is refused
 ```
