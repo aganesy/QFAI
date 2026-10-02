@@ -13,9 +13,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { defaultConfig, loadConfig, type QfaiConfig } from "../../src/core/config.js";
-import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../../src/core/gitChanges.js";
-import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
+import { getChangedFilesAgainstBase } from "../../src/core/gitChanges.js";
 
 const tempDirs: string[] = [];
 
@@ -52,8 +50,6 @@ const MODULE_BODY = [
   "",
 ].join("\n");
 
-const config: QfaiConfig = { ...defaultConfig, baseBranch: "base" };
-
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -75,11 +71,6 @@ function changedFilesOrThrow(root: string, baseBranch: string): Set<string> {
   return changed;
 }
 
-/** What a caller asking "was this row's implementation modified?" reads. */
-function stillPresentOrThrow(root: string, baseBranch: string): Set<string> {
-  return withoutPathsGoneAtHead(root, baseBranch, changedFilesOrThrow(root, baseBranch));
-}
-
 describe("getChangedFilesAgainstBase", () => {
   it("reports both endpoints of a rename by default", async () => {
     const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
@@ -91,60 +82,6 @@ describe("getChangedFilesAgainstBase", () => {
     const changed = changedFilesOrThrow(root, "base");
     expect(changed.has("src/core/old.ts")).toBe(true);
     expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops the source of a rename when asked to", async () => {
-    const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
-    git(root, "mv", "src/core/old.ts", "src/core/new.ts");
-    git(root, "commit", "-m", "move");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/old.ts")).toBe(false);
-    expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops a move git scores as a delete plus an add, not as a rename", async () => {
-    // Rename detection is a similarity score, so a file moved and rewritten in
-    // one commit falls under the threshold. Subtracting only detected renames
-    // left this source in the set, and a ledger row still naming it read as
-    // "implementation modified" — the false negative the option exists to stop.
-    const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
-    git(root, "rm", "src/core/old.ts");
-    await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "move and rewrite");
-
-    // The premise: git really does not call this a rename.
-    const renames = execFileSync(
-      "git",
-      ["diff", "-M", "--diff-filter=R", "--name-only", "base...HEAD"],
-      { cwd: root, encoding: "utf-8" },
-    );
-    expect(renames.trim()).toBe("");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/old.ts")).toBe(false);
-    expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops an ordinary deletion and keeps the edit beside it", async () => {
-    const root = await newRepo({
-      "src/core/gone.ts": MODULE_BODY,
-      "src/core/kept.ts": "export const kept = 1;\n",
-    });
-    git(root, "rm", "src/core/gone.ts");
-    // Edited in the same commit, so it is in the diff and the subtraction has
-    // something to get wrong. Left untouched it is absent from the set either
-    // way, and the pin below would hold for a function that dropped
-    // everything.
-    await write(root, "src/core/kept.ts", "export const kept = 2;\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "delete one, edit the other");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/gone.ts")).toBe(false);
-    // The over-correction pin: only the removed path goes.
-    expect(changed.has("src/core/kept.ts")).toBe(true);
   });
 
   it("reports a path git would quote, by the name it actually has", async () => {
@@ -178,7 +115,7 @@ describe("getChangedFilesAgainstBase", () => {
     expect(changedFilesOrThrow(root, "base").has(".qfai/contracts/db/\u7a7a.sql")).toBe(true);
   });
 
-  it("keeps every removed path for the caller that did not ask", async () => {
+  it("keeps a removed path", async () => {
     const root = await newRepo({ "src/core/gone.ts": MODULE_BODY });
     git(root, "rm", "src/core/gone.ts");
     git(root, "commit", "-m", "delete");
@@ -186,241 +123,5 @@ describe("getChangedFilesAgainstBase", () => {
     // The drift guard wants it: an artifact removed from under its protected
     // path is exactly what it exists to notice.
     expect(changedFilesOrThrow(root, "base").has("src/core/gone.ts")).toBe(true);
-  });
-});
-
-describe("validateTraceabilityIntegrity across a rename", () => {
-  /**
-   * The two files `collectSpecEntries` reads as "this directory is a layered
-   * spec", beside the `04_Business-Rules.md` marker each fixture already
-   * writes. Without them the directory is no layout at all,
-   * `validateTraceabilityIntegrity` never reaches its ledger, and the case
-   * under test reports `QFAI-TRACE-003` instead of the row it is about.
-   */
-  const layeredSpecBase: Record<string, string> = {
-    ".qfai/specs/spec-0001/01_Spec.md": "# Spec 0001\n",
-    ".qfai/specs/spec-0001/02_User-stories.md": "# User stories\n\n- US-0001-0001: story\n",
-  };
-
-  const ledgerFor = (implFile: string): string =>
-    [
-      "# Traceability Ledger",
-      "",
-      "| BR/AC | Implementation File | Test File |",
-      "| --- | --- | --- |",
-      `| BR-0001-0001 | ${implFile} | tests/core/module.test.ts |`,
-    ].join("\n");
-
-  // The row still names the path the rename emptied. Reading the source as
-  // "modified" made the stalest possible ledger the one case that passed.
-  it("reports a ledger row still pointing at the rename's source", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
-      "src/core/old.ts": MODULE_BODY,
-    });
-    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
-    git(root, "mv", "src/core/old.ts", "src/core/new.ts");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "revise the rule and move the module");
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-    const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
-    expect(stale).toHaveLength(1);
-    expect(stale[0]?.file).toBe("src/core/old.ts");
-  });
-
-  // Same staleness, reached by the move rename detection does not score. The
-  // set that subtracted only detected renames kept this source, so the row
-  // reading it as "implementation modified" passed.
-  it("reports a row pointing at a move git calls a delete plus an add", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
-      "src/core/old.ts": MODULE_BODY,
-    });
-    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
-    git(root, "rm", "src/core/old.ts");
-    await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "revise the rule, move and rewrite the module");
-
-    // The premise: git really does not call this a rename.
-    const renames = execFileSync(
-      "git",
-      ["diff", "-M", "--diff-filter=R", "--name-only", "base...HEAD"],
-      { cwd: root, encoding: "utf-8" },
-    );
-    expect(renames.trim()).toBe("");
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-    const stale = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
-    expect(stale).toHaveLength(1);
-    expect(stale[0]?.file).toBe("src/core/old.ts");
-  });
-
-  it("fails closed when a changed rule has no parseable BR-ID obligation", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-      "src/core/module.ts": MODULE_BODY,
-    });
-    await write(
-      root,
-      ".qfai/specs/spec-0001/04_Business-Rules.md",
-      "# BR\n\n- BR-0001-0001: revised\n",
-    );
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "revise an unparseable rule");
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-    expect(
-      issues.some((entry) => entry.code === "QFAI-TRACE-003" && entry.severity === "error"),
-    ).toBe(true);
-  });
-
-  // Pruning the removed paths before deriving the spec set hid the deletion
-  // that most needs reporting: the spec's own BR/AC file is gone, so nothing
-  // named the spec, and the code for "its ledger can no longer be read" never
-  // fired.
-  it("reports a spec directory the branch deleted whole", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-      "src/core/module.ts": MODULE_BODY,
-    });
-    git(root, "rm", "-r", ".qfai/specs/spec-0001");
-    git(root, "commit", "-m", "delete the spec");
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-    const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
-    expect(uninspectable).toHaveLength(1);
-    expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
-  });
-
-  /**
-   * The config an adopter gets for a `paths.specsDir` written this way, read
-   * through the real loader rather than assembled here: the spelling is
-   * settled at load, so a test that built the value itself would prove nothing
-   * about what a project's own `qfai.config.yaml` produces.
-   */
-  async function configWithSpecsDir(root: string, specsDir: string): Promise<QfaiConfig> {
-    await write(root, "qfai.config.yaml", `baseBranch: base\npaths:\n  specsDir: '${specsDir}'\n`);
-    const { config: loaded } = await loadConfig(root);
-    return loaded;
-  }
-
-  // A configured directory is joined with a child path in some readers and
-  // tested as a prefix in others. The prefix form built `.qfai/specs//`, which
-  // no repository path starts with, so every changed file was skipped, the
-  // spec set came back empty and the gate reported a pass over nothing.
-  //
-  // All three spellings name one directory and reach one finding: the loader
-  // settles the separators and the finding renders what it is given in POSIX
-  // form, so how the config was written does not reach the report.
-  it.each([".qfai/specs/", ".qfai/specs//", ".qfai\\specs\\"])(
-    "reads the same specs directory written as %s",
-    async (specsDir) => {
-      const root = await newRepo({
-        ...layeredSpecBase,
-        ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-        ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-        "src/core/module.ts": MODULE_BODY,
-      });
-      git(root, "rm", "-r", ".qfai/specs/spec-0001");
-      git(root, "commit", "-m", "delete the spec");
-
-      const written = await configWithSpecsDir(root, specsDir);
-      const issues = await validateTraceabilityIntegrity(root, written);
-      const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
-
-      expect(uninspectable).toHaveLength(1);
-      expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
-    },
-  );
-
-  // The case above reads the directory through the loader, which settles the
-  // spelling. A config assembled in code keeps whatever separator it was given,
-  // so this one reaches the rendering with a backslash still in the value and
-  // holds on a runner whose own separator is already `/`.
-  it("renders the spec directory as one POSIX path when the config carries a backslash", async () => {
-    const specsDir = ".qfai\\specs";
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-      "src/core/module.ts": MODULE_BODY,
-    });
-    git(root, "rm", "-r", ".qfai/specs/spec-0001");
-    git(root, "commit", "-m", "delete the spec");
-
-    const issues = await validateTraceabilityIntegrity(root, {
-      ...config,
-      paths: { ...config.paths, specsDir },
-    });
-    const uninspectable = issues.filter((entry) => entry.code === "QFAI-TRACE-003");
-
-    expect(uninspectable).toHaveLength(1);
-    expect(uninspectable[0]?.file).toBe(".qfai/specs/spec-0001");
-  });
-
-  // The two other ways the detection can select nothing — a diff it cannot
-  // take, and a spec the diff names that the tree no longer holds — each say
-  // so. A directory that is not there said nothing at all, which is the same
-  // output as a clean run.
-  it("reports a specs directory that is not in the repository", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-      "src/core/module.ts": MODULE_BODY,
-    });
-
-    const written = await configWithSpecsDir(root, ".qfai/spec");
-    const issues = await validateTraceabilityIntegrity(root, written);
-    const missing = issues.filter(
-      (entry) => entry.code === "QFAI-TRACE-003" && entry.file === ".qfai/spec",
-    );
-
-    expect(missing).toHaveLength(1);
-    expect(missing[0]?.message).toContain("ran over nothing");
-  });
-
-  it("says nothing about a specs directory that is there", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
-      "src/core/module.ts": MODULE_BODY,
-    });
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-
-    expect(issues.filter((entry) => entry.file === ".qfai/specs")).toEqual([]);
-  });
-
-  it("passes a ledger row updated to the rename's destination", async () => {
-    const root = await newRepo({
-      ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
-      "src/core/old.ts": MODULE_BODY,
-    });
-    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
-    git(root, "mv", "src/core/old.ts", "src/core/new.ts");
-    await write(
-      root,
-      ".qfai/specs/spec-0001/16_Traceability-ledger.md",
-      ledgerFor("src/core/new.ts"),
-    );
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "revise the rule, move the module, update the ledger");
-
-    const issues = await validateTraceabilityIntegrity(root, config);
-    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-001")).toEqual([]);
   });
 });

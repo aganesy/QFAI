@@ -1,51 +1,60 @@
-// QFAI:SPEC-0018:TC-0018-0246
-// QFAI:SPEC-0018:TC-0018-0247
-// QFAI:SPEC-0018:TC-0018-0248
-// QFAI:SPEC-0018:TC-0018-0249
-// QFAI:SPEC-0018:TC-0018-0250
-// QFAI:SPEC-0018:TC-0018-0251
+// QFAI:EX-0001-0185-38
+// QFAI:EX-0001-0185-49
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type { PlanStep } from "../../../src/core/workflow/types.js";
+import { KIND_STEPS, planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
-const specBinding = { specId: "spec-0001" };
-const LEDGER = ".qfai/specs/spec-0001/tdd/test-list.md";
-const IMPLEMENT_EVIDENCE = ".qfai/evidence/implement-spec-0001.md";
+const flowBinding = { flowId: "BF-0001" };
+const IMPLEMENT_EVIDENCE = ".qfai/evidence/implement-BF-0001.md";
+const STORY = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0005";
+const CONTRACT = ".qfai/spec/03_contract/cli/notify.md";
+const DECISIONS = ".qfai/spec/decisions.md";
+const OPEN_QUESTIONS = ".qfai/spec/open-questions.md";
+// Defect example seeding after a diagnosis whose first matched ID is AC-0001-0005-02: the
+// observer derives the story's examples file and the one contract citing that criterion.
+const facts = {
+  specsDir: ".qfai/spec",
+  seeding: { exampleFile: `${STORY}/03_Example.md`, contractFiles: [CONTRACT] },
+};
 
-// A bounded-change plan whose middle stage is the kind under test.
-function boundedPlan(stageKind: string, skill: string, operation: string) {
-  const stage = (id: string, kind: string, by: string, op: string) => ({
-    stageInstanceId: id,
-    stageKind: kind,
-    skill: by,
-    operation: op,
-    when: "always",
-  });
+// The kind of the stage under test, and the steps it runs.
+type Middle = [string, PlanStep[]];
+
+// A stage of a kind carrying the steps a built-in plan gives it.
+function ofKind(stageKind: string): Middle {
+  return [stageKind, KIND_STEPS[stageKind] ?? []];
+}
+
+// An add-feature plan whose middle stage is the kind under test.
+function boundedPlan(stageKind: string, steps: PlanStep[]) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/notify"],
     stages: [
-      stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"),
-      stage("bounded-middle", stageKind, skill, operation),
-      stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+      planStage("bounded-sdd-delta", "sdd"),
+      { stageInstanceId: "bounded-middle", stageKind, steps },
+      planStage("bounded-verify", "verify"),
     ],
   };
 }
 
-// Issues the middle stage's work order, bound to spec-0001.
-function issueMiddle(stageKind: string, skill: string, operation: string) {
+// Issues the middle stage's work order, bound to BF-0001.
+function issueMiddle(stageKind: string, steps: PlanStep[]) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-records", state: "ready", sequence: 8 },
-    plan: boundedPlan(stageKind, skill, operation),
-    specBinding,
+    plan: boundedPlan(stageKind, steps),
+    flowBinding,
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
   };
-  const issued = decide(ready, { operation: "next" }, {});
+  const issued = decide(ready, { operation: "next" }, facts);
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
   if (!workOrder || !run) throw new Error("next issues the middle stage's work order");
@@ -53,8 +62,8 @@ function issueMiddle(stageKind: string, skill: string, operation: string) {
 }
 
 // Accepts a result of the middle stage that changed exactly `paths`.
-function acceptChanging(stageKind: string, skill: string, operation: string, paths: string[]) {
-  const { snapshot, workOrder, run } = issueMiddle(stageKind, skill, operation);
+function acceptChanging(stageKind: string, steps: PlanStep[], paths: string[]) {
+  const { snapshot, workOrder, run } = issueMiddle(stageKind, steps);
   const decision = decide(
     snapshot,
     {
@@ -69,7 +78,7 @@ function acceptChanging(stageKind: string, skill: string, operation: string, pat
         changedFiles: paths.map((path) => ({ path, digest: "d".repeat(64) })),
       },
     },
-    {},
+    facts,
   );
   const error = decision.verdict.error;
   return {
@@ -79,47 +88,40 @@ function acceptChanging(stageKind: string, skill: string, operation: string, pat
   };
 }
 
-const implement: [string, string, string] = ["implement", "qfai-implement", "implement"];
-const sddAppend: [string, string, string] = ["sdd_append", "qfai-sdd", "defect-row-seeding"];
+const implement = ofKind("implement");
+const sddAppend = ofKind("sdd_append");
 
 function refusedWriteScope(path: string) {
   return { ok: false, reasons: [{ reason: "write-scope", subject: path }] };
 }
 
-it("TC-0018-0246 (TDD-0479): own ledger and evidence accepted", () => {
-  expect(acceptChanging(...implement, [LEDGER, IMPLEMENT_EVIDENCE])).toEqual({
-    recordAreas: [LEDGER, IMPLEMENT_EVIDENCE],
+it("own evidence accepted", () => {
+  expect(acceptChanging(...implement, [IMPLEMENT_EVIDENCE])).toEqual({
+    recordAreas: [IMPLEMENT_EVIDENCE],
     ok: true,
     reasons: undefined,
   });
 });
 
-it("TC-0018-0247 (TDD-0480): another spec's evidence refused write-scope", () => {
-  const path = ".qfai/evidence/implement-spec-0002.md";
+it("another flow's evidence refused write-scope", () => {
+  const path = ".qfai/evidence/implement-BF-0002.md";
   const { ok, reasons } = acceptChanging(...implement, [path]);
 
   expect({ ok, reasons }).toEqual(refusedWriteScope(path));
 });
 
-it("TC-0018-0248 (TDD-0481): a change-request record refused write-scope", () => {
-  const path = ".qfai/evidence/change-request-20260924-0001.md";
+it("the decisions table refused write-scope", () => {
+  const path = DECISIONS;
   const { ok, reasons } = acceptChanging(...implement, [path]);
 
   expect({ ok, reasons }).toEqual(refusedWriteScope(path));
 });
 
-const outsideRecords: [string, [string, string, string], string][] = [
-  ["TC-0018-0249 (TDD-0482): decision-record", implement, ".qfai/evidence/decision-0001.md"],
-  [
-    "TC-0018-0249 (TDD-0483): workflow-evidence",
-    implement,
-    ".qfai/evidence/workflow/run-records/summary.json",
-  ],
-  [
-    "TC-0018-0249 (TDD-0484): acceptance-criteria",
-    sddAppend,
-    ".qfai/specs/spec-0001/03_Acceptance-Criteria.md",
-  ],
+const outsideRecords: [string, Middle, string][] = [
+  ["decision-record", implement, ".qfai/evidence/decision/decision-0001.md"],
+  ["workflow-evidence", implement, ".qfai/evidence/workflow/run-records/summary.json"],
+  ["acceptance-criteria", sddAppend, `${STORY}/02_Acceptance-Criteria.md`],
+  ["user-story", sddAppend, `${STORY}/01_User-story.md`],
 ];
 
 for (const [title, stage, path] of outsideRecords) {
@@ -130,61 +132,22 @@ for (const [title, stage, path] of outsideRecords) {
   });
 }
 
-const SPEC = ".qfai/specs/spec-0001";
-const implementRecords = [LEDGER, IMPLEMENT_EVIDENCE];
-const atddRecords = [
-  LEDGER,
-  ".qfai/evidence/atdd-spec-0001.md",
-  ".qfai/evidence/coverage-depth-spec-0001.md",
-];
+const SDD_EVIDENCE = ".qfai/evidence/sdd-BF-0001.md";
+const implementRecords = [IMPLEMENT_EVIDENCE];
+const atddRecords = [".qfai/evidence/atdd-BF-0001.md"];
 
-const derivations: [string, [string, string, string], string[] | undefined][] = [
-  ["TC-0018-0250 (TDD-0485): implement", implement, implementRecords],
-  [
-    "TC-0018-0250 (TDD-0486): regression-fix",
-    ["regression_fix", "qfai-implement", "regression-fix"],
-    implementRecords,
-  ],
-  [
-    "TC-0018-0250 (TDD-0487): test-fix-implement",
-    ["test_fix", "qfai-implement", "test-fix"],
-    implementRecords,
-  ],
-  [
-    "TC-0018-0250 (TDD-0488): acceptance",
-    ["acceptance", "qfai-atdd", "author-acceptance-tests"],
-    atddRecords,
-  ],
-  ["TC-0018-0250 (TDD-0489): test-fix-atdd", ["test_fix", "qfai-atdd", "test-fix"], atddRecords],
-  [
-    "TC-0018-0250 (TDD-0490): sdd-append",
-    sddAppend,
-    [LEDGER, `${SPEC}/06_Test-Cases.md`, `${SPEC}/09_delta.md`, ".qfai/evidence/sdd-spec-0001.md"],
-  ],
-  [
-    "TC-0018-0250 (TDD-0491): prototype-not-ui-bearing",
-    ["prototype", "qfai-prototyping", "existing-runtime-contract"],
-    undefined,
-  ],
-  ["TC-0018-0250 (TDD-0492): sdd", ["sdd", "qfai-sdd", "new-capability"], undefined],
-  [
-    "TC-0018-0250 (TDD-0493): sdd-delta",
-    ["sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
-    undefined,
-  ],
-  [
-    "TC-0018-0250 (TDD-0494): discussion",
-    ["discussion", "qfai-discussion", "resolve-unsettled-product-scope"],
-    undefined,
-  ],
-  ["TC-0018-0250 (TDD-0495): verify", ["verify", "qfai-verify", "verify-full"], undefined],
-  ["TC-0018-0250 (TDD-0496): diagnose", ["diagnose", "qfai-implement", "diagnose-only"], undefined],
-  [
-    "TC-0018-0250 (TDD-0497): maintenance",
-    ["maintenance", "qfai-maintain", "non-normative-edit"],
-    undefined,
-  ],
-  ["TC-0018-0250 (TDD-0498): route", ["route", "qfai-run", "route"], undefined],
+const derivations: [string, Middle, string[] | undefined][] = [
+  ["implement", implement, implementRecords],
+  ["regression-fix", ofKind("regression_fix"), implementRecords],
+  ["acceptance", ofKind("acceptance"), atddRecords],
+  ["test-fix", ofKind("test_fix"), [...atddRecords, ...implementRecords]],
+  ["sdd-append", sddAppend, [`${STORY}/03_Example.md`, CONTRACT, DECISIONS, SDD_EVIDENCE]],
+  ["prototype", ofKind("prototype"), undefined],
+  ["sdd", ofKind("sdd"), [DECISIONS, OPEN_QUESTIONS, SDD_EVIDENCE]],
+  ["discussion", ofKind("discussion"), undefined],
+  ["verify", ofKind("verify"), undefined],
+  ["diagnose", ofKind("diagnose"), undefined],
+  ["maintenance", ofKind("maintenance"), undefined],
 ];
 
 for (const [title, stage, recordAreas] of derivations) {
@@ -193,7 +156,7 @@ for (const [title, stage, recordAreas] of derivations) {
   });
 }
 
-// The checked plan a routing result becomes, for the same bounded-change stages.
+// The checked plan a routing result becomes, for the same add-feature stages.
 function checkedPlanDocument() {
   const plan = boundedPlan(...implement);
   const routed = decide(
@@ -216,34 +179,29 @@ function checkedPlanDocument() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Notify the owner when an export fails.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: ["spec-0001"],
-          newCapabilities: [],
+          affectedFlowIds: ["BF-0001"],
+          newStories: [],
           proposedWriteScope: plan.writeScope,
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
     {
-      plans: { "bounded-change": { route: "bounded-change", stages: plan.stages } },
-      specs: { "spec-0001": { lifecycle: "active" } },
+      plans: { "add-feature": { route: "add-feature", stages: plan.stages } },
+      flows: ["BF-0001"],
     },
   );
   return routed.verdict.plan;
 }
 
-it("TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out", () => {
+it("scope digest leaves recordAreas out", () => {
   const implementOrder = issueMiddle(...implement).workOrder;
-  const acceptanceOrder = issueMiddle(
-    "acceptance",
-    "qfai-atdd",
-    "author-acceptance-tests",
-  ).workOrder;
+  const acceptanceOrder = issueMiddle(...ofKind("acceptance")).workOrder;
   const plan = checkedPlanDocument();
 
   expect({
@@ -255,5 +213,14 @@ it("TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out", () => {
     recordAreasDiffer: true,
     digests: [expect.stringMatching(/^[a-f0-9]{64}$/), implementOrder.scope?.digest],
     planHoldsRecordAreas: false,
+  });
+});
+
+it("seeding writes its example and citation, and no criterion", () => {
+  const example = `${STORY}/03_Example.md`;
+  expect(acceptChanging(...sddAppend, [example, CONTRACT, DECISIONS, SDD_EVIDENCE])).toEqual({
+    recordAreas: [example, CONTRACT, DECISIONS, SDD_EVIDENCE],
+    ok: true,
+    reasons: undefined,
   });
 });

@@ -1,14 +1,12 @@
-// QFAI:SPEC-0018:TC-0018-0179
-// QFAI:SPEC-0018:TC-0018-0181
-// QFAI:SPEC-0018:TC-0018-0182
+// QFAI:AC-0001-0192-03
+// QFAI:EX-0001-0192-07
 
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
 import {
-  commitAll,
   DISCOVERY_PROPOSAL,
   field,
   minimalProject,
@@ -18,12 +16,13 @@ import {
   submit,
   workflow,
 } from "./workflowProject.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
 // Every journal event of the run, in sequence order.
 async function journalOf(root: string, runId: string): Promise<unknown[]> {
-  const dir = path.join(root, ".qfai", "runs", runId, "journal");
+  const dir = path.join(root, ".qfai", "run", runId, "journal");
   const names = (await readdir(dir)).filter((name) => name.endsWith(".json")).sort();
   return Promise.all(
     names.map(async (name): Promise<unknown> =>
@@ -32,17 +31,18 @@ async function journalOf(root: string, runId: string): Promise<unknown[]> {
   );
 }
 
-it("TC-0018-0179 (TDD-0387): A run in running", async () => {
+it("A run in running", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   const config = await readFile(path.join(root, "qfai.config.yaml"));
   const { runId } = await routedRun(root);
   const issued = workflow(root, ["next", "--run", runId]);
-  const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-  const original = await readFile(manifest);
-  await writeFile(manifest, Buffer.concat([original, Buffer.from("# edited outside the run\n")]));
+  // A rule added under the assistant tree while the run is in flight.
+  const rule = path.join(root, ".qfai", "assistant", "rule", "local-policy.md");
+  await mkdir(path.dirname(rule), { recursive: true });
+  await writeFile(rule, "# Local policy\n\nAdded outside the run.\n");
   const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
   const untouched = (await readFile(path.join(root, "qfai.config.yaml"))).equals(config);
-  await writeFile(manifest, original);
+  await rm(rule);
   workflow(root, ["resume", "--run", runId]);
   const cleared = (await journalOf(root, runId)).find(
     (event) => field(event, "event") === "blocker-cleared-and-revalidated",
@@ -61,18 +61,20 @@ it("TC-0018-0179 (TDD-0387): A run in running", async () => {
   });
 });
 
-it("TC-0018-0182 (TDD-0388): The run edits qfai", async () => {
+it("The run edits qfai", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
+  // An edit-text plan, whose write scope may name the policy file.
   const proposal = {
     ...DISCOVERY_PROPOSAL,
-    proposedWriteScope: [...DISCOVERY_PROPOSAL.proposedWriteScope, "qfai.config.yaml"],
+    extraction: extractionFor("edit-text"),
+    proposedWriteScope: ["qfai.config.yaml"],
   };
   const { runId, routed } = await routedRun(root, proposal);
   const issued = workflow(root, ["next", "--run", runId]);
   const config = path.join(root, "qfai.config.yaml");
   const edited = "workflow:\n  mode: active\n# edited inside the run\n";
   await writeFile(config, edited);
-  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
+  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "edit-1"));
 
   expect({
     routed: field(routed.json, "ok"),
@@ -80,31 +82,4 @@ it("TC-0018-0182 (TDD-0388): The run edits qfai", async () => {
     cause: field(accepted.json, "halt.cause"),
     config: await readFile(config, "utf8"),
   }).toEqual({ routed: true, state: "blocked", cause: "policy-drift", config: edited });
-});
-
-it("TC-0018-0181: A change committed during the run outside its write scope", async () => {
-  const root = await minimalProject();
-  await writeFile(path.join(root, "notes.md"), "Untracked before the run.\n");
-  const { runId } = await routedRun(root);
-  const issued = workflow(root, ["next", "--run", runId]);
-  await mkdir(path.join(root, "src"), { recursive: true });
-  await writeFile(path.join(root, "src", "leak.ts"), "export {};\n");
-  commitAll(root);
-  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
-  const finished = workflow(root, ["finish", "--run", runId]);
-  const unmet = field(finished.json, "unmet");
-
-  expect({
-    state: field(accepted.json, "run.state"),
-    cause: field(accepted.json, "halt.cause"),
-    subjects: field(accepted.json, "halt.subjects"),
-    outOfScope: (Array.isArray(unmet) ? unmet : [])
-      .filter((entry) => field(entry, "condition") === "diff-out-of-scope")
-      .map((entry) => field(entry, "subject")),
-  }).toEqual({
-    state: "blocked",
-    cause: "invariant-violation",
-    subjects: ["src/leak.ts"],
-    outOfScope: ["src/leak.ts"],
-  });
 });

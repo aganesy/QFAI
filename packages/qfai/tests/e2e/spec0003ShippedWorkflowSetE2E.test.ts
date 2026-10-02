@@ -228,7 +228,7 @@ async function scratchRepo(trees: ReadonlyArray<Record<string, string>>): Promis
   return repo;
 }
 
-// QFAI:SPEC-0003:US-0003-0021
+// QFAI:BF-0002
 describe(
   "E2E: an adopter receives a hardened validate workflow, not merely a packaged one (US-0003-0021)",
   { timeout: 120000 },
@@ -357,7 +357,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0022
+// QFAI:BF-0002
 describe(
   "E2E: every action an adopter is handed is pinned, and readable without a trailer (US-0003-0022)",
   { timeout: 120000 },
@@ -424,7 +424,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0023
+// QFAI:BF-0002
 describe(
   "E2E: the layer lanes arrive declared, inert and credential-free (US-0003-0023)",
   { timeout: 120000 },
@@ -519,7 +519,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0024
+// QFAI:BF-0002
 describe(
   "E2E: change detection selects lanes without a third party, and the verdict is green on skip (US-0003-0024)",
   { timeout: 120000 },
@@ -645,7 +645,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0025
+// QFAI:BF-0002
 describe(
   "E2E: the runner an adopter gets is a variable with a public default (US-0003-0025)",
   { timeout: 120000 },
@@ -690,7 +690,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0026
+// QFAI:BF-0002
 describe(
   "E2E: Node fails open and the package manager fails closed, on the delivered file (US-0003-0026)",
   { timeout: 120000 },
@@ -787,7 +787,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0027
+// QFAI:BF-0002
 describe(
   "E2E: init writes only what QFAI ships and never touches what the adopter wrote (US-0003-0027)",
   { timeout: 120000 },
@@ -842,7 +842,7 @@ describe(
   },
 );
 
-// QFAI:SPEC-0003:US-0003-0028
+// QFAI:BF-0002
 describe(
   "E2E: the semantic values the gate pins are the ones the adopter actually receives (US-0003-0028)",
   { timeout: 120000 },

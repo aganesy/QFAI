@@ -1,49 +1,26 @@
-// QFAI:SPEC-0018:TC-0018-0047
+// QFAI:EX-0001-0185-29
 // Fault seeds: FAULT-012, FAULT-013
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "bounded-sdd-delta",
-      stageKind: "sdd_delta",
-      skill: "qfai-sdd",
-      operation: "delta-or-applicability-check",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-acceptance",
-      stageKind: "acceptance",
-      skill: "qfai-atdd",
-      operation: "author-acceptance-tests",
-      when: "acceptance_obligations_unmet",
-    },
-    {
-      stageInstanceId: "bounded-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-      when: "always",
-    },
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 const facts = { acceptanceObligationsUnmet: true };
 const deltaAccepted = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
 function acceptRed(red: NonNullable<AcceptResult["red"]>) {
@@ -51,7 +28,7 @@ function acceptRed(red: NonNullable<AcceptResult["red"]>) {
     {
       run: { id: "run-red", state: "ready", sequence: 6 },
       plan,
-      specBinding,
+      flowBinding,
       acceptedStages: deltaAccepted,
     },
     { operation: "next" },
@@ -61,7 +38,7 @@ function acceptRed(red: NonNullable<AcceptResult["red"]>) {
   const run = issued.verdict.run;
   if (!workOrder || !run) return { accepted: issued, next: issued };
   const accepted = decide(
-    { run, plan, specBinding, acceptedStages: deltaAccepted, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, acceptedStages: deltaAccepted, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -81,7 +58,7 @@ function acceptRed(red: NonNullable<AcceptResult["red"]>) {
     {
       run: accepted.verdict.run ?? run,
       plan,
-      specBinding,
+      flowBinding,
       acceptedStages: [
         ...deltaAccepted,
         { stageInstanceId: "bounded-acceptance", stageKind: "acceptance", outcome: "accepted" },
@@ -112,32 +89,31 @@ function redNotAssertion() {
   };
 }
 
-it("TC-0018-0047 (TDD-0059): An acceptance result with testObservation", () => {
+it("An acceptance result with testObservation", () => {
   const { accepted, next } = acceptRed({ testId: "TC-0007-0003", failureKind: "assertion" });
   expect({
     state: accepted.verdict.run?.state,
     nextStage: next.verdict.workOrder?.stageKind,
-    nextSkill: next.verdict.workOrder?.executor?.skill,
-  }).toEqual({ state: "ready", nextStage: "implement", nextSkill: "qfai-implement" });
+    nextSteps: next.verdict.workOrder?.steps,
+  }).toEqual({ state: "ready", nextStage: "implement", nextSteps: kindSteps("implement") });
 });
 
-// QFAI:SPEC-0018:TC-0018-0048
-it("TC-0018-0048 (TDD-0060): collection", () => {
+it("collection", () => {
   const { accepted } = acceptRed({ testId: "TC-0007-0003", failureKind: "collection" });
   expect(refusal(accepted)).toEqual(redNotAssertion());
 });
 
-it("TC-0018-0048 (TDD-0061): import", () => {
+it("import", () => {
   const { accepted } = acceptRed({ testId: "TC-0007-0003", failureKind: "import" });
   expect(refusal(accepted)).toEqual(redNotAssertion());
 });
 
-it("TC-0018-0048 (TDD-0062): startup", () => {
+it("startup", () => {
   const { accepted } = acceptRed({ testId: "TC-0007-0003", failureKind: "startup" });
   expect(refusal(accepted)).toEqual(redNotAssertion());
 });
 
-it("TC-0018-0048 (TDD-0063): timeout", () => {
+it("timeout", () => {
   const { accepted } = acceptRed({ testId: "TC-0007-0003", failureKind: "timeout" });
   expect(refusal(accepted)).toEqual(redNotAssertion());
 });

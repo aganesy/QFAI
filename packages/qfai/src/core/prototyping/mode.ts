@@ -42,9 +42,7 @@ export type PrototypingMode = "convergence" | "exploration";
  */
 export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
   "QFAI-CRIT-008", // loop not completed across viewports
-  "QFAI-DCON-030", // design contract drift (DESIGN.md / lock)
-  "QFAI-DCON-031", // design contract drift (paired lock value)
-  "QFAI-DCON-032", // design contract drift (paired token surface)
+  "QFAI-DCON-030", // root DESIGN.md missing
 ] as const;
 
 /**
@@ -108,9 +106,9 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-PROT-006", // iterations.length exceeds MAX_ITERATIONS
   "QFAI-PROT-007", // acceptedIterationIndex === iterations.length - 1
   // validators/prototyping/** — linkage, paths, completion certificate
-  "QFAI-PROT-008", // specsCovered[] id format / missing spec
+  "QFAI-PROT-008", // uiContractsCovered must resolve to current UI contracts
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
-  "QFAI-PROT-011", // frozenSurfaceUnion names a spec that no longer resolves
+  "QFAI-PROT-011", // frozenSurfaceUnion names a UI contract that no longer resolves
   "QFAI-PROT-311", // delegation map: entries must name a role the skill declares
   "QFAI-PROT-335", // completion certificate: required evidence
   "QFAI-PROT-336", // completion certificate: completion claimed without seal
@@ -136,9 +134,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
   // validators/designContractReadiness.ts — non-drift readiness gates
-  "QFAI-DCON-001",
-  "QFAI-DCON-005",
-  "QFAI-DCON-009",
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DCON-033",
@@ -159,9 +154,7 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
   // validators/agentDefinition.ts — statically attributable agent gates
-  "QFAI-AGENT-004",
   "QFAI-AGENT-005",
-  "QFAI-AGENT-006",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
   "QFAI-AGENT-009",
@@ -170,7 +163,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-AGENT-012",
   "QFAI-AGENT-013",
   // Errors since the version-keyed severity ladder was retired.
-  "QFAI-AGENT-014",
   "QFAI-AGENT-015",
   "QFAI-AGENT-016",
   "QFAI-AGENT-017",
@@ -179,18 +171,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CONTRACT-042",
   // validators/contracts.ts — a UI contract that does not parse
   "QFAI-CONTRACT-021",
-  // validators/bpApDb.ts
-  "QFAI-BPAP-001",
-  "QFAI-BPAP-002",
-  "QFAI-BPAP-003",
-  "QFAI-BPAP-004",
-  "QFAI-BPAP-005",
-  "QFAI-BPAP-006",
-  "QFAI-BPAP-007",
-  "QFAI-BPAP-008",
-  "QFAI-BPAP-009",
-  "QFAI-BPAP-010",
-  "QFAI-BPAP-011",
   // validators/researchSummary.ts
   "QFAI-RESEARCH-001",
   "QFAI-RESEARCH-003",

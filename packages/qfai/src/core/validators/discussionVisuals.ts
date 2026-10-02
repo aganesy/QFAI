@@ -10,8 +10,10 @@ const SCREEN_MOCK_HEADING_RE =
   /^\s*#{1,6}\s*screen mock(?:\s*[-\u2014]+\s*fallback)?\s*\(html\+css\)\s*$/im;
 const HTML_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*html\b/im;
 const CSS_FENCE_RE = /^\s*(?:`{3,}|~{3,})\s*css\b/im;
+// The last three alternatives are the Japanese spellings of HTML/CSS mock,
+// HTML+CSS mock and screen mock, written as escapes.
 const MOCK_REFERENCE_RE =
-  /\b(?:html\s*\+\s*css\s+(?:mock|screen mock)|html\/css\s+mock|screen mock|fallback mock|visual mock)\b|HTML\/CSSモック|HTML\+CSSモック|画面モック/i;
+  /\b(?:html\s*\+\s*css\s+(?:mock|screen mock)|html\/css\s+mock|screen mock|fallback mock|visual mock)\b|HTML\/CSS\u30E2\u30C3\u30AF|HTML\+CSS\u30E2\u30C3\u30AF|\u753B\u9762\u30E2\u30C3\u30AF/i;
 
 export async function validateDiscussionVisuals(root: string): Promise<Issue[]> {
   const discussionRoot = path.join(root, ".qfai", "discussion");
@@ -27,13 +29,13 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-VIS-001",
-        "02_Inception-Deck.md に Mermaid 図が見つかりません。",
+        "No Mermaid diagram was found in 02_Inception-Deck.md.",
         "warning",
         inceptionPath,
         "discussionVisuals.inceptionMermaid",
         undefined,
         "change",
-        "02_Inception-Deck.md の `Show the Solution` などに ` ```mermaid ` 図を少なくとも1つ追加してください。",
+        "Add at least one ` ```mermaid ` diagram to 02_Inception-Deck.md, for example under `Show the Solution`.",
       ),
     );
   }
@@ -53,13 +55,13 @@ export async function validateDiscussionVisuals(root: string): Promise<Issue[]> 
     issues.push(
       issue(
         "QFAI-VIS-002",
-        "03_Story-Workshop.md に HTML+CSS モックの参照がありますが、オプションのフォールバックアーティファクトがありません。HTML+CSS モックは canonical discussion フローでは必須ではなく、明示的に参照された場合にのみ関連します。",
+        "03_Story-Workshop.md references an HTML+CSS mock but has no optional fallback artifact. An HTML+CSS mock is not required by the canonical discussion flow and matters only when it is explicitly referenced.",
         "info",
         storyWorkshopPath,
         "discussionVisuals.storyWorkshopMock",
         undefined,
         "change",
-        "Story Workshop が HTML+CSS モックを参照している場合、フォールバックアーティファクトを追加するか参照を削除してください。サイドカー（uiux/）が UI 定義の主要ソースです。",
+        "If the Story Workshop references an HTML+CSS mock, add the fallback artifact or remove the reference. The sidecar (uiux/) is the primary source of the UI definition.",
       ),
     );
   }
