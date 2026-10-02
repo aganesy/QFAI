@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0195-04
+// QFAI:EX-0001-0188-04
 
 import { expect, it } from "vitest";
 
@@ -76,7 +76,7 @@ for (const [title, optionId, state, events] of effects) {
   });
 }
 
-// QFAI:EX-0001-0195-15
+// QFAI:EX-0001-0188-15
 it("A replan answer, then next", () => {
   const replanned = answer(["narrow"]).verdict.run;
   if (!replanned) throw new Error("the replan answer returns the run");

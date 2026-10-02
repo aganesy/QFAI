@@ -3,12 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Optional local prototype server
+  # AC-0001-0131-01
+  Scenario: `iterate --auto-serve` opt-in flag with foreign-process protection
+    Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
+    When the loop runs,
+    Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
+    And when invoked WITH `--auto-serve`, iterate MUST call the server runner once, invoke the teardown it returns at cycle end and on SIGINT, continue when the runner reports a recovered prior owner, and exit 2 reporting the runner's reason when the runner refuses.
+    And the default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
 
-# AC-0001-0131-01
-# Parent: US-0001-0131
-Scenario: `--*-shadow*:` declaration strip (OQ-0104 Option B)
-  Given a fixture with `--shadow-sm: 0 1px 2px rgba(15,23,42,0.05);` AND a parallel `--card-shadow: 0 4px 8px rgba(0,0,0,0.1);`,
-  When the input filter into `scanColors` runs,
-  Then the broader `--*-shadow*:` pattern MUST strip both declarations before color scanning and `designMdViolations[]` MUST NOT contain entries naming those rgba values.
+  # AC-0001-0131-02
+  Scenario: A failed `--auto-serve` teardown is reported and leaves the exit code alone
+    Given `qfai prototyping iterate --auto-serve` whose server runner returns a teardown that rejects
+    When the cycle ends and iterate invokes that teardown
+    Then iterate prints a line on stdout naming the `--auto-serve` teardown as what failed, with the rejection reason
+    And iterate returns the exit code the cycle would have returned had the teardown resolved
 ```

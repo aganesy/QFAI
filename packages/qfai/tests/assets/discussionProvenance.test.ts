@@ -11,7 +11,7 @@ const read = (tree: string, file: string): Promise<string> =>
 describe("discussion IDs remain provenance, not story-tree IDs", () => {
   for (const tree of trees) {
     it(tree + ": SDD records selected source and disposition in its own records", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = (await read(tree, "assistant/step/sdd-triage/STEP.md")).replace(/\s+/g, " ");
       const decomposition = await read(
         tree,
         "assistant/skill/qfai-sdd/references/requirements-decomposition.md",

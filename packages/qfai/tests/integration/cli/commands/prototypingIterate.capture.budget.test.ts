@@ -11,7 +11,7 @@
  * the comparison semantics.
  */
 
-// QFAI:EX-0001-0134-01
+// QFAI:EX-0001-0130-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -98,7 +98,7 @@ async function seedMinimal(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");

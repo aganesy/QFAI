@@ -1,18 +1,12 @@
-# US-0001-0206: Resolve only the unsettled scope as a stage of a run
+# US-0001-0206: Seed a diagnosed missing example under an existing criterion
 
 ## User Story
 
-- Goal: As an operator whose request needs a discussion before it can be
-  planned, I want the discussion stage of a run to ask only about what the run
-  has not settled, so that I am not asked again what I already answered.
-- Non-goals: how the run continues after the discussion stage, which the plan
-  decides; grilling inside a run in general; the shared stage-skill rules every
-  skill follows.
-- Notes: discussion-20260923171450572#REQ-0055, #REQ-0051 and #REQ-0052.
+As an operator fixing a bug the stories already describe in general but no example states, I want the case the diagnosis found to be added as one example under the criterion it matched, cited by the rule that enforces that criterion's examples, so that the defect is fixed against the existing specification without changing a criterion or a rule statement.
 
-## Source Provenance
+## Non-goals
 
-- Story block: US-0010-0013, which `main` added to spec-0010 (archived pre-merge
-  pack of spec-0010; main's
-  text at `b5d357c14:.qfai/specs/spec-0010/02_User-stories.md`).
-  `decisions.md#DEC-0745` records the carry.
+- Changing a story, a criterion or a rule statement
+- Seeding when an example already states the case, which needs no SDD stage
+- Writing the test, which a later stage does
+- The Change request row every SDD-kind stage of a run appends, which US-0001-0207 states

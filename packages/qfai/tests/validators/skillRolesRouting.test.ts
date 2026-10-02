@@ -62,13 +62,18 @@ type Fixture = {
   routingProfile?: string;
   route?: QfaiRoutingEntry;
   rawSkill?: string;
+  /** Route a step under the step layer instead of a skill. */
+  step?: boolean;
 };
 
 async function runFixture(fixture: Fixture): Promise<Issue[]> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-roles-"));
   try {
     const agentDir = path.join(root, ".qfai", "assistant", "agent");
-    const skillDir = path.join(root, ".qfai", "assistant", "skill", "demo-skill");
+    const unit = fixture.step ? "demo-step" : "demo-skill";
+    const skillDir = fixture.step
+      ? path.join(root, ".qfai", "assistant", "step", unit)
+      : path.join(root, ".qfai", "assistant", "skill", unit);
     await mkdir(agentDir, { recursive: true });
     await mkdir(skillDir, { recursive: true });
     for (const [name, kind] of AGENTS) {
@@ -84,16 +89,16 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
       fixture.rawSkill ??
       [
         "---",
-        "name: demo-skill",
+        `name: ${unit}`,
         ...rolesLine,
         ...(fixture.routingProfile ? [`routing-profile: ${fixture.routingProfile}`] : []),
         "---",
         "",
         "# Demo",
       ].join("\n");
-    await writeFile(path.join(skillDir, "SKILL.md"), skill);
+    await writeFile(path.join(skillDir, fixture.step ? "STEP.md" : "SKILL.md"), skill);
     const route = fixture.route ?? {
-      skill: "demo-skill",
+      ...(fixture.step ? { step: unit } : { skill: unit }),
       phases: [
         {
           id: "review",
@@ -115,7 +120,7 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
       },
     });
     return issues.filter(
-      (issue) => issue.file?.includes("demo-skill") || issue.file === "qfai.config.yaml",
+      (issue) => issue.file?.includes(unit) || issue.file === "qfai.config.yaml",
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -227,5 +232,53 @@ describe("skill roles against effective routing", () => {
       routingProfile: "demo-profile",
     });
     expect(issues.filter((issue) => issue.code === "QFAI-AGENT-015")).toEqual([]);
+  });
+});
+
+describe("step roles against effective routing", () => {
+  it("accepts a step whose STEP.md declares every routed agent", async () => {
+    expect(
+      await runFixture({
+        step: true,
+        roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+        routingProfile: "demo-profile",
+      }),
+    ).toEqual([]);
+  });
+
+  it("reads a routed step's roles from its STEP.md", async () => {
+    const issues = await runFixture({
+      step: true,
+      roles: ["delivery-planner"],
+      routingProfile: "demo-profile",
+    });
+    expect(issues.filter((issue) => issue.code === "QFAI-AGENT-019")).toEqual([
+      expect.objectContaining({
+        file: ".qfai/assistant/step/demo-step/STEP.md",
+        severity: "error",
+      }),
+      expect.objectContaining({ severity: "warning" }),
+    ]);
+  });
+
+  it("reports a step that declares a routing-profile but is not routed", async () => {
+    const issues = await runFixture({
+      step: true,
+      roles: ["completion-reviewer"],
+      routingProfile: "demo-profile",
+      route: { step: "demo-step", phases: [], review_profile: "demo-profile" },
+    });
+    expect(issues.filter((issue) => issue.code === "QFAI-AGENT-017")).toEqual([
+      expect.objectContaining({ file: ".qfai/assistant/step/demo-step/STEP.md" }),
+    ]);
+  });
+
+  it("holds a step's routing-profile against the route keyed by its name", async () => {
+    const issues = await runFixture({
+      step: true,
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      routingProfile: "different-profile",
+    });
+    expect(issues.some((issue) => issue.code === "QFAI-AGENT-018")).toBe(true);
   });
 });

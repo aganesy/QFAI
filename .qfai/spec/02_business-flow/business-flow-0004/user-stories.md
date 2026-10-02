@@ -16,4 +16,5 @@
 | US-0004-0010 | Rewrite the test annotations to the new IDs                | `user-story-0004-0010/` |
 | US-0004-0011 | Repoint the host links and the ignore rules                | `user-story-0004-0011/` |
 | US-0004-0012 | Migrate a project with the skill                           | `user-story-0004-0012/` |
-| US-0004-0041 | A migrated project runs the free-text entry                | `user-story-0004-0041/` |
+| US-0004-0013 | A migrated project runs the free-text entry                | `user-story-0004-0013/` |
+| US-0004-0042 | List the project files that still name a 1.x path          | `user-story-0004-0042/` |

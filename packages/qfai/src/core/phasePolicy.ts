@@ -56,12 +56,12 @@ export function buildCiProfileIssue(
     severity: "warning",
     category: "change",
     message:
-      `CI で full-scan ではない profile "${profile}" を実行しています。stage gate としては有効ですが、` +
-      `完了宣言の根拠にはなりません（full-scan は ${allowed}）。`,
+      `CI is running profile "${profile}", which is not a full-scan. It is valid as a stage gate, ` +
+      `but it is not grounds for declaring completion (full-scan profiles: ${allowed}).`,
     rule: "VALIDATE-017",
     suggested_action:
-      `stage gate としての実行であればそのままで構いません。完了を宣言する前に ` +
-      `--profile full（または --profile 指定なし）で full-scan を実行してください。CI で full-scan と` +
-      `みなされる profile: ${allowed}。`,
+      `If this run is a stage gate, no action is needed. Before declaring completion, ` +
+      `run a full-scan with --profile full (or with no --profile). Profiles CI treats ` +
+      `as a full-scan: ${allowed}.`,
   };
 }

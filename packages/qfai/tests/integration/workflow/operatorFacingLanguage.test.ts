@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0201-05
-// QFAI:EX-0001-0201-17
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0194-17
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -12,7 +12,6 @@ import {
   listSourceFiles,
   relativeToPosix,
 } from "../../helpers/japaneseMessageScan.js";
-import { SRC_JAPANESE_ALLOWLIST } from "../../unit/cliMessageLanguage.allowlist.js";
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "src");
 
@@ -32,8 +31,5 @@ it("Run the CLI message language check", async () => {
     ),
   );
 
-  expect({
-    japanese: japanese.reduce((sum, count) => sum + count, 0),
-    allowlisted: files.filter((file) => file in SRC_JAPANESE_ALLOWLIST),
-  }).toEqual({ japanese: 0, allowlisted: [] });
+  expect(japanese.reduce((sum, count) => sum + count, 0)).toBe(0);
 });

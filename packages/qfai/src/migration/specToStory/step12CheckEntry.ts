@@ -1,19 +1,16 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  extractManagedBlock,
-  planEntryDirective,
-  SKILL_INTEGRATION_DIRS,
-} from "../../cli/commands/init.js";
-import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
+import { extractManagedBlock } from "../../core/init/rootGitignore.js";
 import { QFAI_RUN_STATE_IGNORE } from "../../core/gitignore.js";
 import { allPlanRefusals, type PlanRefusal } from "../../core/workflow/plans.js";
 import { isRecord } from "../../core/workflow/parse.js";
 import { EVIDENCE_DIR, reincludesEvidence, trackedEvidence } from "./evidenceIndex.js";
 import type { MigrationContext, MigrationStep } from "./harness.js";
+import { scanOldPaths } from "./step12OldPaths.js";
 import { linksToSkill } from "./step11InstallEntry.js";
 
 const RUN_SKILL = "qfai-run";
@@ -28,14 +25,8 @@ function refusalItem(refusal: PlanRefusal): string {
   switch (refusal.reason) {
     case "reviewer-missing":
       return `reviewer-missing: qfai.config.yaml: the \`routing:\` override for \`${skill}\` drops \`${detail}\`, which the package's default routing requires`;
-    case "skill-missing":
-      return `contract-undeclared: ${skillPath(skill)}: the ${refusal.route} plan names this skill and it is not installed`;
-    case "operations-pair-omitted":
-      return `contract-undeclared: ${skillPath(skill, "references/orchestrated-mode.md")}: the Operations table of \`${skill}\` lacks \`${detail}\`, which the ${refusal.route} plan dispatches to it`;
-    case "operations-table-missing":
-    case "operations-first-column":
-    case "operations-cell-not-id":
-      return `contract-undeclared: ${skillPath(skill, "references/orchestrated-mode.md")}: the Operations table of \`${skill}\` cannot be read (${refusal.reason})`;
+    case "step-missing":
+      return `contract-undeclared: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
     default:
       return `contract-undeclared: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
   }
@@ -49,19 +40,6 @@ async function modeItems(context: MigrationContext): Promise<string[]> {
     ? `workflow.mode is ${JSON.stringify(workflow.mode)}`
     : "workflow is not a mapping";
   return [`invalid-mode: qfai.config.yaml: ${value}, not active, shadow or off`];
-}
-
-async function entryDirectiveItems(context: MigrationContext): Promise<string[]> {
-  const items: string[] = [];
-  for (const name of AGENT_ENTRY_POINT_FILES) {
-    const entry = await planEntryDirective(context.root, name);
-    if (entry.kind === "current") continue;
-    let reason = "it carries no operative entry directive";
-    if (entry.kind === "create") reason = "the file does not exist";
-    if (entry.kind === "refused") reason += `, and step 11 cannot add one. ${entry.reason}`;
-    items.push(`entry-directive: ${name}: ${reason}`);
-  }
-  return items;
 }
 
 async function gitignoreItems(context: MigrationContext): Promise<string[]> {
@@ -125,24 +103,29 @@ async function runLinkItems(context: MigrationContext): Promise<string[]> {
 
 /**
  * Makes the project checks `npx qfai workflow start` makes before it creates a
- * run, checks what step 11 installs, and checks that git keeps `.qfai/evidence/`
- * out of the index as step 10 leaves it. It writes nothing and repairs nothing.
+ * run, checks what step 11 installs, checks that git keeps `.qfai/evidence/`
+ * out of the index as step 10 leaves it, and lists each line of a tracked
+ * project file that still names a 1.x path. It writes nothing and repairs
+ * nothing.
  */
 export const step12: MigrationStep = {
   number: 12,
   writeSet: [],
-  sections: ["For a person"],
+  sections: ["Files scanned", "For a person"],
   async plan(context) {
+    // Read git first: a git failure ends the step before any other check reads the index.
+    const scan = await scanOldPaths(context);
     const refusals = await allPlanRefusals(context.root, context.config);
     return {
       operations: [],
+      filesScanned: [scan.scanned],
       forAPerson: [
         ...refusals.map(refusalItem),
         ...(await modeItems(context)),
-        ...(await entryDirectiveItems(context)),
         ...(await gitignoreItems(context)),
         ...(await runLinkItems(context)),
         ...trackedEvidenceItems(context),
+        ...scan.items,
       ],
     };
   },

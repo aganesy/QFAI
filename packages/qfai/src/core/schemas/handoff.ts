@@ -12,9 +12,7 @@
  *   - productScope?
  * All fields are optional; `additionalProperties: true` so skills MAY
  * attach per-skill data under custom keys without violating the
- * contract. Legacy ad-hoc files (e.g. `session-handoff.yaml`) are
- * accepted during the deprecation window with a
- * `D-HANDOFF-LEGACY-FORMAT` warning emitted by the reader.
+ * contract.
  */
 
 import { parse as parseYaml } from "yaml";
@@ -49,14 +47,6 @@ export type HandoffValidationIssue = {
   message: string;
   field?: string;
 };
-
-/**
- * Diagnostic code surfaced when a legacy ad-hoc file (e.g.
- * `session-handoff.yaml`) is read during the deprecation window. NOT
- * an error: the reader returns the parsed payload AND attaches this
- * warning so callers can route through `qfai handoff upgrade`.
- */
-export const HANDOFF_LEGACY_FORMAT_CODE = "D-HANDOFF-LEGACY-FORMAT" as const;
 
 /**
  * Schema-drift code emitted by the SSOT-sync Pair IV reviewer-gate
@@ -100,10 +90,8 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
 
 /**
  * Parse a YAML OR JSON handoff payload into a `Record<string, unknown>`
- * view. The canonical handoff format is YAML (per `references/handoff.md`
- * and the shape written by `qfai handoff upgrade`); JSON is accepted
- * because JSON is a strict subset of YAML and some legacy tooling
- * emitted JSON-formatted handoffs during the deprecation window.
+ * view. The canonical handoff format is YAML (per `references/handoff.md`);
+ * JSON parses too, because JSON is a subset of YAML.
  *
  * The parser is intentionally permissive on input shape (both formats
  * reduce to a plain object). It does NOT enforce the schema — that is
@@ -129,13 +117,3 @@ export function parseHandoff(text: string): Record<string, unknown> | null {
   // safe-after-guard pattern, not a bare assertion on user data.
   return parsed as Record<string, unknown>;
 }
-
-/**
- * Back-compat alias for the pre-YAML-support function name. Existing
- * call sites (`core/saasPackage/profile.ts`) keep working without
- * surface-wide rename.
- *
- * @deprecated Prefer {@link parseHandoff}; this alias is kept for
- *   internal consumers and may be removed in a future minor.
- */
-export const parseHandoffJson = parseHandoff;

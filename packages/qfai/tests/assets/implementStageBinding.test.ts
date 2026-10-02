@@ -19,7 +19,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
   });
 
   it("requires a fresh story obligation and the project command contract", async () => {
-    const skill = await read(tree, "assistant/skill/qfai-implement/SKILL.md");
+    const skill = await read(tree, "assistant/step/implement-tdd/STEP.md");
     expect(skill).toContain("qfai validate --profile tdd --flow BF-NNNN");
     expect(skill).toContain("generatedAt");
     expect(skill).toContain("no earlier than this run start");
@@ -39,7 +39,7 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
 
   it("binds stage steering to the shared rule and keeps upstream changes governed", async () => {
     const [skill, workflow, baseline] = await Promise.all([
-      read(tree, "assistant/skill/qfai-implement/SKILL.md"),
+      read(tree, "assistant/step/implement-tdd/STEP.md"),
       read(tree, "assistant/rule/workflow.md"),
       read(tree, "assistant/rule/shared-skill-operating-baseline.md"),
     ]);

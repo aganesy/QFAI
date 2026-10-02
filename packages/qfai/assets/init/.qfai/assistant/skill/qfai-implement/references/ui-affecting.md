@@ -2,7 +2,9 @@
 
 ## Inputs
 
-Resolve paths.contractsDir from qfai.config.yaml. Read the optional UI surface paths section of its structure.md, every UI contract under its ui/ directory, the root DESIGN.md if present, and the design files under its design/ directory. Read the flow, story, acceptance criterion, and example that the implementation changes.
+Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, and the root DESIGN.md if present for the brand tokens.
+When a prototyping loop ran in this checkout, read its handoff at .qfai/evidence/prototyping/prototyping.json#handoff: the final prototype, its procurement and the implementation notes.
+Read the flow, story, acceptance criterion, and example that the implementation changes.
 
 ## Routing
 
@@ -13,12 +15,12 @@ component is UI affecting when a rendered surface consumes it.
 
 Match declared paths after normalizing separators to forward slashes. A pattern with two stars spans zero or more path
 segments; one star stays in one segment; a question mark matches one character. Matching is case-sensitive, including
-dot-prefixed segments. If the optional path section is absent or the path relationship is uncertain, use the observed
+dot-prefixed segments. If `uiux.surfacePaths` is absent or the path relationship is uncertain, use the observed
 behavior and UI contracts; route an unresolved case as UI affecting and record the uncertainty for
 product-surface-reviewer. Do not infer that a change has no UI effect from its directory name alone.
 
 ## Evidence
 
-For a UI affecting example, record the screen state, action, expected and observed result, and a capture or rendered artifact under .qfai/evidence/. The artifact must identify the source revision. Request product-surface-reviewer on the same example, its UI contracts, and its captured state. The review verdict and audited evidence hash refer to that revision.
+For a UI affecting example, record the screen state, action, expected and observed result, and a capture or rendered artifact under .qfai/evidence/. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict and audited evidence hash refer to that revision.
 
 If the implementation or capture changes after the verdict, refresh the capture and review. A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.

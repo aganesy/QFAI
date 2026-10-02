@@ -3,7 +3,6 @@ import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
-import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import {
@@ -19,7 +18,7 @@ import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
 import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
-import { error, info, warn } from "./lib/logger.js";
+import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
 import { resolveToolVersion } from "../core/version.js";
 
@@ -27,8 +26,8 @@ import { resolveToolVersion } from "../core/version.js";
  * Exit code for a command name nothing recognizes.
  *
  * Deliberately not `options.invalidExitCode`. That field carries the
- * CLI-arg-error code the exit-code table in `.qfai/contracts/cli/qfai-init.md`
- * reserves — 2, for an unknown flag or a malformed value — and the parser never
+ * CLI-arg-error code the CLI's exit-code rule reserves — 2, for an unknown
+ * flag or a malformed value — and the parser never
  * sets `invalid` for an unrecognized command, so borrowing it here would file a
  * mistyped command under a row the contract wrote for something else. 1 keeps
  * the two distinguishable while still refusing to report success. A
@@ -56,7 +55,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "audit",
   "sdd",
   "atdd",
-  "handoff",
   "discussion",
   "prototyping",
   "workflow",
@@ -96,9 +94,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   }
 
   if (!command || options.help) {
-    // 拒否理由は stderr、usage は stdout。呼び出し側が stdout を捨てても
-    // 「どのトークンが拒否されたか」は必ず手元に残る。`--format json` の
-    // 経路でも理由は stderr なので、stdout の JSON は汚れない。
+    // The rejection reason goes to stderr and the usage to stdout. Even if a
+    // caller discards stdout, it still learns which token was rejected. The
+    // reason is on stderr on the `--format json` path too, so the JSON on
+    // stdout stays clean.
     //
     // The flag list is more specific than the stored reason when several
     // unknown flags arrived together, so it is preferred where it exists.
@@ -194,8 +193,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-          // `never` はここで捨てない: 捨てると「未指定」と区別できず、
-          // config の `validation.failOn` を下向きに上書きできなくなる。
+          // Do not drop `never` here: dropped, it cannot be told from
+          // "not given", and could no longer override the config's
+          // `validation.failOn` downward.
           ...(options.failOn ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
           ...(options.doctorSkillProfile !== undefined
@@ -225,7 +225,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "audit":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAuditLog({
           root: resolvedRoot,
@@ -244,8 +244,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           process.exitCode = options.invalidExitCode;
           return;
         }
-        // `--format json` の stdout は machine-readable として README が案内
-        // している。root 探索の警告は stderr へ送り、JSON 本体だけを流す。
+        // The README documents `--format json` stdout as machine-readable.
+        // Send root-discovery warnings to stderr so only the JSON body is
+        // written to stdout.
         const resolvedRoot = await resolveRoot(options, options.sddFormat === "json");
         process.exitCode = await runSddPreflightCommand({
           root: resolvedRoot,
@@ -257,7 +258,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "atdd":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAtddScaffold({
           root: resolvedRoot,
@@ -267,33 +268,11 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
-    case "handoff":
-      {
-        // Only `upgrade` is supported today; parseArgs already
-        // markInvalid()s a missing / unrecognized action, so we land
-        // here with `upgrade` selected.
-        if (!options.handoffLegacyFile) {
-          error("qfai handoff upgrade: <legacy-file> is required.");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        const resolvedRoot = await resolveRoot(options);
-        process.exitCode = await runHandoffUpgrade({
-          root: resolvedRoot,
-          legacyFile: options.handoffLegacyFile,
-          // The canonical `.qfai/handoff.yaml` is a consumed SSOT:
-          // `--force` is required to overwrite an existing one, and
-          // `--dry-run` must preview instead of writing.
-          force: options.force,
-          dryRun: options.dryRun,
-        });
-      }
-      return;
     case "discussion":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
-        // ここでは required な `action` を narrow するためだけに読む。
+        // parseArgs already rejected a missing or invalid subcommand
+        // (invalidReason). It is read here only to narrow the required
+        // `action`.
         const discussionAction = options.discussionAction;
         if (!discussionAction) {
           return;
@@ -314,7 +293,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "prototyping":
       {
-        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
         if (options.prototypingAction === "certify") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingCertify({
@@ -347,7 +326,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
             rootExplicit: true,
             format: options.doctorFormat,
             ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            // `never` は doctor 側の明示的なオプトアウトとして渡す。
+            // Pass `never` through as doctor's explicit opt-out.
             ...(options.failOn ? { failOn: options.failOn } : {}),
             profile: "prototyping",
             ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
@@ -399,9 +378,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
 
     default:
-      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
-      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
-      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
+      // Normally unreachable: an unknown command name is rejected before the
+      // help branch. Kept as a backstop for when KNOWN_COMMANDS drifts from
+      // this switch; failing with a usage error is safer than passing through
+      // with exit 0.
       error(`Unknown command: ${command}`);
       info(usage());
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
@@ -449,12 +429,11 @@ Commands:
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
   audit log [filters]          List the decision log under .qfai/evidence/decision/ (--scope/--operator/--clause + --format table|json)
-  handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml (CLI-HANDOFF)
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
-  prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
+  prototyping preflight        Diagnose prototyping preconditions (spec/UI contracts/DESIGN.md/roles/browser/targetUrl)
   prototyping iterate          Commit one cycle of the single-thread evolution loop
   prototyping certify [--check]         Generate / verify completion-certificate.json
                                         [--scope <saas-package|full>] issue a scope-limited certificate
@@ -476,7 +455,6 @@ Options:
                   so your own command / prompt / skill files survive; a symlink has no content of
                   its own, so one you published under a retired QFAI skill name is deleted (its
                   target .qfai/assistant/skill/<id>/ stays, so you can re-link it).
-  --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
   --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
                   to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
                   refused with exit 2). A cycle 0 that resets the loop, with or without it,
@@ -485,7 +463,7 @@ Options:
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
                               (legacy .qfai/assistant/{instructions,steering}/ -> rule/ skill/ agent/ prompt/)
-  --dry-run       init / doctor / handoff upgrade / prototyping iterate|rescope: show what would change without writing anything
+  --dry-run       init / doctor / prototyping iterate|rescope: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
@@ -511,7 +489,7 @@ Options:
   --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; Playwright is imported dynamically)
   --auto-serve                  prototyping iterate: opt-in in-process local HTTP server (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE is a refusal)
   --license-patch <file>        prototyping iterate: apply an add-only license allowlist patch on any cycle (not cycle 0 only; appended to the audit ledger and replayed on later cycles. sourceHosts are not replayed)
-  --primary-ui-contract <CON-UI-NNNN>  prototyping iterate: pick the primary UI contract when several apply
+  --primary-ui-contract <UI-NNNN> prototyping iterate: pick the primary UI contract when several apply
   --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)

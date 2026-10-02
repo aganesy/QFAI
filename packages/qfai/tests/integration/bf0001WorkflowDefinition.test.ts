@@ -4,10 +4,21 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 
 const assistant = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const skill = (name: string) => path.join(assistant, "skill", name, "SKILL.md");
 const rule = (name: string) => path.join(assistant, "rule", name);
+
+/** `qfai-sdd` and its steps, read as one text with soft wraps collapsed. */
+async function readSdd(): Promise<string> {
+  const steps = ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"];
+  const texts = await Promise.all([
+    readFile(skill("qfai-sdd"), "utf8"),
+    ...steps.map((name) => readFile(path.join(assistant, "step", name, "STEP.md"), "utf8")),
+  ]);
+  return texts.join("\n").replace(/\s+/g, " ");
+}
 
 describe("BF-0001 workflow definition", () => {
   // QFAI:EX-0001-0006-05
@@ -69,8 +80,8 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0001-02
   it("hands a fifteen-file discussion pack with REQ and NFR seeds to SDD", async () => {
-    const discussion = await readFile(skill("qfai-discussion"), "utf8");
-    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const discussion = await readDiscussionSkill(assistant);
+    const sdd = await readSdd();
     expect(discussion).toContain("unified 15-file discussion pack");
     expect(discussion).toContain("Capture scope, REQ, NFR");
     expect(sdd).toContain("Read the pack, its completed reviews");
@@ -78,7 +89,7 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0017-01
   it("instructs SDD to reconcile discussion and completed reviews in its own evidence", async () => {
-    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const sdd = await readSdd();
     const playbook = await readFile(
       path.join(assistant, "skill", "qfai-sdd", "references", "sdd-execution-playbook.md"),
       "utf8",
@@ -94,9 +105,9 @@ describe("BF-0001 workflow definition", () => {
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 
-  // QFAI:EX-0001-0001-04
+  // QFAI:EX-0001-0001-03
   it("routes the specification output to the three story-tree layers", async () => {
-    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const sdd = await readSdd();
     expect(sdd).toContain("`01_policy/");
     expect(sdd).toContain("`02_business-flow/");
     expect(sdd).toContain("`03_contract/");
@@ -170,7 +181,7 @@ describe("BF-0001 workflow definition", () => {
   // QFAI:EX-0001-0007-09
   // QFAI:EX-0001-0007-10
   it("routes retirement, triage and change requests into decision rows", async () => {
-    const sdd = await readFile(skill("qfai-sdd"), "utf8");
+    const sdd = await readSdd();
     const triage = await readFile(
       path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
       "utf8",

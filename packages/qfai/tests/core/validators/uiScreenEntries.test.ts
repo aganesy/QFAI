@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-05
 /**
  * A UI contract entry the product reads as no screen is named.
  *
@@ -39,12 +40,11 @@ async function projectWith(files: Readonly<Record<string, readonly string[]>>): 
   return root;
 }
 
-const screen = (id: string, route: string, tasks = "      - Browse"): string[] => [
-  `  - id: ${id}`,
-  `    route: ${route}`,
-  "    primary_tasks:",
-  tasks,
-];
+const screen = (
+  id: string,
+  route: string,
+  tasks = "      - { id: browse, label: Browse, acceptance: done }",
+): string[] => [`  - id: ${id}`, `    route: ${route}`, "    primary_tasks:", tasks];
 
 describe("a UI contract entry no screen is read from is reported", () => {
   it("says nothing about a contract whose every entry is a screen", async () => {
@@ -275,7 +275,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
 });
 
 describe("the screen reader under an absolute contracts directory", () => {
-  // QFAI:EX-0001-0124-03
+  // QFAI:EX-0001-0120-01
   it("returns every screen of a contract outside the project root", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-root-"));
     const contractsDir = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-abs-"));
@@ -284,7 +284,7 @@ describe("the screen reader under an absolute contracts directory", () => {
     await writeFile(
       path.join(contractsDir, "ui", "orders.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0007",
+        "# QFAI-CONTRACT-ID: UI-0007",
         "screens:",
         ...screen("home", "/"),
         ...screen("settings", "/settings"),

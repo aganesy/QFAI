@@ -1,20 +1,12 @@
-# US-0001-0195: Stop only for my decision or a fact only I hold
+# US-0001-0195: A stage skill picked up by free text hands over
 
 ## User Story
 
-- Goal: As an operator, a request that could lose data, break a contract or reach outside the repository stops and asks me before anything irreversible happens, and a change to the story tree is applied only once I approve it. Otherwise I am asked only for a value the run cannot find itself.
-- Non-goals: A question whose answer the request or the repository already gives; an approval inferred from a mode, a confidence value or an agent's own words.
-- Notes: discussion-20260923171450572#DUS-004,
-  discussion-20260923171450572#REQ-0008,
-  discussion-20260923171450572#REQ-0009,
-  discussion-20260923171450572#REQ-0010,
-  discussion-20260923171450572#REQ-0018,
-  discussion-20260923171450572#REQ-0028,
-  discussion-20260923171450572#REQ-0039,
-  discussion-20260923171450572#REQ-0041,
-  discussion-20260923171450572#REQ-0044,
-  discussion-20260923171450572#REQ-0055. Also holds how a discussion under a run treats what is already settled.
+As an operator, I want a stage skill that the host picks for a free-text request to pass the request to `qfai-run` instead of starting work, while a stage I invoke by name still runs on its own and ends at that stage, so that nothing is edited outside a run and the direct `/qfai-*` path keeps working.
 
-## Source Provenance
+## Non-goals
 
-- Story block: `us-0018-0004` of the main-sync-20260926 archive of spec-0018, which `main` added as US-0018-0004 of its spec-0018. `decisions.md#DEC-0744` records the carry, and the main-sync-20260926 ID map of spec-0018 maps every item.
+- The entry skill `qfai-run` and the workflow control core.
+- What `qfai init` installs.
+- What each step does.
+- How a skill that owns steps runs them when invoked by name.

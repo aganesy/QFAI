@@ -9,8 +9,8 @@
  * candidate `discussion-*` dir and the literal recovery command
  * `qfai discussion use <id>`.
  */
-// QFAI:EX-0001-0160-01
-// QFAI:EX-0001-0160-02
+// QFAI:EX-0001-0154-01
+// QFAI:EX-0001-0154-02
 
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";

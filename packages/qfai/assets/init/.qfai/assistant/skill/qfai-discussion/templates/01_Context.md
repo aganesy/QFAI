@@ -24,7 +24,7 @@ Notes:
 
 Required when a classified surface is `web`, `mobile`, `desktop` or `mixed`. Omit for cli-only and non-ui.
 
-The user chooses this; `references/design-dna-intake.md` says how to put the choice to them. `/qfai-sdd`'s `03_contract` step authors root `DESIGN.md` from it, and asks nothing further.
+The user chooses this; `references/design-dna-intake.md` says how to put the choice to them. `/qfai-sdd`'s `common-design-md` step authors root `DESIGN.md` from it, and asks nothing further.
 
 - adopted_theme: [the published theme or design system this product is built on]
 - brand_accent: [what departs from it — typically the primary hue and the typeface pairing]

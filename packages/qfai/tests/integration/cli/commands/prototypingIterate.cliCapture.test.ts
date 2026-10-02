@@ -112,7 +112,7 @@ async function seedMinimal(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
@@ -134,7 +134,7 @@ async function fileExists(p: string): Promise<boolean> {
 }
 
 describe("iterate --capture: (1) CLI flag parses", () => {
-  // QFAI:EX-0001-0134-01
+  // QFAI:EX-0001-0130-01
   it("parseArgs sets options.prototypingCapture=true when --capture is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--capture"],
@@ -146,7 +146,7 @@ describe("iterate --capture: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingCapture).toBe(true);
   });
 
-  // QFAI:EX-0001-0134-01
+  // QFAI:EX-0001-0130-01
   it("parseArgs leaves prototypingCapture undefined when --capture is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -397,7 +397,7 @@ async function seedUiContract(
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
   const yamlBody = [
-    "# QFAI-CONTRACT-ID: CON-UI-0001",
+    "# QFAI-CONTRACT-ID: UI-0001",
     "screens:",
     ...screens.flatMap((screen) => {
       const lines = [`  - id: ${screen.id}`, `    route: ${screen.route}`];
@@ -412,7 +412,7 @@ async function seedUiContract(
 }
 
 describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
-  // QFAI:EX-0001-0134-01
+  // QFAI:EX-0001-0130-01
   it("derives screens from UI contracts when CLI sets capture=true without DI screens", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -603,7 +603,7 @@ describe("iterate --capture: (9) capture URL composition with targetUrl", () => 
 });
 
 describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contracts", () => {
-  // QFAI:EX-0001-0134-01
+  // QFAI:EX-0001-0130-01
   it("derives screens from `.yml` UI contracts (extension parity with `.yaml`)", async () => {
     // Repos that author UI contracts as `.yml` (rather than `.yaml`)
     // were silently producing an empty screens list under `--capture`,
@@ -654,7 +654,7 @@ describe("iterate --capture: (11) iterate falls back to the default Playwright r
     vi.resetModules();
   });
 
-  // QFAI:EX-0001-0134-01
+  // QFAI:EX-0001-0130-01
   it("uses the default runner when no captureScreen is injected, and exits 2 naming Playwright when it is not installed", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

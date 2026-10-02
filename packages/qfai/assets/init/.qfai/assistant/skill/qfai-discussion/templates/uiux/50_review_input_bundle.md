@@ -22,7 +22,7 @@ those two rows `n-a: cli-only pack` rather than leaving the bundle incomplete â€
 - Required references are all present and complete.
 - Stale / overused AI slop patterns are explicitly avoided.
 - Reference research is translated into local design decisions in the `04_Sources.md` registries (visual-prototyping surfaces) and on screen contracts (every UI-bearing surface). A cli-only pack records no brand direction: the screen contracts carry the whole translation.
-- Iteration handling follows the one-lineage rule in `qfai-prototyping/SKILL.md`: no parallel
+- Iteration handling follows the one-lineage rule in `.qfai/assistant/step/prototyping-loop/STEP.md`: no parallel
   candidates and no best-of-history â€” the latest iteration is the accepted one. A middle iteration
   that looked stronger is addressed by pivoting the next cycle, not by reaching back for it.
 

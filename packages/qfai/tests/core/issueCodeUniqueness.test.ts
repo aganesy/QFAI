@@ -12,6 +12,7 @@ import {
   resolveIssueExpected,
   resolveIssueFix,
 } from "../../src/cli/commands/validate.js";
+import { EMITTED_RULE_CODES } from "../../src/core/emittedRuleCodes.js";
 import { type IssueCodeUsage, collectIssueCodeUsage } from "../helpers/issueCodes.js";
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -256,7 +257,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-RESEARCH-011",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
-  "QFAI-SPACK-090",
   "QFAI-TRACE-118",
   "QFAI-TRACE-119",
   "QFAI-TRACE-120",
@@ -335,7 +335,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-013",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-DCON-009",
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DT-001",
@@ -560,11 +559,11 @@ describe("issue report metadata", () => {
       code: "QFAI-NOT-A-CATALOGUED-CODE",
       severity: "error",
       category: "canonical",
-      message: "Duplicate BP ID: BP-0001",
-      rule: "bpApDb.duplicateId",
+      message: "External URL reference in HTML Mock: https://cdn.example.com/style.css",
+      rule: "htmlMock.externalUrl",
     });
     expect(expected).toBe(UNCATALOGUED_EXPECTED);
-    expect(expected).not.toContain("bpApDb");
+    expect(expected).not.toContain("htmlMock");
   });
 
   it("states the skills-integrity expected state without naming a configured path", () => {
@@ -575,42 +574,200 @@ describe("issue report metadata", () => {
       code: "QFAI-SKILLS-001",
       severity: "error",
       category: "change",
-      message: "標準資産 'tools/skills/**' が改変されています（変更: 1）。",
+      message: "Standard asset 'tools/skills/**' has been modified (changes: 1).",
       rule: "skills.integrity",
     });
     expect(expected).not.toBe(UNCATALOGUED_EXPECTED);
     expect(expected).not.toContain(".qfai/");
   });
 
-  it("remediates a BP/AP required field that is present but invalid, not only one that is absent", () => {
-    // `toSafeString(value).trim() === ""` fires on `description: []` as well as
-    // on an absent key, and "add the missing field" cannot repair that entry:
-    // a second key of the same name is a YAML duplicate.
-    const base = { severity: "error", category: "canonical" } as const;
-    for (const code of ["QFAI-BPAP-006", "QFAI-BPAP-009"]) {
-      const fix = resolveIssueFix({
-        ...base,
-        code,
-        message: `Missing required field "description" in entry`,
-      });
-      expect(fix).not.toBe(UNCATALOGUED_FIX);
-      expect(fix).toMatch(/add the key/i);
-      expect(fix).toMatch(/overwrite the value/i);
-    }
-  });
-
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
-    const base = { severity: "error", category: "canonical", message: "Duplicate BP ID" } as const;
+    const base = { severity: "error", category: "canonical", message: "Unknown key" } as const;
     expect(
       resolveIssueFix({
         ...base,
-        code: "QFAI-BPAP-005",
+        code: "QFAI-CFG-001",
         suggested_action: "Do the specific thing.",
       }),
     ).toBe("Do the specific thing.");
-    const catalogued = resolveIssueFix({ ...base, code: "QFAI-BPAP-005" });
+    const catalogued = resolveIssueFix({ ...base, code: "QFAI-CFG-001" });
     expect(catalogued).not.toBe(UNCATALOGUED_FIX);
-    expect(catalogued).toContain("BP ID");
+    expect(catalogued).toContain("Delete the named key");
     expect(resolveIssueFix({ ...base, code: "QFAI-NOT-A-CATALOGUED-CODE" })).toBe(UNCATALOGUED_FIX);
+  });
+});
+
+describe("the form of a finding code", () => {
+  /** Capital letters in hyphen-separated words, then three digits. */
+  const FORM = /^[A-Z]+(?:-[A-Z]+)*-\d{3}$/;
+
+  /**
+   * The codes emitted before a new code had to take the form and an expected
+   * state. A code may leave this set when it is fixed or retired; none may join it.
+   */
+  const PREDATING: ReadonlySet<string> = new Set([
+    "D-DEPRECATED-PATH",
+    "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+    "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
+    "D-SAAS-PACKAGE-VERIFY-SKIPPED",
+    "D-SCAFFOLD-PLACEHOLDER",
+    "I-ASSISTANT-LAYER-UNSEEDED",
+    "QFAI-AGENT-005",
+    "QFAI-AGENT-007",
+    "QFAI-AGENT-008",
+    "QFAI-AGENT-009",
+    "QFAI-AGENT-010",
+    "QFAI-AGENT-011",
+    "QFAI-AGENT-012",
+    "QFAI-AGENT-013",
+    "QFAI-ASSETS-001",
+    "QFAI-ASSETS-002",
+    "QFAI-AUD-001",
+    "QFAI-AUD-004",
+    "QFAI-AUD-020",
+    "QFAI-AUD-021",
+    "QFAI-CONSISTENCY-001",
+    "QFAI-CONSISTENCY-002",
+    "QFAI-CONTRACT-000",
+    "QFAI-CONTRACT-010",
+    "QFAI-CONTRACT-011",
+    "QFAI-CONTRACT-012",
+    "QFAI-CONTRACT-013",
+    "QFAI-CONTRACT-014",
+    "QFAI-CONTRACT-020",
+    "QFAI-CONTRACT-021",
+    "QFAI-CRIT-001",
+    "QFAI-CRIT-002",
+    "QFAI-CRIT-003",
+    "QFAI-CRIT-004",
+    "QFAI-CRIT-005",
+    "QFAI-CRIT-006",
+    "QFAI-CRIT-007",
+    "QFAI-CRIT-008",
+    "QFAI-CRIT-009",
+    "QFAI-CRIT-010",
+    "QFAI-DB-001",
+    "QFAI-DB-002",
+    "QFAI-DT-001",
+    "QFAI-DT-002",
+    "QFAI-DT-003",
+    "QFAI-DT-004",
+    "QFAI-DT-005",
+    "QFAI-DT-006",
+    "QFAI-DT-007",
+    "QFAI-DT-008",
+    "QFAI-DT-009",
+    "QFAI-DT-010",
+    "QFAI-FLOW-001",
+    "QFAI-FLOW-002",
+    "QFAI-FLOW-004",
+    "QFAI-MOCK-001",
+    "QFAI-MOCK-002",
+    "QFAI-MOCK-003",
+    "QFAI-MOCK-004",
+    "QFAI-MOCK-005",
+    "QFAI-MOCK-006",
+    "QFAI-MOCK-007",
+    "QFAI-MOCK-008",
+    "QFAI-MOCK-009",
+    "QFAI-MOCK-010",
+    "QFAI-MOCK-011",
+    "QFAI-MOCK-012",
+    "QFAI-PLATFORM-001",
+    "QFAI-PLATFORM-002",
+    "QFAI-PROT-001",
+    "QFAI-PROT-002",
+    "QFAI-PROT-003",
+    "QFAI-PROT-004",
+    "QFAI-PROT-005",
+    "QFAI-PROT-006",
+    "QFAI-PROT-007",
+    "QFAI-PROT-008",
+    "QFAI-PROT-009",
+    "QFAI-PROT-010",
+    "QFAI-RESEARCH-001",
+    "QFAI-RESEARCH-002",
+    "QFAI-RESEARCH-003",
+    "QFAI-RESEARCH-004",
+    "QFAI-RESEARCH-005",
+    "QFAI-RESEARCH-006",
+    "QFAI-RESEARCH-007",
+    "QFAI-RESEARCH-008",
+    "QFAI-RESEARCH-009",
+    "QFAI-RESEARCH-010",
+    "QFAI-RESEARCH-011",
+    "QFAI-REVIEW-008",
+    "QFAI-REVIEW-009",
+    "QFAI-REVIEW-010",
+    "QFAI-SKILLS-010",
+    "QFAI-SKILLS-011",
+    "QFAI-SKILLS-012",
+    "QFAI-TEST-002",
+    "QFAI-VALIDATE-017",
+    "QFAI-WAIVER-001",
+    "QFAI-WAIVER-002",
+    "QFAI-WAIVER-003",
+    "QFAI-WAIVER-004",
+    "QFAI_CONFIG_INVALID",
+    "R-AUTOPILOT-POLICY-MISSING",
+    "R-AUTOPILOT-POLICY-WIDENED",
+    "R-CERTIFY-VERIFY-CIRCULAR",
+    "R-EVIDENCE-MUTATION-UNLOGGED",
+    "R-HANDOFF-SCHEMA-DRIFT",
+    "R-MOCK-HREF-DRIFT",
+    "R-PROMPT-SCANNER-DRIFT",
+    "R-SKILL-MANIFEST-DRIFT",
+    "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+    "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+    "UIX-VAL-3LAYER-LEGACY-FORMAT",
+    "UIX-VAL-3LAYER-MIXED-FORMAT",
+    "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+    "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+    "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+    "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+    "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
+    "UIX-VAL-CLASSIFICATION-MISSING",
+    "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+    "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+    "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
+    "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+    "UIX-VAL-DIRECTION-HISTORY-MISSING",
+    "UIX-VAL-OQ-OPEN-CRITICAL",
+    "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
+    "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+    "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+    "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
+    "UIX-VAL-SIDECAR-MISSING",
+    "UIX-VAL-SKILL-ASPIRATIONAL",
+    "UIX-VAL-SKILL-BANNED-PHRASE",
+    "UIX-VAL-SKILL-CANONICAL-SURFACE",
+    "UIX-VAL-SKILL-CLI-SURFACE",
+    "UIX-VAL-SKILL-DELEGATION",
+    "UIX-VAL-SKILL-ENV-PRECONDITIONS",
+    "UIX-VAL-SKILL-EVIDENCE-PATHS",
+    "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
+    "UIX-VAL-SKILL-PREFLIGHT",
+    "UIX-VAL-SKILL-SECTION-MISSING",
+    "UIX-VAL-SKILL-STATIC-FIRST",
+    "UIX-VAL-SKILL-UI-BEARING-FALSE",
+    "UIX-VAL-T05",
+    "UIX-VAL-TREND-CATEGORY-MISSING",
+    "UIX-VAL-TREND-ENTRY-MISSING",
+    "UIX-VAL-TREND-FIELD-MISSING",
+    "UIX-VAL-TREND-SCAN-MISSING",
+    "W-ASSISTANT-LAYOUT",
+    "W-SKILL-DOC-BROKEN-REF",
+    "W-SKILL-PROJECT-MEMORY",
+    "W-STALE-REFERENCE",
+  ]);
+
+  // QFAI:EX-0001-0039-13
+  it("gives every new code a letter prefix, three digits and an expected state", () => {
+    const outside = EMITTED_RULE_CODES.filter(
+      (code) => !FORM.test(code) || !(code in ISSUE_EXPECTED_BY_CODE),
+    );
+    expect(outside.filter((code) => !PREDATING.has(code))).toEqual([]);
+    expect("QFAI-STORY-012").toMatch(FORM);
+    expect(ISSUE_EXPECTED_BY_CODE).toHaveProperty(["QFAI-STORY-012"]);
   });
 });

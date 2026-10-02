@@ -5,7 +5,7 @@ import {
   AGENT_INTEGRATION_CONFIGS,
   SKILL_INTEGRATION_DIRS,
   collectCanonicalSkillIds,
-} from "../../src/cli/commands/init.js";
+} from "../../src/core/init/integrationDirs.js";
 
 /**
  * Writes the host links a project initialised before the migration carries:

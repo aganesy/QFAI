@@ -4,19 +4,23 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const skills = path.join(root, "packages/qfai/assets/init/.qfai/assistant/skill");
 const read = (rel: string): Promise<string> => readFile(path.join(skills, rel), "utf-8");
+const readStep = async (name: string): Promise<string> =>
+  (await readFile(path.join(skills, "..", "step", name, "STEP.md"), "utf-8")).replace(/\s+/g, " ");
 
 describe("brand catalog ownership", () => {
   it("gives root DESIGN.md authoring to SDD for a visual surface", async () => {
-    const discussion = await read("qfai-discussion/SKILL.md");
+    const discussion = (await readDiscussionSkill(path.dirname(skills))).replace(/\s+/g, " ");
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
-    const sdd = await read("qfai-sdd/SKILL.md");
+    const sdd = await readStep("sdd-contract");
     expect(discussion).toContain("root `DESIGN.md` — is authored");
     expect(discussion).toContain("/qfai-sdd");
     expect(authoring).toContain("How `/qfai-sdd` writes the root `DESIGN.md`");
-    expect(sdd).toContain("complete the root `DESIGN.md` and design-lock checks");
+    expect(sdd).toContain("root `DESIGN.md`, which `common-design-md`");
   });
 
   it("uses the adopted discussion direction as the brand input", async () => {
@@ -24,14 +28,14 @@ describe("brand catalog ownership", () => {
     const discussion = await read("qfai-discussion/references/discussion-completion-matrix.md");
     expect(authoring).toContain("01_Context.md#Design Direction");
     expect(authoring).toContain("04_Sources.md");
-    expect(discussion).toContain("03_contract` step authors root `DESIGN.md`");
+    expect(discussion).toContain("common-design-md` step authors root `DESIGN.md`");
   });
 
   it("does not invent a visual brand for a CLI-only target", async () => {
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
-    const sdd = await read("qfai-sdd/SKILL.md");
+    const sdd = await readStep("sdd-contract");
     expect(authoring).toContain("A cli-only target has no root");
-    expect(sdd).toContain("A CLI-only surface does not require a visual brand lock");
+    expect(sdd).toContain("A CLI-only surface does not require one");
   });
 
   it("routes brand archetype and interaction into supported fields", async () => {

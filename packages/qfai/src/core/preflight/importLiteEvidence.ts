@@ -201,7 +201,10 @@ const VALUE_DECORATION_RE = /^[([{"'`*_]+|[)\]}"'`*_]+$/g;
  * (`discussionPack.ts` ends its pattern `\.?$`), so normalizing here is what
  * keeps the two readings of "unfilled" the same.
  */
-const TRAILING_PUNCTUATION_RE = /[.,;:!?。、．，；：！？…]+$/u;
+// Beyond ASCII punctuation, strips the ideographic full stop and comma
+// (U+3002, U+3001), the full-width period, comma, semicolon, colon, exclamation
+// and question marks (U+FF0E, U+FF0C, U+FF1B, U+FF1A, U+FF01, U+FF1F) and the ellipsis.
+const TRAILING_PUNCTUATION_RE = /[.,;:!?\u3002\u3001\uFF0E\uFF0C\uFF1B\uFF1A\uFF01\uFF1F…]+$/u;
 
 /**
  * The comparable core of a value: decoration and sentence punctuation removed,

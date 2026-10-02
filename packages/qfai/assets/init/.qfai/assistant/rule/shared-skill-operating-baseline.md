@@ -72,13 +72,17 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 
 ## User Questions (AskUserQuestion Protocol)
 
+This section binds every skill and every step as written. A skill or step does
+not restate it: it names only the questions of its own, and with `--auto` it
+asks nothing and records explicit assumptions in its stage evidence.
+
 - When a question to the user is needed, use AskUserQuestion if the tool is available. **No question is exempt** — a confirmation and a yes-or-no take the same path as anything else, because an exception is what an agent reaches for when it would rather not ask. The form a question takes is owned by `.agents/rules/user-questions.md`; this section is where it binds a skill.
 - Availability is judged for **this question in this invocation**. A tool the mode withholds, or one that cannot carry the answer's shape, is unavailable for that question and takes the fallback below. A mode that permits no question at all — `--auto` — is read before this: nothing is asked, so there is no question whose availability to judge, and the fallback is not its route.
 - Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input. An open answer — one with no listable set of candidates — takes the free-text path instead; the preference ranks two ways of asking one question, and never turns an open answer into a choice. A name, a number or a sentence is usually open and is not open by type.
 - If AskUserQuestion is unavailable, ask the same question in a normal message **in the shape its answer has**: explicit numbered choices where there are choices, and a plain request for the value where the answer has no listable set of candidates. Inventing options to make an open answer fit a numbered list is the failure the form rule names, and the fallback is not a licence for it.
 - Where there are choices, preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
+- The three buckets of a skill's Default Autopilot Policy say who settles a decision **the skill performs**. A **frontier decision** put inside a grilling session is not one: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Read as a classification of every
   question an invocation can utter, the closed `ask-user` list would contradict that rule. **Two things stay classified by their subject wherever they are asked**: a mandatory approval, and a `hard-required` input the invocation consumes. A session does not reclassify either — a `hard-required` input asked inside one still stops a run that cannot get it, rather than being guessed. Where
   the interview is what the skill performs, the asking stays in `ask-user`: the bucket carries a category for a decision a declared grilling session puts to the user, open to a skill whose own operation is the interview and to no other. That skill holds a user session; a delegated session puts only its critical decisions to the user (`.agents/rules/grilling.md`). The buckets:
   - `auto-decide` — the skill settles it without asking.
@@ -94,6 +98,7 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   question, not the prompt: a question asked because a document requires a recorded human decision (an SDD triage `Approved By`, a reviewer-gate escalation) is an **approval** and spends nothing, and bundling one into a prompt does not exempt the clarifications beside it. On exhaustion, do not ask a sixth clarification — proceed with explicit, labelled assumptions and record them in the
   output, as `--auto` does; a required approval may still be asked. See `.qfai/assistant/rule/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask via plain text. Proceed with explicit assumptions and record them in the outputs. Proceeding presupposes evidence to assume from — when a step has none, it is a hard blocker: stop there and report it as a blocker instead of asking or guessing.
+  How such a run may end its turn: `#unattended-runs-ending-a-turn` below.
 - Mandatory approval questions and `hard-required` inputs are exempt from the budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this invocation actually consumes** MUST be asked for rather than assumed — if it stays missing, stop instead of guessing. A `hard-required` input the requested path never reads is neither
   asked for nor a blocker. Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so these questions survive both. Under an explicit `--auto` the question is not asked at all — that run stops and names the missing input instead of inventing one. See `.qfai/assistant/rule/constitution.md` Article VI.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside the interview `.agents/rules/grilling.md` defines spends no budget, and a session runs to its own end condition — for a user session an empty frontier and the user's confirmation, which is itself in the exempt class, and for a delegated one no open node and an answer to every critical decision — rather than to a count.
@@ -102,6 +107,75 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   Under an explicit `--auto` the session asks nothing, a delegated one still adopts every decision that is not critical, and each node it could not settle is opened as a question in the register the stage reads. Each node, not each decision: a fact only
   the user holds cannot be settled from evidence either, and a fact declared undefaultable stops the run rather than taking a value nobody has. Where a document requires the field to hold something, write the defaulted value and label it an assumption beside that open question; what is forbidden is the assumption with no open question against it (Article X, rule 6).
 
+## Unattended Runs: Ending a Turn
+
+Under `--auto` nobody is there to reply. A message with no tool call in it ends the turn, and an ended turn stops the run whether or not the work is done. The Completion Contract below cannot catch this: the stage is incomplete, and nothing is left running to notice.
+
+While work is still owed, a turn MUST NOT end with any of these:
+
+1. A summary that announces the next step and does not take it.
+2. An offer to carry on unless the user would prefer otherwise. Nobody is there to answer it.
+3. A list of decisions for the user when, by the agent's own account, none of them blocks the rest of the work.
+4. A stop because the turn has run long or a milestone is done.
+
+A turn may end with work still owed only when one of these holds:
+
+- nothing can move without the user — a hard blocker, or a `hard-required` input the run cannot read off evidence;
+- the thing blocking the run is deliberately protected from the agent, such as a credential, a permission or a protected branch.
+
+That ending is a stop report under `#gate-failure-autorepair-protocol`, not a completion claim.
+
+A status note or a recommendation is welcome. It goes in the same message as the next action.
+
+This section does not relax the confirmation an irreversible action needs, and it does not apply where a person is there to answer.
+
+## Default Autopilot Policy (Shared)
+
+Every `qfai-*` skill works under the prototype below. Its three named buckets
+collapse avoidable per-session prompts to zero or one by classifying each
+decision the skill performs. A skill whose policy adds to the prototype carries
+a `## Default Autopilot Policy` section listing only what it adds. A skill that
+adds nothing carries no section.
+
+| Bucket          | Prototype entries                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `auto-decide`   | output formatting; ID / sequence numbering; append-vs-create on subject overlap; equivalent-option pick                                                                                                            |
+| `ask-user`      | approval-required governance operations (a category); destructive operations (rm / overwrite / force-push); version-pin changes (`package.json#version`, branch pin); scope expansions outside the active envelope |
+| `hard-required` | brand intent; the undefaultable inputs the skill itself consumes, declared per skill                                                                                                                               |
+
+- **Equivalent-option pick means demonstrably equivalent.** A design choice is
+  not one: moving it to `auto-decide` records a design nobody agreed to as
+  decided.
+- **The governance category is instantiated per skill.** The triage operations
+  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE are the common
+  instance, each asked with a prompt that names the target and the rationale.
+- **An interview skill asks its own frontier.** A skill whose own operation is
+  the interview lists, under `ask-user`, the decisions a declared grilling
+  session puts to the user and the confirmation that closes it. No other skill
+  may.
+
+**What a skill's own section adds.** An instance of the governance category,
+naming the operations its own run cannot authorize for itself. For an interview
+skill, its frontier. Under `hard-required`, the undefaultable inputs this skill
+itself consumes: they are declared per skill, and the policy check fails when a
+skill's section no longer names one. A skill MUST NOT introduce an entry outside
+the prototype's categories. Widening triggers a Reviewer-Gate finding.
+
+**An entry a skill never reaches costs nothing.** A decision the skill does not
+perform is never asked, and a `hard-required` input it does not consume is
+neither asked for nor a blocker (above). So no skill restates the prototype to
+drop an entry from it.
+
+**Steps.** An entry that only one step of a parent reaches may also be written
+in that step's `## Autopilot` section. The parent's section still lists every
+entry its steps add to the prototype, because that section is the one the policy
+check reads.
+
+Route every `ask-user` and `hard-required` item through
+[User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol),
+including its `--auto` rule. What each bucket needs inside a workflow run is
+[Default Autopilot Policy inside a run](#default-autopilot-policy-inside-a-run).
+
 ## Canonical qfai Launcher (Mandatory)
 
 - **Launcher preflight — run once, before the first gate.** Confirm the project resolves qfai from its own dependencies. Either proof is sufficient:
@@ -109,7 +183,9 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   - **A Plug'n'Play install.** Yarn Berry's default `nodeLinker: pnp` writes no `node_modules/.bin`, so the file check alone would report a correctly installed project as UNRUN forever. Accept it when the project has a `.pnp.cjs` / `.pnp.loader.mjs` at its root and lists `qfai` in `package.json` `dependencies` / `devDependencies`; `yarn exec qfai --help` exiting 0 is the direct
     confirmation.
 
-  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. The fix is to install the dependency (`npm i -D qfai`, or the pnpm / yarn equivalent). `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
+  If neither proof holds, every gate below is UNRUN: report it as a blocker and stop. `package.json` says which fix applies:
+  - **`qfai` is listed in `dependencies` or `devDependencies`, but this checkout has no install.** A fresh clone or a new worktree has no `node_modules`, and `npx qfai` then resolves the copy of a parent directory, which may be an older version of another checkout. Run the project's install command in this checkout, then run the preflight again.
+  - **`qfai` is not listed.** Install the dependency: `npm i -D qfai`, or the pnpm / yarn equivalent. `qfai` does not add itself to `package.json` on init, so a project bootstrapped with `npx qfai init` alone has no local dependency yet.
 
 - Once the preflight passes, invoke every gate through the launcher that proof established:
   - local binary -> `npx qfai …`, which resolves to it. `node_modules/.bin/qfai …` is the same thing spelled out; prefer it when PATH reachability is uncertain.
@@ -120,29 +196,44 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 - Never launch a gate as a bare `qfai` command: qfai is a project dependency, not a global one, so that is `command not found` on a normal local install — and a gate that cannot run is a gate that silently passes.
 - The preflight is the guard, not a flag. `npx` runs "a command from a local **or remote** npm package": with nothing resolvable locally it downloads and runs one (non-interactive shells do this without prompting), and `npx --no-install` still executes a copy already sitting in the npx cache. Neither spelling can tell you the qfai that ran was this project's; only the preflight can.
 - If the launcher cannot be resolved at any point, the gate is UNRUN, not PASS. Report it as a blocker instead of completing the stage.
-- The project's gate commands belong in the Standard commands section of `<paths.contractsDir>/tech.md`. The CI workflow generated by `npx qfai init` is the one deliberate exception: it runs before any project install can be assumed and must still be able to bootstrap.
+- The project's gate commands belong in the Standard commands section of `<paths.contractsDir>/tech.md` ([Standard Commands](#standard-commands-mandatory) below). The CI workflow generated by `npx qfai init` is the one deliberate exception: it runs before any project install can be assumed and must still be able to bootstrap.
+
+## Standard Commands (Mandatory)
+
+A project's gate commands have one home:
+`<paths.contractsDir>/tech.md#standard-commands-copy-paste`. The directory comes
+from `qfai.config.yaml`.
+
+- **Read them there and nowhere else.** Install, Format, Test, Lint, Typecheck,
+  Build, Skeleton and Validate come from that section. Do not infer one from the
+  package manager, a framework convention or another stack.
+- **A section that offers only a whole-project command is used as written.** A
+  narrower command is used only where that section, or the runner's checked-in
+  configuration, declares it.
+- **A capability with no entry is UNRUN, not passed.** Discover the command from
+  the task-runner manifest, then the CI configuration, then the contributing
+  docs, as `.qfai/assistant/rule/quality.md` sets out. Record it in that
+  section before it is used, where this stage owns the file; otherwise route the
+  gap to its owner through `.qfai/assistant/rule/drift-protocol.md`.
+- **No other document restates the commands.** It points at that section.
+
+The `common-gate-run` step runs a gate from this section and records it.
 
 ## FORMAT SSOT (Mandatory)
 
-- Before writing or editing `.qfai/**`, read the relevant README/template/sample for the target artifact.
+- Before writing or editing `.qfai/**`, read the template or sample for the target artifact.
 - Do not copy templates or samples into prompt markdown.
-- Generated artifacts must match README-defined structure, headings, ordering, and table columns.
+- Generated artifacts match their template's headings, ordering, content kinds and table columns, and add no section, including no history section. Under `<paths.specsDir>` a document schema rejects anything else; `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes` states what a template cannot show.
 - Completion requires a format self-check in evidence.
 
 ## Stage 0 - Steering completion refresh (mandatory)
 
-Check these files under `<paths.specsDir>` before or during the stage when facts are missing or stale:
-
-- `01_policy/objective.md` and `01_policy/initiative.md`
-- `01_policy/principle.md` and `01_policy/constraint.md`
-- `03_contract/structure.md` and `03_contract/tech.md`
-
-Rules:
-
-- Detect incomplete content such as empty sections, placeholder-only text, `<...>`, `TBD`, or stale facts.
-- Fill verified facts only when this stage owns the file; otherwise route the change to its owner through `.qfai/assistant/rule/drift-protocol.md`.
-- If something cannot be verified, record an Open Question in `<paths.specsDir>/open-questions.md` and ask the user, subject to the invocation's question policy.
-- Route new facts discovered during the stage to the owning artifact.
+Every stage starts with the steering refresh, and does not continue affected
+work on stale steering. The contract is
+`.qfai/assistant/rule/workflow.md#stage-0--steering-refresh-contract-mandatory`.
+The procedure — which files, what counts as incomplete, how a fact is filled
+and where an unverifiable one goes — is the `common-steering-refresh` step. A
+skill or step cites the step and restates none of it.
 
 ### Inside a workflow run
 
@@ -202,9 +293,77 @@ check changes nothing in the run.
   author and never counts it as the work's independent reviewer.
 - These statements add to the constitution. They except no article.
 
+## Running Steps (Mandatory)
+
+A step is one part of a parent skill's procedure, kept at
+`.qfai/assistant/step/<name>/STEP.md`. No host lists a step as a skill; a step
+runs only from its parent or from a work order.
+
+- **A step's `requires` names only `common-*` steps**, and a `common-*` step
+  requires nothing. The deepest chain is parent, step, common step.
+- **A parent's `requires` names the `common-*` steps its own body runs**, such
+  as `common-review-cycle` after the last step. Like a step's, it names no
+  other kind of step.
+- **A step's review profile is its `routing-profile`.** A step without one has
+  no review of its own. A parent has no profile of its own.
+- **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
+  step name.**
+
+### A parent skill invoked by name
+
+1. Run the [entry check](#workflow-run-entry-check-mandatory).
+2. Take the steps from the parent's `steps:` list, in that order. Skip a step
+   only where the parent's body names the condition that skips it.
+3. For each step: read that step's `STEP.md` and no other, run it, and pass its
+   gate. Run a `common-*` step it `requires` at the point the step calls it.
+   Then move to the next step.
+4. After the last step, run one review through `common-review-cycle`. The
+   reviewers are the union of the reviewers the profiles of the steps that ran
+   require, with each conditional reviewer whose condition holds.
+5. Complete as the parent's completion section says, reporting what each step
+   produced.
+
+A step skipped on a condition that later turns out to hold is run in its place
+in the order, before the review.
+
+### A work order's steps
+
+A workflow sub-agent handed a QFAI work order runs the steps the work order
+names, in its `steps:` list, and no other.
+
+1. Run the entry check in the `worker` state.
+2. For each listed step, in order: read the `STEP.md` at its `path` and no
+   other, run it, and pass its gate. A step the parent lists and the work order
+   does not is not run. Where the work needs an unlisted step, return the
+   replan outcome rather than run it. A step that reports a `branch` ends the
+   work order there: the steps after it do not run, and the result carries the
+   `branch` and no `closure`.
+3. Take what the work order's `settled` field records as settled, and ask none
+   of it again.
+4. Run one review through `common-review-cycle` at the end, with the work
+   order's `requiredReviewerRoles`, and none when it names none. The run
+   computed that set; do not recompute it or drop a role from it.
+5. Return the stage result the work order asks for. A finding another owner
+   must repair is a debt naming that owner, not an edit made here.
+
+### A pass-through step
+
+A step the work order marks `passThrough` always runs. It first reads what its
+`## Passes when` section names. When that shows it has nothing to write, it
+writes nothing, keeps what it read in a git-ignored record, and returns a pass
+in the result's `passes` as `{ step, reason, evidenceRef }`: `reason` names the
+fact that leaves nothing to write, and `evidenceRef` names the record.
+
+- A pass is not a skip. The step stays in the result, and the stage's reviewers
+  judge its reason.
+- `accept` refuses a pass on a step the work order does not mark, and a pass
+  while the step's obligation remains.
+- Invoked by name, a step with a `## Passes when` section passes the same way,
+  and the report names the pass and its reason.
+
 ## Default Autopilot Policy inside a run
 
-Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
+Inside a run, each bucket of a skill's Default Autopilot Policy is
 satisfied by one kind of authorization the run records:
 
 - An `ask-user` item is satisfied only by a `human_decision` that answers it.
@@ -244,7 +403,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 
-The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on CON-DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a
+The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a
 surrender. Blocked is a status, not a verdict on the run.
 
 ### Nondeterministic gates
@@ -271,7 +430,7 @@ Reporting the clean run and omitting the red ones satisfies every existing evide
 Before declaring completion, you MUST:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
-- verify every expected artifact exists and required sections are populated;
+- verify every expected artifact exists and required sections are populated — a table with no rows or a `- None.` list counts where the template allows it;
 - scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
 - run the smallest applicable smoke check and report its outcome. Only PASS satisfies this bullet: FAIL and UNRUN are blockers, so they go in a stop report with the reason, never next to a completion claim.
 
@@ -287,7 +446,8 @@ report instead of the completion claim.
 **`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register
 table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses
 `ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row.
-Discussion registers use their own template fields. Article II and `.qfai/assistant/rule/workflow.md` both end an
+Discussion registers use their own template fields. A register row's Status is structure too: `TODO` in the Status cell of a
+`decisions.md` or `open-questions.md` row is the row's state, not a placeholder. Article II and `.qfai/assistant/rule/workflow.md` both end an
 unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an
 unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a
 value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.

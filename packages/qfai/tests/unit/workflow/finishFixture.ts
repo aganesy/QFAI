@@ -2,6 +2,7 @@
 // plants one change on a copy of it.
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -12,19 +13,13 @@ export const TOOL_DIGEST = "a".repeat(64);
 export const CONFIG_DIGEST = "b".repeat(64);
 
 export const finishPlan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/notify"],
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-    ["bounded-implement", "implement", "qfai-implement", "implement"],
-    ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
+  ],
 };
 
 export function readySnapshot(): Snapshot {
@@ -42,7 +37,7 @@ export function readySnapshot(): Snapshot {
     acceptedStages: [
       {
         stageInstanceId: "bounded-sdd-delta",
-        stageKind: "sdd_delta",
+        stageKind: "sdd",
         outcome: "accepted",
         reviewResults: [
           {

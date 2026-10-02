@@ -1,6 +1,6 @@
 # SDD Execution Playbook
 
-Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape.
+Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape, and spec-traceability-rules.md#document-shapes states what a template cannot show.
 
 ## Stage 0: source inventory
 
@@ -20,23 +20,27 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Stage 2: policy and flow
 
-1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, tech.md, and structure.md.
-2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow has a Mermaid flowchart or sequenceDiagram.
+1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
+   A constraint is a limit in plain words; its ID is its place in its section, so removing a row renumbers the rows after it.
+   A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the pack records and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.
+   A layer is a group of modules whose dependencies point one way: down. The section draws the layers as one `flowchart TD`, then lists them in the table from the uppermost down, and the two name the same layers and edges.
+   Implementation places new code by that table and reviewers judge a change against it, as spec-traceability-rules.md#architecture states.
+2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
 3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
 
 ## Stage 3: concrete stories
 
 1. Write each affected story directory with exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md, based on the matching templates.
-2. Each AC is a Gherkin scenario. Each EX has exactly one existing AC-Ref. Each AC has at least one EX. Preserve observable normal, boundary, and kept-failure outcomes.
+2. Each AC is one named Gherkin Scenario under its ID comment. Each EX has exactly one existing AC-Ref and plain Input and Expected values. Each AC has at least one EX. Preserve observable normal, boundary, and kept-failure outcomes.
 3. Check the BF → US → AC → EX edges before writing a BR. The test-layer policy later routes BF to E2E, AC to API or Integration, and EX to the applicable other layer.
 4. Record retired stories as decision rows. Do not recycle their IDs.
 
 ## Stage 4: enforcing contracts
 
-1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. The only quality-gate command definitions are in the Standard commands section of tech.md.
-2. Put each BR inside the contract that enforces it. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition; dependent contracts use file-level rule refs.
-3. Add each contract file to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
-4. For a visual UI surface, complete the DESIGN.md lock protocol before finalizing design contracts. A CLI-only surface does not require a visual lock.
+1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. tech.md holds the stack, the runtime dependencies and, in its Standard commands section, the only quality-gate command definitions. It holds no BR.
+2. Put each BR inside the contract that enforces it, numbered `BR-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
+3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
+4. For a visual UI surface, the root DESIGN.md is written and validated by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require one.
 
 ## Concrete-abstract cycle
 
@@ -45,8 +49,9 @@ When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in 
 ## Stage 5: gate, review, and completion
 
 Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning
-source and rerun. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
-from ../templates/evidence/sdd-flow.md. Route independent reviewers under review-cycle-playbook.md; all blocking
+source and rerun. A document that fails its schema is reshaped to its template; adding a section or a note to explain the
+error is never the fix. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
+from ../templates/evidence/sdd-flow.md. Route independent reviewers under .qfai/assistant/step/common-review-cycle/STEP.md; all blocking
 verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 
 For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, say so in the report, record the pending ownership as an `open-questions.md` row, and do not claim a flow gate passed.

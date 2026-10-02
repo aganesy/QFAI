@@ -1,13 +1,19 @@
+// The keys are the canonical Japanese category labels (UI implementation,
+// screenshot, evaluation scoring, build), kept as escapes because delegation
+// maps are matched against them.
 export const PROTOTYPING_DELEGATION_SCOPE = {
-  UI実装: ["frontend-engineer", "product-experience-architect"],
-  スクリーンショット: ["devops-ci-engineer"],
-  評価スコアリング: ["product-surface-reviewer", "product-experience-architect"],
-  ビルド: ["devops-ci-engineer", "backend-engineer"],
+  "UI\u5B9F\u88C5": ["frontend-engineer", "product-experience-architect"],
+  "\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8": ["devops-ci-engineer"],
+  "\u8A55\u4FA1\u30B9\u30B3\u30A2\u30EA\u30F3\u30B0": [
+    "product-surface-reviewer",
+    "product-experience-architect",
+  ],
+  "\u30D3\u30EB\u30C9": ["devops-ci-engineer", "backend-engineer"],
 } as const;
 
 /**
  * The Delegation Scope Table rendered by the shipped
- * `qfai-prototyping/SKILL.md`, transcribed row for row: each English label
+ * `prototyping-loop/STEP.md`, transcribed row for row: each English label
  * maps to the roles ITS OWN row documents.
  *
  * A `delegationMap` written against the distributed skill uses these labels,

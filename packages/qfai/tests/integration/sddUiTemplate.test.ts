@@ -10,7 +10,7 @@
  * not this test's subject. It ships filled entries, because a template that
  * emits an empty list hands the author a document that does not validate.
  */
-// QFAI:EX-0001-0159-01
+// QFAI:EX-0001-0153-01
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -87,8 +87,8 @@ const LEGACY_DESIGN_CONTRACTS = [
 ];
 
 describe("shipped primary_tasks ceiling", () => {
-  // QFAI:AC-0001-0161-01
-  // QFAI:EX-0001-0161-01
+  // QFAI:AC-0001-0155-01
+  // QFAI:EX-0001-0155-01
   it("documents a ceiling of 7 and no floor in the template and the guide", async () => {
     const template = await readFile(TEMPLATE_PATH, "utf-8");
     expect(template).toContain("Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).");
@@ -104,8 +104,8 @@ describe("shipped primary_tasks ceiling", () => {
 });
 
 describe("shipped qfai-sdd design contracts", () => {
-  // QFAI:EX-0001-0158-01
-  // QFAI:EX-0001-0158-02
+  // QFAI:EX-0001-0152-01
+  // QFAI:EX-0001-0152-02
   it("writes no legacy design contract and lists the removed ones", async () => {
     const templates = await readdir(path.join(SDD_SKILL_DIR, "templates"), { recursive: true });
     const names = templates.map((entry) => path.basename(entry));
@@ -118,8 +118,12 @@ describe("shipped qfai-sdd design contracts", () => {
       "utf-8",
     );
     expect(normalization).toContain("MUST NOT be generated");
-    expect(normalization).toContain("Add the lock YAML to `<paths.contractsDir>/contracts.md`");
-    expect(normalization).toContain("design-system.yaml");
-    expect(normalization).toContain("prototype-handoff.yaml");
+    const designMd = await readFile(
+      path.join(SDD_SKILL_DIR, "..", "..", "step", "common-design-md", "STEP.md"),
+      "utf-8",
+    );
+    expect(normalization).toContain("common-design-md/STEP.md#author-and-validate");
+    expect(designMd).toContain("## Author and validate");
+    expect(normalization).toContain("prototyping.json#handoff");
   });
 });

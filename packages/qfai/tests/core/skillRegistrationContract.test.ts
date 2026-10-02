@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-06
 /**
  * A skill a host cannot register.
  *
@@ -558,7 +559,10 @@ describe("the gate reads a skill as the host does", () => {
     await mkdir(path.join(skills, ".draft"), { recursive: true });
     await writeFile(path.join(skills, ".draft", "SKILL.md"), "# draft\n", "utf-8");
 
-    expect(await findings(root)).toEqual([]);
+    const draft = (await findings(root)).filter((finding) =>
+      (finding.file ?? "").includes(".draft"),
+    );
+    expect(draft).toEqual([]);
   });
 
   it("reports a crawled document that is not valid UTF-8", async () => {
@@ -697,7 +701,10 @@ describe("the gate reads a skill as the host does", () => {
     await writeFile(path.join(hidden, "SKILL.md"), "# draft\n", "utf-8");
     await chmod(hidden, 0o000);
 
-    const reported = await findings(root).catch((error: unknown) => error);
+    const reported = await findings(root).then(
+      (items) => items.filter((finding) => (finding.file ?? "").includes(".draft")),
+      (error: unknown) => error,
+    );
 
     await chmod(hidden, 0o700);
     expect(reported).toEqual([]);

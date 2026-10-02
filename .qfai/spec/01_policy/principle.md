@@ -13,8 +13,16 @@
 - Test annotations require executed behavior and an observable assertion. A placeholder or annotation alone is not coverage.
 - Independent reviewers report PASS or REVISE against current evidence. Authors do not certify their own work.
 - The package ships its own source and assets; this repository does not install itself as a dependency.
-- Decision lens: preserve correctness and traceability before reducing workflow steps or runtime cost.
 - Sources: `.qfai/assistant/rule/test-layers.md`, `.qfai/assistant/rule/review-convergence.md`, `.agents/rules/minimal-implementation.md`, and `scripts/check-not-a-dependency.mjs`.
+
+## Decision priorities
+
+| Priority | Concern      | Decision rule                                                              |
+| -------- | ------------ | -------------------------------------------------------------------------- |
+| 1        | Correctness  | A false PASS is more costly than a visible incomplete gate.                |
+| 2        | Traceability | Keep each obligation linked to its authoritative source and test evidence. |
+| 3        | Usability    | Make CLI findings actionable and keep operator inputs explicit.            |
+| 4        | Runtime cost | Reduce repeated work only after preserving the first three priorities.     |
 
 ## Compatibility vs Change Rubric
 

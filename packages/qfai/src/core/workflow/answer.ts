@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { refusedInput, refusedWith } from "./common.js";
 import { carriedAuthorization, type QuestionEffect } from "./parse.js";
+import { routeChoiceEvents } from "./routing.js";
 import type {
   WorkflowAuthorization,
   WorkflowDecision,
@@ -9,6 +10,7 @@ import type {
   WorkflowFacts,
   WorkflowInput,
   WorkflowQuestion,
+  WorkflowReroute,
   WorkflowRun,
   WorkflowSettled,
   WorkflowSnapshot,
@@ -47,17 +49,29 @@ function valueDigestOf(value: string | undefined, key: string | undefined) {
   return normalized ? keyedDigest(normalized, key) : undefined;
 }
 
+// The answer's record, what it fixes (the route a candidate question chose), and its effect. A
+// `proceed` to a re-route past the cap takes the re-route.
 function answerEvents(
   authorization: WorkflowAuthorization,
   settled: WorkflowSettled | undefined,
+  fixed: WorkflowEvent[],
+  reroute: WorkflowReroute | undefined,
 ): WorkflowEvent[] {
   const events: WorkflowEvent[] = [
     { type: "authorization-recorded", authorization, ...(settled ? { settled } : {}) },
+    ...fixed,
   ];
-  if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
+  if (authorization.effect === "proceed" && reroute) {
+    events.push({ type: "declared-reroute", reroute });
+  } else if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
   if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
   return events;
+}
+
+// A fact offering no options is answered with a value; every other question with options.
+function isValueRequest(question: WorkflowQuestion) {
+  return question.kind === "fact" && question.options.length === 0;
 }
 
 function valueAnswer(question: WorkflowQuestion, value: string | undefined, key?: string) {
@@ -95,7 +109,7 @@ function answerOf(
   input: WorkflowInput,
   key: string | undefined,
 ): Pick<WorkflowAuthorization, "answer" | "effect"> | "option" | undefined {
-  if (question.kind === "fact") return valueAnswer(question, input.answer?.value, key);
+  if (isValueRequest(question)) return valueAnswer(question, input.answer?.value, key);
   const chosen = chosenOptions(question, input.answer?.optionIds ?? []);
   if (!chosen) return "option";
   const effect = EFFECT_STRENGTH.find((candidate) =>
@@ -114,12 +128,11 @@ function settledWith(
   const settled = snapshot.settled;
   if (!settled) return undefined;
   const optionIds = input.answer?.optionIds ?? [];
-  const chosen =
-    question.kind === "fact"
-      ? (input.answer?.value ?? "").normalize("NFC").trim()
-      : question.options
-          .filter((option) => optionIds.includes(option.optionId))
-          .map((option) => option.label);
+  const chosen = isValueRequest(question)
+    ? (input.answer?.value ?? "").normalize("NFC").trim()
+    : question.options
+        .filter((option) => optionIds.includes(option.optionId))
+        .map((option) => option.label);
   const answer = { questionId: question.questionId, text: question.text, chosen };
   return { ...settled, answers: [...settled.answers, answer] };
 }
@@ -218,8 +231,21 @@ export function decideAnswer(
     input.answeredBy ?? "",
     facts.now,
   );
-  const events = answerEvents(authorization, settledWith(snapshot, question, input));
-  const state = STATE_AFTER_EFFECT[answered.effect];
+  const chosen = "optionIds" in answered.answer ? answered.answer.optionIds : [];
+  const fixed = routeChoiceEvents(snapshot, question.purpose, chosen);
+  const reroute = question.purpose === "reroute" ? snapshot.pendingReroute : undefined;
+  const settled = settledWith(snapshot, question, input);
+  const events = answerEvents(authorization, settled, fixed, reroute);
+  // A plan the operator has not confirmed, or a route not chosen yet, keeps the run waiting
+  // whatever other question this answer settles.
+  const gateOpen = (snapshot.openQuestions ?? []).some(
+    (open) =>
+      open.questionId !== question.questionId &&
+      (open.purpose === "plan" || open.purpose === "route"),
+  );
+  const proceeds = answered.effect === "proceed";
+  const moved = proceeds && reroute ? "routing" : STATE_AFTER_EFFECT[answered.effect];
+  const state = proceeds && gateOpen ? "awaiting_input" : moved;
   return {
     verdict: { ok: true, run: { ...run, state, sequence: run.sequence + events.length } },
     events,

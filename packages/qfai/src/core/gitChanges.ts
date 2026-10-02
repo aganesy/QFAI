@@ -117,9 +117,6 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * would then reach the per-path confirmation below as a pathspec matching
  * nothing, read as clean, and drop out of the result — silently exempting
  * exactly the artifacts a non-English project names.
- *
- * A caller that asks "was the file this row points at modified?" wants
- * {@link withoutPathsGoneAtHead} over this set.
  */
 export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> | null {
   const output = gitStdout(root, [
@@ -158,37 +155,6 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
   }
 
   return changed;
-}
-
-/**
- * `changed` without the paths this branch removed.
- *
- * Asking "was the file this ledger row points at modified?" is answered wrongly
- * by any path the branch **removed**: it no longer exists, and finding it in the
- * set let a ledger still naming it pass as though its implementation had been
- * touched. A separate function rather than an option on the listing above,
- * because the same caller needs both sets — the raw one says which spec
- * directories the branch touched, deletions included, and pruning that would
- * hide a spec deleted whole.
- *
- * Keyed on removal rather than on rename detection, because rename detection is
- * a similarity score. A file moved and substantially rewritten in one commit
- * falls under the threshold and is reported as a delete plus an add, so a set
- * that subtracted only detected renames left that source behind — and a ledger
- * row still naming it passed. So does a plain deletion, whose path is equally
- * gone. Removal is the property the caller is actually asking about, and it is
- * not a heuristic.
- */
-export function withoutPathsGoneAtHead(
-  root: string,
-  baseBranch: string,
-  changed: ReadonlySet<string>,
-): Set<string> {
-  const kept = new Set(changed);
-  for (const removed of getRemovedPathsAgainstBase(root, baseBranch)) {
-    kept.delete(removed);
-  }
-  return kept;
 }
 
 /**
@@ -255,44 +221,6 @@ export function changedFilesSince(
     // the collapse this function exists to avoid.
     return { kind: "unresolvable" };
   }
-}
-
-/**
- * Every path present on `baseBranch` and gone at `HEAD`.
- *
- * `--diff-filter=D` under `--no-renames` is the whole answer: with rename
- * detection off a rename is a deletion plus an addition, so the sources of
- * detected renames, the sources of moves too rewritten to be detected as one,
- * and plain deletions all arrive as `D` rows. One list, no similarity score.
- *
- * `--name-only -z` is used so a path holding a quote or a non-ASCII byte comes
- * back verbatim rather than in git's C-style quoted form.
- *
- * **Three-dot, matching {@link getChangedFilesAgainstBase}.** These paths are
- * subtracted from that function's set, so a removal listed against a different
- * pair of trees removes a path the set never held, or fails to remove one it
- * does — either way this function stops meaning what its caller reads it
- * to mean.
- */
-function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<string> {
-  const output = gitStdout(root, [
-    "diff",
-    "--no-renames",
-    "--diff-filter=D",
-    "--name-only",
-    "-z",
-    `${baseBranch}...HEAD`,
-  ]);
-  const removed = new Set<string>();
-  if (output === null) {
-    return removed;
-  }
-  for (const record of output.split("\0")) {
-    if (record.length > 0) {
-      removed.add(normalizeRepoPath(record));
-    }
-  }
-  return removed;
 }
 
 /**

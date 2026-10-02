@@ -1,14 +1,14 @@
-// QFAI:AC-0001-0199-03
-// QFAI:EX-0001-0199-06
+// QFAI:AC-0001-0192-03
+// QFAI:EX-0001-0192-06
 // Fault seeds: FAULT-023
 
-import { readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "yaml";
 
-import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import {
   field,
   inbox,
@@ -21,9 +21,7 @@ import {
 
 afterEach(removeProjects);
 
-const DEFAULT_ROUTING = path.resolve(getInitAssetsDir(), "..", "defaults", "agent-routing.yml");
-const VERIFY_SKILL = path.join(".qfai", "assistant", "skill", "qfai-verify");
-const VERIFY_TABLE = path.join(VERIFY_SKILL, "references", "orchestrated-mode.md");
+const VERIFY_STEP = path.join(".qfai", "assistant", "step", "verify-repo-gate", "STEP.md");
 
 // `start` in `root`, and the run directories it left behind.
 async function startIn(root: string) {
@@ -36,14 +34,10 @@ async function startIn(root: string) {
   };
 }
 
-// A `qfai.config.yaml` routing override for `skill`: the package default with the first blocking
+// A `qfai.config.yaml` routing override for `step`: the package default with the first blocking
 // agent of its first phase dropped from every list of that phase.
-async function dropBlockingAgent(root: string, skill: string): Promise<void> {
-  const routing: unknown = parseYaml(await readFile(DEFAULT_ROUTING, "utf8"));
-  const entries: unknown = field(routing, "routing");
-  const entry: unknown = Array.isArray(entries)
-    ? entries.find((each) => field(each, "skill") === skill)
-    : undefined;
+async function dropBlockingAgent(root: string, step: string): Promise<void> {
+  const entry: unknown = (await defaultRoutingEntries()).find((each) => each.step === step);
   const phase: unknown = field(entry, "phases.0");
   const blocking = field(phase, "blocking_agents");
   const dropped: unknown = Array.isArray(blocking) ? blocking[0] : undefined;
@@ -62,7 +56,7 @@ async function dropBlockingAgent(root: string, skill: string): Promise<void> {
 
 it("A qfai.config.yaml routing override that drops a required reviewer", async () => {
   const root = await minimalProject();
-  await dropBlockingAgent(root, "qfai-implement");
+  await dropBlockingAgent(root, "implement-tdd");
 
   expect(await startIn(root)).toEqual({
     code: "fail-closed",
@@ -71,51 +65,22 @@ it("A qfai.config.yaml routing override that drops a required reviewer", async (
   });
 });
 
-const table = (header: string, cells: string[]) =>
-  ["# qfai-verify", "", "## Operations", "", `| ${header} | What |`, "| --- | --- |"]
-    .concat(cells.map((cell) => `| ${cell} | stub |`))
-    .join("\n");
+it("step-missing", async () => {
+  const root = await minimalProject();
+  await rm(path.join(root, VERIFY_STEP), { force: true });
 
-const BOUNDARIES: [string, (root: string) => Promise<void>][] = [
-  ["skill-missing", (root) => rm(path.join(root, VERIFY_SKILL), { recursive: true, force: true })],
-  [
-    "operations-table-missing",
-    (root) =>
-      writeFile(path.join(root, VERIFY_TABLE), "# qfai-verify\n\nServes the verify stage.\n"),
-  ],
-  [
-    "operations-first-column",
-    (root) => writeFile(path.join(root, VERIFY_TABLE), table("Mode", ["`verify-full`"])),
-  ],
-  [
-    "operations-cell-not-id",
-    (root) =>
-      writeFile(path.join(root, VERIFY_TABLE), table("Operation", ["`verify-full`, `verify`"])),
-  ],
-  [
-    "operations-pair-omitted",
-    (root) => writeFile(path.join(root, VERIFY_TABLE), table("Operation", ["`diagnose-only`"])),
-  ],
-];
-
-for (const [title, breakIt] of BOUNDARIES) {
-  it(title, async () => {
-    const root = await minimalProject();
-    await breakIt(root);
-
-    expect(await startIn(root)).toEqual({
-      code: "fail-closed",
-      cause: "contract-undeclared",
-      runs: [],
-    });
+  expect(await startIn(root)).toEqual({
+    code: "fail-closed",
+    cause: "contract-undeclared",
+    runs: [],
   });
-}
+});
 
 it("A fresh qfai init tree, and the same tree with an override dropping a required reviewer", async () => {
   const root = await initProject();
   const fresh = await startIn(root);
   await rm(path.join(root, ".qfai", "run"), { recursive: true, force: true });
-  await dropBlockingAgent(root, "qfai-implement");
+  await dropBlockingAgent(root, "implement-tdd");
 
   expect({ fresh, dropped: await startIn(root) }).toEqual({
     fresh: { code: undefined, cause: undefined, runs: [expect.stringMatching(/^run-\d{17}$/)] },

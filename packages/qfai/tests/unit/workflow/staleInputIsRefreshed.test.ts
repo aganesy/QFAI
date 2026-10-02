@@ -1,9 +1,10 @@
-// QFAI:EX-0001-0196-20
+// QFAI:EX-0001-0189-19
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
+import { kindSteps } from "./kindSteps.js";
 
 const source = "src/notify/email.ts";
 const staleDigest = "1".repeat(64);
@@ -17,8 +18,7 @@ it("A result whose submitted digest of an input differs from the digest in the f
     attempt: 1,
     stageKind: "implement",
     target: { kind: "flow" as const, flowId: "BF-0007" },
-    executor: { skill: "qfai-implement" },
-    operation: "implement",
+    steps: kindSteps("implement"),
     scope: { writeAreas: ["src/notify"] },
     inputs: [{ path: source, digest: staleDigest }],
   };
@@ -27,7 +27,7 @@ it("A result whose submitted digest of an input differs from the digest in the f
     plan: finishPlan,
     flowBinding: { flowId: "BF-0007" },
     acceptedStages: [
-      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+      { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
     ],
     outstandingWorkOrder: implementOrder,
   };

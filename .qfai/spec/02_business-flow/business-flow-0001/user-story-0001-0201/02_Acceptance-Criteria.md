@@ -3,47 +3,27 @@
 ## Criteria
 
 ```gherkin
-Feature: Claim a host as supported only with evidence
+Feature: Diagnose a reported defect without changing product code
+  # AC-0001-0201-01
+  Scenario: A diagnose-only operation changes no tracked project file
+    Given a diagnose-only work order with the expected-behaviour reference and the scope
+    When /qfai-implement serves it
+    Then no file git tracks is changed, so no product code, test or story file differs
+    And a file it writes that git ignores, such as its reproduction record, is named as an artifact, not as a changed file
 
-# AC-0001-0201-01
-# Parent: US-0001-0201
-Scenario: The seeds are tracked as rewritten and the fault seeds run on every pull request
-  Given the tracked fault-seed and routing-seed fixtures
-  When a pull request is checked
-  Then the fixtures hold 24 fault cases and 64 routing cases as rewritten
-  And every fault seed runs as a deterministic test with no network and no paid model
+  # AC-0001-0201-02
+  Scenario: A diagnosis returns one verdict and what supports it
+    Given a diagnose-only work order
+    When the stage returns
+    Then the result carries exactly one verdict: a missing test, a defective test, a regression, an expectation that differs from the request, or one of the verdicts that end the run or move it to another route
+    And it names the BF, AC or EX IDs of the bound flow that the next work order acts on
+    And the reproduction, the cause candidates and the impact are in the record the result references
 
-# AC-0001-0201-02
-# Parent: US-0001-0201
-Scenario: The routing eval is a manual release gate scored case by case
-  Given a release candidate for a host
-  When the routing eval is run
-  Then it is started by a maintainer and no workflow references its runner
-  And the safety-relevant list was recorded before it ran
-  And every safety case must pass and one high-risk false pass blocks the release
-
-# AC-0001-0201-03
-# Parent: US-0001-0201
-Scenario: A host is claimed as supported only with its evidence
-  Given the per-host eval records for the current package version
-  When the supported-host claim in the README is checked
-  Then the claimed hosts equal the hosts with a passing record and a green adapter test
-  And before the release commit no host is claimed
-
-# AC-0001-0201-04
-# Parent: US-0001-0201
-Scenario: The README puts the free-text entry first
-  Given the root README and the published README
-  When an adopter reads them
-  Then the free-text entry is the primary usage and direct stage invocation the expert path
-  And neither the operating-model diagram nor the tutorial has the operator typing each stage
-
-# AC-0001-0201-05
-# Parent: US-0001-0201
-Scenario: What ships keeps the repository's shipping rules
-  Given the assets, schemas, plans and evidence the workflow adds
-  When they are built, packed and written
-  Then their size, version, launcher and language rules hold
-  And the run records under `.qfai/evidence/workflow/` hold no conversation text, secret or absolute path
-  And the shipped schemas and the parser accept and refuse the same payloads, and runtime state is written only under `.qfai/run/`
+  # AC-0001-0201-03
+  Scenario: A diagnosed missing test raises no change request from implement
+    Given diagnosis found a missing test on behaviour an existing AC states
+    When /qfai-implement handles that scope gap
+    Then it appends no change request row to decisions.md and adds no EX
+    And the skill's statement of what goes to /qfai-sdd as a change request states that carve-out
+    And any other scope gap still goes to /qfai-sdd as a change request
 ```

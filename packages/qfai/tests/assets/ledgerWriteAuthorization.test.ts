@@ -16,7 +16,7 @@ async function asset(relative: string): Promise<string> {
 describe("Implementation evidence ownership", () => {
   it("keeps approved story and contract changes with their upstream owner", async () => {
     const drift = await asset("rule/drift-protocol.md");
-    const skill = await asset("skill/qfai-implement/SKILL.md");
+    const skill = await asset("step/implement-tdd/STEP.md");
     expect(drift).toContain("A downstream skill does not edit an approved specification");
     expect(drift).toContain("A new change-request row in decisions.md is permitted");
     expect(drift).toContain("TODO is not authorization");
@@ -25,7 +25,7 @@ describe("Implementation evidence ownership", () => {
   });
 
   it("puts observed EX results and review decisions in flow evidence", async () => {
-    const skill = await asset("skill/qfai-implement/SKILL.md");
+    const skill = await asset("step/implement-tdd/STEP.md");
     expect(skill).toContain(".qfai/evidence/implement-BF-NNNN.md");
     expect(skill).toContain("Give each example its own");
     expect(skill).toContain("RED, GREEN, and Refactor commands and observed results");

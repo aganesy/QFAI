@@ -1,34 +1,20 @@
-// QFAI:EX-0001-0192-31
+// QFAI:EX-0001-0185-31
 // Fault seeds: FAULT-003
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Decision = ReturnType<typeof decide>;
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const featurePlan = {
-  route: "feature",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "feature-sdd",
-      stageKind: "sdd",
-      skill: "qfai-sdd",
-      operation: "new-story",
-    },
-    {
-      stageInstanceId: "feature-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-    },
-    {
-      stageInstanceId: "feature-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
+    planStage("feature-sdd", "sdd"),
+    planStage("feature-implement", "implement"),
+    planStage("feature-verify", "verify"),
   ],
 };
 const approval = {
@@ -123,21 +109,8 @@ it("The recorded resultId with a different payload digest", () => {
 });
 
 const directPlan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  route: "edit-text",
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
 

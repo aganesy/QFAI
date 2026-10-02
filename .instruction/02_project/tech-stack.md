@@ -5,30 +5,32 @@ dependencies: [02_project/architecture.md]
 version: 1.0.0
 ---
 
-# 採用技術一覧（QFAI Toolkit）
+# Technology Stack (QFAI Toolkit)
 
-## ランタイム/言語
+## Runtime and Language
 
 - Node.js — the supported range is `package.json#engines`. Read it there; it moves.
-- TypeScript（ESM）
+- TypeScript (ESM)
 - pnpm — the pinned version is `package.json#packageManager`.
 
-## ビルド/パッケージ
+## Build and Packaging
 
-- tsup（`packages/qfai` のビルド）
-- TypeScript コンパイラ（`tsc -b` / `tsc --noEmit`）
-- npm publish（`RELEASE.md` に手順を集約）
+- tsup (builds `packages/qfai`)
+- TypeScript compiler (`tsc -b` / `tsc --noEmit`)
+- npm publish (steps are collected in `RELEASE.md`)
 
-## 解析/フォーマット
+## Parsing and Formatting
 
-- Gherkin 解析: `@cucumber/gherkin`, `@cucumber/messages`
-- YAML 解析: `yaml`（`qfai.config.yaml`）
+- Gherkin parsing: `@cucumber/gherkin`, `@cucumber/messages`
+- YAML parsing: `yaml` (`qfai.config.yaml`)
+- Markdown schema check: `@jackchuka/mdschema`, a dependency of the package that
+  `qfai validate` and the shipped docs lane both run
 
-## テスト
+## Tests
 
-- Vitest（`packages/qfai` のユニット/CLI テスト）
+- Vitest (unit and CLI tests for `packages/qfai`)
 
-## 品質・静的解析
+## Quality and Static Analysis
 
 - ESLint
 - Prettier

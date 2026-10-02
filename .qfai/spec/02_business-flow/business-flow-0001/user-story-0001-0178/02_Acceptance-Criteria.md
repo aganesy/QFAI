@@ -3,12 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: New Reviewer-Gate finding-code catalog
+Feature: Research Skill Packaging
+  # AC-0001-0178-01
+  Scenario: SKILL.md loading with progressive disclosure
+    Given a valid SKILL.md with YAML frontmatter
+    When the agent loads the skill
+    Then only metadata (name, description, allowed-tools) is read initially
+    And the full body is loaded only when the research task begins
 
-# AC-0001-0178-01
-# Parent: US-0001-0178
-Scenario: New Reviewer-Gate finding-code catalog enforced with mandatory justification
-  Given the Reviewer Gate,
-  When it evaluates a PR,
-  Then the eight catalog codes `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT` MUST be available in the catalog, each carrying a mandatory non-empty `justification:` (per the prior-pack OQ-0109 Option A / TC-71 advisory-failing posture). The catalog governs membership only and declares no per-code severity column: each code's own severity belongs to the detector that emits it (e.g. `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is emitted at warning by `designMdPatchZone.ts` per REQ-0151). A finding emitted with empty / whitespace-only `justification:` MUST be rejected by `qfai validate` ingestion (advisory-failing) at severity error for every one of the eight codes without exception, because what that rejection reports is the missing justification, not the underlying finding. The Reviewer subagent prompt / tool-augmentation timing for these codes inherits the OQ-0119 carry-forward deferral and is NOT resolved here.
+  # AC-0001-0178-02
+  Scenario: SKILL.md with invalid frontmatter
+    Given a SKILL.md with malformed YAML frontmatter
+    When the agent attempts to load the skill
+    Then the agent reports a parse error with details
+    And the agent falls back to default research behavior
 ```

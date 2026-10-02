@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0196-16
+// QFAI:EX-0001-0189-15
 
 import { expect, it } from "vitest";
 
@@ -10,7 +10,7 @@ it("Decide resume on a run in running whose outstanding work order has no accept
     workOrderId: "work-order-bounded-sdd-delta-1",
     stageInstanceId: "bounded-sdd-delta",
     attempt: 1,
-    stageKind: "sdd_delta",
+    stageKind: "sdd",
   };
   const resumed = decide(
     {

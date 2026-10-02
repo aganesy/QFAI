@@ -5,11 +5,11 @@ dependencies: none
 version: 1.0.0
 ---
 
-# 命名規約
+# Naming Conventions
 
-## 原則
+## Principles
 
-- 参照の正は ID であり、ファイル名は補助情報。
+- The ID is the authoritative reference; the file name is supplementary.
 - Business flows group user stories; examples cite their acceptance criterion,
   and contract rules cite examples.
 - Use `.qfai/spec/` as the configured `paths.specsDir`. Its policy, flow and
@@ -39,14 +39,18 @@ version: 1.0.0
   03_contract/
     contracts.md
     tech.md
-    structure.md
     api/ db/ ui/ cli/ design/
 ```
 
 The story-tree validator checks required files and rejects nested story
 directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 
-## ID 形式
+Every Markdown file in the tree conforms to its closed schema in
+`packages/qfai/assets/mdschema/`, which fixes its headings, their order and the
+one kind of content each section holds. `qfai validate` reports a violation as
+`QFAI-DOCSCHEMA-001`.
+
+## ID Formats
 
 - business flow: `BF-0001`
 - user story: `US-0001-0001` under `BF-0001`
@@ -55,15 +59,24 @@ directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 - business rule: `BR-0001` in a contract, citing its examples
 - decision and open question: `DEC-0001`, `OQ-0001`
 
+A new ID comes from `node scripts/story-ids.mjs next <scope>...`, for example
+`next DEC EX-0001-0054`. It counts the IDs on main, on every open pull
+request and in the working tree, so parallel branches do not pick the same
+number. `node scripts/story-ids.mjs check` lists each ID the branch adds that
+main or another open pull request adds too.
+
 ## Contracts
 
-- API, DB, UI and design contracts retain one appropriate
-  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declaration.
-- CLI contracts use `CLI-*` short IDs in `03_contract/contracts.md`.
+- API, DB and UI contracts declare one
+  `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`.
+- A CLI contract declares `# CLI-NNNN: <title>` as its H1 and is named
+  `cli/cli-NNNN-<slug>.md`.
+- `03_contract/contracts.md` lists every contract by that ID.
 
 ## Examples and test annotations
 
-- `03_Example.md` uses `EX-ID | AC-Ref | Input | Expected` rows.
+- `03_Example.md` holds one table with the columns
+  `EX-ID | AC-Ref | Input | Expected`, as its schema fixes.
 - E2E tests annotate `QFAI:BF-0001`; integration and API tests annotate
   `QFAI:AC-0001-0001-01`; selected non-E2E tests annotate
   `QFAI:EX-0001-0001-01`.

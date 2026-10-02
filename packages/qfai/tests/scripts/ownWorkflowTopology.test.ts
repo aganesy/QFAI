@@ -390,7 +390,7 @@ describe("TC-0017-0005 (TDD-0005): an unrecognized need state fails closed", () 
 //
 // The preamble was duplicated six times in `ci.yml`: enable the corepack shim,
 // set up Node, re-shim pnpm against the toolcache Node, install with a frozen
-// lockfile. `BR-0017-0024`'s obligation is SINGLE-DEFINITION, and a
+// lockfile. `BR-0016-0024`'s obligation is SINGLE-DEFINITION, and a
 // repository-internal composite action is the mechanism that satisfies it today
 // — a reusable workflow was rejected because per-job dispatch overhead
 // contradicts the cost objective this whole spec exists to serve.
@@ -558,7 +558,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
       .toBeLessThan(runOf(3).indexOf("pnpm rebuild"));
 
     // CLAIM 2 — the Node step carries the package-manager cache AND an EXPLICIT
-    // cache-dependency path. `BR-0017-0026` names both; today's inline preamble
+    // cache-dependency path. `BR-0016-0026` names both; today's inline preamble
     // has only the first, so the explicit path is new here rather than carried
     // over, and asserting it is what stops the extraction from silently dropping
     // half the rule.
@@ -650,11 +650,12 @@ describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shippe
 // The repository shipped a validate workflow to adopters AND kept its own copy of it.
 // The copy was never a mirror — it ran `--profile full` while the repository's own CI ran
 // `tdd` and `sdd` — so deleting it would have dropped coverage rather than removed a
-// duplicate. `BR-0017-0059` is what makes the deletion safe: the full-profile run moves
+// duplicate. `BR-0016-0058` is what makes the deletion safe: the full-profile run moves
 // into the `build` job first.
 //
-// Why the fold and not a repoint at the shipped file: the root manifest declares no
-// dependency on the package and provides no local binary, so `npx qfai` from the root
+// Why the fold and not a repoint at the shipped file: the root reaches the package only
+// through a workspace link, and the shipped workflow installs without building it. pnpm
+// links no binary for a package whose `bin` target is missing, so `npx qfai` from the root
 // resolves to the PUBLISHED package. That inverts the dogfooding — CI would validate a
 // release instead of the change under review.
 
@@ -780,9 +781,9 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
     const run = stepRun(only);
 
     // CLAIM 2 — it runs through the ratchet guard, and the guard targets the repository root
-    // with the LOCAL binary. The binary is the half that matters: the root manifest declares
-    // no dependency on the package, so any resolution through the package name would reach
-    // the published release instead of the build under review.
+    // with the LOCAL binary. The binary is the half that matters: every job installs before it
+    // builds, so pnpm links no `node_modules/.bin/qfai`, and any resolution through the package
+    // name would reach the published release instead of the build under review.
     expect
       .soft(run, `the folded run must go through the ratchet: ${JSON.stringify(run)}`)
       .toContain(DOGFOOD_GUARD);
@@ -812,9 +813,11 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       .soft(published, "a resolver-based invocation would reach the published package")
       .toEqual([]);
 
-    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest really
-    // does not depend on the package. If that ever changes, CLAIM 3's rationale changes with
-    // it and this row should be revisited rather than silently kept.
+    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest reaches
+    // the package only through the workspace link, which has no binary until the package is
+    // built. A registry range would put the published copy in `node_modules/.bin` of every job
+    // instead. If that ever changes, CLAIM 3's rationale changes with it and this row should
+    // be revisited rather than silently kept.
     const rootManifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
     );
@@ -826,8 +829,10 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       : {};
     expect
       .soft(
-        Object.keys(declared).filter((name) => name === "qfai"),
-        "the root manifest declaring a dependency on qfai would change why a repoint is unsafe",
+        Object.entries(declared).filter(
+          ([name, specifier]) => name === "qfai" && specifier !== "workspace:*",
+        ),
+        "the root manifest may depend on qfai only through the workspace link",
       )
       .toEqual([]);
   });
@@ -837,7 +842,7 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
 describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verification set", () => {
   it("enumerates the build job's verifications and requires each of them, the folded run included", () => {
     // THE enumeration. Keeping it here, as literals, is what makes removing any member a
-    // failing test rather than a tidy diff — which is precisely what `BR-0017-0060` asks
+    // failing test rather than a tidy diff — which is precisely what `BR-0016-0059` asks
     // for ("removing it later is a release blocker rather than a cleanup"). A set derived
     // from the workflow would agree with the workflow by construction and assert nothing.
     const REQUIRED = [
@@ -882,8 +887,8 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     // assertion above kept passing — and it is the only copy that checks the can-it-fail
     // property, so a member that drifted out of it would lose that check silently.
     //
-    // Pinned by EQUALITY rather than by sharing a constant, deliberately. `BR-0017-0060` and
-    // `BR-0017-0032` are different obligations over the same list, and a shared constant would
+    // Pinned by EQUALITY rather than by sharing a constant, deliberately. `BR-0016-0059` and
+    // `BR-0016-0032` are different obligations over the same list, and a shared constant would
     // let one row's edit satisfy the other by construction — the reason `VERIFICATION_SET`
     // restates rather than imports. Equality keeps three copies and makes divergence fail.
     const declared: unknown = JSON.parse(
@@ -937,7 +942,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
 // the same reason: a rule that is only read is a rule nobody has tested. The heredoc
 // is quoted, so the bytes GitHub executes are the bytes these tests execute.
 //
-// Why the classifier decides even the failure case: `BR-0017-0008` requires a failed
+// Why the classifier decides even the failure case: `BR-0016-0008` requires a failed
 // diff to emit an annotation naming the reason AND to select the full set. If that
 // decision lived in the shell around the program it would be the one part of the rule
 // no test could reach. So the workflow only ATTEMPTS the diff — paths to one file,
@@ -1158,12 +1163,12 @@ describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout su
 });
 
 /**
- * The lanes `BR-0017-0011` exempts from selection, by the command that runs each.
+ * The lanes `BR-0016-0011` exempts from selection, by the command that runs each.
  *
  * A literal list, and that is the row's whole point: the rule's subject is the LANE, not the
  * job hosting it, so a lane keeps its exemption when it moves. Derived from the aggregate
  * script this list would lose exactly the lane that left the aggregate — which is the case
- * the rule's own Notes name as satisfying `BR-0017-0007` while the guard stops running.
+ * the rule's own Notes name as satisfying `BR-0016-0007` while the guard stops running.
  *
  * Five, one per guard the rule enumerates: the formatter, the linter, the document and
  * shipped-surface structure checks, the repository scans, and the agent-integration mirror.
@@ -1227,7 +1232,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
         "pnpm lint: lint",
       ]);
 
-    // CLAIM 2 — no host carries a condition. `BR-0017-0011`'s second sentence: a lane moved
+    // CLAIM 2 — no host carries a condition. `BR-0016-0011`'s second sentence: a lane moved
     // into a job of its own MUST NOT acquire one.
     const conditioned = [...hostsOf.values()]
       .flat()
@@ -1239,7 +1244,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
 
     // CLAIM 3 — and no host appears in `dependencyConditions`. The pair is what the rule
     // forbids: a condition alone is CLAIM 2's, an entry alone declares a skip the job cannot
-    // take, and together they satisfy `BR-0017-0007` while the guard stops running.
+    // take, and together they satisfy `BR-0016-0007` while the guard stops running.
     const declaration: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
     );
@@ -1349,7 +1354,7 @@ describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref b
 describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-only", () => {
   it("selects everything for the assistant tree and narrows for the agent mirrors", () => {
     // The assistant tree is excluded from the documentation-only set by name
-    // (`BR-0017-0010`) because what lives there changes validate output — the same
+    // (`BR-0016-0010`) because what lives there changes validate output — the same
     // reason the catalog is loaded rather than merely shipped.
     const assistant = runClassifier({ paths: [".qfai/assistant/catalog/test-layers.md"] });
     expect
@@ -1367,7 +1372,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
     // path. The list was inert — the same decoration defect as a project matching zero
     // files and a knob the runner ignores, and this time it was in my own code.
     //
-    // `BR-0017-0010` requires the exclusion to be explicit ("MUST exclude the assistant
+    // `BR-0016-0010` requires the exclusion to be explicit ("MUST exclude the assistant
     // catalog tree BECAUSE changes there alter validate output"), so the reason is what
     // makes the rule enforced rather than incidental. Asserting it also keeps the
     // exclusion working if `.qfai/` is ever admitted to the documentation set.
@@ -1378,8 +1383,8 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       )
       .toMatch(/validate output/i);
 
-    // And the mirrors are documentation-only, which is what `BR-0017-0010` and `AC-0017-0005`
-    // say and what the user approved when they took `CR-20260820-0004` **option A**: the mirror
+    // And the mirrors are documentation-only, which is what `BR-0016-0010` says
+    // and what the user approved when they took `CR-20260820-0004` **option A**: the mirror
     // guards move into the lint lane, which selection never skips, so the mirrors keep their
     // saving without losing their guard.
     //
@@ -1581,10 +1586,10 @@ describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committe
   });
 });
 
-// `TC-0017-0012`'s own row is the lane-host one further up: `BR-0017-0011` was restated over
-// every lane of the lint aggregate, whichever job hosts it, so the claim that reads one job's
-// condition is no longer the whole of what that test case asks for. What survives here is the
-// half about `BR-0017-0012` — the required-context job and its closure — plus the lint lane read
+// The lane-host row further up is the main one: `BR-0016-0011` covers every lane of the lint
+// aggregate, whichever job hosts it, so a claim that reads one job's condition is not the
+// whole of what the rule asks for. What survives here is the
+// half about `BR-0016-0012` — the required-context job and its closure — plus the lint lane read
 // directly, which is the cheapest check on the tree and needs no lane resolution to make.
 describe("the required-context job and the lint lane both stay unconditional", () => {
   it("leaves the lint lane and the required-context job unconditional", () => {
@@ -1593,7 +1598,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
     expect(lint, "ci.yml must declare a `lint` job").not.toBeUndefined();
     if (lint === undefined) return;
 
-    // `BR-0017-0011`: the lint lane carries the formatter, the Markdown linter, the
+    // `BR-0016-0011`: the lint lane carries the formatter, the Markdown linter, the
     // leakage guard and the pin guard — all of which a documentation-only change can
     // break. Skipping it would make those gates vacuous for exactly the changes most
     // likely to trip them.
@@ -1602,7 +1607,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
       .soft(needsOf(lint), "the lint lane must not depend on detection")
       .not.toContain(DETECT_JOB);
 
-    // And the required-context job. `BR-0017-0012` is about what branch protection
+    // And the required-context job. `BR-0016-0012` is about what branch protection
     // sees: a skipped job reports success, so a condition on the job carrying a
     // required context — or on anything it depends on — turns the gate into a rubber
     // stamp. Asserted as an EMPTY needs set rather than "no conditional need",
@@ -1624,14 +1629,14 @@ describe("the required-context job and the lint lane both stay unconditional", (
 // ── change 9: layer separation stays inside the file, and no check name moves ─
 //
 // The layer split has seven matrix legs of the `test` job, one per runner
-// project. `BR-0017-0035` is what keeps it that way — "test-layer separation MUST be
+// project. `BR-0016-0035` is what keeps it that way — "test-layer separation MUST be
 // expressed as jobs and matrix legs inside the existing own-CI workflow file", with the
 // file count and the aggregate check name unchanged.
 //
 // What change 9 does NOT do is repartition those legs by cost. `10_Plan.md` puts that
 // last "because the partition is the only part of this spec that needs a measurement it
 // does not itself take", and step 6 landed structure only: no timing artifact exists, and
-// `BR-0017-0049` forbids adopting a value without one. So these three rows are the
+// `BR-0016-0048` forbids adopting a value without one. So these three rows are the
 // invariant that repartition will have to satisfy, landed BEFORE it rather than after —
 // which is the only order in which a guard can reject the change it guards against.
 //
@@ -1646,7 +1651,7 @@ describe("the required-context job and the lint lane both stay unconditional", (
 /**
  * The own-CI workflow files.
  *
- * `BR-0017-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
+ * `BR-0016-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
  * separation must be jobs and matrix legs inside the existing file, and a new workflow file PER
  * LAYER must be rejected. It is not a freeze on the repository ever gaining a workflow — the row
  * below says so in as many words, that it asserts the count layer separation must not change
@@ -1692,7 +1697,7 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     //
     // The set has both shrunk and grown since the spec was written, which is the point:
     // change 7 deleted the repository's own duplicate of the shipped validate workflow
-    // (`BR-0017-0058`, recorded in `DR-0017-0007`), and the release-automation and Renovate
+    // (`BR-0016-0057`), and the release-automation and Renovate
     // files were added. Each move had to be argued past the docblock above. This row asserts
     // the set layer separation must not change — not a set frozen at that moment.
     expect
@@ -2011,7 +2016,7 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
   it("keeps the verdict's key and declares no name that could rename it", () => {
     const jobs = ciJobs();
 
-    // CLAIM 1 — the key is unchanged. `BR-0017-0004` forbids renaming it across every
+    // CLAIM 1 — the key is unchanged. `BR-0016-0004` forbids renaming it across every
     // change in this spec, and eight changes have now touched this file.
     expect
       .soft(Object.keys(jobs), `the verdict job key must stay \`${VERDICT_JOB}\``)
@@ -2040,7 +2045,7 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
 
 // ── the required-context job's integrity, and upload hygiene ─────────────────
 //
-// `BR-0017-0032` is unusually explicit about what it is not satisfied by: "Any split, fold
+// `BR-0016-0032` is unusually explicit about what it is not satisfied by: "Any split, fold
 // or restructuring MUST leave a job of the exact name `build` that is unconditional and
 // that still performs — or depends on jobs that perform — every item of its enumerated
 // verification set. **Keeping the name alone is explicitly not sufficient.**"
@@ -2052,7 +2057,7 @@ describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable
 // migrate to a job `build` needs, and that is legal.
 
 /**
- * The exact name `BR-0017-0032` requires. A literal — the rule is about this string.
+ * The exact name `BR-0016-0032` requires. A literal — the rule is about this string.
  *
  * `build` declares no `needs` at all, so requiring it and nothing else would let every test lane
  * fail with the merge condition satisfied.
@@ -2072,7 +2077,7 @@ const BUILD_JOB_NAME = "build";
  * The items of the required-context job's enumerated verification set.
  *
  * The same literals `TC-0017-0073` pins, restated here on purpose rather than imported
- * from that row: `BR-0017-0060` and `BR-0017-0032` are different obligations over the same
+ * from that row: `BR-0016-0059` and `BR-0016-0032` are different obligations over the same
  * list, and a shared constant would let one row's edit silently satisfy the other.
  */
 const VERIFICATION_SET = [
@@ -2123,7 +2128,7 @@ function stepsOf(jobId: string): Record<string, unknown>[] {
 /**
  * The steps of the required-context job and of every job it transitively needs.
  *
- * This is what makes `BR-0017-0032`'s "or depends on jobs that perform" clause real rather
+ * This is what makes `BR-0016-0032`'s "or depends on jobs that perform" clause real rather
  * than decorative: an item that moved into a dependency still counts, and one that moved
  * into an unrelated job does not.
  */
@@ -2151,7 +2156,7 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
   it("keeps the exact name, no condition, and every verification item within reach", () => {
     const jobs = ciJobs();
 
-    // CLAIM 1 — the exact name. `BR-0017-0032` says "a job of the exact name", so this is a
+    // CLAIM 1 — the exact name. `BR-0016-0032` says "a job of the exact name", so this is a
     // string equality against the key set and not a search for something build-like.
     expect
       .soft(Object.keys(jobs), `a job of the exact name \`${REQUIRED_CONTEXT_NAME}\` must exist`)
@@ -2247,7 +2252,7 @@ describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by conti
     // `!== undefined` and not `=== true`, deliberately. `continue-on-error` accepts an
     // expression, so `${{ github.event_name == 'push' }}` is neither `true` nor `false` at
     // parse time and would slip past an equality check while doing exactly what
-    // `BR-0017-0033` forbids on the runs where it evaluates true. A verification item has no
+    // `BR-0016-0033` forbids on the runs where it evaluates true. A verification item has no
     // legitimate reason to carry the key at all.
     expect
       .soft(
@@ -2305,7 +2310,7 @@ describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an uncond
     if (upload === undefined) return;
     const withBlock = isRecord(upload["with"]) ? upload["with"] : {};
 
-    // The boundary, asserted as a boundary. `BR-0017-0034` says "at most seven days", so
+    // The boundary, asserted as a boundary. `BR-0016-0034` says "at most seven days", so
     // seven passes and eight fails — and an ABSENT value is not a pass either, because the
     // action's own default is ninety.
     const retention = withBlock["retention-days"];
@@ -2730,11 +2735,17 @@ describe("a permitted rebuild is verified against where the package comes from",
     try {
       const list = path.join(dir, "dependency-builds.txt");
       writeFileSync(list, `# probe\nesbuild\n`, "utf-8");
+      // The package manager's own permission list, which the verifier reads against the one
+      // above. It agrees here, so what each case below measures is the lockfile resolution.
+      const workspace = path.join(dir, "pnpm-workspace.yaml");
+      writeFileSync(workspace, `allowBuilds:\n  esbuild: true\n`, "utf-8");
 
       const verify = (lock: string): number => {
         const lockPath = path.join(dir, "pnpm-lock.yaml");
         writeFileSync(lockPath, lock, "utf-8");
-        const run = spawnSync("node", [VERIFIER, lockPath, list], { encoding: "utf-8" });
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
         if (run.error !== undefined) throw run.error;
         return run.status ?? -1;
       };
@@ -2793,6 +2804,97 @@ describe("a permitted rebuild is verified against where the package comes from",
       expect
         .soft(verify(absent), "a permitted name the lockfile never resolves must be reported")
         .toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses either list holding a name the other does not", () => {
+    // The agreeing fixture above measures the lockfile resolution. This measures the comparison
+    // itself: each branch of it, and the two shapes that must not be read as agreement.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-rebuild-agree-"));
+    try {
+      const lockPath = path.join(dir, "pnpm-lock.yaml");
+      writeFileSync(
+        lockPath,
+        [
+          "lockfileVersion: '9.0'",
+          "",
+          "packages:",
+          "",
+          "  esbuild@0.21.5:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+          "  sharp@0.33.0:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const verify = (listText: string, workspaceText: string): { status: number; out: string } => {
+        const list = path.join(dir, "dependency-builds.txt");
+        const workspace = path.join(dir, "pnpm-workspace.yaml");
+        writeFileSync(list, listText, "utf-8");
+        writeFileSync(workspace, workspaceText, "utf-8");
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
+        if (run.error !== undefined) throw run.error;
+        return { status: run.status ?? -1, out: `${run.stdout}${run.stderr}` };
+      };
+
+      const agreeing = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n");
+      expect
+        .soft(agreeing.status, `two lists naming the same package agree:\n${agreeing.out}`)
+        .toBe(0);
+
+      // The manager permits what nobody reviewed. This is the direction that matters: under an
+      // ordinary install — one this job does not perform — that permission is what runs code.
+      const managerOnly = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: true\n");
+      expect.soft(managerOnly.status, "a permission absent from the allow-list must fail").toBe(1);
+      expect
+        .soft(managerOnly.out, "and name the package the allow-list never reviewed")
+        .toContain("sharp");
+
+      // And the other way: the list names what the manager will refuse to build, which is a
+      // rebuild that stops the step later and with a worse message.
+      const listOnly = verify("esbuild\nsharp\n", "allowBuilds:\n  esbuild: true\n");
+      expect.soft(listOnly.status, "an allow-list entry the manager denies must fail").toBe(1);
+      expect.soft(listOnly.out, "and name it").toContain("sharp");
+
+      // A denial is not a permission, so it owes the allow-list nothing.
+      const denied = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: false\n");
+      expect.soft(denied.status, `an explicit false needs no counterpart:\n${denied.out}`).toBe(0);
+
+      // FAIL CLOSED on a value this check cannot read. The manager honours more of YAML than a
+      // line scan does, and a permission it skips in silence is the drift this exists to stop.
+      for (const [shape, why] of [
+        ["allowBuilds:\n  esbuild: true\n  sharp: !!bool true\n", "a tagged boolean"],
+        ["allowBuilds:\n  esbuild: true\n  sharp: yes\n", "another spelling of true"],
+        ["allowBuilds: { esbuild: true }\n", "a flow mapping on the key's own line"],
+        ['"allowBuilds":\n  esbuild: true\n  sharp: true\n', "a double-quoted key"],
+        ["'allowBuilds':\n  esbuild: true\n  sharp: true\n", "a single-quoted key"],
+        [" allowBuilds:\n   esbuild: true\n   sharp: true\n", "a root mapping that is indented"],
+        [
+          '"\\u0061llowBuilds":\n  esbuild: true\n  sharp: true\n',
+          "an escaped spelling of the key",
+        ],
+        ["? allowBuilds\n: esbuild: true\n  sharp: true\n", "the explicit key form"],
+      ] as Array<[string, string]>) {
+        const unreadable = verify("esbuild\n", shape);
+        expect.soft(unreadable.status, `${why} must be refused, not skipped`).toBe(1);
+      }
+
+      // And no list at all is not a disagreement. The re-publish path checks out a tree written
+      // before the manager required one, and there the allow-list is the whole permission.
+      const absent = verify("esbuild\n", 'packages:\n  - "packages/qfai"\n');
+      expect
+        .soft(absent.status, `a tree declaring no allowBuilds must still pass:\n${absent.out}`)
+        .toBe(0);
+      expect
+        .soft(absent.out, "and say so, because a skipped comparison reads like a satisfied one")
+        .toContain("declares no allowBuilds");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -3208,7 +3310,7 @@ describe("release automation performs decisions rather than making them", () => 
     ).toMatch(/grep[^\n]*release\/v\$\{claimed}/);
 
     // …and the permission surface must not have widened to pay for it. Asking the API needs
-    // `pull-requests: read`, and granting it here would make `BR-0017-0016`'s closed departure
+    // `pull-requests: read`, and granting it here would make `BR-0016-0016`'s closed departure
     // set four. Reading through the secret is what keeps that set at three.
     expect(
       tagWorkflow["permissions"],
@@ -3393,7 +3495,7 @@ describe("release automation performs decisions rather than making them", () => 
 
   it("keeps both workflows at the minimal permission scope", () => {
     // The writes go through a token in a secret, not through the job token, which is what keeps
-    // `BR-0017-0016`'s closed departure set at three. The row above that enforces the set would
+    // `BR-0016-0016`'s closed departure set at three. The row above that enforces the set would
     // catch a regression here too; this one says why it holds, so a later reader does not
     // "simplify" it by granting `contents: write` and widening the set.
     for (const name of ["prepare-release.yml", "tag-release.yml"]) {

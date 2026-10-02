@@ -29,6 +29,7 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
       "\n## Work Orders Summary",
     );
     expect(backstops).toContain("**A backstop sits above the declared shape, never at it.**");
+    expect(backstops).toContain("Leave room for other permitted agents sharing the host limit.");
     expect(backstops).toContain("QFAI sets none of them, so the host defaults stand.");
     expect(backstops).not.toContain("self-verification");
   });
@@ -36,42 +37,59 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
   it("lists the Claude Code controls with their defaults and version", async () => {
     const backstops = section(
       await read(tree, baselinePath),
-      "### Host backstops above the declared shape",
-      "\n## Work Orders Summary",
+      "Claude Code 2.1.217 or later:",
+      "\nCodex:",
     );
     expect(backstops).toContain("Claude Code 2.1.217 or later:");
     for (const row of [
-      "| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` | 3 (1 in 2.1.217 and 2.1.218) |",
-      "| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20 |",
-      "| `--max-budget-usd` in print mode; `maxBudgetUsd` / `max_budget_usd` in the Agent SDK | none |",
+      "| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` | 3 (1 in 2.1.217 and 2.1.218) | How deep delegation nests. `1` turns nesting off |",
+      "| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` | 20 | When new Agent tool spawns are refused |",
+      "| `--max-budget-usd` in print mode; `maxBudgetUsd` / `max_budget_usd` in the Agent SDK | none | What one run may spend, in US dollars, sub-agents included |",
     ]) {
       expect(backstops).toContain(row);
     }
+    expect(backstops).toContain(
+      "The spawn limit has exceptions for ultracode, `/subtask` forks, and resuming an exited agent.",
+    );
   });
 
   it("names the other hosts' controls and says where none was confirmed", async () => {
-    const backstops = section(
-      await read(tree, baselinePath),
-      "### Host backstops above the declared shape",
+    const baseline = await read(tree, baselinePath);
+    const codex = section(baseline, "\nCodex:", "\nGitHub Copilot CLI:");
+    expect(codex).toContain(
+      "| `agents.max_concurrent_threads_per_session` in `config.toml` (alias `agents.max_threads`) | chosen by Codex when unset | How many spawned-agent threads are open at once, the primary excluded |",
+    );
+    expect(codex).toContain("No equivalent was confirmed for nesting depth or for a spend cap.");
+    const copilot = section(
+      baseline,
+      "\nGitHub Copilot CLI:",
+      "\nVS Code Local harness (`runSubagent`):",
+    );
+    for (const row of [
+      "| `subagents.maxDepth` setting | 6 in the limits table | How deep sub-agents nest |",
+      "| `COPILOT_SUBAGENT_MAX_DEPTH` | 4 in the environment-variable table | How deep sub-agents nest |",
+      "| `subagents.maxConcurrency` setting | set by the Copilot plan, 2 to 32 | How many sub-agents run at once |",
+      "| `COPILOT_SUBAGENT_MAX_CONCURRENT` | 32 in the environment-variable table | How many sub-agents run at once |",
+      "| `--max-ai-credits` | unset | AI credits per response, as a soft limit |",
+    ]) {
+      expect(copilot).toContain(row);
+    }
+    expect(copilot).toContain("The two settings take effect only on usage-based billing plans.");
+    expect(copilot).toContain(
+      "The depth defaults disagree across the CLI documentation. Which control takes precedence was not confirmed.",
+    );
+    const vscode = section(
+      baseline,
+      "\nVS Code Local harness (`runSubagent`):",
       "\n## Work Orders Summary",
     );
-    for (const control of [
-      "`agents.max_concurrent_threads_per_session`",
-      "`subagents.maxDepth`",
-      "`COPILOT_SUBAGENT_MAX_DEPTH`",
-      "`subagents.maxConcurrency`",
-      "`COPILOT_SUBAGENT_MAX_CONCURRENT`",
-      "`--max-ai-credits`",
-      "`chat.subagents.allowInvocationsFromSubagents`",
-    ]) {
-      expect(backstops).toContain(control);
-    }
-    expect(backstops).toContain(
-      "No equivalent was confirmed for nesting depth or for a spend cap.",
+    expect(vscode).toContain(
+      "| `chat.subagents.allowInvocationsFromSubagents` | `false` | Whether a sub-agent may start sub-agents. Nesting stops at depth five |",
     );
-    expect(backstops).toContain(
+    expect(vscode).toContain(
       "No equivalent was confirmed for concurrent sub-agents or for a spend cap.",
     );
+    expect(vscode).toContain("None was confirmed for any of the three in the Copilot cloud agent.");
   });
 
   it("keeps the reviewer-gate note beside the independent-reviewer definition", async () => {
@@ -84,6 +102,7 @@ describe.each(trees)("%s — host backstops in the delegation baseline", (tree) 
     expect(definition).toContain("don't use subagents to verify your own work");
     expect(definition).toContain("excludes an agent reviewing its own output");
     expect(definition).toContain("pinned to a hash of the reviewed state");
+    expect(definition).toContain("The author cannot accept its own output.");
   });
 
   it("points the parallelization policy at the baseline and ships no URL", async () => {

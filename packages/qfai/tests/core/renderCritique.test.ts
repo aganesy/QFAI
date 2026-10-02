@@ -37,15 +37,8 @@ describe("Render Critique Loop validation", () => {
   }
 
   async function seedContracts(): Promise<void> {
-    const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
     const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
-    await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      "checklist:\n  color: []\n  typography: []\n  spacing: []\n  border_radius: []\n  shadow: []\n  dos_and_donts: []\n  component_tone: []\n  motion_rules: []\n",
-      "utf-8",
-    );
     await writeFile(
       path.join(uiDir, "ui-0001-dashboard.yaml"),
       "screens:\n  - id: dashboard\n    title: Dashboard\n    route: /dashboard\n",
@@ -53,7 +46,7 @@ describe("Render Critique Loop validation", () => {
     );
   }
 
-  it("renders/screenshot/HTML への言及がなければ QFAI-CRIT-001 を返す", async () => {
+  it("returns QFAI-CRIT-001 when there is no mention of renders/screenshot/HTML", async () => {
     await seedSkillPrompt(
       "qfai-prototyping",
       "# Prototyping Skill\n\nReview the code diff carefully.",
@@ -108,7 +101,7 @@ describe("Render Critique Loop validation", () => {
     expect(issues.some((issue) => issue.code === "QFAI-CRIT-005")).toBe(true);
   });
 
-  it("critique evidence に viewport/date/verdict/findings/rubric が揃っていれば必須項目エラーを返さない", async () => {
+  it("returns no required-field error when the critique evidence has viewport/date/verdict/findings/rubric", async () => {
     await seedEvidence(
       "critique-001.md",
       [

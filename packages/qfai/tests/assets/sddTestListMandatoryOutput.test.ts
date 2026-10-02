@@ -11,7 +11,7 @@ const read = (tree: string, file: string): Promise<string> =>
 describe("SDD completion hands off story obligations without an execution ledger", () => {
   for (const tree of trees) {
     it(tree + ": gates and records each changed flow", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-gate/STEP.md");
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
       expect(skill).toContain("--flow BF-NNNN");
       expect(skill).toContain(".qfai/evidence/sdd-BF-NNNN.md");

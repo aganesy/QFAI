@@ -40,13 +40,13 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-001",
-        `legacy ディレクトリを検出しました: .qfai/${rule.legacy}/`,
+        `Legacy directory detected: .qfai/${rule.legacy}/`,
         "error",
         legacyPath,
         "hygiene.legacyDirectory",
         [rule.legacy, rule.canonical],
         "change",
-        `ディレクトリ名を .qfai/${rule.canonical}/ へ統一し、生成/検査の参照先を canonical に揃えてください。`,
+        `Rename the directory to .qfai/${rule.canonical}/ and point generation and validation at the canonical name.`,
       ),
     );
   }
@@ -56,13 +56,13 @@ export async function validateRepositoryHygiene(
     issues.push(
       issue(
         "QFAI-HYG-002",
-        `specs 配下にテンプレ混入疑いを検出しました（warning）: ${suspiciousPaths.join(", ")}`,
+        `Suspected template content under specs (warning): ${suspiciousPaths.join(", ")}`,
         "warning",
         specsRoot,
         "hygiene.templateContamination",
         suspiciousPaths,
         "change",
-        "テンプレやサンプルは `.qfai/assistant/templates/` へ移設し、specs 配下には実成果物のみを配置してください。",
+        "Move templates and samples to `.qfai/assistant/templates/`, and keep only real deliverables under specs.",
       ),
     );
   }

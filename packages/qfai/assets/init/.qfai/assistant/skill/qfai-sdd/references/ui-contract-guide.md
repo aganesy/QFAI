@@ -1,34 +1,28 @@
 # UI Contract Authoring Guide
 
-Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: CON-UI-NNNN` and a nonempty `screens[]` list. Add its exact file and ID to `<paths.contractsDir>/contracts.md` in the same change. A filename is a locator; it does not define the contract ID or its flow coverage.
+Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`, each named `ui-NNNN-<slug>.yaml` after its ID. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its row to `<paths.contractsDir>/contracts.md` in the same change.
+The flows a UI contract serves are the flows whose examples its rules cite; the file name does not select them.
 
 ## `screens[].primary_tasks` shape
 
 Each entry in `screens[]` MUST carry a `primary_tasks:` slot. Each
-slot entry may be authored in one of two shapes:
+slot entry is a mapping with exactly three required keys, no additional
+keys allowed:
 
-1. **String-only (legacy)** — a plain bullet such as
-   `- Review pending orders`. Accepted during the deprecation window
-   for backwards compatibility with contracts authored before the
-   structured shape was introduced.
+```yaml
+- id: t1
+  label: Mark order shipped
+  acceptance: order status flips to shipped
+```
 
-2. **Structured (closed schema)** — a mapping with exactly three
-   required keys, no additional keys allowed:
+- `id` — short stable handle for the task.
+- `label` — human-readable task name.
+- `acceptance` — testable acceptance condition, written so a reviewer
+  can tell whether the task is actually done.
 
-   ```yaml
-   - id: t1
-     label: Mark order shipped
-     acceptance: order status flips to shipped
-   ```
-
-   - `id` — short stable handle for the task.
-   - `label` — human-readable task name.
-   - `acceptance` — testable acceptance condition, written so a
-     reviewer can tell whether the task is actually done.
-
-A structured entry missing any of `id` / `label` / `acceptance`, or
-carrying any extra key (e.g. `priority`, `owner`), is rejected at
-validate time. The schema is intentionally closed (no
+An entry that is a plain string, lacks any of `id` / `label` /
+`acceptance`, or carries any extra key (e.g. `priority`, `owner`), is
+rejected at validate time. The schema is intentionally closed (no
 `additionalProperties: true`) for two reasons: a fixed key set lets
 validate name a malformed task deterministically instead of accepting
 a mistyped or invented key in silence; and an open shape invites
@@ -36,7 +30,7 @@ per-project field sprawl (`priority`, `owner`, …), which would leave
 the same contract shape meaning different things in different
 projects.
 
-Validate is currently the only consumer of a structured entry: it
+Validate is currently the only consumer of an entry: it
 reads `label` for the empty-slot and count-band lanes, and requires
 `id` and `acceptance` to be present and non-empty. Nothing generates
 tests from them yet — requiring them now is what lets a generator be
@@ -92,7 +86,7 @@ element the marker stands for.
 ## `data-qfai` marker convention
 
 - The value is `CONTRACT_ID:ELEMENT_ID`, as in
-  `data-qfai="CON-UI-0001:search_input"`.
+  `data-qfai="UI-0001:search_input"`.
 - The suffix is `elements[].id`, never `elements[].label`. An id survives a copy
   change and a label does not.
 - Markers are what give an element fidelity coverage when its text is not
@@ -186,18 +180,18 @@ downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
 
 ## Prototyping coverage
 
-The prototyping cycle resolves UI-bearing contracts by their declared full `CON-UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `primaryUiContract` and `--primary-ui-contract` accept only a full ID; the CLI flag takes precedence. There is no filename alias or numeric shorthand.
+The prototyping cycle resolves UI-bearing contracts by their declared full `UI-NNNN` IDs across `<paths.contractsDir>/ui/`. `primaryUiContract` and `--primary-ui-contract` accept only a full ID; the CLI flag takes precedence. There is no filename alias or numeric shorthand.
 
 Cycle 0 freezes the full set of UI-bearing IDs in `uiContractsCovered[]` and its union of screen surfaces in
-`frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/CON-UI-NNNN/<screen>.review.json`. A later
+`frozenSurfaceUnion[]`. Evidence for a screen is scoped beneath `iter-NN/UI-NNNN/<screen>.review.json`. A later
 iterate, certify, or show reads that frozen set. If an older record has `specsCovered` or `frozenSpecsCovered`, or lacks
 the new fields, seed a fresh cycle 0 with `npx qfai prototyping iterate --cycle 0`; retain the older evidence as history.
 
 A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Discussion UI/UX sidecars are source material; the contract is the execution authority.
 
-## Design lock
+## Root DESIGN.md
 
-For a UI-bearing visual flow, use `design-md-authoring.md` and `ui-design-contract-normalization.md` to validate the root `DESIGN.md`, record its lock, and normalize approved screen decisions. A CLI-only flow without a visual secondary surface does not need a brand lock.
+For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with `ui-design-contract-normalization.md`. A CLI-only flow without a visual secondary surface does not need one.
 
 ## Review checklist
 

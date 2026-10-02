@@ -1,7 +1,7 @@
 /**
  * A missing newline can delete a shipped rule without deleting any text.
  *
- * `qfai-implement/SKILL.md` once joined the tail of a completion bullet
+ * The implementation completion gate once joined the tail of a completion bullet
  * to the next one. Because the joined line is a
  * two-space continuation of the preceding item, markdown renders all of it as
  * that item's text — so the skill's primary completion condition stopped being
@@ -78,7 +78,7 @@ describe.each(TREES)("%s", (tree) => {
 describe("the implementation completion condition remains a list item", () => {
   it.each(TREES)("%s", async (tree) => {
     const skill = await readFile(
-      path.join(repoRoot, tree, "assistant/skill/qfai-implement/SKILL.md"),
+      path.join(repoRoot, tree, "assistant/step/implement-checkpoint/STEP.md"),
       "utf-8",
     );
     // Anchored at a line start, so a future re-join fails here too and names

@@ -11,7 +11,7 @@
  * Integration scope: config loader + probe-order pin.
  */
 
-// QFAI:EX-0001-0133-01
+// QFAI:EX-0001-0129-01
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -51,8 +51,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "prototyping:",
       "  execution:",
       `    browserTool: ${browserTool}`,

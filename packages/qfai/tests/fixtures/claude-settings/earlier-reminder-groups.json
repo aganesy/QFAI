@@ -98,6 +98,22 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "grilling-design-artifact"
+            ]
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -178,6 +194,51 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(**/*.md)",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "documentation-clarity-after-write"
+            ]
+          },
+          {
+            "type": "command",
+            "if": "Edit(**/*.md)",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "documentation-clarity-after-edit"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI minimal-implementation reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "minimal-implementation"
+            ]
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -191,6 +252,22 @@
             "args": [
               "-e",
               "console.log(JSON.stringify({hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:\"QFAI user questions (.agents/rules/user-questions.md). Every question you put to the user this turn goes through the host's structured question tool where it is callable, and through that rule's fallback where it is not \\u2014 carrying the same parts either way. No question is light enough to skip it: a yes-or-no, a confirmation and a \\\"just checking\\\" are each a question. Read the rule rather than working from this line.\"}}))"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI structured-question reminder",
+            "command": "node",
+            "args": [
+              "-e",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
+              "structured-question"
             ]
           }
         ]

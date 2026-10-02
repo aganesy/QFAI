@@ -1,5 +1,5 @@
 /**
- * A feature run driven through the built CLI to a recorded RED receipt, and optionally a GREEN
+ * An add-feature run driven through the built CLI to a recorded RED receipt, and optionally a GREEN
  * one, over a story tree, a test file and a production file that exist on disk. Every stage
  * before acceptance is accepted with a canned result.
  */
@@ -97,9 +97,9 @@ async function accepted(root: string, runId: string, issued: unknown, id: string
 }
 
 /**
- * A feature run whose acceptance stage recorded RED over the test file, left with the implement
- * work order outstanding; with `green`, the implement stage also recorded GREEN over the
- * production file, leaving the verify work order outstanding.
+ * An add-feature run whose acceptance stage recorded RED over the test file, left with the
+ * implement work order outstanding; with `green`, the implement stage also recorded GREEN over
+ * the production file, leaving the docs work order outstanding.
  */
 export async function runWithReceipts(root: string, green: boolean) {
   const { runId, issued } = await featureRunAt(root, "acceptance");

@@ -1,9 +1,11 @@
-/** The shipped implementation workflow is the observable contract for this skill. */
+/** The shipped implementation steps are the observable contract for this skill. */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
 
 const skillDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -11,7 +13,7 @@ const skillDir = path.resolve(
 );
 
 async function skill(): Promise<string> {
-  return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
+  return readImplementFlowSteps(path.resolve(skillDir, "../.."));
 }
 
 async function reference(name: string): Promise<string> {
@@ -31,7 +33,7 @@ describe("E2E: implementation follows flow-scoped example obligations", () => {
 
   it("runs one falsifiable RED, GREEN and Refactor cycle per EX", async () => {
     const content = await skill();
-    expect(content).toContain("### Red, Green, Refactor");
+    expect(content).toContain("## Red, Green, Refactor");
     expect(content).toContain("A load error, missing dependency, or broken fixture is");
     expect(content).toContain("qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
