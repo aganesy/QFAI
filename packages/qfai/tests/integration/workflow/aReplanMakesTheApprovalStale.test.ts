@@ -108,7 +108,7 @@ it("an approval given before a widening replan is asked again at issue", async (
     kept: "ready",
     state: "awaiting_input",
     workOrder: null,
-    reaskedGoal: FEATURE_PROPOSAL.newStories[0].goal,
+    reaskedGoal: FEATURE_PROPOSAL.newStories[0]?.goal,
     reaskedSlot: field(questionOf(routed.json, "create"), "story.slotId"),
   });
 });
