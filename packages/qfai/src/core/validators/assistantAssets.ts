@@ -1537,12 +1537,12 @@ function collectSkillNameIssue(
 }
 
 /** The bidirectional controls that reorder the text after them on a terminal. */
-const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
+export const BIDIRECTIONAL_CONTROLS: ReadonlySet<number> = new Set([
   0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
 ]);
 
 /** The separators a Unicode-aware renderer starts a new line at. */
-const LINE_SEPARATORS: ReadonlySet<number> = new Set([0x2028, 0x2029]);
+export const LINE_SEPARATORS: ReadonlySet<number> = new Set([0x2028, 0x2029]);
 
 /**
  * A value out of a `SKILL.md`, safe to print.

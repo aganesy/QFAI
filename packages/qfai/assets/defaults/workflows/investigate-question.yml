@@ -1,17 +1,10 @@
 route: investigate-question
 family: close
 stages:
-  - id: investigate
-    kind: triage
-    steps: [triage-investigate]
   - id: answer
     kind: triage
-    steps: [triage-answer]
-    after: [investigate]
-  - id: close
-    kind: triage
-    steps: [triage-close]
-    after: [answer]
+    steps: [triage-investigate, triage-answer, triage-close]
+    review: none
 defaultModifiers: []
 decisionPoints: []
 branchPoints:

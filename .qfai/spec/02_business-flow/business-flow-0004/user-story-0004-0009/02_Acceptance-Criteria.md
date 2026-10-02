@@ -11,6 +11,8 @@ Feature: Write the business rules into their contracts
     Then each contract carries its rule in the form its file type allows
     And each rule's examples are the new IDs of every example with a new ID whose old BR-Ref named it
     And each old ID in a rule's statement is its new ID
+    And a rule written as a heading section with a Rule field has that field's value alone as its statement, on one line in a SQL contract
+    And a YAML contract keeps its x-qfai-depends-on list on one line however many IDs it holds
 
   # AC-0004-0009-02
   Scenario: Unplaced rules and the old non-functional requirement lists go to a person
@@ -25,4 +27,11 @@ Feature: Write the business rules into their contracts
     When step 7 runs
     Then the rule is written as a row of the contract's Business rules table
     And the rule and the rule its statement names are listed under For a person
+
+  # AC-0004-0009-04
+  Scenario: A rule written as an index table row and as a heading is one rule
+    Given an old business-rules file that holds a rule both in an index table row and in a heading section, with another rule's lines between them
+    When step 7 runs
+    Then the rule is written once, and only its own row and section leave the file
+    And two values of one field that disagree stop the run with exit 2, naming both locations
 ```
