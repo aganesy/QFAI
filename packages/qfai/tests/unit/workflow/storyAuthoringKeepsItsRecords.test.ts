@@ -1,8 +1,8 @@
-// QFAI:EX-0001-0192-46
-// QFAI:EX-0001-0192-47
-// QFAI:EX-0001-0192-50
-// QFAI:EX-0001-0195-13
-// QFAI:EX-0001-0195-14
+// QFAI:EX-0001-0185-46
+// QFAI:EX-0001-0185-47
+// QFAI:EX-0001-0185-50
+// QFAI:EX-0001-0188-13
+// QFAI:EX-0001-0188-14
 
 import { expect, it } from "vitest";
 
@@ -79,7 +79,7 @@ interface Accepted {
 // A story-authoring work order issued against `ISSUED`, and its result accepted against `after`.
 function accept(accepted: Accepted) {
   const { stageKind, after, changed = [], outcome = "accepted" } = accepted;
-  const stage = planStage(stageKind, stageKind, "always");
+  const stage = planStage(stageKind, stageKind);
   const workOrder = {
     workOrderId: `work-order-${stageKind}-1`,
     stageInstanceId: stageKind,
@@ -97,7 +97,7 @@ function accept(accepted: Accepted) {
   }));
   const snapshot: Snapshot = {
     run: { id: RUN, state: "running", sequence: 12 },
-    plan: { route: "bounded-change", stages: [stage] },
+    plan: { route: "add-feature", stages: [stage] },
     flowBinding: { flowId: "BF-0001" },
     outstandingWorkOrder: workOrder,
     authorizations: [...answers, { authorizationId: "authorization-2", kind: "request_scope" }],
@@ -174,10 +174,10 @@ it("An sdd result appending a cited CREATE row and a cited change request, each 
   ).toEqual(accepted);
 });
 
-it("An sdd_delta result editing the Content of a row present at issue", () => {
+it("An sdd result editing the Content of a row present at issue", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [
         ISSUED[0] ?? "",
         "| DEC-0002 | Keep two emails per customer | Settled in discussion | DONE |",
@@ -186,10 +186,10 @@ it("An sdd_delta result editing the Content of a row present at issue", () => {
   ).toEqual(refused("record-rewritten", "DEC-0002"));
 });
 
-it("An sdd_delta result moving the Status of a row this run did not append", () => {
+it("An sdd result moving the Status of a row this run did not append", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [
         ISSUED[0] ?? "",
         "| DEC-0002 | Keep one email per customer | Settled in discussion | WIP |",
@@ -198,10 +198,10 @@ it("An sdd_delta result moving the Status of a row this run did not append", () 
   ).toEqual(refused("record-rewritten", "DEC-0002"));
 });
 
-it("An sdd_delta result moving the Status of a row this run appended", () => {
+it("An sdd result moving the Status of a row this run appended", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       appendedByRun: ["DEC-0002"],
       after: [
         ISSUED[0] ?? "",
@@ -214,23 +214,23 @@ it("An sdd_delta result moving the Status of a row this run appended", () => {
 it("An appended CREATE row at WIP citing no human_decision of this run", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [...ISSUED, "| DEC-0003 | CREATE US-0001-0006 in BF-0001 | Approved | WIP |"],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-it("An sdd_delta result deleting an open-questions row present at issue", () => {
-  expect(accept({ stageKind: "sdd_delta", after: ISSUED, questionsAfter: [] })).toEqual(
+it("An sdd result deleting an open-questions row present at issue", () => {
+  expect(accept({ stageKind: "sdd", after: ISSUED, questionsAfter: [] })).toEqual(
     refused("record-rewritten", "OQ-0001"),
   );
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP citing this run's human_decision with another answeredBy", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [
         ...ISSUED,
         `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${cites(CREATE, { who: "operator-2" })} | WIP |`,
@@ -239,11 +239,11 @@ it("An appended CREATE row at WIP citing this run's human_decision with another 
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP citing another run's human_decision", () => {
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [
         ...ISSUED,
         `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${cites(CREATE, { run: "run-20250101000000000" })} | WIP |`,
@@ -252,45 +252,45 @@ it("An appended CREATE row at WIP citing another run's human_decision", () => {
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that does not say when the answer was recorded", () => {
   const withoutTime = `Answered ${RUN}/${CREATE.authorizationId} by operator-1: Create it`;
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${withoutTime} | WIP |`],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that does not name the option the operator chose", () => {
   const withoutChoice = `Answered ${RUN}/${CREATE.authorizationId} by operator-1 at ${CREATE.recordedAt}`;
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${withoutChoice} | WIP |`],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that states another recordedAt", () => {
   const otherTime = cites(CREATE, { at: "2026-09-26T09:00:00.000Z" });
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${otherTime} | WIP |`],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("An appended CREATE row at WIP that states an option the answer did not choose", () => {
   const otherOption = cites(CREATE, { chosen: ["Leave it"] });
   expect(
     accept({
-      stageKind: "sdd_delta",
+      stageKind: "sdd",
       after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${otherOption} | WIP |`],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
@@ -317,12 +317,12 @@ const changeRequestRefused = {
   ],
 };
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("A change request at WIP whose two-option answer it states with one label", () => {
   expect(changeRequestStating({ chosen: ["Apply it"] })).toEqual(changeRequestRefused);
 });
 
-// QFAI:EX-0001-0192-53
+// QFAI:EX-0001-0185-53
 it("A change request at WIP that states another recordedAt", () => {
   expect(changeRequestStating({ at: "2026-09-26T09:00:00.000Z" })).toEqual(changeRequestRefused);
 });
@@ -477,13 +477,13 @@ it("The answer to a story-authoring stage's question authorizes its change", () 
   }).toEqual({ state: "ready", operation: "CHANGE_REQUEST", answeredBy: "operator-1" });
 });
 
-// A bounded run's sdd_delta stage, driven through the journal: its first attempt appends a row
+// An add-feature run's sdd stage, driven through the journal: its first attempt appends a row
 // and ends with `outcome`, and the attempt after it moves that row to DONE.
 function laterAttemptMovesItsRow(outcome: "needs_repair" | "blocked") {
   const plan = planOf(
-    "bounded-change",
+    "add-feature",
     [
-      stage("bounded-sdd-delta", "sdd_delta"),
+      stage("bounded-sdd-delta", "sdd"),
       stage("bounded-implement", "implement"),
       stage("bounded-verify", "verify"),
     ],

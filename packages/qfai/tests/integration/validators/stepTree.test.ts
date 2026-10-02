@@ -32,10 +32,15 @@ async function writeDoc(rel: string, content: string): Promise<void> {
   await writeFile(target, content, "utf-8");
 }
 
-async function writeParent(name: string, steps: string, roles = "[orchestrator]"): Promise<void> {
+async function writeParent(
+  name: string,
+  steps: string,
+  roles = "[orchestrator]",
+  extra: Record<string, string> = {},
+): Promise<void> {
   await writeDoc(
     `.qfai/assistant/skill/${name}/SKILL.md`,
-    frontmatter({ name, description: '"Use when testing."', steps, roles }),
+    frontmatter({ name, description: '"Use when testing."', steps, roles, ...extra }),
   );
 }
 
@@ -70,8 +75,8 @@ describe("validateStepTree", () => {
     expect(await run()).toEqual([]);
   });
 
-  // QFAI:AC-0001-0217-02
-  // QFAI:EX-0001-0217-02
+  // QFAI:AC-0001-0210-02
+  // QFAI:EX-0001-0210-02
   it("refuses a SKILL.md anywhere under the step layer", async () => {
     await seedCleanTree();
     await writeDoc(".qfai/assistant/step/demo-one/nested/SKILL.md", "# nested\n");
@@ -81,8 +86,8 @@ describe("validateStepTree", () => {
     expect(found[0]?.file).toBe(".qfai/assistant/step/demo-one/nested/SKILL.md");
   });
 
-  // QFAI:EX-0001-0217-02
-  // QFAI:EX-0001-0217-03
+  // QFAI:EX-0001-0210-02
+  // QFAI:EX-0001-0210-03
   it("refuses a step directory without STEP.md and a name that is not its directory", async () => {
     await seedCleanTree();
     await writeParent("qfai-demo", "[demo-one, demo-two, common-share]");
@@ -95,15 +100,15 @@ describe("validateStepTree", () => {
     ]);
   });
 
-  // QFAI:AC-0001-0217-03
-  // QFAI:EX-0001-0217-04
+  // QFAI:AC-0001-0210-03
+  // QFAI:EX-0001-0210-04
   it("refuses an owner that is neither common nor an installed parent", async () => {
     await seedCleanTree();
     await writeStep("demo-one", { owner: "qfai-missing", requires: "[common-share]" });
     expect(rules(await run())).toEqual(["stepTree.unknownOwner"]);
   });
 
-  // QFAI:EX-0001-0217-05
+  // QFAI:EX-0001-0210-05
   it("refuses a parent steps: entry naming no installed step", async () => {
     await seedCleanTree();
     await writeParent("qfai-demo", "[demo-one, demo-absent, common-share]");
@@ -112,7 +117,7 @@ describe("validateStepTree", () => {
     expect(found[0]?.file).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
   });
 
-  // QFAI:EX-0001-0217-05
+  // QFAI:EX-0001-0210-05
   it("refuses a plan step that is not installed", async () => {
     const plans = path.join(getInitAssetsDir(), "..", "defaults", "workflows");
     const [plan = ""] = (await readdir(plans)).filter((name) => name.endsWith(".yml"));
@@ -133,7 +138,7 @@ describe("validateStepTree", () => {
     ).toBe(true);
   });
 
-  // QFAI:EX-0001-0217-06
+  // QFAI:EX-0001-0210-06
   it("refuses a step no parent lists, no plan uses and no step requires", async () => {
     await seedCleanTree();
     await writeStep("common-idle", { owner: "common", requires: "[]" });
@@ -142,9 +147,16 @@ describe("validateStepTree", () => {
     expect(found[0]?.file).toBe(".qfai/assistant/step/common-idle/STEP.md");
   });
 
-  it("counts the review cycle as used once a parent runs steps", async () => {
+  // QFAI:EX-0001-0210-06
+  it("counts a common step a parent requires as used, and no step as used without a reference", async () => {
     await seedCleanTree();
     await writeStep("common-review-cycle", { owner: "common", requires: "[]" });
+    const orphaned = await run();
+    expect(rules(orphaned)).toEqual(["stepTree.orphan"]);
+    expect(orphaned[0]?.file).toBe(".qfai/assistant/step/common-review-cycle/STEP.md");
+    await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", {
+      requires: "[common-review-cycle]",
+    });
     expect(await run()).toEqual([]);
   });
 
@@ -154,8 +166,8 @@ describe("validateStepTree", () => {
     expect(await run()).toEqual([]);
   });
 
-  // QFAI:AC-0001-0217-04
-  // QFAI:EX-0001-0217-07
+  // QFAI:AC-0001-0210-04
+  // QFAI:EX-0001-0210-07
   it("refuses requires naming a step that is not common", async () => {
     await seedCleanTree();
     await writeParent("qfai-demo", "[demo-one, demo-two, common-share]");
@@ -163,14 +175,31 @@ describe("validateStepTree", () => {
     expect(rules(await run())).toEqual(["stepTree.requiresNonCommon"]);
   });
 
-  // QFAI:EX-0001-0217-07
+  // QFAI:EX-0001-0210-07
   it("refuses a common step that requires anything", async () => {
     await seedCleanTree();
     await writeStep("common-share", { owner: "common", requires: "[common-share]" });
     expect(rules(await run())).toEqual(["stepTree.commonRequires"]);
   });
 
-  // QFAI:EX-0001-0217-06
+  // QFAI:EX-0001-0210-09
+  it("refuses a parent requires: that is not a list, names a step that is not common, or names no installed step", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["common-share", "stepTree.requiresShape", "not a list"],
+      ["[demo-one]", "stepTree.requiresNonCommon", '"demo-one"'],
+      ["[common-absent]", "stepTree.unknownStep", '"common-absent"'],
+    ];
+    for (const [requires, rule, named] of cases) {
+      await seedCleanTree();
+      await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", { requires });
+      const found = await run();
+      expect(rules(found), requires).toEqual([rule]);
+      expect(found[0]?.file, requires).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
+      expect(found[0]?.message, requires).toContain(named);
+    }
+  });
+
+  // QFAI:EX-0001-0210-06
   it("refuses a step whose owner's steps: does not list it", async () => {
     await seedCleanTree();
     await writeParent("qfai-demo", "[common-share]");

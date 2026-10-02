@@ -2,10 +2,10 @@
 /**
  * E2E: a clear new feature is delivered from one request.
  *
- * On a `qfai init` project, a feature run asks one `create` question at routing. The
+ * On a `qfai init` project, an add-feature run asks one `create` question at routing. The
  * story-authoring stage asks for its change once, and the attempt holding the answer writes the
  * new flow and story with the rows that cite both answers. Acceptance takes the seam round trip,
- * implement and verify follow, and `finish` completes the run `qfai_done` on the tree the run
+ * implement, docs and verify follow, and `finish` completes the run `qfai_done` on the tree the run
  * left, which validates clean. Declining the question cancels the run with nothing tracked, and a
  * result for a work order the run never issued changes nothing.
  */
@@ -24,6 +24,7 @@ import {
   STORY_ID,
   approvedFeature,
   authorStory,
+  docsPass,
   implementGreen,
   throughAcceptance,
   verifyPass,
@@ -51,7 +52,7 @@ afterEach(removeProjects);
 
 const BOUND = { kind: "flow", flowId: FLOW_ID };
 const BASELINE = "shared-skill-operating-baseline.md";
-const ACCEPTANCE = ["atdd-scaffold", "atdd-author"];
+const ACCEPTANCE = ["atdd-scaffold", "atdd-credentials", "atdd-author"];
 
 it("one create question, one change approval, every stage from its work order, and finish qfai_done", async () => {
   const root = await discussedProject();
@@ -59,7 +60,8 @@ it("one create question, one change approval, every stage from its work order, a
   const { runId, routed, create, waiting, approved, sdd } = await approvedFeature(root);
   const story = await authorStory(root, runId, sdd.json, field(create, "questionId"));
   const stages = await throughAcceptance(root, runId, story.next.json);
-  const { next: verify } = await implementGreen(root, runId, stages.implement);
+  const { next: docs } = await implementGreen(root, runId, stages.implement);
+  const { next: verify } = await docsPass(root, runId, docs.json);
   const { next: done } = await verifyPass(root, runId, verify.json);
   commitAll(root);
   const summary = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
@@ -85,9 +87,14 @@ it("one create question, one change approval, every stage from its work order, a
       field(record, "operation"),
       field(record, "capture"),
     ]),
-    later: [stages.acceptance, stages.seam, stages.again, stages.implement, verify.json].map(
-      (document) => orderOf(document),
-    ),
+    later: [
+      stages.acceptance,
+      stages.seam,
+      stages.again,
+      stages.implement,
+      docs.json,
+      verify.json,
+    ].map((document) => orderOf(document)),
     seamParent:
       field(stages.seam, "workOrder.parentWorkOrderId") ===
       field(stages.acceptance, "workOrder.workOrderId"),
@@ -108,7 +115,15 @@ it("one create question, one change approval, every stage from its work order, a
     approved: "ready",
     sdd: {
       stageKind: "sdd",
-      steps: ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"],
+      steps: [
+        "sdd-triage",
+        "sdd-flow",
+        "sdd-story",
+        "sdd-contract",
+        "common-design-md",
+        "sdd-cycle",
+        "sdd-gate",
+      ],
       target: { kind: "new_story", slotId: expect.any(String) },
     },
     slotBound: true,
@@ -127,7 +142,11 @@ it("one create question, one change approval, every stage from its work order, a
         steps: ["implement-tdd", "implement-checkpoint"],
         target: BOUND,
       },
-      { stageKind: "verify", steps: ["verify-context", "verify-qfai-gate", "verify-repo-gate"] },
+      { stageKind: "maintenance", steps: ["maintain-edit"] },
+      {
+        stageKind: "verify",
+        steps: ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
+      },
     ],
     seamParent: true,
     attempts: [1, 2],

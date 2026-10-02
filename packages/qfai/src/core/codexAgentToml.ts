@@ -226,7 +226,7 @@ export function renderCodexAgentToml(
   if (frontmatter.frontmatter.name !== agentName) {
     return {
       ok: false,
-      error: `frontmatter.name (${frontmatter.frontmatter.name}) がファイル名 (${agentName}) と一致しません`,
+      error: `frontmatter.name (${frontmatter.frontmatter.name}) does not match the file name (${agentName})`,
     };
   }
   if (frontmatter.frontmatter.kind !== kind) {

@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0193-02
+// QFAI:EX-0001-0186-02
 
 import { expect, it } from "vitest";
 
@@ -6,12 +6,12 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bugfix",
+  route: "fix-defect",
   stages: [
-    planStage("bugfix-diagnose", "diagnose", "always"),
-    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
-    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
-    planStage("bugfix-verify", "verify", "always"),
+    planStage("bugfix-diagnose", "diagnose"),
+    planStage("bugfix-sdd-append", "sdd_append"),
+    planStage("bugfix-implement", "implement"),
+    planStage("bugfix-verify", "verify"),
   ],
   writeScope: ["src/forms/**"],
 };

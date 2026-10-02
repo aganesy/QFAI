@@ -1,5 +1,5 @@
-# US-0001-0134: Optional prototype capture
+# US-0001-0134: UI-contract terminology in prototyping
 
 ## User Story
 
-As a `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --capture` flag that is off by default, so that I can opt into PNG and HTML capture per the Capture contract without breaking the default no-capture posture.
+As a downstream consumer, I want the public `/qfai-prototyping` skill surface to name the UI contract as its unit and to leave `resolveSurfaceUnion()` out, so that SKILL.md and the contracts stop drifting from the implementation.

@@ -114,11 +114,15 @@ Every major artifact in the stage should include this table schema:
 Every skill and step inherits this gate. Its own reviewer gate names only the
 checks specific to its artifacts; the Drift Protocol, test-layer and
 signals-not-gates bullets below, and the `PASS` / `REVISE` vocabulary, are not
-restated. A stage that runs several steps is reviewed once, after its last step,
-with the union of their reviewers
+restated. A skill with no check of its own carries no reviewer gate section. A
+stage that runs several steps is reviewed once, after its last step, with the
+union of their reviewers
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
 
 - Final completion gate must be delegated to an independent reviewer.
+- Each reviewer records an explicit PASS or REVISE for the reviewed revision.
+- The one exception: a work order that names no required reviewer is reviewed
+  by none, and the two bullets above then have nothing to apply to.
 
 ### Definition: independent reviewer (NORMATIVE)
 
@@ -189,9 +193,12 @@ inherit a spent budget and would have made the two artifacts' rounds indistingui
 
 The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing else.
 
-- Reviewers must verify Drift Protocol enforcement.
-- Reviewers must verify test-layer policy enforcement when relevant.
-- Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
+- Reviewers must verify Drift Protocol enforcement
+  (`.qfai/assistant/rule/drift-protocol.md`).
+- Reviewers must verify test-layer policy enforcement when relevant
+  (`.qfai/assistant/rule/test-layers.md`).
+- Test volume ratios, floors and planning estimates are signals, not gates,
+  unless the skill explicitly says so.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
   `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
@@ -219,6 +226,7 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/qfai-grilling`           | Decisions asked rather than assumed, facts naming where they were read, the session's end condition                 | The merit of what the user decided, and the artifacts the invoking stage writes from it |
 | `/qfai-grill`              | The same, reported to the user rather than to a stage                                                               | The merit of what the user decided; there is no artifact to review                      |
 | `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                                      | Whether the new wording is the better one                                               |
+| `/qfai-triage`             | That no tracked file changed, the recorded outcome, each follow-up, and the sources an answer cites                 | The work a follow-up request describes                                                  |
 | `/qfai-run`                | Nothing of its own: it writes no artifact, and each stage's reviewers review that stage's work                      | Every artifact a stage writes, which that stage's remit covers                          |
 
 Article VII excess in the reviewing stage's own artifacts is in scope;

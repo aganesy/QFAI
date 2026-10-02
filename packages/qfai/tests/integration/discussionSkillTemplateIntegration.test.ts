@@ -111,7 +111,7 @@ const RETIRED_CONCEPT_PATTERNS = [
 ];
 
 describe("discussion skill template integration", () => {
-  it("uiux template directory が screen-level sidecars を持つ", async () => {
+  it("the uiux template directory has screen-level sidecars", async () => {
     const files = await readdir(uiuxTemplateDir);
     expect(files).toContain("40_screen_contracts.md");
     expect(files).toContain("50_review_input_bundle.md");
@@ -122,7 +122,7 @@ describe("discussion skill template integration", () => {
   });
 
   // QFAI:EX-0001-0016-01
-  it("SKILL.md の UI-bearing completion が brand SSOT を要求している", async () => {
+  it("SKILL.md requires the brand SSOT for UI-bearing completion", async () => {
     const content = await readFile(skillPath, "utf-8");
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
@@ -134,7 +134,7 @@ describe("discussion skill template integration", () => {
   // `threeLayer.ts#CANONICAL_REQUIRED_SIDECAR_FILES`, an operator builds a
   // `uiux/` that the completeness gate cannot flag and the Reviewer Gate then
   // demands a file nobody was told to create.
-  it("SKILL.md の canonical sidecar family が validator の SSOT と一致している", async () => {
+  it("the canonical sidecar family in SKILL.md matches the validator SSOT", async () => {
     const content = await readFile(skillPath, "utf-8");
 
     const familySection = content
@@ -158,7 +158,7 @@ describe("discussion skill template integration", () => {
     }
   });
 
-  it("forbidden sidecar 名の一覧が validator の SSOT を網羅している", () => {
+  it("the list of forbidden sidecar names covers the validator SSOT", () => {
     // Ties the list above to the validator: a pattern added to
     // FORBIDDEN_LEGACY_PATTERNS without a representative filename here would
     // otherwise leave the sweep below blind to that whole family.
@@ -194,7 +194,7 @@ describe("discussion skill template integration", () => {
   // Following such guidance creates the file and then fails validation,
   // so a stale instruction anywhere in the tree is a live trap — the
   // sweep therefore covers references/ and templates/, not just SKILL.md.
-  it("配布 skill が forbidden legacy sidecar の生成を指示していない", async () => {
+  it("the shipped skill does not instruct generating forbidden legacy sidecars", async () => {
     const forbiddenMentions = [...FORBIDDEN_SIDECAR_NAMES, ...FORBIDDEN_RANGE_MENTIONS];
     // Four files name them on purpose: `00_index.md` is the
     // forbidden-legacy manifest, `ui_ux_best_practices.md` carries the
@@ -230,7 +230,7 @@ describe("discussion skill template integration", () => {
   // The same residue on a different shipped surface: an agent definition that
   // tells a reviewer to reconcile a `selected anchor` sidecar sends it after an
   // artifact `ui_ux_best_practices.md` forbids the pack from containing.
-  it("配布 agent 定義が retired discussion concept を参照していない", async () => {
+  it("the shipped agent definitions do not reference retired discussion concepts", async () => {
     const files = await collectMarkdownFiles(agentsDir);
     const offenders: string[] = [];
     for (const file of files) {
@@ -249,7 +249,7 @@ describe("discussion skill template integration", () => {
   // prototyping loop's DESIGN.md drift scanner is the only reader of the
   // `visual.*` token values. Requiring a `cli` pack to author the token tree
   // therefore blocks completion on an artifact nothing downstream reads.
-  it("cli pack が root DESIGN.md の visual token tree で完了をブロックされない", async () => {
+  it("a cli pack is not blocked from completing by the root DESIGN.md visual token tree", async () => {
     const playbook = await readFile(uiBearingPlaybookPath, "utf-8");
     const surfaceRow = (surface: string): string =>
       playbook.split("\n").find((line) => new RegExp(`^\\|\\s*${surface}\\s+\\|`).test(line)) ?? "";
@@ -309,8 +309,8 @@ describe("discussion skill template integration", () => {
   // classification (`detection/surfaceType.ts#readValidatedClassificationBlock`),
   // and it still ships a visual surface. A carve-out written against
   // `primary_surface` alone would drop the token SSOT for that product.
-  // QFAI:EX-0001-0090-03
-  it("DESIGN.md carve-out が secondary_surfaces も判定に含めている", async () => {
+  // QFAI:EX-0001-0087-03
+  it("the DESIGN.md carve-out also counts secondary_surfaces", async () => {
     const skill = await readFile(skillPath, "utf-8");
     const playbook = await readFile(uiBearingPlaybookPath, "utf-8");
     const matrix = await readFile(completionMatrixPath, "utf-8");
@@ -337,7 +337,7 @@ describe("discussion skill template integration", () => {
   // declares the family's own completeness rule. Left unconditional it tells
   // the generated pack that root DESIGN.md must sit beside the three sidecars,
   // which contradicts the carve-out the same run just applied.
-  it("生成される 00_index.md が cli-only pack に DESIGN.md を要求しない", async () => {
+  it("the generated 00_index.md does not require DESIGN.md of a cli-only pack", async () => {
     const index = await readFile(path.join(uiuxTemplateDir, "00_index.md"), "utf-8");
     const completeness = index.split(/^## /m).find((s) => s.startsWith("Completeness Rule")) ?? "";
     expect(completeness, "no Completeness Rule section").not.toBe("");
@@ -353,7 +353,7 @@ describe("discussion skill template integration", () => {
   // Root DESIGN.md is written by `/qfai-sdd` after discussion ends.
   // A discussion review line that asks for it can be satisfied by no pack at
   // all, so the gates check the direction record the pack does produce.
-  it("Reviewer Gate と review bundle が DESIGN.md ではなく記録された設計方針を見ている", async () => {
+  it("the Reviewer Gate and the review bundle look at the recorded design direction, not DESIGN.md", async () => {
     const gatePaths = [
       path.join(templateBase, "templates", "14_Review-Request.md"),
       path.join(templateBase, "templates", "review", "review_request.md"),
@@ -386,7 +386,7 @@ describe("discussion skill template integration", () => {
   // `templates/prototyping.yaml` and `qfai-prototyping/SKILL.md` both reject
   // `cli` as an execution surface, so discussion must not hand a cli pack a
   // recommendation the next skill refuses to run.
-  it("cli pack に prototyping.yaml を生成させない", async () => {
+  it("does not make a cli pack generate prototyping.yaml", async () => {
     const skill = await readDiscussionSkill(assistantBase);
     const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
     const prototypingYaml = await readFile(
@@ -416,7 +416,7 @@ describe("discussion skill template integration", () => {
   // `screenContract.ts` requires a non-empty `route`, never a URL. Telling
   // native mobile/desktop authors that a web path is "expected" pushes them to
   // invent one for a product that has no URLs at all.
-  it("40_screen_contracts.md が surface ごとの route の意味を定義している", async () => {
+  it("40_screen_contracts.md defines the meaning of the route per surface", async () => {
     const screenContracts = await readFile(
       path.join(uiuxTemplateDir, "40_screen_contracts.md"),
       "utf-8",
@@ -437,7 +437,7 @@ describe("discussion skill template integration", () => {
     );
   });
 
-  it("09_Constraints.md が accessibility を正しい階層で参照している", async () => {
+  it("09_Constraints.md references accessibility at the right level", async () => {
     // `accessibility` is a TOP-LEVEL DESIGN.md key. `visual` rejects
     // unknown keys, so an author who followed a `visual.accessibility`
     // pointer would write a file that fails to parse.
@@ -454,7 +454,7 @@ describe("discussion skill template integration", () => {
   // the matrix is sent back by the reviewer, and a pack that satisfies the
   // reviewer fails the forbidden-sidecar check — the UI-bearing pack cannot be
   // completed at all.
-  it("review テンプレートが completion matrix と同じ UI ファミリーを要求している", async () => {
+  it("the review template requires the same UI families as the completion matrix", async () => {
     const reviewDir = path.join(templateBase, "templates", "review");
 
     // Half one: the matrix itself must still carry the current UI family and

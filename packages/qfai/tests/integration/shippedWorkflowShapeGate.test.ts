@@ -3,7 +3,7 @@
  * gate.
  *
  * Covers the gate half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0023): ONE declared
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0023): ONE declared
  * shape, whose values live in exactly one module (`shippedWorkflowShape.ts`
  * beside this file), diffed against a workflow tree and reporting
  * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with the drifted value and the expected
@@ -67,7 +67,7 @@ const CONTRACT_PATH = path.join(
   "spec",
   "03_contract",
   "cli",
-  "cli-0020-shipped-workflows.md",
+  "cli-0018-shipped-workflows.md",
 );
 
 /** The owning story, scanned for value restatements. */
@@ -82,7 +82,7 @@ const SPEC_DIR = path.join(
 
 /**
  * The contract's dimension ordinals — a CLOSED set of ten. The ordinals are
- * the contract's own (BR-0020-0028 to BR-0020-0037), not shape values; the shape supplies what
+ * the contract's own (BR-0018-0028 to BR-0018-0037), not shape values; the shape supplies what
  * each one pins.
  */
 const CONTRACT_DIMENSION_IDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -642,7 +642,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
 
   it("words each dimension the way the contract's business rule does", async () => {
     // The dimension set is closed and the contract is where it is closed: one
-    // business rule per dimension, BR-0020-0028 to BR-0020-0037, each opening
+    // business rule per dimension, BR-0018-0028 to BR-0018-0037, each opening
     // `Declared shape dimension N:`. A title that drifts from its rule leaves
     // the gate reporting one obligation and the contract stating another, with
     // nothing between them.

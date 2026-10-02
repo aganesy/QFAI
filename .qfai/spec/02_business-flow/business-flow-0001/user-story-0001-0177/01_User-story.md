@@ -1,5 +1,10 @@
-# US-0001-0177: Cross-skill `handoff.yaml` schema
+# US-0001-0177: MCP Server Integration for Web Research
 
 ## User Story
 
-As a QFAI maintainer, I want a single canonical cross-skill handoff schema (`packages/qfai/src/core/schemas/handoff.ts`, documented in `references/handoff.md`) that every skill producing or consuming handoff state reads and writes, with a Reviewer Gate emitting `R-HANDOFF-SCHEMA-DRIFT` (severity error) on non-conforming writes or on edits to the schema that its writers do not follow, so that handoff state stops fragmenting into ad-hoc per-skill files.
+As a developer, I want ready-made MCP integration templates for Brave Search, Firecrawl and Playwright, so that web research works with minimal setup.
+
+## Non-goals
+
+- Developing a custom MCP server.
+- MCP servers other than the three listed.

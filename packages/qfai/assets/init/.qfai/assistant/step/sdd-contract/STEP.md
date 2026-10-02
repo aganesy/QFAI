@@ -40,9 +40,10 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   `Reconciled With` and `Purpose`.
 
 A new contract takes its kind from its directory (`cli/`, `api/`, `db/` or
-`ui/`) and the next contract number, one more than the highest of any kind. A number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it
-declares its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`),
-or on a `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
+`ui/`) and the next contract number, one more than the highest of any kind. A
+number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
+its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
+`QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
 Inside a workflow run, write only in the attempt the operator's answer
 authorizes, as
@@ -102,7 +103,9 @@ the run.
 `solution-architect` accepts the connected BF → US → AC → EX ← BR design and
 its contract realization before `sdd-gate` runs.
 
-## Skipped when
+## Passes when
 
-Inside a run, the plan may gate this step with `when: proposed`: a change that
-writes no BR and no contract leaves it out of the proposal.
+Read first: the triage rows, the examples `sdd-story` wrote or kept, and the
+contracts whose rules cite them. The step passes when the change writes no BR
+and changes no contract or `contracts.md` row. The pass names the contracts it
+read.

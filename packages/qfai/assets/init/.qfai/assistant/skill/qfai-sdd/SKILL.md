@@ -5,6 +5,7 @@ description: "Use when invoked by name or handed a QFAI work order. Its subject 
 argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
+requires: [common-review-cycle]
 roles:
   [
     orchestrator,
@@ -27,6 +28,10 @@ mode: approval-gated
 ## /qfai-sdd
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 Turn a requirement into a checkable story tree: BF → US → AC → EX, with each BR
 in the contract that enforces it.
@@ -73,16 +78,11 @@ reviewers.
 After the last step, run one review with `common-review-cycle`, one affected
 business flow at a time. The reviewers are the union of the reviewers of the
 steps that ran, including `product-surface-reviewer` for a UI-bearing flow.
-What they check is the `## Review` section of `sdd-gate`.
+What they check is the `## Review` section of `sdd-gate`. Roles are selected
+under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ### Reviewer Gate
 
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-planning estimates are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states. The gate records
-PASS or REVISE for the reviewed revision;
-an author does not review its own artifact.
 Where the concrete-abstract cycle ran, the completion reviewer also checks its
 record, as `sdd-cycle` states.
 
@@ -96,15 +96,12 @@ Report the source selected, BF and US IDs touched, decision and OQ IDs, contract
 files and index rows, each per-flow validation result and log, independent
 reviewer verdicts, adopted grilling decisions, rejected options still excluded,
 and remaining questions. The next implementation route is `/qfai-atdd`; UI work
-may pass through `/qfai-prototyping` first.
+may pass through `/qfai-prototyping` first. The report ends with a question
+listing those next actions, as `.agents/rules/user-questions.md` § 6 sets out.
+Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 
-- auto-decide: output formatting, ID numbering under the stated scopes, and an
-  equivalent option supported by existing decisions.
-- ask-user: approval-required change operations, destructive actions, version
-  changes, scope expansion, and critical product decisions.
-  In `--auto`, leave these pending without asking or self-approving.
 - hard-required: a usable requirement source,
   an identifiable affected flow or an explicit decision to create one,
   and product brand intent when a root `DESIGN.md` is required.

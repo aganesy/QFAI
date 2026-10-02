@@ -1,11 +1,17 @@
-// QFAI:EX-0001-0193-10
+// QFAI:EX-0001-0186-10
 
 import { expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
+import { answerOpen } from "../../integration/workflow/decisionRuns.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 import { JournalRun, planOf, readyWith } from "./journalRun.js";
 
+type Facts = NonNullable<Parameters<JournalRun["apply"]>[1]>;
+
 const FLOW = "BF-0007";
+const SCOPE = ["src/notify/**", ".qfai/spec/02_business-flow/business-flow-0007/**"];
+// EX-0007-0001-02 is an example no test annotates yet.
 const obligations = {
   flowId: FLOW,
   ids: ["AC-0007-0001-01", FLOW, "EX-0007-0001-01", "EX-0007-0001-02"],
@@ -14,89 +20,100 @@ const obligations = {
   digest: "7".repeat(64),
 };
 
-// A bugfix run bound to BF-0007 whose RED receipt was accepted for EX-0007-0001-02, then
-// reclassified: its verify stage found a story defect only story authoring can repair, and
-// routing settled bounded-change. Returns the run in `ready` under the new plan.
-async function reclassified() {
-  // The package's plans, as the command observes them.
-  const plans = await planFacts();
-  const plan = (route: "bugfix" | "bounded-change") =>
-    planOf(route, plans[route]?.stages ?? [], ["src/notify/**"]);
-  const facts = { flows: [FLOW], obligations };
-  const run = new JournalRun(readyWith(plan("bugfix"), FLOW));
-  run.next(facts);
-  const diagnosis = {
-    verdict: "missing-test",
-    reproductionRef: ".qfai/evidence/repro.md",
-    matchedIds: ["EX-0007-0001-02"],
-  };
-  run.accept({ diagnosis }, facts);
-  expect(run.next(facts).stageKind).toBe("implement");
-  run.accept(
-    { testObservation: "expected_red", red: { testId: "t", failureKind: "assertion" } },
-    facts,
-  );
-  expect(run.next(facts).stageKind).toBe("verify");
-  const storyDefect = {
-    findingCode: "QFAI-TRACE-002",
-    path: ".qfai/spec/02_business-flow/business-flow-0007/user-story-0007-0001/03_Example.md",
-    cause: "The example contradicts its criterion",
-    owningFlow: FLOW,
-    detectingCommand: "qfai validate",
-    resolvingOwner: "qfai-sdd",
-    blockingExtent: "run",
-  };
-  const replanned = run.accept({ outcome: "needs_repair", debts: [storyDefect] }, facts);
-  expect(replanned.verdict.run?.state).toBe("routing");
-  const receipts = run.snapshot.receiptRefs ?? [];
-  expect(run.next(facts).stageKind).toBe("route");
-  const proposal = {
-    requestKind: "change",
-    candidateRoute: "bounded-change",
-    goal: "Fix the notification the example describes.",
+// The routing result each re-route asks for.
+function proposalFor(route: string, proposedWriteScope: string[]) {
+  return {
+    requestKind: "routed",
+    extraction: extractionFor(route),
+    goal: "Send one notification per address.",
     expectedBehaviorRefs: [{ kind: "flow-id", ref: FLOW }],
     observedRefs: [],
     affectedFlowIds: [FLOW],
+    riskSignals: [],
+    unresolvedQuestions: [],
     newStories: [],
-    proposedWriteScope: ["src/notify/**"],
+    proposedWriteScope,
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
+    rationale: "The route the branch point fixed.",
   };
-  const routingFacts = {
-    flows: [FLOW],
-    plans: { "bounded-change": { route: "bounded-change", stages: plan("bounded-change").stages } },
-  };
-  expect(run.accept({ proposal }, routingFacts).verdict.run?.state).toBe("ready");
-  return { run, receipts, routing: run.snapshot.routingReceiptRef ?? "" };
 }
 
-it("A RED receipt accepted for an example no test annotates, then a reclassification from bugfix to bounded-change, then next", async () => {
-  const { run, receipts, routing } = await reclassified();
-  const [diagnose = "", red = ""] = receipts;
-  const receiptValidity = { [routing]: "valid", [diagnose]: "stale", [red]: "valid" } as const;
+// Accepts the routing result of a re-route, and confirms the plan where `gate:user` asks.
+function routeAgain(run: JournalRun, facts: () => Facts, route: string, scope: string[]) {
+  run.next(facts());
+  const routed = run.accept({ proposal: proposalFor(route, scope) }, facts());
+  if (routed.verdict.questions?.some((question) => question.purpose === "plan")) {
+    answerOpen(run, "plan", "proceed");
+  }
+}
+
+// A fix-defect run bound to BF-0007 whose diagnosis found the story expects something else, so it
+// re-routed to decide-acceptance, whose `triage-close` adopted the change toward add-feature.
+// Returns the run in `ready` on the add-feature plan.
+async function reclassified() {
+  const plans = await planFacts();
+  const run = new JournalRun(
+    readyWith(planOf("fix-defect", plans["fix-defect"]?.stages ?? [], SCOPE), FLOW),
+  );
+  const facts = (): Facts => {
+    const routing = run.snapshot.routingReceiptRef;
+    const receiptValidity = routing ? { [routing]: "valid" as const } : {};
+    return { plans, flows: [FLOW], obligations, receiptValidity };
+  };
+  const diagnosis = {
+    verdict: "expectation-differs",
+    reproductionRef: ".qfai/evidence/repro.md",
+    matchedIds: ["EX-0007-0001-02"],
+  };
+  run.next(facts());
+  run.accept({ diagnosis }, facts());
+  routeAgain(run, facts, "decide-acceptance", []);
+  for (const stage of ["clarify", "record"]) {
+    expect(run.next(facts()).stageInstanceId).toBe(stage);
+    run.accept({}, facts());
+  }
+  run.next(facts());
+  run.accept({ branch: { outcome: "adopted", route: "add-feature" } }, facts());
+  routeAgain(run, facts, "add-feature", SCOPE);
+  return { run, receipts: run.snapshot.receiptRefs ?? [] };
+}
+
+it("A run re-routed from fix-defect to decide-acceptance and then to add-feature, then next", async () => {
+  const { run, receipts } = await reclassified();
+  const routing = run.snapshot.routingReceiptRef ?? "";
+  const [diagnose = ""] = receipts;
+  const receiptValidity = Object.fromEntries([
+    [routing, "valid" as const],
+    ...receipts.map((ref) => [ref, ref === diagnose ? ("stale" as const) : ("valid" as const)]),
+  ]);
 
   const workOrder = run.next({ flows: [FLOW], obligations, receiptValidity });
 
   expect({
+    route: run.snapshot.plan?.route,
     receipts: receipts.length,
+    reroutes: run.snapshot.reroutes?.map((each) => each.to),
     stageKind: workOrder.stageKind,
     obligationIds: workOrder.obligations?.ids,
     priorStageReceiptRefs: workOrder.priorStageReceiptRefs,
-    prior: run.snapshot.priorStages?.map((stage) => stage.stageKind),
+    prior: run.snapshot.priorStages?.map((stage) => stage.stageInstanceId),
   }).toEqual({
-    receipts: 2,
-    stageKind: "sdd_delta",
+    route: "add-feature",
+    receipts: 4,
+    reroutes: ["decide-acceptance", "add-feature"],
+    stageKind: "sdd",
     obligationIds: obligations.ids,
-    priorStageReceiptRefs: [
-      { ref: diagnose, validity: "stale" },
-      { ref: red, validity: "valid" },
-    ],
-    prior: ["diagnose", "implement"],
+    priorStageReceiptRefs: receipts.map((ref) => ({
+      ref,
+      validity: ref === diagnose ? "stale" : "valid",
+    })),
+    prior: ["diagnose", "clarify", "record", "close"],
   });
 });
 
-it("next after the replan, once the routing receipt went stale", async () => {
-  const { run, receipts, routing } = await reclassified();
+it("next after the re-routes, once the routing receipt went stale", async () => {
+  const { run, receipts } = await reclassified();
+  const routing = run.snapshot.routingReceiptRef ?? "";
   const receiptValidity = Object.fromEntries(
     [routing, ...receipts].map((ref) => [ref, ref === routing ? "stale" : "valid"] as const),
   );
@@ -110,5 +127,6 @@ it("next after the replan, once the routing receipt went stale", async () => {
     state: decision.verdict.run?.state,
     events: decision.events.map((event) => event.type),
     replans: run.snapshot.replans,
-  }).toEqual({ state: "routing", events: ["required-plan-revision"], replans: 2 });
+    reroutes: run.snapshot.reroutes?.length,
+  }).toEqual({ state: "routing", events: ["required-plan-revision"], replans: 1, reroutes: 2 });
 });

@@ -42,7 +42,8 @@
  *
  * Notes:
  *   - The catalog STORES membership only, never severity. Each code's
- *     own severity belongs to the detector that emits it. The empty-`justification:` ingestion rejection in
+ *     own severity belongs to the detector that emits it. The
+ *     empty-`justification:` ingestion rejection in
  *     `reviewerJustification.ts` is ALWAYS `error` for every catalog
  *     code, because what it reports is the missing justification, not
  *     the underlying finding. Entries therefore carry no severity
@@ -71,7 +72,7 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
   {
     code: "R-AUTOPILOT-POLICY-MISSING",
     description:
-      "SKILL.md is missing the `## Default Autopilot Policy` section required by the skill governance contract (3 named buckets: auto-decide / ask-user / hard-required).",
+      "The shared operating baseline is missing its `## Default Autopilot Policy (Shared)` section or one of its 3 named buckets (auto-decide / ask-user / hard-required), or a SKILL.md does not name a hard-required input declared for its skill.",
   },
   {
     code: "R-HANDOFF-SCHEMA-DRIFT",

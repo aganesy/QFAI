@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0193-07
+// QFAI:EX-0001-0186-07
 
 import { expect, it } from "vitest";
 
@@ -6,11 +6,11 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const obligations = {
@@ -28,7 +28,7 @@ it("Issue an implement work order bound to a flow", () => {
       plan,
       flowBinding: { flowId: "BF-0001" },
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     { operation: "next" },

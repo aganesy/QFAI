@@ -106,7 +106,7 @@ async function seedProject(
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "ui-0001.yaml"),
-    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - { id: browse, label: Browse, acceptance: done }\n",
     "utf-8",
   );
 }
@@ -153,7 +153,7 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
 });
 
 describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () => {
-  // QFAI:EX-0001-0147-02
+  // QFAI:EX-0001-0143-02
   it("absence of --emit-skeletons writes zero placeholder HTML files (v1.9.1 no-regression)", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -313,7 +313,7 @@ describe("QFAI-CRIT-009 keyword surface SSOT", () => {
 });
 
 describe("iterate --capture emits a taskFidelity template with named sections", () => {
-  // QFAI:EX-0001-0150-02
+  // QFAI:EX-0001-0145-02
   it("includes cta_visibility and four_state_check sections with TODO placeholders for all keywords", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -333,7 +333,7 @@ describe("iterate --capture emits a taskFidelity template with named sections", 
 // ─── mutation-log + R-EVIDENCE-MUTATION-UNLOGGED ─
 
 describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
-  // QFAI:EX-0001-0151-01
+  // QFAI:EX-0001-0146-01
   it("records a 2048-byte UI review file with its source path and prior size", async () => {
     const root = await newTempDir();
     await seedProject(root);

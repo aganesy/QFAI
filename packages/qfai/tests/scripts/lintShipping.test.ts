@@ -125,18 +125,37 @@ describe("lint-shipping fixture — detection rules", () => {
     ]);
   });
 
+  // QFAI:EX-0002-0012-03
+  it("reports requirement and test-design IDs in source comments at any number", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/guard.ts"),
+      "// REQ-0006\n/** TDD-0039 */\n// REQ-NNNN\nexport const guard = true;\n",
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(
+      violations.map(({ file, line, pattern, matched }) => ({ file, line, pattern, matched })),
+    ).toEqual([
+      { file: "src/guard.ts", line: 1, pattern: "local-reference-id-comment", matched: "REQ-0006" },
+      { file: "src/guard.ts", line: 2, pattern: "local-reference-id-comment", matched: "TDD-0039" },
+    ]);
+  });
+
   it("scans built-in routing defaults outside the init tree", async () => {
     const root = await newTempDir();
-    await mkdir(path.join(root, "assets/defaults"), { recursive: true });
+    await mkdir(path.join(root, "assets/defaults/agent-routing"), { recursive: true });
     await writeFile(
-      path.join(root, "assets/defaults/agent-routing.yml"),
+      path.join(root, "assets/defaults/agent-routing/skills.yml"),
       "routing:\n  - skill: spec-1234\n",
     );
     const { violations, scannedFileCount } = await runLintShipping(root);
     expect(scannedFileCount).toBe(1);
     expect(violations).toEqual([
       expect.objectContaining({
-        file: "assets/defaults/agent-routing.yml",
+        file: "assets/defaults/agent-routing/skills.yml",
         pattern: "spec-id-literal",
       }),
     ]);

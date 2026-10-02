@@ -21,7 +21,9 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
         "an identifiable affected flow or an explicit decision to create one",
       );
       expect(skill).toContain("product brand intent when a root `DESIGN.md` is required");
-      expect(skill).toContain("In `--auto`, leave these pending without asking or self-approving");
+      // `--auto` answers no approval: the shared baseline states it for every skill.
+      const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
+      expect(baseline).toContain("`--auto` satisfies nothing");
     });
 
     it(tree + ": prototyping selects a full UI contract identity", async () => {
@@ -41,7 +43,7 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
   }
 
   it("the CLI contract rejects a bare primary UI contract ID", async () => {
-    const file = path.join(root, ".qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md");
+    const file = path.join(root, ".qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md");
     const { rules } = parseContractRules(file, await readFile(file, "utf-8"));
     const pin = rules.find(({ statement }) => statement.includes("`--primary-ui-contract` flag"));
     expect(pin?.statement).toContain("Both accept only the full `UI-NNNN` form");

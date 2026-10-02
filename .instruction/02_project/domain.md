@@ -5,12 +5,12 @@ dependencies: none
 version: 1.0.0
 ---
 
-# ドメイン概要（QFAI Toolkit）
+# Domain Overview (QFAI Toolkit)
 
 QFAI supports discussion, story-tree authoring, contracts, tests, validation
 and reporting.
 
-## 主な構成要素
+## Main Components
 
 - `.qfai/spec/01_policy/`: project objective, initiative, principle, glossary
   and constraints.
@@ -18,7 +18,7 @@ and reporting.
   their US, AC and EX files. This repository has four flows: development,
   pull request CI, workspace diagnosis, and spec-pack migration.
 - `.qfai/spec/03_contract/`: contract index, technology stack and commands,
-  and contracts grouped by kind. API, DB, UI and design contracts declare
+  and contracts grouped by kind. API, DB and UI contracts declare
   `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`. A CLI contract
   declares `CLI-NNNN` in its H1 and is named `cli-NNNN-<slug>.md`.
 - `.qfai/spec/decisions.md` and `open-questions.md`: project-wide decision and
@@ -30,9 +30,9 @@ and reporting.
   ignored, and reviewers read it in the working tree.
 - `.qfai/review/`: review packs.
 - `.qfai/report/`: where `validate` and `report` write.
-- `qfai.config.yaml`: パス/検証ルール/出力設定
+- `qfai.config.yaml`: paths, validation rules and output settings
 
-## ID とトレーサビリティ
+## IDs and Traceability
 
 The chain is `BF → US → AC → EX ← BR`. A BF contains stories; each EX names
 one AC; each BR lives in a contract and cites one or more EX IDs.
@@ -50,4 +50,4 @@ non-E2E test. `validate` checks IDs, links, layers and uncovered obligations.
 
 Full grammar: `02_project/naming.md`.
 
-詳細な命名規約は `02_project/naming.md` を参照してください。
+For the detailed naming conventions, see `02_project/naming.md`.

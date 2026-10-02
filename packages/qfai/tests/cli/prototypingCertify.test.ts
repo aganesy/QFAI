@@ -252,7 +252,7 @@ describe("qfai prototyping certify (generate)", () => {
       await rm(path.join(root, rel), { force: true });
     }
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errors: string[] = [];
     const errorSpy = vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
       errors.push(args.map(String).join(" "));
@@ -281,7 +281,7 @@ describe("qfai prototyping certify (generate)", () => {
     // never readable.
     await writeFile(path.join(root, ".qfai/report/verify.json"), "{ not json", "utf-8");
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -320,7 +320,7 @@ describe("qfai prototyping certify (generate)", () => {
       }),
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -391,7 +391,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
-  // QFAI:EX-0001-0122-04
+  // QFAI:EX-0001-0118-04
   it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -413,6 +413,40 @@ describe("qfai prototyping certify (generate)", () => {
       "utf-8",
     );
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  // QFAI:EX-0001-0118-10
+  it("exits 2 when prototyping.json carries no top-level runId, even with fullHarness.runId", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root);
+    await writeFile(
+      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
+      JSON.stringify({
+        mode: { effective: "standard", source: "test", rationale: "x" },
+        surface: "web",
+        fullHarness: { runId: "run-x" },
+        designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
+        reviewerGate: {
+          result: "PASS",
+          signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
+        },
+        iterations: [{ index: 0 }, { index: 1 }],
+      }),
+      "utf-8",
+    );
+
+    const logger = await import("../../src/core/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain("prototyping.json#runId is required");
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("accepts legacy reviewer signoff fields when issuing the certificate", async () => {
@@ -488,7 +522,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       "utf-8",
     );
 
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -619,7 +653,7 @@ describe("qfai prototyping show-ui-contract", () => {
     await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(record), "utf-8");
   }
 
-  // QFAI:EX-0001-0125-02
+  // QFAI:EX-0001-0121-01
   it("shows the frozen and live UI contract IDs with a full primary descriptor", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -628,7 +662,7 @@ describe("qfai prototyping show-ui-contract", () => {
       uiContractsCovered: ["UI-0012"],
       frozenSurfaceUnion: ["UI-0012"],
     });
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
       expect(await runPrototypingShowUiContract({ root })).toBe(0);
@@ -667,7 +701,7 @@ describe("qfai prototyping show-ui-contract", () => {
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 
-  // QFAI:EX-0001-0142-02
+  // QFAI:EX-0001-0138-02
   it("refuses a configured primary UI contract the config loader rejected", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -683,7 +717,7 @@ describe("qfai prototyping show-ui-contract", () => {
       `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
     try {
@@ -765,7 +799,7 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
       '<span style="color:#abcdef">stale</span>\n',
       "utf-8",
     );
-    const logger = await import("../../src/cli/lib/logger.js");
+    const logger = await import("../../src/core/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);

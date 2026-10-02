@@ -1,5 +1,5 @@
-# US-0001-0156: Optional Side Artifact Neutrality
+# US-0001-0156: Canonical verification validators
 
 ## User Story
 
-As a QFAI user, I want optional discussion side artifacts to leave SDD preflight readiness unchanged, so that their absence or legacy format does not prevent spec generation.
+As a maintainer, I want verify to use the canonical validator path, so that removed compatibility surfaces do not re-enter production.

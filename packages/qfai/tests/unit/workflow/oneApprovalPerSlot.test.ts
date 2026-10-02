@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-03
+// QFAI:EX-0001-0185-03
 
 import { expect, it } from "vitest";
 
@@ -8,6 +8,7 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("Two new stories open two CREATE questions in one routing round", () => {
   const snapshot = {
@@ -35,8 +36,8 @@ it("Two new stories open two CREATE questions in one routing round", () => {
       reviewResults: [],
       debts: [],
       proposal: {
-        requestKind: "change",
-        candidateRoute: "feature",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Let customers manage notification email addresses and delivery preferences.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -63,7 +64,6 @@ it("Two new stories open two CREATE questions in one routing round", () => {
         ],
         proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
-        requiredStages: ["sdd", "verify"],
         rationale: "Neither story exists in the current scope.",
       },
     },

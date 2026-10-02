@@ -1,4 +1,4 @@
-// QFAI:AC-0001-0192-04
+// QFAI:AC-0001-0185-04
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -14,6 +14,7 @@ import {
   submit,
   workflow,
 } from "../../e2e/workflowJourney.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 import { FLOW_ID, flowProject, proposalFor, withOtherFlows } from "./acceptanceRuns.js";
 
 afterEach(removeProjects);
@@ -51,7 +52,7 @@ const refusal = (run: Awaited<ReturnType<typeof routeWith>>) => ({
 
 it("A checked proposal becomes a plan holding the goal, the stages in plan order and the write scope", async () => {
   const root = await flowProject();
-  const proposal = proposalFor("bounded-change", {
+  const proposal = proposalFor("add-feature", {
     expectedBehaviorRefs: [
       { kind: "request", ref: "request" },
       { kind: "flow-id", ref: FLOW_ID },
@@ -71,7 +72,7 @@ it("A checked proposal becomes a plan holding the goal, the stages in plan order
   }).toEqual({
     state: "ready",
     goal: "Allow ten notification addresses per customer.",
-    stages: ["sdd_delta", "acceptance", "implement", "verify"],
+    stages: ["sdd", "acceptance", "implement", "maintenance", "verify"],
     writeScope: [".qfai/spec/02_business-flow/business-flow-0001/**", "src/**", "tests/**"],
     normative: [
       { kind: "request", ref: "request" },
@@ -87,25 +88,25 @@ it("An unknown flow, a missing path, a bare string and two flows are each refuse
   await withOtherFlows(root);
   const unknownFlow = await routeWith(
     root,
-    proposalFor("bounded-change", {
+    proposalFor("add-feature", {
       expectedBehaviorRefs: [{ kind: "flow-id", ref: "BF-9999" }],
-      confidence: 1,
+      extraction: extractionFor("add-feature", { confidence: "medium" }),
     }),
   );
   await submit(root, unknownFlow.runId, "decision", { stop: true, answeredBy: "operator" });
   const missingPath = await routeWith(
     root,
-    proposalFor("bounded-change", { observedRefs: [{ kind: "path", ref: "Dockerfile" }] }),
+    proposalFor("add-feature", { observedRefs: [{ kind: "path", ref: "Dockerfile" }] }),
   );
   await submit(root, missingPath.runId, "decision", { stop: true, answeredBy: "operator" });
   const bareString = await routeWith(
     root,
-    proposalFor("bounded-change", { expectedBehaviorRefs: ["request"] }),
+    proposalFor("add-feature", { expectedBehaviorRefs: ["request"] }),
   );
   await submit(root, bareString.runId, "decision", { stop: true, answeredBy: "operator" });
   const twoFlows = await routeWith(
     root,
-    proposalFor("bounded-change", { affectedFlowIds: [FLOW_ID, "BF-0002"] }),
+    proposalFor("add-feature", { affectedFlowIds: [FLOW_ID, "BF-0002"] }),
   );
 
   expect({

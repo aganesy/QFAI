@@ -3,12 +3,24 @@
 ## Criteria
 
 ```gherkin
-Feature: Simplified Handoff Schema
+Feature: Convergence and iteration budget
   # AC-0001-0098-01
-  Scenario: Read implementation inputs from the prototyping handoff
-    Given the shipped `/qfai-prototyping` handoff reference and the rule `/qfai-implement` reads a UI definition by
-    When the handoff record they describe is read
-    Then it is `handoff` in `.qfai/evidence/prototyping/prototyping.json`, with exactly `finalArtifact`, `procurement` and `implementationNotes`
-    And `/qfai-implement` reads it there and takes design tokens from root `DESIGN.md`
-    And it does not require an exactly-four-field schema or the retired `mustPreserve`, `mayAdapt` and `mustNotCopy` fields
+  Scenario: The machine gate is documented
+    Given a prototyping run approaches completion
+    When the skill documents its machine gate
+    Then `qfai validate --fail-on error` is documented as the machine gate before completion.
+
+  # AC-0001-0098-02
+  Scenario: The final review gate is documented
+    Given a prototyping run approaches final review
+    When the skill documents its review gate
+    Then `/qfai-verify` is documented as the final review gate.
+    And completion remains blocked on `REVISE`.
+
+  # AC-0001-0098-03
+  Scenario: A time-budget overrun is a soft warning
+    Given the time-budget cap is 5 minutes per (UI contract, screen) review session in each cycle
+    When a review session exceeds the cap in a cycle
+    Then the reviewer payload records a `softWarnings.timeBudget` entry
+    And the aggregator does not gate on it, and only the global 10-cycle budget can hard-fail the run
 ```

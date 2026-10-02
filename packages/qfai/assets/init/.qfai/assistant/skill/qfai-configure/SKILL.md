@@ -383,6 +383,9 @@ Fill steering templates with repo evidence.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
 - Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
+- Fill `## Architecture` of `03_contract/tech.md` from the codebase: one row per layer the module layout shows, what it is responsible for, and the layers its imports reach, or `-`. Name layers, never paths. Implementation places new code by this table and reviewers judge a change against it, so write the import directions the code has.
+  - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
+  - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `npx qfai validate` reports a diagram and a table that disagree.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
@@ -487,14 +490,6 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)
     — neither this nor the proposal above has a defensible default, and a guess
     is saved as if it were evidence
-
-A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations` — with the
-operations its own run cannot authorize for itself. `hard-required` also takes the
-undefaultable inputs this skill itself consumes, declared per skill and checked against
-that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
-entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 

@@ -23,8 +23,8 @@ async function section(file: string, heading: string): Promise<string> {
 }
 
 describe("Stage 1 approvals inside a run", () => {
-  // QFAI:AC-0001-0212-01
-  // QFAI:EX-0001-0212-01
+  // QFAI:AC-0001-0205-01
+  // QFAI:EX-0001-0205-01
   it("checks a routing-time CREATE approval and cites it from the triage row", async () => {
     const pointer = await section(TRIAGE_STEP, "## Inside a workflow run");
     expect(pointer).toMatch(
@@ -42,8 +42,8 @@ describe("Stage 1 approvals inside a run", () => {
     expect(text).toMatch(/the table keeps exactly its four columns/i);
   });
 
-  // QFAI:AC-0001-0212-02
-  // QFAI:EX-0001-0212-02
+  // QFAI:AC-0001-0205-02
+  // QFAI:EX-0001-0205-02
   it("appends no row and asks nothing on a missing, mismatched or stale approval", async () => {
     const text = await section(TRIAGE, "## Inside a workflow run");
     expect(text).toMatch(
@@ -55,8 +55,8 @@ describe("Stage 1 approvals inside a run", () => {
     expect(text).toMatch(/the clock alone never makes it stale/i);
   });
 
-  // QFAI:AC-0001-0212-03
-  // QFAI:EX-0001-0212-03
+  // QFAI:AC-0001-0205-03
+  // QFAI:EX-0001-0205-03
   it("opens the approval question for every other approval-required operation", async () => {
     const text = await section(TRIAGE, "## Inside a workflow run");
     expect(text).toMatch(/DELETE, SPLIT, MERGE, SUPERSEDE and UPDATE:REMOVE/);
@@ -69,8 +69,8 @@ describe("Stage 1 approvals inside a run", () => {
     );
   });
 
-  // QFAI:AC-0001-0212-04
-  // QFAI:EX-0001-0212-04
+  // QFAI:AC-0001-0205-04
+  // QFAI:EX-0001-0205-04
   it("lets --auto approve nothing inside a run", async () => {
     const text = await section(TRIAGE_STEP, "## Inside a workflow run");
     expect(text).toMatch(
@@ -83,8 +83,8 @@ describe("Stage 1 approvals inside a run", () => {
 });
 
 describe("defect example seeding", () => {
-  // QFAI:AC-0001-0213-01
-  // QFAI:EX-0001-0213-01
+  // QFAI:AC-0001-0206-01
+  // QFAI:EX-0001-0206-01
   it("appends one example under the matched criterion and cites it from the enforcing rule", async () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/in a stage of kind `sdd_append`/i);
@@ -102,8 +102,8 @@ describe("defect example seeding", () => {
     );
   });
 
-  // QFAI:AC-0001-0213-02
-  // QFAI:EX-0001-0213-02
+  // QFAI:AC-0001-0206-02
+  // QFAI:EX-0001-0206-02
   it("changes no story, criterion, rule statement, existing example or test", async () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/the rule's Statement is unchanged/i);
@@ -113,8 +113,8 @@ describe("defect example seeding", () => {
     );
   });
 
-  // QFAI:AC-0001-0213-03
-  // QFAI:EX-0001-0213-03
+  // QFAI:AC-0001-0206-03
+  // QFAI:EX-0001-0206-03
   it("records the appended example as one approval-free UPDATE:APPEND triage row", async () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(
@@ -125,8 +125,8 @@ describe("defect example seeding", () => {
 });
 
 describe("qfai-sdd as a stage of a run", () => {
-  // QFAI:AC-0001-0214-01
-  // QFAI:EX-0001-0214-01
+  // QFAI:AC-0001-0207-01
+  // QFAI:EX-0001-0207-01
   it("refuses a work order with no target, scopes a flow target and binds a new-story slot", async () => {
     const text = await section(TRIAGE_STEP, "## Scope of the request");
     expect(text).toMatch(
@@ -139,16 +139,16 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(story).toMatch(/a `new_story` target's result reports one `bindings` entry per slot/i);
   });
 
-  // QFAI:AC-0001-0214-02
-  // QFAI:EX-0001-0214-02
+  // QFAI:AC-0001-0207-02
+  // QFAI:EX-0001-0207-02
   it("ends at SDD when invoked by name, and hands a request to go to the end to a run", async () => {
     const text = await section(SKILL, "## /qfai-sdd");
     expect(text).toMatch(/runs standalone, ends at SDD and creates no run/i);
     expect(text).toMatch(/handed to a whole run through `qfai-run`/i);
   });
 
-  // QFAI:AC-0001-0214-03
-  // QFAI:EX-0001-0214-03
+  // QFAI:AC-0001-0207-03
+  // QFAI:EX-0001-0207-03
   it("hands over, refuses or works the order as the entry check says", async () => {
     const text = await section(BASELINE, "## Workflow Run Entry Check (Mandatory)");
     expect(text).toMatch(/edit nothing\. pass the request to `qfai-run` in the same turn/i);
@@ -156,8 +156,8 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(text).toMatch(/then do only that work/i);
   });
 
-  // QFAI:AC-0001-0214-05
-  // QFAI:EX-0001-0214-05
+  // QFAI:AC-0001-0207-05
+  // QFAI:EX-0001-0207-05
   it("recomputes the Stage 0 key and always reruns the preflight readiness check", async () => {
     const text = await section(STEERING_STEP, "## Inside a workflow run");
     expect(text).toMatch(/only when the key recorded with it, recomputed, is equal/i);
@@ -167,8 +167,8 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(triage).toMatch(/preflight readiness check runs in every attempt/i);
   });
 
-  // QFAI:AC-0001-0214-06
-  // QFAI:EX-0001-0214-06
+  // QFAI:AC-0001-0207-06
+  // QFAI:EX-0001-0207-06
   it("changes the story tree only on the operator's answer, and moves its change request row to DONE", async () => {
     const text = await section(TRIAGE, "### A change to the story tree");
     expect(text).toMatch(/the first attempt asks once and changes nothing/i);

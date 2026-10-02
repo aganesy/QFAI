@@ -1,5 +1,5 @@
-# US-0001-0082: Exploration Brief Authoring
+# US-0001-0082: Design Anti-Goals
 
 ## User Story
 
-As a discussion facilitator, I want product intent, must-keep interactions, brand signals and differentiation targets recorded in `04_Sources.md`, so that prototyping starts from explicit exploration constraints.
+As a reviewer, I want explicit anti-goals and recurrence prevention notes recorded in `04_Sources.md`, so that bland or generic directions are easier to reject later.

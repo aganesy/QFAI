@@ -1,5 +1,11 @@
 import { parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import {
+  architectureDiagram,
+  dependsOnCell,
+  orderLayers,
+  type ArchitectureLayer,
+} from "../../core/storyTree/architecture.js";
+import {
   addUnique,
   listItems,
   renderTemplate,
@@ -13,9 +19,21 @@ import {
 } from "./policyDocuments.js";
 
 const STACK = "Stack";
+const ARCHITECTURE = "Architecture";
 const DEPENDENCIES = "Dependencies";
 const COMMANDS = "Standard commands (copy-paste)";
 const STACK_COLUMNS = ["Component", "Choice"] as const;
+const ARCHITECTURE_COLUMNS = ["Layer", "Responsibility", "Depends on"] as const;
+
+/**
+ * A path, a file name or a command, which a layer row names by responsibility instead: a
+ * backtick or a backslash; a path starting with `/`, `./` or `../`; a slash-joined name
+ * ending in a file extension; or three or more slash-joined lowercase segments, or one
+ * ending in a slash. A single slash between words, as in `I/O` or `and/or`, is prose. The
+ * `## Architecture` section of the `tech.md` document schema holds the same patterns.
+ */
+const LOCATED =
+  /[`\\]|(?:^|[\s(])\.{0,2}\/\w|\w\/[\w./-]*\.[A-Za-z][A-Za-z0-9]{0,4}\b|[a-z0-9_-]+\/[a-z0-9_-]+\/|[a-z0-9_-]\/(?:\s|$)/;
 
 /** Old headings, in lower case, whose `Key: value` items become Stack rows. */
 const STACK_LISTS = new Set([
@@ -103,6 +121,53 @@ function moveCommands(draft: PolicyDraft, section: PolicySection): string[] {
   return person;
 }
 
+const layerOf = (row: string[]): ArchitectureLayer => ({
+  name: row[0] ?? "",
+  dependsOn: dependsOnCell(row[2] ?? ""),
+});
+
+/**
+ * Moves an old architecture section into the `## Architecture` table of the `tech.md` draft
+ * when it is one table of layers: a Layer, a Responsibility and a Depends on column, with no
+ * path or file name in a row. The rows are ordered from the uppermost layer down; when they
+ * cannot be, because a layer has two rows, depends on one with no row, or depends on
+ * itself through others, none of them moves. Returns what a person has to do otherwise.
+ */
+export function moveArchitectureSection(draft: PolicyDraft, section: PolicySection): string[] {
+  const table = tableRows(section.body, ARCHITECTURE_COLUMNS);
+  if (table === null) return [rewrite(draft, section, ARCHITECTURE)];
+  const person = table.dropped.map(
+    (column) =>
+      `${draft.target} ## ${ARCHITECTURE}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+  );
+  const rows: string[][] = [];
+  for (const row of table.rows) {
+    if (row.some((cell) => LOCATED.test(cell)))
+      person.push(
+        `${draft.target} ## ${ARCHITECTURE}: rewrite the layer ${row[0] || "with no name"} of "## ${section.heading}" in ${section.source} without a path or file name by hand (kept at ${section.archive})`,
+      );
+    else rows.push(row);
+  }
+  const merged = [...(draft.rows.get(ARCHITECTURE) ?? [])];
+  for (const row of rows) if (!merged.some((entry) => sameRow(entry, row))) merged.push(row);
+  const order = orderLayers(merged.map(layerOf));
+  if (typeof order === "string") {
+    person.push(
+      `${draft.target} ## ${ARCHITECTURE}: order the layers of "## ${section.heading}" in ${section.source} from the uppermost down by hand, since ${order} (kept at ${section.archive})`,
+    );
+    return person;
+  }
+  const rowOf = new Map(merged.map((row) => [row[0] ?? "", row]));
+  draft.rows.set(
+    ARCHITECTURE,
+    order.flatMap(({ name }) => {
+      const row = rowOf.get(name);
+      return row === undefined ? [] : [row];
+    }),
+  );
+  return person;
+}
+
 /** Adds standard-command items already in the template's form, such as Skeleton items. */
 export function addTechCommands(draft: PolicyDraft, items: string[]): void {
   addUnique(draft.lists, COMMANDS, items, sameText);
@@ -158,8 +223,8 @@ const commandLabel = (item: string): string => /^- ([^:\n]+):/.exec(item)?.[1] ?
 
 /**
  * `tech.md` as its template gives it, with each Stack row and each command the draft
- * holds in place of the template's item of the same name, and the draft's dependencies
- * in place of the template's.
+ * holds in place of the template's item of the same name, and the draft's layers, drawn
+ * and listed, and its dependencies in place of the template's.
  */
 export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
   return renderTemplate("03_contract/tech.md", (title, templateBody) => {
@@ -171,6 +236,12 @@ export async function renderTechDocument(draft: PolicyDraft): Promise<string> {
         STACK_COLUMNS,
         mergeByName(templateRows, rows, (row) => row[0] ?? ""),
       );
+    }
+    if (title === ARCHITECTURE) {
+      const rows = draft.rows.get(ARCHITECTURE) ?? [];
+      if (rows.length === 0) return templateBody;
+      const diagram = architectureDiagram(rows.map(layerOf));
+      return `${diagram}\n\n${tableText(ARCHITECTURE_COLUMNS, rows)}`;
     }
     if (title === DEPENDENCIES) return draft.lists.get(DEPENDENCIES)?.join("\n") ?? templateBody;
     if (title === COMMANDS) {

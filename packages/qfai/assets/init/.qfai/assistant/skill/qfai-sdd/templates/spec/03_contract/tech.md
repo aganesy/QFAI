@@ -15,6 +15,18 @@
 | CSS framework       | `<CSS framework, or none>`                 |
 | Component catalogue | `<primary component catalogue, or none>`   |
 
+## Architecture
+
+```mermaid
+flowchart TD
+  Upper[<upper layer>] --> Lower[<lower layer>]
+```
+
+| Layer         | Responsibility                      | Depends on    |
+| ------------- | ----------------------------------- | ------------- |
+| <upper layer> | <what the layer is responsible for> | <lower layer> |
+| <lower layer> | <what the layer is responsible for> | -             |
+
 ## Dependencies
 
 - `<package>`

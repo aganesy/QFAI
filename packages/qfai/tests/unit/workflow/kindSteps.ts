@@ -1,35 +1,24 @@
 // The steps a plan stage of each kind runs in the built-in plans, as a unit test's snapshot
-// carries them, and the work-order entries a stage issued with its active steps holds.
+// carries them, and the work-order entries a stage issued with those steps holds.
 
-import { stepRefs } from "../../../src/core/workflow/steps.js";
+import { stepRefs, stepServes } from "../../../src/core/workflow/steps.js";
 import type { PlanStep } from "../../../src/core/workflow/types.js";
 
-const proposed = (name: string): PlanStep => ({ name, when: "proposed" });
+const passThrough = (name: string): PlanStep => ({ name, passThrough: true });
 
 export const KIND_STEPS: Record<string, PlanStep[]> = {
   maintenance: [{ name: "maintain-edit" }],
   diagnose: [{ name: "implement-diagnose" }],
-  sdd_append: [{ name: "sdd-story" }, { name: "sdd-gate" }],
-  test_fix: [
-    { name: "atdd-test-fix", when: "test_defect_acceptance_layer" },
-    { name: "implement-test-fix", when: "test_defect_example_layer" },
-  ],
+  sdd_append: [passThrough("sdd-story"), { name: "sdd-gate" }],
+  test_fix: [passThrough("atdd-test-fix"), passThrough("implement-test-fix")],
   regression_fix: [{ name: "implement-regression-fix" }],
   sdd: [
     { name: "sdd-triage" },
-    { name: "sdd-flow" },
+    passThrough("sdd-flow"),
     { name: "sdd-story" },
-    { name: "sdd-contract" },
-    proposed("common-design-md"),
-    { name: "sdd-cycle" },
-    { name: "sdd-gate" },
-  ],
-  sdd_delta: [
-    { name: "sdd-triage" },
-    proposed("sdd-flow"),
-    { name: "sdd-story" },
-    proposed("sdd-contract"),
-    proposed("common-design-md"),
+    passThrough("sdd-contract"),
+    passThrough("common-design-md"),
+    passThrough("sdd-cycle"),
     { name: "sdd-gate" },
   ],
   prototype: [
@@ -38,33 +27,46 @@ export const KIND_STEPS: Record<string, PlanStep[]> = {
     { name: "prototyping-loop" },
     { name: "prototyping-handoff" },
   ],
-  acceptance: [{ name: "atdd-scaffold" }, proposed("atdd-credentials"), { name: "atdd-author" }],
+  acceptance: [
+    { name: "atdd-scaffold" },
+    passThrough("atdd-credentials"),
+    passThrough("atdd-author"),
+  ],
   implement: [{ name: "implement-tdd" }, { name: "implement-checkpoint" }],
-  verify: [{ name: "verify-context" }, { name: "verify-qfai-gate" }, { name: "verify-repo-gate" }],
+  verify: [
+    passThrough("verify-change-note"),
+    { name: "verify-context" },
+    { name: "verify-qfai-gate" },
+    { name: "verify-repo-gate" },
+  ],
+  triage: [{ name: "triage-close" }],
   discussion: [
     { name: "discussion-research" },
     { name: "discussion-interview" },
     { name: "discussion-pack" },
     { name: "discussion-oq" },
-    proposed("discussion-uiux"),
+    passThrough("discussion-uiux"),
   ],
 };
 
 // A plan stage of a kind, carrying that kind's steps.
-export function planStage(stageInstanceId: string, stageKind: string, when?: string) {
+export function planStage(stageInstanceId: string, stageKind: string) {
   const steps = KIND_STEPS[stageKind];
   if (!steps) throw new Error(`no steps for stage kind ${stageKind}`);
-  return { stageInstanceId, stageKind, steps, ...(when ? { when } : {}) };
+  return { stageInstanceId, stageKind, steps };
 }
 
-// The `steps` of a work order that runs the named steps.
+// The `steps` of a work order that runs the named steps, none of them pass-through.
 export function issuedSteps(...names: string[]) {
   return stepRefs(names);
 }
 
-// The `steps` of a work order issued for a stage of a kind with no step proposed: every step
-// that runs without a proposal. A `test_fix` stage names its layer instead.
+// The `steps` of a work order issued for a stage of a kind: every step the kind runs.
 export function kindSteps(stageKind: string) {
-  const steps = KIND_STEPS[stageKind] ?? [];
-  return stepRefs(steps.filter((step) => step.when === undefined).map((step) => step.name));
+  return stepRefs(KIND_STEPS[stageKind] ?? []);
+}
+
+// The `steps` of a repair work order for a stage of a kind: the steps that serve `owner`.
+export function servedSteps(stageKind: string, owner: string) {
+  return stepRefs((KIND_STEPS[stageKind] ?? []).filter((step) => stepServes(step.name, owner)));
 }

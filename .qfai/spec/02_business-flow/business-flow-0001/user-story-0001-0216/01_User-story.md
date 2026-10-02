@@ -1,12 +1,10 @@
-# US-0001-0216: Run only the steps a change needs, reviewed once per stage
+# US-0001-0216: Pass a step with evidence when it has nothing to write
 
 ## User Story
 
-As an operator, I want each stage of a run to do only the steps its plan and the checked route proposal make active, and to be reviewed once, at its end, by the reviewers those steps need, so that a small change does not pay for the whole of a large skill and its reviews.
+As an operator, I want a step that has nothing to write for my change to say so with evidence instead of being dropped from the plan, and to be refused when work it owns remains, so that fixed routes stay small for small changes without hiding an obligation.
 
 ## Non-goals
 
-- A new route or predicate family beyond `proposed`
-- A review at the end of every step
-- The whole-change review at `finish`, which stays the independent `qa-gatekeeper` PASS
-- Which steps exist and where they are installed, which the assistant-steps contract states
+- A step that passes without running.
+- A pass for a step outside the closed list.

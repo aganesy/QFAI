@@ -1,5 +1,5 @@
-# US-0001-0047: Deprecated assistant paths and skill project memory
+# US-0001-0047: Profile-specific validation reports
 
 ## User Story
 
-As an adopter migrating off the legacy layout, I want `qfai validate` to emit `D-DEPRECATED-PATH` naming the sunset release when it finds `.qfai/assistant/steering/`, and to warn when a `qfai-*` SKILL.md does not end with a `project_memory:` YAML block, so that read paths are explicit and the deprecation timeline is unambiguous.
+As a release operator running `qfai validate` across multiple profiles in sequence, I want each run to write to a profile-suffixed output path (`.qfai/report/validate-<profile>.json`) alongside an always-latest `validate.json` that names its `profile`, and I want the legacy `.qfai/output/validate.json` path to keep working with a `D-DEPRECATED-PATH` warning until sunset, so that profile outputs cannot silently overwrite each other and downstream certify reads the intended profile.

@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0192-06
-// QFAI:EX-0001-0192-20
+// QFAI:AC-0001-0185-06
+// QFAI:EX-0001-0185-20
 // Fault seeds: FAULT-009
 
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
   featureRunAt,
   field,
@@ -24,13 +25,14 @@ it("finish offered a verify", async () => {
   const { runId, issued } = await featureRunAt(root, "verify");
   const runs = path.join(root, ".qfai", "run");
   await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
-  await writeFile(path.join(root, ".qfai", "report", "verify.json"), '{"status":"FAIL"}\n');
+  const text = '{"status":"FAIL"}\n';
+  await writeFile(path.join(root, ".qfai", "report", "verify.json"), text);
   const accepted = await submit(
     root,
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/report/verify.json", digest: "submitted" }],
+      artifactRefs: [{ path: ".qfai/report/verify.json", digest: hashAssistantAssetText(text) }],
     }),
   );
   const foreign = path.join(runs, "run-20200101000000000", "reports", "verify", "verify.json");

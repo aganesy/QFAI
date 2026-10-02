@@ -1,5 +1,5 @@
-# US-0001-0087: Screen Contracts
+# US-0001-0087: Design Direction Handoff
 
 ## User Story
 
-As an implementer, I want `40_screen_contracts.md` to capture screen obligations and required states, so that downstream UI contracts can be normalized deterministically.
+As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` authors root `DESIGN.md` from my choice rather than from an assistant's guess.

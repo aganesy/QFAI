@@ -44,19 +44,19 @@ describe("BF-0001 story annotation layers", () => {
   });
 
   // QFAI:EX-0001-0010-02
-  // QFAI:EX-0001-0071-01
+  // QFAI:EX-0001-0069-01
   it("counts an AC annotation in integration or API tests", () => {
     for (const kind of ["integration", "api"] as const) {
       expect(hasMissing(criterion, [file(kind, criterion)], "atdd")).toBe(false);
     }
   });
 
-  // QFAI:EX-0001-0010-04
+  // QFAI:EX-0001-0010-03
   it("counts an EX annotation in a selected unit test", () => {
     expect(hasMissing(example, [file(null, example)], "tdd")).toBe(false);
   });
 
-  // QFAI:EX-0001-0010-04
+  // QFAI:EX-0001-0010-03
   it("does not count an EX annotation in an E2E test and reports it as misplaced", () => {
     const e2e = file("e2e", example);
     const findings = validateStoryTreeObligationsModel(model, [e2e], "tdd");
@@ -70,7 +70,7 @@ describe("BF-0001 story annotation layers", () => {
     );
   });
 
-  // QFAI:EX-0001-0058-04
+  // QFAI:EX-0001-0056-04
   it("reports misplaced BF and AC annotations without counting coverage", () => {
     for (const [kind, id] of [
       ["integration", flow],
@@ -86,8 +86,8 @@ describe("BF-0001 story annotation layers", () => {
     }
   });
 
-  // QFAI:EX-0001-0010-07
-  // QFAI:EX-0001-0010-08
+  // QFAI:EX-0001-0010-04
+  // QFAI:EX-0001-0010-05
   it("ignores the retired SPEC and contract annotation forms", () => {
     for (const legacy of [
       ["QFAI", "SPEC-0099", "BF-0099"].join(":"),

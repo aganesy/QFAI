@@ -112,8 +112,8 @@ async function seedProject(root: string): Promise<void> {
       "    route: /",
       "    title: Home",
       "    primary_tasks:",
-      "      - Record an order",
-      "      - Review yesterday's orders",
+      "      - { id: record, label: Record an order, acceptance: the order is listed }",
+      "      - { id: review, label: Review yesterday's orders, acceptance: the orders render }",
     ].join("\n"),
     "utf-8",
   );

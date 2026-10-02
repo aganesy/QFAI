@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-30
+// QFAI:EX-0001-0185-30
 
 import { expect, it } from "vitest";
 
@@ -6,7 +6,7 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "direct",
+  route: "edit-text",
   stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };

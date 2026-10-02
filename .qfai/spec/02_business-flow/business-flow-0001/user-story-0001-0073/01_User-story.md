@@ -1,5 +1,5 @@
-# US-0001-0073: ATDD Reviewer Gate
+# US-0001-0073: ATDD Scaffold Bulk Skeleton Generation
 
 ## User Story
 
-As a project lead, I want an independent reviewer to check coverage obligations, forbidden references and evidence completeness before ATDD completes, with the scoped completion gate run per business flow (`--flow BF-NNNN`), so that no acceptance-test gap survives undetected and each run is judged on the flow it owns.
+As a QA engineer, I want `qfai atdd scaffold` to write one skeleton per AC of a story (`--story US-NNNN-NNNN`) or one E2E skeleton for a flow (`--flow BF-NNNN`), never overwriting an existing file, with `D-SCAFFOLD-PLACEHOLDER` keyed by the AC or BF ID until the placeholder is filled, so that I can bootstrap acceptance-test files in bulk without hand-creating each file.

@@ -1,5 +1,5 @@
-# US-0001-0125: Cycle-zero UI-contract set freeze
+# US-0001-0125: CSS token reference resolution
 
 ## User Story
 
-As a maintainer, I want the resolved UI contract set frozen at cycle 0 and recorded as `uiContractsCovered[]`, so that a UI contract added mid-run does not restart cycle 0 and is deferred to the next invocation instead.
+As a designer, I want `scanFonts`, `scanRadius` and `scanShadow` to resolve `var(--token)` references against `:root` before judging safety, so that token-driven CSS does not produce false-positive `designMdViolations[]`.

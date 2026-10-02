@@ -12,7 +12,7 @@
  * writer file's expected `writerToken`. Symmetric (both present or
  * both absent) → no finding. Asymmetric → fire.
  */
-// QFAI:EX-0001-0177-01
+// QFAI:EX-0001-0171-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -2,6 +2,19 @@
 // `assets/schemas/workflow/`: every required field present, every field of its type, and no key
 // a schema does not declare. What a payload means is the decision function's to judge.
 
+import {
+  alternativesFit,
+  ARTIFACTS,
+  CONFIDENCES,
+  ENTRY_FLAGS,
+  GATES,
+  INTENTS,
+  QUALIFIERS,
+  RISKS,
+  SIGNALS,
+} from "./extraction.js";
+import { WORKFLOW_MODIFIERS } from "./modifiers.js";
+
 type Shape =
   | { kind: "string"; minLength?: number; pattern?: RegExp }
   | { kind: "integer"; minimum: number }
@@ -14,8 +27,10 @@ type Shape =
       kind: "object";
       fields: Record<string, Shape>;
       required: readonly string[];
-      // A rule over the whole object that the field shapes cannot state.
+      // A rule over the whole object that the field shapes cannot state, and the field a
+      // failure names.
       holds?: (value: Record<string, unknown>) => boolean;
+      holdsField?: string;
     }
   | { kind: "anyOf"; options: readonly Shape[] };
 
@@ -32,8 +47,46 @@ const object = (
   fields: Record<string, Shape>,
   required: readonly string[] = [],
   holds?: (value: Record<string, unknown>) => boolean,
-): Shape => ({ kind: "object", fields, required, ...(holds ? { holds } : {}) });
+  holdsField?: string,
+): Shape => ({
+  kind: "object",
+  fields,
+  required,
+  ...(holds ? { holds } : {}),
+  ...(holdsField ? { holdsField } : {}),
+});
 const everyField = (fields: Record<string, Shape>): Shape => object(fields, Object.keys(fields));
+
+// The verdicts a diagnosis reports: what the run does next follows from the one it gives.
+export const DIAGNOSIS_VERDICTS = [
+  "missing-test",
+  "defective-test",
+  "regression",
+  "expectation-differs",
+  "as-specified",
+  "not-ours",
+  "duplicate",
+  "needs-info",
+  "surface-conflict",
+  "check-gap",
+  "product-race",
+] as const;
+
+// How a `triage-close` result closed the request.
+export const CLOSURE_OUTCOMES = [
+  "no-work",
+  "other-owner",
+  "answered",
+  "duplicate",
+  "awaiting-info",
+  "accepted",
+  "declined",
+  "deferred",
+  "decided",
+  "split",
+  "handed-off",
+  "verified",
+] as const;
 
 const FLOW_ID: Shape = { kind: "string", pattern: /^BF-\d{4}$/ };
 const EFFECT = oneOf("proceed", "replan", "stop");
@@ -65,18 +118,34 @@ export const DECISION_INPUT = object({
   stop: { kind: "boolean" },
 });
 
+// One reading of the request, each field from its closed vocabulary.
+const READING_FIELDS = {
+  intent: oneOf(...INTENTS, null),
+  entryFlags: list(oneOf(...ENTRY_FLAGS)),
+  qualifiers: list(oneOf(...QUALIFIERS)),
+  signals: list(oneOf(...SIGNALS)),
+};
+
+// The facts the decision rules read. Alternatives are required at `low`, allowed at `medium`
+// and refused at `high`.
+export const EXTRACTION = object(
+  {
+    ...READING_FIELDS,
+    risks: list(oneOf(...RISKS)),
+    gate: oneOf(...GATES),
+    artifacts: list(oneOf(...ARTIFACTS)),
+    confidence: oneOf(...CONFIDENCES),
+    alternatives: list(everyField(READING_FIELDS)),
+  },
+  [...Object.keys(READING_FIELDS), "risks", "gate", "artifacts", "confidence"],
+  (value) => alternativesFit(value.confidence, value.alternatives),
+  "alternatives",
+);
+
 export const ROUTE_PROPOSAL = object(
   {
-    requestKind: oneOf(
-      "change",
-      "read_only",
-      "plan_only",
-      "verify_only",
-      "resume",
-      "cancel",
-      "explicit_stage",
-    ),
-    candidateRoute: oneOf("direct", "bugfix", "bounded-change", "feature", "discovery", null),
+    requestKind: oneOf("routed", "verify_only", "resume", "cancel", "explicit_stage"),
+    extraction: EXTRACTION,
     goal: text,
     expectedBehaviorRefs: list(reference("request", "flow-id", "contract-id", "path")),
     observedRefs: list(reference("path", "evidence")),
@@ -105,14 +174,11 @@ export const ROUTE_PROPOSAL = object(
     ),
     proposedWriteScope: list(text),
     protectedTargets: list(text),
-    requiredStages: list(text),
-    optionalSteps: list(text),
     rationale: text,
-    confidence: { kind: "number" },
   },
   [
     "requestKind",
-    "candidateRoute",
+    "extraction",
     "goal",
     "expectedBehaviorRefs",
     "observedRefs",
@@ -122,7 +188,6 @@ export const ROUTE_PROPOSAL = object(
     "newStories",
     "proposedWriteScope",
     "protectedTargets",
-    "requiredStages",
     "rationale",
   ],
 );
@@ -173,6 +238,13 @@ export const STAGE_RESULT = object(
         everyField({ kind: oneOf("reused"), receiptRef: text }),
       ],
     },
+    passes: list(everyField({ step: text, reason: text, evidenceRef: text })),
+    adopted: list(everyField({ step: text, decision: text, reason: text })),
+    raise: list(everyField({ modifier: oneOf(...WORKFLOW_MODIFIERS), reason: text })),
+    closure: everyField({
+      outcome: oneOf(...CLOSURE_OUTCOMES),
+      followUps: list(everyField({ goal: text, reason: text })),
+    }),
     red: everyField({
       testId: text,
       failureKind: oneOf("assertion", "collection", "import", "startup", "timeout"),
@@ -186,13 +258,18 @@ export const STAGE_RESULT = object(
     ]),
     regressionFix: object({ testId: text, rerunRef: text, reviewRef: text }, ["testId"]),
     diagnosis: everyField({
-      verdict: oneOf("missing-test", "defective-test", "regression", "expectation-differs"),
+      verdict: oneOf(...DIAGNOSIS_VERDICTS),
       reproductionRef: text,
       matchedIds: list({
         kind: "string",
         pattern: /^(BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})$/,
       }),
     }),
+    // What a step at a branch point reports; which outcome and route the point declares is the
+    // decision function's to judge.
+    branch: object({ outcome: text, route: text, extraction: everyField(READING_FIELDS) }, [
+      "outcome",
+    ]),
     bindings: list(
       everyField({
         slotId: text,
@@ -276,8 +353,8 @@ function objectFaults(
   at: string,
 ): string[] {
   if (!isPlainObject(value)) return [at];
-  if (shape.holds && !shape.holds(value)) return [at];
   const within = (name: string) => (at ? `${at}.${name}` : name);
+  if (shape.holds && !shape.holds(value)) return [shape.holdsField ? within(shape.holdsField) : at];
   const missing = shape.required.filter((name) => value[name] === undefined).map(within);
   const unknown = Object.keys(value)
     .filter((name) => !Object.hasOwn(shape.fields, name))

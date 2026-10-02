@@ -1,5 +1,5 @@
-# US-0001-0093: Discussion writes the active session pointer
+# US-0001-0093: Parallel Slice Dispatch
 
 ## User Story
 
-As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId`, and a missing or ambiguous pointer to raise an error naming the candidate directories and the recovery command, so that the pack just written becomes the active session downstream skills find.
+As a developer, I want parallel execution authorized only for independent SUT slices with worktree separation and post-merge integration verify, so that parallel TDD does not introduce hidden coupling.

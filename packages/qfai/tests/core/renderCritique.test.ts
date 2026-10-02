@@ -46,7 +46,7 @@ describe("Render Critique Loop validation", () => {
     );
   }
 
-  it("renders/screenshot/HTML への言及がなければ QFAI-CRIT-001 を返す", async () => {
+  it("returns QFAI-CRIT-001 when there is no mention of renders/screenshot/HTML", async () => {
     await seedSkillPrompt(
       "qfai-prototyping",
       "# Prototyping Skill\n\nReview the code diff carefully.",
@@ -101,7 +101,7 @@ describe("Render Critique Loop validation", () => {
     expect(issues.some((issue) => issue.code === "QFAI-CRIT-005")).toBe(true);
   });
 
-  it("critique evidence に viewport/date/verdict/findings/rubric が揃っていれば必須項目エラーを返さない", async () => {
+  it("returns no required-field error when the critique evidence has viewport/date/verdict/findings/rubric", async () => {
     await seedEvidence(
       "critique-001.md",
       [

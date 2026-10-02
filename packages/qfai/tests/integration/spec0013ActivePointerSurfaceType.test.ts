@@ -7,12 +7,12 @@
  * up an isolated workspace with `mkdtemp` and tears it down via
  * `afterEach`.
  */
-// QFAI:EX-0001-0160-01
-// QFAI:EX-0001-0160-02
-// QFAI:EX-0001-0161-01
-// QFAI:EX-0001-0161-01
-// QFAI:EX-0001-0161-02
-// QFAI:EX-0001-0161-02
+// QFAI:EX-0001-0154-01
+// QFAI:EX-0001-0154-02
+// QFAI:EX-0001-0155-01
+// QFAI:EX-0001-0155-01
+// QFAI:EX-0001-0155-02
+// QFAI:EX-0001-0155-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -53,7 +53,7 @@ async function makeUiContract(filename: string, content: string): Promise<void> 
 }
 
 describe("spec-0013 active-pack resolver CHG-006", () => {
-  it("QFAI:EX-0001-0160-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
+  it("QFAI:EX-0001-0154-01 — normal: the single helper returns the pack named in state.json#discussion.currentId", async () => {
     const expected = await makeDiscussionPack("discussion-20260527075558258");
     await makeDiscussionPack("discussion-20260528075558258");
     await writeDiscussionCurrentId(root, "discussion-20260527075558258");
@@ -61,7 +61,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     expect(resolved).toBe(expected);
   });
 
-  it("QFAI:EX-0001-0160-03 — a dangling currentId names candidate packs and the recovery command", async () => {
+  it("QFAI:EX-0001-0154-03 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
     await writeDiscussionCurrentId(root, "discussion-20260303000000000");
@@ -78,7 +78,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0160-02 — an absent currentId names candidate packs and the recovery command", async () => {
+  it("QFAI:EX-0001-0154-02 — an absent currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
 
@@ -102,8 +102,11 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     return validateDesignAudit(root, defaultConfig);
   }
 
-  it("QFAI:EX-0001-0161-01 — normal: QFAI-AUD-020 warning text names the ceiling when count is 9", async () => {
-    const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
+  it("QFAI:EX-0001-0155-01 — normal: QFAI-AUD-020 warning text names the ceiling when count is 9", async () => {
+    const tasks = Array.from(
+      { length: 9 },
+      (_, i) => `      - { id: task_${i + 1}, label: task_${i + 1}, acceptance: done }`,
+    ).join("\n");
     const issues = await withinBandIssues(
       [
         "screens:",
@@ -123,8 +126,8 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  // QFAI:AC-0001-0161-01
-  it("QFAI:EX-0001-0161-04 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
+  // QFAI:AC-0001-0155-01
+  it("QFAI:EX-0001-0155-04 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
     // count == 2: silent, because there is no floor
     {
       const issues = await withinBandIssues(
@@ -134,8 +137,8 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -152,9 +155,9 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
-          "      - t3",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
+          "      - { id: t3, label: t3, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -170,14 +173,14 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
           "    title: Dashboard",
           "    route: /dashboard",
           "    primary_tasks:",
-          "      - t1",
-          "      - t2",
-          "      - t3",
-          "      - t4",
-          "      - t5",
-          "      - t6",
-          "      - t7",
-          "      - t8",
+          "      - { id: t1, label: t1, acceptance: done }",
+          "      - { id: t2, label: t2, acceptance: done }",
+          "      - { id: t3, label: t3, acceptance: done }",
+          "      - { id: t4, label: t4, acceptance: done }",
+          "      - { id: t5, label: t5, acceptance: done }",
+          "      - { id: t6, label: t6, acceptance: done }",
+          "      - { id: t7, label: t7, acceptance: done }",
+          "      - { id: t8, label: t8, acceptance: done }",
           "",
         ].join("\n"),
       );
@@ -185,7 +188,7 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     }
   });
 
-  it("QFAI:EX-0001-0161-02 — normal: string-only AND complete structured items are accepted", async () => {
+  it("QFAI:EX-0001-0155-02 — normal: complete structured items are accepted and a string item is rejected", async () => {
     const issues = await withinBandIssues(
       [
         "screens:",
@@ -203,11 +206,16 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
         "",
       ].join("\n"),
     );
-    expect(issues.find((issue) => issue.code === "QFAI-AUD-021")).toBeUndefined();
+    const shape = issues.filter((issue) => issue.code === "QFAI-AUD-021");
+    expect(shape.map((issue) => issue.message)).toEqual([
+      expect.stringMatching(
+        /primary_task #1 must be a mapping with exactly id, label and acceptance/,
+      ),
+    ]);
     expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeUndefined();
   });
 
-  it("QFAI:EX-0001-0161-02 — error: structured item missing acceptance is rejected (closed schema)", async () => {
+  it("QFAI:EX-0001-0155-02 — error: structured item missing acceptance is rejected (closed schema)", async () => {
     const issues = await withinBandIssues(
       [
         "screens:",

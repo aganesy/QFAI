@@ -3,26 +3,13 @@
 ## Criteria
 
 ```gherkin
-Feature: SKILL.md `## Default Autopilot Policy` section
+Feature: Reviewer-Gate ingests workflow-hygiene and shipped-shape drift
   # AC-0001-0175-01
-  Scenario: SKILL.md `## Default Autopilot Policy` present with 3 named buckets
-    Given a SKILL.md,
-    When the Reviewer Gate checks it,
-    Then a `## Default Autopilot Policy` section MUST be present listing three named buckets per DR-0269: (a) auto-decide (named defaults — output formatting, ID / sequence numbering, append-vs-create on subject overlap, equivalent-option pick), (b) ask-user (approval-required governance operations, destructive operations, version-pin changes, scope expansions — each with its prompt template; the first is a category each skill instantiates with the operations its own run cannot authorize for itself, per DR-0269 Amendment 2), (c) hard-required (brand intent, and the inputs declared for the skill). When the section is absent OR is present but missing one or more required buckets (heading-only / partial population — the "populated with three named buckets" requirement is not satisfied), the gate emits `R-AUTOPILOT-POLICY-MISSING` at severity error with a non-empty `justification:` naming the missing bucket(s). The three enumerations are the prototype: a SKILL.md MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry with its own operations, but MUST NOT introduce an entry outside the prototype's categories. A hard-required entry outside them raises `QFAI-AUTOPILOT-001` at severity error. The ask-user categories are the four above plus, for a skill whose own operation is the interview, a decision a declared grilling session puts to the user.
-
-  # AC-0001-0175-02
-  Scenario: Each Default Autopilot bucket under a workflow run
-    Given a skill's Default Autopilot Policy and a workflow run
-    When an item of each bucket comes up
-    Then an `ask-user` item is satisfied only by a `human_decision` that answers it
-    And a `hard-required` input is satisfied by `request_scope` or by the run's binding
-    And an `auto-decide` item needs no authorization
-    And `--auto` satisfies none of them
-
-  # AC-0001-0175-03
-  Scenario: A run binding supplies the flow a stage works on
-    Given a stage skill whose `hard-required` bucket holds the business flow it works on
-    When it runs under a work order whose target binds one business flow
-    Then the binding counts as the supplied flow, and nothing is asked
-    And invoked by name with no flow it can resolve, it still stops at preflight for the flow
+  Scenario: Reviewer-Gate ingests `R-WORKFLOW-HYGIENE-DRIFT` and `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`
+    Given the workflow-hygiene lane (owned by spec-0017) reports a rule violation on a pull request, in either QFAI's own workflows or the shipped template tree,
+    When the Reviewer Gate processes that signal,
+    Then it surfaces `R-WORKFLOW-HYGIENE-DRIFT` (own or shipped workflow rule violation) or `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` (declared shape divergence) naming the offending file, job and rule name as the lane reported them.
+    And membership of the closed `JUSTIFICATION_CATALOG` set is decided by **severity class**, never by which component emits the code: the catalog is the closed error-class mandatory-justification set and already holds script- and probe-driven members (`R-PACK-LOCATION-DRIFT`, emitted only by a repository lint script; `R-SKILL-MANIFEST-DRIFT`), while what sits outside it is warning-class advisory-only auxiliary signal such as `R-AUTOPILOT-POLICY-WIDENED` — whose own sibling `R-AUTOPILOT-POLICY-MISSING`, same emitter, is a member.
+    And both new codes are declared lint-failure codes, i.e. error class, so by that test they **belong in** the catalog on the `R-PACK-LOCATION-DRIFT` precedent. Registering them extends a closed set and MUST move in lockstep with the reviewer SSOTs, so registration is deliberately deferred rather than denied (DR-0015-0006).
+    And until that lockstep change lands, the gate MUST ingest both codes without demanding a `justification:`. That handling is a recorded **temporary divergence** from the membership test, scoped to exactly these two codes; it is NOT a principle, and no further code may be exempted by appealing to it.
 ```

@@ -3,18 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: Design Direction Handoff
+Feature: Discussion writes the active session pointer
   # AC-0001-0090-01
-  Scenario: Design direction recorded for /qfai-sdd
-    Given a `/qfai-discussion` run whose classified surfaces, primary or secondary, include `web`, `mobile`, `desktop` or `mixed`
-    When the discussion pack is finalized
-    Then `01_Context.md#Design Direction` names the adopted theme and who chose it
-    And discussion writes no root `DESIGN.md`
+  Scenario: `/qfai-discussion` writes the active session pointer
+    Given a `/qfai-discussion` run finalizing a pack
+    When the pack is finalized
+    Then `.qfai/state.json#discussion.currentId` is set to the ID of the pack just written, the single source of the active session
+    And `qfai discussion list --active` reads this value rather than inferring it from file timestamps
 
   # AC-0001-0090-02
-  Scenario: /qfai-sdd authors root DESIGN.md from the recorded direction
-    Given a UI-bearing flow on a visual prototyping surface whose discussion pack is its source
-    When `/qfai-sdd` writes the flow's design contracts
-    Then it authors root `DESIGN.md` from the brand direction `01_Context.md#Design Direction` records
-    And when the pack records no brand direction, it asks for one rather than choosing a brand itself
+  Scenario: An absent or dangling pointer resolves only to a lone pack
+    Given `.qfai/state.json#discussion.currentId` is absent or names no existing pack
+    When `qfai discussion list --active` resolves the active pointer
+    Then with no pointer and exactly one `discussion-*` directory, that pack is returned with exit 0 and a stderr note that no pointer is set
+    And with no pointer and more than one `discussion-*` directory, or a pointer naming no existing pack, an error is raised naming the candidate `discussion-*` directories and the recovery command (`qfai discussion use <id>`), and the active session is not inferred from mtime
 ```

@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0201-19
+// QFAI:EX-0001-0194-19
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -44,6 +44,8 @@ it("The parser's verdict on each stage result variant", async () => {
     "stage result binding a malformed flow ID": ["schema:bindings[0].flowId"],
     "stage result measured with nulls": [],
     "stage result with a debt missing its owner": ["schema:debts[0].resolvingOwner"],
+    "stage result reporting a branch": [],
+    "stage result whose branch names no outcome": ["schema:branch.outcome"],
   });
 });
 

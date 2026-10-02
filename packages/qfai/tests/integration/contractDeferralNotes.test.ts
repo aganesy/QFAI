@@ -12,7 +12,7 @@ import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
  *
  * A note of the shape "NOT YET IMPLEMENTED in vX.Y.Z — scheduled for vA.B.C+"
  * expires silently: the only way to notice the deadline arrived is to diff the
- * contract against `packages/qfai/package.json#version`. `cli-0011-qfai-init.md` carried
+ * contract against `packages/qfai/package.json#version`. `cli-0009-qfai-init.md` carried
  * two such notes (`--allow-dirty`, exit 65) whose target version shipped with
  * neither behaviour implemented. Either a contract describes what the code does
  * today, or it points at a tracking issue — never at a version number.
@@ -101,8 +101,8 @@ describe("CLI contracts do not defer behaviour to a version number", () => {
   });
 });
 
-describe("cli-0011-qfai-init.md matches the additive assistant-tree upgrade", () => {
-  const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0011-qfai-init.md");
+describe("cli-0009-qfai-init.md matches the additive assistant-tree upgrade", () => {
+  const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0009-qfai-init.md");
   const initSourcePath = path.join(ROOT, "packages", "qfai", "src", "cli", "commands", "init.ts");
 
   /** The business rule that states what `--upgrade-assistant-tree` copies. */
@@ -400,9 +400,9 @@ function carriesCode(node: ts.Node, code: string): boolean {
   return found;
 }
 
-describe("cli-0016-qfai-validate.md documents only finding codes the source can emit", () => {
+describe("cli-0014-qfai-validate.md documents only finding codes the source can emit", () => {
   it("every code the business rules name is emitted by a module the runner invokes", async () => {
-    const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0016-qfai-validate.md");
+    const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0014-qfai-validate.md");
     const scan = parseContractRules(contractPath, await readFile(contractPath, "utf-8"));
     expect(scan.errors).toEqual([]);
 

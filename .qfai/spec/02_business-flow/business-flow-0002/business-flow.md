@@ -35,5 +35,5 @@ flowchart TD
   a runner for that lane.
 - Package-manager resolution or install failure stops its lane. A failing,
   cancelled or unrecognized dependency state makes the aggregate verdict fail.
-- Repository-owned CI requirements live in `cli/cli-0018-repository-ci.md`; rules for
-  workflows shipped to adopters live in `cli/cli-0020-shipped-workflows.md`.
+- Repository-owned CI requirements live in `cli/cli-0016-repository-ci.md`; rules for
+  workflows shipped to adopters live in `cli/cli-0018-shipped-workflows.md`.

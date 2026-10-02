@@ -2,6 +2,7 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                                                                                    | Expected                                                                                                                                                           |
-| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| EX-0001-0181-01 | AC-0001-0181-01 | A `references/handoff.md` still describing pre-CLI-HANDOFF ad-hoc files after the implementation PR, checked by `qfai validate --report` | The stale reference surfaces as a warning, whatever the date of the run; a doc rewritten in the same atomic PR as the implementation reports zero stale references |
+| EX-ID           | AC-Ref          | Input                                                                    | Expected                                                                                                    |
+| --------------- | --------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| EX-0001-0181-01 | AC-0001-0181-01 | Research fetches page containing "API-KEY: sk-abc123def456" in body text | Session log records content hash but NOT the literal API key; sanitized log has `[REDACTED]`                |
+| EX-0001-0181-02 | AC-0001-0181-01 | Research session completes with 3 searches, 5 fetches, 2 verifications   | Log contains: queries[3], urls[5], hashes[5], sanitization_events[5], verification_results[2], citations[N] |

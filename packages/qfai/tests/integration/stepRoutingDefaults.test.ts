@@ -6,14 +6,20 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { loadConfig } from "../../src/core/config.js";
+import { loadConfig, routingEntryName } from "../../src/core/config.js";
+import {
+  ASSISTANT_ASSET_MAX_LINE_CHARS,
+  ASSISTANT_ASSET_MAX_LINES,
+  countLines,
+  widestMeasurableLine,
+} from "../../src/core/doctor/assetLineBudget.js";
+import { readRoutingDefaultsFiles } from "../../src/core/routingDefaults.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateAgentDefinition } from "../../src/core/validators/agentDefinition.js";
-import { frontMatterOf, readDefault, readShipped } from "../helpers/shippedAssistant.js";
+import { defaultRoutingEntries, frontMatterOf, readShipped } from "../helpers/shippedAssistant.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -30,11 +36,7 @@ function names(value: unknown): string[] {
 const AGENT_CHECKS = /^QFAI-AGENT-01[3-9]$/;
 const SDD_CONTRACT = path.join(".qfai", "assistant", "step", "sdd-contract", "STEP.md");
 
-async function routingEntries(): Promise<RoutingEntry[]> {
-  const parsed: unknown = parseYaml(await readDefault("agent-routing.yml"));
-  const routing = isRecord(parsed) ? parsed.routing : undefined;
-  return Array.isArray(routing) ? routing.filter(isRecord) : [];
-}
+const routingEntries = defaultRoutingEntries;
 
 /** Agent-check findings on a fresh install, after `edit` rewrites its `sdd-contract` step. */
 async function agentFindings(edit?: (text: string) => string): Promise<Issue[]> {
@@ -54,8 +56,8 @@ async function agentFindings(edit?: (text: string) => string): Promise<Issue[]> 
 }
 
 describe("routing keyed by step", () => {
-  // QFAI:AC-0001-0167-06
-  // QFAI:EX-0001-0167-09
+  // QFAI:AC-0001-0161-06
+  // QFAI:EX-0001-0161-07
   it("routes sdd-contract by its step name and leaves the parent and a profile-less step unrouted", async () => {
     const entries = await routingEntries();
     const matching = entries.filter((candidate) => candidate.step === "sdd-contract");
@@ -83,7 +85,27 @@ describe("routing keyed by step", () => {
     expect(await agentFindings()).toEqual([]);
   });
 
-  // QFAI:EX-0001-0167-10
+  // QFAI:EX-0001-0161-07
+  it("reads the routing defaults as one list over files that each stay within the asset ceilings", async () => {
+    const files = await readRoutingDefaultsFiles();
+    const over = files.flatMap((file) => {
+      const lines = countLines(file.text);
+      const widest = widestMeasurableLine(file.text);
+      return [
+        ...(lines > ASSISTANT_ASSET_MAX_LINES ? [`${file.rel}: ${lines} lines`] : []),
+        ...(widest > ASSISTANT_ASSET_MAX_LINE_CHARS ? [`${file.rel}: ${widest} characters`] : []),
+      ];
+    });
+    expect(over).toEqual([]);
+    const names = files.map((file) => path.posix.basename(file.rel));
+    expect(names).toEqual([...names].sort());
+
+    const keys = (await routingEntries()).map((entry) => routingEntryName(entry));
+    expect(keys.filter((key, index) => keys.indexOf(key) !== index)).toEqual([]);
+    expect(keys).toContain("sdd-contract");
+  });
+
+  // QFAI:EX-0001-0161-08
   it("reports a step whose roles or routing-profile drift from its entry", async () => {
     const missingRole = await agentFindings((text) =>
       text.replace(/^\s*architecture-reviewer,?\s*$/m, ""),
@@ -110,8 +132,8 @@ describe("routing keyed by step", () => {
 });
 
 describe("routing defaults come from the installed package", () => {
-  // QFAI:AC-0001-0167-03
-  // QFAI:EX-0001-0167-11
+  // QFAI:AC-0001-0161-03
+  // QFAI:EX-0001-0161-09
   it("stops and names the install command when the package is not installed", async () => {
     const rule = (await readShipped("rule/agent-selection.md")).replace(/\s+/g, " ");
     expect(rule).toContain(

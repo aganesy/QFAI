@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-07
+// QFAI:EX-0001-0185-07
 
 import { expect, it } from "vitest";
 
@@ -9,14 +9,15 @@ import type {
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("Decide accept of a routing result whose proposal passes every check", () => {
   const boundedPlan = {
-    route: "bounded-change",
+    route: "add-feature",
     stages: [
-      planStage("sdd-delta", "sdd_delta", "always"),
-      planStage("implement", "implement", "always"),
-      planStage("verify", "verify", "always"),
+      planStage("sdd-delta", "sdd"),
+      planStage("implement", "implement"),
+      planStage("verify", "verify"),
     ],
   };
   const snapshot = {
@@ -38,8 +39,8 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
       expectedSequence: 2,
       outcome: "accepted",
       proposal: {
-        requestKind: "change",
-        candidateRoute: "bounded-change",
+        requestKind: "routed",
+        extraction: extractionFor("add-feature"),
         goal: "Reject an empty notification email with a clear message.",
         expectedBehaviorRefs: [
           { kind: "request", ref: "request" },
@@ -50,13 +51,12 @@ it("Decide accept of a routing result whose proposal passes every check", () => 
         affectedFlowIds: ["BF-0007"],
         newStories: [],
         proposedWriteScope: ["src/notify/**", "tests/notify/**"],
-        requiredStages: ["sdd_delta", "implement", "verify"],
       },
     },
   };
   const facts = {
     pathExistence: { "src/notify/email.ts": true },
-    plans: { "bounded-change": boundedPlan },
+    plans: { "add-feature": boundedPlan },
     flows: ["BF-0007"],
   };
 

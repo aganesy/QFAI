@@ -1,0 +1,34 @@
+route: quarantine-flaky
+family: upkeep
+stages:
+  - id: isolate
+    kind: implement
+    steps: [implement-quarantine]
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [isolate]
+  - id: fix
+    kind: test_fix
+    steps:
+      - { step: atdd-test-fix, passThrough: true }
+      - { step: implement-test-fix, passThrough: true }
+    after: [diagnose]
+  - id: reenable
+    kind: verify
+    steps: [verify-repeat-run]
+    after: [fix]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [reenable]
+defaultModifiers: []
+decisionPoints: []
+branchPoints:
+  - step: implement-diagnose
+    outcomes:
+      - { outcome: product-race, routes: [fix-intermittent] }

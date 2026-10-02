@@ -80,6 +80,74 @@ contracts linked to that flow, and record it for each affected flow. Route
 `product-experience-architect` during design and `product-surface-reviewer`
 during review whenever either signal identifies the flow as UI-bearing.
 
+## Which surface owns the truth
+
+When the request or the diagnosis names two surfaces that disagree — a
+validator and the template it checks, a contract and the code, a record and
+what was built — decide which one owns the truth before any later step writes.
+
+1. Take the order the project has recorded, highest first:
+   - an in-force `decisions.md` row that settles it;
+   - the story tree and the contracts, over the code, tests and prose that
+     implement them, as Article IV of `.qfai/assistant/rule/constitution.md`
+     states;
+   - between two surfaces of one rank, the one a policy row, a contract or a
+     decision names as the source.
+2. Record the owner, and the entry of that order that made it the owner, in the
+   triage row's Approach.
+3. The surface that does not own the truth is the one that changes. Where that
+   is code, tests or shipped prose, `implement-tdd` aligns it, and this stage
+   changes no story-tree file for it.
+4. Where nothing recorded settles the order, the owner is a decision at this
+   step's decision point (below).
+
+## A mechanism nothing runs
+
+When the diagnosis finds a mechanism that exists but does nothing — a check no
+lane runs, a field nothing reads, a rule no code enforces — decide whether it is
+wired or retired:
+
+- **Wire it** when a specification, a contract or a recorded decision still
+  asks for what it does. The route continues.
+- **Retire it** when nothing written asks for it any more, or the request says
+  to remove it. Write nothing, and report `branch: { outcome: retire }`; on a
+  route that declares it, the run moves to the route that removes it.
+
+## Settled mode
+
+A work order step with `mode: settled` applies a decision already recorded and
+approved: the one the work order's `settled` field or the request cites.
+
+- Read that record and the part of the story tree it names. Do not reopen,
+  grill again or widen what it settles.
+- Triage each requirement strictly within the record.
+- An instruction that asks for more than the record settles — a new flow, a
+  changed criterion, a behaviour the record never mentions — stops the step.
+  Write nothing, and report `branch: { outcome: outside-record, route }`, with
+  `route` `decide-acceptance` when whether to accept a behaviour is open and
+  `decide-design` when how to build it is.
+- A citation that resolves to no in-force row stops the step: put the missing
+  record to the operator as a question, and write nothing.
+
+## At a decision point
+
+Where the work order marks this step `decisionPoint: user`, each decision it
+reaches — the owner, wire or retire, how to repair — is taken here:
+
+- When the work order's `modifiers` hold `gate:user`, put each decision to the
+  operator as a question, return `awaiting_input` and change nothing. The
+  attempt holding the answers carries on.
+- Otherwise take the decision, list it in the result's `adopted` as
+  `{ step, decision, reason }`, and carry on.
+- A critical decision goes to the operator either way: one that makes a
+  specification, a contract or a recorded decision the losing side, one that
+  cannot be taken back, such as removing a public command or key, or one resting
+  on product intent nothing written states. The result also raises `gate:user`
+  through `raise`, as `{ modifier, reason }`, for the rest of the run.
+
+Invoked by name, record each such decision in the flow evidence with whether
+this step took it or the operator answered it.
+
 ## ID allocation
 
 Allocate each new ID from the highest ID of its kind in scope plus one,

@@ -53,5 +53,19 @@ export function stageResultVariants(result: unknown): { name: string; payload: u
       name: "stage result with a debt missing its owner",
       payload: { ...base, debts: [{ ...debt, resolvingOwner: undefined }] },
     },
+    {
+      name: "stage result reporting a branch",
+      payload: {
+        ...base,
+        branch: {
+          outcome: "defect-found",
+          extraction: { intent: "defect", entryFlags: ["repro"], qualifiers: [], signals: [] },
+        },
+      },
+    },
+    {
+      name: "stage result whose branch names no outcome",
+      payload: { ...base, branch: { route: "add-feature" } },
+    },
   ].map(({ name, payload }) => ({ name, payload: JSON.parse(JSON.stringify(payload)) }));
 }

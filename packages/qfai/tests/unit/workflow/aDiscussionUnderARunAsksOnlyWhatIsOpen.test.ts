@@ -1,20 +1,21 @@
-// QFAI:EX-0001-0195-11
+// QFAI:EX-0001-0188-11
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Decision = ReturnType<typeof decide>;
 
 const boundedStages = [
-  planStage("bounded-sdd-delta", "sdd_delta", "always"),
-  planStage("bounded-implement", "implement", "always"),
-  planStage("bounded-verify", "verify", "always"),
+  planStage("bounded-sdd-delta", "sdd"),
+  planStage("bounded-implement", "implement"),
+  planStage("bounded-verify", "verify"),
 ];
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
   flows: ["BF-0007"],
 };
 const statusQuestion = {
@@ -44,8 +45,8 @@ function route(): Decision {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -54,7 +55,6 @@ function route(): Decision {
           newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },

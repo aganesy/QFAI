@@ -1,5 +1,5 @@
-// QFAI:EX-0001-0194-05
-// QFAI:EX-0001-0198-04
+// QFAI:EX-0001-0187-05
+// QFAI:EX-0001-0191-04
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
@@ -12,17 +12,17 @@ import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const FLOW = "BF-0007";
 const bounded = planOf(
-  "bounded-change",
+  "add-feature",
   [
-    stage("bounded-sdd-delta", "sdd_delta"),
+    stage("bounded-sdd-delta", "sdd"),
     stage("bounded-implement", "implement"),
     stage("bounded-verify", "verify"),
   ],
   ["src/notify/**", ".qfai/spec/02_business-flow/business-flow-0007/**"],
 );
-const direct = planOf("direct", [stage("edit", "maintenance"), stage("verify", "verify")]);
+const editText = planOf("edit-text", [stage("edit", "maintenance"), stage("verify", "verify")]);
 
-// What every operation of a bounded run observes: the flows, and the bound flow's examples.
+// What every operation of an add-feature run observes: the flows, and the bound flow's examples.
 const facts = {
   flows: [FLOW],
   obligations: {
@@ -44,10 +44,10 @@ const specFinding = {
   blockingExtent: "run",
 };
 
-// A bounded run whose verify work order is outstanding.
+// An add-feature run whose verify work order is outstanding.
 function verifying(): JournalRun {
   const run = new JournalRun(readyWith(bounded, FLOW));
-  for (const kind of ["sdd_delta", "implement"]) {
+  for (const kind of ["sdd", "implement"]) {
     expect(run.next(facts).stageKind).toBe(kind);
     expect(run.accept({}, facts).verdict.run?.state).toBe("ready");
   }
@@ -62,9 +62,10 @@ function issued(run: JournalRun) {
   return `${workOrder.stageInstanceId}#${String(workOrder.attempt)}@${steps}`;
 }
 
-const SDD_DELTA = "sdd-triage+sdd-story+sdd-gate";
+// The sdd steps qfai-sdd owns, which a finding it owns is repaired with.
+const SDD_DELTA = "sdd-triage+sdd-flow+sdd-story+sdd-contract+sdd-cycle+sdd-gate";
 const IMPLEMENT = "implement-tdd+implement-checkpoint";
-const VERIFY = "verify-context+verify-qfai-gate+verify-repo-gate";
+const VERIFY = "verify-change-note+verify-context+verify-qfai-gate+verify-repo-gate";
 
 it("A verify result needs_repair whose finding sits in a story file with resolvingOwner qfai-sdd", () => {
   const run = verifying();
@@ -107,7 +108,7 @@ it("A verify result needs_repair whose findings name two owners the plan serves"
   ]);
 });
 
-// A direct plan binds no flow; its only stage is the maintenance edit.
+// An edit-text plan binds no flow; its first stage is the maintenance edit.
 const semanticEffect = {
   findingCode: "maintain-semantic-effect",
   path: "src/orders.ts",
@@ -119,24 +120,30 @@ const semanticEffect = {
 };
 
 function maintaining(): JournalRun {
-  const run = new JournalRun(readyWith(direct, undefined));
+  const run = new JournalRun(readyWith(editText, undefined));
   expect(run.next().stageKind).toBe("maintenance");
   return run;
 }
 
-it("A maintain result needs_repair whose finding names an owner the direct plan does not serve", () => {
+it("A maintain result needs_repair whose finding names an owner the edit-text plan does not serve", () => {
   const run = maintaining();
   const decision = run.accept({ outcome: "needs_repair", debts: [semanticEffect] });
 
   expect({
     state: decision.verdict.run?.state,
     events: decision.events.map((event) => event.type),
-    replans: run.snapshot.replans,
+    halt: run.snapshot.halt,
+    route: run.snapshot.plan?.route,
     repairRequest: run.snapshot.repairRequest,
   }).toEqual({
-    state: "routing",
-    events: ["scope-or-obligation-revision"],
-    replans: 1,
+    state: "blocked",
+    events: ["unrun-or-unresolved-dependency"],
+    halt: {
+      blocker: "stage-blocked",
+      owner: "qfai-implement",
+      subjects: ["maintain-semantic-effect@src/orders.ts"],
+    },
+    route: "edit-text",
     repairRequest: undefined,
   });
 });

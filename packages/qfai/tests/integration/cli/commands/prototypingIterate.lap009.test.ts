@@ -8,7 +8,7 @@
  * finding. Reviewer override requires a non-empty `justification:`.
  */
 
-// QFAI:EX-0001-0143-01
+// QFAI:EX-0001-0139-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -153,7 +153,7 @@ describe("lap-009 md5-duplicate-capture advisory-failing", () => {
   it("surfaces lap-009 warning via runCapturePath when two screens share md5", async () => {
     const root = await newTempDir();
     await seedProject(root);
-    // `warn()` routes to stdout in the shared logger (cli/lib/logger.ts),
+    // `warn()` routes to stdout in the shared logger (core/logger.ts),
     // so capture stdout to observe the advisory finding.
     const stdoutChunks: string[] = [];
     const origWrite = process.stdout.write.bind(process.stdout);

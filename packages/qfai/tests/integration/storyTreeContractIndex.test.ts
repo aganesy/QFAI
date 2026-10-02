@@ -61,9 +61,9 @@ describe("story-tree contract index", () => {
     expect(await validateStoryTreeContractReferences(root, config, listed)).toEqual([]);
   });
 
-  // QFAI:AC-0001-0054-06
+  // QFAI:AC-0001-0052-06
   it("reports a file outside the contract kind directories once, as not a contract", async () => {
-    // QFAI:EX-0001-0054-10
+    // QFAI:EX-0001-0052-10
     const config = storyTreeConfig();
     const base = config.paths.contractsDir;
     await put(
@@ -85,8 +85,6 @@ describe("story-tree contract index", () => {
     expect(outside[0]?.message).toContain("api/, db/, ui/, cli/");
     expect(model.contracts).toEqual([]);
     expect(model.rules).toEqual([]);
-    expect(
-      findings.some((item) => item.message.includes("lists UI-0001 with design/ui-0001-tokens.md")),
-    ).toBe(true);
+    expect(findings.filter((item) => item.code === "QFAI-CONTRACT-034")).toEqual(outside);
   });
 });

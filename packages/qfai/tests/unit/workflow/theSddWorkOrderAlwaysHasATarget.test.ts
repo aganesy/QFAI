@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-04
+// QFAI:EX-0001-0185-04
 
 import { expect, it } from "vitest";
 
@@ -7,7 +7,7 @@ import { planStage } from "./kindSteps.js";
 
 it("Issue the SDD work order, then accept an SDD result reporting bindings for the slot", () => {
   const plan = {
-    route: "feature",
+    route: "add-feature",
     stages: [
       planStage("feature-sdd", "sdd"),
       planStage("feature-implement", "implement"),

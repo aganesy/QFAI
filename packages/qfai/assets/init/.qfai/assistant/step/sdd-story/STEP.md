@@ -68,6 +68,23 @@ states.
 Inside a run, a `new_story` target's result reports one `bindings` entry per
 slot, naming the flow and the stories it created.
 
+## Passes when
+
+Read first: the diagnosis or the triage rows, and the `03_Example.md` of each
+story they touch. The step passes in two cases, and the pass names both facts
+it rests on:
+
+- **In an append stage**, when an existing example already states the case the
+  diagnosis matched. The pass cites that example, and no row is appended to
+  `decisions.md`.
+- **In an `sdd` stage**, when the change stays inside the documents that own
+  the truth, as `sdd-triage` recorded the owner, and adds and changes no
+  example. The pass names the owning document and says that no example is added
+  or changed.
+
+A pass is refused while no example states the append stage's case, and in an
+`sdd` stage whose result adds, changes or removes an example.
+
 ## A diagnosed missing test
 
 In a stage of kind `sdd_append`, which a diagnosis that found a missing example

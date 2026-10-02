@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0195-05
+// QFAI:EX-0001-0188-05
 
 import { expect, it } from "vitest";
 
@@ -8,12 +8,12 @@ import { planStage } from "./kindSteps.js";
 type Question = NonNullable<Parameters<typeof decide>[0]["openQuestions"]>[number];
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/export/**"],
   stages: [
-    planStage("bounded-sdd-delta", "sdd_delta", "always"),
-    planStage("bounded-implement", "implement", "always"),
-    planStage("bounded-verify", "verify", "always"),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const question: Question = {

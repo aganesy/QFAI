@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0196-18
+// QFAI:EX-0001-0189-17
 // Fault seeds: FAULT-020
 
 import { expect, it } from "vitest";
@@ -82,7 +82,7 @@ it("Four results in turn with delegation", () => {
 
 it("A delegation unavailable on a stage after the first delegated one", () => {
   const snapshot = running([
-    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+    { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
   ]);
   const decision = decide(
     snapshot,

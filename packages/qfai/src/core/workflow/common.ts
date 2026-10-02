@@ -17,10 +17,10 @@ export const RESULT_ID = /^[A-Za-z0-9._-]{1,64}$/;
 export const TERMINAL_STATES = ["completed", "cancelled", "failed"];
 
 // The stage kinds that author the story tree, and so record rows of its two tables.
-export const STORY_AUTHORING_KINDS = ["sdd", "sdd_append", "sdd_delta"];
+export const STORY_AUTHORING_KINDS = ["sdd", "sdd_append"];
 
 // The stage kinds whose work order binds no flow and no new story.
-export const UNTARGETED_KINDS = ["route", "discussion", "maintenance", "verify"];
+export const UNTARGETED_KINDS = ["route", "triage", "discussion", "maintenance", "verify"];
 
 export const DEFAULT_SPECS_DIR = ".qfai/spec";
 

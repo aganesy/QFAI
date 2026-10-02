@@ -36,14 +36,14 @@ async function seedUiContracts(root: string): Promise<void> {
       "    title: Orders Dashboard",
       "    route: /orders",
       "    primary_tasks:",
-      "      - View latest orders",
+      "      - { id: view_orders, label: View latest orders, acceptance: done }",
     ].join("\n"),
     "utf-8",
   );
 }
 
 describe("validateUiEvidenceArtifacts", () => {
-  it("declared screen に screenshot と HTML が無い場合は両方 error を返す", async () => {
+  it("returns errors for both when a declared screen has no screenshot and no HTML", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -53,7 +53,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues.every((issue) => issue.severity === "error")).toBe(true);
   });
 
-  it("declared screen の screenshot と HTML が揃っていれば issue を返さない", async () => {
+  it("returns no issue when a declared screen has both its screenshot and its HTML", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -69,7 +69,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("iter-NN 配下の v2 screenshot と HTML が揃っていれば issue を返さない", async () => {
+  it("returns no issue when the v2 screenshot and HTML under iter-NN are both present", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -84,7 +84,7 @@ describe("validateUiEvidenceArtifacts", () => {
   });
 
   // QFAI:EX-0001-0040-03
-  it("contracts/ui が無い場合はチェックをスキップする", async () => {
+  it("skips the check when contracts/ui is absent", async () => {
     const root = await newTempRoot();
 
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
@@ -92,7 +92,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("custom contractsDir から導出した evidence 配下を参照する", async () => {
+  it("reads the evidence directory derived from a custom contractsDir", async () => {
     const root = await newTempRoot();
     const config = {
       ...defaultConfig,
@@ -126,7 +126,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("危険な screenId を evidence filename として使わず error を返す", async () => {
+  it("returns an error instead of using a dangerous screenId as an evidence filename", async () => {
     const root = await newTempRoot();
     const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(contractsDir, { recursive: true });
@@ -186,7 +186,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(codes).toContain("QFAI-UIE-001");
   });
 
-  it("custom contractsDir でも suggested_action は実際の evidence path を案内する", async () => {
+  it("points suggested_action at the actual evidence path even with a custom contractsDir", async () => {
     const root = await newTempRoot();
     const config = {
       ...defaultConfig,
