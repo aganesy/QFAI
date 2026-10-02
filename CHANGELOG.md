@@ -24,6 +24,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   This repository's own review instructions say the same. They are also split
   by topic into four files, so the TypeScript checks apply to `*.ts` files and
   the compatibility checks to the package source only.
+
 - **Step 12 of `qfai-migration-v1-to-v2` lists the project files that still
   name a 1.x path.** A skill, agent or document the project wrote is not
   rewritten, and it kept reading `.qfai/specs/`, `_policies/`, `spec-NNNN`,
