@@ -97,7 +97,7 @@ async function seedProjectWithUiContracts(root: string): Promise<void> {
   await writeFile(
     path.join(uiDir, "home.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: home",
       "    route: /",

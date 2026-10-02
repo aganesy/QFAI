@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: Integration Acceptance Test Implementation
-
-# AC-0001-0072-01
-# Parent: US-0001-0072
-Scenario: Integration Coverage Obligation on the story tree
-  Given the ACs of the stories in scope
-  When the ATDD Integration implementer runs
-  Then every AC has a test file under `<testsDir>/integration/**` or `<testsDir>/api/**` carrying `QFAI:AC-NNNN-NNNN-NN`.
+Feature: Test Case Quality Depth Verification
+  # AC-0001-0072-01
+  Scenario: Normal-path-only test cases are flagged
+    Given the test cases produced by ATDD for a business flow
+    When the test-design-analyst reviews them
+    Then a BF or AC with only normal-path test cases is flagged as incomplete.
 ```

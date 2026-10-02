@@ -3,14 +3,24 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Explicit reviewer pivot directive
+  # AC-0001-0105-01
+  Scenario: pivotDirective Enum
+    Given any `iter-NN/review.json`
+    When it is validated
+    Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`
+    And any other value raises `QFAI-PROT-002`
 
-# AC-0001-0105-01
-# Parent: US-0001-0105
-Scenario: AC-0001-0105-01
-  Given reviewers prepare to evaluate a prototype
-  When evaluator input guidance is read
-  Then evaluator input guidance names the live prototype, root `DESIGN.md`, prior review context, and the layout anti-pattern catalog.
-  And review guidance names the visual checklist categories used during scoring.
-  And screenshots and HTML snapshots are additional inputs only when opt-in `--capture` produced them.
+  # AC-0001-0105-02
+  Scenario: pivotDirective Rule — pivot
+    Given `open(r)` is the number of `blockingFindings` plus `layoutAntiPatternsDetected` in review `r`, and `open(latest) > 0`, `open(latest) >= open(prior)` and `open(prior) >= open(prior2)`
+    When the reviewer writes `pivotDirective` by the rule the shipped reviewer prompt states
+    Then it writes `"pivot"`.
+
+  # AC-0001-0105-03
+  Scenario: pivotDirective Rule — continue or refine
+    Given the pivot condition does not hold
+    When the reviewer writes `pivotDirective` by the rule the shipped reviewer prompt states
+    Then it writes `"continue"` when a prior review exists and `open(latest) < open(prior)`, and `"refine"` otherwise.
+    And each of the four UX axis scores in the review is one of `weak`, `acceptable`, `strong` or `exceptional`; any other value is rejected.
 ```

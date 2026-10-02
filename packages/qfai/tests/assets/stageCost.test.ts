@@ -78,8 +78,9 @@ describe("the stage cost rule", () => {
 
       for (const [role, , measurement] of rows) {
         expect(roles).toContain(role?.replace(/`/g, ""));
-        expect(measurement).not.toBe("None yet");
-        expect(measurement).not.toBe("");
+        expect(measurement).toBeTypeOf("string");
+        expect(measurement?.trim()).not.toBe("None yet");
+        expect(measurement?.trim()).not.toBe("");
       }
     });
 

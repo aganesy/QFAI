@@ -1,30 +1,5 @@
-# US-0001-0171: Pattern-Doubler Reviewer
+# US-0001-0171: Cross-skill `handoff.yaml` schema
 
 ## User Story
 
-- Parent: CAP-0015
-
-Requirement provenance: the requirement source of the approved concrete-review change CR-20260913-0007, which git history keeps.
-
-As a QFAI user, I want optional advisory review that proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale, so that real behavior is covered without numeric targets or demands for more abstract rules.
-
-## Legacy Source Scope
-
-- In:
-  - agent cards and routing framework
-  - orchestrator protocol
-  - delegation hard-stop rules
-  - review profiles and gate rules
-  - the shipped routing entry for `/qfai-migration-spec-to-story`
-  - skill integration
-  - prototyping evaluator/reviewer routing
-  - `/qfai-prototyping` v2.0 routing rebuild: orchestrator → product-experience-architect (generator) + product-surface-reviewer (evaluator) + devops-ci-engineer (capture); same-Claude generator/reviewer is forbidden (self-preference bias)
-  - the built-in review profiles contain `default` but no `full-harness`; no review-profile file is written into the project
-- Out:
-  - runtime execution engines
-  - removed prototyping CLI behavior
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0015
-- Story block: `us-0015-0005` of retired spec-0015
+As a QFAI maintainer, I want a single canonical cross-skill handoff schema (`packages/qfai/src/core/schemas/handoff.ts`, documented in `references/handoff.md`) that every skill producing or consuming handoff state reads and writes, with a Reviewer Gate emitting `R-HANDOFF-SCHEMA-DRIFT` (severity error) on non-conforming writes or on edits to the schema that its writers do not follow, so that handoff state stops fragmenting into ad-hoc per-skill files.

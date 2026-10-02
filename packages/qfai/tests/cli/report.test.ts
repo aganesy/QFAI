@@ -81,26 +81,6 @@ describe("qfai report on a story tree", () => {
     );
   });
 
-  it("includes policy guardrails in the JSON report", async () => {
-    const root = await storyRoot();
-    const policy = path.join(root, ".qfai/spec/01_policy/policy.md");
-    await mkdir(path.dirname(policy), { recursive: true });
-    await writeFile(
-      policy,
-      "## Decision Guardrails\n### DG-0001: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n",
-      "utf8",
-    );
-    await writeValidation(root, []);
-    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
-    const output = JSON.parse(
-      await readFile(path.join(root, ".qfai/report/report.json"), "utf8"),
-    ) as {
-      guardrails: { total: number; items: Array<{ id: string }> };
-    };
-    expect(output.guardrails.total).toBe(1);
-    expect(output.guardrails.items.map((item) => item.id)).toContain("DG-0001");
-  });
-
   it("uses loaded findings for the exit gate even when stored counts are stale", async () => {
     const root = await storyRoot();
     await writeValidation(root, [issue("error")]);
@@ -138,7 +118,7 @@ describe("qfai report on a story tree", () => {
     await expect(runReport({ root, format: "json" })).rejects.toThrow("invalid shape");
   });
 
-  // QFAI:EX-0001-0064-01
+  // QFAI:EX-0001-0062-01
   it("exits 2 and names the missing input when no validate output exists", async () => {
     const root = await storyRoot();
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -148,7 +128,7 @@ describe("qfai report on a story tree", () => {
     );
   });
 
-  // QFAI:EX-0001-0063-02
+  // QFAI:EX-0001-0061-02
   it("reports a narrow profile run in CI at warning without failing on it", async () => {
     const root = await storyRoot();
     vi.stubEnv("CI", "true");
@@ -173,6 +153,7 @@ describe("qfai report on a story tree", () => {
     }
   });
 
+  // QFAI:EX-0001-0066-04
   it("requires a scoped input file for --flow", async () => {
     const root = await storyRoot();
     await writeValidation(root, []);
@@ -194,6 +175,7 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/report.spec-0001.md"))).toBe(false);
   });
 
+  // QFAI:EX-0001-0062-02
   it("refuses a legacy spec layout", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacy-"));
     roots.push(root);

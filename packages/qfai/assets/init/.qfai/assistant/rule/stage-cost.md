@@ -13,9 +13,8 @@ The `effort` setting sets how much a model reasons per step. Its levels are
 `low`, `medium`, `high`, `xhigh` and `max`. On another host, the equivalent
 setting applies.
 
-The right level differs by stage. For code review, accuracy has been found to
-hold at lower levels, so a fast pass at review time and a thorough pass later
-can be run at different levels.
+The right level differs by stage. A lower level can suit code review when a
+measurement shows that accuracy holds on the tasks reviewed.
 
 | Role                            | Level              | Measurement |
 | ------------------------------- | ------------------ | ----------- |
@@ -28,8 +27,8 @@ is a guess.
 ### A higher level can cost more on a long deliverable
 
 At the top levels a model can draft most of a long output while reasoning, then
-write it again as the reply. The turn doubles in length and the result does not
-improve.
+write it again as the reply. This can lengthen the turn without improving the
+result.
 
 The stages that produce long documents are spec authoring, contract
 normalization and a full review pack. Run them at the default level unless a
@@ -43,18 +42,15 @@ A work order may carry a time budget in seconds. The agent ends every message
 with its elapsed time against that budget, for example `elapsed 340s / 1200s`,
 or with elapsed time alone where the work order sets none.
 
-The line makes a team of agents finish sooner with comparable answer quality. It
-works by keeping more agents running in parallel, not by doing less work, which
-is the opposite of what a lower reasoning level does.
+The elapsed line makes progress against the budget visible.
 
 It is advisory. Nothing stops at the budget.
 
 ## Whole-file rewrites
 
-Current models rewrite a whole file for a small change more readily than earlier
-ones. The result is usually identical, so nothing fails and nothing is measured;
-it only costs more. A one-line instruction to edit only the lines that change,
-where that does not affect the result, brings the cost back down.
+A whole-file rewrite can repeat unchanged content and consume output tokens
+even when the resulting file is identical. A one-line instruction to edit only
+the lines that change, where that does not affect the result, can reduce this
+cost.
 
-A rewrite also touches lines the change did not mean to touch, and a guard that
-reads the diff sees every one of them.
+A rewrite can introduce unrelated changes that a diff-based guard sees.

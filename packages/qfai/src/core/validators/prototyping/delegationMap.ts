@@ -55,8 +55,8 @@ export async function validatePrototypingDelegationMap(root: string): Promise<Is
         "prototyping.executionPlan.delegationMap",
         undefined,
         "canonical",
-        "`executionPlan.delegationMap` を category -> role の object にしてください " +
-          "(不要になった executionPlan ブロックは削除してください)。",
+        "Make `executionPlan.delegationMap` an object mapping category -> role " +
+          "(delete the executionPlan block if it is no longer needed).",
       ),
     ];
   }
@@ -117,7 +117,7 @@ export function validateDelegationMapIssues(
       continue;
     }
     // Flag non-string values explicitly so malformed entries like
-    // { UI実装: 123 } surface a real violation instead of slipping through.
+    // { "UI implementation": 123 } surface a real violation instead of slipping through.
     if (typeof rawRole !== "string") {
       issues.push(
         issue(
@@ -128,8 +128,8 @@ export function validateDelegationMapIssues(
           "prototyping.executionPlan.delegationMap",
           undefined,
           "canonical",
-          `category "${category}" には string の role を割り当ててください ` +
-            `(allowed: ${allowedRoles.join(", ")})。`,
+          `Assign a string role to category "${category}" ` +
+            `(allowed: ${allowedRoles.join(", ")}).`,
         ),
       );
       continue;
@@ -144,8 +144,8 @@ export function validateDelegationMapIssues(
           "prototyping.executionPlan.delegationMap",
           undefined,
           "canonical",
-          `category "${category}" を許可された role に割り当ててください ` +
-            `(allowed: ${allowedRoles.join(", ")})。`,
+          `Assign category "${category}" to an allowed role ` +
+            `(allowed: ${allowedRoles.join(", ")}).`,
         ),
       );
     }

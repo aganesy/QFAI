@@ -1,11 +1,12 @@
-// QFAI:EX-0001-0195-07
+// QFAI:EX-0001-0188-07
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -13,10 +14,9 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
   flows: ["BF-0007"],
 };
 
@@ -47,8 +47,8 @@ function routeWithOneMissingValue() {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -57,7 +57,6 @@ function routeWithOneMissingValue() {
           newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
@@ -104,7 +103,7 @@ it("A routing result blocked only by the expected HTTP status, opened as one que
   }).toEqual({
     state: "awaiting_input",
     questions: [{ kind: "fact", text: statusQuestion.text, recommendation: undefined }],
-    stageKinds: ["sdd_delta", "implement", "verify"],
+    stageKinds: ["sdd", "implement", "verify"],
     answeredState: "ready",
     authorizations: [
       { answer: { valueDigest: expect.stringMatching(/^[a-f0-9]{64}$/) }, effect: "proceed" },

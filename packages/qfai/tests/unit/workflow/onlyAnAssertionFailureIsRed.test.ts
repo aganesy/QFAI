@@ -1,49 +1,26 @@
-// QFAI:EX-0001-0192-29
+// QFAI:EX-0001-0185-29
 // Fault seeds: FAULT-012, FAULT-013
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    {
-      stageInstanceId: "bounded-sdd-delta",
-      stageKind: "sdd_delta",
-      skill: "qfai-sdd",
-      operation: "update-or-applicability-check",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-acceptance",
-      stageKind: "acceptance",
-      skill: "qfai-atdd",
-      operation: "author-acceptance-tests",
-      when: "acceptance_obligations_unmet",
-    },
-    {
-      stageInstanceId: "bounded-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-      when: "always",
-    },
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
   ],
 };
 const flowBinding = { flowId: "BF-0007" };
 const facts = { acceptanceObligationsUnmet: true };
 const deltaAccepted = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
 function acceptRed(red: NonNullable<AcceptResult["red"]>) {
@@ -117,8 +94,8 @@ it("An acceptance result with testObservation", () => {
   expect({
     state: accepted.verdict.run?.state,
     nextStage: next.verdict.workOrder?.stageKind,
-    nextSkill: next.verdict.workOrder?.executor?.skill,
-  }).toEqual({ state: "ready", nextStage: "implement", nextSkill: "qfai-implement" });
+    nextSteps: next.verdict.workOrder?.steps,
+  }).toEqual({ state: "ready", nextStage: "implement", nextSteps: kindSteps("implement") });
 });
 
 it("collection", () => {

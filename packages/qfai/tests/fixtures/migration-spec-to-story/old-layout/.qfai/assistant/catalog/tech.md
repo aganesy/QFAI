@@ -1,5 +1,5 @@
 # Technology
 
-## Runtime
+## Runtime / platform
 
-The order service accepts JSON requests.
+- Language runtime: Node.js, serving JSON requests

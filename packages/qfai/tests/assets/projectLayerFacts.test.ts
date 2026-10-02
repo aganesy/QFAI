@@ -55,7 +55,7 @@ const PATH_CITATION =
  */
 const NOT_A_PATH = [
   /[<>*]/, // `spec-XXXX`'s siblings, `skills/*`, `<spec-id>`
-  /[A-Z]{3,}/, // `spec-NNNN`, `CON-API-*`
+  /[A-Z]{3,}/, // `spec-NNNN`, `API-*`
   /^\.qfai\/(?:discussion|report|evidence|review)\//,
 ];
 

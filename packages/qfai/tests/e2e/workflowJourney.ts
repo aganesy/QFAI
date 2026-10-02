@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const CLI = path.join(PACKAGE_ROOT, "dist", "cli", "index.mjs");
@@ -39,10 +40,14 @@ export const START_INPUT = {
   harness: { host: "claude-code", capabilities: CAPABILITIES },
 };
 
-/** A discovery proposal: its plan binds no flow and runs the discussion stage. */
+/**
+ * A decide-design proposal: its plan binds no flow, runs the discussion stage and closes the
+ * request, writing only its discussion pack. The route carries `gate:user`, so routing asks to
+ * confirm the plan.
+ */
 export const DISCOVERY_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "discovery",
+  requestKind: "routed",
+  extraction: extractionFor("decide-design"),
   goal: "Settle what the notification export contains.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -50,10 +55,21 @@ export const DISCOVERY_PROPOSAL = {
   riskSignals: [],
   unresolvedQuestions: [],
   newStories: [],
-  proposedWriteScope: ["docs/**"],
+  proposedWriteScope: [".qfai/discussion/**"],
   protectedTargets: [],
-  requiredStages: ["discussion"],
   rationale: "What the export contains is not settled.",
+};
+
+/**
+ * An answer-question proposal: its plan binds no flow, writes nothing, carries no modifier, and
+ * opens no question at routing of its own.
+ */
+export const ANSWER_PROPOSAL = {
+  ...DISCOVERY_PROPOSAL,
+  extraction: extractionFor("answer-question"),
+  goal: "Explain how the notification export is built.",
+  proposedWriteScope: [],
+  rationale: "The request asks how the product works as it is.",
 };
 
 const roots: string[] = [];
@@ -241,17 +257,39 @@ export async function acceptThenNext(
   return { accepted, next: workflow(root, ["next", "--run", runId]) };
 }
 
-/** A started run whose routing result for `proposal` has been submitted. */
+/**
+ * Answers the plan confirmation a route carrying `gate:user` opens at routing, when it is the
+ * only question routing opened; any other routing result is returned as it is.
+ */
+export async function confirmedPlan(root: string, runId: string, routed: CliRun): Promise<CliRun> {
+  const questions = field(routed.json, "questions");
+  const [only] = Array.isArray(questions) ? questions : [];
+  if (!Array.isArray(questions) || questions.length !== 1 || field(only, "purpose") !== "plan") {
+    return routed;
+  }
+  return submit(root, runId, "decision", {
+    questionId: field(only, "questionId"),
+    answer: { optionIds: ["proceed"] },
+    answeredBy: "operator",
+    expectedSequence: field(routed.json, "run.sequence"),
+  });
+}
+
+/**
+ * A started run whose routing result for `proposal` has been submitted, with a plan confirmation
+ * that is routing's only question answered: `routed` is where routing left the run.
+ */
 export async function routedRun(root: string, proposal: object, input: unknown = START_INPUT) {
   const runId = await startRun(root, input);
   const routing = workflow(root, ["next", "--run", runId]);
-  const routed = await submit(
+  const accepted = await submit(
     root,
     runId,
     "accept",
     resultFor(routing.json, "route-1", { proposal }),
   );
-  return { runId, routing, routed };
+  const routed = await confirmedPlan(root, runId, accepted);
+  return { runId, routing, routed, accepted };
 }
 
 /** The option of a stored question whose effect is `effect`. */
@@ -273,12 +311,16 @@ export async function answer(root: string, runId: string, question: unknown, eff
   });
 }
 
-/** What a work order names: its stage kind, executor, operation and target. */
+/** The names of the steps a work order runs, in order. */
+export function stepNames(document: unknown): unknown[] {
+  return list(document, "workOrder.steps").map((step) => field(step, "name"));
+}
+
+/** What a work order names: its stage kind, steps and target. */
 export function orderOf(document: unknown) {
   return {
     stageKind: field(document, "workOrder.stageKind"),
-    skill: field(document, "workOrder.executor.skill"),
-    operation: field(document, "workOrder.operation"),
+    steps: stepNames(document),
     target: field(document, "workOrder.target"),
   };
 }

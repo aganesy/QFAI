@@ -7,8 +7,8 @@
  * stopped forwarding either flag would leave them all passing. These cases run
  * the same argv an operator types.
  */
-// QFAI:EX-0001-0166-01
-// QFAI:EX-0001-0166-01
+// QFAI:EX-0001-0160-01
+// QFAI:EX-0001-0160-01
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";

@@ -2,6 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                                             | Expected                                                                                                                                                                                        |
-| --------------- | --------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0082-01 | AC-0001-0082-01 | Given a UI-bearing discussion for a task dashboard When the facilitator finalizes `04_Sources.md` | Then it names the dashboard purpose, the task actions that must survive exploration, the intended brand signals, and how it should differ from generic dashboards without naming a winning mock |
+| EX-ID           | AC-Ref          | Input                                                                                                | Expected                                                                                                                                          |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0082-01 | AC-0001-0082-01 | A generic card grid was rejected for a UI-bearing pack, when the pack's `04_Sources.md` is finalized | It records the grid as an anti-goal, explains why it obscures the primary task, and names a review cue that would catch the pattern if it returns |

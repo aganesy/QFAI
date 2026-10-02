@@ -768,6 +768,8 @@ describe("the rollback does not overwrite a file created in the gap", () => {
       // and `symlink` fails with the `EEXIST` that announces it.
       const theirs = "# written between the rm and the symlink\n";
       symlinkSpy.mockImplementation(async (actual: FsPromises, ...args: never[]) => {
+        // Init's up-front probe is a symlink call too, and not the one racing.
+        if (String(args[1]).includes("qfai-symlink-probe")) return actual.symlink(...args);
         await actual.writeFile(linkPath, theirs, "utf-8");
         return actual.symlink(...args);
       });

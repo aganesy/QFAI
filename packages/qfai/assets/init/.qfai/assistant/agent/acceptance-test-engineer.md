@@ -38,7 +38,7 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Implement one E2E test per BF and integration or API tests for each active AC obligation. Annotate the test at its owning layer and assert observable behavior.
-- Use active CON-API and CON-DB contracts to shape assertions. Keep BF E2E and AC coverage separate from EX unit or component tests owned by `/qfai-implement`.
+- Use active API and DB contracts to shape assertions. Keep BF E2E and AC coverage separate from EX unit or component tests owned by `/qfai-implement`.
 - Keep shared fixtures isolated and record selected commands, observed RED or falsifiability proof, results and revisions in ATDD evidence.
 - Apply `.agents/rules/minimal-implementation.md` to each test without reducing the approved coverage obligation.
 
@@ -46,14 +46,14 @@ specialization_tags:
 
 - `rule/**`, especially routing, test layers and drift.
 - The affected BF, US and AC story files under `<paths.specsDir>/02_business-flow/**` and applicable decisions.
-- `<paths.specsDir>/03_contract/tech.md` for Standard commands and `structure.md` for test roots.
-- Active API, DB, UI and design contracts under `<paths.contractsDir>` where the flow references them.
+- `<paths.specsDir>/03_contract/tech.md` for Standard commands, and the test globs in `qfai.config.yaml` for test roots.
+- Active API, DB and UI contracts under `<paths.contractsDir>` whose business rules cite the flow's examples.
 - Current `.qfai/evidence/atdd-BF-NNNN.md`.
 
 ## Deliverables
 
 - Acceptance test plan and implemented coverage
-- Mapping from BF / AC / CON-API / CON-DB to test assets
+- Mapping from BF / AC / API / DB to test assets
 - Execution proof and evidence summary
 - Updated ATDD evidence with test paths, selectors, observed results, and implementation handoff
 - Gaps and follow-up actions

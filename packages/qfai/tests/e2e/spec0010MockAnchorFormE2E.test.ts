@@ -27,6 +27,8 @@ const discussionSkillDir = path.join(
   "qfai-discussion",
 );
 const workshopTemplate = path.join(discussionSkillDir, "templates", "03_Story-Workshop.md");
+/** The step that authors the Story Workshop, and so the mock inside it. */
+const packStep = path.join(discussionSkillDir, "..", "..", "step", "discussion-pack", "STEP.md");
 
 const roots: string[] = [];
 
@@ -71,12 +73,12 @@ describe("E2E: the mock template emits anchor-form hrefs by default (US-0010-001
     expect(template).toContain('<a href="#orders">');
   });
 
-  it("instructs the author in the skill as well as in the template", async () => {
+  it("instructs the author in the pack step as well as in the template", async () => {
     const template = await readFile(workshopTemplate, "utf-8");
-    const skill = await readFile(path.join(discussionSkillDir, "SKILL.md"), "utf-8");
+    const step = await readFile(packStep, "utf-8");
     for (const [name, content] of [
       ["the template", template],
-      ["SKILL.md", skill],
+      ["discussion-pack/STEP.md", step],
     ] as const) {
       expect(content, `${name} must name the anchor form`).toContain('<a href="#name">');
     }

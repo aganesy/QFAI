@@ -4,11 +4,9 @@
 
 ```gherkin
 Feature: 15-file discussion-pack structure
-
-# AC-0001-0013-01
-# Parent: US-0001-0013
-Scenario: discussion-pack が 15 必須ファイルを含む
-  Given discussion-pack ディレクトリが存在する
-  When 必須ファイルを検証する
-  Then 01_Context.md から 99_delta.md までの 15 ファイルが存在する
+  # AC-0001-0013-01
+  Scenario: The discussion pack holds the 15 required files
+    Given a discussion-pack directory
+    When its required files are checked
+    Then the 15 files from `01_Context.md` to `99_delta.md` exist
 ```

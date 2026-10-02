@@ -17,7 +17,7 @@ describe("business rules are owned by enforcing contracts and cite examples", ()
       );
       expect(rules).toContain("YAML and JSON contracts put rules under x-qfai-rules");
       expect(rules).toContain("SQL contracts use -- Rule and -- Examples: lines");
-      expect(rules).toContain("Markdown contracts use a ## Rules table");
+      expect(rules).toContain("Markdown contracts use a ## Business rules table");
       expect(rules).toContain("Each rule includes ID, statement, and full example IDs");
       expect(rules).toContain("The authoritative contract defines a shared BR once");
     });
@@ -25,9 +25,9 @@ describe("business rules are owned by enforcing contracts and cite examples", ()
     it(tree + ": the CLI contract template shows a BR-to-EX edge", async () => {
       const template = await read(
         tree,
-        "assistant/skill/qfai-sdd/templates/spec/03_contract/cli/command.md",
+        "assistant/skill/qfai-sdd/templates/spec/03_contract/cli/cli-NNNN-title.md",
       );
-      expect(template).toContain("| BR-0001 |");
+      expect(template).toContain("| BR-0001-0001 |");
       expect(template).toContain("EX-0001-0001-01");
     });
   }

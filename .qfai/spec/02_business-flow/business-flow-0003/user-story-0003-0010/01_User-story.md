@@ -2,16 +2,9 @@
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: `qfai doctor --profile <skill>` reads `<paths.skillsDir>/<skill>/manifest.json` and probes `node_modules/.bin/...` / `node_modules/<name>/` for each `runtimeDependencies` entry. A missing dependency is reported with its install command. An empty list is not probed, so it yields no false positive.
-- Non-goals: manifest schema 著作 / 配布側 lint、依存の auto-install (それは `--autoremediate` の責務)
+As an operator, I want `qfai doctor --profile <skill>` to read `<paths.skillsDir>/<skill>/manifest.json` and probe `node_modules` for each `runtimeDependencies` entry, reporting a missing dependency with its install command and leaving an empty list unprobed, so that I learn what a skill needs before it fails without seeing false positives.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0006
-- Story block: `us-0006-0010` of retired spec-0006
+- Authoring the manifest schema or linting it on the distribution side.
+- Installing dependencies automatically, which `--autoremediate` owns.

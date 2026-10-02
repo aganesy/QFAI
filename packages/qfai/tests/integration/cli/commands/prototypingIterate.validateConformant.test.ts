@@ -17,7 +17,7 @@
  * Plus top-level `acceptedIterationIndex` + `stopReason`.
  */
 
-// QFAI:EX-0001-0136-01
+// QFAI:EX-0001-0132-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -28,6 +28,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
 import { loadConfig } from "../../../../src/core/config.js";
 import { validatePrototypingEvidence } from "../../../../src/core/validators/prototypingEvidence.ts";
+import { validatePrototypingDesignContractReadiness } from "../../../../src/core/validators/designContractReadiness.js";
 import { validatePrototypingArtifactRefIntegrity } from "../../../../src/core/validators/prototyping/refIntegrity.js";
 
 const CERT_DESIGN_MD = [
@@ -107,7 +108,7 @@ async function seedProject(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
@@ -218,7 +219,6 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
       targetUrl: "http://localhost:5173",
     });
     expect(exit).toBe(0);
-    const { config } = await loadConfig(root);
     // NOTHING is written here, and that is the whole assertion. A test that
     // creates `iter-00/index.png` and `iter-00/index.html` itself, under a
     // comment claiming "the seed does this implicitly via `--capture`;
@@ -237,7 +237,7 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
       iterations: Array<Record<string, unknown>>;
     };
     expect(parsed.iterations[0]).not.toHaveProperty("evidenceRefs");
-    const issues = await validatePrototypingArtifactRefIntegrity(root, config);
+    const issues = await validatePrototypingArtifactRefIntegrity(root);
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors).toEqual([]);
   });
@@ -261,9 +261,55 @@ describe("iterate cycle 0 emits validate-conformant prototyping.json", () => {
       },
     });
     expect(exit).toBe(0);
-    const { config } = await loadConfig(root);
-    const issues = await validatePrototypingArtifactRefIntegrity(root, config);
+    const issues = await validatePrototypingArtifactRefIntegrity(root);
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0042-08
+  it("checks the handoff the loop's prototyping.json carries once cycle 0 has written it", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+    expect(exit).toBe(0);
+    const { config } = await loadConfig(root);
+    const handoffIssues = async (): Promise<string[]> =>
+      [
+        ...(await validatePrototypingDesignContractReadiness(root, config)),
+        ...(await validatePrototypingArtifactRefIntegrity(root)),
+      ]
+        .filter(
+          (i) => i.severity === "error" && i.file === ".qfai/evidence/prototyping/prototyping.json",
+        )
+        .map((i) => i.code);
+
+    // Before the handoff step the record carries no handoff.
+    expect(await handoffIssues()).toEqual(["QFAI-DCON-012"]);
+
+    const protoJsonPath = path.join(root, ".qfai/evidence/prototyping/prototyping.json");
+    const record: unknown = JSON.parse(await readFile(protoJsonPath, "utf-8"));
+    expect(typeof record === "object" && record !== null).toBe(true);
+    await writeFile(
+      protoJsonPath,
+      JSON.stringify({
+        ...(typeof record === "object" && record !== null ? record : {}),
+        handoff: {
+          finalArtifact: ".qfai/prototype/final/index.html",
+          procurement: { "drawn-from-project": [{ screen: "home" }] },
+          implementationNotes: "The home screen is drawn from the project's existing layout.",
+        },
+      }),
+      "utf-8",
+    );
+    // The handoff names a final prototype that is not there yet.
+    expect(await handoffIssues()).toEqual(["QFAI-PROT-009"]);
+
+    await mkdir(path.join(root, ".qfai/prototype/final"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/prototype/final/index.html"), "<html></html>", "utf-8");
+    expect(await handoffIssues()).toEqual([]);
   });
 });

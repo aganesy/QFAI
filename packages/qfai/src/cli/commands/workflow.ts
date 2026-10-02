@@ -12,6 +12,7 @@ import {
   RUN_RECORDS_DIR,
   writeSnapshot,
   writeRunRecords,
+  ACCEPTED_EVENTS,
 } from "../../core/workflow/fold.js";
 import {
   baselineOf,
@@ -40,7 +41,8 @@ import {
   writeRecord,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
-import { obligationFilesOf } from "../../core/workflow/storyFacts.js";
+import { reportedRoute } from "../../core/workflow/routes.js";
+import { obligationOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowDecision,
   WorkflowDependency,
@@ -170,12 +172,24 @@ async function modeOf(root: string) {
   return readWorkflowMode(document);
 }
 
+// The route a run is on, a retired id shown as the route that succeeds it.
+function routeOf(snapshot: WorkflowSnapshot): string | null {
+  const plan = snapshot.plan;
+  return plan
+    ? reportedRoute(
+        plan.route,
+        plan.stages.map((stage) => stage.stageKind),
+      )
+    : null;
+}
+
 function reportStatus(snapshot: WorkflowSnapshot, mode: string | null): number {
   const { run, outstandingWorkOrder, openQuestions, halt } = snapshot;
   emit({
     ok: true,
     run,
     mode,
+    route: routeOf(snapshot),
     stage: outstandingWorkOrder?.stageInstanceId ?? null,
     workOrder: outstandingWorkOrder
       ? workOrderDocument(run.id, run.sequence, outstandingWorkOrder)
@@ -401,8 +415,6 @@ function replayKey(input: WorkflowInput, decision: WorkflowDecision, digest?: st
   return input.questionId && answer ? { key: `question:${input.questionId}`, answer } : undefined;
 }
 
-const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
-
 function routingSettled(decision: WorkflowDecision): boolean {
   return decision.events.some(
     (event) => event.type === "plan-accepted" || event.type === "unsettled-material-input",
@@ -437,8 +449,13 @@ async function acceptedDependencies(
   const target = workOrder.target;
   const flowId = target?.kind === "flow" ? target.flowId : snapshot.flowBinding?.flowId;
   const { config } = await loadConfig(root);
-  const obligation = flowId ? await obligationFilesOf(root, config, flowId) : [];
-  return receiptDependenciesOf(root, workOrder, input.result, obligation);
+  const obligation = flowId ? await obligationOf(root, config, flowId) : undefined;
+  return receiptDependenciesOf(
+    root,
+    workOrder,
+    input.result,
+    flowId && obligation ? { flowId, ...obligation } : undefined,
+  );
 }
 
 // The decision's events, the files they reference, and the journal records that publish them.

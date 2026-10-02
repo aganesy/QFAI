@@ -46,6 +46,8 @@ export type CollectFilesByGlobOptions = {
    * Takes the absolute path, which is what the stream yields.
    */
   filter?: (absolutePath: string) => boolean;
+  /** Matches dot-prefixed files and directories too. Off by default. */
+  dot?: boolean;
 };
 
 export type CollectFilesByGlobsResult = {
@@ -126,6 +128,7 @@ export async function collectFilesByGlobs(
     onlyFiles: true,
     absolute: true,
     unique: true,
+    dot: options.dot ?? false,
   });
   const files: string[] = [];
   let truncated = false;

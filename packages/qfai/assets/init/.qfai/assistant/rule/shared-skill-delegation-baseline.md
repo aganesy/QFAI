@@ -4,6 +4,12 @@ Use this document to keep SKILL bodies compact. Skill files should reference thi
 
 ## Sub-agent Delegation (MANDATORY)
 
+This section binds every skill and every step as written. A skill or step
+restates none of it and writes no placeholder stanza for a subsection it does
+not change; it states only an override, under the subsection it overrides. In
+particular, whatever the skill: roles are never simulated, and a delegation
+failure is classified by the taxonomy below before any response.
+
 ### Orchestrator Protocol (MUST)
 
 - The orchestrator may create work orders, delegate tasks, integrate outputs, and present results.
@@ -99,7 +105,18 @@ Every major artifact in the stage should include this table schema:
 
 ## Reviewer Gate Baseline
 
+Every skill and step inherits this gate. Its own reviewer gate names only the
+checks specific to its artifacts; the Drift Protocol, test-layer and
+signals-not-gates bullets below, and the `PASS` / `REVISE` vocabulary, are not
+restated. A skill with no check of its own carries no reviewer gate section. A
+stage that runs several steps is reviewed once, after its last step, with the
+union of their reviewers
+(`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
+
 - Final completion gate must be delegated to an independent reviewer.
+- Each reviewer records an explicit PASS or REVISE for the reviewed revision.
+- The one exception: a work order that names no required reviewer is reviewed
+  by none, and the two bullets above then have nothing to apply to.
 
 ### Definition: independent reviewer (NORMATIVE)
 
@@ -170,9 +187,12 @@ inherit a spent budget and would have made the two artifacts' rounds indistingui
 
 The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing else.
 
-- Reviewers must verify Drift Protocol enforcement.
-- Reviewers must verify test-layer policy enforcement when relevant.
-- Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
+- Reviewers must verify Drift Protocol enforcement
+  (`.qfai/assistant/rule/drift-protocol.md`).
+- Reviewers must verify test-layer policy enforcement when relevant
+  (`.qfai/assistant/rule/test-layers.md`).
+- Test volume ratios, floors and planning estimates are signals, not gates,
+  unless the skill explicitly says so.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
   `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
@@ -186,20 +206,22 @@ Both live in `.qfai/assistant/rule/review-convergence.md`: the two-round budget,
 
 A finding outside the reviewing stage's remit is recorded and deferred, never blocking:
 
-| Stage                      | In scope                                                                                            | Out of scope (record and defer)                                                         |
-| -------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `/qfai-discussion`         | Requirement clarity, scope boundary, decision traceability                                          | Spec structure, runtime behavior                                                        |
-| `/qfai-sdd`                | Spec / contract consistency, testability, traceability edges                                        | Runtime enforcement correctness, code quality                                           |
-| `/qfai-atdd`               | Obligation coverage, layer placement, annotation validity                                           | Implementation structure                                                                |
-| `/qfai-implement`          | Code quality, spec alignment of the item, RED/GREEN evidence                                        | Upstream spec content, contract design                                                  |
-| `/qfai-migration-v1-to-v2` | Migration plan and report fidelity, ID mapping, archive completeness                                | New story content and downstream implementation quality                                 |
-| `/qfai-configure`          | Config / manifest validity and the surfaces the run generated                                       | Spec content, implementation structure                                                  |
-| `/qfai-verify`             | Gate execution, evidence completeness, report / artifact fidelity                                   | Authoring quality of the artifacts it verifies                                          |
-| `/web-research`            | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
-| `/qfai-grilling`           | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
-| `/qfai-grill`              | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
-| `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                      | Whether the new wording is the better one                                               |
-| `/qfai-run`                | Nothing of its own: it writes no artifact, and each stage's reviewers review that stage's work      | Every artifact a stage writes, which that stage's remit covers                          |
+| Stage                      | In scope                                                                                                            | Out of scope (record and defer)                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `/qfai-discussion`         | Requirement clarity, scope boundary, decision traceability                                                          | Spec structure, runtime behavior                                                        |
+| `/qfai-sdd`                | Spec / contract consistency, testability, traceability edges, each document in its template's shape                 | Runtime enforcement correctness, code quality                                           |
+| `/qfai-atdd`               | Obligation coverage, layer placement, annotation validity                                                           | Implementation structure                                                                |
+| `/qfai-implement`          | Code quality, spec alignment of the item, RED/GREEN evidence                                                        | Upstream spec content, contract design                                                  |
+| `/qfai-prototyping`        | The prototype against its UI contracts and the root `DESIGN.md`, loop evidence, the handoff                         | Spec and contract content, downstream implementation code                               |
+| `/qfai-migration-v1-to-v2` | Migration plan and report fidelity, ID mapping, archive completeness, each written document in its template's shape | New story content and downstream implementation quality                                 |
+| `/qfai-configure`          | Config / manifest validity and the surfaces the run generated                                                       | Spec content, implementation structure                                                  |
+| `/qfai-verify`             | Gate execution, evidence completeness, report / artifact fidelity                                                   | Authoring quality of the artifacts it verifies                                          |
+| `/web-research`            | Source authority and freshness, citation accuracy, claim support                                                    | Spec content, implementation structure                                                  |
+| `/qfai-grilling`           | Decisions asked rather than assumed, facts naming where they were read, the session's end condition                 | The merit of what the user decided, and the artifacts the invoking stage writes from it |
+| `/qfai-grill`              | The same, reported to the user rather than to a stage                                                               | The merit of what the user decided; there is no artifact to review                      |
+| `/qfai-maintain`           | That the diff changes no behaviour, and the checks run over it                                                      | Whether the new wording is the better one                                               |
+| `/qfai-triage`             | That no tracked file changed, the recorded outcome, each follow-up, and the sources an answer cites                 | The work a follow-up request describes                                                  |
+| `/qfai-run`                | Nothing of its own: it writes no artifact, and each stage's reviewers review that stage's work                      | Every artifact a stage writes, which that stage's remit covers                          |
 
 Article VII excess in the reviewing stage's own artifacts is in scope;
 quality of downstream implementation code is deferred at upstream stages.
@@ -208,13 +230,16 @@ Apply this route only where the installed Article VII governs the artifact.
 A retained constitution does not gain newer authority from refreshed cards.
 Report an unsupported Article VII route as advisory and follow the installed constitution.
 
+A step's remit is its owner's row. A `common-*` step's work is reviewed under
+the row of the skill whose stage ran it.
+
 **Fallback for any stage not listed.** A stage that references this baseline without a row above has, as its remit, the artifacts that stage itself produces; everything upstream of them is out of scope, recorded and deferred. Add the row when a new stage starts routing blocking reviewers, so the in/out split is not re-derived per run.
 
 ### Finding provenance (MUST)
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
 - `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — a `BF-*`, `AC-*`, `EX-*`, `BR-*`, `CON-*` ID, or a named shared rule **that governs the product's behaviour**;
+  - an upstream obligation — a `BF-*`, `AC-*`, `EX-*`, `BR-*` or contract ID, or a named shared rule **that governs the product's behaviour**;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it (see `.qfai/assistant/rule/drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
   - `record:<CODE>` — a defect in the run's own record rather than in the product: an evidence section, a round block, an anchor, or provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
@@ -322,7 +347,7 @@ Audited evidence hash: <content hash of the evidence read>   # one line per EX r
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
+- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/<contract-ID>/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
 - <action>   # blocking findings only
 Advisory / Change Request proposals:

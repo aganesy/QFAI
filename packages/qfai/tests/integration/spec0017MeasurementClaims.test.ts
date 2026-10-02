@@ -1,5 +1,5 @@
 /**
- * `BR-0017-0030` and `BR-0017-0031`: a cost, wall-clock or parallelism claim is backed by captured
+ * `BR-0016-0030` and `BR-0016-0031`: a cost, wall-clock or parallelism claim is backed by captured
  * before-and-after numbers, or it does not land — and a measured regression is an accepting outcome
  * rather than a failed attempt.
  *
@@ -169,7 +169,7 @@ describe("the extractor reads this repository's own decision record, not only it
     expect(capturedPairs(measured ?? "")).toEqual([{ before: "22.90s", after: "5.49s" }]);
 
     // The record that names a regression without measuring one. It sits in a `- Decision` bullet and
-    // cites `BR-0017-0030`, exactly like the one above — which is why the claim direction is an input
+    // cites the measurement rule, exactly like the one above — which is why the claim direction is an input
     // to this module rather than something it infers. If this ever yields a pair, that argument has
     // changed and the API shape should be revisited rather than the assertion relaxed.
     const described = sections.get("DR-0017-0002");

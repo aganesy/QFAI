@@ -3,13 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature: ドライラン
-
-# AC-0001-0023-01
-# Parent: US-0001-0023
-Scenario: --dry-run で変更プレビュー
-  Given 空のプロジェクトディレクトリが存在する
-  When `qfai init --dry-run` を実行する
-  Then 作成予定のファイル一覧が表示される
-  And 実際にはファイルが作成されない
+Feature: Dry run
+  # AC-0001-0023-01
+  Scenario: `--dry-run` previews the changes
+    Given an empty project directory
+    When `qfai init --dry-run` runs
+    Then the files it would create are listed
+    And no file is actually created
 ```

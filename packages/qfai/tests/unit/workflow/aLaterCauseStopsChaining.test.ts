@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0199-07
+// QFAI:EX-0001-0192-07
 
 import { expect, it } from "vitest";
 
@@ -120,7 +120,7 @@ it("Facts where the observed diff escapes the authorized write scope at a write 
 });
 
 it("A routing result accepted while the policy drifted", () => {
-  const seed = readyWith(planOf("bounded-change", finishPlan.stages), undefined).slice(0, 2);
+  const seed = readyWith(planOf("add-feature", finishPlan.stages), undefined).slice(0, 2);
   const run = new JournalRun(seed);
   expect(run.next().stageKind).toBe("route");
 

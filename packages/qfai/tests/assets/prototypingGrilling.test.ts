@@ -19,6 +19,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
+const GRILL = "assistant/step/prototyping-grill/STEP.md";
+const LOOP = "assistant/step/prototyping-loop/STEP.md";
 const RULE = ".agents/rules/grilling.md";
 const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
 const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
@@ -51,7 +53,7 @@ function boundaryTable(skill: string): string[][] {
 /** The `ask-user` bucket's entries, unwrapped. */
 function askUserBucket(skill: string): string {
   const block = new RegExp(
-    "- ask-user:" + "\\n" + "([" + "\\s\\S" + "]*?)" + "\\n" + "- hard-required:",
+    "- ask-user:" + "\\n" + "([" + "\\s\\S" + "]*?)" + "\\n" + "(?:- |\\n)",
   ).exec(skill);
   expect(block, "the ask-user bucket is gone").not.toBeNull();
   return unwrap(block?.[1] ?? "");
@@ -68,7 +70,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // The cells are read per row rather than searched for in the file: an edit
     // that moved a question across the table, or swapped the headings, would
     // leave every phrase present and the boundary reversed.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "## What is grilled, and what is prototyped");
 
     const rows = boundaryTable(skill);
@@ -103,7 +105,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // session when no node is open and every critical decision has the user's
     // answer, so reducing the checkpoint to one question would route to
     // handoff with the rest open.
-    const skill = await read(SKILL);
+    const skill = await read(LOOP);
     expectPhrase(skill, "**Resume the session against the converged prototype**");
     expectPhrase(
       skill,
@@ -122,11 +124,11 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // Recording the answer does not change the HTML. Treating any answer as
     // sufficient would copy the unchanged iteration to `final` and certify the
     // design the user just turned down.
-    const skill = await read(SKILL);
+    const skill = await read(LOOP);
     expectPhrase(skill, "**Accepted** — the prototype is what they picked — goes to `H`");
     expectPhrase(
       skill,
-      "takes the cycle-0 reset (`references/iteration-loop.md#sealed-loop`), carrying their answer as the pivot",
+      "takes the cycle-0 reset (`.qfai/assistant/skill/qfai-prototyping/references/iteration-loop.md#sealed-loop`), carrying their answer as the pivot",
     );
     // Not the next cycle: convergence seals the loop, and `iterate --cycle N`
     // past the accepted index exits 2 without writing — so a next-cycle route
@@ -169,7 +171,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // four fixed axes. Neither says anything about this prototype's purpose, so
     // answers with no destination are answers the loop cannot read — and it
     // will contradict them on the next cycle.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "`.qfai/evidence/prototyping/grilling.md`");
     expectPhrase(skill, "under `## Session` for the decisions");
     // Only a critical decision waits on the user; the rest are adopted and
@@ -179,20 +181,21 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // An answered escalation leaves the open section, or the same decision
     // reads as settled and open at once — and the delegated prompts consume
     // every matching row.
+    const loop = await read(LOOP);
     expectPhrase(
-      skill,
+      loop,
       "**replacing any row with the same `Scope` and decision rather than adding beside it",
     );
-    expectPhrase(skill, "removing its row from `## Escalated`**");
-    expectPhrase(skill, "the current state of the tree, not its history");
+    expectPhrase(loop, "removing its row from `## Escalated`**");
+    expectPhrase(loop, "the current state of the tree, not its history");
     // Two answers to one decision steer the next cycle in two directions: the
     // delegated prompts consume every row matching their lineage, so a
     // superseded pivot is still read.
-    expectPhrase(skill, "a superseded pivot still steers the next cycle");
+    expectPhrase(loop, "a superseded pivot still steers the next cycle");
     // Both consumers, named where each lists its inputs.
-    const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(skill)?.[1] ?? "";
+    const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(loop)?.[1] ?? "";
     expect(unwrap(evaluator)).toContain(".qfai/evidence/prototyping/grilling.md");
-    expect(unwrap(skill)).toContain(
+    expect(unwrap(loop)).toContain(
       "Generator reads contracts + `.qfai/evidence/prototyping/grilling.md`",
     );
   });
@@ -200,7 +203,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   it("says what each mistake costs", async () => {
     // The boundary is a judgement call at the edges, so the skill gives the
     // reader the cost of each error rather than a list to match against.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "building is the expensive way to learn something a sentence would have");
     expectPhrase(skill, "it costs a session rather than a cycle");
   });
@@ -209,7 +212,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // The failure this stops is the one the rule spends every round avoiding,
     // and a prototype makes it easier rather than harder: the agent now has
     // evidence, which is exactly what makes deciding alone feel justified.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "**The prototype makes a decision answerable; it does not take it.**");
     expectPhrase(skill, "ask the question again against it");
     expectPhrase(skill, "with more evidence than before, and still not the user's answer");
@@ -218,7 +221,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   it("leaves the scope floor where it was", async () => {
     // Which specs the loop covers is decided elsewhere. A session that could
     // narrow it would turn a coverage rule into a conversation.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "The scope floor is unchanged");
     expectPhrase(skill, "no session narrows it");
   });
@@ -228,12 +231,11 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // decision is the session's, and listing it here would let an orchestrator
     // treat an open-ended session as part of this section's 0-1 prompt policy
     // instead of running it to its own end condition.
-    const skill = await read(SKILL);
-    const askUser = askUserBucket(skill);
+    const askUser = askUserBucket(await read(SKILL));
     expect(askUser).toContain("asked again against it");
     expect(askUser).not.toContain("what the prototype is for");
     expectPhrase(
-      skill,
+      await read(GRILL),
       "the session's own decisions are classified there rather than in this skill's buckets",
     );
   });
@@ -242,7 +244,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // The specs, the UI contracts and DESIGN.md answer some of these already,
     // and the method reads a fact rather than asking about it. A session that
     // re-opens a frozen requirement produces an answer that drifts from it.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "**Only what the inputs leave open.**");
     expectPhrase(skill, "a question they answer is not on the frontier");
     expectPhrase(skill, "produces an answer that drifts from it");
@@ -253,7 +255,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // key applies every answer to each of them. `global` is written rather
     // than inferred from a missing key, because a missing key is also what an
     // unscoped row looks like.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "**Every row names what it applies to**");
     expectPhrase(skill, "`<ui-contract-id>/<screen>`");
     expectPhrase(skill, "`global` is a real answer and not a default");
@@ -267,7 +269,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // On a fresh project nothing ships one and the session produces no artifact
     // of its own, so a required input the delegated role cannot find is an error
     // it has to guess past — which is what the record exists to stop.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "**The file is written before C0, empty session or not.**");
     expectPhrase(skill, "a different statement from a file that is not there");
   });
@@ -276,7 +278,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // A run log is regenerable. These answers are not: nothing reproduces them,
     // and every later generator and reviewer must read them. Like all evidence
     // the record is local, so it stays in place until the loop is certified.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, "**It is a decision record, not a regenerable log.**");
     expectPhrase(skill, "A run log is reproducible by rerunning its stage");
     expectPhrase(skill, "Keep the file in place until the loop is certified.");
@@ -306,12 +308,12 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // A host that loads skill bodies lazily hands the agent the skill's name
     // and not its procedure, and an agent with the name alone improvises an
     // interview that reads exactly like the method.
-    const skill = await read(SKILL);
-    expectPhrase(skill, "Read\n`.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting");
-    expectPhrase(skill, "It is the single implementation");
+    const grill = await read(GRILL);
+    expectPhrase(grill, "Read\n`.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting");
+    expectPhrase(grill, "It is the single implementation");
     // In the read order too, since that is where an agent looks for what to
     // open before it starts.
-    const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(skill);
+    const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(await read(SKILL));
     expect(inputs, "the read order is gone").not.toBeNull();
     expect(unwrap(inputs?.[0] ?? "")).toContain(
       "`.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session",
@@ -323,7 +325,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // answers them. Starting the loop there spends the whole cycle budget
     // building against nothing, and the reviewer prompt says in its own words
     // what it does without the record.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(
       skill,
       "**A left-column decision still under `## Escalated` stops the run before C0.**",
@@ -338,7 +340,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // The evidence `iter-00` is renamed and kept; the authoring one is
     // overwritten with no backup. A confirmation naming the first understates
     // the loss, and a destructive operation is approved on what it says.
-    const skill = await read(SKILL);
+    const skill = await read(LOOP);
     expectPhrase(skill, "naming what it destroys in both trees");
     expectPhrase(skill, "`.qfai/prototype/iter-00/index.html` is overwritten");
     expectPhrase(skill, "with no backup taken");
@@ -368,7 +370,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // The rule states the same boundary from its side. If one moved without
     // the other, an agent would be told to grill and not to grill the same
     // question, which is worse than either instruction alone.
-    const skill = await read(SKILL);
+    const skill = await read(GRILL);
     expectPhrase(skill, ".agents/rules/grilling.md");
 
     const rule = await readFile(path.join(repoRoot, RULE), "utf-8");

@@ -1,25 +1,11 @@
-# US-0001-0204: Author acceptance tests as a stage of a run
+# US-0001-0204: Settle one visual decision as a stage of a run
 
 ## User Story
 
-- Goal: As an operator who asked for a feature once, I want `/qfai-atdd` to
-  take its acceptance work order from the run, write the acceptance tests for
-  the flow the run binds and report RED honestly, so that the run moves on to
-  implementation without my typing a stage.
-- Non-goals: deciding the plan; the seam-only work order itself, which
-  `/qfai-implement` serves; judging whether the run is complete.
-- Notes: discussion-20260923171450572#DUS-001 (its acceptance side),
-  discussion-20260923171450572#REQ-0035,
-  discussion-20260923171450572#REQ-0037,
-  discussion-20260923171450572#REQ-0038,
-  discussion-20260923171450572#REQ-0051,
-  discussion-20260923171450572#REQ-0052,
-  discussion-20260923171450572#REQ-0056. The seam-only round trip belongs here
-  because it starts and ends inside the acceptance stage.
+As an operator whose change needs a visual decision, I want the prototype stage of a run to settle that one decision for the business flow the run binds, within the existing root `DESIGN.md` and UI contracts, so that the run does not stop for a separate `/qfai-prototyping` invocation.
 
-## Source Provenance
+## Non-goals
 
-- Story block: US-0008-0009, which `main` added to spec-0008 (archived pre-merge
-  pack of spec-0008; main's
-  text at `b5d357c14:.qfai/specs/spec-0008/02_User-stories.md`).
-  `decisions.md#DEC-0745` records the carry.
+- When the run dispatches the prototype stage, which the plan decides
+- `qfai prototyping iterate` and `certify`, which a run does not change
+- The shared stage-skill rules every skill follows

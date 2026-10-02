@@ -11,11 +11,12 @@ source for its identity, mission, domain, artifacts, tools, permissions, and
 specializations. Read the card before assigning work. Do not keep another copy
 of its definition in a routing file.
 
-The installed QFAI package supplies routing and review-profile defaults from
-`assets/defaults/agent-routing.yml` and
-`assets/defaults/review-profiles.yml`. Find that directory beside the package's
-`assets/init/` directory. A `qfai.config.yaml` `routing:` or `reviewProfiles:`
-entry replaces the matching default entry as a whole; a new key adds an entry.
+The installed QFAI package supplies routing defaults from every file in
+`assets/defaults/agent-routing/`, read in file-name order as one routing list,
+and review-profile defaults from `assets/defaults/review-profiles.yml`. Find
+that directory beside the package's `assets/init/` directory. A
+`qfai.config.yaml` `routing:` or `reviewProfiles:` entry replaces the matching
+default entry as a whole; a new key adds an entry.
 Resolve defaults and project overrides before selecting agents. The project
 does not own copies of these default files.
 

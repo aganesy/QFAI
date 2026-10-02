@@ -1,8 +1,9 @@
-import type { Dirent } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { isEnoent } from "./fs/errno.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -15,11 +16,9 @@ import {
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import {
   DESIGN_MD_SAMPLE_MARKER,
-  hashDesignMd,
   isUnreplacedDesignMdSample,
   parseDesignMd,
 } from "./design/designMd.js";
-import { readDesignMdLockSha } from "./design/designMdLock.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import {
@@ -37,10 +36,10 @@ import { readStoryTreeModel } from "./storyTree/tree.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
-import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import {
   probeSkillManifest,
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
@@ -54,6 +53,9 @@ import {
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
+import { checkDocsLane } from "./doctor/docsLane.js";
+import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
+import { checkWorkflowPreconditions } from "./doctor/workflowPreconditions.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -96,12 +98,36 @@ type CreateDoctorDataOptions = {
   targetUrl?: string;
 };
 
+/** Follows links on every platform, so a broken link does not exist; `access` succeeds on one on Windows. */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await stat(target);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** True when the path is a regular file the process may read, which is what `qfai report` needs of validate.json. */
+async function isReadableFile(target: string): Promise<boolean> {
+  try {
+    if (!(await stat(target)).isFile()) {
+      return false;
+    }
+    await access(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return false;
+  } catch (error: unknown) {
+    return isEnoent(error);
   }
 }
 
@@ -165,20 +191,32 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+  outDir: "the first `qfai validate` creates it",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
+}
+
 /**
  * `title` of every `workflows.integrity` emission.
  *
- * Extracted on the schedule its own call sites set: the drift branch's comment
- * held two literal copies with "extract both into a module constant when the
- * third copy arrives with the next emission branch", and TDD-0039's unresolved
- * skip is that branch. The four `skills.integrity` copies below are left inline —
- * different check, and this constant is not theirs to share.
+ * Shared by the three emission branches: drift, `ok`, and the skip taken when
+ * the packaged copy cannot be resolved. The four
+ * `skills.integrity` copies below are left inline — different check, and this
+ * constant is not theirs to share.
  *
- * A LITERAL, and it must stay one. `TDD-0030` pins it with `toBe` against a
- * test-owned `.github/workflows` and records why deriving it from
- * `WorkflowsIntegrityDiff.workflowsDir` was rejected: that makes the assertion
- * check production against itself under the coordinated edit that moves the title
- * and the payload together.
+ * A LITERAL, and it must stay one. A test pins it with `toBe` against a
+ * test-owned `.github/workflows`. Deriving it from
+ * `WorkflowsIntegrityDiff.workflowsDir` would make that assertion check
+ * production against itself under the coordinated edit that moves the title and
+ * the payload together.
  */
 const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
 
@@ -222,16 +260,19 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // Pinning every config issue to `warning` made `doctor --fail-on error`
     // exit 0 on a config the loader had rejected — a value past its sunset
     // reads as "normalized with defaults" rather than as the blocking fault
-    // `qfai-doctor.md` says it is. The check now carries the worst severity
+    // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
+    // The text formatter prints only `message`, so the issues the loader
+    // returned are listed there, one line, `; `-joined.
+    const listed = issues.map((issue) => renderIssueForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
@@ -253,15 +294,25 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     const resolved = resolvePath(root, config, key);
     const ok = await exists(resolved);
     const missingDefaultSkillCreatedPath = !ok && isDefaultSkillCreatedPath(key, config.paths[key]);
+    const absentNote =
+      ok || missingDefaultSkillCreatedPath || !(await isAbsent(resolved))
+        ? undefined
+        : defaultAbsentNote(key, config.paths[key]);
     addCheck(checks, {
       id: `paths.${key}`,
-      severity: ok ? "ok" : missingDefaultSkillCreatedPath ? "info" : "warning",
+      severity: ok
+        ? "ok"
+        : missingDefaultSkillCreatedPath || absentNote !== undefined
+          ? "info"
+          : "warning",
       title: `Path exists: ${key}`,
       message: ok
         ? `${key} exists`
         : missingDefaultSkillCreatedPath
           ? `${key} is not created by init; QFAI skills create it when real artifacts exist`
-          : `${key} is missing (configure this path or create the directory)`,
+          : absentNote !== undefined
+            ? `${key} is the shipped default and does not exist yet: ${absentNote}`
+            : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
 
@@ -391,19 +442,18 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // with an empty `modified`, at which point silence is no longer what that
   // status produces, while the unreachability is unaffected.
   //
-  // That moment has arrived — the skip arm below is TDD-0039's — and the two
-  // halves of the sentence above landed as predicted: silence is no longer what
-  // the status produces, and the conjunct is still unreachable, because `status`
-  // still carries one value per run. So it is NOT this row that pays for it: the
-  // state needs a reader reporting `modified` with an unresolved operand, which no
-  // row has opened.
+  // The unresolved skip arm below now emits at `info`, and both halves of the
+  // sentence above hold: silence is no longer what the status produces, and the
+  // conjunct is still unreachable, because `status` still carries one value per
+  // run. So the skip arm does NOT pay for it: the state needs a reader reporting
+  // `modified` with an unresolved operand, and no reader does.
   //
   // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
   // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
   // `eslint` all unchanged (measured — it is not load-bearing for lint either),
   // so no oracle exists in the deletion direction and none can be written while
   // the state is unreachable. It survives as an executable statement of the
-  // contract's content requirement, to be paid for by the row that makes the
+  // contract's content requirement, to be paid for by a test that makes the
   // state reachable.
   const workflowsDiff = await diffInstalledShippedWorkflows(root);
   if (
@@ -528,12 +578,12 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // provenance record is empty for a missing, unreadable or malformed file by
     // contract, and `status: "ok"` is what the reader returns after comparing
     // NOTHING. Every shipped name in that tree is `adopter-owned` or `absent`
-    // in the shipped-workflows state enum (§3) and both rows require silence;
+    // in the shipped-workflows state enum and both rows require silence;
     // the doctor contract keys `ok` to `installed` alone and says outright that
     // it reports nothing for a workflow with no provenance entry. Emitting here
     // would tell an adopter their workflows match a packaged copy that was
     // never opened — including the adopter who installed before the record
-    // existed, for whom §3's known limitation says this channel is silent.
+    // existed, for whom the contract's known limitation says this channel is silent.
     //
     // Deliberately the count and not "some name resolved to `installed`":
     // The workflow rule requires `ok` on a tree whose recorded files were all
@@ -608,9 +658,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // recorded there as an equivalent mutant; a second would be a second untestable
     // one on the same emission.
     //
-    // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
-    // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
-    // no two arms' status tests can both be true, and `else if` makes that
+    // EXCLUSIVITY holds twice over, and the tests that pin one
+    // `workflows.integrity` check per run with `toHaveLength(1)` depend on it:
+    // `status` carries one value per run, so no two arms' status tests can both
+    // be true, and `else if` makes that
     // structural rather than value-dependent. The chain form is the belt and not
     // the load — measured, converting this arm to a standalone `if` leaves both of
     // those suites green — so keep it anyway rather than resting the pins on the
@@ -619,9 +670,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `details` carries `workflowsDir` and NOTHING else, the same width as the
     // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
     // never compared, `packagedDir` is `undefined` here by construction, and
-    // `declined` is part of the drift payload, owned by
-    // TDD-0036. This arm adds no key of its own, so it decides nothing for that
-    // row.
+    // `declined` is part of the drift payload, which the drift arm owns. This
+    // arm adds no key of its own, so it decides nothing for that payload.
     //
     // `message` is English to match the two arms above — one check id, one
     // operator — and interpolates NOTHING: the only operand this state has is the
@@ -629,10 +679,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `undefined`.
     //
     // Its WORDING is not contract-fixed, the emission table having no row for this
-    // state — but "leaves the text editable", which stood here, is wrong about what
-    // TDD-0039 leaves. FOUR pins hold this string, enumerated so an editor knows
-    // which one will redden: `/\S/` for non-emptiness (the renderer prints
-    // `[severity] id: message` and nothing else); `details.modified` must stay
+    // state, but it is not free to edit either. FOUR pins hold this string,
+    // enumerated so an editor knows which one will redden: `/\S/` for
+    // non-emptiness (the renderer prints `[severity] id: message` and nothing
+    // else); `details.modified` must stay
     // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
     // (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`) and the
     // literal `undefined`. Both sweeps are broader than the contract deliberately: a
@@ -644,11 +694,11 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // widening it.
     //
     // It also carries no command token, which is measured rather than asserted:
-    // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
-    // of that row's tokens pass on this text. The unresolved-copy rule scopes
-    // the no-command rule to the DRIFT finding's body, so no oracle holds it
-    // here — but that row's
-    // sweeps do read this message under that mutation, so an edit adding a `qfai`
+    // under the mutation that makes this arm fire in the repair-text test's
+    // fixture, all eight of that test's command tokens pass on this text. The
+    // unresolved-copy rule scopes the no-command rule to the DRIFT finding's
+    // body, so no oracle holds it here — but the repair-text test's sweeps do
+    // read this message under that mutation, so an edit adding a `qfai`
     // subcommand to it would surface there and not here.
     addCheck(checks, {
       id: "workflows.integrity",
@@ -659,6 +709,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   }
+
+  addCheck(checks, await checkDocsLane(root));
+  addCheck(checks, await checkMdschemaBinary());
+  for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
@@ -700,49 +754,20 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     checks.push(...(await buildSkillManifestProbeChecks(root, options.skillProfile)));
   }
 
-  const guardrailsLoad = await loadDecisionGuardrails(root, {
-    specsRoot: path.join(resolvePath(root, config, "specsDir"), "01_policy"),
-    contractsRoot: resolvePath(root, config, "contractsDir"),
-  });
-  const guardrailsItems = normalizeDecisionGuardrails(guardrailsLoad.entries);
-  let guardrailsSeverity: DoctorSeverity;
-  let guardrailsMessage: string;
-  if (guardrailsLoad.errors.length > 0) {
-    guardrailsSeverity = "warning";
-    guardrailsMessage = `Decision Guardrails scan failed (errors=${guardrailsLoad.errors.length})`;
-  } else if (guardrailsItems.length === 0) {
-    guardrailsSeverity = "info";
-    guardrailsMessage = "Decision Guardrails not found (optional)";
-  } else {
-    guardrailsSeverity = "ok";
-    guardrailsMessage = `Decision Guardrails detected (count=${guardrailsItems.length})`;
-  }
-
-  addCheck(checks, {
-    id: "guardrails.present",
-    severity: guardrailsSeverity,
-    title: "Decision Guardrails",
-    message: guardrailsMessage,
-    details: {
-      count: guardrailsItems.length,
-      errors: guardrailsLoad.errors.map((item) => ({
-        path: toRelativePath(root, item.path),
-        message: item.message,
-      })),
-    },
-  });
-
   const validateJsonAbs = path.isAbsolute(config.output.validateJsonPath)
     ? config.output.validateJsonPath
     : path.resolve(root, config.output.validateJsonPath);
-  const validateJsonExists = await exists(validateJsonAbs);
+  const validateJsonExists = await isReadableFile(validateJsonAbs);
+  const validateJsonAbsent = !validateJsonExists && (await isAbsent(validateJsonAbs));
   addCheck(checks, {
     id: "output.validateJson",
-    severity: validateJsonExists ? "ok" : "warning",
+    severity: validateJsonExists ? "ok" : validateJsonAbsent ? "info" : "warning",
     title: "validate.json",
     message: validateJsonExists
       ? "validate.json exists (report can run)"
-      : "validate.json is missing (run 'qfai validate' before 'qfai report')",
+      : validateJsonAbsent
+        ? "validate.json is missing (run 'qfai validate' before 'qfai report')"
+        : "validate.json is not a readable file (a directory, a broken link or an unreadable path); fix or remove it, then run 'qfai validate'",
     details: { path: toRelativePath(root, validateJsonAbs) },
   });
 
@@ -960,38 +985,90 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Whether one code point is a C0, DEL or C1 control character.
+ * Whether one code point must not reach a single-line message: a C0, DEL or C1
+ * control character, a Unicode line or paragraph separator, or a bidirectional
+ * control.
  *
  * Read as code points rather than matched with the equivalent character-class
  * regular expression: that pattern needs an `eslint-disable no-control-regex`,
  * and the universal quality rule forbids adding a suppression without the
- * user’s explicit permission. `reviewerJustification.ts` refuses control
- * characters the same way, for the same reason.
+ * user’s explicit permission.
  */
 function isControlCodePoint(code: number): boolean {
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  return (
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    LINE_SEPARATORS.has(code) ||
+    BIDIRECTIONAL_CONTROLS.has(code)
+  );
+}
+
+/** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
+const MAX_LISTED_ISSUE_LENGTH = 500;
+
+const CUT_MARKER = " ... ";
+
+/** Takes whole tokens from the front of `tokens` while they fit in `budget` characters. */
+function takeWithin(tokens: ReadonlyArray<string>, budget: number): string[] {
+  const taken: string[] = [];
+  let used = 0;
+  for (const token of tokens) {
+    if (used + token.length > budget) {
+      break;
+    }
+    taken.push(token);
+    used += token.length;
+  }
+  return taken;
 }
 
 /**
- * Makes one path safe to splice into a single-line finding message.
+ * Renders one loader issue for the `config.load` message: without a YAML parse
+ * error's source excerpt, escaped, and at most `MAX_LISTED_ISSUE_LENGTH`
+ * characters as displayed. Several loader messages quote the rejected value, so a
+ * very large value is cut. The middle goes, so the start of the message and the
+ * diagnosis at its end both stay, and no escape sequence is split.
+ */
+function renderIssueForMessage(message: string): string {
+  const tokens = Array.from(withoutYamlExcerpt(message), escapeCharacter);
+  if (tokens.reduce((total, token) => total + token.length, 0) <= MAX_LISTED_ISSUE_LENGTH) {
+    return tokens.join("");
+  }
+  const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
+  const head = takeWithin(tokens, Math.ceil(kept / 2));
+  const tail = takeWithin(tokens.slice().reverse(), Math.floor(kept / 2)).reverse();
+  return `${head.join("")}${CUT_MARKER}${tail.join("")}`;
+}
+
+/**
+ * A YAML parse error ends with an excerpt of the offending source after a blank
+ * line, and that excerpt can hold any value the file holds. This keeps the cause
+ * and its position and drops the excerpt; any other issue is returned whole.
+ */
+function withoutYamlExcerpt(message: string): string {
+  return message.replace(/^([^\r\n]* at line \d+, column \d+:)\r?\n\r?\n[\s\S]*$/, "$1");
+}
+
+/**
+ * Makes any display string — a path, a filename or a loader message — safe to
+ * splice into a single-line finding message.
  *
  * A filename may legally contain a newline or an ANSI escape on POSIX, and
- * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
- * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
- * lines — into the very output whose one-finding-per-line shape downstream
- * severity greps rely on. `details` keeps the raw path; only what is rendered
- * is escaped.
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, such a string
+ * could inject extra lines — including counterfeit `[ok]` / `[error]` lines —
+ * into the very output whose one-finding-per-line shape downstream severity
+ * greps rely on. `details` keeps the raw value; only what is rendered is
+ * escaped.
  */
+function escapeCharacter(character: string): string {
+  const code = character.codePointAt(0);
+  return code !== undefined && isControlCodePoint(code)
+    ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
+    : character;
+}
+
 function escapeForMessage(value: string): string {
-  let escaped = "";
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    escaped +=
-      code !== undefined && isControlCodePoint(code)
-        ? `\\x${code.toString(16).padStart(2, "0")}`
-        : character;
-  }
-  return escaped;
+  return Array.from(value, escapeCharacter).join("");
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
@@ -1484,22 +1561,28 @@ async function buildPrototypingDoctorChecks(
   targetUrlOverride?: string,
 ): Promise<DoctorCheck[]> {
   const targetUrl = targetUrlOverride ?? config.prototyping?.execution?.targetUrl ?? undefined;
-  const [primarySpec, uiContracts, designContracts, requiredRoles, launcherChecks, targetUrlCheck] =
-    await Promise.all([
-      buildPrototypingPrimarySpecCheck(root, config),
-      buildPrototypingUiContractsCheck(root, config),
-      buildPrototypingDesignContractsCheck(root, config),
-      buildPrototypingRolesCheck(root),
-      buildPlaywrightLauncherChecks(root),
-      buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
-    ]);
-  const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
+  const [
+    primarySpec,
+    uiContracts,
+    designMdReadiness,
+    requiredRoles,
+    launcherChecks,
+    targetUrlCheck,
+  ] = await Promise.all([
+    buildPrototypingPrimarySpecCheck(root, config),
+    buildPrototypingUiContractsCheck(root, config),
+    buildPrototypingDesignMdReadinessCheck(root, config),
+    buildPrototypingRolesCheck(root),
+    buildPlaywrightLauncherChecks(root),
+    buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
+  ]);
+  const designMdChecks = await buildPrototypingDesignMdChecks(root);
   // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
   // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
   return [
     primarySpec,
     uiContracts,
-    designContracts,
+    designMdReadiness,
     requiredRoles,
     ...launcherChecks,
     targetUrlCheck,
@@ -1507,14 +1590,9 @@ async function buildPrototypingDoctorChecks(
   ];
 }
 
-async function buildPrototypingDesignMdChecks(
-  root: string,
-  config: Awaited<ReturnType<typeof loadConfig>>["config"],
-): Promise<DoctorCheck[]> {
+async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck[]> {
   const designMdRel = "DESIGN.md";
-  const lockRel = path.join(config.paths.contractsDir, "design", "DESIGN.md.lock.yaml");
   const designMdAbs = path.join(root, designMdRel);
-  const lockAbs = path.join(root, lockRel);
 
   const checks: DoctorCheck[] = [];
   let designMdText: string | null;
@@ -1535,8 +1613,8 @@ async function buildPrototypingDesignMdChecks(
   } else if (isUnreplacedDesignMdSample(designMdText)) {
     // `qfai init` seeds the shipped sample brand into the project root,
     // so "file exists and parses" cannot distinguish an authored brand
-    // from an unauthored one. Report it here, before /qfai-sdd Phase 0
-    // freezes its sha256 as the project's brand contract.
+    // from an unauthored one. Report it here, before a prototyping loop
+    // records its sha256 as the brand the loop runs against.
     //
     // Samples seeded by releases that predate the marker are detected by
     // content fingerprint instead, so the remediation text must not tell
@@ -1547,8 +1625,8 @@ async function buildPrototypingDesignMdChecks(
       severity: "error",
       title: "Root DESIGN.md",
       message: markerPresent
-        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before freezing"
-        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before freezing",
+        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping"
+        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before prototyping",
       details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
     });
   } else {
@@ -1572,62 +1650,6 @@ async function buildPrototypingDesignMdChecks(
     }
   }
 
-  let lockText: string | null;
-  try {
-    lockText = await readFile(lockAbs, "utf-8");
-  } catch {
-    lockText = null;
-  }
-  let lockSha: string | null = null;
-  if (lockText === null) {
-    checks.push({
-      id: "prototyping.designMdLock",
-      severity: "error",
-      title: "DESIGN.md.lock.yaml",
-      message: `DESIGN.md.lock.yaml is missing at ${toRelativePath(root, lockAbs)}`,
-      details: { path: toRelativePath(root, lockAbs) },
-    });
-  } else {
-    lockSha = readDesignMdLockSha(lockText);
-    if (lockSha === null) {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "error",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml is missing 'designMdSha256' or is malformed YAML",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "ok",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml carries designMdSha256",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    }
-  }
-
-  if (designMdText !== null && lockSha !== null) {
-    const currentSha = hashDesignMd(designMdText);
-    if (currentSha === lockSha) {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "ok",
-        title: "DESIGN.md sha256 freeze",
-        message: "DESIGN.md sha256 matches DESIGN.md.lock.yaml",
-        details: { sha256: currentSha },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "error",
-        title: "DESIGN.md sha256 freeze",
-        message: `DESIGN.md sha256 mismatch: lock=${lockSha} current=${currentSha}`,
-        details: { lock: lockSha, current: currentSha },
-      });
-    }
-  }
   return checks;
 }
 
@@ -1641,7 +1663,7 @@ async function buildPrototypingPrimarySpecCheck(
       id: "prototyping.primaryUiContract",
       severity: "error",
       title: "Primary UI contract",
-      message: "no UI contract with CON-UI-NNNN and screens[] resolved under contractsDir/ui",
+      message: "no UI contract with UI-NNNN and screens[] resolved under contractsDir/ui",
     };
   }
 
@@ -1678,15 +1700,32 @@ async function buildPrototypingUiContractsCheck(
   // A prototype is built around each screen's primary tasks, so the stage does
   // not start while a screen has none. The audit lane refuses the same contract
   // under `QFAI-AUD-001`; without this, the stage's own preflight passed it.
+  // A screen whose every entry is malformed has no task either, but telling
+  // its author to add one hides the cause: the entries are there, in the
+  // wrong shape.
   const withoutTasks = screens.filter((screen) => screen.primaryTasks.length === 0);
   if (withoutTasks.length > 0) {
+    const refs = (list: typeof screens): string =>
+      list.map((screen) => screen.sourceRef || screen.screenId).join(", ");
+    const malformed = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length > 0);
+    const empty = withoutTasks.filter((screen) => screen.primaryTaskShapeFindings.length === 0);
+    const problems = [
+      ...(empty.length > 0
+        ? [
+            `UI contract screen(s) with no primary_tasks: ${refs(empty)}; add at least one primary_task to each screen`,
+          ]
+        : []),
+      ...(malformed.length > 0
+        ? [
+            `UI contract screen(s) whose primary_tasks entries are not {id, label, acceptance} mappings: ${refs(malformed)}; write each entry as a mapping with exactly id, label and acceptance`,
+          ]
+        : []),
+    ];
     return {
       id: "prototyping.uiContracts",
       severity: "error",
       title: "UI contracts",
-      message: `UI contract screen(s) with no primary_tasks: ${withoutTasks
-        .map((screen) => screen.sourceRef || screen.screenId)
-        .join(", ")}; add at least one primary_task to each screen before prototyping`,
+      message: `${problems.join("; ")} before prototyping`,
       details: {
         contractsDir: config.paths.contractsDir,
         screenIds: withoutTasks.map((screen) => screen.screenId),
@@ -1706,19 +1745,19 @@ async function buildPrototypingUiContractsCheck(
   };
 }
 
-async function buildPrototypingDesignContractsCheck(
+async function buildPrototypingDesignMdReadinessCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
   const issues = await validateSddDesignContractReadiness(root, config);
   if (issues.length === 0) {
     return {
-      id: "prototyping.designContracts",
+      id: "prototyping.designMdReadiness",
       severity: "ok",
-      title: "Pre-prototyping design contracts",
-      message: "pre-prototyping design contracts satisfy readiness checks",
+      title: "Root DESIGN.md readiness",
+      message: "root DESIGN.md satisfies the readiness checks",
       details: {
-        designDir: `${config.paths.contractsDir}/design`,
+        designMd: "DESIGN.md",
       },
     };
   }
@@ -1729,12 +1768,12 @@ async function buildPrototypingDesignContractsCheck(
   }
 
   return {
-    id: "prototyping.designContracts",
+    id: "prototyping.designMdReadiness",
     severity: issues.some((item) => item.severity === "error") ? "error" : "warning",
-    title: "Pre-prototyping design contracts",
-    message: `pre-prototyping design contracts have blocking issue(s) (count=${issues.length})`,
+    title: "Root DESIGN.md readiness",
+    message: `root DESIGN.md has blocking issue(s) (count=${issues.length})`,
     details: {
-      designDir: `${config.paths.contractsDir}/design`,
+      designMd: "DESIGN.md",
       issues: issues.map((item) => ({
         code: item.code,
         severity: item.severity,

@@ -30,8 +30,7 @@
  *     code these validators emit.
  *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
  *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
- *     other shapes out: `GuardrailIssue` (`QFAI-GR-00N`, a `guardrails`-command
- *     type that `applyWaivers` never sees), `HandoffValidationIssue`, the
+ *     other shapes out: `HandoffValidationIssue`, the
  *     render-evidence error record and the justification catalog all carry a
  *     `code` but none of them is a validate `Issue`, and a waiver naming one
  *     could never match a finding.
@@ -129,9 +128,9 @@ const CORE_ISSUE_FACTORY = ["issue", { severityArg: 2, fixedSeverity: null }];
  * `issue(code, message, severity, file, rule, …)` — the argument a finding
  * carries as its `rule`.
  *
- * A waiver may name either spelling, and several rules publish an alias no
- * `code` literal ever yields: `tddList.ts` emits `TDDLIST-003` and
- * `TDDLIST-004` only here. Collecting them keeps a waiver written against the
+ * A waiver may name either spelling, and a rule may publish an alias no `code`
+ * literal ever yields: `waivers.ts` emits `WAIVER-001` only here, beside the
+ * code `QFAI-WAIVER-001`. Collecting them keeps a waiver written against the
  * documented spelling out of `QFAI-WAIVER-004` on a run where the rule stays
  * quiet. Only the shared helper is read — a local factory's parameter order is
  * its own — and `RULE_ID_RE` discards the `category.subcategory` strings this
@@ -410,7 +409,7 @@ function resolveValue(raw, literals, constants) {
  * passes them on, so the same file always holds the answer.
  *
  * Same-file is also what keeps the resolution honest: widening it to the whole
- * tree would let any `code:` field anywhere — `GuardrailIssue`'s included —
+ * tree would let any `code:` field anywhere — `HandoffValidationIssue`'s included —
  * answer for every `x.code` argument in `src/`.
  *
  * @param {string} raw sanitized source slice.
@@ -1209,10 +1208,10 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [${list(errorOnly)}];
 /**
  * Rule ids that only ever reach a finding through \`Issue.rule\`.
  *
- * Some emitters key the finding on a broad \`code\` and narrow it with a
- * per-defect \`rule\` — \`tddList.ts\` raises one code but tags each finding
- * \`TDDLIST-003\` / \`TDDLIST-004\`. A waiver may name either, so the ids that
- * never appear as a \`code\` are listed here rather than folded into
+ * An emitter may publish a finding under a \`rule\` no \`code\` spells —
+ * \`waivers.ts\` raises \`QFAI-WAIVER-001\` and tags it \`WAIVER-001\`. A waiver
+ * may name either, so the ids that never appear as a \`code\` are listed here
+ * rather than folded into
  * {@link EMITTED_RULE_CODES}: they are waivable, but they are not codes.
  */
 export const RULE_ID_ALIASES: readonly string[] = [${list(aliases)}];

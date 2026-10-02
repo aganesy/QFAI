@@ -9,7 +9,7 @@ import path from "node:path";
 
 export const ASSISTANT_DIR = ".qfai/assistant" as const;
 
-export const ASSISTANT_LAYERS = ["rule", "skill", "agent", "prompt"] as const;
+export const ASSISTANT_LAYERS = ["rule", "skill", "step", "agent", "prompt"] as const;
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 

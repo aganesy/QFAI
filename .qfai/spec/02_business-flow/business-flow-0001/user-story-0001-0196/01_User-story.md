@@ -1,21 +1,14 @@
-# US-0001-0196: Continue, or stop, an interrupted run
+# US-0001-0196: Install or upgrade and get the free-text entry
 
 ## User Story
 
-- Goal: As an operator, I say "continue" in a new session, and the run picks up at the pending work without redoing story authoring or acceptance. When I stop a run, it ends at once and leaves my own uncommitted work alone.
-- Non-goals: A lock taken over because it looks old; a damaged journal repaired to look like success; recovery through a reset, a stash or a branch switch.
-- Notes: discussion-20260923171450572#DUS-005,
-  discussion-20260923171450572#REQ-0020,
-  discussion-20260923171450572#REQ-0026,
-  discussion-20260923171450572#REQ-0027,
-  discussion-20260923171450572#REQ-0029,
-  discussion-20260923171450572#REQ-0030,
-  discussion-20260923171450572#REQ-0031,
-  discussion-20260923171450572#REQ-0032,
-  discussion-20260923171450572#REQ-0068,
-  discussion-20260923171450572#NFR-0010,
-  discussion-20260923171450572#NFR-0011
+As an adopter maintainer, I want `qfai init` and an upgrade to install `qfai-run` and `qfai-maintain` with their host links, and tell me which workflow mode is in force and what my own edits leave out of step, so that my operators can use the free-text entry without further setup and my edits survive.
 
-## Source Provenance
+## Non-goals
 
-- Story block: `us-0018-0005` of the main-sync-20260926 archive of spec-0018, which `main` added as US-0018-0005 of its spec-0018. `decisions.md#DEC-0744` records the carry, and the main-sync-20260926 ID map of spec-0018 maps every item.
+- The workflow core and what `start` refuses.
+- The routing entries of the two skills, which the package defaults carry.
+- Writing a `workflow.mode` key or asking for one.
+- Installing the built-in plans, which the package holds.
+- Overwriting a skill the project edited without `--force`.
+- The ignore entries for run state and run evidence in the managed `.gitignore` block.

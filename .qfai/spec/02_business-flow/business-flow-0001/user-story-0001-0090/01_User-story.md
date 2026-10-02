@@ -1,27 +1,5 @@
-# US-0001-0090: Design Direction Handoff
+# US-0001-0090: Discussion writes the active session pointer
 
 ## User Story
 
-As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` authors root `DESIGN.md` from my choice rather than from an assistant's guess.
-
-## Legacy Source Scope
-
-- In:
-  - `/qfai-discussion` exploration authoring workflow for UI-bearing packs
-  - `04_Sources.md` reference research posture
-  - `40_screen_contracts.md`
-  - `50_review_input_bundle.md`
-  - root `DESIGN.md` draft authoring as Phase output (brand vision / visual identity SSOT for downstream)
-  - drop legacy sidecars (`uiux/33_exploration_rubric.md`, `uiux/34_evaluator_calibration.md`, `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md`) — DESIGN.md replaces them
-- Out:
-  - legacy trend-derived scoring sidecar など旧 evaluation sidecar family
-  - discussion 時点の brand archetype selection
-  - discussion 時点の design system generation
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0010
-- Story block: `us-0010-0009` of retired spec-0010
-- Retitled and restated by the brand-direction change request that
-  `decisions.md#DEC-0683` records; main's text at
-  `b5d357c14:.qfai/specs/spec-0010/02_User-stories.md`.
+As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId`, and a missing or ambiguous pointer to raise an error naming the candidate directories and the recovery command, so that the pack just written becomes the active session downstream skills find.

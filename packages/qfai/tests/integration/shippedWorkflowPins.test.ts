@@ -2,7 +2,7 @@
  * Integration: shipped GitHub Actions workflow-set action pinning.
  *
  * Covers the supply-chain pin half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §6): every `uses:`
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0004 and BR-0018-0005): every `uses:`
  * reference in the shipped set is a bare 40-hex commit SHA pin with no
  * floating major / minor / branch reference anywhere, and no test in the
  * suite retains a floating-major expectation for the shipped workflows (the
@@ -144,14 +144,14 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
   // match inside a leading-v string too (e.g. the "4.0" substring of
   // "v4.4.0"). The leading-v PROHIBITION is deliberately not this oracle's
   // job: it is enforced by the guard-pattern zero-match it below, per
-  // TC-0003-0031 bullet 3 / CLI-WFSET §6 (presence and leading-v live in
+  // TC-0003-0031 bullet 3 / BR-0018-0005 (presence and leading-v live in
   // separate oracles by the TC's own split).
   const READABLE_VERSION_RE = /\b[0-9]+\.[0-9]+(\.[0-9]+)?\b/;
 
   // The leakage guard's version regex, mirrored LITERALLY from
   // packages/qfai/scripts/check-no-internal-version-leakage.sh; the
   // tree-wide it below asserts the mirror is still in sync with the guard
-  // before judging with it ("guard と同じ pattern" is the TC's requirement).
+  // before judging with it ("the same pattern as the guard" is the TC's requirement).
   const GUARD_VERSION_RE_SOURCE = String.raw`\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b`;
   const guardVersionRe = (): RegExp => new RegExp(GUARD_VERSION_RE_SOURCE);
   const GUARD_SCRIPT_PATH = path.join(
@@ -251,8 +251,7 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
 });
 
 describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
-  // Realizes TC-0003-0033 (AC-0003-0028; BR-0003-0027 "guard breadth is
-  // invariant", NFR-C0005). Bullet mapping:
+  // Realizes BR-0018-0007 (the guard's breadth is invariant, NFR-C0005). Bullet mapping:
   //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
   //     it()s. The REAL committed guard is spawned against a temp-staged
   //     package fixture — planted trailers live only on temp copies, never
@@ -523,5 +522,30 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     // the reverse.
     expect(findingsOf(run.output), "the untouched shipped set produced a finding").toBe("");
     expect(run.exitCode, `the untouched shipped set must pass the lane:\n${run.output}`).toBe(0);
+  });
+});
+
+/**
+ * The docs lane installs the checker's engine itself, and the package depends
+ * on the same engine. Two versions would let the lane and `qfai validate` give
+ * two verdicts about one document, so all three pins are one.
+ */
+describe("the docs lane installs the mdschema version the package depends on", () => {
+  const PACKAGE = /"@jackchuka\/mdschema":\s*"([^"]+)"/;
+
+  it("pins @jackchuka/mdschema to the version both package manifests name", async () => {
+    const lane = await readFile(
+      path.join(shippedGithubDir(), "workflows", "qfai-docs.yml"),
+      "utf-8",
+    );
+    const shipped = /@jackchuka\/mdschema@(\d+\.\d+\.\d+)/.exec(lane)?.[1];
+    const own = PACKAGE.exec(await readFile(path.join(packageRoot, "package.json"), "utf-8"))?.[1];
+    const repository = PACKAGE.exec(
+      await readFile(path.join(packageRoot, "..", "..", "package.json"), "utf-8"),
+    )?.[1];
+
+    expect(shipped).toBeDefined();
+    expect(own).toBe(shipped);
+    expect(repository).toBe(shipped);
   });
 });

@@ -122,8 +122,8 @@ function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
 
 /**
  * The inputs BF-0001 has before SDD authors the story tree: the discussion that
- * led to it, and the technology and structure contracts the full profile reads
- * for unfilled placeholders.
+ * led to it, and the technology contract the full profile reads for unfilled
+ * placeholders.
  */
 async function seedProjectInputs(root: string): Promise<void> {
   for (const name of DISCUSSION_FILES) {
@@ -133,11 +133,6 @@ async function seedProjectInputs(root: string): Promise<void> {
     root,
     ".qfai/spec/03_contract/tech.md",
     "# Technology\n\n## Runtime / platform\n\n- Runtime: `Node.js 20`\n- Platform: `Linux, macOS and Windows`\n\n## Stack\n\n| Component | Choice |\n| --------- | ------ |\n| Test runner | node:test |\n\n## Dependencies\n\n- Runtime dependency: `none; the checkout module uses the standard library`\n\n## Standard commands (copy-paste)\n\n- Install: `npm install`\n- Format: `npm run format:check`\n- Test: `node --test tests`\n- Lint: `npm run lint`\n- Typecheck: `npm run typecheck`\n- Build: `npm run build`\n- Skeleton: `node src/checkout.mjs`\n- Validate: `npx qfai validate`\n",
-  );
-  await put(
-    root,
-    ".qfai/spec/03_contract/structure.md",
-    "# Structure\n\n## Structure\n\n- Repository layout: `src/ holds the checkout module; tests/ holds its tests by layer`\n- Production roots: `src/`\n\n## Entry points\n\n- Entry point: `src/checkout.mjs totals the selected cart items`\n\n## Key packages / entrypoints\n\n- Package or entrypoint: `src/checkout.mjs computes the cart total`\n\n## Architecture constraints\n\n- Boundary: `tests import src; src imports nothing from tests`\n\n## UI surface paths (SSOT)\n\n- UI surface: `none`\n",
   );
 }
 
@@ -174,37 +169,45 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       `${spec}/01_policy/objective.md`,
       "# Objective\n\n## Objective\n\n- Outcome: Buyers can complete checkout.\n- Evidence: Project need recorded by the owner.\n\n## Users\n\n- Primary user: Buyer completing a purchase.\n\n## Success criteria\n\n- Measure: A cart total is correct for every selected item.\n\n## Non-goals\n\n- Outside this initiative: Payment settlement.\n",
     );
-    await put(root, `${flow}/business-flow.md`, `# ${flowId}: Complete checkout\n`);
+    await put(
+      root,
+      `${flow}/business-flow.md`,
+      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\nNot drawn yet.\n`,
+    );
     await put(
       root,
       `${spec}/02_business-flow/business-flows.md`,
-      `# Business Flows\n\n| BF-ID | Name |\n| --- | --- |\n| ${flowId} | Complete checkout |\n`,
+      `# Business Flows\n\n## Flows\n\n| BF-ID | Flow | Path |\n| --- | --- | --- |\n| ${flowId} | Complete checkout | \`business-flow-0001/\` |\n`,
     );
     await put(
       root,
       `${flow}/user-stories.md`,
-      `# User Stories\n\n| US-ID | Name |\n| --- | --- |\n| ${storyId} | Checkout a cart |\n`,
+      `# User Stories\n\n## Stories\n\n| US-ID | Story | Path |\n| --- | --- | --- |\n| ${storyId} | Checkout a cart | \`user-story-0001-0001/\` |\n`,
     );
-    await put(root, `${story}/01_User-story.md`, `# ${storyId}: Checkout a cart\n`);
+    await put(
+      root,
+      `${story}/01_User-story.md`,
+      `# ${storyId}: Checkout a cart\n\n## User Story\n\nAs a buyer, I want the cart total, so that I pay the right amount.\n`,
+    );
     await put(
       root,
       `${story}/02_Acceptance-Criteria.md`,
-      `# Acceptance Criteria\n\n\`\`\`gherkin\n# ${criterionId}\nScenario: total selected items\n  Given a cart with two items\n  When the buyer checks out\n  Then the total is the sum of both prices\n\`\`\`\n`,
+      `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: Checkout a cart\n  # ${criterionId}\n  Scenario: total selected items\n    Given a cart with two items\n    When the buyer checks out\n    Then the total is the sum of both prices\n\`\`\`\n`,
     );
     await put(
       root,
       `${story}/03_Example.md`,
-      `# Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| ${exampleId} | ${criterionId} | 20 and 30 | 50 |\n`,
+      `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| ${exampleId} | ${criterionId} | 20 and 30 | 50 |\n`,
     );
     await put(
       root,
-      `${spec}/03_contract/cli/checkout.md`,
-      `# Checkout contract\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
+      `${spec}/03_contract/cli/cli-0001-checkout.md`,
+      `# CLI-0001: Checkout\n\n## Ownership boundary\n\nThis contract decides how a cart total is calculated.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
     );
     await put(
       root,
       `${spec}/03_contract/contracts.md`,
-      "# Contracts\n\n## Contract Index\n\n| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| CLI-001 | Checkout | - | cli/checkout.md | - | - | Calculate the cart total. |\n",
+      "# Contracts\n\n## Contract Index\n\n| ID | Title | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- |\n| CLI-0001 | Checkout | cli/cli-0001-checkout.md | - | - | Calculate the cart total. |\n",
     );
     await put(
       root,
@@ -228,7 +231,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       `${flow}/business-flow.md`,
-      `# ${flowId}: Complete checkout\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n`,
+      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n`,
     );
     await put(
       root,
@@ -338,7 +341,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       ),
     ) as { nodes: Array<{ id: string }> };
     expect(graph.nodes.map((node) => node.id)).toEqual(
-      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-0001"]),
+      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-0001-0001"]),
     );
   });
 });

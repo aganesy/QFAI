@@ -1,11 +1,11 @@
-# デフォルトの動作: 改行コードを変換しない
+# Default: do not convert line endings
 * text=auto eol=lf
 
-# Windows特有のファイルはCRLFを維持
+# Keep CRLF for Windows-specific files
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# バイナリファイル
+# Binary files
 *.png binary
 *.jpg binary
 *.jpeg binary

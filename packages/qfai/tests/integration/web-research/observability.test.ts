@@ -21,7 +21,7 @@ async function readSkill(): Promise<string> {
 }
 
 describe("web-research observability", () => {
-  // QFAI:EX-0001-0188-02 (TDD-0023)
+  // QFAI:EX-0001-0181-02 (TDD-0023)
   it("log completeness - 6 mandatory field categories, no secrets", async () => {
     const content = await readSkill();
 
@@ -44,7 +44,7 @@ describe("web-research observability", () => {
     expect(content).toMatch(/no\s+secret|secret\s+exclusion|credential|sensitive/i);
   });
 
-  // QFAI:EX-0001-0188-01 (TDD-0024)
+  // QFAI:EX-0001-0181-01 (TDD-0024)
   it("secret exclusion - API key not in log, content hash instead", async () => {
     const content = await readSkill();
 

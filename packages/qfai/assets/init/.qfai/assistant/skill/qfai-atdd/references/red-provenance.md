@@ -40,8 +40,9 @@ mutation that violates the claimed rule. Run the selected test, capture its
 assertion failure, restore the mutation, and rerun it on the restored tree.
 Record the mutation and both results. If no safe mutation or equivalent
 falsifiability argument exists, keep the obligation unresolved and route it
-through the current flow's `decisions.md`; only a valid DONE exception can
-discharge it. Do not call a passing test alone a RED proof.
+through a `decisions.md` row under `<paths.specsDir>`; only a DONE
+`Test exception:` row can discharge it. Do not call a passing test alone a RED
+proof.
 
 ## Freshness
 
@@ -49,7 +50,7 @@ A test or fixture edit after RED changes the proof subject. Recompute the
 manifest and hash and retake the proof before a reviewer certifies it.
 A later flow that changes a shared fixture follows
 `references/shared-test-artifacts.md`. Do not overwrite the old record;
-append the new attempt and identify the current one. The common revision
-and review-seal rules are in
-`../qfai-implement/references/evidence-revision.md` and
-`../qfai-implement/references/round-evidence.md`.
+append the new attempt and identify the current one. The revision form is
+`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`, and
+the review seal and the rounds a blocking finding opens are
+`.qfai/assistant/step/common-review-cycle/STEP.md`.

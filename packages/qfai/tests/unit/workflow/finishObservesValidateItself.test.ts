@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-19
+// QFAI:EX-0001-0185-19
 // Fault seeds: FAULT-008
 
 import { expect, it } from "vitest";
@@ -15,7 +15,7 @@ function acceptImplementClaimingValidatePass() {
       plan: finishPlan,
       flowBinding,
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     { operation: "next" },
@@ -31,7 +31,7 @@ function acceptImplementClaimingValidatePass() {
       flowBinding,
       outstandingWorkOrder: workOrder,
       acceptedStages: [
-        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+        { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
       ],
     },
     {

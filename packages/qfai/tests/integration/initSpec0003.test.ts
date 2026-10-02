@@ -10,6 +10,16 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
+// The managed-block writer init calls, shared with the migration steps.
+const ROOT_GITIGNORE_WRITER = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "core",
+  "init",
+  "rootGitignore.ts",
+);
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
@@ -193,30 +203,29 @@ describe("TC-0003-0015: Symlink idempotency (3 consecutive runs)", () => {
   });
 });
 
-// TC-0003-0018: gitignore 管理ブロック追記（新規）
+// TC-0003-0018: append the managed gitignore block (new file)
 // Actual assertions live in tests/cli/init.test.ts ("appends QFAI entries to root .gitignore on init").
 // This block records the TC→implementation coverage link for traceability.
-describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
+describe("TC-0003-0018: append the managed gitignore block (new file)", () => {
   it("init wires QFAI_GITIGNORE_BLOCK writer into runInit", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("ensureRootGitignoreEntries");
-    expect(content).toContain("QFAI_GITIGNORE_BLOCK");
+    expect(await readFile(INIT_CLI, "utf-8")).toContain("ensureRootGitignoreEntries");
+    expect(await readFile(ROOT_GITIGNORE_WRITER, "utf-8")).toContain("QFAI_GITIGNORE_BLOCK");
   });
 });
 
-// TC-0003-0019: レガシー行除去と管理ブロック置換
+// TC-0003-0019: remove legacy lines and replace the managed block
 // Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
-describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () => {
+describe("TC-0003-0019: remove legacy lines and replace the managed block", () => {
   it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
+    const content = await readFile(ROOT_GITIGNORE_WRITER, "utf-8");
     expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
     expect(content).toContain("removeManagedBlock");
   });
 });
 
-// TC-0003-0020: review-*/ サブディレクトリが gitignore 対象
+// TC-0003-0020: review-*/ subdirectories are gitignored
 // Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
-describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象", () => {
+describe("TC-0003-0020: review-*/ subdirectories are gitignored", () => {
   it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
     const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } =
       await import("../../src/core/gitignore.js");
@@ -234,15 +243,16 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
 // assistant-tree path helpers used by init.
 
 describe("TC-0003-0021: singular assistant-tree seed", () => {
-  it("init uses the assistant path SSOT and ships the four singular layers", async () => {
+  it("init uses the assistant path SSOT and ships the singular layers", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("assistantPaths");
     expect(content).toContain("ASSISTANT_DIR");
     expect(content).toContain("joinAssistantLayer");
     expect(content).toContain('"assistant/skill"');
     expect(content).toContain('"assistant/agent"');
+    expect(content).toContain('"assistant/step"');
     const { ASSISTANT_LAYERS } = await import("../../src/core/paths/assistantPaths.js");
-    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
+    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
   });
 });
 
@@ -261,7 +271,7 @@ describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
 describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
   it("exports the singular layer names and path helpers", async () => {
     const mod = await import("../../src/core/paths/assistantPaths.js");
-    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
+    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
     expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
       path.join("project", ".qfai", "assistant", "rule", "quality.md"),

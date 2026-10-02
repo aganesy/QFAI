@@ -20,7 +20,10 @@ describe("SDD griller and reviewer independence", () => {
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
       expect(loop).toContain("Keep authorship, grilling, and final review as distinct invocations");
       expect(loop).toContain("a critical product decision needs the user");
-      expect(skill).toContain("an author cannot review the artifact it edited");
+      expect(skill).toContain("### Reviewer Gate");
+      // Independence is the shared reviewer gate's, which every skill inherits.
+      const baseline = await read(tree, "assistant/rule/shared-skill-delegation-baseline.md");
+      expect(baseline).toContain("It MUST NOT return `PASS` on an artifact it authored.");
       expect(gate).toContain("Reviewers are independent of authors");
     });
   }

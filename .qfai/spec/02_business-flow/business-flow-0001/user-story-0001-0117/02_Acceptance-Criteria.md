@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature:
-
-# AC-0001-0117-01
-# Parent: US-0001-0117
-Scenario: design-system as DESIGN.md Mirror
-  Given `<paths.contractsDir>/design/design-system.yaml` is generated post-loop,
-  When its token tables are compared to root `DESIGN.md`,
-  Then color / typography / radius / shadow are byte-equivalent. Drift raises `QFAI-DCON-032`.
+Feature: Stock-photo source provenance
+  # AC-0001-0117-01
+  Scenario: License-permitted stock-photo fill recorded per image
+    Given every image slot referenced by the prototype set,
+    When the slot is filled at any cycle,
+    Then the image source is drawn from the cycle-0 frozen license catalog (allowlist: Unsplash, Pexels), AND a row `{url, license, attribution, source}` is written to `prototyping.json#imageSources[]` for every fill, AND license-verify failure (unknown license / non-allowlisted source / non-https url / missing attribution) hard-stops the run with exit 66, AND a malformed `imageSources[]` entry (missing or non-string `url`/`source`/`license`) hard-stops the run with exit 2 (input-shape class) at the iterate boundary before the license-verify gate runs.
 ```

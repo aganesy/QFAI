@@ -63,8 +63,8 @@ afterEach(async () => {
 });
 
 describe("story-tree prototyping report", () => {
-  // QFAI:AC-0001-0067-02
-  // QFAI:EX-0001-0067-04
+  // QFAI:AC-0001-0065-02
+  // QFAI:EX-0001-0065-04
   it("shows the no-pack state as prototyping not run here when evidence is absent", async () => {
     const root = await sandbox();
     await seedReportInput(root, validation());
@@ -84,22 +84,22 @@ describe("story-tree prototyping report", () => {
     expect(written).toContain("- Status: no-pack");
   });
 
-  // QFAI:AC-0001-0067-01
-  // QFAI:EX-0001-0067-02
+  // QFAI:AC-0001-0065-01
+  // QFAI:EX-0001-0065-02
   it("reports accepted screenshot and missing HTML evidence with the validator finding", async () => {
     const root = await sandbox();
     const evidence = ".qfai/evidence/prototyping";
     await put(
       root,
       ".qfai/spec/03_contract/ui/checkout.yaml",
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: checkout\n  - id: settings\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: checkout\n  - id: settings\n",
     );
     await put(root, `${evidence}/iter-01/checkout.png`, "image");
     await put(
       root,
       `${evidence}/prototyping.json`,
       JSON.stringify({
-        uiContractsCovered: ["CON-UI-0001"],
+        uiContractsCovered: ["UI-0001"],
         acceptedIterationIndex: 1,
         stopReason: "converged",
         iterations: [
@@ -143,7 +143,7 @@ describe("story-tree prototyping report", () => {
     // The report's closing `## Findings` lists every issue, so the finding and
     // the rerun line are read from the prototyping section alone.
     const start = markdown.indexOf("## Prototyping");
-    const end = markdown.indexOf("## Decision Guardrails");
+    const end = markdown.indexOf("\n## ", start + 1);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const section = markdown.slice(start, end);

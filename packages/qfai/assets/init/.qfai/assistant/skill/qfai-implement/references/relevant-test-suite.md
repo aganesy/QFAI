@@ -4,7 +4,7 @@
 
 Start with the test selector that carries the current QFAI:EX annotation. Include the nearest unit, component, or integration tests for the changed production module and the acceptance tests that use a changed contract or fixture. Follow imports and test data consumers rather than selecting only by filename.
 
-Take Test commands from the Standard commands section of <paths.contractsDir>/tech.md. If the section provides only a whole-project command, use it as written. A narrower command is used only when that section or the test runner's checked-in configuration declares it.
+Test commands follow the Standard commands rule, `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`.
 
 ## Cadence
 

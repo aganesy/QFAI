@@ -1,8 +1,7 @@
 /**
  * The minimal project a built-CLI workflow case runs `start` in, with no `qfai init`: one stub
- * skill per skill a package plan names, with an Operations table covering the pairs the plans
- * use. The plans and the routing stay in the package. The tree is a git repository with
- * everything committed.
+ * `STEP.md` per step a package plan runs. The plans and the routing stay in the package. The
+ * tree is a git repository with everything committed.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -14,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
 import { removeTempTree } from "../../helpers/tempTree.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const PLANS = path.join(PACKAGE_ROOT, "assets", "defaults", "workflows");
@@ -49,9 +49,15 @@ function git(root: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
-// Every (skill, operation) pair the package's plans use.
-async function planPairs(): Promise<Map<string, Set<string>>> {
-  const pairs = new Map<string, Set<string>>();
+function stepName(entry: unknown): string | undefined {
+  if (typeof entry === "string") return entry;
+  if (typeof entry !== "object" || entry === null || !("step" in entry)) return undefined;
+  return typeof entry.step === "string" ? entry.step : undefined;
+}
+
+// Every step the package's plans run.
+export async function planStepNames(): Promise<Set<string>> {
+  const steps = new Set<string>();
   for (const name of await readdir(PLANS)) {
     const plan: unknown = parseYaml(await readFile(path.join(PLANS, name), "utf8"));
     const stages: unknown[] =
@@ -59,24 +65,19 @@ async function planPairs(): Promise<Map<string, Set<string>>> {
         ? plan.stages
         : [];
     for (const stage of stages) {
-      if (typeof stage !== "object" || stage === null) continue;
-      const skills: unknown = "skill" in stage ? stage.skill : undefined;
-      const operation = "operation" in stage ? String(stage.operation) : "";
-      for (const skill of Array.isArray(skills) ? skills : [skills]) {
-        pairs.set(String(skill), (pairs.get(String(skill)) ?? new Set()).add(operation));
-      }
+      if (typeof stage !== "object" || stage === null || !("steps" in stage)) continue;
+      const entries: unknown[] = Array.isArray(stage.steps) ? stage.steps : [];
+      for (const step of entries.map(stepName)) if (step) steps.add(step);
     }
   }
-  return pairs;
+  return steps;
 }
 
-async function writeStubSkills(root: string): Promise<void> {
-  for (const [skill, operations] of await planPairs()) {
-    const dir = path.join(root, ".qfai", "assistant", "skill", skill, "references");
+async function writeStubSteps(root: string): Promise<void> {
+  for (const step of await planStepNames()) {
+    const dir = path.join(root, ".qfai", "assistant", "step", step);
     await mkdir(dir, { recursive: true });
-    const rows = [...operations].map((operation) => `| \`${operation}\` | stub |`);
-    const table = ["## Operations", "", "| Operation | What |", "| --- | --- |", ...rows];
-    await writeFile(path.join(dir, "orchestrated-mode.md"), `# ${skill}\n\n${table.join("\n")}\n`);
+    await writeFile(path.join(dir, "STEP.md"), `# ${step}\n`);
   }
 }
 
@@ -84,7 +85,7 @@ async function writeStubSkills(root: string): Promise<void> {
 export async function minimalProject(config?: string, prefix = "qfai-workflow-"): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), prefix));
   roots.push(root);
-  await writeStubSkills(root);
+  await writeStubSteps(root);
   if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   // As `qfai init` ignores them: the runtime tree, and the reports a stage writes.
   await writeFile(path.join(root, ".gitignore"), "/.qfai/run/\n/.qfai/report/\n");
@@ -199,10 +200,13 @@ export async function startRun(root: string, input: unknown = START_INPUT): Prom
   return id;
 }
 
-/** A routing proposal for the discovery route, which binds no flow and needs no approval. */
+/**
+ * A routing proposal for the decide-design route, which binds no flow and writes only its
+ * discussion pack. The route carries `gate:user`, so routing asks to confirm the plan.
+ */
 export const DISCOVERY_PROPOSAL = {
-  requestKind: "change",
-  candidateRoute: "discovery",
+  requestKind: "routed",
+  extraction: extractionFor("decide-design"),
   goal: "Settle what the export should contain.",
   expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
   observedRefs: [],
@@ -210,16 +214,15 @@ export const DISCOVERY_PROPOSAL = {
   riskSignals: [],
   unresolvedQuestions: [],
   newStories: [],
-  proposedWriteScope: ["docs/**"],
+  proposedWriteScope: [".qfai/discussion/**"],
   protectedTargets: [],
-  requiredStages: ["discussion"],
   rationale: "The request names no behaviour a story already states.",
 };
 
-/** A routing proposal for the feature route, naming one new story in BF-0001. */
+/** A routing proposal for the add-feature route, naming one new story in BF-0001. */
 export const FEATURE_PROPOSAL = {
   ...DISCOVERY_PROPOSAL,
-  candidateRoute: "feature",
+  extraction: extractionFor("add-feature"),
   goal: "Export an order as CSV.",
   newStories: [
     {
@@ -231,7 +234,6 @@ export const FEATURE_PROPOSAL = {
     },
   ],
   proposedWriteScope: [".qfai/spec/02_business-flow/**", "src/**"],
-  requiredStages: ["sdd", "implement", "verify"],
 };
 
 /**
@@ -262,7 +264,28 @@ export async function submit(root: string, runId: string, operation: string, pay
   return workflow(root, [operation, "--run", runId, "--in", file]);
 }
 
-/** A started run whose routing result for `proposal` has been submitted. */
+/**
+ * Answers the plan confirmation a route carrying `gate:user` opens at routing, when it is the
+ * only question routing opened; any other routing result is returned as it is.
+ */
+export async function confirmedPlan(root: string, runId: string, routed: CliRun): Promise<CliRun> {
+  const questions = field(routed.json, "questions");
+  const [only] = Array.isArray(questions) ? questions : [];
+  if (!Array.isArray(questions) || questions.length !== 1 || field(only, "purpose") !== "plan") {
+    return routed;
+  }
+  return submit(root, runId, "decision", {
+    questionId: field(only, "questionId"),
+    answer: { optionIds: ["proceed"] },
+    answeredBy: "operator",
+    expectedSequence: field(routed.json, "run.sequence"),
+  });
+}
+
+/**
+ * A started run whose routing result for `proposal` has been submitted, with a plan confirmation
+ * that is routing's only question answered: `routed` is where routing left the run.
+ */
 export async function routedRun(
   root: string,
   proposal: object = DISCOVERY_PROPOSAL,
@@ -270,16 +293,17 @@ export async function routedRun(
 ) {
   const runId = await startRun(root, input);
   const routing = workflow(root, ["next", "--run", runId]);
-  const routed = await submit(
+  const accepted = await submit(
     root,
     runId,
     "accept",
     resultFor(routing.json, "route-1", { proposal }),
   );
-  return { runId, routing, routed };
+  const routed = await confirmedPlan(root, runId, accepted);
+  return { runId, routing, routed, accepted };
 }
 
-/** A feature run approved and driven, with canned accepted results, until `next` issues a
+/** An add-feature run approved and driven, with canned accepted results, until `next` issues a
  * work order of `stageKind`. Returns the run and that `next` output. */
 export async function featureRunAt(root: string, stageKind: string, input: unknown = START_INPUT) {
   const { runId, routed } = await routedRun(root, FEATURE_PROPOSAL, input);

@@ -2,9 +2,14 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { extractH2Sections } from "../parse/markdown.js";
+import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { architectureProblems } from "../storyTree/architecture.js";
 import {
+  contractNumber,
   isStoryTreeId,
   itemIdMatchesStory,
+  ruleContractNumber,
   storyIdMatchesFlow,
   type StoryTreeIdKind,
 } from "../storyTree/ids.js";
@@ -205,7 +210,6 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
 
   const examples = new Set(model.examples.map((entry) => entry.id));
   const citedExamples = new Set<string>();
-  const rules = new Set(model.rules.map((entry) => entry.id));
   for (const rule of model.rules) {
     if (rule.examples.length === 0) {
       issues.push(
@@ -239,17 +243,30 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
       );
     }
   }
-  for (const ref of model.ruleRefs) {
-    if (!rules.has(ref.id)) {
-      issues.push(
-        finding("QFAI-STORY-005", `${ref.id} is not defined in a contract: ${ref.file}`, ref.file, [
-          ref.id,
-        ]),
-      );
-    }
-  }
   for (const error of model.errors) {
     issues.push(finding("QFAI-STORY-005", error, ""));
+  }
+  issues.push(...validateRuleContractNumbers(model));
+  return issues;
+}
+
+/** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
+function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
+  const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
+  const issues: Issue[] = [];
+  for (const rule of model.rules) {
+    const number = ruleContractNumber(rule.id);
+    if (number === null) continue;
+    const contractId = contractByFile.get(rule.file);
+    if (contractId && contractNumber(contractId) === number) continue;
+    issues.push(
+      finding(
+        "QFAI-STORY-005",
+        `${rule.id} does not carry the number of its contract ${contractId ?? "(no contract ID)"} in ${rule.file}`,
+        rule.file,
+        [rule.id],
+      ),
+    );
   }
   return issues;
 }
@@ -320,10 +337,80 @@ export async function validateStoryTreeStructure(
     ...(await validateStoryDirectories(roots.specsDir, tree)),
     ...(await validateFlowMermaid(tree)),
     ...validateStoryTreeStructureModel(tree),
+    ...(await validateConstraintIds(roots.specsDir)),
+    ...(await validateTechArchitecture(roots.contractsDir)),
   ];
 }
 
-/** A business flow needs an actual Mermaid flowchart or sequence diagram. */
+/**
+ * The `## Architecture` section of `tech.md` draws its layers as a diagram and lists
+ * them in a table, uppermost first. The document schema holds the section to one
+ * diagram then one table; this reads whether the two agree and the rows are in order.
+ */
+export async function validateTechArchitecture(contractsDir: string): Promise<Issue[]> {
+  const file = path.join(contractsDir, "tech.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const section = extractH2Sections(content).get("Architecture");
+  if (section === undefined) return [];
+  return architectureProblems(section.body).map((problem) =>
+    finding("QFAI-STORY-013", `## Architecture of ${file}: ${problem}`, file),
+  );
+}
+
+/** Each section of `constraint.md` and the prefix its IDs carry. */
+const CONSTRAINT_PREFIXES: ReadonlyMap<string, string> = new Map([
+  ["Technical Constraints", "TC"],
+  ["Operational Constraints", "OC"],
+  ["Business Constraints", "BC"],
+]);
+
+/**
+ * A constraint ID is positional: each section numbers its rows from 01 in table
+ * order, with its own prefix, so removing a row closes the gap. The document
+ * schema holds the table's shape but cannot count rows; this reads the IDs.
+ */
+export async function validateConstraintIds(specsDir: string): Promise<Issue[]> {
+  const file = path.join(specsDir, "01_policy", "constraint.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const issues: Issue[] = [];
+  for (const [heading, section] of extractH2Sections(content)) {
+    const prefix = CONSTRAINT_PREFIXES.get(heading);
+    const table = parseAllMarkdownTables(section.body)[0];
+    const column = table?.headers.findIndex((header) => header.trim() === "ID") ?? -1;
+    if (prefix === undefined || table === undefined || column < 0) continue;
+    table.rows.forEach((row, index) => {
+      const id = (row[column] ?? "").trim();
+      const expected = `${prefix}-${String(index + 1).padStart(2, "0")}`;
+      if (id === expected) return;
+      issues.push(
+        finding(
+          "QFAI-STORY-012",
+          `${id || "(empty)"} is row ${index + 1} of ## ${heading} in ${file}; constraint IDs run from ${prefix}-01 in table order, so it is ${expected}`,
+          file,
+          id ? [id] : [],
+        ),
+      );
+    });
+  }
+  return issues;
+}
+
+/**
+ * A business flow draws its main path as a Mermaid flowchart or sequence diagram.
+ * The document schema holds it to one block under `## Flow`; this reads the diagram type.
+ */
 async function validateFlowMermaid(model: StoryTreeModel): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const flow of model.flows) {
@@ -337,7 +424,7 @@ async function validateFlowMermaid(model: StoryTreeModel): Promise<Issue[]> {
     issues.push(
       finding(
         "QFAI-STORY-011",
-        `${flow.id} needs a Mermaid flowchart or sequenceDiagram in ${flow.file}`,
+        `${flow.id} needs one Mermaid flowchart or sequenceDiagram as the ## Flow section of ${flow.file}`,
         flow.file,
         [flow.id],
       ),

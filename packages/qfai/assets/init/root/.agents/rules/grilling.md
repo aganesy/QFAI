@@ -12,19 +12,20 @@ A **grilling session** is a mode entered deliberately. An invocation declares
 one; nothing else starts one. Meeting an unfixed design does not, and neither
 does an ambiguity found while implementing.
 
-| Target                            | Applies                                                            |
-| --------------------------------- | ------------------------------------------------------------------ |
-| A session, once entered           | Every round, until it ends                                         |
-| A critical decision               | Asked, never assumed, in every session                             |
-| Any other decision                | Asked in a user session; in a delegated one, the recommendation    |
-| A fact the environment can settle | Never asked; looked up                                             |
-| A fact only the user holds        | Asked as a value, never with a recommended answer                  |
-| A question outside a session      | Not a grilling question — an ordinary clarification, capped as one |
-| Work already specified            | Outside this rule; the spec is the authority                       |
+| Target                                            | Applies                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------ |
+| A session, once entered                           | Every round, until it ends                                         |
+| A critical decision                               | Asked, never assumed, in every session                             |
+| Any other decision                                | Asked in a user session; in a delegated one, the recommendation    |
+| A fact the environment can settle                 | Never asked; looked up                                             |
+| A fact only the user holds                        | Asked as a value, never with a recommended answer                  |
+| A question outside a session                      | Not a grilling question — an ordinary clarification, capped as one |
+| The question ending a turn that waits on the user | Not a clarification, and not capped; `user-questions.md` § 6       |
+| Work already specified                            | Outside this rule; the spec is the authority                       |
 
-The sixth row is what keeps the rest from being a way around a question budget.
-It also makes the class decidable when the question is asked rather than
-arguable afterwards.
+The sixth row is what keeps the rows above it from being a way around a
+question budget. It also makes the class decidable when the question is asked
+rather than arguable afterwards.
 
 Reach for a session whenever a decision is about to be made that the repository
 cannot settle by itself: a design, an approach, a scope boundary, a trade-off

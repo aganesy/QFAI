@@ -57,7 +57,7 @@ describe("story-tree CLI flow scope", () => {
     expect(await exists(shared)).toBe(false);
   });
 
-  // QFAI:EX-0001-0059-01
+  // QFAI:EX-0001-0057-01
   it("scopes a run over two --flow values to both flows", async () => {
     const root = await storyRoot();
     for (const id of ["0001", "0002"]) {
@@ -87,7 +87,7 @@ describe("story-tree CLI flow scope", () => {
     expect(missing).toContain("user-story-0002-0001");
   });
 
-  // QFAI:EX-0001-0068-01
+  // QFAI:EX-0001-0066-01
   it("writes a scoped report to --out instead of the scoped report name", async () => {
     const root = await storyRoot();
     await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
@@ -138,7 +138,7 @@ describe("story-tree CLI flow scope", () => {
   );
 
   it("TC-0004-0112: refuses --spec on a story tree", async () => {
-    // QFAI:EX-0001-0097-05
+    // QFAI:EX-0001-0094-05
     const root = await storyRoot();
     const parsed = parseArgs(["validate", "--spec", "0001"], root);
     expect(parsed.invalid).toBe(true);
@@ -211,7 +211,7 @@ describe("story-tree CLI flow scope", () => {
     );
     await writeFile(
       contract,
-      "# QFAI-CONTRACT-ID: CON-API-0001\nx-qfai-rules:\n  - id: BR-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
       "utf8",
     );
     await runReport({
@@ -235,7 +235,7 @@ describe("story-tree CLI flow scope", () => {
     );
     expect(graph.edges.map((edge) => edge.relation)).toContain("BF_TO_US");
     expect(graph.edges.map((edge) => edge.relation)).toContain("BR_TO_CON");
-    expect(graph.nodes.map((node) => node.id)).toContain("CON-API-0001");
+    expect(graph.nodes.map((node) => node.id)).toContain("API-0001");
   });
 
   it("does not derive an output directory from an invalid flow heading", async () => {

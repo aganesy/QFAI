@@ -2,12 +2,13 @@
 /**
  * E2E: a run stops only for the operator's decision or a fact only they hold.
  *
- * On a `qfai init` project, routing that carries a material risk opens one question and waits
- * with no work order; a `stop` then ends the run `cancelled`, and the run takes nothing further.
- * A missing fact is asked once as a value with no recommendation, and the discussion stage is
- * handed what the run has settled before the run returns to routing.
+ * On a `qfai init` project, routing that carries a material risk opens its question beside the
+ * plan confirmation the decide-design route asks for, and waits with no work order; a `stop` then
+ * ends the run `cancelled`, and the run takes nothing further. A missing fact is asked once as a
+ * value with no recommendation, and once the plan is confirmed the discussion stage is handed what
+ * the run has settled before the run goes on to the stage that closes the request.
  */
-import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -21,6 +22,7 @@ import {
   removeProjects,
   resultFor,
   routedRun,
+  stepNames,
   submit,
   workflow,
 } from "./workflowJourney.js";
@@ -63,7 +65,7 @@ it("a material question waits unanswered with no work order, then a stop cancels
     routed: field(routed.json, "run.state"),
     questions: list(routed.json, "questions").map((question) => [
       field(question, "kind"),
-      field(question, "text"),
+      field(question, "purpose") ?? field(question, "text"),
     ]),
     waiting: [waiting.status, field(waiting.json, "run.state"), field(waiting.json, "workOrder")],
     status: list(status.json, "questions").map((question) => field(question, "text")),
@@ -77,9 +79,12 @@ it("a material question waits unanswered with no work order, then a stop cancels
     next: [next.status, field(next.json, "error.code")],
   }).toEqual({
     routed: "awaiting_input",
-    questions: [["decision", GO_AHEAD.text]],
+    questions: [
+      ["decision", GO_AHEAD.text],
+      ["decision", "plan"],
+    ],
     waiting: [0, "awaiting_input", null],
-    status: [GO_AHEAD.text],
+    status: [GO_AHEAD.text, expect.stringContaining(DISCOVERY_PROPOSAL.goal)],
     finish: [1, "awaiting_input", expect.arrayContaining(["run-waiting"])],
     stopped: [0, "cancelled"],
     replayed: [0, "cancelled"],
@@ -126,7 +131,7 @@ it("an answer that changes the scope sends the run back to routing, and qfai-run
   });
 }, 300_000);
 
-it("one missing fact is asked as a value, and the discussion stage gets what is settled before the run returns to routing", async () => {
+it("one missing fact is asked as a value, and the discussion stage gets what is settled before the close stage", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, {
     ...DISCOVERY_PROPOSAL,
@@ -140,29 +145,44 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
     answeredBy: "operator",
     expectedSequence: field(routed.json, "run.sequence"),
   });
+  const confirmed = await answer(root, runId, list(routed.json, "questions")[1], "proceed");
   const issued = workflow(root, ["next", "--run", runId]);
   const settled = field(issued.json, "workOrder.settled");
   const returned = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
-  const reference = await readFile(
-    path.join(root, ".qfai/assistant/skill/qfai-discussion/references/orchestrated-mode.md"),
-    "utf8",
+  const closing = workflow(root, ["next", "--run", runId]);
+  const installed = list(issued.json, "workOrder.steps").every((step) =>
+    existsSync(path.join(root, String(field(step, "path")))),
   );
 
   expect({
     question: [field(question, "kind"), field(question, "recommendation")],
-    answered: field(answered.json, "run.state"),
-    stage: [field(issued.json, "workOrder.stageKind"), field(issued.json, "workOrder.operation")],
+    answered: [field(answered.json, "run.state"), field(confirmed.json, "run.state")],
+    stage: [field(issued.json, "workOrder.stageKind"), stepNames(issued.json)],
     routingResult: Object.values(Object(settled)).includes("route-1"),
     answers: Object.values(Object(settled)).find((value) => Array.isArray(value)),
     returned: field(returned.json, "run.state"),
-    installed: reference.includes("`resolve-unsettled-product-scope`"),
+    closing: [field(closing.json, "workOrder.stageKind"), stepNames(closing.json)],
+    installed,
   }).toEqual({
     question: ["fact", undefined],
-    answered: "ready",
-    stage: ["discussion", "resolve-unsettled-product-scope"],
+    answered: ["awaiting_input", "ready"],
+    stage: [
+      "discussion",
+      [
+        "discussion-research",
+        "discussion-interview",
+        "discussion-pack",
+        "discussion-uiux",
+        "discussion-oq",
+      ],
+    ],
     routingResult: true,
-    answers: [{ questionId, text: FORMAT.text, chosen: "CSV" }],
-    returned: "routing",
+    answers: [
+      { questionId, text: FORMAT.text, chosen: "CSV" },
+      expect.objectContaining({ chosen: ["Run the plan"] }),
+    ],
+    returned: "ready",
+    closing: ["triage", ["triage-close"]],
     installed: true,
   });
 }, 300_000);

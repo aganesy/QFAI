@@ -3,37 +3,41 @@
 ## Criteria
 
 ```gherkin
-Feature: Repair a defective test with example coverage untouched
+Feature: Claim a host as supported only with evidence
+  # AC-0001-0194-01
+  Scenario: The seeds are tracked as rewritten and the fault seeds run on every pull request
+    Given the tracked fault-seed and routing-seed fixtures
+    When a pull request is checked
+    Then the fixtures hold 24 fault cases and 64 routing cases as rewritten
+    And every fault seed runs as a deterministic test with no network and no paid model
 
-# AC-0001-0194-01
-# Parent: US-0001-0194
-Scenario: A defective test is fixed with example coverage untouched
-  Given diagnosis returns the defective-test verdict
-  When the `test_fix` stage returns its result
-  Then the work order went to the owner the kind of the first matched ID names
-  And the result is accepted with every example still annotated as before
+  # AC-0001-0194-02
+  Scenario: The routing eval is a manual release gate scored case by case
+    Given a release candidate for a host
+    When the routing eval is run
+    Then it is started by a maintainer and no workflow references its runner
+    And the safety-relevant list was recorded before it ran
+    And every safety case must pass and one high-risk false pass blocks the release
 
-# AC-0001-0194-02
-# Parent: US-0001-0194
-Scenario: A test fix that changes the expectation goes back to story authoring
-  Given a `test_fix` result whose cited criterion or rule differs before and after the fix
-  When the result is submitted
-  Then `accept` refuses it, naming `qfai-sdd` as the owner of the fix
-  And the run is unchanged
+  # AC-0001-0194-03
+  Scenario: A host is claimed as supported only with its evidence
+    Given the per-host eval records for the current package version
+    When the supported-host claim in the README is checked
+    Then the claimed hosts equal the hosts with a passing record and a green adapter test
+    And before the release commit no host is claimed
 
-# AC-0001-0194-03
-# Parent: US-0001-0194
-Scenario: A test fix without its review or re-run is refused
-  Given a `test_fix` result missing the independent review or the re-run receipt
-  When the result is submitted
-  Then `accept` refuses it
-  And the obligation set stays as it was
+  # AC-0001-0194-04
+  Scenario: The README puts the free-text entry first
+    Given the root README and the published README
+    When an adopter reads them
+    Then the free-text entry is the primary usage and direct stage invocation the expert path
+    And neither the operating-model diagram nor the tutorial has the operator typing each stage
 
-# AC-0001-0194-04
-# Parent: US-0001-0194
-Scenario: A review counts only from an instance the run has not recorded as author or recommender
-  Given stage results that name their `actor`
-  When a later result is reviewed
-  Then every work order's `actorHistory` holds the recorded authors, recommenders and reviewers
-  And a review by the result's own `actor`, an author or a recommender is refused, and a result with no `actor` is refused
+  # AC-0001-0194-05
+  Scenario: What ships keeps the repository's shipping rules
+    Given the assets, schemas, plans and evidence the workflow adds
+    When they are built, packed and written
+    Then their size, version, launcher and language rules hold
+    And the run records under `.qfai/evidence/workflow/` hold no conversation text, secret or absolute path
+    And the shipped schemas and the parser accept and refuse the same payloads, and runtime state is written only under `.qfai/run/`
 ```

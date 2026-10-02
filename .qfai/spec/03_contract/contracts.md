@@ -1,42 +1,26 @@
 # Contracts
 
-## Purpose
-
-This index names the current contract artifacts under `paths.contractsDir` (default `.qfai/spec/03_contract/`). The discussion pack supplies provenance; downstream execution reads the story tree and its enforcing contracts. A contract file and its index row are updated together.
-
-QFAI itself has no project API, database, or rendered UI contract. Those families remain available to adopter repositories. Root `DESIGN.md` is an input only when a visual UI contract needs a brand lock.
-
 ## Contract Index
 
-| Short ID         | Entity                   | Declared ID | File                                                       | Purpose                                                                                        |
-| ---------------- | ------------------------ | ----------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| DCON-AP          | Anti-pattern schema      | —           | `.qfai/spec/03_contract/design/anti-patterns.schema.yaml`  | Schema for classified UI anti-pattern records.                                                 |
-| DCON-BP          | Best-practice schema     | —           | `.qfai/spec/03_contract/design/best-practices.schema.yaml` | Schema for UI practice records.                                                                |
-| DCON-DT          | Design-token schema      | CON-DT-0001 | `.qfai/spec/03_contract/design/design-tokens.schema.yaml`  | Primitive, semantic, and component token structure.                                            |
-| CLI-ROUTING      | Assistant routing        | —           | `.qfai/spec/03_contract/cli/assistant-routing.md`          | Agent cards, routing, and review profiles.                                                     |
-| CLI-CONFIG       | Configuration            | —           | `.qfai/spec/03_contract/cli/configuration.md`              | Project override and path resolution.                                                          |
-| CLI-DELIVERY     | Delivery workflow        | —           | `.qfai/spec/03_contract/cli/delivery-workflow.md`          | ATDD, implementation, and verification handoffs.                                               |
-| CLI-ATDD         | qfai atdd scaffold       | —           | `.qfai/spec/03_contract/cli/qfai-atdd-scaffold.md`         | BF and AC test scaffolds.                                                                      |
-| CLI-AUDIT        | qfai audit               | —           | `.qfai/spec/03_contract/cli/qfai-audit.md`                 | Decision-record query surface.                                                                 |
-| CLI-DISCUSSION   | qfai discussion          | —           | `.qfai/spec/03_contract/cli/qfai-discussion.md`            | Discussion-pack listing and active pointer.                                                    |
-| CLI-DOC          | qfai doctor              | —           | `.qfai/spec/03_contract/cli/qfai-doctor.md`                | Environment and asset checks with repair guidance.                                             |
-| CLI-GUARD        | qfai guardrails          | —           | `.qfai/spec/03_contract/cli/qfai-guardrails.md`            | Decision guardrail grammar and command surface.                                                |
-| CLI-HUP          | qfai handoff upgrade     | —           | `.qfai/spec/03_contract/cli/qfai-handoff-upgrade.md`       | Legacy handoff conversion.                                                                     |
-| CLI-INIT         | qfai init                | —           | `.qfai/spec/03_contract/cli/qfai-init.md`                  | Project seed, paths, and assistant integration.                                                |
-| CLI-MIGR         | Story-tree migration     | —           | `.qfai/spec/03_contract/cli/qfai-migration-v1-to-v2.md`    | Bundled migration steps, the free-text entry they install and check, and their write boundary. |
-| CLI-PITER        | qfai prototyping iterate | —           | `.qfai/spec/03_contract/cli/qfai-prototyping-iterate.md`   | Cycle flags, capture, and scope freeze.                                                        |
-| CLI-PROT         | qfai prototyping         | —           | `.qfai/spec/03_contract/cli/qfai-prototyping.md`           | UI contract loop, certification, show, and rescope.                                            |
-| CLI-REPORT       | qfai report              | —           | `.qfai/spec/03_contract/cli/qfai-report.md`                | Report rendering and flow scope.                                                               |
-| CLI-VAL          | qfai validate            | —           | `.qfai/spec/03_contract/cli/qfai-validate.md`              | Profiles, findings, and validation output.                                                     |
-| CLI-RESEARCH     | Research protocol        | —           | `.qfai/spec/03_contract/cli/research-protocol.md`          | Provider-independent source handling.                                                          |
-| CLI-WFSET        | Shipped workflows        | —           | `.qfai/spec/03_contract/cli/shipped-workflows.md`          | Distributed CI workflow ownership and shape.                                                   |
-| CLI-WF           | qfai workflow            | —           | `.qfai/spec/03_contract/cli/qfai-workflow.md`              | Free-text entry, run control and the final gate.                                               |
-| CLI-WFFILE       | Workflow files           | —           | `.qfai/spec/03_contract/cli/workflow-files.md`             | Run trees, local run records, plans and schemas.                                               |
-| CLI-STORY-AUTHOR | Story authoring          | —           | `.qfai/spec/03_contract/cli/story-tree-authoring.md`       | SDD and migration authoring boundaries.                                                        |
-
-## Rule ownership
-
-- `tech.md#rules` owns technology and CI rules.
-- `structure.md#rules` owns story-tree and repository layout rules.
-- A CLI contract owns rules for its command or shared subject. Its BR entries cite existing examples from the story tree.
-- Historical contract declarations are in the retired spec-pack `_policies/05_Contracts.md`, which git history keeps; they are not execution inputs.
+| ID       | Title                               | File                                                              | Depends On | Reconciled With | Purpose                                                                                        |
+| -------- | ----------------------------------- | ----------------------------------------------------------------- | ---------- | --------------- | ---------------------------------------------------------------------------------------------- |
+| CLI-0001 | Assistant Routing                   | `.qfai/spec/03_contract/cli/cli-0001-assistant-routing.md`        | -          | -               | Agent cards, routing, and review profiles.                                                     |
+| CLI-0002 | Assistant Steps                     | `.qfai/spec/03_contract/cli/cli-0002-assistant-steps.md`          | -          | -               | Step tree, parent step lists, per-step review, and the step-tree check.                        |
+| CLI-0003 | Configuration                       | `.qfai/spec/03_contract/cli/cli-0003-configuration.md`            | -          | -               | Project override and path resolution.                                                          |
+| CLI-0004 | Delivery Workflow                   | `.qfai/spec/03_contract/cli/cli-0004-delivery-workflow.md`        | -          | -               | ATDD, implementation, and verification handoffs.                                               |
+| CLI-0005 | `qfai atdd scaffold`                | `.qfai/spec/03_contract/cli/cli-0005-qfai-atdd-scaffold.md`       | -          | -               | BF and AC test scaffolds.                                                                      |
+| CLI-0006 | `qfai audit log`                    | `.qfai/spec/03_contract/cli/cli-0006-qfai-audit.md`               | -          | -               | Decision-record query surface.                                                                 |
+| CLI-0007 | `qfai discussion`                   | `.qfai/spec/03_contract/cli/cli-0007-qfai-discussion.md`          | -          | -               | Discussion-pack listing and active pointer.                                                    |
+| CLI-0008 | `qfai doctor`                       | `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`              | -          | -               | Environment and asset checks with repair guidance.                                             |
+| CLI-0009 | `qfai init`                         | `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md`                | -          | -               | Project seed, paths, and assistant integration.                                                |
+| CLI-0010 | `/qfai-migration-v1-to-v2` scripts  | `.qfai/spec/03_contract/cli/cli-0010-qfai-migration-v1-to-v2.md`  | -          | -               | Bundled migration steps, the free-text entry they install and check, and their write boundary. |
+| CLI-0011 | `qfai prototyping`                  | `.qfai/spec/03_contract/cli/cli-0011-qfai-prototyping.md`         | -          | -               | UI contract loop, certification, show, and rescope.                                            |
+| CLI-0012 | `qfai prototyping iterate`          | `.qfai/spec/03_contract/cli/cli-0012-qfai-prototyping-iterate.md` | -          | -               | Cycle flags, capture, and scope freeze.                                                        |
+| CLI-0013 | `qfai report`                       | `.qfai/spec/03_contract/cli/cli-0013-qfai-report.md`              | -          | -               | Report rendering and flow scope.                                                               |
+| CLI-0014 | `qfai validate`                     | `.qfai/spec/03_contract/cli/cli-0014-qfai-validate.md`            | -          | -               | Profiles, findings, and validation output.                                                     |
+| CLI-0015 | `qfai workflow`                     | `.qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md`            | -          | -               | Free-text entry, run control and the final gate.                                               |
+| CLI-0016 | Repository CI                       | `.qfai/spec/03_contract/cli/cli-0016-repository-ci.md`            | -          | -               | This repository's own CI workflows, hygiene lane, test runner and release gate.                |
+| CLI-0017 | Research Protocol                   | `.qfai/spec/03_contract/cli/cli-0017-research-protocol.md`        | -          | -               | Provider-independent source handling.                                                          |
+| CLI-0018 | Shipped GitHub Actions workflow set | `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`        | -          | -               | Distributed CI workflow ownership and shape.                                                   |
+| CLI-0019 | Story-Tree Authoring                | `.qfai/spec/03_contract/cli/cli-0019-story-tree-authoring.md`     | -          | -               | SDD and migration authoring boundaries.                                                        |
+| CLI-0020 | Workflow Files                      | `.qfai/spec/03_contract/cli/cli-0020-workflow-files.md`           | -          | -               | Run trees, local run records, plans and schemas.                                               |

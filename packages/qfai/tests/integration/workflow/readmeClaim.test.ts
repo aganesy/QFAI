@@ -1,8 +1,8 @@
-// QFAI:AC-0001-0201-03
-// QFAI:AC-0001-0201-04
-// QFAI:EX-0001-0201-09
-// QFAI:EX-0001-0201-11
-// QFAI:EX-0001-0201-12
+// QFAI:AC-0001-0194-03
+// QFAI:AC-0001-0194-04
+// QFAI:EX-0001-0194-09
+// QFAI:EX-0001-0194-11
+// QFAI:EX-0001-0194-12
 
 import { spawnSync } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
@@ -61,15 +61,16 @@ async function claimingCopies(): Promise<Record<string, string>> {
   return Object.fromEntries(copies);
 }
 
-it("The READMEs claim exactly the hosts with a passing eval record for this version: none", async () => {
+it("The READMEs claim exactly the hosts with a passing eval record for this version", async () => {
   const current = await version();
   const all = await readmes();
+  const recorded = recordedHosts(await records(), current);
 
+  // `recorded` is the hosts with a passing record for this version; each README claims exactly those.
   expect({
-    claimed: Object.values(all).map((readme) => claimedHosts(readme)),
-    recorded: recordedHosts(await records(), current),
+    claimed: Object.values(all).map((readme) => claimedHosts(readme)?.sort()),
     problems: claimProblems(all, await records(), current),
-  }).toEqual({ claimed: [[], []], recorded: [], problems: [] });
+  }).toEqual({ claimed: [recorded, recorded], problems: [] });
 });
 
 it("A copy of the READMEs claiming a host that has no record fails the check", async () => {

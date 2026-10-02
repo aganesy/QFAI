@@ -340,7 +340,7 @@ describe("applyWaivers", () => {
   it("says a post-waiver rule cannot be suppressed rather than calling it unknown", async () => {
     // `applyWaivers` runs inside `core/validate.ts`, and `src/cli/` appends
     // findings afterwards — so a waiver naming one can never match, whatever it
-    // is called. A message saying `未知の rule` would send the operator
+    // is called. A message saying `unknown rule` would send the operator
     // looking for a typo that is not there, and the remedy differs: a typo is
     // corrected, this waiver is removed.
     const root = await createRoot();
@@ -366,9 +366,9 @@ describe("applyWaivers", () => {
       const finding = result.issues.find((item) => item.code === "QFAI-WAIVER-004");
       expect(finding).toBeDefined();
       // The rule exists; what it cannot do is be waived.
-      expect(finding?.message).not.toContain("未知の rule");
-      expect(finding?.message).toContain("存在しますが waiver では抑制できません");
-      expect(finding?.message).toContain("削除");
+      expect(finding?.message).not.toContain("unknown rule");
+      expect(finding?.message).toContain("cannot be suppressed by a waiver");
+      expect(finding?.message).toContain("Delete this waiver");
       expect(result.waivers.active.some((item) => item.id === "WVR-20260208-06")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -400,7 +400,7 @@ describe("applyWaivers", () => {
 
       const finding = result.issues.find((item) => item.code === "QFAI-WAIVER-004");
       expect(finding).toBeDefined();
-      expect(finding?.message).toContain("未知の rule");
+      expect(finding?.message).toContain("unknown rule");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -893,7 +893,7 @@ describe("applyWaivers", () => {
     }
   });
 
-  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"], ["QFAI-DCON-031"], ["QFAI-DCON-032"]])(
+  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"]])(
     "keeps a waiver for the exploration-relaxable rule %s active on a quiet run",
     async (rule) => {
       const root = await createRoot();

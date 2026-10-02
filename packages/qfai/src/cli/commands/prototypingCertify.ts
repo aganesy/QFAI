@@ -3,7 +3,7 @@
  *
  * `certify` is the only writer of `.qfai/evidence/prototyping/completion-certificate.json`.
  * It refuses to write the artifact unless every gate passes:
- *   - prototyping.json.fullHarness.runId is present
+ *   - prototyping.json.runId is present
  *   - .qfai/output/validate.json exists with counts.error === 0
  *   - .qfai/output/verify.json exists with status === "PASS"
  *   - prototyping.json.reviewerGate.result === "PASS"
@@ -35,10 +35,13 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { loadConfig, type ConfigLoadResult } from "../../core/config.js";
+import {
+  loadConfig,
+  readRejectedPrimaryUiContract,
+  type ConfigLoadResult,
+} from "../../core/config.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
-import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { resolvePrototypingIterationViews } from "../../core/prototyping/modeRead.js";
 import {
@@ -92,7 +95,7 @@ import {
 import { readUiContractInventory } from "../../core/prototyping/specResolution.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../core/logger.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { profileSuffixedReportPath } from "./validate.js";
 
@@ -191,13 +194,10 @@ function resolveFullProfileGatesSignalRel(config: ConfigLoadResult["config"]): s
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
 /**
- * Frozen UI contract IDs are full CON-UI-NNNN values. The anchored shape
+ * Frozen UI contract IDs are full UI-NNNN values. The anchored shape
  * keeps review payload paths inside their iteration directories.
  */
-const CANONICAL_SPEC_ID = /^CON-UI-\d{4}$/u;
-
-/** Legacy `prototyping.json` shape (OC-60). Named so the code is greppable. */
-const DEPRECATED_SCHEMA_CODE = "D-DEPRECATED-SCHEMA" as const;
+const CANONICAL_SPEC_ID = /^UI-\d{4}$/u;
 
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
@@ -287,28 +287,8 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // Accept the new top-level `runId` (written by `iterate` at cycle 0) and
-  // fall back to the legacy `fullHarness.runId` shape for projects whose
-  // prototyping.json predates the UX-loop schema rewrite.
-  //
-  // The fallback used to be silent. A hybrid record — modern `iterations[]`,
-  // legacy `fullHarness.runId` — sealed a completion certificate with
-  // `counts.error === 0` and no operator signal at all, while the migration
-  // memo told the same operator the shape was retired. Reporting it follows
-  // the legacy `verify.json` branch below: say so, and still seal. Refusing
-  // outright would delete the acceptance path, which OC-60 forbids.
-  const canonicalRunId = extractString(protoJson, "runId");
-  const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
-  const runId = canonicalRunId ?? legacyRunId;
-  if (!canonicalRunId && legacyRunId) {
-    // The shape is retired and nothing reads it any more, so this is an error
-    // outright.
-    error(
-      `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
-        `\`fullHarness.runId\` shape instead of a top-level \`runId\`. ` +
-        `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`,
-    );
-  }
+  // The top-level `runId` is written by `iterate` at cycle 0.
+  const runId = extractString(protoJson, "runId");
   if (!runId) {
     error(
       "qfai prototyping certify: prototyping.json#runId is required " +
@@ -653,7 +633,7 @@ export async function runPrototypingCertify(
       error(
         `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
           `UI contract set (uiContractsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
-          "but no iter-NN/CON-UI-NNNN/<screen>.review.json layout is present. " +
+          "but no iter-NN/UI-NNNN/<screen>.review.json layout is present. " +
           "Each declared contract and screen requires its own review payload.",
       );
       // Exit 64 covers missing reviewer evidence.
@@ -662,7 +642,7 @@ export async function runPrototypingCertify(
       if (!hasPerSpecLayout) {
         // State the required layout before listing missing pairs.
         info(
-          `qfai prototyping certify: ${acceptedIterDir}/CON-UI-NNNN layout not detected — ` +
+          `qfai prototyping certify: ${acceptedIterDir}/UI-NNNN layout not detected — ` +
             "every declared UI contract and screen needs its review payload under the contract directory.",
         );
       }
@@ -912,8 +892,7 @@ export async function runPrototypingCertify(
 
   const uiContractsCovered = coveredRead.value;
   // Frozen-loop hash invariant: the certificate must record the sha256
-  // that was frozen at cycle 0 in prototyping.json (and, when the SDD
-  // lock is present, the lock value too). Recording the live re-hash
+  // that was frozen at cycle 0 in prototyping.json. Recording the live re-hash
   // would let a brand-body edit between the final iter and certify
   // silently re-baseline the cert against an SSOT that was not used
   // during the loop.
@@ -934,34 +913,6 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const lockResult = await loadLockGate(options.root, config.paths.contractsDir);
-  if (lockResult.kind === "malformed") {
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml exists but " +
-        "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run the design lock step of /qfai-sdd to regenerate the lock before sealing.",
-    );
-    return 2;
-  }
-  if (lockResult.kind === "unreadable") {
-    const cause =
-      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml exists but could not be read " +
-        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
-        "unreadable; fix file permissions / EIO and rerun.",
-    );
-    return 2;
-  }
-  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
-  if (lockSha !== null && lockSha !== frozenSha) {
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml sha256 (" +
-        `${lockSha}) differs from the loop-frozen value (${frozenSha}). ` +
-        "Refreeze and re-run prototyping from cycle 0.",
-    );
-    return 2;
-  }
   // The completion certificate digests every file under `evidenceRoot`,
   // so a stale `iter-NN` dir from a prior loop (NN >= recorded
   // iterationCount) would otherwise be sealed into `evidenceDigests`
@@ -976,8 +927,7 @@ export async function runPrototypingCertify(
   } catch (err) {
     // findStaleIterDirs propagates non-ENOENT fs errors (EACCES /
     // EPERM / EIO) instead of swallowing them, so a permission flip
-    // cannot silently bypass the stale-iter guard — symmetric with the
-    // lock `unreadable` path. Surface a clear operator-facing message
+    // cannot silently bypass the stale-iter guard. Surface a clear operator-facing message
     // instead of letting the raw error stack escape.
     const cause = err instanceof Error ? err.message : String(err);
     error(
@@ -1049,31 +999,19 @@ export async function runPrototypingCertify(
   return 0;
 }
 
-type LockGateResult =
-  | { kind: "ok"; sha256: string }
-  | { kind: "missing" }
-  | { kind: "malformed" }
-  | { kind: "unreadable"; cause: unknown };
-
-async function loadLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
-  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
-  let text: string;
-  try {
-    text = await readFile(lockAbs, "utf-8");
-  } catch (err) {
-    if (isEnoent(err)) return { kind: "missing" };
-    return { kind: "unreadable", cause: err };
-  }
-  const sha = readDesignMdLockSha(text);
-  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
-}
-
 /**
  * Print the frozen UI contract scope, the current live scope, and the
- * selected primary contract. Missing or legacy state exits 2.
+ * selected primary contract. Missing or legacy state, or a rejected
+ * configured primary contract, exits 2.
  */
 export async function runPrototypingShowUiContract(options: { root: string }): Promise<number> {
-  const { config } = await loadConfig(options.root);
+  const loaded = await loadConfig(options.root);
+  const rejected = readRejectedPrimaryUiContract(loaded);
+  if (rejected !== undefined) {
+    error(`qfai prototyping show-ui-contract: qfai.config.yaml ${rejected}`);
+    return 2;
+  }
+  const { config } = loaded;
   const protoRaw = await loadJson(path.join(options.root, PROTOTYPING_JSON_REL));
   const covered = readUiContractsCovered(protoRaw);
   if (covered.kind !== "ok") {
@@ -1768,10 +1706,8 @@ export async function findStaleIterDirs(
     // operator deleted the dir mid-flight — there's nothing stale to
     // flag in either case.
     //
-    // EACCES / EPERM / EIO: the same fail-closed posture as the
-    // `unreadable` LockGateResult branch above. Returning [] here would
-    // let a permission flip silently bypass the stale-iter guard, the
-    // same vector the lock branch guards against. Symmetric: propagate
+    // EACCES / EPERM / EIO: fail closed. Returning [] here would let a
+    // permission flip silently bypass the stale-iter guard. Propagate
     // so certify's caller surfaces a hard error rather than seal a
     // possibly-stale digest set.
     if (isEnoent(err)) return [];
@@ -1909,8 +1845,7 @@ async function findEvidenceNewerThan(
  * Returns `false` for ANY fs error (including permission flips) — the
  * caller treats "not visible to the certify process" as missing. This
  * is symmetric with `validateUiEvidenceArtifacts`-style presence
- * checks elsewhere; certify's strict gates upstream (lock-unreadable,
- * stale-iter-readdir) catch the broader permission-flip vector.
+ * checks elsewhere; certify's strict gate upstream (stale-iter-readdir) catch the broader permission-flip vector.
  */
 /** One rejected `<screen>.review.json` and why it was rejected. */
 type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly string[] };
@@ -1919,7 +1854,7 @@ type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly
  * The (UI contract, screen, cycle) triple a payload is filed under.
  *
  * `specDirName` is `null` for a payload outside a canonical
- * `CON-UI-NNNN` directory. Such a path anchors only its screen and cycle.
+ * `UI-NNNN` directory. Such a path anchors only its screen and cycle.
  */
 type ReviewPayloadExpectation = {
   readonly specDirName: string | null;
@@ -2038,7 +1973,7 @@ async function auditStrayPayloads(args: {
 }
 
 /**
- * Canonical `CON-UI-NNNN` subdirectories, sorted. An unreadable
+ * Canonical `UI-NNNN` subdirectories, sorted. An unreadable
  * directory yields `[]`.
  */
 async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
@@ -2063,7 +1998,7 @@ async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
  *
  * The walk is recursive on purpose. `buildCompletionCertificate`
  * digests the evidence root recursively, so a payload one level down
- * (`CON-UI-NNNN/archive/old.review.json`) is sealed into the certificate
+ * (`UI-NNNN/archive/old.review.json`) is sealed into the certificate
  * exactly like a top-level sibling. A shallow `readdir` here would let
  * that nested file ship without ever being parsed — the audited set
  * must be at least as wide as the digested set.
@@ -2113,7 +2048,7 @@ async function collectReviewPayloadFiles(
 
 /**
  * Every `*.review.json` under an accepted-iteration directory that does
- * not inside a canonical `CON-UI-NNNN` subtree. Historical
+ * not inside a canonical `UI-NNNN` subtree. Historical
  * `spec-NNNN` evidence is preserved and ignored. Paths are relative
  * to the iteration directory.
  */
@@ -2135,7 +2070,7 @@ function payloadScreenId(rel: string): string {
 /**
  * Derive the `(UI contract, screen, cycle)` a payload path claims, given
  * its iteration-relative path. The contract is anchored only when the
- * first segment is a canonical `CON-UI-NNNN` directory; see
+ * first segment is a canonical `UI-NNNN` directory; see
  * {@link ReviewPayloadExpectation}.
  */
 function payloadExpectationFromRel(rel: string, cycle: number): ReviewPayloadExpectation {
@@ -2332,11 +2267,11 @@ async function fileExists(absPath: string): Promise<boolean> {
  * Canonical UI contract evidence directory. Historical `spec-NNNN`
  * directories are excluded from the current review gate.
  */
-const CANONICAL_SPEC_DIR = /^CON-UI-\d{4}$/u;
+const CANONICAL_SPEC_DIR = /^UI-\d{4}$/u;
 
 /**
  * Returns `true` when the accepted iter directory contains at least
- * one canonical `CON-UI-NNNN` subdirectory. A missing directory yields
+ * one canonical `UI-NNNN` subdirectory. A missing directory yields
  * false; the coverage gate reports missing pair evidence.
  */
 async function hasPerSpecSubdir(iterDirAbs: string): Promise<boolean> {

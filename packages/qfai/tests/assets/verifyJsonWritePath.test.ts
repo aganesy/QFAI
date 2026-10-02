@@ -28,12 +28,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const CONTRACT = "assistant/skill/qfai-verify/references/verify-output-contract.md";
-const VERIFY_SKILL = "assistant/skill/qfai-verify/SKILL.md";
+const VERIFY_STEP = "assistant/step/verify-repo-gate/STEP.md";
 const WORKFLOW = "assistant/rule/workflow.md";
 const HANDOFF = "assistant/skill/qfai-prototyping/references/handoff.md";
 
 /** Files whose prose instructs a writer where to put `verify.json`. */
-const WRITE_SIDE_DOCS = [CONTRACT, VERIFY_SKILL, WORKFLOW, HANDOFF];
+const WRITE_SIDE_DOCS = [CONTRACT, VERIFY_STEP, WORKFLOW, HANDOFF];
 
 /** ``... write[s] ... `<some .qfai path ending in verify.json>` `` on one line. */
 const WRITE_INSTRUCTION = /\bwrites?\b[^.\n]*`(\.qfai\/[^`]*verify\.json)`/g;

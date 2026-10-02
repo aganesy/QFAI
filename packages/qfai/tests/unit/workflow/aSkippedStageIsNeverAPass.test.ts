@@ -1,28 +1,16 @@
-// QFAI:EX-0001-0192-15
+// QFAI:EX-0001-0185-15
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Facts = Parameters<typeof decide>[2];
 
 const plan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  route: "edit-text",
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
 

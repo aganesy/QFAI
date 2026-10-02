@@ -2,16 +2,10 @@
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: `qfai doctor --clean` が `.qfai/review/<ts>/` の中で TTL (既定 14 日 / DR-0264、`qfai.config.yaml#review.staleTtlDays` で設定可能) を超過した pack を `.qfai/review/_archive/<ts>/` へ move する。archival は NEVER delete; restore は手動 `mv` 戻し。`qfai validate --profile review` は `_archive/` を out-of-scope とし top-level pack のみ scan する。in-scope pack の `QFAI-REVIEW-003/004/005` 挙動は不変。
-- Non-goals: pack の自動削除、`_archive/` 内 pack の validate scan、復元 CLI subcommand
+As an operator, I want `qfai doctor --clean` to move each review pack under `.qfai/review/<ts>/` older than the TTL (14 days by default, set by `review.staleTtlDays` in `qfai.config.yaml`) to `.qfai/review/_archive/<ts>/` without ever deleting it, and `qfai validate --profile review` to scan only the top-level packs, so that stale packs stop being validated while every pack stays restorable by hand.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0006
-- Story block: `us-0006-0008` of retired spec-0006
+- Deleting packs automatically.
+- Validating packs under `_archive/`.
+- A restore subcommand: a pack is restored by moving it back with `mv`.

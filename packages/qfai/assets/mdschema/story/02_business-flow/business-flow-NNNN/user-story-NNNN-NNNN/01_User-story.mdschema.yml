@@ -1,13 +1,39 @@
-# Document schema: 02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md
+# Document schema: <specsDir>/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
-      pattern: "^# US-[0-9]{4}-[0-9]{4}: .+"
+      pattern: "^# US-[0-9]{4}-[0-9]{4}: .+$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: Story ID and title.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## User Story$"
           regex: true
-        description: User Story section.
-        allow_additional: true
+        description: One "As a <actor>, I want <goal>, so that <benefit>." sentence.
+        allow_additional: false
+        paragraphs:
+          min: 1
+          max: 1
+        required_text:
+          # The migration's story-sentence test, with a wrapped line read as one space.
+          - pattern: '(?s)\A\s*As\s+an?\s+[^,]+,\s+I\s+want\s+.+,\s+so\s+that\s+.+\.\s*\z'
+            regex: true
+      - heading:
+          pattern: "^## Non-goals$"
+          regex: true
+        description: What this story does not cover, one item each.
+        optional: true
+        allow_additional: false
+        lists:
+          - min: 1
+            max: 1
+            min_items: 1
+        forbidden_text:
+          - pattern: '(?m)^[^-\s]'
+            regex: true

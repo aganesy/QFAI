@@ -40,13 +40,27 @@ const identities = (runs: Issue[][]): string[][] =>
       .sort(),
   );
 
+describe("validate is deterministic", () => {
+  // QFAI:EX-0001-0039-12
+  it("gives the same findings on two runs over the same tree and configuration", async () => {
+    await withInitProject(async (root) => {
+      await put(root, ".qfai/spec/01_policy/constraint.md", "# Constraints\n");
+      const first = await issuesOf(root);
+      const second = await issuesOf(root);
+
+      expect(first.flat().length).toBeGreaterThan(0);
+      expect(identities(second)).toEqual(identities(first));
+    });
+  }, 120_000);
+});
+
 describe("validate reads no stage evidence", () => {
   it("gives the same findings with and without a local spec-stage record", async () => {
     await withInitProject(async (root) => {
       await put(
         root,
-        ".qfai/spec/03_contract/db/CON-DB-0001.sql",
-        "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE notify (id int);\n",
+        ".qfai/spec/03_contract/db/DB-0001.sql",
+        "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE notify (id int);\n",
       );
       const without = await issuesOf(root);
       await put(root, ".qfai/evidence/sdd-BF-0001.md", "# SDD BF-0001\n\nNo grilling record.\n");
@@ -61,15 +75,10 @@ describe("validate reads no stage evidence", () => {
       await put(
         root,
         ".qfai/spec/03_contract/ui/main.yaml",
-        '# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: SCR-001\n    route: "/"\n',
+        '# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: SCR-001\n    route: "/"\n',
       );
-      // The prototyping outputs stand in the tree with no local record of the run that made them.
-      await put(root, ".qfai/spec/03_contract/design/design-system.yaml", "source: DESIGN.md\n");
-      await put(
-        root,
-        ".qfai/spec/03_contract/design/prototype-handoff.yaml",
-        "finalIterIndex: 0\n",
-      );
+      // The final prototype stands in the tree with no local record of the run that made it.
+      await put(root, ".qfai/prototype/final/index.html", "<html></html>\n");
       const aboutTheMissingFile = (await issuesOf(root))
         .flat()
         .filter(

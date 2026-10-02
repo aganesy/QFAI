@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           # Full history: the diff is against the base commit, and a shallow clone is
-          # one of the two failures BR-0017-0008 requires to fail open with an
+          # one of the two failures BR-0015-0008 requires to fail open with an
           # annotation rather than silently narrow the lane set.
           fetch-depth: 0
           persist-credentials: false
@@ -94,14 +94,14 @@ jobs:
           // ENUMERATED lists and select either the full lane set or the
           // documentation-only minimum.
           //
-          // The whole decision lives here, failure included. BR-0017-0008 requires a
+          // The whole decision lives here, failure included. BR-0015-0008 requires a
           // failed diff to emit an annotation naming the reason AND to select the full
           // set; if that branch lived in the shell it would be the one part of the rule
           // no test could execute. The workflow only attempts the diff.
           import { appendFileSync, readFileSync } from "node:fs";
           import process from "node:process";
 
-          // Directories this classifier knows how to reason about (BR-0017-0009). The
+          // Directories this classifier knows how to reason about (BR-0015-0009). The
           // list is CLOSED: a path outside every entry selects the full set and says so,
           // because an unclassified path is never "nothing to run".
           const RECOGNIZED_DIRS = [
@@ -136,13 +136,13 @@ jobs:
           ];
 
           // Paths that may NEVER be read as documentation, checked before the
-          // documentation set (BR-0017-0010). The assistant tree is named here rather
+          // documentation set (BR-0015-0010). The assistant tree is named here rather
           // than merely left out, so the exclusion is enforced instead of incidental:
           // what lives there changes validate output, which is why the catalog is
           // loaded and not merely shipped.
           //
           // The agent-integration mirrors are NOT here, and that is a recorded hazard
-          // rather than an oversight: BR-0017-0010 requires them in the
+          // rather than an oversight: BR-0015-0010 requires them in the
           // documentation-only set with an explicit MUST, while
           // `packages/qfai/tests/codex/agents.test.ts` and
           // `.../tests/integration/agentsRulesSurface.test.ts` guard those same paths
@@ -151,7 +151,7 @@ jobs:
           // Adding a member here would decide it against the rule's own wording.
           const NEVER_DOCUMENTATION = [".qfai/assistant/"];
 
-          // The documentation-only set (BR-0017-0010). Small, and measured rather than
+          // The documentation-only set (BR-0015-0010). Small, and measured rather than
           // guessed: every other candidate is read by at least one test file, so
           // classifying it as documentation would skip the lane that guards it.
           //
@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          4e417ac4c9e1c3e418ab4af7e595a42332319101699ebe8f34b2b6b5963f002e  .github/pinned-bytes.txt
+          31c75f37be5645e4ef748370a460017f656912ce16039e05ee8e44951df1ee36  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -385,7 +385,7 @@ jobs:
   # selected as documentation-only.
   #
   # It carries NO condition and appears in no `dependencyConditions` entry, which is
-  # what `BR-0017-0011` requires of a lane moved into a job of its own: the surface
+  # what `BR-0015-0011` requires of a lane moved into a job of its own: the surface
   # it checks — the rule mirror, the skill links, the reviewer vocabulary — is what a
   # documentation-only change is most likely to break.
   #
@@ -410,7 +410,7 @@ jobs:
     needs: [detect]
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
-    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    # protection needs no repository setting change (BR-0015-0006, BR-0015-0013).
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -429,7 +429,7 @@ jobs:
     needs: [detect]
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
-    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    # protection needs no repository setting change (BR-0015-0006, BR-0015-0013).
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -452,7 +452,7 @@ jobs:
   # written for.
   #
   # The floor is pinned exactly, through the shared action's `node-version` input rather
-  # than a second inline preamble (`BR-0017-0027`). It runs the package test suite,
+  # than a second inline preamble (`BR-0015-0027`). It runs the package test suite,
   # because a runtime floor is a claim about running code and a type check would not
   # notice a missing runtime API.
   #
@@ -562,7 +562,7 @@ jobs:
     needs: [detect]
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
-    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    # protection needs no repository setting change (BR-0015-0006, BR-0015-0013).
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -659,7 +659,7 @@ jobs:
     needs: [detect]
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
-    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    # protection needs no repository setting change (BR-0015-0006, BR-0015-0013).
     if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -815,11 +815,12 @@ jobs:
           # and `sdd`, so deleting it without this step would have dropped
           # coverage rather than removed a duplicate.
           #
-          # The LOCAL binary, not a resolver. The root manifest declares no
-          # dependency on the package and provides no local binary, so `npx qfai`
-          # from here resolves to the PUBLISHED release — CI would validate a
-          # version nobody is reviewing. That is why the run was folded in rather
-          # than repointed at the shipped workflow file.
+          # The LOCAL binary, not a resolver. This job installs before it
+          # builds, so the root's workspace link to the package has no
+          # `node_modules/.bin/qfai`, and `npx qfai` from here resolves to the
+          # PUBLISHED release — CI would validate a version nobody is reviewing.
+          # That is why the run was folded in rather than repointed at the
+          # shipped workflow file.
           # The lane is a ratchet, not a clean gate. The ledger rules it runs
           # report `error`, and this repository carries rows written before
           # they existed. `check-dogfood-backlog.mjs` holds every file absent
