@@ -429,6 +429,7 @@
     "tests/helpers/routingEvalRoutes.ts",
     "tests/integration/workflow/acceptanceRuns.ts",
     "tests/integration/workflow/aResultStaysInItsScope.test.ts",
+    "tests/integration/workflow/aReplanMakesTheApprovalStale.test.ts",
     "tests/integration/workflow/doneNeedsTheChangeCommitted.test.ts",
     "tests/integration/workflow/evalFixtures.test.ts",
     "tests/integration/workflow/hostAdapter.test.ts",
