@@ -1,0 +1,14 @@
+{
+  // markdownlint-cli2 merges this file with the repository's
+  // `.markdownlint-cli2.jsonc` for every Markdown file under `.qfai/spec/`.
+  // Only rules that differ from the repository default are listed here.
+  // `packages/qfai/scripts/check-markdownlint-config.mjs` checks this file
+  // against markdownlint's strict schema.
+
+  // Spec documents hold long single-line prose. Tables and code blocks are
+  // exempt because their width is data.
+  "MD013": { "line_length": 1200, "code_blocks": false, "tables": false },
+  // A register or example document repeats its title as its only section
+  // (`# Examples` then `## Examples`), so only sibling duplicates are errors.
+  "MD024": { "siblings_only": true },
+}

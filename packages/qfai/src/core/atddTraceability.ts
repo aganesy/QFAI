@@ -18,7 +18,6 @@ import {
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
-import { withoutJsoncSyntax } from "./jsonc.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import {
@@ -27,7 +26,6 @@ import {
   parseAllMarkdownTables,
   resolveTestCaseTables,
 } from "./specPackParsers.js";
-import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
@@ -479,25 +477,21 @@ function restoreTestNames(masked: string, original: string, patterns: readonly R
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
-const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
-/**
- * `CON-DB-*` annotation, the DB peer of the API form above.
- *
- * `CON-DB-*` was a first-class authored contract kind with no downstream test
- * obligation: no annotation form, no coverage rule, and — because
- * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
- * A `QFAI:CON-DB-0002` written into a test was silently invisible.
- */
-const DB_TEST_ANNOTATION_RE = /\bQFAI:CON-DB-(\d+)\b/g;
+const API_TEST_ANNOTATION_RE = /\bQFAI:(API-\d{4}(?![\w-]))/g;
+/** The `DB-NNNN` annotation, the DB peer of the API form above. */
+const DB_TEST_ANNOTATION_RE = /\bQFAI:(DB-\d{4}(?![\w-]))/g;
 
-/** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
-const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
-/** `- Level: L4` meta line inside a heading-form test case block. */
-const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
+/**
+ * Heading form of a test case, e.g. `## TC-0001-0002: title`. `\uFF1A` is the
+ * full-width colon, accepted as a separator.
+ */
+const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:\uFF1A]\s*.*)?$/;
+/** `- Level: L4` meta line inside a heading-form test case block (`\uFF1A` is the full-width colon). */
+const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:\uFF1A]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
-const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
+const API_CONTRACT_ID_RE = /^API-\d{4}$/;
+const DB_CONTRACT_ID_RE = /^DB-\d{4}$/;
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -635,7 +629,7 @@ export type AtddCodeTraceabilityResult = {
   deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
-   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * Every declared `API-NNNN`, active and deferred alike. This is the public
    * meaning the field has always had — adding `x-qfai-status: planned` defers
    * the test obligation, it does not un-declare the contract, so an external
    * consumer using this set for "is this ID declared?" must keep seeing it.
@@ -644,24 +638,24 @@ export type AtddCodeTraceabilityResult = {
   /** The subset that carries the `QFAI-ATDD-113` obligation. */
   activeApiContractIds: Set<string>;
   /**
-   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * `API-NNNN` IDs excluded from the `QFAI-ATDD-113` obligation because their
    * contract declares `x-qfai-status: planned`. Reported as `info` so the
    * deferral stays visible instead of silently shrinking the gate.
    */
   deferredApiContractIds: Set<string>;
   contractsDbRoot: string;
-  /** Every declared `CON-DB-*`, active and deferred alike. */
+  /** Every declared `DB-NNNN`, active and deferred alike. */
   dbContractIds: Set<string>;
   /** The subset that carries the `QFAI-ATDD-115` obligation. */
   activeDbContractIds: Set<string>;
-  /** `CON-DB-*` deferred by `-- x-qfai-status: planned`; reported at `info`. */
+  /** `DB-NNNN` IDs deferred by `-- x-qfai-status: planned`; reported at `info`. */
   deferredDbContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
     api: Map<string, Set<string>>;
     /**
-     * `CON-DB-*` references found in integration tests. L3 Integration is the
+     * `DB-NNNN` references found in integration tests. L3 Integration is the
      * layer whose declared scope is real-infrastructure integration including
      * the database, so it is the one that can actually exercise a DB contract.
      */
@@ -710,15 +704,15 @@ export type AtddCodeTraceabilityResult = {
    * declared `Level` is Unit or Component. Reported at `info`
    * (`QFAI-ATDD-117`) so the exclusion is visible rather than silent — the
    * shape a coverage scan must never take, since "nothing owed" and "nothing
-   * scanned" are otherwise indistinguishable. `/qfai-implement`'s ledger gate
-   * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
+   * scanned" are otherwise indistinguishable. No validate rule demands a test
+   * for them.
    */
   unitComponentTcIds: string[];
   /**
    * `TC-*` refs declaring a `Level` of L4/API or L5/E2E.
    *
    * `catalog/test-layers.md` states that a `TC-*` row's `Level` stays within
-   * L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so an oracle that
+   * L1-L3: L4's goal is a `API-NNNN` and L5's is a `US-*`, so an oracle that
    * derives to either means the obligation is filed under the wrong ID type —
    * not that the test case is an L4/L5 test.
    *
@@ -1004,8 +998,7 @@ export async function evaluateAtddCodeTraceability(
       if (homeKind === null) {
         // Unit / Component: no ATDD annotation obligation, and therefore no
         // forbidden placement either. Annotating a `tests/integration/**` test
-        // with an L1 TC is a project's own choice, not a rule violation — the
-        // rule that owns L1/L2 is `TDDLIST_TC_NOT_COVERED` on the ledger.
+        // with an L1 TC is a project's own choice, not a rule violation.
         continue;
       }
       if (kind === homeKind && known) {
@@ -1046,14 +1039,14 @@ export async function evaluateAtddCodeTraceability(
     }
 
     for (const contractId of dbAnnotations) {
-      // Declared = active ∪ deferred, for the same reason as CON-API: a
+      // Declared = active ∪ deferred, for the same reason as API-NNNN: a
       // deferral suspends the obligation, it does not un-declare the contract.
       if (!declaredDbContractIds.has(contractId)) {
         pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conDb");
         continue;
       }
       // Only an integration test counts. A DB contract is exercised against
-      // real infrastructure, which is L3's declared scope; counting a `CON-DB`
+      // real infrastructure, which is L3's declared scope; counting a `DB-NNNN`
       // annotation from `tests/e2e/**` would let an end-to-end assertion that
       // never touches the schema close the obligation.
       if (kind === "integration") {
@@ -1189,89 +1182,6 @@ export async function evaluateAtddCodeTraceability(
 }
 
 /**
- * Where each `TC-*` annotation sits, split by whether the file declares a test.
- *
- * Both maps are keyed like the scan's own `refs.tc`: spec number, then `TC-…`,
- * then the files.
- */
-export type TestCaseAnnotationHomes = {
-  /** Files that declare a test a runner collects. */
-  tests: AtddSpecRefs;
-  /** Files that name the case and declare no test: prose, or an annotation alone. */
-  carriers: AtddSpecRefs;
-};
-
-/**
- * Every `TC-*` annotation in the test files, whatever the case's `Level`.
- *
- * The acceptance scan in {@link evaluateAtddCodeTraceability} keeps only the
- * acceptance layers, so it cannot say whether a unit test annotates a case. A
- * ledger row claims a test at every layer, so this reads with no layer filter
- * and splits the files the way `QFAI-ATDD-119` does.
- *
- * Where the project names its test files in `testFileGlobs`, executable files
- * are read through those patterns alone: a file they leave out is one the
- * runner does not select, so a test in it discharges nothing. Only the
- * structural carriers are read from the whole of `paths.testsDir` besides.
- * With no project glob the acceptance globs reach none of `unit/` or
- * `component/`, so the whole directory is read by the default pattern.
- *
- * `null` when the scan is incomplete — truncated, a pattern could not be
- * walked, or a file could not be read. A test past the gap may annotate the
- * case, so "a carrier alone names it" is then unproven, as it is for
- * `coveredByCarrierOnly`.
- *
- * SIMPLIFIED: walks and reads the test tree again after the acceptance scan.
- * Lift when: a completion gate is measured slow on the second walk.
- */
-export async function collectTestCaseAnnotationHomes(
-  root: string,
-  config: QfaiConfig,
-): Promise<TestCaseAnnotationHomes | null> {
-  const projectGlobs = config.validation.traceability.testFileGlobs;
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const testsBase = testsBaseGlob(root, testsRoot);
-  const configured = projectGlobs.map((glob) => toPosixPath(glob).trim()).filter(Boolean);
-  const globs =
-    configured.length > 0
-      ? [...configured, `${testsBase}/**/*.{${STRUCTURAL_ANNOTATION_EXTENSIONS.join(",")}}`]
-      : [
-          ...buildAtddScanGlobs(root, testsRoot, DEFAULT_TEST_FILE_GLOB, []),
-          `${testsBase}/${DEFAULT_TEST_FILE_GLOB}`,
-        ];
-  const excludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
-  let scan: CollectFilesByGlobsResult;
-  try {
-    scan = await collectTestFiles(root, globs, excludes, acceptanceSourceFilter(root, globs));
-  } catch {
-    return null;
-  }
-  if (scan.truncated) return null;
-  const homes: TestCaseAnnotationHomes = { tests: new Map(), carriers: new Map() };
-  for (const file of scan.files) {
-    let raw: string;
-    try {
-      raw = await readFile(file, "utf-8");
-    } catch {
-      return null;
-    }
-    const refs = extractSpecScopedAnnotations(maskTestSource(file, raw), TC_TEST_ANNOTATION_RE);
-    if (refs.length === 0) continue;
-    // A computed binding (`const run = LIVE ? test : test.skip`) declares a test
-    // no literal call shows, and this check reports at `error`, so it counts.
-    // The binding is JavaScript syntax, so only a JavaScript-family file can
-    // declare a test through it. In any other file, prose included, the same
-    // text is an example and declares nothing a runner collects.
-    const bindable = COMPUTED_BINDING_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase());
-    const declaresTest =
-      hasRunnableTestStructure(file, raw) || (bindable && hasComputedSuiteBinding(raw));
-    const into = declaresTest ? homes.tests : homes.carriers;
-    for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
-  }
-  return homes;
-}
-
-/**
  * Why a pattern could not be read, in a form the report may carry.
  *
  * A file-system error's own message embeds the absolute path the call was made
@@ -1403,10 +1313,10 @@ function unreadableDirectoryOf(root: string, error: unknown): string | null {
 const UNCOUNTED_TEST_DIRS = ["atdd"];
 
 /** Any QFAI test annotation, in any of its forms. */
-const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
+const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
-const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/;
+const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /**
  * Whether a legacy file's annotations are all ones ATDD no longer owes.
@@ -1419,7 +1329,7 @@ const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/
  * required nor misplaced wherever it lands. The advice would push a project back
  * into the all-integration collapse the exclusion exists to undo.
  *
- * Conservative on every uncertainty: a `US-*` or `CON-*` annotation is
+ * Conservative on every uncertainty: a `US-*` or contract annotation is
  * `Level`-independent and still owed, and an unknown or level-less `TC-*`
  * resolves to the default home rather than to "no obligation", so only a file
  * whose every annotation is provably outside ATDD goes quiet.
@@ -1584,13 +1494,9 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
   // being an obligation of their own.
   const tcText = maskNonSpecRegions(rawTcText);
   const levels = new Map<string, string>();
-  // First-seen, not last: `set` on every pair made the *last* duplicate heading
-  // win here while the ledger gate kept the first, so a TC headed `L1` and then
-  // `L1`-superseded-by-`L3` was excluded from `QFAI-ATDD-112` by one collector
-  // and claimed by `TDDLIST_TC_NOT_COVERED` by the other — owed twice, which is
-  // the two-gates-disagree failure this routing exists to remove. The table pass
-  // below and `resolveTestCaseTables` already resolve duplicates first-seen, so
-  // the heading pass was the one shape out of step.
+  // First-seen, not last, so a TC declared twice resolves to one level whichever
+  // shape declares it: the table pass below and `resolveTestCaseTables` resolve
+  // duplicates first-seen too.
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
     if (!levels.has(id)) {
       levels.set(id, level);
@@ -1607,14 +1513,10 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
 /**
  * Table-form levels, read from the same tables `resolveTestCaseTables` reads.
  *
- * These two collectors decide the same TC's fate from opposite ends —
- * `QFAI-ATDD-112` excludes an L1/L2 TC, `TDDLIST_TC_NOT_COVERED` demands a
- * ledger row for it — so they must agree on which tables are authoritative.
- * Scanning every table in the document meant an explanatory table above the
- * `## Test Case Table` heading won under first-declaration-wins: an example
- * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112`, while the
- * section-scoped ledger gate read the real `L3` row and did not claim it
- * either. Full validation then passed with no test at all.
+ * Scanning every table in the document let an explanatory table above the
+ * `## Test Case Table` heading win under first-declaration-wins: an example
+ * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112` although the
+ * real table declared it `L3`, and full validation passed with no test at all.
  */
 function collectTableTcLevels(tcText: string): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
@@ -1641,19 +1543,6 @@ function collectTableTcLevels(tcText: string): Array<[string, string]> {
 }
 
 /**
- * Heading-form TC levels only (`## TC-0001` + `- Level:`), with non-spec
- * regions masked.
- *
- * Exported for `validateTddList`: its table reader is deliberately
- * section-scoped, so the heading shape needs collecting separately. Using the
- * combined `collectTcLevels` there would re-admit every table in the document,
- * including an Appendix one the section scoping exists to keep out.
- */
-export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, string]> {
-  return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
-}
-
-/**
  * The TC ids a spec pack declares, from the shapes that carry authority.
  *
  * The union of the heading form and the `TC-ID` column of the tables
@@ -1667,22 +1556,19 @@ const TC_TOKEN_RE = /\bTC-\d{4}(?:-\d{4})?\b/g;
 export function collectDeclaredTcIds(rawTcText: string): Set<string> {
   const ids = new Set(collectHeadingTcIdsFrom(rawTcText));
   // The section, not `resolveTestCaseTables`: that filter is case-exact on the
-  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids — the
-  // ledger reports `TDDLIST_TC_TABLE_UNRESOLVED` and ATDD keeps the default
-  // obligation, so fixing the header clears both. What the section boundary
-  // excludes is the appendix table, which declares nothing.
+  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids, so
+  // ATDD keeps the default obligation until the header is fixed. What the
+  // section boundary excludes is the appendix table, which declares nothing.
   const masked = maskNonSpecRegions(rawTcText);
   const section = extractTestCaseTableSection(masked) ?? masked;
   for (const table of parseAllMarkdownTables(section)) {
     const idIndex = table.headers.findIndex((header) => header.trim().toUpperCase() === "TC-ID");
     if (idIndex < 0) {
-      // The header is mistyped — `TC Id`, say — so this table is unresolvable
-      // and `TDDLIST_TC_TABLE_UNRESOLVED` reports it. Its ids are still
-      // **declared**: dropping them removed the obligation entirely, and with
-      // no ledger `TDDLIST_MISSING` is only a warning, so a spec could pass
-      // `--profile full --fail-on error` with neither a test nor a ledger row.
-      // Conservative here, loud there — keeping the tokens preserves the
-      // obligation while the header is what gets fixed.
+      // The header is mistyped — `TC Id`, say — so no level is read from this
+      // table. Its ids are still **declared**: dropping them would remove the
+      // obligation with nothing reporting it, and a spec could pass
+      // `--profile full --fail-on error` with no test behind it. Keeping the
+      // tokens preserves the obligation while the header is what gets fixed.
       for (const row of table.rows) {
         for (const value of row) {
           for (const match of value.matchAll(TC_TOKEN_RE)) {
@@ -1703,11 +1589,10 @@ export function collectDeclaredTcIds(rawTcText: string): Set<string> {
 /**
  * Every heading-form TC id, whether or not the block declares a `Level`.
  *
- * `collectHeadingTcLevelsFrom` yields a pair only when a `- Level:` line
- * follows the heading, so it cannot answer "does this spec declare this TC?" —
- * a level-less TC is still declared. `validateTddList` needs both questions
- * answered from the same shape: the id set decides whether a ledger `TC-Refs`
- * value is known, the level pairs decide whether it is a coverage target.
+ * The level collector yields a pair only when a `- Level:` line follows the
+ * heading, so it cannot answer "does this spec declare this TC?" — a
+ * level-less TC is still declared. {@link collectDeclaredTcIds} reads this
+ * for that reason.
  */
 export function collectHeadingTcIdsFrom(rawTcText: string): string[] {
   const ids: string[] = [];
@@ -1789,7 +1674,7 @@ function normalizeLevel(level: string): string {
 /**
  * `Level` values that carry no ATDD annotation obligation.
  *
- * `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and
+ * The `atdd-author` step puts Unit and Component out of its scope, and
  * `catalog/test-layers.md` gives L1/L2 no mandated directory — only L3-L5 are
  * directory-pinned, and only those three roots are ever scanned. L1/L2 used to
  * fall through `LEVEL_TO_TEST_KIND`'s `?? "integration"`, which is the fallback
@@ -1804,26 +1689,14 @@ function normalizeLevel(level: string): string {
  * `tests/integration/**` — the all-integration collapse the layer model exists
  * to prevent.
  *
- * These obligations are not unguarded: `tdd/test-list.md` carries a row per
- * coverage-target TC and `TDDLIST_TC_NOT_COVERED` (`error`) reports a missing
- * one, which is `/qfai-implement`'s gate and the stage that owns Unit and
- * Component.
+ * No validate rule demands a test for these levels. `QFAI-ATDD-117` reports
+ * each excluded TC at `info`, so the exclusion is visible rather than silent.
  *
- * **One vocabulary, not two.** This is `UNIT_COMPONENT_LAYERS` itself, not a
- * second copy of its members. The handoff above is the whole safety argument
- * for dropping the ATDD obligation, and it only holds while the set ATDD stops
- * owing is the set the ledger starts owing: a spelling in one and not the
- * other is a `Level` owed by no gate at all, which is the hole this exclusion
- * was written to avoid opening. Two literals with the same members and two
- * private normalizations is exactly how `resolveAtddHomeKind` came to have
- * three answers, so the vocabulary is imported rather than restated. The two
- * modules still ask different questions of it — "does this owe an ATDD
- * annotation" here, "is this a ledger coverage target" there — and those
- * predicates stay separate; only the word list is shared. Both normalize with
- * `trim().toLowerCase()`, which `tddHelpers` documents as the membership
- * contract of the set.
+ * The members are lower-case, so a `Level` goes through {@link normalizeLevel}
+ * before it is looked up. Adding a spelling here takes the only test obligation
+ * away from every TC declaring it.
  */
-const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
+const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
@@ -2091,13 +1964,13 @@ const PLANNED_CONTRACT_RE = new RegExp(
  *
  * `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) but slices them in
  * Phase 2, so between the second contract and the last slice every declared
- * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
+ * `API-NNNN` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
  * deferral explicit and reviewable in the contract itself.
  *
  * The marker is only honoured at the **document root**. A text scan that
  * accepted any indentation would let an `x-qfai-status: planned` on a single
  * OpenAPI operation defer the whole file, silently dropping the API-test
- * obligation for every other `CON-API-*` it declares. The document is therefore
+ * obligation for every other `API-NNNN` it declares. The document is therefore
  * parsed (YAML is a superset of JSON, so both contract formats go through the
  * same path) and only a top-level key counts. An unparseable document falls
  * back to a column-0 text match, which cannot see a nested key either.
@@ -2173,7 +2046,7 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
  * A DB contract is `.sql`, so the YAML-parse path `isPlannedApiContract` uses
  * cannot apply. The marker is matched on its own comment line only: accepting
  * it mid-statement would let a stray mention inside a `CREATE TABLE` body defer
- * every `CON-DB-*` the file declares.
+ * every `DB-NNNN` the file declares.
  */
 const PLANNED_DB_CONTRACT_RE = new RegExp(
   `^[ \\t]*--[ \\t]*${escapeRegExp(PLANNED_CONTRACT_KEY)}[ \\t]*:[ \\t]*${escapeRegExp(
@@ -2194,9 +2067,10 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
  * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
  * here left those stories unable to defer at all, and in an H2/H3 document it
  * also mis-attributed an H3 story's marker to the preceding H2 story, because
- * the `###` line neither opened a block nor closed the open one.
+ * the `###` line neither opened a block nor closed the open one. `\uFF1A` is
+ * the full-width colon, accepted as a separator.
  */
-const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:\uFF1A]\s*.*)?$/;
 
 /** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
 const ANY_HEADING_RE = /^#{1,6}\s+/;
@@ -2349,7 +2223,7 @@ const ORDERED_MARKER = "\\d{1,9}[.)]";
  * width is the item's content column; group 2 is the id.
  */
 const US_LIST_ITEM_RE = new RegExp(
-  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:：]?`,
+  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:\\uFF1A]?`,
 );
 
 /**
@@ -2415,7 +2289,7 @@ function indentColumn(line: string): number {
  * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
  *
  * A story whose acceptance cannot be observed at E2E in this slice had no
- * in-band way to say so: `CON-API-*` and `CON-DB-*` both defer with
+ * in-band way to say so: `API-NNNN` and `DB-NNNN` both defer with
  * `x-qfai-status: planned`, while a `US-*` could only be left uncovered (a hard
  * `QFAI-ATDD-111` error), covered by a test asserting nothing, or erased by
  * declaring the whole spec non-user-facing. This is the per-story counterpart.
@@ -2882,7 +2756,8 @@ const GHERKIN_STRUCTURE_PATTERNS: readonly RegExp[] = [
  * A `.feature` written in a Gherkin dialect this scan cannot read English.
  *
  * Cucumber resolves `Scenario:` through the `# language:` header, so a feature
- * declaring `ja` collects `シナリオ:` and matches no English keyword above.
+ * declaring `ja` collects the Japanese scenario keyword and matches no English
+ * keyword above.
  * Carrying a keyword table for seventy dialects is not this scan's job, so a
  * non-English feature is taken at its word and counted as declaring a test:
  * over-counting one file costs a finding that would not have been raised,
@@ -2948,25 +2823,6 @@ function hasRunnableTestStructure(file: string, text: string): boolean {
     return matchesAny(GHERKIN_STRUCTURE_PATTERNS, text);
   }
   return matchesAny(runnableTestPatterns(extension, text), text);
-}
-
-/** A readable test file that declares this TC in a runnable carrier. */
-export function hasRunnableTcCarrier(
-  file: string,
-  text: string,
-  specNumber: string,
-  tcId: string,
-): boolean {
-  const extension = path.extname(file).slice(1).toLowerCase();
-  if (extension !== "feature" && !TEST_PATTERNS_BY_EXTENSION.has(extension)) return false;
-  const annotations = extractSpecScopedAnnotations(
-    maskTestSource(file, text),
-    TC_TEST_ANNOTATION_RE,
-  );
-  return (
-    annotations.some((ref) => ref.spec === specNumber && `TC-${ref.id}` === tcId) &&
-    hasRunnableTestStructure(file, text)
-  );
 }
 
 /** True when any of `patterns` matches `text` once its non-code spans are gone. */
@@ -3208,8 +3064,7 @@ function acceptanceSourceFilter(
     namedTestFile(toPosixPath(absolutePath));
 }
 
-/** `paths.testsDir` as a glob base: root-relative inside the root, absolute outside. */
-function testsBaseGlob(root: string, testsRoot: string): string {
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -3217,11 +3072,7 @@ function testsBaseGlob(root: string, testsRoot: string): string {
   const base = isInsideRoot
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
-  return base.replace(/\/+$/, "");
-}
-
-function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
-  const normalizedBase = testsBaseGlob(root, testsRoot);
+  const normalizedBase = base.replace(/\/+$/, "");
   return [
     `${normalizedBase}/e2e/${filePattern}`,
     `${normalizedBase}/api/${filePattern}`,
@@ -3317,7 +3168,7 @@ const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
   ["integration", "integration"],
 ]);
 
-type TestLayerRoots = {
+export type TestLayerRoots = {
   root: string;
   testsDirName: string;
   e2eRoot: string;
@@ -3326,10 +3177,23 @@ type TestLayerRoots = {
   isPackageRoot: (absoluteDir: string) => boolean;
 };
 
+/** Shared directory crosswalk for acceptance checks and migration. */
+export function createTestLayerRoots(root: string, config: QfaiConfig): TestLayerRoots {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  return {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+}
+
 /** An acceptance layer a file answers, and the layer directory it sits in. */
 type TestLayer = { kind: AtddTestKind; layerDir: string };
 
-function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
+export function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
   return resolveTestLayer(filePath, roots)?.kind ?? null;
 }
 
@@ -3373,15 +3237,7 @@ export function atddTestOwnerProbe(
   root: string,
   config: QfaiConfig,
 ): (absolutePath: string) => string | null {
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const roots: TestLayerRoots = {
-    root,
-    testsDirName: testsDirName(root, config),
-    e2eRoot: path.join(testsRoot, "e2e"),
-    apiRoot: path.join(testsRoot, "api"),
-    integrationRoot: path.join(testsRoot, "integration"),
-    isPackageRoot: packageRootProbe(),
-  };
+  const roots = createTestLayerRoots(root, config);
   return (absolutePath) => {
     const layer = resolveTestLayer(absolutePath, roots);
     return layer === null ? null : layerSpecNumber(layer, absolutePath);
@@ -3543,6 +3399,61 @@ function declaresName(content: string): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * JSONC with its comments and trailing commas taken out, so `JSON.parse` reads
+ * it. A `//` or `/*` inside a string is text, not a comment.
+ */
+function withoutJsoncSyntax(content: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i] ?? "";
+    const next = content[i + 1] ?? "";
+    if (inString) {
+      out += char;
+      if (char === "\\") {
+        out += next;
+        i += 1;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      out += char;
+    } else if (char === "/" && next === "/") {
+      const end = content.indexOf("\n", i);
+      i = end === -1 ? content.length : end - 1;
+    } else if (char === "/" && next === "*") {
+      const end = content.indexOf("*/", i + 2);
+      i = end === -1 ? content.length : end + 1;
+    } else if (char === "," && /^\s*[}\]]/.test(withoutLeadingComments(content.slice(i + 1)))) {
+      // A trailing comma: the next thing that is not a comment closes the value.
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
+/** Text with leading whitespace and comments removed, up to its first token. */
+function withoutLeadingComments(text: string): string {
+  let rest = text;
+  for (;;) {
+    const trimmed = rest.trimStart();
+    if (trimmed.startsWith("//")) {
+      const end = trimmed.indexOf("\n");
+      rest = end === -1 ? "" : trimmed.slice(end + 1);
+    } else if (trimmed.startsWith("/*")) {
+      const end = trimmed.indexOf("*/");
+      rest = end === -1 ? "" : trimmed.slice(end + 2);
+    } else {
+      return trimmed;
+    }
   }
 }
 
@@ -3714,11 +3625,11 @@ function extractSpecScopedAnnotations(text: string, pattern: RegExp): SpecScoped
 function extractApiContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(API_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-API-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
@@ -3726,11 +3637,11 @@ function extractApiContractAnnotations(text: string): string[] {
 function extractDbContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(DB_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-DB-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
