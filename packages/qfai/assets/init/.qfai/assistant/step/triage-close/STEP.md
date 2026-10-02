@@ -67,7 +67,7 @@ Any other route closes here.
 
 ## Gate
 
-The reviewer confirms one outcome is recorded with the evidence behind it,
+The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
 no follow-up was routed or started, and no tracked file changed. The report
 never says a change is done.

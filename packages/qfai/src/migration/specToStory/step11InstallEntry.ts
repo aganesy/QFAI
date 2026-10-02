@@ -2,10 +2,8 @@ import { lstat, mkdir, readdir, readlink, realpath, rename, stat } from "node:fs
 import path from "node:path";
 
 import { collectTemplateFiles, copyTemplatePaths } from "../../core/fs/templateCopy.js";
-import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { hashAssistantAssetFile } from "../../core/assistantAssetProvenance.js";
 import { isEnoent } from "../../core/fs/errno.js";
-import { planEntryDirective } from "../../core/init/entryDirective.js";
 import {
   collectCanonicalSkillIds,
   SKILL_ARCHIVE_DIR,
@@ -281,26 +279,6 @@ async function planLinks(context: MigrationContext, ids: readonly string[], plan
   }
 }
 
-async function planEntryPoints(context: MigrationContext, plan: StepPlan): Promise<void> {
-  for (const name of AGENT_ENTRY_POINT_FILES) {
-    const entry = await planEntryDirective(context.root, name);
-    if (entry.kind === "current") continue;
-    if (entry.kind === "refused") {
-      plan.forAPerson?.push(`${name}: the entry directive was not added. ${entry.reason}`);
-      continue;
-    }
-    plan.operations.push({
-      kind: "delegate",
-      target: name,
-      description:
-        entry.kind === "create"
-          ? "write from the package's seed, which opens with the entry directive"
-          : "prepend the entry directive",
-      apply: entry.apply,
-    });
-  }
-}
-
 /**
  * The reminder hooks `qfai init` installs, through the same merge: a missing
  * hook file is written from the package's template, and one the project has
@@ -326,7 +304,7 @@ async function planReminderHookFiles(context: MigrationContext, plan: StepPlan):
       description:
         hooks.kind === "create"
           ? "write from the package's hook template"
-          : `update (${reminderHooksUpdateDetail(hooks.events)}; existing settings kept)`,
+          : `update (${reminderHooksUpdateDetail(hooks.events, hooks.permissionsAdded)}; existing settings kept)`,
       apply: () => writeReminderHooks(hooks),
     });
     if (relativePath === CODEX_HOOKS_RELATIVE_PATH) {
@@ -423,7 +401,6 @@ export const step11: MigrationStep = {
     "steps",
     "step-archive",
     "skill-links",
-    "entry-points",
     "gitignore",
     "gitignore-staging",
     "reminder-hooks",
@@ -435,7 +412,6 @@ export const step11: MigrationStep = {
     for (const id of ids) await planLayerEntry(context, "skill", id, plan);
     for (const id of await shippedStepIds()) await planLayerEntry(context, "step", id, plan);
     await planLinks(context, ids, plan);
-    await planEntryPoints(context, plan);
     await planReminderHookFiles(context, plan);
     await planReminderText(context, plan);
     const gitignore = await step10.plan(context);

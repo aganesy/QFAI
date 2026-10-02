@@ -20,6 +20,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { captureStdout } from "../helpers/stdout.js";
 import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
@@ -636,6 +637,128 @@ describe("nothing under a review directory reaches a commit", () => {
         (sample) => ignoredByGit(root, sample),
       );
       expect(hidden, "a governance record must stay committable").toEqual([]);
+    });
+  });
+});
+
+describe("the managed block does not repeat a line the project already has", () => {
+  // QFAI:EX-0001-0033-10
+  it("leaves /tmp/ to the project's own line and says so", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(root, ".gitignore"),
+        `# Temporary files${NL}/tmp/${NL}node_modules/${NL}`,
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      const lines = (await readGitignore(root)).split(NL);
+      expect(lines.filter((line) => line === "/tmp/")).toHaveLength(1);
+      expect(lines).toContain(QFAI_GITIGNORE_MARKER);
+      expect(lines).toContain(".qfai/report/*");
+      expect(output).toContain("left out of the QFAI entries: /tmp/");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("counts the project's own unanchored tmp/ as the same ignore", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `tmp/${NL}`, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await readGitignore(root)).split(NL)).not.toContain("/tmp/");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("keeps every other ignore line in the block, even one the project has", async () => {
+    // The contract names these as the block's own lines.
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(root, ".gitignore"),
+        `.qfai/state.json${NL}.qfai/report/*${NL}`,
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      const lines = (await readGitignore(root)).split(NL);
+      expect(lines.filter((line) => line === ".qfai/state.json")).toHaveLength(2);
+      expect(lines.filter((line) => line === ".qfai/report/*")).toHaveLength(2);
+      expect(output).not.toContain("left out of the QFAI entries");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("names the lines it would leave out on --dry-run", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).toContain("left out of the QFAI entries: /tmp/");
+      expect(await readGitignore(root)).toBe(`/tmp/${NL}`);
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("keeps the run-state line in the block even when the project has it, and settles", async () => {
+    // The freshness check reads that line from the block, so leaving it out
+    // would rebuild the block on every run.
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `.qfai/run/${NL}`, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const first = await readGitignore(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(first.split(NL).filter((line) => line === ".qfai/run/")).toHaveLength(2);
+      expect(await readGitignore(root)).toBe(first);
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("does not count a project line that starts with whitespace", async () => {
+    // Git reads the leading space as part of the pattern, so ` /tmp/` ignores nothing.
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), ` /tmp/${NL}`, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect((await readGitignore(root)).split(NL)).toContain("/tmp/");
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("settles on identical bytes when init runs again", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}`, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const first = await readGitignore(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readGitignore(root)).toBe(first);
+    });
+  });
+
+  // QFAI:EX-0001-0033-10
+  it("still writes /tmp/ when the project's line is cancelled by a negation", async () => {
+    await withProject(async (root) => {
+      await writeFile(path.join(root, ".gitignore"), `/tmp/${NL}!/tmp/${NL}`, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readGitignore(root)).split(NL);
+      expect(lines.filter((line) => line === "/tmp/")).toHaveLength(2);
     });
   });
 });

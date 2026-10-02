@@ -25,12 +25,12 @@ const CATALOG: [string, string][] = [
   // QFAI:EX-0001-0220-02
   [
     "answer-question",
-    "answer (triage): triage-answer; close (triage): triage-close; default modifiers none; decision points none; branch points none; binds no flow",
+    "answer (triage, no review): triage-answer, triage-close; default modifiers none; decision points none; branch points none; binds no flow",
   ],
   // QFAI:EX-0001-0220-03
   [
     "investigate-question",
-    "investigate (triage): triage-investigate; answer (triage): triage-answer; close (triage): triage-close; default modifiers none; decision points none; branch points triage-investigate; binds no flow",
+    "answer (triage, no review): triage-investigate, triage-answer, triage-close; default modifiers none; decision points none; branch points triage-investigate; binds no flow",
   ],
   // QFAI:EX-0001-0220-04
   [
@@ -231,7 +231,8 @@ const BINDING = {
 // A plan in the words of its catalog example: its stages, its points and the flow it binds.
 function described(plan: WorkflowPlanFile, planned: PlanStages): string {
   const stages = plan.stages.map(
-    (stage) => `${stage.id} (${stage.kind}): ${stage.steps.map(stepText).join(", ")}`,
+    (stage) =>
+      `${stage.id} (${stage.kind}${stage.review ? ", no review" : ""}): ${stage.steps.map(stepText).join(", ")}`,
   );
   return [
     ...stages,
