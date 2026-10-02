@@ -200,7 +200,8 @@ async function textAt(root: string, relative: string): Promise<string> {
 }
 
 function operations(report: string): string[] {
-  const section = /^## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
+  // A report opens with its verdict line, so the heading is found at the start of a line.
+  const section = /(?:^|\n)## Operations\r?\n([\s\S]*?)(?=\r?\n## |$)/.exec(report)?.[1] ?? "";
   return section
     .split(/\r?\n/)
     .map((line) => line.trim())
