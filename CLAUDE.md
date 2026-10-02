@@ -9,7 +9,8 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
 - TypeScript: avoid bare `as` type assertions; prefer type narrowing.
 - TypeScript: await or return every promise. `.agents/rules/minimal-implementation.md`
   § 2 governs consuming callers, kept failures and callback boundaries.
-- Keep functions focused; extract when a function exceeds ~50 lines.
+- Keep each function focused on one job. Length alone is not a reason to
+  extract one.
 - Build a file path with `node:path`, never by joining strings: CI runs the
   suite on Linux and on Windows.
 - A branch catches up by merging the default branch into it, never by rebase.
