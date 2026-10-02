@@ -70,11 +70,14 @@ function checkFile(relPath: string, content: string, kept: readonly KeptEmphasis
 }
 
 async function shippedFiles(): Promise<string[]> {
-  const files = await fg(SCANNED_ROOTS.map((root) => `${root}/**/*`), {
-    cwd: initRoot,
-    dot: true,
-    onlyFiles: true,
-  });
+  const files = await fg(
+    SCANNED_ROOTS.map((root) => `${root}/**/*`),
+    {
+      cwd: initRoot,
+      dot: true,
+      onlyFiles: true,
+    },
+  );
   return files.sort();
 }
 
@@ -133,9 +136,7 @@ describe("capitalised emphasis in the shipped assistant tree and root rules", ()
       { phrase: "gone MUST", readBy: "unused" },
     ]);
 
-    expect(verdict.uncovered).toEqual([
-      "sample.md: …## Evidence (MANDATORY) You MUST write it. …",
-    ]);
+    expect(verdict.uncovered).toEqual(["sample.md: …## Evidence (MANDATORY) You MUST write it. …"]);
     expect(verdict.stale).toEqual(["sample.md: gone MUST"]);
   });
 
