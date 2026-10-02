@@ -58,4 +58,13 @@ Feature: Run any migration step without risk to the project
     Then the source file is gone from the old layout
     And a source file holding content with no destination is kept under the migration's retired archive
     And a directory left empty is removed
+
+  # AC-0004-0003-08
+  Scenario: A step says what it found before it reports
+    Given a project with a qfai.config.yaml
+    When one of steps 1 to 10 runs to completion, in a dry run or a real run
+    Then its first line says that no 1.x layout was found under the specs directory, that the migration is already done, or that a 1.x layout was found and is being migrated
+    And a line that found no layout names the specs directory and the value of paths.specsDir, relative to the project root
+    And step 10 ends with one line saying which of the three applies and, where no layout was found, asking the person to check that the directory is where the specs live
+    And steps 11 and 12 print no such line
 ```

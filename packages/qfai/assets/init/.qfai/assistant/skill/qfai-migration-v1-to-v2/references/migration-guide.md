@@ -343,6 +343,27 @@ The same steps serve two runs:
 | On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks                                |
 | Migrated already by an earlier 2.x release | Steps 1 to 10 each change nothing and add a line saying the migration is already done; step 11 adds only what that release lacked, the hooks among it |
 
+Steps 1 to 10 each print one line before their report, in a dry run and a real
+run, and the report file keeps it. The line says what the step found:
+
+| First line                                                      | What it means                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` | The tree shows no trace of the old layout, and steps 1, 9 and 10 have no work of their own. |
+| `1.x layout found, migrating`                                   | The tree shows a trace of the old layout, or step 1, 9 or 10 has work of its own.           |
+| `already migrated (id-map.json present)`                        | An earlier run migrated the project and no step has anything left to do.                    |
+
+The traces are an ID map, a source of step 1's renames, a spec pack or
+`_policies/` directory in the specs directory, staging the step has to clear and
+a retired key in `qfai.config.yaml`. `<specsDir>` is the specs directory the
+configuration names and `<value>` is the configured `paths.specsDir`, each
+written from the project root with `/` and never as an absolute path.
+
+Step 10 also ends with a `Summary:` line for the first two, and with the line
+saying the migration is already done for the third. Steps 11 and 12 print
+neither line, because they compare the project with the installed package and
+not with the old layout. A step never decides that the project is in the wrong
+place. It names the directory it looked in and leaves the check to the person.
+
 After upgrading a project the second row describes:
 
 1. Run `npx qfai init` without `--force`. It installs the reminder hooks and
@@ -382,7 +403,8 @@ for a person to inspect.
 
 Step 12 writes only its report file.
 
-Every report contains `## Operations`. Steps 2 through 12 also contain
+Every report contains `## Operations`, after the first line of steps 1 to 10.
+Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
 `## Annotations kept`; step 10 contains `## Git index`; step 11 contains
 `## Reminder hooks`; step 12 contains `## Files scanned`. Empty sections say
@@ -390,9 +412,12 @@ Every report contains `## Operations`. Steps 2 through 12 also contain
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
-completed step is safe to run again and changes no file but its report file. If steps 1 to 9 all
-report `none` on a project already using the story tree, there is nothing to
-migrate; run steps 10 to 12 all the same.
+completed step is safe to run again and changes no file but its report file.
+When every one of steps 1 to 10 prints
+`no 1.x layout found under <specsDir> (paths.specsDir=<value>)` first on a
+project already using the story tree, report that there is nothing to migrate
+in the directory that line names and ask the person to check that the specs
+live there. Run steps 11 and 12 all the same.
 
 Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
 is archived under `retired/_policies/` and none of its sections was copied to

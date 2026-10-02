@@ -85,6 +85,8 @@ const TRUST_CODEX_HOOKS =
   "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
 const ALREADY_DONE =
   "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
+const VERDICT_DONE = "already migrated (id-map.json present)";
+const VERDICT_FOUND = "1.x layout found, migrating";
 // Step 12 on a migrated project outside a git repository: nothing to list, and the scan says why
 // it did not run.
 const CLEAN_REPORT =
@@ -1149,9 +1151,20 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
         expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
         if (step <= 10) {
+          expect(result.output.split("\n").slice(0, 3), `step ${step}`).toEqual([
+            VERDICT_DONE,
+            "",
+            "## Operations",
+          ]);
           expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `step ${step}`).toBe(true);
+          expect(
+            result.output.split("\n").filter((line) => line.startsWith("Summary")),
+            `step ${step}`,
+          ).toEqual([]);
           const items = result.output.split("\n").filter((line) => line.startsWith("- "));
           expect(items, `step ${step}`).toEqual([]);
+        } else {
+          expect(result.output.startsWith("## Operations\n"), `step ${step}`).toBe(true);
         }
         if (step === 11 && pass === 1) {
           const operations = section(result.output, "Operations");
@@ -1247,6 +1260,7 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         const result = await stepIn(root, step);
         expect(result.code, `${name} step ${step}: ${result.output}${result.errors}`).toBe(0);
         expect(result.output, `${name} step ${step}`).toBe(preview.output);
+        expect(result.output.split("\n")[0], `${name} step ${step}`).toBe(VERDICT_DONE);
         expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `${name} step ${step}`).toBe(true);
       }
       expect(await fingerprint(root), name).toBe(before);
@@ -1303,6 +1317,42 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
       expect(section(five.output, "For a person"), name).toEqual([
         expect.stringContaining("TC-0001-0009: no criterion"),
       ]);
+    }
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-08
+  it("opens a stopped migration with the found line in steps 4, 5 and 7 and never with the already-migrated line", async () => {
+    // QFAI:EX-0004-0003-44
+    const { root: finished } = await earlierRelease();
+    const unsettled = await clone(finished);
+    await appendFile(
+      path.join(
+        unsettled,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md",
+      ),
+      "| TC-0001-0009 | — | — | Cancel an order | The order is gone |\n",
+    );
+    for (const step of [4, 5, 7]) {
+      for (const args of [["--dry-run"], []]) {
+        const label = `step ${step} ${args.join(" ")}`.trimEnd();
+        const result = await stepIn(unsettled, step, args);
+        expect(result.code, `${label}: ${result.errors}`).toBe(step === 5 ? 3 : 0);
+        expect(result.output.split("\n").slice(0, 3), label).toEqual([
+          VERDICT_FOUND,
+          "",
+          "## Operations",
+        ]);
+        expect(result.output, label).not.toContain(ALREADY_DONE);
+        if (step === 5) {
+          expect(section(result.output, "For a person"), label).toEqual([
+            expect.stringContaining("TC-0001-0009: no criterion"),
+          ]);
+        } else {
+          for (const heading of [...result.output.matchAll(/^## (.+)$/gm)].map((m) => m[1])) {
+            expect(result.output, `${label}: ${heading}`).toContain(`## ${heading}\nnone\n`);
+          }
+        }
+      }
     }
   }, 300_000);
 });

@@ -402,6 +402,7 @@
     "tests/unit/migration/specToStory/step12OldPaths.test.ts",
     "tests/unit/migration/specToStory/steps01to04.test.ts",
     "tests/unit/migration/specToStory/steps05to08.test.ts",
+    "tests/unit/migration/specToStory/verdictLine.test.ts",
     "tests/unit/storyTree/core.test.ts",
     "tests/validators/agentDefaults.test.ts",
     "tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts",

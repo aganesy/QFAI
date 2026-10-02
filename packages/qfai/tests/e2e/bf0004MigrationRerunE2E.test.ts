@@ -265,6 +265,13 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         expect(last, `step ${number} ${kind}`).toBe(`Exit code: ${results[number - 1]?.status}`);
       }
     }
+    // Steps 1 to 10 say what they found before they report; steps 11 and 12 open on their report.
+    for (const [position, result] of [...preview, ...applied].entries()) {
+      const index = position % 12;
+      expect(result.stdout.split(/\r?\n/)[0], `step ${index + 1}`).toBe(
+        index < 10 ? "1.x layout found, migrating" : "## Operations",
+      );
+    }
     expect(applied[11]?.status, applied[11]?.stdout).toBe(0);
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),
@@ -324,9 +331,15 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         expect(real.status, `pass ${pass} step ${number}: ${real.stdout}${real.stderr}`).toBe(0);
         expect(real.stdout, `pass ${pass} step ${number}`).toBe(dryRun.stdout);
         if (number <= 10) {
+          expect(real.stdout.split(/\r?\n/).slice(0, 3), `step ${number}`).toEqual([
+            "already migrated (id-map.json present)",
+            "",
+            "## Operations",
+          ]);
           expect(real.stdout.endsWith(`\n${ALREADY_DONE}\n`), `step ${number}`).toBe(true);
         } else {
           expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
+          expect(real.stdout.split(/\r?\n/)[0], `step ${number}`).toBe("## Operations");
         }
         if (number === 11) {
           expect(section(real.stdout, "Reminder hooks").join("\n")).not.toContain("edited here");
