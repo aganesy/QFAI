@@ -1,11 +1,12 @@
-// QFAI:EX-0001-0195-01
+// QFAI:EX-0001-0188-01
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -13,10 +14,9 @@ const boundedStages = [
   stageKind,
   skill,
   operation,
-  when: "always",
 }));
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
   flows: ["BF-0007"],
 };
 
@@ -61,8 +61,8 @@ function routeWithRisk(signal: string) {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Change how user records are stored.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
@@ -72,7 +72,6 @@ function routeWithRisk(signal: string) {
           newStories: [],
           proposedWriteScope: ["src/users/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
@@ -104,7 +103,7 @@ for (const [title, signal] of signals) {
     expect(actual).toEqual({
       state: "awaiting_input",
       questions: [{ kind: "decision", text: expectedText }],
-      events: ["question-opened", "binding-recorded", "unsettled-material-input"],
+      events: ["route-decided", "question-opened", "binding-recorded", "unsettled-material-input"],
     });
   });
 }

@@ -2,7 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                            | Expected                                                                               |
-| --------------- | --------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| EX-0001-0093-01 | AC-0001-0093-01 | `/qfai-discussion` finalizes pack `discussion-20260527075558258` | `state.json#discussion.currentId` set to that ID; `discussion list --active` prints it |
-| EX-0001-0093-02 | AC-0001-0093-02 | `currentId` absent with 3 candidate `discussion-*` dirs present  | error names the 3 candidates + `qfai discussion use <id>` recovery                     |
+| EX-ID           | AC-Ref          | Input                                                                                                                                  | Expected                                                                                                                                                                                                       |
+| --------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0093-01 | AC-0001-0093-01 | Two items that both write the same shared fixture/mock file, or that mutate the same fixture instance, when delivery-planner evaluates | Parallel dispatch is denied (the concurrent write violates independence); the mere existence of a shared read-only fixture module, which neither item writes and each consumes as-is, is not a deny on its own |

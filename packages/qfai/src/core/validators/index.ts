@@ -5,9 +5,7 @@
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
-export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-export { validateStoryTreeCoverageDepth } from "./storyTreeCoverageDepth.js";
 export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";
 export {
@@ -15,11 +13,14 @@ export {
   validateStoryTreeObligationsModel,
 } from "./storyTreeObligations.js";
 export {
+  validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
+  validateTechArchitecture,
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
+export { validateDocumentSchema } from "./documentSchema.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export {
@@ -36,7 +37,6 @@ export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
-export { validateBpApDb } from "./bpApDb.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -46,6 +46,7 @@ export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";
+export { validateStepTree } from "./stepTree.js";
 export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
@@ -81,7 +82,6 @@ export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.j
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
-export { detectDesignMdPatchOutOfZone, validateDesignMdPatchZone } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
@@ -96,7 +96,6 @@ export {
   validateAutopilotPolicy,
 } from "./autopilotPolicy.js";
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
-export { GRILLING_TRACE_CODES, validateGrillingTrace } from "./grillingTrace.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,

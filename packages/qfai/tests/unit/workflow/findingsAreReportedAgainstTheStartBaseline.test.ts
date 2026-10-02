@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0192-23
+// QFAI:EX-0001-0185-23
 
 import { expect, it } from "vitest";
 
@@ -33,6 +33,32 @@ it("A start baseline with one error, and finish facts holding it and one new err
         { ...added, baseline: "new" },
       ],
     },
+  ]);
+});
+
+it("A new warning under failOn error", () => {
+  const known = { code: "QFAI-TRACE-002", file: "src/notify/email.ts", refs: [] };
+  const added = { code: "QFAI-TRACE-004", file: "src/notify/sms.ts", refs: [] };
+  const warned = { code: "QFAI-TRACE-005", file: "src/notify/push.ts", refs: [] };
+  const snapshot = readySnapshot();
+  const start = snapshot.baseline;
+  if (!start) throw new Error("the fixture carries a start baseline");
+  const facts = metFacts();
+  const completion = facts.completion;
+  if (!completion) throw new Error("the fixture carries completion facts");
+  completion.validate = {
+    failOn: "error",
+    findings: [
+      { ...known, severity: "error" },
+      { ...added, severity: "error" },
+      { ...warned, severity: "warning" },
+    ],
+  };
+  const decision = finish({ ...snapshot, baseline: { ...start, findings: [known] } }, facts);
+
+  expect(decision.verdict.unmet?.[0]?.findings).toEqual([
+    { ...known, baseline: "pre-existing" },
+    { ...added, baseline: "new" },
   ]);
 });
 

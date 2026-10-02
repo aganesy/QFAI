@@ -22,9 +22,10 @@ import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
-import { copyTemplateTree } from "../../src/cli/lib/fs.js";
+import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
+  isPathIgnored,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
@@ -341,7 +342,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:EX-0001-0020-02
+  // QFAI:EX-0001-0024-02
   // QFAI:EX-0001-0025-01
   it("creates template additions with symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -361,9 +362,8 @@ describe("qfai init", () => {
           "skill",
           "qfai-discussion",
           "references",
-          "rcp_footer.md",
+          "discussion-artifact-rules.md",
         ),
-        path.join(root, ".qfai", "assistant", "skill", "qfai-sdd", "references", "rcp_footer.md"),
         path.join(root, ".github", "copilot-instructions.md"),
       ];
 
@@ -1460,6 +1460,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0023-02
   it("reports legacy cleanup as planned in dry-run and keeps files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -1721,7 +1722,134 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:EX-0001-0020-03
+  // QFAI:EX-0001-0028-05
+  it("says the config file is shared when init runs inside a linked worktree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+      const shared = /shared by every worktree of this repository/;
+
+      // Before the real run, which sets the shared value to true and so ends the write
+      // this output would otherwise describe.
+      const mainOutput = await captureStdout(async () => {
+        await runInit({ dir: main, force: false, dryRun: true, yes: true });
+      });
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: true, yes: true });
+      });
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      expect(mainOutput).toContain("would set: git config --local core.symlinks true");
+      expect(mainOutput).not.toMatch(shared);
+      expect(dryRunOutput).toMatch(shared);
+      expect(realOutput).toMatch(shared);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("stops before writing anything when a symlink cannot be created", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-eperm-"));
+    let attempts = 0;
+    try {
+      await expect(
+        runInit(
+          { dir: root, force: false, dryRun: false, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+              throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+            },
+          },
+        ),
+      ).rejects.toThrow(/Developer Mode has to be enabled/);
+
+      expect(attempts).toBe(1);
+      expect(await readdir(root)).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("makes no symlink attempt on --dry-run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dry-probe-"));
+    let attempts = 0;
+    try {
+      await captureStdout(async () => {
+        await runInit(
+          { dir: root, force: false, dryRun: true, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+            },
+          },
+        );
+      });
+
+      expect(attempts).toBe(0);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("goes ahead when the symlink probe succeeds or fails for another reason", async () => {
+    for (const failure of [undefined, Object.assign(new Error("read-only"), { code: "EROFS" })]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-probe-"));
+      try {
+        await captureStdout(async () => {
+          await runInit(
+            { dir: root, force: false, dryRun: false, yes: true },
+            {
+              platform: "win32",
+              createSymlink: async (target, linkPath, type) => {
+                if (
+                  failure !== undefined &&
+                  path.basename(linkPath).startsWith("qfai-symlink-probe")
+                ) {
+                  throw failure;
+                }
+                await symlink(target, linkPath, type);
+              },
+            },
+          );
+        });
+
+        await access(path.join(root, ".qfai"));
+      } finally {
+        await removeTempTree(root);
+      }
+    }
+  });
+
+  // QFAI:EX-0001-0028-03
   it("stays silent about core.symlinks outside a git repository", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2148,6 +2276,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0031-03
   it("--force replaces an instructions symlink instead of writing through it", async () => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
@@ -2182,6 +2311,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0031-02
   it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
     // `lstat` only answers about the last path component, so with
     // `.github/instructions` pointing at a shared directory the destination
@@ -2754,15 +2884,9 @@ describe("qfai init", () => {
     }
   });
 
-  // The re-inclusion of `.qfai/evidence/prototyping/` exposes every descendant
-  // with no later rule of its own, so a block that hid that directory has to
-  // gain the line that re-ignores its contents. What counts as having hidden it
-  // is the whole question: a project may write the evidence tree, or the
-  // directory itself when it tracks the rest of its audit trail.
-  // The anchored spellings are in the list because a leading slash anchors a
-  // pattern to the directory its `.gitignore` sits in, which for the managed
-  // block is the project root — the same set, written the way a contributor
-  // who knows the syntax writes it.
+  // Nothing under the evidence directory is re-included, so whichever ignore a
+  // block carries over that tree keeps the prototype captures out of a commit,
+  // the anchored spellings included.
   it.each([
     ".qfai/evidence/*",
     ".qfai/evidence/prototyping/",
@@ -2784,15 +2908,14 @@ describe("qfai init", () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // Asserted by position, because git applies the last matching pattern:
-      // the contents ignore has to land above the re-inclusion of the
-      // directory and of the one record inside it.
       const lines = (await readFile(path.join(root, ".gitignore"), "utf-8")).split("\n");
-      const contents = lines.indexOf(".qfai/evidence/prototyping/*");
-      expect(contents, "the contents ignore is missing").toBeGreaterThan(-1);
-      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/"));
-      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/grilling.md"));
-      expect(lines.filter((line) => line === ".qfai/evidence/prototyping/*")).toHaveLength(1);
+      expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
+      for (const sample of [
+        ".qfai/evidence/prototyping/iter-00/home.png",
+        ".qfai/evidence/prototyping/grilling.md",
+      ]) {
+        expect(isPathIgnored(lines, sample), sample).toBe(true);
+      }
     } finally {
       await removeTempTree(root);
     }
@@ -2928,8 +3051,9 @@ describe("qfai init", () => {
     }
   });
 
-  // 出力先の開示。`--dir` の既定値は cwd なので、宛先を名指ししない出力では
-  // 誤ったディレクトリへの実行が正しい実行とバイト単位で同一になる。
+  // Destination disclosure. The default for `--dir` is the cwd, so output that
+  // does not name the destination makes a run in the wrong directory
+  // byte-for-byte identical to a correct one.
   it("names the destination directory before the work starts and in the report header", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dest-"));
     try {
@@ -2941,7 +3065,7 @@ describe("qfai init", () => {
       const header = `qfai init: dry-run (dest=${dest})`;
       expect(output).toContain(opening);
       expect(output).toContain(header);
-      // 開示は処理開始前に出す — 中断・失敗した実行でも対象が残る。
+      // The disclosure comes before any work, so the target stays visible even when a run is interrupted or fails.
       expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
     } finally {
       await removeTempTree(root);
@@ -3024,6 +3148,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0034-01
   it("seeds the singular assistant tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-singular-"));
     try {
@@ -3033,7 +3158,7 @@ describe("qfai init", () => {
           (await readdir(path.join(root, ".qfai", "assistant", layer))).length,
         ).toBeGreaterThan(0);
       }
-      for (const retired of ["constitution", "manifest", "process"]) {
+      for (const retired of ["constitution", "manifest", "catalog", "process", "steering"]) {
         await expect(readdir(path.join(root, ".qfai", "assistant", retired))).rejects.toMatchObject(
           { code: "ENOENT" },
         );
@@ -3043,7 +3168,6 @@ describe("qfai init", () => {
         "01_policy/initiative.md",
         "01_policy/principle.md",
         "03_contract/tech.md",
-        "03_contract/structure.md",
       ]) {
         await access(path.join(root, ".qfai", "spec", ...relative.split("/")));
       }
@@ -3184,7 +3308,7 @@ describe("qfai init", () => {
     // could be deleted for looking like init's after mangling.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
-      // Shift_JIS for「プロジェクト」— not a valid UTF-8 sequence.
+      // Shift_JIS for the katakana word for "project" — not a valid UTF-8 sequence.
       const shiftJis = Buffer.from([
         0x83, 0x76, 0x83, 0x8d, 0x83, 0x57, 0x83, 0x46, 0x83, 0x4e, 0x83, 0x67,
       ]);

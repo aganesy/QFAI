@@ -12,7 +12,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("SDD selected-source review precision", () => {
   for (const tree of trees) {
     it(`${tree}: reads completed reviews for the selected pack`, async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const playbook = await read(
         tree,
         "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",

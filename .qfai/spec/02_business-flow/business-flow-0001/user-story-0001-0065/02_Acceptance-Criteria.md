@@ -3,12 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature: 出力パス制御
+Feature: Prototyping Observability Section
+  # AC-0001-0065-01
+  Scenario: The Prototyping section is written
+    Given prototyping evidence exists
+    When `qfai report --format md` runs
+    Then report.md contains a `## Prototyping` section
+    And it contains the mode, obligations, evidence coverage, render, browserQa and calibration subsections
+    And a missing screenshot or HTML snapshot is judged from the validation findings and from the `{kind, path}` entries of `evidenceRefs[]` on each screen of the accepted iteration after convergence, without assuming the old per-iteration capture script or `QFAI-UIE-001/002`
 
-# AC-0001-0065-01
-# Parent: US-0001-0065
-Scenario: --out で出力先制御
-  Given validate.json が存在する
-  When `qfai report --out /tmp/custom-report.md` を実行する
-  Then /tmp/custom-report.md にレポートが出力される
+  # AC-0001-0065-02
+  Scenario: The Prototyping section without evidence
+    Given no prototyping evidence exists
+    When `qfai report --format md` runs
+    Then report.md contains a `## Prototyping` section
+    And it shows `Status: no-pack` and does not claim success for evidence that does not exist
 ```

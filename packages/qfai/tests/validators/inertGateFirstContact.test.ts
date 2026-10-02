@@ -152,7 +152,7 @@ describe("the undeclared-dependency warning names what it is holding back", () =
     "openapi: 3.0.0",
     "info:",
     "  title: Orders",
-    "# QFAI-CONTRACT-ID: CON-API-0001",
+    "# QFAI-CONTRACT-ID: API-0001",
     "",
   ].join("\n");
 

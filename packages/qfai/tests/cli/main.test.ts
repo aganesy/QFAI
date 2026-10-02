@@ -99,8 +99,8 @@ describe("cli root discovery", () => {
     }
   });
 
-  // CLI-arg errors exit 2 on every command, not just `guardrails`
-  // (`.qfai/contracts/cli/qfai-init.md` exit-code table).
+  // CLI-arg errors exit 2 on every command
+  // (BR-0009-0045 of `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md`).
   it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
@@ -202,111 +202,6 @@ describe("cli root discovery", () => {
     }
   });
 
-  // `--dry-run` is rejected on the commands that never wired it, but
-  // `handoff upgrade` implements it: the flag must reach the command and
-  // preview instead of writing the canonical file.
-  it("honours --dry-run on handoff upgrade instead of writing the canonical file", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-dryrun-"));
-    const legacyFile = path.join(root, "legacy.yaml");
-    await writeFile(legacyFile, "companyName: FreshCo\n", "utf-8");
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await captureStdout(async () => {
-        await run(["handoff", "upgrade", legacyFile, "--root", root, "--dry-run"], root);
-      });
-      expect(process.exitCode).toBe(0);
-      // The whole point of the flag: nothing may be written.
-      await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).rejects.toThrow();
-    } finally {
-      process.exitCode = previousExitCode;
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps guardrails --format json stdout parseable when no config is found", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-json-"));
-    const deltaPath = path.join(root, "18_delta.md");
-    try {
-      await writeFile(
-        deltaPath,
-        [
-          "# SPEC-0001: Delta",
-          "",
-          "## Decision Guardrails",
-          "",
-          "- ID: DG-0001",
-          "  Type: non-goal",
-          "  Guardrail: Do not change the spec layout.",
-          "  Rationale: Spec layout is a hard gate.",
-          "  Reconsider: never",
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-
-      const previousExitCode = process.exitCode;
-      process.exitCode = undefined;
-      let output = "";
-      try {
-        output = await captureStdout(async () => {
-          await run(["guardrails", "list", "--path", deltaPath, "--format", "json"], root);
-        });
-      } finally {
-        process.exitCode = previousExitCode;
-      }
-
-      // The missing-config notice must go to stderr, leaving stdout pure JSON.
-      expect(() => JSON.parse(output)).not.toThrow();
-      expect(output).not.toContain("defaultConfig");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("emits a JSON refusal envelope when the parser rejects guardrails --format json", async () => {
-    const cwd = process.cwd();
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    let output: string;
-    try {
-      output = await captureStdout(async () => {
-        await run(["guardrails", "extract", "--max", "abc", "--format", "json"], cwd);
-      });
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
-
-    // The parser rejects before runGuardrails() is reached, so usage must go to
-    // stderr and stdout must still be parseable.
-    const parsed: unknown = JSON.parse(output);
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error("guardrails --format json must emit an object on a parser rejection");
-    }
-    expect({ ...parsed }.error).toEqual(expect.objectContaining({ code: "invalid-arguments" }));
-  });
-
-  it("keeps usage on stdout when a guardrails rejection did not ask for json", async () => {
-    const cwd = process.cwd();
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    let output: string;
-    try {
-      output = await captureStdout(async () => {
-        await run(["guardrails", "extract", "--max", "abc"], cwd);
-      });
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
-
-    expect(output).toContain("qfai <command> [options]");
-  });
-
   it("sets exitCode=1 when the top-level command is unknown", async () => {
     const cwd = process.cwd();
 
@@ -323,19 +218,6 @@ describe("cli root discovery", () => {
       } finally {
         process.exitCode = previousExitCode;
       }
-    }
-  });
-
-  it("sets exitCode=2 when guardrails args are invalid", async () => {
-    const cwd = process.cwd();
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(["guardrails", "--path"], cwd);
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
     }
   });
 
@@ -364,7 +246,9 @@ describe("cli root discovery", () => {
 });
 
 describe("cli usage errors", () => {
-  async function captureRun(argv: string[]): Promise<{ stdout: string; stderr: string }> {
+  async function captureRun(
+    argv: string[],
+  ): Promise<{ stdout: string; stderr: string; exitCode: typeof process.exitCode }> {
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const previousExitCode = process.exitCode;
@@ -374,6 +258,7 @@ describe("cli usage errors", () => {
       return {
         stdout: stdoutSpy.mock.calls.map((call) => String(call[0])).join(""),
         stderr: stderrSpy.mock.calls.map((call) => String(call[0])).join(""),
+        exitCode: process.exitCode,
       };
     } finally {
       stdoutSpy.mockRestore();
@@ -381,6 +266,16 @@ describe("cli usage errors", () => {
       process.exitCode = previousExitCode;
     }
   }
+
+  // QFAI:EX-0001-0173-03
+  it("exits 2 on an audit argument error and names the reason on stderr", async () => {
+    const missing = await captureRun(["audit"]);
+    expect(missing.exitCode).toBe(2);
+    expect(missing.stderr).toContain("qfai audit: unknown or missing subcommand. Expected: log");
+    const format = await captureRun(["audit", "log", "--format", "csv"]);
+    expect(format.exitCode).toBe(2);
+    expect(format.stderr).toContain("--format");
+  });
 
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
@@ -393,10 +288,6 @@ describe("cli usage errors", () => {
     const cases: Array<{ argv: string[]; expected: string }> = [
       { argv: ["audit"], expected: "qfai audit: unknown or missing subcommand. Expected: log" },
       { argv: ["atdd"], expected: "qfai atdd: unknown or missing subcommand. Expected: scaffold" },
-      {
-        argv: ["handoff"],
-        expected: "qfai handoff: unknown or missing subcommand. Expected: upgrade",
-      },
       {
         argv: ["discussion"],
         expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
@@ -473,7 +364,7 @@ describe("cli usage text", () => {
   it("does not claim everything outside skills/agents is skipped when it exists", async () => {
     const entry = forceEntry(await captureHelp());
 
-    expect(entry).not.toContain("それ以外は既存があればスキップ");
+    expect(entry).not.toContain("everything else is skipped if it already exists");
     expect(entry).toContain("rule/*.local.md overlays");
     expect(entry).not.toContain("assistant/catalog");
   });

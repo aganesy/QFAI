@@ -27,10 +27,15 @@ const SKILL_PATH = path.resolve(
 const CONFIG_PATH = path.resolve(__dirname, "..", "..", "src", "core", "config.ts");
 
 describe("Repository Analysis Identifies Frameworks", () => {
+  // QFAI:EX-0001-0075-01
   it("SKILL.md defines repository analysis as primary goal", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/[Aa]nalyze.*repositor/);
     expect(content).toContain("qfai.config.yaml");
+    expect(content).toContain("Identify test frameworks and locations");
+    expect(content).toContain("Enumerate directories that contain tests");
+    expect(content).toContain("Note naming rules");
+    expect(content).toContain("package manager (pnpm/npm/yarn)");
   });
 
   it("config module defines testFileGlobs for framework detection", async () => {
@@ -53,10 +58,12 @@ describe("Glob Patterns Cover Test Locations", () => {
 });
 
 describe("Config Update Is Minimal", () => {
+  // QFAI:EX-0001-0076-01
   it("SKILL.md mandates minimal diff for config changes", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/minimal.*diff/i);
     expect(content).toContain("traceability globs");
+    expect(content).toContain("Write no `validation.require` key");
   });
 });
 
@@ -66,9 +73,19 @@ describe("Project context is populated from evidence", () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toContain(".qfai/spec/01_policy/objective.md");
     expect(content).toContain(".qfai/spec/03_contract/tech.md");
-    expect(content).toContain(".qfai/spec/03_contract/structure.md");
     expect(content).not.toContain(".qfai/assistant/catalog/");
     expect(content).toMatch(/Fill.*verifiable.*evidence/i);
+  });
+});
+
+describe("UI surface paths are configured", () => {
+  // QFAI:AC-0001-0076-04
+  // QFAI:EX-0001-0076-07
+  it("SKILL.md writes uiux.surfacePaths from the observed paths, or an empty list", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    expect(content).toContain("`uiux.surfacePaths`: the repository-relative globs");
+    expect(content).toContain("or `[]` when the repository renders none");
+    expect(content).toContain("Keep an existing value unless the user asks to change it");
   });
 });
 

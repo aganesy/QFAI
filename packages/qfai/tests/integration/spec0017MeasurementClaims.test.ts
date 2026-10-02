@@ -1,5 +1,5 @@
 /**
- * `BR-0017-0030` and `BR-0017-0031`: a cost, wall-clock or parallelism claim is backed by captured
+ * `BR-0016-0030` and `BR-0016-0031`: a cost, wall-clock or parallelism claim is backed by captured
  * before-and-after numbers, or it does not land — and a measured regression is an accepting outcome
  * rather than a failed attempt.
  *
@@ -27,15 +27,12 @@ import {
 } from "../helpers/measurementClaim.js";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
-const DECISIONS = path.join(
-  REPO_ROOT,
-  ".qfai",
-  "evidence",
-  "migration-spec-to-story",
-  "retired",
-  "spec-0017",
-  "07_Decisions.md",
-);
+/** The decision register, one table row per decision. */
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
+
+/** Every decision row in the register. */
+const decisionRows = (text: string): string[] =>
+  text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
 
 /** A record in the shape these rules police, with the numbers left out. */
 const WITHOUT_NUMBERS = [
@@ -152,9 +149,11 @@ describe("an asserted regression with no numbers is not accepting", () => {
 describe("the extractor reads this repository's own decision record, not only its fixtures", () => {
   it("finds the one measured pair that exists and none in the record that only describes the rule", async () => {
     const text = await readFile(DECISIONS, "utf8");
+    // Keyed by the imported decision each row carries, `…/07_Decisions.md#DR-NNNN-NNNN: title`.
     const sections = new Map<string, string>();
-    for (const raw of text.split(/^### /m).slice(1)) {
-      sections.set(raw.slice(0, Math.max(raw.indexOf(":"), 0)), raw);
+    for (const row of decisionRows(text)) {
+      const id = /#(DR-\d{4}-\d{4}):/.exec(row)?.[1];
+      if (id !== undefined) sections.set(id, row);
     }
     expect(
       sections.size,
@@ -170,7 +169,7 @@ describe("the extractor reads this repository's own decision record, not only it
     expect(capturedPairs(measured ?? "")).toEqual([{ before: "22.90s", after: "5.49s" }]);
 
     // The record that names a regression without measuring one. It sits in a `- Decision` bullet and
-    // cites `BR-0017-0030`, exactly like the one above — which is why the claim direction is an input
+    // cites the measurement rule, exactly like the one above — which is why the claim direction is an input
     // to this module rather than something it infers. If this ever yields a pair, that argument has
     // changed and the API shape should be revisited rather than the assertion relaxed.
     const described = sections.get("DR-0017-0002");

@@ -4,74 +4,89 @@
 
 ```gherkin
 Feature: shipped workflow drift detection (detection half)
+  # AC-0003-0011-01
+  Scenario: Drift in an installed shipped workflow is reported as advisory
+    Given an adopter tree initialised in a temp dir, with one shipped workflow under `.github/workflows/` edited by hand
+    When `qfai doctor` runs
+    Then the `workflows.integrity` check emits an advisory finding at severity `info`
+    And the finding names the stale file by its path relative to the adopter tree
+    And once the same tree is restored to match the packaged copy, `workflows.integrity` is at severity `ok` with no drift finding
 
-# AC-0003-0011-01
-# Parent: US-0003-0011
-Scenario: install 済み shipped workflow の drift を advisory で検出する
-  Given temp dir に init した adopter tree があり、`.github/workflows/` の shipped workflow 1 ファイルが手編集されている
-  When `qfai doctor` を実行する
-  Then `workflows.integrity` check が severity `info` の advisory finding を出す
-  And finding は stale file の adopter-tree 相対 path を名指しする
-  And 同じ tree を package 同梱 copy と内容一致に戻すと `workflows.integrity` は severity `ok` となり drift finding は 0 件になる
+  # AC-0003-0011-02
+  Scenario: The drift finding is advisory and leaves the exit code unchanged (boundary)
+    Given `workflows.integrity` has detected drift
+    When `qfai doctor --fail-on error` runs
+    Then the exit code stays 0 (this finding alone does not block the active profile)
+    And the finding appears in the "warnings advisory of drift" group (AC-0003-0007-02)
+    And `qfai validate` emits no finding for this drift (it is a diagnostic surface only)
+    And as a control, a tree with one `error` finding under `qfai doctor --fail-on error` exits 1
 
-# AC-0003-0011-02
-# Parent: US-0003-0011
-Scenario: drift finding は advisory であり exit code を変えない (boundary)
-  Given `workflows.integrity` が drift を検出した状態
-  When `qfai doctor --fail-on error` を実行する
-  Then exit code は 0 のまま変わらない (本 finding 単独では active profile を block しない)
-  And finding は "warnings advisory of drift" group (AC-0003-0007-02) に表示される
-  And `qfai validate` はこの drift について finding を 1 件も emit しない (diagnostic surface のみ)
+  # AC-0003-0011-03
+  Scenario: The repair text names only a manual step, and absent, declined or unresolvable copies are not drift (error/boundary)
+    Given `workflows.integrity` has detected drift
+    When the finding's message body is inspected
+    Then the body names the manual repair of replacing the file with the copy in the installed package
+    And the body names no refresh command, CLI verb or flag
+    And a shipped name in the `absent` state, with no provenance entry and no file on disk, never appears in a drift finding (never installed is not deleted; when a stale file with an entry sits in the same tree, only that file is reported)
+    And the `declined` state, with a provenance entry and a file deleted after install, is a different state from `absent` and is outside this criterion; AC-0003-0011-06 owns how it is reported
+    And `absent` and `declined` are not treated alike as missing; classifying either name as missing or deliberately deleted for ownership belongs to the ownership contract in `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md` and is outside this criterion
+    And when the shipped copy inside the installed package cannot be resolved, the check is skipped at severity `info`
 
-# AC-0003-0011-03
-# Parent: US-0003-0011
-Scenario: repair text は手動手順のみを名指しし、absent / declined / 解決不能は drift ではない (error/boundary)
-  Given `workflows.integrity` が drift を検出した状態
-  When finding の message body を検査する
-  Then body は「install 済み package 内の copy で当該ファイルを置き換える」手動 repair を名指しする
-  And body は refresh command / CLI verb / flag を 1 つも名指ししない
-  And provenance entry を持たず disk にも存在しない `absent` state の shipped name は、drift finding に
-    1 度も現れない (never-installed は「削除された」ではない。同じ tree に entry を持つ stale file が
-    併置されていれば、報告されるのはそちらだけである)
-  And provenance entry を持ち install 後に削除された `declined` state は `absent` とは別 state であり、
-    本 AC の対象外である。その報告のされ方は AC-0003-0011-06 が owner である
-  And `absent` と `declined` を「不在」として同一視しない。どちらの name を missing / 意図的削除として
-    ownership 上どう扱うかの分類は spec-0003 / REQ-0020 の ownership contract 側の責務であり、本 AC の
-    対象外である
-  And install 済み package 側の shipped copy を解決できない場合、check は severity `info` で skip する
+  # AC-0003-0011-04
+  Scenario: A same-named file without a provenance entry is not reported as drift
+    Given a temp-dir adopter tree whose `.github/workflows/` holds a file named within the shipped name space, and `.qfai/install-provenance.json` has no entry for that name
+    When `qfai doctor` runs
+    Then `workflows.integrity` emits no drift finding for that file
+    And the file's name appears nowhere in the finding messages
+    And when another stale file with a provenance entry is placed in the same tree, only that file is reported
 
-# AC-0003-0011-04
-# Parent: US-0003-0011
-Scenario: provenance entry を持たない同名ファイルは drift として報告しない
-  Given temp dir の adopter tree の `.github/workflows/` に、shipped name 空間と衝突する名前の
-    ファイルが存在し、`.qfai/install-provenance.json` に当該 name の entry が無い
-  When `qfai doctor` を実行する
-  Then `workflows.integrity` は当該ファイルについて drift finding を 1 件も出さない
-  And finding message 全体に当該ファイル名が現れない
-  And 同じ tree に provenance entry を持つ別の stale file を置くと、そちらだけが報告される
+  # AC-0003-0011-05
+  Scenario: The drift finding alone leaves the exit code unchanged even under --fail-on warning (boundary)
+    Given a tree where `workflows.integrity` has detected drift and no other warning or error finding exists
+    When `qfai doctor --fail-on warning` runs
+    Then the exit code is 0
+    And `summary.warning` stays 0 (the drift finding is counted as `info`)
+    And as a control, adding one warning unrelated to this finding to the same tree and running again exits 1
+    And that control shows the exit-0 claim is not vacuous, as it would be for an implementation that detects nothing
 
-# AC-0003-0011-05
-# Parent: US-0003-0011
-Scenario: drift finding 単独では --fail-on warning でも exit code が変わらない (boundary)
-  Given `workflows.integrity` が drift を検出しており、他に warning / error の finding が 1 件も無い tree
-  When `qfai doctor --fail-on warning` を実行する
-  Then exit code は 0 である
-  And `summary.warning` は 0 のままである (drift finding は `info` として計上される)
-  And 対照として、同じ tree に本 finding と無関係な warning を 1 件足して再実行すると exit code は 1 になる
-  And この対照ケースが成立することで、exit 0 の主張が「何も検出しない実装」でも通る vacuous な
-    主張ではないことが示される
+  # AC-0003-0011-06
+  Scenario: The drift finding's details list declined files transparently
+    Given an adopter tree where one shipped workflow with a provenance entry is edited by hand and another is deleted after install
+    When `qfai doctor --format json` runs
+    Then the `details` of the `workflows.integrity` finding include `workflowsDir`, `modified`, `declined` and `packagedDir`
+    And `details.modified` names the edited file and `details.declined` names the deleted one
+    And a `declined` entry changes neither the severity (it stays `info`) nor the exit code
+    And the message body does not name the declined file as stale
+    And in a tree with no modified file and only declined ones, no finding is emitted, so no `details` appear in the output
 
-# AC-0003-0011-06
-# Parent: US-0003-0011
-Scenario: drift finding の details が declined を透過的に列挙する
-  Given provenance entry を持つ shipped workflow の 1 つが手編集され、別の 1 つが install 後に
-    削除されている adopter tree
-  When `qfai doctor --format json` を実行する
-  Then `workflows.integrity` finding の `details` は `workflowsDir` / `modified` / `declined` /
-    `packagedDir` を含む
-  And `details.modified` は手編集された file を、`details.declined` は削除された file を名指しする
-  And `declined` の存在は severity を変えず (`info` のまま)、exit code にも寄与しない
-  And message body は declined file を stale として名指ししない
-  And modified が 0 件で declined だけが存在する tree では finding 自体が emit されず、
-    したがって `details` も出力に現れない
+  # AC-0003-0011-07
+  Scenario: A missing document-schema lane is reported
+    Given a project whose `.github/workflows/qfai-docs.yml` is absent, whether never installed or removed after install
+    When `qfai doctor` runs
+    Then the `workflows.docsLane` check is an error naming the file and the packaged copy to restore it from
+    And with the file present the check is `ok`
+  # AC-0003-0011-08
+  Scenario: Doctor warns about the repository facts the shipped workflows rely on
+    Given a project that has none of those facts in place: `pnpm-lock.yaml` without a valid `"packageManager"` in `package.json`; two lockfiles; `engines.node` without a `.nvmrc` or `.node-version`; a workflow under `.github/workflows/` pinning a Node below `engines.node`
+    When `qfai doctor` runs
+    Then each unmet fact is a `warning` and never an `error`, so a project without CI is not blocked
+    And the `workflows.packageManager` message names `pnpm-lock.yaml` and the `packageManager` value to set
+    And the `workflows.lockfiles` message names the lockfiles, the package manager the shipped workflows install with and the lockfile they ignore
+    And the `workflows.nodeVersionFile` message names `engines.node` and the Node the shipped workflows use instead
+    And the `workflows.nodePin` message names each workflow file and the pinned version
+    And a fact that is met, or one that does not apply to the project, raises no finding
+
+  # AC-0003-0011-09
+  Scenario: Init names how many of those facts are unmet
+    Given a project where at least one of those facts is unmet
+    When `qfai init` runs
+    Then it prints one line, starting `Shipped workflows:`, with the count and a pointer to `qfai doctor`
+    And a project where every fact is met gets no such line
+
+  # AC-0003-0011-10
+  Scenario: A document-schema checker binary that does not run is reported
+    Given an installed QFAI package whose `@jackchuka/mdschema` binary starts, and one whose binary cannot start
+    When `qfai doctor` runs
+    Then the `workflows.mdschemaBinary` check is `ok` when `mdschema --help` exits 0, and no binary found from the inspected project's root is started
+    And it is an error naming the reason and the fix when the binary cannot start
 ```

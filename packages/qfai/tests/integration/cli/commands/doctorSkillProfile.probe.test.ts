@@ -18,6 +18,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-skillprofile-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 

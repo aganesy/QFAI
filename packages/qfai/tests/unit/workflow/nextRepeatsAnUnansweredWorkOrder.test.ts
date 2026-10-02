@@ -1,26 +1,14 @@
-// QFAI:EX-0001-0192-12
+// QFAI:EX-0001-0185-12
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 it("next twice on a run in running, then resume twice, with no result between", () => {
   const plan = {
-    route: "direct",
-    stages: [
-      {
-        stageInstanceId: "direct-edit",
-        stageKind: "maintenance",
-        skill: "qfai-maintain",
-        operation: "non-normative-edit",
-      },
-      {
-        stageInstanceId: "direct-verify",
-        stageKind: "verify",
-        skill: "qfai-verify",
-        operation: "verify-full",
-      },
-    ],
+    route: "edit-text",
+    stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
   };
   const flowBinding = { flowId: "BF-0007" };
   const issued = decide(

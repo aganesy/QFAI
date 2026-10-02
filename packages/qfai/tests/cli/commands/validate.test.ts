@@ -39,8 +39,8 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
   it("TC-3.9.1: new validator IDs return correct error messages", async () => {
     const src = await readSrc("validate.ts");
     expect(src).toMatch(/"QFAI-DCON-030":[\s\S]*?DESIGN\.md/);
-    expect(src).toMatch(/"QFAI-DCON-031":[\s\S]*?DESIGN\.md\.lock\.yaml/);
-    expect(src).toMatch(/"QFAI-DCON-032":[\s\S]*?sha256/);
+    expect(src).toMatch(/"QFAI-DCON-012":[\s\S]*?prototyping\.json/);
+    expect(src).toMatch(/"QFAI-DCON-013":[\s\S]*?prototyping\.json#handoff/);
   });
 
   it("TC-3.9.2: removed validator IDs are no longer in the lookup map", async () => {
@@ -66,18 +66,14 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     }
   });
 
-  it("TC-3.9.3: gap-allowed numbering preserved (005/009/012/013/019/030/031/032 present)", async () => {
+  it("TC-3.9.3: gap-allowed numbering preserved (012/013/030/033/034 present)", async () => {
     const src = await readSrc("validate.ts");
     for (const preserved of [
-      "QFAI-DCON-001",
-      "QFAI-DCON-005",
-      "QFAI-DCON-009",
       "QFAI-DCON-012",
       "QFAI-DCON-013",
-      "QFAI-DCON-019",
       "QFAI-DCON-030",
-      "QFAI-DCON-031",
-      "QFAI-DCON-032",
+      "QFAI-DCON-033",
+      "QFAI-DCON-034",
     ]) {
       expect(src.includes(`"${preserved}":`), `${preserved} must be present`).toBe(true);
     }
@@ -88,7 +84,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     // The literal map is in src; we extract each line and assert non-empty
     // value. Robustness > exhaustiveness here — the smoke is sufficient
     // because TC-3.9.1 already pinned content.
-    for (const id of ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032"]) {
+    for (const id of ["QFAI-DCON-012", "QFAI-DCON-013", "QFAI-DCON-030"]) {
       const re = new RegExp(`"${id}":[\\s\\S]*?"([^"]+)"`);
       const match = re.exec(src);
       expect(match, `${id} should map to a non-empty string`).not.toBeNull();
@@ -100,11 +96,10 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     const root = await newTempDir();
     // Minimal UI-bearing project without DESIGN.md.
     await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
-    await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
     await mkdir(path.join(root, ".qfai/spec/02_business-flow"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/contracts/ui/ui.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
       "utf-8",
     );
     await writeFile(path.join(root, ".qfai/spec/decisions.md"), "# Decisions\n", "utf-8");

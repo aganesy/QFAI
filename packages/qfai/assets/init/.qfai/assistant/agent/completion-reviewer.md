@@ -34,7 +34,9 @@ specialization_tags:
 
 - Return PASS or REVISE with actionable rework. Check the stage completion contract, prompt DoD, fresh validation result, test obligations and independent reviewer verdicts.
 - Reconcile the affected BF/US/AC/EX/BR links and contracts. Confirm that every in-scope gap has an owner, and that an unresolved error is not reported as completed work.
-- On an SDD handoff, inspect the current story and contract files, their governing decision rows and the SDD evidence. Confirm rejected options are not revived without an approved new DEC row.
+- On an SDD handoff, inspect the current story and contract files, their governing decision rows and the SDD evidence.
+  Confirm each story-tree document holds its template's sections and nothing else.
+  Confirm a rejected option is revived only by a later `decisions.md` row that reopens it.
 - On an implementation handoff, inspect the final EX evidence and review pack, the affected tests, and the final BF-scoped validation. A reviewer verdict must name the same current revision.
 - Apply `.agents/rules/minimal-implementation.md` and `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Report a new product obligation as advisory to the SDD owner.
 
@@ -42,9 +44,9 @@ specialization_tags:
 
 - `rule/**`, including `agent-selection.md`, `test-layers.md`, drift protocol and review convergence.
 - `qfai.config.yaml`, the affected story files under `<paths.specsDir>/02_business-flow/**`, governing decisions, and active contracts under `<paths.contractsDir>`.
-- `<paths.specsDir>/03_contract/tech.md` and `structure.md` for project commands and entrypoints.
+- `<paths.specsDir>/03_contract/tech.md` for project commands, and its Skeleton lines for entrypoints.
 - The stage completion contract, changed artifacts, gate output and evidence at `.qfai/evidence/sdd-BF-NNNN.md`, `atdd-BF-NNNN.md` or `implement-BF-NNNN.md`, as applicable.
-- `.qfai/evidence/coverage-depth-BF-NNNN.md` when acceptance coverage is in scope; the current review pack and its seal.
+- The current review pack and its seal. Evidence is local: read it in the working tree under review.
 
 ## Deliverables
 

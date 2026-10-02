@@ -2,10 +2,12 @@ import { decideAnswer, decideStop, replayedAnswer } from "./answer.js";
 import { notReady, refusedFailClosed, scopeOf, TERMINAL_STATES } from "./common.js";
 import { decideFinish } from "./finish.js";
 import { issueNext } from "./issue.js";
-import { acceptRouting } from "./proposal.js";
+import { acceptRouting } from "./routing.js";
 import { acceptPreamble, acceptSeamOnly, acceptStageResult, blockOnResult } from "./result.js";
 import { decideResume, foundCause } from "./resume.js";
+import { isRetiredRoute, reportedRoute } from "./routes.js";
 import { decideStart } from "./start.js";
+import { isSeamOrder } from "./steps.js";
 import type {
   WorkflowDecision,
   WorkflowFacts,
@@ -39,6 +41,7 @@ export function workOrderDocument(
       allowedEffects: scope.allowedEffects ?? [],
       nonGoals: [],
     },
+    modifiers: workOrder.modifiers ?? [],
     recordAreas: workOrder.recordAreas ?? [],
     inputs: workOrder.inputs ?? [],
     requiredGates: [],
@@ -65,10 +68,11 @@ function replayOf(snapshot: WorkflowSnapshot, input: WorkflowInput): WorkflowDec
   return replayedAnswer(snapshot, input);
 }
 
-// The routing work order. Its kind, skill and operation are built in, and no plan names it; it
-// changes no state, and `next` returns it again until its result is accepted.
+// The routing work order. Its kind, executor and operation are built in, and no plan names it; it
+// changes no state, and `next` returns it again until its result is accepted. One a re-route
+// issues names the destination and what sent the run there.
 function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
-  const { run, outstandingWorkOrder } = snapshot;
+  const { run, outstandingWorkOrder, pendingReroute } = snapshot;
   if (outstandingWorkOrder?.stageKind === "route") {
     return { verdict: { ok: true, run, workOrder: outstandingWorkOrder }, events: [] };
   }
@@ -80,6 +84,15 @@ function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
     stageKind: "route",
     executor: { skill: "qfai-run" },
     operation: "route",
+    ...(pendingReroute
+      ? {
+          reroute: {
+            route: pendingReroute.route,
+            fromStep: pendingReroute.fromStep,
+            outcome: pendingReroute.outcome,
+          },
+        }
+      : {}),
   };
   return {
     verdict: { ok: true, run: { ...run, sequence: run.sequence + 1 }, workOrder },
@@ -137,7 +150,7 @@ function decideAccept(
     return acceptRouting(snapshot, result, facts);
   }
   if (run.state !== "running" || !workOrder) return notReady(run, "stage result");
-  if (workOrder.operation === "seam-only") return acceptSeamOnly(snapshot, workOrder, result);
+  if (isSeamOrder(workOrder)) return acceptSeamOnly(snapshot, workOrder, result);
   return acceptStageResult(snapshot, result, facts);
 }
 
@@ -166,6 +179,8 @@ export function decide(
     return { verdict: { ok: false, run, error: { code: "run-terminal", message } }, events: [] };
   }
   if (input.operation === "decision" && input.stop === true) return decideStop(run, input);
+  const retired = retiredRouteRefusal(snapshot);
+  if (retired) return retired;
   if (input.operation === "resume" && snapshot.identity && facts.identity) {
     if (snapshot.identity.worktree !== facts.identity.worktree) return identityMismatch(run);
   }
@@ -189,6 +204,21 @@ export function decide(
     default:
       return notReady(run, "operation");
   }
+}
+
+// A run an earlier version left on a route the catalog no longer holds cannot go on; only a
+// `stop` ends it.
+function retiredRouteRefusal(snapshot: WorkflowSnapshot): WorkflowDecision | undefined {
+  const route = snapshot.plan?.route;
+  if (!route || !isRetiredRoute(route)) return undefined;
+  const successor = reportedRoute(route, snapshot.plan?.stages.map((each) => each.stageKind) ?? []);
+  const message = `This run is on the route ${route}, which is now ${successor}, so it cannot go on. Stop it and start a new run.`;
+  const error = {
+    code: "fail-closed",
+    message,
+    cause: "contract-undeclared",
+  } satisfies NonNullable<WorkflowDecision["verdict"]["error"]>;
+  return { verdict: { ok: false, run: snapshot.run, error }, events: [] };
 }
 
 function identityMismatch(run: WorkflowSnapshot["run"]): WorkflowDecision {

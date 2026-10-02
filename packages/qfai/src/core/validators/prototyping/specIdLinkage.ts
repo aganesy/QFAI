@@ -21,7 +21,7 @@ export async function validateSpecIdLinkage(root: string, config: QfaiConfig): P
     return [
       issue(
         "QFAI-PROT-008",
-        "prototyping.json requires uiContractsCovered[] with full CON-UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
+        "prototyping.json requires uiContractsCovered[] with full UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
         "error",
         PROTOTYPING_JSON_REL,
         "prototyping.uiContractLinkage.scope",

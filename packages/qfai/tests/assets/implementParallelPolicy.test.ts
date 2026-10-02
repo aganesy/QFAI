@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const skillPath = "assistant/skill/qfai-implement/SKILL.md";
+const skillPath = "assistant/step/implement-tdd/STEP.md";
 const policyPath = "assistant/skill/qfai-implement/references/parallelization-policy.md";
 
 const read = (tree: string, relative: string): Promise<string> =>

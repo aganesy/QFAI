@@ -12,7 +12,7 @@ waivers: []
 # - id: WVR-20260207-01
 #   rule: QFAI-DT-006
 #   scope:
-#     paths: [".qfai/spec/03_contract/design/**"]
+#     paths: ["tokens/**"]
 #   reason: "The kiosk platform is owned by this project; tracked in DEC-0001."
 #   expires: "2026-03-01"
 #   evidence: ".qfai/spec/decisions.md#DEC-0001"

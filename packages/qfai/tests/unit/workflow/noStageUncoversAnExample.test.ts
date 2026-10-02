@@ -1,10 +1,11 @@
-// QFAI:EX-0001-0193-05
-// QFAI:EX-0001-0193-06
-// QFAI:EX-0001-0193-12
+// QFAI:EX-0001-0186-05
+// QFAI:EX-0001-0186-06
+// QFAI:EX-0001-0186-12
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -12,22 +13,15 @@ type Facts = Parameters<typeof decide>[2];
 const flowBinding = { flowId: "BF-0001" };
 const EXAMPLES = ["EX-0001-0001-01", "EX-0001-0001-02"];
 
-// A bounded-change plan whose middle stage is the kind under test.
-function plan(stageKind: string, skill: string, operation: string) {
-  const stage = (id: string, kind: string, by: string, op: string) => ({
-    stageInstanceId: id,
-    stageKind: kind,
-    skill: by,
-    operation: op,
-    when: "always",
-  });
+// An add-feature plan whose middle stage is the kind under test.
+function plan(stageKind: string) {
   return {
-    route: "bounded-change",
+    route: "add-feature",
     writeScope: ["src/**", "tests/**", ".qfai/spec/02_business-flow/**"],
     stages: [
-      stage("sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-      stage("middle", stageKind, skill, operation),
-      stage("verify", "verify", "qfai-verify", "verify-full"),
+      planStage("sdd-delta", "sdd"),
+      planStage("middle", stageKind),
+      planStage("verify", "verify"),
     ],
   };
 }
@@ -46,15 +40,15 @@ function obligations(exampleIds: string[], annotated: string[]): NonNullable<Fac
 // Issues the middle stage against the obligations at issue, then accepts its result against the
 // obligations after it.
 function acceptAgainst(
-  stage: [string, string, string],
+  stageKind: string,
   atIssue: NonNullable<Facts["obligations"]>,
   after: NonNullable<Facts["obligations"]>,
 ) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-obligations", state: "ready", sequence: 8 },
-    plan: plan(...stage),
+    plan: plan(stageKind),
     flowBinding,
-    acceptedStages: [{ stageInstanceId: "sdd-delta", stageKind: "sdd_delta", outcome: "accepted" }],
+    acceptedStages: [{ stageInstanceId: "sdd-delta", stageKind: "sdd", outcome: "accepted" }],
   };
   const issued = decide(ready, { operation: "next" }, { obligations: atIssue });
   const workOrder = issued.verdict.workOrder;
@@ -84,12 +78,8 @@ function acceptAgainst(
   };
 }
 
-const implement: [string, string, string] = ["implement", "qfai-implement", "implement"];
-const sddDelta: [string, string, string] = [
-  "sdd_delta",
-  "qfai-sdd",
-  "update-or-applicability-check",
-];
+const implement = "implement";
+const sddDelta = "sdd";
 
 it("A result after which an annotated example has no annotating test", () => {
   expect(
@@ -121,7 +111,7 @@ it("An implement result that annotates one more example", () => {
   ).toEqual({ state: "ready", reasons: undefined, events: 1 });
 });
 
-it("An sdd_delta result that adds one example and removes another a test annotated", () => {
+it("An sdd result that adds one example and removes another a test annotated", () => {
   const after = ["EX-0001-0001-01", "EX-0001-0001-03"];
 
   expect(

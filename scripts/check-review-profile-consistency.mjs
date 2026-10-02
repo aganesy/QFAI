@@ -13,7 +13,7 @@
  *   0 — all profiles consistent
  *   1 — drift detected (prints one `DRIFT:` line per offending phase)
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
@@ -24,7 +24,7 @@ const { parse: parseYaml } = require("./../packages/qfai/node_modules/yaml");
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const DEFAULTS = join(ROOT, "packages", "qfai", "assets", "defaults");
-const ROUTING_PATH = join(DEFAULTS, "agent-routing.yml");
+const ROUTING_DIR = join(DEFAULTS, "agent-routing");
 const PROFILES_PATH = join(DEFAULTS, "review-profiles.yml");
 
 function loadYaml(path) {
@@ -37,12 +37,19 @@ function loadYaml(path) {
   }
 }
 
-const routingDoc = loadYaml(ROUTING_PATH);
 const profilesDoc = loadYaml(PROFILES_PATH);
 const profiles = profilesDoc?.profiles ?? {};
 
-// agent-routing.yml has top-level `routing:` (array of skill entries).
-const routing = Array.isArray(routingDoc?.routing) ? routingDoc.routing : [];
+// Every file in the routing directory has a top-level `routing:`, an array of
+// `step:` and `skill:` entries. The set is read in file-name order as one list,
+// as the package's own loader reads it.
+const routing = readdirSync(ROUTING_DIR)
+  .filter((name) => name.endsWith(".yml"))
+  .sort()
+  .flatMap((name) => {
+    const doc = loadYaml(join(ROUTING_DIR, name));
+    return Array.isArray(doc?.routing) ? doc.routing : [];
+  });
 
 /**
  * Agents whose output is a verdict. A `review` phase may legitimately route a
@@ -53,7 +60,7 @@ const REVIEWER_NAME = /(?:-reviewer|-gatekeeper)$/;
 
 const drifts = [];
 for (const entry of routing) {
-  const skill = entry.skill ?? "<unknown-skill>";
+  const skill = entry.step ?? entry.skill ?? "<unknown-entry>";
   const profileName = entry.review_profile;
   if (!profileName) continue;
   const profile = profiles[profileName];
@@ -102,7 +109,7 @@ for (const entry of routing) {
 if (drifts.length > 0) {
   for (const line of drifts) console.error(line);
   console.error(
-    `\n${drifts.length} drift(s) detected. Fix agent-routing.yml or review-profiles.yml.`,
+    `\n${drifts.length} drift(s) detected. Fix the routing defaults or review-profiles.yml.`,
   );
   process.exit(1);
 }

@@ -61,8 +61,17 @@ The routing work order's result carries the proposal.
   "testObservation": "not_applicable",
   "actor": { "agentInstance": "routing-1" },
   "proposal": {
-    "requestKind": "change",
-    "candidateRoute": "bugfix",
+    "requestKind": "routed",
+    "extraction": {
+      "intent": "defect",
+      "entryFlags": ["repro", "expect"],
+      "qualifiers": [],
+      "signals": [],
+      "risks": [],
+      "gate": "none",
+      "artifacts": ["code", "tests"],
+      "confidence": "high"
+    },
     "goal": "One sentence",
     "expectedBehaviorRefs": [
       { "kind": "request", "ref": "request" },
@@ -75,26 +84,33 @@ The routing work order's result carries the proposal.
     "newStories": [],
     "proposedWriteScope": ["src/checkout/**", "tests/checkout/**"],
     "protectedTargets": [],
-    "requiredStages": ["diagnose", "implement", "verify"],
     "rationale": "A short reason a reviewer can check"
   }
 }
 ```
 
-- `actor` names the agent instance that proposed the route. The run records it
-  as the recommender, and never counts it as an independent reviewer.
-- `requestKind` is `change`, `read_only`, `plan_only`, `verify_only`, `resume`,
-  `cancel` or `explicit_stage`. Only `change` takes a route; the others carry
-  `candidateRoute: null` and write nothing.
-- `candidateRoute` is `direct`, `bugfix`, `bounded-change`, `feature` or
-  `discovery`.
+- `actor` names the agent instance that wrote the extraction. The run records
+  it as the recommender, and never counts it as an independent reviewer.
+- `requestKind` is `routed`: a change, a question, a proposal to decide or a
+  report to close. The run refuses any other kind.
+- `extraction` holds the facts `references/extraction.md` defines: `intent`,
+  `entryFlags`, `qualifiers`, `signals`, `risks`, `gate`, `artifacts` and
+  `confidence`. `alternatives` is required at `low`, allowed at `medium` and
+  left out at `high`; each one is `{ intent, entryFlags, qualifiers, signals }`.
+- At `accept`, the CLI's decision rules choose the route from the extraction.
+  A proposal names no route, stage or step: the run refuses
+  `candidateRoute`, `route`, `requiredStages` and `optionalSteps` as unknown
+  keys.
 - `expectedBehaviorRefs` takes `request`, `flow-id`, `contract-id` and `path`.
   `observedRefs` takes `path` and `evidence`. A path is project-relative, names
   a file that exists, and holds no glob.
 - A `contract-id` reference is refused as unknown. Name the contract file as a
   `path` instead.
 - `affectedFlowIds` names exactly one business flow when `newStories` is empty
-  and the plan has a stage that works on a flow.
+  and the plan has a stage that works on a flow. A route whose only such stage
+  is a test fix takes one flow or none, and any other route binds none.
+- A route that ends by closing the request writes nothing but the records its
+  discussion stage keeps, so its `proposedWriteScope` names nothing else.
 - `newStories` holds `{ goal, covers, excludes, evidence, flowId }` for each
   story the plan needs that no existing story represents. `flowId` is the flow
   it joins, or `null` when the story needs a new flow. `evidence` is what shows
@@ -103,15 +119,21 @@ The routing work order's result carries the proposal.
   `.qfai/evidence/workflow/`, `.qfai/evidence/decision/`, or `decisions.md` or
   `open-questions.md` under `paths.specsDir`, and never overlaps a protected
   target. The run refuses any of these.
+- A check that depends on the chosen route, such as the flow binding or the
+  write scope of a route that changes nothing, can refuse a proposal whose
+  extraction was valid. Revise it by the reasons `proposal-refused` lists.
+- After a re-route the routing work order carries `reroute`, and its route is
+  already fixed. The result has the same shape, extraction included, but the
+  decision rules do not choose again. It supplies the scope, the flows and the
+  new stories for the fixed route.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
-| Stage kind              | Write areas                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `sdd_delta`             | The story and contract files of the bound flow it changes               |
-| `sdd`                   | The new story's directory, or the new flow's for a story that needs one |
-| `discussion`            | Its tracked records, and `DESIGN.md` for a UI-bearing target            |
-| `prototype`, UI-bearing | `<paths.contractsDir>/design/**`                                        |
+| Stage kind              | Write areas                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sdd`                   | The story and contract files of the bound flow it changes, the new story's directory or the new flow's for a story that needs one, and `DESIGN.md` for a UI-bearing flow |
+| `discussion`            | Its tracked records                                                                                                                                                      |
+| `triage` and `diagnose` | Nothing                                                                                                                                                                  |
 
 A stage's own evidence file and table rows are not named: the run derives them
 from the stage kind.
@@ -151,11 +173,97 @@ A routing or stage result carries a question as:
 - A value answers as `"answer": { "value": "..." }`.
 - The operator's stop is `{ "stop": true, "answeredBy": "..." }`, whether or
   not a question is open.
+- An answer that approves a change is written into the `decisions.md` row the
+  run appends: who answered, when, and what was approved. The values come from
+  the run's authorization record: its `answeredBy`, its `recordedAt`, and the
+  `question.options[].label` of each option the answer chose. The run's own
+  records under `.qfai/evidence/workflow/` stay local and are never committed.
+
+## Work order
+
+`next` returns one per stage. Hand it whole to one sub-agent.
+
+```json
+{
+  "runId": "run-20260927090000000",
+  "workOrderId": "work-order-implement-1",
+  "stageInstanceId": "implement",
+  "attempt": 1,
+  "stageKind": "implement",
+  "target": { "kind": "flow", "flowId": "BF-0002" },
+  "steps": [
+    {
+      "name": "implement-tdd",
+      "path": ".qfai/assistant/step/implement-tdd/STEP.md",
+      "mode": null,
+      "passThrough": false,
+      "decisionPoint": null,
+      "branchPoint": false
+    },
+    {
+      "name": "implement-checkpoint",
+      "path": ".qfai/assistant/step/implement-checkpoint/STEP.md",
+      "mode": null,
+      "passThrough": false,
+      "decisionPoint": null,
+      "branchPoint": false
+    }
+  ],
+  "scope": {
+    "digest": "<scope digest>",
+    "writeAreas": ["src/checkout/**", "tests/checkout/**"],
+    "protectedTargets": [],
+    "allowedEffects": [],
+    "nonGoals": []
+  },
+  "modifiers": [],
+  "recordAreas": [".qfai/evidence/implement-BF-0002.md"],
+  "inputs": [],
+  "requiredGates": [],
+  "requiredReviewerRoles": ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"],
+  "actorHistory": [],
+  "authorizationRefs": [],
+  "priorStageReceiptRefs": [],
+  "expectedSequence": 9
+}
+```
+
+- `steps` lists every step the stage runs, in order. The sub-agent reads a
+  step's `path` when it reaches that step, never before.
+- A step with `passThrough: true` still runs. When it shows it has nothing to
+  write, the result records a pass for it, and writes nothing for that step.
+- The stage is reviewed once, after its last step, by every role in
+  `requiredReviewerRoles`.
+- The routing work order carries `executor` `qfai-run` and `operation` `route`
+  instead of `steps`.
+- A routing work order issued by a re-route also carries
+  `reroute: { route, fromStep, outcome }`: the route the run moves to, and the
+  step and the outcome that sent it there. Its result follows
+  [Routing result](#routing-result).
+- A step with `branchPoint: true` can send the run to another route. It reports
+  that through the stage result's `branch`, or its diagnosis `verdict`.
 
 ## Stage result
 
-The executor skill returns it. `qfai-run` writes it to the run's inbox as the
+The sub-agent that ran the work order's steps returns it. `qfai-run` writes it to the run's inbox as the
 skill gave it, and never edits its outcome, its review results or its
 changed-file list. It names its author in `actor`, as the routing result does.
 A result with no `actor`, a field of the wrong shape or an unknown key is
 refused before the run reads it.
+
+- `passes` holds `{ step, reason, evidenceRef }` for each pass-through step
+  that had nothing to write. `evidenceRef` names a git-ignored record of what
+  the step read. The run refuses a pass for a step its work order does not mark
+  `passThrough`, and a pass while work the step owns remains.
+- `branch` holds `{ outcome, route?, extraction? }` from a step marked
+  `branchPoint: true` other than `implement-diagnose`, which reports its
+  diagnosis `verdict` instead:
+  - `outcome` is one the step declares;
+  - `route` picks one of several destinations the step names for that outcome;
+  - `extraction` is `{ intent, entryFlags, qualifiers, signals }`, from which the
+    decision rules choose the destination when the step leaves it to them.
+- A `branch` moves the run to routing with the destination fixed. A result
+  without one continues the route.
+- A `branch` from a step that is not a branch point, an outcome the step does
+  not declare, or a `route` outside its destinations is refused `invalid-input`
+  with reason `branch-undeclared`.

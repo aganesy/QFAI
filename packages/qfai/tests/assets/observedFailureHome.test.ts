@@ -12,7 +12,7 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 describe("observed failures become concrete examples under acceptance criteria", () => {
   for (const tree of trees) {
     it(tree + ": keeps failures and boundaries in AC and EX coverage", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-story/STEP.md");
       const checklist = await read(
         tree,
         "assistant/skill/qfai-sdd/references/sdd-phase-checklists.md",

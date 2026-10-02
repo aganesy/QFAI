@@ -15,11 +15,14 @@ import {
   testCommands,
 } from "./ownCi.js";
 
-// The workflow control-core suites, the init suites, and the named provenance, gitignore and
-// migration tests. The literal is the declaration this case holds the script to.
+// The workflow control-core suites, the Codex hook suites, the init suites, and the named
+// provenance, gitignore and migration tests. The literal is the declaration this case holds the
+// script to.
 const DECLARED_SUITES = [
   "tests/unit/workflow/",
   "tests/integration/workflow/",
+  "tests/assets/codexToolHooks.test.ts",
+  "tests/assets/freeTextEntryHook.test.ts",
   "tests/cli/init",
   "tests/integration/init/",
   "tests/core/assistantAssetProvenance.test.ts",

@@ -9,7 +9,7 @@ import { loadConfig } from "../../core/config.js";
 import { readFrozenScopeState } from "../../core/prototyping/frozenScope.js";
 import { PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import { readUiContractsCovered } from "../../core/prototyping/specsCovered.js";
-import { info, warn } from "../lib/logger.js";
+import { info, warn } from "../../core/logger.js";
 
 /** What the caller asked for. */
 export type RescopeOptions = {
@@ -37,14 +37,12 @@ export type RescopeAuditEntry = {
  */
 export async function runPrototypingRescope(options: RescopeOptions): Promise<number> {
   if (options.remove.length === 0) {
-    warn("qfai prototyping rescope: --remove <CON-UI-NNNN> is required (repeatable).");
+    warn("qfai prototyping rescope: --remove <UI-NNNN> is required (repeatable).");
     return 2;
   }
-  const invalid = options.remove.filter((id) => !/^CON-UI-\d{4}$/u.test(id));
+  const invalid = options.remove.filter((id) => !/^UI-\d{4}$/u.test(id));
   if (invalid.length > 0) {
-    warn(
-      `qfai prototyping rescope: --remove requires CON-UI-NNNN; received ${invalid.join(", ")}.`,
-    );
+    warn(`qfai prototyping rescope: --remove requires UI-NNNN; received ${invalid.join(", ")}.`);
     return 2;
   }
   if (options.reason.trim().length === 0) {

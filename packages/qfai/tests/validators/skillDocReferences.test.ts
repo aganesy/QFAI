@@ -1,11 +1,11 @@
 /**
  * Validator: skillDocReferences (.qfai/assistant/skill/<skill>/SKILL.md).
  *
- * Covers TC-0004-0023 (project_memory enforcement) and TC-0004-0024
+ * Covers TC-0004-0023 (project_memory shape) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
-// QFAI:EX-0001-0047-02
-// QFAI:EX-0001-0048-01
+// QFAI:EX-0001-0045-02
+// QFAI:EX-0001-0046-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -40,27 +40,7 @@ describe("skillDocReferences validator", () => {
     }
   });
 
-  // TC-0004-0023: project_memory required
-  it("TC-0004-0023: emits warning when qfai-implement/SKILL.md is missing project_memory:", async () => {
-    const root = await newRoot("skill-projmem");
-    try {
-      await seedSkill(
-        root,
-        "qfai-implement",
-        ["## /qfai-implement", "", "body content without trailing project_memory block.", ""].join(
-          "\n",
-        ),
-      );
-      const issues = await validateSkillDocReferences(root, await getConfig(root));
-      const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
-      expect(projMem.length).toBe(1);
-      expect(projMem[0]?.message).toContain("qfai-implement");
-      expect(projMem[0]?.message).toContain("project_memory");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
+  // QFAI:EX-0001-0045-02
   it("does not emit project_memory warning when the block is present", async () => {
     const root = await newRoot("skill-projmem-ok");
     try {
@@ -86,6 +66,7 @@ describe("skillDocReferences validator", () => {
   });
 
   // TC-0004-0024: W-SKILL-DOC-BROKEN-REF
+  // QFAI:EX-0001-0046-01
   it("TC-0004-0024: emits W-SKILL-DOC-BROKEN-REF for legacy .qfai/assistant/steering/ refs in a SKILL.md", async () => {
     const root = await newRoot("skill-brokenref");
     try {
@@ -96,6 +77,7 @@ describe("skillDocReferences validator", () => {
           "## /qfai-sdd",
           "",
           "Route specialist reviewers from `.qfai/assistant/steering/agent-routing.yml`.",
+          "Other rules live under `.qfai/assistant/constitution/overview.md`.",
           "",
           "project_memory:",
           "  - none",
@@ -103,7 +85,10 @@ describe("skillDocReferences validator", () => {
       );
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
+      // One finding: the retired steering path. The constitution/ reference is not resolved.
       expect(broken.length).toBe(1);
+      expect(broken[0]?.severity).toBe("error");
+      expect(broken[0]?.file).toContain("qfai-sdd/SKILL.md");
       expect(broken[0]?.message).toContain("non-canonical path");
       expect(broken[0]?.message).toContain("Agent routing defaults are shipped with qfai");
       expect(broken[0]?.message).toContain("project overrides live in qfai.config.yaml");
@@ -145,8 +130,9 @@ describe("skillDocReferences validator", () => {
     }
   });
 
-  // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail still fires
-  it("TC-0004-0023 (mid-file): project_memory: block followed by another heading still fires the missing-trailing warning", async () => {
+  // TC-0004-0023 (mid-file project_memory): block not at SKILL.md tail fires
+  // QFAI:EX-0001-0045-02
+  it("TC-0004-0023 (mid-file): project_memory: block followed by another heading fires the not-trailing warning", async () => {
     const root = await newRoot("skill-projmem-midfile");
     try {
       await seedSkill(
@@ -168,6 +154,9 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const projMem = issues.filter((i) => i.rule === "skillDocReferences.projectMemory");
       expect(projMem.length).toBe(1);
+      expect(projMem[0]?.code).toBe("W-SKILL-PROJECT-MEMORY");
+      expect(projMem[0]?.severity).toBe("warning");
+      expect(projMem[0]?.message).toContain("qfai-implement");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

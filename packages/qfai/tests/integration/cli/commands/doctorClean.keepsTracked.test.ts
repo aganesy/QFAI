@@ -90,6 +90,8 @@ async function exists(target: string): Promise<boolean> {
 
 describe("doctor --clean does not archive a tracked pack into an ignored directory", () => {
   it("keeps a committed pack in place and says why", async () => {
+    // QFAI:AC-0003-0008-03
+    // QFAI:EX-0003-0008-05
     const { root, packName } = await seedRepo(true);
 
     const result = await cleanStaleReviewPacks(root);

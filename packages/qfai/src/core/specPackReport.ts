@@ -3,7 +3,6 @@ import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
-import { buildContractIndex } from "./contractIndex.js";
 import { resolveFlowScope } from "./flowScope.js";
 import { isStoryTreeId } from "./storyTree/ids.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
@@ -17,7 +16,7 @@ type Graph = {
 function graphForFlow(
   model: StoryTreeModel,
   flowId: string,
-  contractIdsByFile: ReadonlyMap<string, readonly string[]>,
+  contractIdsByFile: ReadonlyMap<string, string>,
   root: string,
 ): Graph {
   const scope = resolveFlowScope([flowId], model);
@@ -51,12 +50,10 @@ function graphForFlow(
     }
   }
   for (const file of new Set(rules.map((rule) => rule.file))) {
-    const fallback = path.relative(root, file).replace(/\\/g, "/");
-    for (const contractId of contractIdsByFile.get(file) ?? [fallback]) {
-      nodes.set(contractId, "CON");
-      for (const rule of rules.filter((item) => item.file === file)) {
-        edge(rule.id, contractId, "BR_TO_CON");
-      }
+    const contractId = contractIdsByFile.get(file) ?? path.relative(root, file).replace(/\\/g, "/");
+    nodes.set(contractId, "CON");
+    for (const rule of rules.filter((item) => item.file === file)) {
+      edge(rule.id, contractId, "BR_TO_CON");
     }
   }
   return {
@@ -80,15 +77,7 @@ export async function writeBusinessFlowReports(
   if (scope?.invalidValues.length) {
     throw new Error(`Unknown business flow: ${scope.invalidValues.join(", ")}`);
   }
-  const contractIndex = await buildContractIndex(root, config);
-  const contractIdsByFile = new Map<string, string[]>();
-  for (const [id, files] of contractIndex.idToFiles) {
-    for (const file of files) {
-      const ids = contractIdsByFile.get(file) ?? [];
-      ids.push(id);
-      contractIdsByFile.set(file, ids);
-    }
-  }
+  const contractIdsByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const selected = scope ? new Set(scope.flowIds) : null;
   const outRoot = resolvePath(root, config, "outDir");
   for (const flow of model.flows.filter(

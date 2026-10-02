@@ -3,28 +3,26 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Unattended prototyping execution
+  # AC-0001-0118-01
+  Scenario: Autonomous run from cycle 0 to cycle 9 — no per-cycle prompts
+    Given `/qfai-prototyping` is invoked,
+    When the run executes cycle 0 through cycle 9,
+    Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin. (Cycle-9 idempotency is specified under AC-0001-0123-01: terminator routing is an iteration-budget concern, not an autonomous-run concern.)
 
-# AC-0001-0118-01
-# Parent: US-0001-0118
-Scenario: AC-0001-0118-01
-  Given a story-tree project contains non-UI work and a UI contract file without a `CON-UI-NNNN` ID or a `screens[]` entry
-  When prototyping scope is resolved
-  Then the file is excluded from the UI-bearing contract set and no spec-level marker is read
-  And missing screen contracts do not trigger UI-only requirements for the non-UI work
-
-# AC-0001-0118-02
-# Parent: US-0001-0118
-Scenario: Multi-spec resolver covers every UI-bearing spec per invocation (case 1)
-  Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract (also accepted: any of the documented 5 candidate layouts in `.qfai/contracts/ui/README.md` — including the per-spec subdirectory layout `<contractsDir>/ui/spec-<id>/<sub>.yaml`, candidate #5, treated as UI-bearing when the subdir contains at least one `*.yaml` file; `*.yml` single-l is excluded for parity with the top-level convention) — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
-  When `/qfai-prototyping` is invoked exactly once,
-  Then `resolveAllUiBearingSpecs()` returns every UI-bearing spec ID, the previous primary-spec selection prompt is not emitted, and cycle-0 evidence records the resolved spec set verbatim.
-
-Scenario: Multi-spec resolver covers every UI-bearing spec per invocation (case 2)
-  Given a consumer project with zero UI-bearing specs **at cycle 0** (no in-progress `prototyping.json#frozenSurfaceUnion` recorded yet),
-  When `/qfai-prototyping` is invoked at cycle 0,
-  Then the run exits 0 deterministically as a no-op (not an error).
-  And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0001-0118-01) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
-  And at cycle ≥ 1 the zero-UI-bearing live result is a hard-stop drift class (see AC-0001-0122-02 class (d) for the "UI markers removed mid-loop" path and class (e) for the "missing cycle-0 seed" path), NOT a no-op. The no-op semantic is intentionally scoped to cycle 0 only.
-  And On the story tree the resolved unit is the UI contract: a file under `<paths.contractsDir>/ui/` is UI-bearing when it declares a `CON-UI-NNNN` ID and at least one `screens[]` entry, and nothing read from `01_Spec.md` or from a contract file named after a spec counts. The resolver returns every UI-bearing `CON-UI-NNNN` ID, cycle-0 evidence records them in `uiContractsCovered[]`, and zero UI-bearing UI contracts at cycle 0 is the same no-op.
+  # AC-0001-0118-02
+  Scenario: Deterministic hard-stop classes
+    Given the hard-stop catalog is fixed at (a) `DESIGN.md` hash drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection (any added / removed UI-bearing spec, including the special case of every UI marker / contract being removed mid-loop so the live UI-bearing union shrinks to `[]`), (e) cycle ≥ 1 invocation without a recorded cycle-0 `frozenSurfaceUnion` seed, (f) cycle ≥ 1 detection of `prototyping.json#frozenLicenseCatalog` drift (set-equality semantic via `licenseCatalogsEqual`), (g) certify-side detection of non-canonical `prototyping.json#frozenSpecsCovered[]` entries (any value that is not bare 4-digit `NNNN` or fully-qualified `spec-NNNN`), (h) certify-side present-but-malformed `prototyping.json#frozenSpecsCovered` field (key on the record but value is non-array / empty / non-string / empty-string entry / explicit `null` / `undefined` — rejected by the SSOT classifier instead of silently falling back to legacy `specsCovered`),
+    When any class triggers,
+    Then the run exits non-zero deterministically with the documented exit code per class:
+    And (a) `DESIGN.md` hash drift → exit `2` (per AC-0001-0112-01),
+    And (c) license-verify failure → exit `66`,
+    And (d) mid-run spec-set change detection → exit `2` (same class as `DESIGN.md` hash drift; new / removed spec deferred to next invocation per the business-rule layer),
+    And (e) cycle ≥ 1 without a cycle-0 seed → exit `2` with the operator instructed to run `--cycle 0 --target-url <url>` first (the "Seed the loop first" branch of the zero-UI precheck; also covers the legacy-shape variant where `prototyping.json` exists but the `frozenSurfaceUnion` field is missing),
+    And (f) `frozenLicenseCatalog` drift → exit `2` with a re-seed instruction (set-equality semantic: order-permuted catalogs MUST NOT trip the gate, semantic differences MUST; SSOT is the in-memory `DEFAULT_LICENSE_CATALOG` constant, which cycle 0 mirrors into `prototyping.json#frozenLicenseCatalog`),
+    And (g) certify-side non-canonical `frozenSpecsCovered[]` entry → exit `2` with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr; operator is directed to re-run `qfai prototyping iterate --cycle 0` to regenerate the record (the certify per-(spec × screen) gate refuses to build paths from unvalidated input — feeding unvalidated strings into `path.join(root, "iter-NN", id, "<screen>.review.json")` would allow path-traversal probes outside the intended subtree),
+    And (h) certify-side present-but-malformed `prototyping.json#frozenSpecsCovered` field (key IS on the record, but value fails the string-array validation contract — non-array, empty array, non-string entry, empty-string entry, OR an explicit `null` / `undefined` on a present key) → exit `2` with a "present but malformed" diagnostic naming the rejection reason.
+    And **Cross-class postcondition: no user prompt is emitted.** This is the original CHG-002 scope, binding ALL hard-stop classes (a)-(h). The hard-stop catalog runs in fully autonomous mode: when ANY class triggers, the run exits non-zero deterministically WITHOUT emitting a user prompt. This clause applies cross-class to the full hard-stop catalog (a)-(h), not only to class (h); the autonomous-run semantic is further reinforced by AC-0001-0118-01.
+    And **Ordering invariant.** This is a sibling of the When / Then clauses above, not a continuation of class (h)'s Then block. Hard-stop classes (a)-(h) MUST be evaluated BEFORE convergence / budget-exhaustion signals (i.e. before `shouldStop()` in iterate's cycle ≥ 1 path, and before any per-(spec × screen) coverage-rejection class on the certify side). When a hard-stop class AND a convergence / coverage signal both fire in the same invocation, the hard-stop class wins and the convergence / coverage signal MUST be suppressed. Rationale: a partial / corrupt lock or a mid-loop drift cannot be "resolved" by satisfying convergence axes or exhausting the iteration budget; honouring `shouldStop`-first would let a mid-loop UI marker removal ship as a successful exit-64 / exit-65 outcome and bypass the lock-drift remediation path entirely. This clause applies cross-class to the full hard-stop catalog (a)-(h); it is not a postcondition of any single class.
+    And **On the story tree** (BR-0012-0011, BR-0012-0012): (b) leaves no review payload for the pair, and certify exits `64` naming it; (d) is any added or removed UI-bearing UI contract; (g) and (h) read `prototyping.json#uiContractsCovered`, (g) rejects any entry that is not a canonical `UI-NNNN` before a review path is built from it, and (h) has no `absent` fallback because there is no second field. A `prototyping.json` that carries `specsCovered` or `frozenSpecsCovered`, or lacks `uiContractsCovered`, is exit `2` on `iterate` at cycle ≥ 1, on `certify` and on `show-ui-contract`, with a message saying to re-seed with `qfai prototyping iterate --cycle 0`. The postcondition and the ordering invariant above bind this class too.
 ```

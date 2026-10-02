@@ -7,6 +7,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -145,7 +146,8 @@ const requiredSkills = [
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
-  "qfai-migration-spec-to-story",
+  "qfai-triage",
+  "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
   "qfai-spec",
@@ -168,7 +170,7 @@ for (const skillId of requiredSkills) {
   }
 }
 
-for (const layer of ["skill", "agent", "rule", "prompt"]) {
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
   const packed = path.join(templateDir, "assistant", layer);
   if (!existsSync(packed) || !lstatSync(packed).isDirectory()) {
     throw new Error(`assets/init/.qfai/assistant/${layer} must be a directory.`);
@@ -241,7 +243,7 @@ if (missingPatterns.length > 0) {
 }
 
 const assistantDir = path.join(qfaiDir, "assistant");
-for (const layer of ["skill", "agent", "rule", "prompt"]) {
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
   const generated = path.join(assistantDir, layer);
   if (!existsSync(generated) || !lstatSync(generated).isDirectory()) {
     throw new Error(`init did not generate .qfai/assistant/${layer} directory.`);
@@ -292,7 +294,7 @@ for (const relative of [
     throw new Error(`init did not seed .qfai/spec/${relative} from its packed template.`);
   }
 }
-for (const kind of ["api", "db", "ui", "cli", "design"]) {
+for (const kind of ["api", "db", "ui", "cli"]) {
   const contractDir = path.join(specDir, "03_contract", kind);
   if (!existsSync(contractDir) || !lstatSync(contractDir).isDirectory()) {
     throw new Error(`init did not generate .qfai/spec/03_contract/${kind} directory.`);
@@ -301,31 +303,6 @@ for (const kind of ["api", "db", "ui", "cli", "design"]) {
 if (hasEntry(path.join(qfaiDir, "specs")) || hasEntry(path.join(qfaiDir, "contracts"))) {
   throw new Error("init generated an obsolete spec or contract directory.");
 }
-
-const syntheticDecisionPath = path.join(specDir, "01_policy", "verify-pack-guardrail.md");
-writeFileSync(
-  syntheticDecisionPath,
-  [
-    "# Delta",
-    "",
-    "## Decision Guardrails",
-    "",
-    "### DG-0001: Synthetic guardrail for verify-pack",
-    "- Type: trade-off",
-    "- Scope: .qfai/spec/*",
-    "- Guardrail: Do not implement the rejected synthetic option.",
-    "- Reason: verify-pack smoke test entry",
-    "- Reconsider: never",
-    "- Keywords: synthetic, verify-pack",
-    "",
-  ].join("\n"),
-);
-execFileSync(
-  "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDecisionPath, "--max", "20"],
-  { stdio: "inherit" },
-);
-rmSync(syntheticDecisionPath, { force: true });
 
 // Symlink-based integration directories (v1.5.4+)
 const skillIntegrationDirs = [
@@ -387,6 +364,19 @@ for (const skillId of requiredSkills) {
   }
 }
 
+// Steps are read by their parent skill, never offered to a host as skills.
+const stepsDir = path.join(assistantDir, "step");
+for (const stepId of readdirSync(stepsDir)) {
+  if (!existsSync(path.join(stepsDir, stepId, "STEP.md"))) {
+    throw new Error(`init did not generate .qfai/assistant/step/${stepId}/STEP.md.`);
+  }
+  for (const [label, dir] of skillIntegrationDirs) {
+    if (hasEntry(path.join(dir, stepId))) {
+      throw new Error(`init linked step ${stepId} into ${label}.`);
+    }
+  }
+}
+
 // Legacy commands/prompts wrappers must NOT exist for any qfai skill id.
 for (const skillId of [...requiredSkills, ...deprecatedSkillIds]) {
   const legacyWrapperPaths = [
@@ -432,10 +422,6 @@ if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
 // Empty scaffold init omits generated discussion-pack files.
 // Seed a minimal discussion-pack so pack-time validate has realistic inputs.
 const discussionDir = path.join(outputDir, ".qfai", "discussion");
-// One stamp for the run this fixture stands for. The pack and the stage
-// evidence a real run writes carry the same one, and the grilling check pairs
-// them by it — spelled twice, a rename of either half silently stops the
-// fixture exercising the path it was seeded for.
 const seededDiscussionPack = "discussion-20260216000000000";
 const seededDiscussionPackDir = path.join(discussionDir, seededDiscussionPack);
 mkdirSync(seededDiscussionPackDir, { recursive: true });
@@ -637,28 +623,6 @@ for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
   writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
 }
 
-// The stage evidence the run that wrote this pack would have written. A real
-// run opens it under its own stamp before anything else and records there when
-// its grilling session ended and when authoring began, so a pack standing on
-// its own is a run that wrote no record — which `QFAI-GRILL-001` reports, and
-// correctly. Seeding the pack without it made the fixture less realistic than
-// the comment above says it is.
-const seededDiscussionEvidenceDir = path.join(outputDir, ".qfai", "evidence");
-mkdirSync(seededDiscussionEvidenceDir, { recursive: true });
-writeFileSync(
-  path.join(seededDiscussionEvidenceDir, `${seededDiscussionPack}.md`),
-  [
-    `# Evidence: /qfai-discussion (${seededDiscussionPack})`,
-    "",
-    "## Grilling Session",
-    "",
-    "| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |",
-    "| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |",
-    "| confirmed | 2026-02-16T00:00:00Z | 2026-02-16T00:01:00Z | empty | none in flight | 3 | 0 |",
-    "",
-  ].join("\n"),
-);
-
 const seededReviewPackName = "review-20260216000000000";
 const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
@@ -745,11 +709,9 @@ if (hasEntry(skillsLocalDir)) {
 }
 
 // Stand in for the `/qfai-configure` run a project makes before it gates.
-// Contract steering files ship as placeholders, and gating without filling
-// them measures the fixture rather than the package.
-const steeringFiles = ["structure.md", "tech.md"].map((name) =>
-  path.join(outputDir, ".qfai", "spec", "03_contract", name),
-);
+// The contract steering file ships as placeholders, and gating without filling
+// it measures the fixture rather than the package.
+const steeringFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
 for (const steeringFile of steeringFiles) {
   if (!existsSync(steeringFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next
@@ -761,12 +723,19 @@ for (const steeringFile of steeringFiles) {
     );
   }
   const before = readFileSync(steeringFile, "utf-8");
-  // One value for both placeholder forms: they stand for the same thing, and a
-  // reader should not have to compare two strings to see that.
-  const fixtureValue = "verify-pack fixture value";
+  // One value for each placeholder text, so two slots that name different
+  // things, such as two architecture layers, stay different once filled. Every
+  // TODO and TBD shares one value.
+  const fixtureValues = new Map();
+  const fixtureValue = (placeholder) => {
+    if (!fixtureValues.has(placeholder)) {
+      fixtureValues.set(placeholder, `verify-pack fixture value ${fixtureValues.size + 1}`);
+    }
+    return fixtureValues.get(placeholder);
+  };
   const after = before
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
-    .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
+    .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
     throw new Error(
       `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +

@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const ID = /\b(?:BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})\b/g;
 const ANNOTATION = /QFAI:(BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})\b/g;
 const DECLARATION =
-  /^(?:#{1,4}\s+|\|\s*|#\s+)(BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})\b/gm;
+  /^[ \t]*(?:#{1,4}\s+|\|\s*|#\s+)(BF-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2})\b/gm;
 
 async function declaredIds(): Promise<Set<string>> {
   const files = await fg(".qfai/spec/02_business-flow/**/*.md", { cwd: root });

@@ -3,12 +3,12 @@
  * the advisory-findings bucket of the 2-group text summary, and never inside the
  * blocking bucket.
  *
- * TC-0006-0029 (AC-0006-0022 / BR-0006-0019, grouping per BR-0006-0011) — Setup
- * 「`workflows.integrity` が drift を返すフィクスチャ」, Action 「`runDoctor({ root,
- * format: 'text', failOn: 'error' })` 相当を呼び…」.
+ * The test case for BR-0008-0019, with the grouping BR-0008-0011 fixes — Setup
+ * "a fixture on which `workflows.integrity` returns drift", Action "call the equivalent of `runDoctor({ root,
+ * format: 'text', failOn: 'error' })`".
  *
- * The TC carries THREE Verify bullets. This row owns the THIRD only — 「text
- * renderer が当該 finding を "warnings advisory of drift" group に配置する」 —
+ * The TC carries THREE Verify bullets. This row owns the THIRD only — "the text
+ * renderer places that finding in the 'warnings advisory of drift' group" —
  * together with the rendered severity tag on the placed line, which the sibling
  * suite's docblock cedes here in those words ("no `[info]` tag, no group header,
  * both TDD-0040's surface"). Bullets 1 and 2 (registered severity, and
@@ -31,7 +31,7 @@
  *   counts are AC-0006-0025. Two of them are owned by NOBODY — the finding's
  *   ORDINAL position inside its bucket, and the empty-bucket placeholder
  *   wording, whose rendered string is in no AC, no TC and no clause of
- *   `.qfai/contracts/cli/qfai-doctor.md`, and is pinned by no test in the
+ *   `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, and is pinned by no test in the
  *   package (measured, both by grep). Unowned is not an invitation: the TC
  *   requires MEMBERSHIP of a bucket, not order within it, and an assertion
  *   stricter than the contract encodes a reviewer-originated obligation, which
@@ -41,12 +41,12 @@
  *
  * ## The header the TC names is not the header that renders
  *
- * The TC (and BR-0006-0011, and DR-0006-0004's plan entry) spell the bucket
+ * The TC and BR-0008-0011 spell the bucket
  * "warnings advisory of drift". `formatDoctorText` renders
  * `== warnings advisory of drift ==`. The two DENOTE the
- * same bucket — BR-0006-0011 declares the group header strings stable
- * identifiers and `.qfai/contracts/cli/qfai-doctor.md` § "Finding grouping"
- * mandates exactly the two buckets — so this file needles the RENDERED literal
+ * same bucket — BR-0008-0011 of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
+ * mandates exactly the two buckets and declares their header strings stable
+ * identifiers — so this file needles the RENDERED literal
  * and never the spec's prose. Neither side is "fixed" here; the mapping is
  * recorded instead, since editing either would be a spec change dressed as a
  * test.

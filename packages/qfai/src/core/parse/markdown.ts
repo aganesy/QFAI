@@ -81,6 +81,15 @@ export function parseHeadings(md: string): Heading[] {
   return headings;
 }
 
+/**
+ * A heading's title without the closing run of `#` CommonMark allows, so
+ * `## Business rules ##` names the same section as `## Business rules`. The run
+ * counts only after a space or a tab: `## C#` keeps its `#`.
+ */
+export function headingText(title: string): string {
+  return title.replace(/(?:^|[ \t]+)#+[ \t]*$/, "").trim();
+}
+
 export function extractH2Sections(md: string): Map<string, H2Section> {
   const lines = md.split(/\r?\n/);
   const headings = parseHeadings(md).filter((heading) => heading.level === 2);

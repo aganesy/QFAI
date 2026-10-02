@@ -8,20 +8,14 @@
  *     companyName?, primaryUiContract?, startDate?, signature?,
  *     entryPattern?, productScope?
  *   All are optional and additional properties are permitted.
- *
- * - The schema additionally documents the `D-HANDOFF-LEGACY-FORMAT`
- *   warning code (not validated here; emitted by readers when a legacy
- *   ad-hoc file is encountered).
  */
-// QFAI:EX-0001-0177-01
+// QFAI:EX-0001-0171-01
 
 import { describe, expect, it } from "vitest";
 
 import {
-  HANDOFF_LEGACY_FORMAT_CODE,
   HANDOFF_MINIMUM_FIELDS,
   parseHandoff,
-  parseHandoffJson,
   validateHandoff,
 } from "../../../../src/core/schemas/handoff.js";
 
@@ -34,7 +28,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   it("accepts the canonical minimum field set", () => {
     const issues = validateHandoff({
       companyName: "Acme",
-      primaryUiContract: "CON-UI-0012",
+      primaryUiContract: "UI-0012",
       startDate: "2026-05-27",
       signature: "abc123",
       entryPattern: "qfai-sdd",
@@ -64,7 +58,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
     expect(codes.has("HANDOFF-SCHEMA-FIELD-TYPE")).toBe(true);
   });
 
-  it("exports the canonical field list and the legacy format code", () => {
+  it("exports the canonical field list", () => {
     expect(HANDOFF_MINIMUM_FIELDS).toEqual([
       "companyName",
       "primaryUiContract",
@@ -73,20 +67,18 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
       "entryPattern",
       "productScope",
     ]);
-    expect(HANDOFF_LEGACY_FORMAT_CODE).toBe("D-HANDOFF-LEGACY-FORMAT");
   });
 });
 
-// Regression for the YAML-parse fix: `qfai handoff upgrade` writes YAML
-// (the canonical format per `references/handoff.md`), and the pre-fix
-// `parseHandoffJson` called `JSON.parse` only — so a normal YAML
-// handoff returned `null` and downstream `validate --profile
-// saas-package` treated the handoff as unparseable.
+// Regression for the YAML-parse fix: the canonical handoff is YAML (per
+// `references/handoff.md`), and the pre-fix parser called `JSON.parse`
+// only — so a normal YAML handoff returned `null` and downstream
+// `validate --profile saas-package` treated the handoff as unparseable.
 describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("parses a canonical YAML handoff into a record", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primaryUiContract: "CON-UI-0001"',
+      'primaryUiContract: "UI-0001"',
       'startDate: "2026-05-27"',
       'signature: "abc123"',
       'entryPattern: "qfai-sdd"',
@@ -96,19 +88,19 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
     const parsed = parseHandoff(yaml);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
+    expect(parsed?.primaryUiContract).toBe("UI-0001");
     expect(parsed?.productScope).toBe("saas");
   });
 
   it("parses a JSON handoff into a record (YAML is a strict superset)", () => {
     const json = JSON.stringify({
       companyName: "Acme",
-      primaryUiContract: "CON-UI-0001",
+      primaryUiContract: "UI-0001",
     });
     const parsed = parseHandoff(json);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
+    expect(parsed?.primaryUiContract).toBe("UI-0001");
   });
 
   it("returns null for empty input (YAML `null` document)", () => {
@@ -128,14 +120,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
     expect(parseHandoff("{ unbalanced: [")).toBeNull();
   });
 
-  it("exposes a back-compat `parseHandoffJson` alias", () => {
-    const yaml = 'companyName: "Acme"\n';
-    expect(parseHandoffJson(yaml)).toEqual({ companyName: "Acme" });
-    // alias and primary share identity (same function reference).
-    expect(parseHandoffJson).toBe(parseHandoff);
-  });
-
-  // Pin no-data-loss for nested YAML payloads. parseHandoffJson was
+  // Pin no-data-loss for nested YAML payloads. The parser was
   // pre-fix `JSON.parse`-only; downstream readers that consumed a
   // YAML handoff with nested mappings (`signature:\n  by: alice`)
   // would see `null` and downstream `--profile saas-package` would
@@ -146,7 +131,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("preserves nested YAML object graphs (no data loss for non-flat payloads)", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primaryUiContract: "CON-UI-0001"',
+      'primaryUiContract: "UI-0001"',
       "signature:",
       '  by: "alice"',
       '  on: "2026-05-27"',

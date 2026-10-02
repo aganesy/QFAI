@@ -30,7 +30,9 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Audit architecture boundaries, trade-offs, and technical consistency.
+- Judge a change against the `## Architecture` table of `<paths.contractsDir>/tech.md`: each new module belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - Audit contract decisions across UI, API, and DB surfaces.
+- Block a contract that names an implementation file, cites another contract's business rule, or reuses a contract number.
 - Block reintroduction of rejected architecture options without RE-OPEN.
 - Review design against SOLID, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
 - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
@@ -51,7 +53,7 @@ specialization_tags:
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
-- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/{tech,structure}.md (project context)
+- <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md

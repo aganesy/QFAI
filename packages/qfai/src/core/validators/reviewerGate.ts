@@ -88,6 +88,8 @@ async function loadJsonObject(filePath: string): Promise<Record<string, unknown>
  * structurally correct active-loop signal.
  */
 function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean {
+  // The state file is a local record, never committed: a missing one is a loop
+  // that has not run in this working tree.
   if (proto === null) return false;
   return proto.stopReason === null;
 }

@@ -1,4 +1,4 @@
-// QFAI:EX-0001-0201-08
+// QFAI:EX-0001-0194-08
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -37,14 +37,24 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
-// `qfai-run` and every skill a built-in plan dispatches to.
+// The skill a plan step belongs to, by its name: `<owner>-<name>`, owner without `qfai-`.
+function ownerOf(step: unknown): string | undefined {
+  const name = typeof step === "string" ? step : record(step).step;
+  const prefix = typeof name === "string" ? name.split("-")[0] : undefined;
+  return prefix && prefix !== "common" ? `qfai-${prefix}` : undefined;
+}
+
+// `qfai-run` and every skill owning a step a built-in plan runs.
 async function entrySkills(): Promise<string[]> {
   const skills = new Set<string>(["qfai-run"]);
   for (const name of await readdir(PLANS)) {
     const plan = record(parseYaml(await readFile(path.join(PLANS, name), "utf8")));
     for (const stage of Array.isArray(plan.stages) ? plan.stages : []) {
-      const skill = record(stage).skill;
-      for (const each of Array.isArray(skill) ? skill : [skill]) skills.add(String(each));
+      const steps: unknown = record(stage).steps;
+      for (const step of Array.isArray(steps) ? steps : []) {
+        const owner = ownerOf(step);
+        if (owner) skills.add(owner);
+      }
     }
   }
   return [...skills].sort();
@@ -87,11 +97,11 @@ async function modelInvocationDisabled(skillDir: string, skills: string[]) {
   return disabled;
 }
 
-// The lines above the entry point's first heading that send a request to `qfai-run`.
+// The lines of the entry point that send a request to `qfai-run`; the hook is the one place that
+// rule is stated.
 async function entryDirectives(file: string): Promise<string[]> {
   const lines = (await readFile(path.join(initRoot, file), "utf8")).split(/\r?\n/);
-  const heading = lines.findIndex((line) => line.startsWith("# "));
-  return lines.slice(0, heading < 0 ? 0 : heading).filter((line) => line.includes("qfai-run"));
+  return lines.filter((line) => line.includes("qfai-run"));
 }
 
 const HOSTS: [string, string, string][] = [
@@ -108,6 +118,6 @@ for (const [host, skillDir, entryFile] of HOSTS) {
       directives: (await entryDirectives(entryFile)).length,
       notOneSource: await notOneSource(skillDir, [...skills, "qfai-maintain"]),
       disabled: await modelInvocationDisabled(skillDir, skills),
-    }).toEqual({ undiscovered: [], directives: 1, notOneSource: [], disabled: [] });
+    }).toEqual({ undiscovered: [], directives: 0, notOneSource: [], disabled: [] });
   });
 }

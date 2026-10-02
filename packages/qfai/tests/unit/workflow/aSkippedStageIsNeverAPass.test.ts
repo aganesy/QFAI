@@ -1,28 +1,16 @@
-// QFAI:EX-0001-0192-15
+// QFAI:EX-0001-0185-15
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Facts = Parameters<typeof decide>[2];
 
 const plan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  route: "edit-text",
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
 const flowBinding = { flowId: "BF-0007" };
 
@@ -97,4 +85,23 @@ it("A result with notRun", () => {
   expect(
     acceptSkipped({ kind: "reused", receiptRef }, { receiptValidity: { [receiptRef]: "stale" } }),
   ).toEqual(refusedInput("reuse-stale"));
+});
+
+it("A result with notRun reused and a valid receipt", () => {
+  const receiptRef = "receipts/verify-2026-09-24.json";
+  const notRun: AcceptResult["notRun"] = { kind: "reused", receiptRef };
+  const actual = acceptSkipped(notRun, { receiptValidity: { [receiptRef]: "valid" } });
+  expect(actual).toEqual({
+    ok: true,
+    state: "ready",
+    reasons: [],
+    events: [
+      expect.objectContaining({
+        type: "accept-nonfinal-result",
+        stageInstanceId: "direct-edit",
+        notRun,
+      }),
+    ],
+  });
+  expect(actual?.events.some((event) => event.type === "receipt-recorded")).toBe(false);
 });

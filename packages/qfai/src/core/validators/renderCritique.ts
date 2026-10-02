@@ -82,7 +82,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   const renderEvidenceViewports = await collectRenderEvidenceViewports(root);
 
-  // --- TDD-0001: Code-only rejection (QFAI-CRIT-001) ---
+  // --- Code-only rejection (QFAI-CRIT-001) ---
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
     if (content.length > 0 && !RENDERED_KEYWORDS_RE.test(content)) {
@@ -123,7 +123,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0002: Desktop critique missing (QFAI-CRIT-003) ---
+  // --- Desktop critique missing (QFAI-CRIT-003) ---
   const allEvidenceContent = await collectContent(evidenceFiles);
   if (
     evidenceFiles.length > 0 &&
@@ -144,7 +144,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0002: Mobile critique missing (QFAI-CRIT-004) ---
+  // --- Mobile critique missing (QFAI-CRIT-004) ---
   if (
     evidenceFiles.length > 0 &&
     !MOBILE_RE.test(allEvidenceContent) &&
@@ -164,7 +164,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0003: Read order (QFAI-CRIT-005) ---
+  // --- Read order (QFAI-CRIT-005) ---
   // Require the story source, the root brand design, and UI contracts.
   for (const sf of skillFiles) {
     const content = await readSafe(sf);
@@ -193,7 +193,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0004: Evidence recording (QFAI-CRIT-006) ---
+  // --- Evidence recording (QFAI-CRIT-006) ---
   for (const ef of evidenceFiles) {
     const content = await readSafe(ef);
     if (content.length === 0) continue;
@@ -222,7 +222,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0004: Rubric not documented (QFAI-CRIT-007) ---
+  // --- Rubric not documented (QFAI-CRIT-007) ---
   if (evidenceFiles.length > 0 && !RUBRIC_RE.test(allEvidenceContent)) {
     issues.push(
       issue(
@@ -238,7 +238,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0005: Loop completion (QFAI-CRIT-008) ---
+  // --- Loop completion (QFAI-CRIT-008) ---
   if (evidenceFiles.length > 0) {
     const desktopPass = hasViewportPass(allEvidenceContent, "desktop");
     const mobilePass = hasViewportPass(allEvidenceContent, "mobile");
@@ -258,7 +258,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     }
   }
 
-  // --- TDD-0006: taskFidelity not recorded (QFAI-CRIT-009) ---
+  // --- taskFidelity not recorded (QFAI-CRIT-009) ---
   if (evidenceFiles.length > 0 && !TASK_FIDELITY_SECTION_RE.test(allEvidenceContent)) {
     // Use TASK_FIDELITY_REQUIRED_KEYWORDS (SSOT) so the error text
     // surfaces every required keyword and the operator-facing doc
@@ -281,7 +281,7 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     );
   }
 
-  // --- TDD-0006: taskFidelity FAIL (QFAI-CRIT-010) ---
+  // --- taskFidelity FAIL (QFAI-CRIT-010) ---
   if (evidenceFiles.length > 0 && TASK_FIDELITY_SECTION_RE.test(allEvidenceContent)) {
     const stepCountMatch = STEP_COUNT_RE.exec(allEvidenceContent);
     const maxStepsMatch = MAX_PRIMARY_STEPS_RE.exec(allEvidenceContent);

@@ -11,7 +11,7 @@ const read = (tree: string, file: string): Promise<string> =>
 describe("SDD templates match the shipped story-tree layout", () => {
   for (const tree of trees) {
     it(tree + ": names the paired template root", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-flow/STEP.md");
       const rules = await read(
         tree,
         "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",

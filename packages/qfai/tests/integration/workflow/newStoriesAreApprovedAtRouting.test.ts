@@ -1,5 +1,5 @@
-// QFAI:AC-0001-0192-01
-// QFAI:AC-0001-0192-02
+// QFAI:AC-0001-0185-01
+// QFAI:AC-0001-0185-02
 
 import { afterEach, expect, it } from "vitest";
 
@@ -32,6 +32,7 @@ const TWO_STORIES = {
   newStories: [...FEATURE_PROPOSAL.newStories, SECOND_STORY],
 };
 
+// QFAI:EX-0001-0185-03
 it("Each new story is asked about once, in the routing round, and recorded through decision", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, TWO_STORIES);
@@ -78,22 +79,34 @@ it("The story-authoring work order carries its slot's approval, and a replan tha
   const sdd = workflow(root, ["next", "--run", runId]);
   const [record] = await humanDecisions(root, runId);
   const approval = String(field(record, "authorizationId"));
-  // The stage finds that the scope needs settling first, which no stage of the plan owns.
-  const outside = {
-    findingCode: "scope-unsettled",
-    path: ".qfai/spec/02_business-flow/business-flows.md",
-    cause: "Which customers the addresses serve is not settled.",
-    owningFlow: null,
-    detectingCommand: "qfai-sdd Stage 1",
-    resolvingOwner: "qfai-discussion",
-    blockingExtent: "run",
+  // The stage finds the change reaches the documentation too, and the operator widens the scope.
+  const widen = {
+    kind: "decision",
+    text: "The change also reaches the documentation. Widen the scope to it?",
+    options: [
+      {
+        optionId: "widen",
+        label: "Widen the scope",
+        description: "The run is planned again with the documentation in scope.",
+        effect: "replan",
+      },
+      {
+        optionId: "keep",
+        label: "Keep the scope",
+        description: "The stage goes on without the documentation.",
+        effect: "proceed",
+      },
+    ],
+    selection: { min: 1, max: 1 },
+    recommendation: "widen",
   };
-  const returned = await submit(
+  const asked = await submit(
     root,
     runId,
     "accept",
-    resultFor(sdd.json, "sdd-1", { outcome: "needs_repair", debts: [outside] }),
+    resultFor(sdd.json, "sdd-1", { outcome: "awaiting_input", questions: [widen] }),
   );
+  const returned = await answer(root, runId, list(asked.json, "questions")[0], "replan");
   const routing = workflow(root, ["next", "--run", runId]);
   const widened = {
     ...FEATURE_PROPOSAL,

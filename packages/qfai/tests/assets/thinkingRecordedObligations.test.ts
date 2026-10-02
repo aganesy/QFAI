@@ -14,16 +14,15 @@ const TEMPLATE = "assistant/skill/qfai-sdd/templates/spec/decisions.md";
 const LABELS = ["`Evidence:`", "`Grounds:`", "`Residual risk:`", "`Rollback:`"];
 const TEMPLATE_CITATION = "templates/spec/decisions.md";
 const SDD_GUIDANCE = [
-  "assistant/skill/qfai-sdd/SKILL.md",
+  "assistant/step/common-grilling-record/STEP.md",
   "assistant/skill/qfai-sdd/references/sdd-triage.md",
   "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
   "assistant/skill/qfai-sdd/templates/change-request.md",
 ];
 const EVIDENCE_GUIDANCE = [
-  "assistant/skill/qfai-implement/SKILL.md",
+  "assistant/step/common-grilling-record/STEP.md",
   "assistant/skill/qfai-implement/references/parallelization-policy.md",
-  "assistant/skill/qfai-atdd/SKILL.md",
 ];
 
 const read = (tree: string, file: string): Promise<string> =>
@@ -50,7 +49,7 @@ describe("every decision a stage records carries one form", () => {
       );
     });
 
-    it(`${tree}: implement and atdd evidence guidance cites the template`, async () => {
+    it(`${tree}: the shared evidence guidance cites the template`, async () => {
       for (const file of EVIDENCE_GUIDANCE) {
         const text = await read(tree, file);
         expect(text, file).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
@@ -82,7 +81,9 @@ describe("every decision a stage records carries one form", () => {
       expect(template).toContain("`file:`");
       expect(template).toContain("`command:`");
       expect(template).toContain("`#L<start>-L<end>`");
-      expect(template).toContain("only the last two may take `none — <reason>`");
+      expect(template.replace(/\s+/g, " ")).toContain(
+        "No item is empty, and only the last two may take `none — <reason>`.",
+      );
       // The form sits above the table, so a row appended at the end of the
       // file stays inside the table.
       expect(template.indexOf("`Rollback:`")).toBeLessThan(template.indexOf("| ID"));
@@ -94,7 +95,7 @@ describe("every decision a stage records carries one form", () => {
       expect(parsed.rows).toEqual([]);
     });
 
-    it(`${tree}: the qfai-sdd guidance on recording a decision cites the template`, async () => {
+    it(`${tree}: the guidance on recording a decision cites the template`, async () => {
       for (const file of SDD_GUIDANCE) {
         expect(await read(tree, file), file).toContain(TEMPLATE_CITATION);
       }

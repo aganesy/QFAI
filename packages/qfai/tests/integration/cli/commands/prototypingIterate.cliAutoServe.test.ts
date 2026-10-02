@@ -116,7 +116,7 @@ async function seedMinimal(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
@@ -143,7 +143,7 @@ async function listenOnEphemeralPort(): Promise<{ server: Server; port: number }
 }
 
 describe("iterate --auto-serve: (1) CLI flag parses", () => {
-  // QFAI:EX-0001-0135-01
+  // QFAI:EX-0001-0131-01
   it("parseArgs sets options.prototypingAutoServe=true when --auto-serve is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--auto-serve"],
@@ -155,7 +155,7 @@ describe("iterate --auto-serve: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingAutoServe).toBe(true);
   });
 
-  // QFAI:EX-0001-0135-01
+  // QFAI:EX-0001-0131-01
   it("parseArgs leaves prototypingAutoServe undefined when --auto-serve is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -183,7 +183,7 @@ describe("iterate --auto-serve: (2) threading via injected serverRunner reaches 
 });
 
 describe("iterate --auto-serve: (3) default runner fallback when serverRunner omitted", () => {
-  // QFAI:EX-0001-0135-01
+  // QFAI:EX-0001-0131-01
   it("dynamically loads defaultServerRunner; deferred sentinel error is gone", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -299,7 +299,7 @@ describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
     }
   });
 
-  // QFAI:EX-0001-0135-01
+  // QFAI:EX-0001-0131-01
   it("default runner teardown resolves within 2000ms", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -626,7 +626,7 @@ describe("iterate --auto-serve: (8) default runner refuses a held port", () => {
     });
   }
 
-  // QFAI:EX-0001-0135-01
+  // QFAI:EX-0001-0131-01
   it("TC-0012-0489 (TDD-0561): refuses the held port, binds no other and iterate exits 2 naming it", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

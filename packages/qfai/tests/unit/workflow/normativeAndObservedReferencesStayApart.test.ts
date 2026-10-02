@@ -1,9 +1,10 @@
-// QFAI:EX-0001-0192-09
+// QFAI:EX-0001-0185-09
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 it("Decide accept of a routing result with normative references, observed references and a new", () => {
   const expectedBehaviorRefs = [
@@ -36,8 +37,8 @@ it("Decide accept of a routing result with normative references, observed refere
             expectedSequence: 2,
             outcome: "accepted",
             proposal: {
-              requestKind: "change",
-              candidateRoute: "feature",
+              requestKind: "routed",
+              extraction: extractionFor("add-feature"),
               goal: "Let each customer register a notification email.",
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
@@ -52,7 +53,6 @@ it("Decide accept of a routing result with normative references, observed refere
                 },
               ],
               proposedWriteScope: ["src/notify/**"],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },
@@ -60,11 +60,11 @@ it("Decide accept of a routing result with normative references, observed refere
           pathExistence: { "src/notify/email.ts": true, "tests/notify/email.test.ts": true },
           flows: ["BF-0007"],
           plans: {
-            feature: {
-              route: "feature",
+            "add-feature": {
+              route: "add-feature",
               stages: [
-                { stageInstanceId: "sdd", stageKind: "sdd", when: "always" },
-                { stageInstanceId: "verify", stageKind: "verify", when: "always" },
+                { stageInstanceId: "sdd", stageKind: "sdd" },
+                { stageInstanceId: "verify", stageKind: "verify" },
               ],
             },
           },

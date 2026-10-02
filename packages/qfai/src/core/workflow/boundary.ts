@@ -4,10 +4,8 @@ import path from "node:path";
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { isEnoent } from "../fs/errno.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
+import { isRunChange } from "./common.js";
 import type { WorkflowBoundaryStart } from "./types.js";
-
-// The runtime tree is never tracked, so nothing under it is a run change.
-const RUNTIME = ".qfai/run/";
 
 // What a path holds, as the boundary compares it: a regular file's content digest after CRLF
 // normalization, a link's target, the type of anything else, or `null` when nothing is there.
@@ -34,7 +32,7 @@ function nulSeparated(output: string | null): string[] {
 // content digest.
 export async function boundaryStartOf(root: string): Promise<WorkflowBoundaryStart> {
   const head = gitStdout(root, ["rev-parse", "--verify", "--quiet", "HEAD"])?.trim() || null;
-  const dirty = (uncommittedPaths(root) ?? []).filter((file) => !file.startsWith(RUNTIME));
+  const dirty = (uncommittedPaths(root) ?? []).filter(isRunChange);
   const digests = await Promise.all(dirty.map((file) => contentDigest(root, file)));
   return {
     head,
@@ -54,9 +52,7 @@ export async function changedSinceStart(
   const committed = start.head
     ? nulSeparated(gitStdout(root, ["diff", "--name-only", "-z", "--no-renames", start.head]))
     : [];
-  const paths = [...new Set([...committed, ...(uncommittedPaths(root) ?? [])])].filter(
-    (file) => !file.startsWith(RUNTIME),
-  );
+  const paths = [...new Set([...committed, ...(uncommittedPaths(root) ?? [])])].filter(isRunChange);
   const moved = await Promise.all(
     paths.map(async (file) => {
       if (!Object.hasOwn(start.dirty, file)) return true;

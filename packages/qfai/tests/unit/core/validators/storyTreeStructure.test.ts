@@ -1,4 +1,5 @@
 // QFAI:EX-0004-0001-01
+// QFAI:EX-0001-0051-06
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,9 +9,11 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
 import {
+  validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
   validateStoryTreeStructureModel,
+  validateTechArchitecture,
 } from "../../../../src/core/validators/storyTreeStructure.js";
 
 const specs = ".qfai/spec";
@@ -36,7 +39,7 @@ function model(overrides: Record<string, string> = {}) {
     ],
     [
       `${contracts}/api/checkout.yaml`,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
     ],
     [`${specs}/decisions.md`, "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |"],
     [
@@ -77,6 +80,161 @@ describe("story-tree structure", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  // QFAI:EX-0001-0051-07
+  it("reports a constraint ID that is not its row's place in its section", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
+    try {
+      const specsDir = path.join(root, ".qfai", "spec");
+      const file = path.join(specsDir, "01_policy", "constraint.md");
+      await mkdir(path.dirname(file), { recursive: true });
+      const table = (rows: string[]): string =>
+        ["| ID | Constraint | Rationale |", "| --- | --- | --- |", ...rows].join("\n");
+      const document = (technical: string[], business: string[]): string =>
+        `# Constraints\n\n## Technical Constraints\n\n${table(technical)}\n\n## Operational Constraints\n\n${table([])}\n\n## Business Constraints\n\n${table(business)}\n`;
+
+      await writeFile(
+        file,
+        document(["| TC-01 | A | B |", "| TC-03 | C | D |"], ["| TC-01 | E | F |"]),
+      );
+      const reported = await validateConstraintIds(specsDir);
+      expect(reported.map((item) => [item.code, item.refs])).toEqual([
+        ["QFAI-STORY-012", ["TC-03"]],
+        ["QFAI-STORY-012", ["TC-01"]],
+      ]);
+      expect(reported[0]?.message).toContain("so it is TC-02");
+      expect(reported[1]?.message).toContain("so it is BC-01");
+
+      await writeFile(file, document(["| TC-01 | A | B |", "| TC-02 | C | D |"], []));
+      expect(await validateConstraintIds(specsDir)).toEqual([]);
+      const tree = buildStoryTreeModel(new Map(), {
+        specsDir,
+        contractsDir: path.join(specsDir, "03_contract"),
+      });
+      const findings = await validateStoryTreeStructure(root, defaultConfig, tree);
+      expect(findings.some((item) => item.code === "QFAI-STORY-012")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads no constraint IDs when the tree has no constraint document", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-constraint-ids-"));
+    try {
+      expect(await validateConstraintIds(path.join(root, ".qfai", "spec"))).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  describe("the architecture of tech.md", () => {
+    const LAYERS = [
+      "| Layer | Responsibility | Depends on |",
+      "| --- | --- | --- |",
+      "| CLI | Parses arguments | Core, Shared |",
+      "| Migration | Moves old trees | Core, Shared |",
+      "| Core | Validates the tree | Shared |",
+      "| Shared | Small helpers | - |",
+    ];
+    const DIAGRAM = [
+      "flowchart TD",
+      "  CLI --> Core",
+      "  CLI --> Shared",
+      '  Migration["Migration"] --> Core',
+      "  Migration --> Shared",
+      "  Core[Core] --> Shared",
+    ];
+
+    async function problems(diagram: string[], table: string[]): Promise<string[]> {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tech-architecture-"));
+      try {
+        const contractsDir = path.join(root, ".qfai", "spec", "03_contract");
+        await mkdir(contractsDir, { recursive: true });
+        await writeFile(
+          path.join(contractsDir, "tech.md"),
+          [
+            "# Technology",
+            "",
+            "## Architecture",
+            "",
+            "```mermaid",
+            ...diagram,
+            "```",
+            "",
+            ...table,
+            "",
+            "## Dependencies",
+            "",
+            "- None.",
+            "",
+          ].join("\n"),
+        );
+        const findings = await validateTechArchitecture(contractsDir);
+        expect(new Set(findings.map((item) => item.code))).toEqual(
+          new Set(findings.length === 0 ? [] : ["QFAI-STORY-013"]),
+        );
+        return findings.map((item) => item.message.replace(/^.*?tech\.md: /, ""));
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+
+    // QFAI:EX-0001-0051-08
+    it("reports a layer that depends on one not below it", async () => {
+      expect(await problems(DIAGRAM, LAYERS)).toEqual([]);
+      const reordered = [LAYERS[0], LAYERS[1], LAYERS[4], LAYERS[2], LAYERS[3], LAYERS[5]].map(
+        (line) => line ?? "",
+      );
+      expect(await problems(DIAGRAM, reordered)).toEqual([
+        "CLI depends on Core, which is not in a row below it",
+        "Migration depends on Core, which is not in a row below it",
+      ]);
+      const unknown = LAYERS.map((line) => line.replace("Core, Shared |", "Core, Domain |"));
+      expect(await problems(DIAGRAM, unknown)).toEqual(
+        expect.arrayContaining([
+          "CLI depends on Domain, which is not a layer of the table",
+          "the diagram has no edge CLI --> Domain",
+        ]),
+      );
+    });
+
+    // QFAI:EX-0001-0051-09
+    it("reports every difference between the diagram and the table", async () => {
+      expect(await problems(DIAGRAM, LAYERS)).toEqual([]);
+      const diagram = [
+        "flowchart LR",
+        "  CLI --> Core",
+        "  CLI --> Shared",
+        "  CLI --> Migration",
+        "  Core --> Shared",
+        "  Extra",
+        "  %% a comment",
+      ];
+      expect(await problems(diagram, LAYERS)).toEqual([
+        "the diagram does not open with flowchart TD",
+        'the diagram line "%% a comment" is neither a layer nor an edge',
+        "the diagram draws Extra, which is not a layer of the table",
+        "the diagram has no edge Migration --> Core",
+        "the diagram has no edge Migration --> Shared",
+        "the diagram draws CLI --> Migration, which no Depends on names",
+      ]);
+      expect(await problems(["flowchart TD", "  CLI --> Core"], LAYERS.slice(0, 3))).toEqual([
+        "CLI depends on Core, which is not a layer of the table",
+        "CLI depends on Shared, which is not a layer of the table",
+        "the diagram draws Core, which is not a layer of the table",
+        "the diagram has no edge CLI --> Shared",
+      ]);
+    });
+
+    it("reads nothing when the tree has no tech.md", async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tech-architecture-"));
+      try {
+        expect(await validateTechArchitecture(path.join(root, "03_contract"))).toEqual([]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
   });
 
   it("names missing and extra entries in a story directory", async () => {

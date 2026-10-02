@@ -57,6 +57,46 @@ describe("story-tree CLI flow scope", () => {
     expect(await exists(shared)).toBe(false);
   });
 
+  // QFAI:EX-0001-0057-01
+  it("scopes a run over two --flow values to both flows", async () => {
+    const root = await storyRoot();
+    for (const id of ["0001", "0002"]) {
+      const story = path.join(
+        root,
+        `.qfai/spec/02_business-flow/business-flow-${id}/user-story-${id}-0001`,
+      );
+      await mkdir(story, { recursive: true });
+      await writeFile(path.join(story, "01_User-story.md"), `# US-${id}-0001: Story\n`, "utf8");
+      await writeFile(
+        path.join(story, "02_Acceptance-Criteria.md"),
+        `\`\`\`gherkin\n# AC-${id}-0001-01\nScenario: Criterion\n  Given a project\n\`\`\`\n`,
+        "utf8",
+      );
+    }
+    await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001", "BF-0002"] });
+    const scoped = path.join(root, ".qfai/report/validate.flow-0001+0002.json");
+    expect(await exists(scoped)).toBe(true);
+    const result = JSON.parse(await readFile(scoped, "utf8")) as {
+      issues: Array<{ code: string; file?: string; message: string }>;
+    };
+    const missing = result.issues
+      .filter((finding) => finding.code === "QFAI-STORY-001")
+      .map((finding) => `${finding.file ?? ""} ${finding.message}`)
+      .join("\n");
+    expect(missing).toContain("user-story-0001-0001");
+    expect(missing).toContain("user-story-0002-0001");
+  });
+
+  // QFAI:EX-0001-0066-01
+  it("writes a scoped report to --out instead of the scoped report name", async () => {
+    const root = await storyRoot();
+    await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
+    const out = path.join(root, "custom", "flow-report.md");
+    await runReport({ root, format: "md", flowIds: ["BF-0001"], outPath: out });
+    expect(await exists(out)).toBe(true);
+    expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
+  });
+
   it.each(["../outside", "BF-0009"])("TC-0004-0113: %s writes no scoped result", async (value) => {
     const root = await storyRoot();
     await runValidate({ root, strict: false, failOn: "never", flowIds: [value] });
@@ -98,7 +138,7 @@ describe("story-tree CLI flow scope", () => {
   );
 
   it("TC-0004-0112: refuses --spec on a story tree", async () => {
-    // QFAI:EX-0001-0097-05
+    // QFAI:EX-0001-0094-05
     const root = await storyRoot();
     const parsed = parseArgs(["validate", "--spec", "0001"], root);
     expect(parsed.invalid).toBe(true);
@@ -171,7 +211,7 @@ describe("story-tree CLI flow scope", () => {
     );
     await writeFile(
       contract,
-      "# QFAI-CONTRACT-ID: CON-API-0001\nx-qfai-rules:\n  - id: BR-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
       "utf8",
     );
     await runReport({
@@ -195,7 +235,7 @@ describe("story-tree CLI flow scope", () => {
     );
     expect(graph.edges.map((edge) => edge.relation)).toContain("BF_TO_US");
     expect(graph.edges.map((edge) => edge.relation)).toContain("BR_TO_CON");
-    expect(graph.nodes.map((node) => node.id)).toContain("CON-API-0001");
+    expect(graph.nodes.map((node) => node.id)).toContain("API-0001");
   });
 
   it("does not derive an output directory from an invalid flow heading", async () => {

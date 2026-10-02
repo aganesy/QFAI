@@ -1,10 +1,12 @@
-// QFAI:EX-0001-0196-17
+// QFAI:EX-0001-0189-16
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import type { WorkflowDecision } from "../../../src/core/workflow/decide.js";
 import { finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
+import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -44,7 +46,7 @@ const routingWorkOrder = {
 };
 
 const routingFacts: Facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: finishPlan.stages } },
+  plans: { "add-feature": { route: "add-feature", stages: finishPlan.stages } },
   flows: ["BF-0001"],
 };
 
@@ -58,8 +60,8 @@ function routingProposal(
   }[] = [],
 ) {
   return {
-    requestKind: "change",
-    candidateRoute: "bounded-change",
+    requestKind: "routed",
+    extraction: extractionFor("add-feature"),
     goal: "Return 404 for a missing export.",
     expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
     observedRefs: [],
@@ -69,7 +71,6 @@ function routingProposal(
     newStories,
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
-    requiredStages: ["sdd_delta", "implement", "verify"],
   };
 }
 
@@ -99,7 +100,7 @@ function readyRun(sequence = 4): Snapshot {
   return { run: { id: "run-edge", state: "ready", sequence }, plan: finishPlan, flowBinding };
 }
 
-// The bounded plan's first work order, issued, and the run that holds it.
+// The add-feature plan's first work order, issued, and the run that holds it.
 function runningRun(): Snapshot & {
   outstandingWorkOrder: NonNullable<WorkflowDecision["verdict"]["workOrder"]>;
 } {
@@ -197,7 +198,7 @@ it("capture-request", () => {
 it("plan-accepted", () => {
   expect(edge(acceptRouting("accepted", routingProposal()))).toEqual({
     state: "ready",
-    events: ["binding-recorded", "plan-accepted"],
+    events: ["route-decided", "binding-recorded", "plan-accepted"],
   });
 });
 
@@ -212,7 +213,7 @@ it("unsettled-material-input", () => {
 
   expect(edge(acceptRouting("accepted", routingProposal([story])))).toEqual({
     state: "awaiting_input",
-    events: ["question-opened", "unsettled-material-input"],
+    events: ["route-decided", "question-opened", "unsettled-material-input"],
   });
 });
 
@@ -262,11 +263,8 @@ it("accept-nonfinal-result", () => {
 
 it("material-decision", () => {
   const featurePlan = {
-    route: "feature",
-    stages: [
-      { stageInstanceId: "feature-sdd", stageKind: "sdd" },
-      { stageInstanceId: "feature-verify", stageKind: "verify" },
-    ],
+    route: "add-feature",
+    stages: [planStage("feature-sdd", "sdd"), planStage("feature-verify", "verify")],
   };
   const unrecordedApproval = {
     kind: "human_decision",
@@ -312,20 +310,14 @@ it("observed-session-interruption", () => {
   });
 });
 
-it("scope-or-obligation-revision", () => {
+it("declared-reroute", () => {
   const bugfixPlan = {
-    route: "bugfix",
+    route: "fix-defect",
     stages: [
-      ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only"],
-      ["bugfix-implement", "implement", "qfai-implement", "implement"],
-      ["bugfix-verify", "verify", "qfai-verify", "verify-full"],
-    ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-      stageInstanceId,
-      stageKind,
-      skill,
-      operation,
-      when: "always",
-    })),
+      planStage("bugfix-diagnose", "diagnose"),
+      planStage("bugfix-implement", "implement"),
+      planStage("bugfix-verify", "verify"),
+    ],
   };
   const ready = {
     run: { id: "run-bugfix", state: "ready", sequence: 4 },
@@ -354,10 +346,23 @@ it("scope-or-obligation-revision", () => {
         },
       },
     },
-    {},
+    {
+      plans: {
+        "fix-defect": {
+          route: "fix-defect",
+          stages: bugfixPlan.stages,
+          branchPoints: [
+            {
+              step: "implement-diagnose",
+              outcomes: [{ outcome: "expectation-differs", routes: ["decide-acceptance"] }],
+            },
+          ],
+        },
+      },
+    },
   );
 
-  expect(edge(accepted)).toEqual({ state: "routing", events: ["scope-or-obligation-revision"] });
+  expect(edge(accepted)).toEqual({ state: "routing", events: ["declared-reroute"] });
 });
 
 it("valid-answer-no-replan", () => {
@@ -398,6 +403,7 @@ it("reconciled-resume", () => {
   ]);
 });
 
+// QFAI:EX-0001-0189-15
 it("reconciled-with-blocker", () => {
   const resumed = decide(runningRun(), { operation: "resume" }, { cause: "policy-drift" });
 

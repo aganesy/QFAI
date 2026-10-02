@@ -1,13 +1,9 @@
 /**
- * TC-3.8.x — designContractReadiness validator (Phase 3b).
+ * TC-3.8.x — designContractReadiness validator.
  *
- * Asserts the new required-files set:
- *   - root DESIGN.md
- *   - .qfai/spec/03_contract/design/DESIGN.md.lock.yaml
- *
- * Plus preserved checks:
- *   - REQUIRED_PROTOTYPING_DESIGN_FILES (design-system.yaml, prototype-handoff.yaml)
- *   - DCON-019 premature prototyping contract (sdd stage)
+ * Root DESIGN.md at the sdd and prototyping stages (QFAI-DCON-030 / 033 /
+ * 034), and at the prototyping stage the `handoff` record the prototyping
+ * loop leaves in its local prototyping.json (QFAI-DCON-012 / 013).
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -15,9 +11,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { hashDesignMd } from "../../../src/core/design/designMd.js";
 import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import {
   PROCUREMENT_PLACEHOLDERS,
@@ -40,41 +36,6 @@ async function newTempDir(): Promise<string> {
   tempDirs.push(dir);
   return dir;
 }
-
-// Verbatim mirror of VALID_DESIGN_MD's visual.* tokens, in YAML form
-// suitable for `.qfai/spec/03_contract/design/design-system.yaml`. Tests that
-// want the full mirror (post-1.8.9 contract) seed this; tests that
-// want a partial mirror to exercise DCON-005 hand-construct their own.
-const VALID_MIRROR_YAML = [
-  "visual:",
-  "  colors:",
-  '    primary: "#1F2937"',
-  '    secondary: "#6366F1"',
-  '    accent: "#D97706"',
-  '    surface: "#FFFFFF"',
-  '    surface_muted: "#F3F4F6"',
-  '    text: "#111827"',
-  '    text_muted: "#6B7280"',
-  '    danger: "#DC2626"',
-  '    warning: "#F59E0B"',
-  '    success: "#10B981"',
-  '    border: "#E5E7EB"',
-  '    overlay: "rgba(0,0,0,0.5)"',
-  "  typography:",
-  '    family_sans: "Inter, system-ui, sans-serif"',
-  '    family_display: "Inter, system-ui, sans-serif"',
-  '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
-  "  radius:",
-  '    sm: "0.25rem"',
-  '    md: "0.5rem"',
-  '    lg: "0.75rem"',
-  '    full: "9999px"',
-  "  shadow:",
-  '    sm: "0 1px 2px rgba(15,23,42,0.05)"',
-  '    md: "0 4px 6px rgba(15,23,42,0.08)"',
-  '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
-  "",
-].join("\n");
 
 const VALID_DESIGN_MD = [
   "---",
@@ -114,73 +75,68 @@ const VALID_DESIGN_MD = [
   "",
 ].join("\n");
 
+const PROTOTYPING_JSON = ".qfai/evidence/prototyping/prototyping.json";
+
+/** The two string fields a handoff carries, filled in. */
+const COMPLETE_HANDOFF: Readonly<Record<string, unknown>> = {
+  finalArtifact: ".qfai/prototype/final/index.html",
+  implementationNotes:
+    "Reviewed final iter has clear navigation, four-state coverage, and compliant DESIGN.md token use.",
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function seedUiBearingProject(root: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
-  await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/spec/03_contract/ui/ui-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
     "utf-8",
   );
 }
 
-async function seedDesignMdAndLock(root: string): Promise<void> {
+async function seedDesignMd(root: string): Promise<void> {
   await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");
-  await writeFile(
-    path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"),
-    [
-      'designMdPath: "DESIGN.md"',
-      `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-      'frozenAt: "2026-05-05T00:00:00Z"',
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
 }
 
-async function seedPrototypingDesignYamls(root: string): Promise<void> {
-  const dir = path.join(root, ".qfai/spec/03_contract/design");
-  await writeFile(
-    path.join(dir, "design-system.yaml"),
-    "checklist:\n  color: [primary]\n  typography: [Inter]\n  spacing: [4px]\n  border_radius: [0.25rem]\n  shadow: [sm]\n  dos_and_donts: [be calm]\n  motion_rules: [reduce]\n  component_tone: [restrained]\n",
-    "utf-8",
-  );
-  await writeFile(
-    path.join(dir, "prototype-handoff.yaml"),
-    [
-      // New post-1.8.9 single-thread loop handoff contract. Legacy
-      // multi-option fields (sourcePrototypeRefs / surfaceProfiles /
-      // screens / visualDna / implementationHandoff) are retired.
-      "finalIterIndex: 1",
-      'finalArtifact: ".qfai/prototypes/final/index.html"',
-      'designMdPath: "DESIGN.md"',
-      `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-      'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-      "implementationNotes: |",
-      "  Reviewed final iter has clear navigation, four-state coverage, and",
-      "  compliant DESIGN.md token use; no further hand-tweaks required.",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
+async function writePrototypingJson(root: string, record: unknown): Promise<void> {
+  const file = path.join(root, PROTOTYPING_JSON);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(record, null, 2)}\n`, "utf-8");
+}
+
+/** A prototyping.json whose handoff is the complete one with `fields` over it. */
+async function seedHandoff(root: string, fields: Record<string, unknown> = {}): Promise<void> {
+  await writePrototypingJson(root, { handoff: { ...COMPLETE_HANDOFF, ...fields } });
+}
+
+/** The fields a few YAML lines describe, so a case reads as the record it seeds. */
+function fieldsFrom(lines: readonly string[]): Record<string, unknown> {
+  const parsed: unknown = parseYaml(lines.join("\n"));
+  return isRecord(parsed) ? parsed : {};
+}
+
+async function prototypingIssues(root: string, code: string): Promise<string[]> {
+  const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+  return issues.filter((i) => i.code === code).map((i) => i.message);
 }
 
 describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
-  it("TC-3.8.1: new file set passes (no issues)", async () => {
+  // QFAI:EX-0001-0042-14
+  it("TC-3.8.1: an authored root DESIGN.md passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
+    await seedDesignMd(root);
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 
   // QFAI:EX-0001-0042-03
-  // QFAI:EX-0001-0157-01
   it("TC-3.8.2: missing root DESIGN.md → DCON-030", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await rm(path.join(root, "DESIGN.md"), { force: true });
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     const codes = issues.map((i) => i.code);
     expect(codes).toContain("QFAI-DCON-030");
@@ -189,216 +145,126 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon030?.severity).toBe("error");
   });
 
-  it("TC-3.8.3: missing DESIGN.md.lock.yaml → DCON-031", async () => {
+  // QFAI:EX-0001-0042-08
+  it("TC-3.8.5: a prototyping.json with no handoff → DCON-012 on prototyping.json", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await rm(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), { force: true });
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+    await seedDesignMd(root);
+    await writePrototypingJson(root, { iterations: [] });
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const dcon012 = issues.filter((i) => i.code === "QFAI-DCON-012");
+    expect(dcon012).toHaveLength(1);
+    expect(dcon012[0]?.file).toBe(PROTOTYPING_JSON);
+    expect(dcon012[0]?.severity).toBe("error");
   });
 
-  it("TC-3.8.5: REQUIRED_PROTOTYPING_DESIGN_FILES preserved (prototyping stage)", async () => {
+  // QFAI:EX-0001-0042-09
+  it("TC-3.8.5b: no prototyping.json → no handoff finding", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    // No prototyping yamls seeded → should raise DCON-001 for each.
+    await seedDesignMd(root);
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon001 = issues.filter((i) => i.code === "QFAI-DCON-001");
-    expect(dcon001.length).toBeGreaterThanOrEqual(2);
-    const files = dcon001.map((i) => i.file).filter(Boolean) as string[];
-    expect(files.some((f) => f.endsWith("design-system.yaml"))).toBe(true);
-    expect(files.some((f) => f.endsWith("prototype-handoff.yaml"))).toBe(true);
+    expect(issues).toEqual([]);
   });
 
   it("TC-3.8.6: SDD vs prototyping stage divergence", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    // No DESIGN.md, no lock, no prototyping yamls.
+    // No DESIGN.md, and a prototyping.json with no handoff.
+    await writePrototypingJson(root, {});
     const sddIssues = await validateSddDesignContractReadiness(root, defaultConfig);
     const protoIssues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     expect(sddIssues.map((i) => i.code)).toContain("QFAI-DCON-030");
-    expect(sddIssues.map((i) => i.code)).toContain("QFAI-DCON-031");
-    expect(sddIssues.map((i) => i.code)).not.toContain("QFAI-DCON-001");
+    expect(sddIssues.map((i) => i.code)).not.toContain("QFAI-DCON-012");
     expect(protoIssues.map((i) => i.code)).toContain("QFAI-DCON-030");
-    expect(protoIssues.map((i) => i.code)).toContain("QFAI-DCON-031");
-    expect(protoIssues.map((i) => i.code)).toContain("QFAI-DCON-001");
+    expect(protoIssues.map((i) => i.code)).toContain("QFAI-DCON-012");
   });
 
-  it("TC-3.8.7: multi-issue aggregation (no short-circuit)", async () => {
+  it("a handoff that is not an object surfaces as '(got <array>)' (not opaque JSON)", async () => {
+    // Pins describeValueForDiagnostic's array branch, so a refactor that
+    // collapses the helper back to a JSON.stringify cannot regress the
+    // operator-facing diagnostic to `(got [1,2])`.
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    // Missing DESIGN.md + missing lock + missing prototyping yamls
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const codes = new Set(issues.map((i) => i.code));
-    expect(codes.has("QFAI-DCON-030")).toBe(true);
-    expect(codes.has("QFAI-DCON-031")).toBe(true);
-    expect(codes.has("QFAI-DCON-001")).toBe(true);
+    await seedDesignMd(root);
+    await writePrototypingJson(root, { handoff: [1, 2] });
+    const messages = await prototypingIssues(root, "QFAI-DCON-012");
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain("(got <array>)");
+    expect(messages[0]).not.toContain("[1,2]");
   });
 
-  it("validatePrototypingDesignContractReadiness emits DCON-032 on sha mismatch", async () => {
+  // QFAI:EX-0001-0042-08
+  it("a complete handoff does NOT emit DCON-012 or DCON-013", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    // Mutate DESIGN.md to invalidate the lock sha.
-    await writeFile(path.join(root, "DESIGN.md"), `${VALID_DESIGN_MD}\n`, "utf-8");
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-032");
-  });
-
-  it("well-formed prototype-handoff.yaml does NOT emit DCON-013 (numeric finalIterIndex accepted)", async () => {
-    // Regression: `finalIterIndex` is a YAML number, but earlier code
-    // forwarded it through `hasMeaningfulContractContent`, which only
-    // accepted strings/arrays/records — so a spec-conformant handoff
-    // (with `finalIterIndex: 1`) was always rejected. The fix path-
-    // splits the numeric field from the string fields.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
+    await seedDesignMd(root);
     // A target whose UI contracts declare screens owes a `procurement`, so the
     // seeded handoff carries the one that says the screen needed nothing.
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      `${(
-        await readFile(
-          path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-          "utf-8",
-        )
-      ).trimEnd()}
-procurement:
-  drawn-from-project:
-    - screen: "home"
-`,
-      "utf-8",
-    );
+    await seedHandoff(root, { procurement: { "drawn-from-project": [{ screen: "home" }] } });
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(dcon013).toEqual([]);
+    expect(issues).toEqual([]);
   });
 
-  it("non-integer finalIterIndex is rejected with DCON-013", async () => {
+  it("a missing finalArtifact is rejected with DCON-013 (and uses the missing-field phrasing)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    // Override with a non-integer value.
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        'finalIterIndex: "not-a-number"',
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(dcon013.length).toBeGreaterThan(0);
-    expect(dcon013[0]?.message).toContain("finalIterIndex");
+    await seedDesignMd(root);
+    await writePrototypingJson(root, {
+      handoff: {
+        implementationNotes: "test",
+        procurement: { "drawn-from-project": [{ screen: "home" }] },
+      },
+    });
+    const messages = await prototypingIssues(root, "QFAI-DCON-013");
+    expect(messages).toEqual([
+      "prototyping.json#handoff is missing required field 'finalArtifact'.",
+    ]);
+  });
+
+  // QFAI:EX-0001-0042-08
+  it("a non-string finalArtifact is rejected with DCON-013 (not as missing)", async () => {
     // Distinct phrasing: present-but-invalid is "must be ... (got ...)",
-    // not "missing required field" — Principle of Least Astonishment.
-    expect(dcon013[0]?.message).toContain("must be a non-negative integer");
-    expect(dcon013[0]?.message).not.toContain("is missing required field");
-  });
-
-  it("array-shaped finalIterIndex surfaces as '(got <array>)' (not opaque JSON)", async () => {
-    // Aganesy 5zGh: pin describeValueForDiagnostic's array branch
-    // (designContractReadiness.ts L472) so a future refactor that
-    // collapses the helper back to a JSON.stringify cannot regress
-    // the operator-facing diagnostic to `(got [1,2])`.
+    // not "missing required field" — an operator who wrote the field is
+    // told what is wrong with it.
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex:",
-        "  - 1",
-        "  - 2",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter(
-      (i) =>
-        i.code === "QFAI-DCON-013" &&
-        i.message.includes("finalIterIndex") &&
-        i.message.includes("non-negative integer"),
-    );
-    expect(dcon013.length).toBeGreaterThan(0);
-    expect(dcon013[0]?.message).toContain("(got <array>)");
-    expect(dcon013[0]?.message).not.toContain("[1,2]");
+    await seedDesignMd(root);
+    await seedHandoff(root, {
+      finalArtifact: { uri: ".qfai/prototype/final/index.html" },
+      procurement: { "drawn-from-project": [{ screen: "home" }] },
+    });
+    const messages = await prototypingIssues(root, "QFAI-DCON-013");
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain("'finalArtifact' must be a non-empty string (got object)");
+    expect(messages[0]).not.toContain("is missing required field");
   });
 
-  it("object-shaped finalIterIndex surfaces as '(got <object>)' (not opaque JSON)", async () => {
-    // Aganesy 5zGh: pin describeValueForDiagnostic's `<typeof>`
-    // branch for non-array non-primitive values (objects).
+  it("a placeholder implementationNotes ('TBD') is rejected with DCON-013", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex:",
-        "  foo: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter(
-      (i) =>
-        i.code === "QFAI-DCON-013" &&
-        i.message.includes("finalIterIndex") &&
-        i.message.includes("non-negative integer"),
-    );
-    expect(dcon013.length).toBeGreaterThan(0);
-    expect(dcon013[0]?.message).toContain("(got <object>)");
-    expect(dcon013[0]?.message).not.toContain('{"foo":1}');
+    await seedDesignMd(root);
+    await seedHandoff(root, {
+      implementationNotes: "TBD",
+      procurement: { "drawn-from-project": [{ screen: "home" }] },
+    });
+    const messages = await prototypingIssues(root, "QFAI-DCON-013");
+    expect(messages).toEqual([
+      "prototyping.json#handoff field 'implementationNotes' must be a non-empty string.",
+    ]);
   });
 
-  it("missing finalIterIndex is rejected with DCON-013 (and uses the missing-field phrasing)", async () => {
+  it("an object where a list belongs surfaces as '(got <object>)' (not opaque JSON)", async () => {
+    // Pins describeValueForDiagnostic's `<typeof>` branch for non-array
+    // non-primitive values.
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    // Override with the field absent.
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(dcon013.some((i) => i.message.includes("missing required field 'finalIterIndex'"))).toBe(
-      true,
-    );
+    await seedDesignMd(root);
+    await seedHandoff(root, { procurement: { procured: { foo: 1 } } });
+    const messages = await prototypingIssues(root, "QFAI-DCON-013");
+    const shape = messages.find((m) => m.includes("'procurement.procured' must be a list"));
+    expect(shape).toContain("(got <object>)");
+    expect(shape).not.toContain('{"foo":1}');
   });
 
   // `procurement` is what `/qfai-implement` installs from rather than
@@ -406,22 +272,9 @@ procurement:
   // A row a reader cannot act on leaves both doing the thing the manifest
   // exists to stop.
   describe("the procurement manifest", () => {
-    /** The seeded handoff with `procurement` set to `body`. */
+    /** The seeded handoff with the fields `body` describes over the complete ones. */
     const withProcurement = async (root: string, body: readonly string[]): Promise<void> => {
-      await writeFile(
-        path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-        [
-          "finalIterIndex: 1",
-          'finalArtifact: ".qfai/prototypes/final/index.html"',
-          'designMdPath: "DESIGN.md"',
-          `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-          'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-          'implementationNotes: "test"',
-          ...body,
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
+      await seedHandoff(root, fieldsFrom(body));
     };
 
     /** A second contract, declaring the screen the rows below name. */
@@ -429,7 +282,7 @@ procurement:
       await writeFile(
         path.join(root, ".qfai/spec/03_contract/ui/ui-0002.yaml"),
         [
-          "# QFAI-CONTRACT-ID: CON-UI-0002",
+          "# QFAI-CONTRACT-ID: UI-0002",
           "screens:",
           "  - id: dashboard",
           "    title: Dashboard",
@@ -444,8 +297,7 @@ procurement:
       const root = await newTempDir();
       await seedUiBearingProject(root);
       await withDashboard(root);
-      await seedDesignMdAndLock(root);
-      await seedPrototypingDesignYamls(root);
+      await seedDesignMd(root);
       await withProcurement(root, body);
       const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
       return issues.filter((i) => i.code === "QFAI-DCON-013").map((i) => i.message);
@@ -478,9 +330,7 @@ procurement:
       // The readiness gate reports that project already; every row failing
       // beside it would repeat the one finding once per row.
       const root = await newTempDir();
-      await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
-      await seedDesignMdAndLock(root);
-      await seedPrototypingDesignYamls(root);
+      await seedDesignMd(root);
       await withProcurement(root, rowFor("procured", "anything"));
       const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
       expect(issues.filter((i) => i.message.includes("which no UI contract declares"))).toEqual([]);
@@ -720,6 +570,7 @@ procurement:
       expect(messages[0]).toContain("must be a mapping");
     });
 
+    // QFAI:EX-0001-0095-01
     it("reports the shipped example, copied and filled in with nothing", async () => {
       // The documented example writes its cells as `<screen id>` and the like,
       // and the word-form placeholder list knows none of them — so the unfilled
@@ -732,17 +583,25 @@ procurement:
         ),
         "utf-8",
       );
-      const lines = handoff.split(/\r?\n/);
-      const at = lines.findIndex((line) => line.trimEnd() === "procurement:");
-      expect(at, "handoff.md no longer shows a procurement block").toBeGreaterThanOrEqual(0);
-      const block: string[] = [];
-      for (const line of lines.slice(at)) {
-        if (block.length > 0 && /^\S/.test(line)) break;
-        block.push(line);
-      }
-      expect(block.join("\n")).toContain("<screen id>");
+      const fence = /```json\n("handoff": \{[\s\S]*?\n\})\n```/.exec(
+        handoff.replace(/\r\n/g, "\n"),
+      );
+      expect(fence, "handoff.md no longer shows the handoff record").not.toBeNull();
+      const parsed: unknown = JSON.parse(`{${fence?.[1] ?? ""}}`);
+      const example = isRecord(parsed) && isRecord(parsed.handoff) ? parsed.handoff : {};
+      expect(Object.keys(example).sort()).toEqual([
+        "finalArtifact",
+        "implementationNotes",
+        "procurement",
+      ]);
+      expect(JSON.stringify(example.procurement)).toContain("<screen id>");
 
-      const messages = await seeded(block);
+      const root = await newTempDir();
+      await seedUiBearingProject(root);
+      await withDashboard(root);
+      await seedDesignMd(root);
+      await writePrototypingJson(root, { handoff: example });
+      const messages = await prototypingIssues(root, "QFAI-DCON-013");
 
       // Every row of the example, each named for the cells it does not carry.
       // `drawn-from-project` carries only a screen, so it is named for that
@@ -827,894 +686,15 @@ procurement:
     });
   });
 
-  it("non-string handoff field (finalArtifact as object) is rejected with DCON-013", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        "finalArtifact:", // mapping-shaped value
-        '  uri: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(
-      dcon013.some(
-        (i) =>
-          i.message.includes("finalArtifact") && i.message.includes("must be a non-empty string"),
-      ),
-    ).toBe(true);
-  });
-
-  it("non-string handoff field (designSystemMirror as array) is rejected with DCON-013", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        "designSystemMirror:",
-        '  - ".qfai/spec/03_contract/design/design-system.yaml"',
-        '  - ".qfai/spec/03_contract/design/another.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(
-      dcon013.some(
-        (i) =>
-          i.message.includes("designSystemMirror") &&
-          i.message.includes("must be a non-empty string"),
-      ),
-    ).toBe(true);
-  });
-
-  it("design-system.yaml mirror with visual.spacing matching DESIGN.md passes (verbatim copy)", async () => {
-    // Post-7QGd: optional sections are still optional in DESIGN.md,
-    // but the mirror's spacing block must match DESIGN.md's exactly
-    // (verbatim copy contract). DESIGN.md without spacing means the
-    // mirror must also omit it. This test pins the symmetric
-    // happy-path: BOTH author spacing with the same value -> pass.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdWithSpacing = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "8px"',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace("  radius:", '  spacing:\n    base: "8px"\n  radius:'),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(dcon005).toEqual([]);
-  });
-
-  it("design-system.yaml mirror authors visual.spacing but DESIGN.md does not → DCON-005 (fabrication)", async () => {
-    // Aganesy 7QGd: third-state contract violation. DESIGN.md
-    // doesn't author spacing; mirror authors `visual.spacing:
-    // { base: "8px" }`. Pre-7QGd this passed silently because the
-    // optional helper was guarded on `dmSpacing !== undefined`.
-    // Post-7QGd, the mirror-only fabrication is rejected.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace("  radius:", '  spacing:\n    base: "8px"\n  radius:'),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) => i.message.includes("visual.spacing") && i.message.includes("DESIGN.md does not"),
-      ),
-    ).toBe(true);
-  });
-
-  it("mirror authors typography.scale but DESIGN.md does not → DCON-005 (fabrication)", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.typography.scale") && i.message.includes("DESIGN.md does not"),
-      ),
-    ).toBe(true);
-  });
-
-  it("mirror authors typography.weight but DESIGN.md does not → DCON-005 (fabrication)", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.typography.weight") &&
-          i.message.includes("DESIGN.md does not"),
-      ),
-    ).toBe(true);
-  });
-
-  it("design-system.yaml as DESIGN.md mirror passes validation (post-1.8.9 contract)", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    // Replace the legacy checklist-shaped design-system.yaml with the
-    // post-1.8.9 mirror shape — full verbatim copy of DESIGN.md tokens
-    // so both the shape gate and the value cross-check pass.
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(path.join(designDir, "design-system.yaml"), VALID_MIRROR_YAML, "utf-8");
-    // Also seed the prototype-handoff so the suite passes end-to-end.
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    // Mirror shape requires visual.colors / typography / radius / shadow
-    // — all present here, so no DCON-005 should fire.
-    expect(dcon005).toEqual([]);
-  });
-
-  // QFAI:EX-0001-0117-01
-  it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
-    // The mirror is contractually a verbatim DESIGN.md
-    // copy. A hand-authored mirror that disagrees with DESIGN.md must
-    // be rejected so downstream `/qfai-implement` cannot bind to a
-    // tampered identity.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace('primary: "#1F2937"', 'primary: "#FF0000"'),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(dcon005.length).toBeGreaterThanOrEqual(1);
-    expect(dcon005[0]?.message).toContain("visual.colors.primary");
-    expect(dcon005[0]?.message).toContain("#FF0000");
-    expect(dcon005[0]?.message).toContain("#1F2937");
-  });
-
-  it("legitimate full mirror with typography.scale + weight passes (no false-positive 'fabricated key' DCON-005)", async () => {
-    // Aganesy 7FTv: pre-fix, the bidir mirror cross-check fired
-    // DCON-005 on `typography.scale` / `typography.weight` keys
-    // because they weren't in the `compare()` expected set, even
-    // though they are legitimate optional mirror sub-keys per
-    // qfai-prototyping/references/handoff.md. Post-fix, the bidir
-    // reverse loop accepts an `optionalKeys` whitelist that
-    // includes scale/weight. A legitimate full mirror that copies
-    // both must pass without any DCON-005 fabricated-key noise.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdWithFull = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"\n    weight:\n      regular: 400\n      bold: 700',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdWithFull, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithFull)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Legitimate mirror that copies scale + weight verbatim.
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"\n    weight:\n      regular: 400\n      bold: 700',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithFull)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(dcon005).toEqual([]);
-  });
-
-  it("placeholder designMdPath ('TBD') triggers single DCON-013 from string-field gate, not double-fire", async () => {
-    // Aganesy 6ll3: pre-fix, the cross-check would fire a SECOND
-    // DCON-013 on a placeholder value ("TBD is not DESIGN.md")
-    // even though the upstream string-field loop already DCON-013s
-    // it for being a placeholder. Post-fix, the cross-check skip
-    // predicate also excludes PLACEHOLDER_RE matches.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "TBD"',
-        'designMdSha256: "TODO"',
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013Path = issues.filter(
-      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdPath"),
-    );
-    const dcon013Sha = issues.filter(
-      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdSha256"),
-    );
-    // Exactly ONE DCON-013 per placeholder field (from the upstream
-    // string-field gate); the cross-check must NOT add a second.
-    expect(dcon013Path.length).toBe(1);
-    expect(dcon013Sha.length).toBe(1);
-    // The single DCON-013 should be the "non-empty string" message
-    // from the string-field gate, not the cross-check's wording.
-    expect(dcon013Path[0]?.message).toContain("must be a non-empty string");
-    expect(dcon013Path[0]?.message).not.toContain("must be 'DESIGN.md'");
-    expect(dcon013Sha[0]?.message).toContain("must be a non-empty string");
-    expect(dcon013Sha[0]?.message).not.toContain("64-char");
-  });
-
-  it("optional visual.spacing in DESIGN.md must be mirrored verbatim → DCON-005 on divergence", async () => {
-    // Optional DESIGN.md tokens are also part of the
-    // verbatim-mirror contract when DESIGN.md authors them. A
-    // mirror that diverges on `visual.spacing.base` must surface
-    // as DCON-005.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdWithSpacing = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdWithSpacing, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Mirror with WRONG spacing.base value (0.5rem instead of 0.25rem).
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        "  radius:",
-        '  spacing:\n    base: "0.5rem"\n    scale: [0, 4, 8, 16]\n  radius:',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithSpacing)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.spacing.base") &&
-          i.message.includes("0.5rem") &&
-          i.message.includes("0.25rem"),
-      ),
-    ).toBe(true);
-  });
-
-  it("mirror authors visual.spacing.scale that DESIGN.md never authored → DCON-005", async () => {
-    // Pre-fix the reverse spacing-key check only rejected
-    // keys outside the schema-defined `{base, scale}` set, which let
-    // an author add `spacing.scale` to design-system.yaml even though
-    // DESIGN.md only authored `spacing.base`. Post-fix that case
-    // surfaces as DCON-005 ("authors 'visual.spacing.scale' but
-    // DESIGN.md does not"), preserving the verbatim-copy contract.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    // DESIGN.md authors only `spacing.base` (no `scale`).
-    const designMdSpacingBaseOnly = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    base: "0.25rem"',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdSpacingBaseOnly, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdSpacingBaseOnly)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Mirror fabricates `spacing.scale` even though DESIGN.md did not
-    // author it. Pre-fix this slipped through; post-fix it surfaces.
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        "  radius:",
-        '  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]\n  radius:',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdSpacingBaseOnly)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.spacing.scale") && i.message.includes("DESIGN.md does not"),
-      ),
-    ).toBe(true);
-  });
-
-  it("symmetric: mirror authors visual.spacing.base that DESIGN.md never authored → DCON-005", async () => {
-    // Reverse direction of the mirror-authors-an-extra-spacing-key case
-    // above: DESIGN.md authors only `spacing.scale` (no `base`), mirror
-    // fabricates `base`. The fix's reverse loop iterates mirror keys, so
-    // the `base` branch and the `scale` branch share the same code path;
-    // without this symmetric pin, a future special-case for
-    // `expected.scale !== undefined` (typography helpers split by
-    // sub-key, so it's plausible) could silently regress one direction
-    // while the test above stays green.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdSpacingScaleOnly = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n  spacing:\n    scale: [0, 4, 8, 16]',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdSpacingScaleOnly, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdSpacingScaleOnly)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Mirror fabricates `spacing.base` even though DESIGN.md only
-    // authored `spacing.scale`. Post-fix this surfaces as DCON-005.
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        "  radius:",
-        '  spacing:\n    base: "0.25rem"\n    scale: [0, 4, 8, 16]\n  radius:',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdSpacingScaleOnly)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.spacing.base") && i.message.includes("DESIGN.md does not"),
-      ),
-    ).toBe(true);
-  });
-
-  it("optional visual.typography.scale in DESIGN.md must be mirrored verbatim → DCON-005 on missing key", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdWithScale = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem"\n      lg: "1.25rem"',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdWithScale, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithScale)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Mirror omits typography.scale entirely.
-    await writeFile(path.join(designDir, "design-system.yaml"), VALID_MIRROR_YAML, "utf-8");
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithScale)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(dcon005.some((i) => i.message.includes("visual.typography.scale"))).toBe(true);
-  });
-
-  it("optional visual.typography.weight numeric values cross-checked → DCON-005 on divergence", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    const designMdWithWeight = VALID_DESIGN_MD.replace(
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
-      '    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 700',
-    );
-    await writeFile(path.join(root, "DESIGN.md"), designMdWithWeight, "utf-8");
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(designDir, { recursive: true });
-    await writeFile(
-      path.join(designDir, "DESIGN.md.lock.yaml"),
-      [
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithWeight)}"`,
-        'frozenAt: "2026-05-05T00:00:00Z"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    // Mirror with WRONG weight.bold value (800 instead of 700).
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"',
-        '    family_mono: "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      regular: 400\n      bold: 800',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(designMdWithWeight)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.typography.weight.bold") &&
-          i.message.includes("800") &&
-          i.message.includes("700"),
-      ),
-    ).toBe(true);
-  });
-
-  it("design-system.yaml mirror with extra fabricated key → DCON-005 (mirror must be verbatim)", async () => {
-    // Aganesy 6ll8: bidirectional cross-check. A hand-authored
-    // mirror with `visual.colors.fabricated_token: "#FF00FF"` must
-    // be rejected even when every DESIGN.md token is faithfully
-    // copied — the mirror is contractually a verbatim copy, so
-    // extra keys break the set-equal invariant.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace(
-        '    overlay: "rgba(0,0,0,0.5)"',
-        '    overlay: "rgba(0,0,0,0.5)"\n    fabricated_token: "#FF00FF"',
-      ),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) =>
-          i.message.includes("visual.colors.fabricated_token") &&
-          i.message.includes("not a DESIGN.md token"),
-      ),
-    ).toBe(true);
-  });
-
-  it("malformed root DESIGN.md WITHOUT lock yaml still surfaces DCON-033 (parse error)", async () => {
-    // Pre-fix, parseDesignMd was nested under
-    // `designMdText !== null && lockText !== null`, so a project
-    // with a malformed DESIGN.md and no lock yet (the common
-    // initial state) saw only DCON-031 and missed the parse error.
-    // Post-fix, parseDesignMd runs whenever DESIGN.md is readable,
-    // so DCON-033 fires regardless of lock state.
+  // QFAI:EX-0001-0042-03
+  it("malformed root DESIGN.md surfaces DCON-033 (parse error)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     // Author a malformed DESIGN.md (missing front-matter delimiter).
     await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
-    // Do NOT seed the lock — common pre-Phase-0 state.
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    const codes = issues.map((i) => i.code);
-    expect(codes).toContain("QFAI-DCON-031"); // missing lock
-    expect(codes).toContain("QFAI-DCON-033"); // parse failure now also surfaced
-  });
-
-  it("design-system.yaml mirror missing one DESIGN.md sub-key → DCON-005 missing-key diagnostic", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    const designDir = path.join(root, ".qfai/spec/03_contract/design");
-    // Drop visual.radius.full from the mirror — DESIGN.md still has
-    // it, so the cross-check must surface it as missing.
-    await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      VALID_MIRROR_YAML.replace('    full: "9999px"\n', ""),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(designDir, "prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon005 = issues.filter((i) => i.code === "QFAI-DCON-005");
-    expect(
-      dcon005.some(
-        (i) => i.message.includes("visual.radius.full") && i.message.includes("missing"),
-      ),
-    ).toBe(true);
-  });
-
-  it("prototype-handoff.yaml designMdPath !== root DESIGN.md → DCON-013", async () => {
-    // A handoff that points at an alternate file must be
-    // rejected so downstream `/qfai-implement` cannot bind to a
-    // non-SSOT design identity.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "docs/alternate-DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(
-      dcon013.some(
-        (i) =>
-          i.message.includes("designMdPath") &&
-          i.message.includes("DESIGN.md") &&
-          i.message.includes("docs/alternate-DESIGN.md"),
-      ),
-    ).toBe(true);
-  });
-
-  it("prototype-handoff.yaml designMdPath './DESIGN.md' is accepted (normalized)", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "./DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013Path = issues.filter(
-      (i) => i.code === "QFAI-DCON-013" && i.message.includes("designMdPath"),
-    );
-    expect(dcon013Path).toEqual([]);
-  });
-
-  it("prototype-handoff.yaml designMdSha256 not 64-hex → DCON-013", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        'designMdSha256: "not-a-real-sha"',
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013Sha = issues.filter(
-      (i) =>
-        i.code === "QFAI-DCON-013" &&
-        i.message.includes("designMdSha256") &&
-        i.message.includes("64-char"),
-    );
-    expect(dcon013Sha.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("prototype-handoff.yaml designMdSha256 stale (valid hex but != lock) → DCON-013", async () => {
-    // Companion to the designMdPath-mismatch case above: a syntactically-valid-but-wrong sha must
-    // be cross-checked against DESIGN.md.lock.yaml#designMdSha256.
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    const stale = "0".repeat(64);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: 1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${stale}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013Sha = issues.filter(
-      (i) =>
-        i.code === "QFAI-DCON-013" &&
-        i.message.includes("designMdSha256") &&
-        i.message.includes("does not match"),
-    );
-    expect(dcon013Sha.length).toBeGreaterThanOrEqual(1);
-    expect(dcon013Sha[0]?.message).toContain(stale);
-    expect(dcon013Sha[0]?.message).toContain(hashDesignMd(VALID_DESIGN_MD));
-  });
-
-  it("negative finalIterIndex is rejected with DCON-013", async () => {
-    const root = await newTempDir();
-    await seedUiBearingProject(root);
-    await seedDesignMdAndLock(root);
-    await seedPrototypingDesignYamls(root);
-    await writeFile(
-      path.join(root, ".qfai/spec/03_contract/design/prototype-handoff.yaml"),
-      [
-        "finalIterIndex: -1",
-        'finalArtifact: ".qfai/prototypes/final/index.html"',
-        'designMdPath: "DESIGN.md"',
-        `designMdSha256: "${hashDesignMd(VALID_DESIGN_MD)}"`,
-        'designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"',
-        'implementationNotes: "test"',
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
-    const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
-    expect(dcon013.length).toBeGreaterThan(0);
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-DCON-033"]);
+    expect(issues[0]?.severity).toBe("error");
   });
 });
 
@@ -1723,7 +703,7 @@ procurement:
 //
 // The sample gate has to fire BEFORE the UI-contract gate: a copied sample
 // can be in place from the first commit, `contracts/ui/**` is authored later
-// in SDD, and Phase 0 freezes the file's sha256 in between.
+// in SDD, and a prototyping loop records the file's sha256 after that.
 // ---------------------------------------------------------------------------
 
 /**
@@ -1798,7 +778,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: []\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       "utf-8",
     );
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
@@ -1840,7 +820,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
 });
 
 /**
- * The story tree has no spec-level UI marker. A declared CON-UI contract with
+ * The story tree has no spec-level UI marker. A declared UI contract with
  * screens is the design-readiness signal. A discussion pack still guides SDD,
  * but it cannot override a live UI contract when validation runs.
  */
@@ -1867,17 +847,16 @@ describe("story-tree visual design readiness", () => {
     await writeDiscussionCurrentId(root, id);
   }
 
-  it("a cli-only discussion without UI contracts requires no visual brand lock", async () => {
+  it("a cli-only discussion without UI contracts requires no root DESIGN.md", async () => {
     const root = await newTempDir();
     await seedDiscussionPack(root, "cli");
     const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
       (issue) => issue.code,
     );
     expect(codes).not.toContain("QFAI-DCON-030");
-    expect(codes).not.toContain("QFAI-DCON-031");
   });
 
-  it("an unreplaced sample without a UI contract warns without requiring a lock", async () => {
+  it("an unreplaced sample without a UI contract only warns", async () => {
     const root = await newTempDir();
     await seedDiscussionPack(root, "cli");
     await writeFile(
@@ -1885,8 +864,9 @@ describe("story-tree visual design readiness", () => {
       await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8"),
     );
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    expect(issues.find((issue) => issue.code === "QFAI-DCON-034")?.severity).toBe("warning");
-    expect(issues.map((issue) => issue.code)).not.toContain("QFAI-DCON-031");
+    expect(issues.map((issue) => [issue.code, issue.severity])).toEqual([
+      ["QFAI-DCON-034", "warning"],
+    ]);
   });
 
   it("an active cli pack cannot suppress a UI contract with screens", async () => {
@@ -1897,7 +877,6 @@ describe("story-tree visual design readiness", () => {
       (issue) => issue.code,
     );
     expect(codes).toContain("QFAI-DCON-030");
-    expect(codes).toContain("QFAI-DCON-031");
   });
 
   it("a web discussion alone does not invent a UI contract", async () => {
@@ -1913,7 +892,7 @@ describe("story-tree visual design readiness", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: []\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       "utf-8",
     );
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);

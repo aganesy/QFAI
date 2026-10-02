@@ -1,25 +1,20 @@
-// QFAI:EX-0001-0195-05
+// QFAI:EX-0001-0188-05
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Question = NonNullable<Parameters<typeof decide>[0]["openQuestions"]>[number];
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   writeScope: ["src/export/**"],
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-    ["bounded-implement", "implement", "qfai-implement", "implement"],
-    ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
+  ],
 };
 const question: Question = {
   questionId: "question-3-1",

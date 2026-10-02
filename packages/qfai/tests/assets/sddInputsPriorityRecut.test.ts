@@ -11,7 +11,7 @@ describe("qfai-sdd reads the current assistant tree", () => {
   for (const tree of trees) {
     it(`${tree}: the classification and decomposition references resolve`, async () => {
       const assistant = path.join(repoRoot, tree, "assistant");
-      const skill = await readFile(path.join(assistant, "skill", "qfai-sdd", "SKILL.md"), "utf-8");
+      const skill = await readFile(path.join(assistant, "step", "sdd-triage", "STEP.md"), "utf-8");
       expect(skill).toContain(".qfai/assistant/rule/change-classification.md");
       expect(skill).toContain("references/requirements-decomposition.md");
       await access(path.join(assistant, "rule", "change-classification.md"));

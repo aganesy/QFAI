@@ -24,6 +24,44 @@ describe("story-tree default paths", () => {
   });
 });
 
+describe("uiux.surfacePaths", () => {
+  async function surfacePathsOf(configBody: string) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-surface-paths-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), configBody, "utf-8");
+      const { config, issues } = await loadConfig(root);
+      return { surfacePaths: config.uiux?.surfacePaths, issues };
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  // QFAI:EX-0001-0076-05
+  it("reads a list of globs, an empty list, and an absent key apart", async () => {
+    const listed = await surfacePathsOf(
+      "uiux:\n  surfacePaths:\n    - src/ui/**\n    - tests/e2e/**\n",
+    );
+    expect(listed).toEqual({ surfacePaths: ["src/ui/**", "tests/e2e/**"], issues: [] });
+    expect(await surfacePathsOf("uiux:\n  surfacePaths: []\n")).toEqual({
+      surfacePaths: [],
+      issues: [],
+    });
+    expect(await surfacePathsOf("paths:\n  specsDir: .qfai/spec\n")).toEqual({
+      surfacePaths: undefined,
+      issues: [],
+    });
+  });
+
+  // QFAI:EX-0001-0076-06
+  it("reports a value that is not a list of globs and declares nothing", async () => {
+    const { surfacePaths, issues } = await surfacePathsOf("uiux:\n  surfacePaths: src/ui/**\n");
+    expect(issues.map((entry) => entry.message)).toContain(
+      "uiux.surfacePaths must be a list of non-empty glob strings.",
+    );
+    expect(surfacePaths).toBeUndefined();
+  });
+});
+
 describe("assistant routing overrides", () => {
   it("loads complete routing entries and review profiles without merging defaults", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
@@ -67,6 +105,33 @@ describe("assistant routing overrides", () => {
       ]);
       expect(config.routing).toEqual([{ skill: "qfai-sdd" }]);
       expect(config.reviewProfiles).toEqual({});
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keys an override by step name and refuses an entry with both keys or a duplicate name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "routing:",
+          "  - step: sdd-contract",
+          "    phases: []",
+          "  - step: sdd-flow",
+          "    skill: qfai-sdd",
+          "  - skill: sdd-contract",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues.map((issue) => issue.message)).toEqual([
+        expect.stringContaining("routing[1] must have exactly one non-empty step or skill."),
+        expect.stringContaining("routing has duplicate entry sdd-contract."),
+      ]);
+      expect(config.routing).toEqual([{ step: "sdd-contract", phases: [] }]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -445,7 +510,9 @@ describe("uiux.competitive_refs_min", () => {
     // effectively demanded three while the finding still said "at least 2.5".
     const { config, issues } = await loadWith("2.5");
     expect(issues.map((issue) => issue.message)).toEqual([
-      expect.stringContaining("uiux.competitive_refs_min は0以上の整数である必要があります。"),
+      expect.stringContaining(
+        "uiux.competitive_refs_min must be an integer greater than or equal to 0.",
+      ),
     ]);
     expect(config.uiux?.competitive_refs_min).toBeUndefined();
   });

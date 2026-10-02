@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { QFAI_GITIGNORE_GOVERNANCE_NEGATIONS } from "../../src/core/gitignore.js";
+import { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_LEGACY_LINES } from "../../src/core/gitignore.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -23,9 +23,14 @@ describe.each(trees)("decision records in %s", (tree) => {
   });
 });
 
-describe("the decision record home is tracked", () => {
-  it("re-includes the singular directory in the managed ignore block", () => {
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/**");
+describe("the decision record home stays local", () => {
+  // QFAI:EX-0001-0033-03
+  it("re-includes nothing under it in the managed ignore block, and retires the old negations", () => {
+    const block = QFAI_GITIGNORE_BLOCK.split("\n");
+    for (const line of ["!.qfai/evidence/decision/", "!.qfai/evidence/decision/**"]) {
+      expect(block).not.toContain(line);
+      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
+    }
+    expect(block).toContain(".qfai/evidence/*");
   });
 });

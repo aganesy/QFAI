@@ -1,13 +1,14 @@
-// QFAI:EX-0001-0196-19
+// QFAI:EX-0001-0189-18
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
+import { kindSteps, servedSteps } from "./kindSteps.js";
 
 const flowBinding = { flowId: "BF-0007" };
 const acceptedStages = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 // The test fails because the example it asserts is wrong, so the spec's owner repairs it.
 const failingExample = {
@@ -28,8 +29,7 @@ it("An implement result with testObservation", () => {
     attempt: 1,
     stageKind: "implement",
     target: { kind: "flow" as const, flowId: "BF-0007" },
-    executor: { skill: "qfai-implement" },
-    operation: "implement",
+    steps: kindSteps("implement"),
   };
   const snapshot = {
     run,
@@ -70,11 +70,11 @@ it("An implement result with testObservation", () => {
 
   expect({
     retries: [accepted.verdict.retry, next.verdict.retry],
-    executor: next.verdict.workOrder?.executor?.skill,
+    steps: next.verdict.workOrder?.steps,
     stageInstanceId: next.verdict.workOrder?.stageInstanceId,
   }).toEqual({
     retries: [undefined, undefined],
-    executor: "qfai-sdd",
+    steps: servedSteps("sdd", "qfai-sdd"),
     stageInstanceId: "bounded-sdd-delta",
   });
 });

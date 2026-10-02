@@ -3,26 +3,19 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Declared layout anti-pattern review
+  # AC-0001-0108-01
+  Scenario: A layout anti-pattern caps the information-architecture score
+    Given any `iter-NN/review.json` where `layoutAntiPatternsDetected.length > 0`
+    When it is validated
+    Then `scores.informationArchitecture` is in `{weak, acceptable}`
+    And `strong` or `exceptional` raises `QFAI-PROT-021`
 
-# AC-0001-0108-01
-# Parent: US-0001-0108
-Scenario: pivotDirective Enum
-  Given any `iter-NN/review.json`,
-  When validated,
-  Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`. Other values raise `QFAI-PROT-002`.
-
-# AC-0001-0108-02
-# Parent: US-0001-0108
-Scenario: pivotDirective Rule — pivot
-  Given the latest 3 iters each have `informationArchitecture ∈ {weak, acceptable}` and the latest iter has `layoutAntiPatternsDetected.length > 0`,
-  When `computePivotDirective(history)` runs,
-  Then it returns `"pivot"`.
-
-# AC-0001-0108-03
-# Parent: US-0001-0108
-Scenario: pivotDirective Rule — continue
-  Given the latest iter has `≥ 2` of the 4 UX axes strictly improved by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter,
-  When `computePivotDirective(history)` runs,
-  Then it returns `"continue"`. Otherwise (and not `pivot`) it returns `"refine"`.
+  # AC-0001-0108-02
+  Scenario: Only declared layout anti-pattern IDs are accepted
+    Given any `iter-NN/review.json`
+    When it is validated
+    Then every entry in `layoutAntiPatternsDetected[]` is an identifier declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is what `loadKnownLapIds` reads
+    And a token no entry declares raises `QFAI-PROT-002`
+    And the registry file is the only list of accepted identifiers, so no second copy of it is written out
 ```

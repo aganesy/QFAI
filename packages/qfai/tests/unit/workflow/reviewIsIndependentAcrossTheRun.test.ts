@@ -1,25 +1,20 @@
-// QFAI:EX-0001-0194-03
-// QFAI:EX-0001-0194-08
+// QFAI:EX-0001-0187-03
+// QFAI:EX-0001-0187-08
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const plan = {
-  route: "bounded-change",
+  route: "add-feature",
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-    ["bounded-acceptance", "acceptance", "qfai-atdd", "author-acceptance-tests"],
-    ["bounded-implement", "implement", "qfai-implement", "implement"],
-    ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when: "always",
-  })),
+    planStage("bounded-sdd-delta", "sdd"),
+    planStage("bounded-acceptance", "acceptance"),
+    planStage("bounded-implement", "implement"),
+    planStage("bounded-verify", "verify"),
+  ],
 };
 const flowBinding = { flowId: "BF-0007" };
 const actorHistory = [
@@ -28,7 +23,7 @@ const actorHistory = [
   { role: "reviewer", agentInstance: "agent-review-1", stageInstanceId: "bounded-sdd-delta" },
 ];
 const firstAccepted = [
-  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
+  { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd", outcome: "accepted" },
 ];
 
 it("Issue work orders across a run with an author, a recommender and a reviewer recorded", () => {
@@ -100,8 +95,7 @@ it("A review result whose reviewer instance the actor history shows as the autho
     attempt: 1,
     stageKind: "implement",
     target: { kind: "flow" as const, flowId: "BF-0007" },
-    executor: { skill: "qfai-implement" },
-    operation: "implement",
+    steps: kindSteps("implement"),
   };
   const decision = decide(
     {
@@ -151,8 +145,9 @@ it("A review result whose reviewer instance the actor history shows as the autho
   });
 });
 
-// A bounded run driven through the journal, each result naming the agent that produced it.
-function actorsRun() {
+// An add-feature run driven through the journal, each result naming the agent that produced it, and
+// its accepted routing result naming `recommender` when one is given.
+function actorsRun(recommender?: string) {
   const flow = "BF-0007";
   const facts = {
     flows: [flow],
@@ -164,12 +159,24 @@ function actorsRun() {
       digest: "1".repeat(64),
     },
   };
-  const plan = planOf("bounded-change", [
-    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-    stage("bounded-implement", "implement", "qfai-implement", "implement"),
-    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+  const plan = planOf("add-feature", [
+    stage("bounded-sdd-delta", "sdd"),
+    stage("bounded-implement", "implement"),
+    stage("bounded-verify", "verify"),
   ]);
-  const run = new JournalRun(readyWith(plan, flow));
+  const actor = recommender
+    ? {
+        actor: {
+          role: "recommender" as const,
+          agentInstance: recommender,
+          stageInstanceId: "routing",
+        },
+      }
+    : {};
+  const seed = readyWith(plan, flow).map((record) =>
+    record.event === "plan-accepted" ? { ...record, ...actor } : record,
+  );
+  const run = new JournalRun(seed);
   run.next(facts);
   run.accept({ actor: { agentInstance: "sdd-1" } }, facts);
   run.next(facts);
@@ -207,6 +214,16 @@ it("A verify result reviewed by the instance that authored the implement stage",
         { actor: { agentInstance: "verify-1" }, reviewResults: [review("implement-1")] },
         facts,
       ),
+    ),
+  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+});
+
+it("A verify result reviewed by the instance that produced the routing result", () => {
+  const { run, facts } = actorsRun("run-1");
+
+  expect(
+    reasonsOf(
+      run.accept({ actor: { agentInstance: "verify-1" }, reviewResults: [review("run-1")] }, facts),
     ),
   ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
 });

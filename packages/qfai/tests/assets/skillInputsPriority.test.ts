@@ -25,16 +25,23 @@ describe("skills read the governing inputs for their current stage", () => {
 
     it(tree + ": SDD reads the selected source and existing story tree", async () => {
       const skill = await read(tree, "qfai-sdd");
-      expect(skill).toContain("selectedInputPath");
-      expect(skill).toContain("existing story tree");
+      const triage = await readFile(
+        path.join(root, tree, "assistant/step/sdd-triage/STEP.md"),
+        "utf-8",
+      );
+      expect(triage).toContain("selectedInputPath");
+      expect(triage).toContain("existing story tree");
       expect(skill).toContain("shared-skill-operating-baseline.md");
-      expect(skill).toContain("decisions.md");
+      expect(triage).toContain("decisions.md");
     });
 
     it(
       tree + ": acceptance and implementation skills read flow obligations and layer rules",
       async () => {
-        const atdd = await read(tree, "qfai-atdd");
+        const atdd = await readFile(
+          path.join(root, tree, "assistant/step/atdd-scaffold/STEP.md"),
+          "utf-8",
+        );
         const implement = await read(tree, "qfai-implement");
         for (const skill of [atdd, implement]) {
           expect(skill).toContain("BF-NNNN");

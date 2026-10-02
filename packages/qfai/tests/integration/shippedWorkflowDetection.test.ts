@@ -2,7 +2,7 @@
  * Integration: shipped orchestrator change detection and verdict.
  *
  * Covers the detection/verdict half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5): the
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0012 to BR-0018-0014): the
  * orchestrator's change-detection shell is self-contained (name-only diff
  * + JSON filtering, no third-party action), selects the minimal lane set
  * for docs-only diffs and the full one for source diffs, fails OPEN to the
@@ -40,7 +40,7 @@ import {
 /** The orchestrator file that owns detection, lanes and verdict. */
 const ORCHESTRATOR = "qfai-tests.yml";
 
-/** The full lane superset (value SSOT in the suite per CLI-WFSET §5). */
+/** The full lane superset (value SSOT in the suite per BR-0018-0023). */
 const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 
 const newTempDir = useTempDirPool("qfai-wfdetect-");
@@ -581,6 +581,7 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
   });
 });
 
+// QFAI:EX-0002-0004-04
 describe("a default-branch push declared covered by its pull request runs nothing it already ran", () => {
   // `QFAI_CI_PUSH_POLICY=protected` is the adopter's statement that every merge passed these
   // checks on a pull request first. Only that exact value on a push may skip, because a skip

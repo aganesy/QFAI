@@ -67,13 +67,13 @@ const FILES: Record<string, string> = {
   ].join("\n"),
   [EXAMPLES]: examples(),
   [CONTRACT]: [
-    "# Export",
+    "# CLI-0001: Export",
     "",
-    "## Rules",
+    "## Business rules",
     "",
     "| BR-ID | Statement | Examples |",
     "| --- | --- | --- |",
-    "| BR-0001 | One row per order line | EX-0001-0001-01, EX-0001-0001-02 |",
+    "| BR-0001-0001 | One row per order line | EX-0001-0001-01, EX-0001-0001-02 |",
     "",
   ].join("\n"),
   [DECISIONS]: decisions(["| DEC-0001 | Export as CSV | Settled | DONE |"]),
@@ -110,9 +110,16 @@ export async function storyFacts(root: string, snapshot: WorkflowSnapshot) {
   return storyFactsOf(root, config, snapshot.flowBinding?.flowId, snapshot.diagnosis);
 }
 
-function stage(stageKind: string, skill: string, operation: string, when = "always") {
-  return { stageInstanceId: stageKind, stageKind, skill, operation, when };
+// A plan stage running `steps`, those in `passThrough` marked pass-through.
+function stage(stageKind: string, steps: string[], passThrough: string[] = []) {
+  const entries = steps.map((name) =>
+    passThrough.includes(name) ? { name, passThrough: true } : { name },
+  );
+  return { stageInstanceId: stageKind, stageKind, steps: entries };
 }
+
+const VERIFY = ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const IMPLEMENT = ["implement-tdd", "implement-checkpoint"];
 
 const acceptedStage = (stageKind: string) => ({
   stageInstanceId: stageKind,
@@ -120,26 +127,26 @@ const acceptedStage = (stageKind: string) => ({
   outcome: "accepted",
 });
 
-const BOUNDED = [
-  stage("sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-  stage("implement", "qfai-implement", "implement"),
-  stage("verify", "qfai-verify", "verify-full"),
+const ADD_FEATURE = [
+  stage("sdd", ["sdd-triage", "sdd-story", "sdd-gate"]),
+  stage("implement", IMPLEMENT),
+  stage("verify", VERIFY, ["verify-change-note"]),
 ];
 
-const BUGFIX = [
-  stage("diagnose", "qfai-implement", "diagnose-only"),
-  stage("sdd_append", "qfai-sdd", "defect-example-seeding", "missing_example_needed"),
-  stage("implement", "qfai-implement", "implement", "diagnosis_missing_test"),
-  stage("verify", "qfai-verify", "verify-full"),
+const FIX_DEFECT = [
+  stage("diagnose", ["implement-diagnose"]),
+  stage("sdd_append", ["sdd-story", "sdd-gate"], ["sdd-story"]),
+  stage("implement", IMPLEMENT),
+  stage("verify", VERIFY, ["verify-change-note"]),
 ];
 
 /**
- * A ready run bound to BF-0001 whose next stage is `stageKind`: of the bounded-change plan, or of
- * the bugfix plan after a missing-test diagnosis for defect example seeding.
+ * A ready run bound to BF-0001 whose next stage is `stageKind`: of the add-feature plan, or of
+ * the fix-defect plan after a missing-test diagnosis for defect example seeding.
  */
 export function readySnapshot(stageKind: string, extra: Partial<WorkflowSnapshot> = {}) {
   const seeding = stageKind === "sdd_append";
-  const stages = seeding ? BUGFIX : BOUNDED;
+  const stages = seeding ? FIX_DEFECT : ADD_FEATURE;
   const before = stages.slice(
     0,
     stages.findIndex((each) => each.stageKind === stageKind),
@@ -147,7 +154,7 @@ export function readySnapshot(stageKind: string, extra: Partial<WorkflowSnapshot
   const snapshot: WorkflowSnapshot = {
     run: { id: "run-20260926000000000", state: "ready", sequence: 6 },
     plan: {
-      route: seeding ? "bugfix" : "bounded-change",
+      route: seeding ? "fix-defect" : "add-feature",
       stages,
       writeScope: ["src/**", "tests/**"],
     },

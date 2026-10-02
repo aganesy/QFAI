@@ -6,7 +6,6 @@ import ts from "typescript";
 
 import {
   validateStoryTreeContractReferences,
-  validateStoryTreeCoverageDepth,
   validateStoryTreeDrift,
   validateStoryTreeObligations,
   validateStoryTreeStructure,
@@ -24,11 +23,6 @@ const validators = [
     name: "validateStoryTreeObligations",
     module: "storyTreeObligations.js",
     profiles: ["atdd", "tdd"],
-  },
-  {
-    name: "validateStoryTreeCoverageDepth",
-    module: "storyTreeCoverageDepth.js",
-    profiles: ["atdd"],
   },
   { name: "validateStoryTreeDrift", module: "upstreamSsotGuard.js", profiles: ["tdd", "drift"] },
 ] as const;
@@ -109,7 +103,7 @@ function profileBody(pipeline: ts.SourceFile, profile: string): ts.Node {
 
 describe("BF-0001 story-tree validator registration", () => {
   it("exports, directly imports and invokes every current validator in its owning profile", async () => {
-    // QFAI:EX-0001-0155-01
+    // QFAI:EX-0001-0150-01
     const barrel = await source("validators/index.ts");
     const pipeline = await source("validate.ts");
     expect(
@@ -117,7 +111,6 @@ describe("BF-0001 story-tree validator registration", () => {
         validateStoryTreeStructure,
         validateStoryTreeContractReferences,
         validateStoryTreeObligations,
-        validateStoryTreeCoverageDepth,
         validateStoryTreeDrift,
       ].every((value) => typeof value === "function"),
     ).toBe(true);

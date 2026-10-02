@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const implementSkillPath = path.join(
@@ -13,10 +15,11 @@ const implementSkillPath = path.join(
   "qfai-implement",
   "SKILL.md",
 );
+const implementAssistantDir = path.join(templateRoot, ".qfai", "assistant");
 
 describe("E2E: sub-agent roster formalization", () => {
   it("SKILL.md defines a formal routed specialist roster", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     expect(content).toContain("roles:");
     expect(content).toContain("delivery-planner");
     expect(content).toContain("frontend-engineer");
@@ -29,8 +32,8 @@ describe("E2E: sub-agent roster formalization", () => {
 
 describe("E2E: completion contract hardening", () => {
   it("SKILL.md has item completion checklist, spec completion, and prohibition conditions", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
-    expect(content).toContain("### Completion gate");
+    const content = await readImplementFlowSteps(implementAssistantDir);
+    expect(content).toContain("## Completion gate");
     expect(content).toContain("Report the flow complete only when:");
     expect(content).toContain(
       "Every implemented EX has an observed RED, GREEN and Refactor result",
@@ -41,7 +44,7 @@ describe("E2E: completion contract hardening", () => {
 
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
     expect(content).toContain("RED, GREEN, and Refactor commands and observed results");
     expect(content).toContain("Evidence without a command and result pair does not prove a");
@@ -51,7 +54,7 @@ describe("E2E: evidence contract hardening", () => {
 describe("E2E: parallel dispatch rules", () => {
   it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
     // Full conditions live in references/parallelization-policy.md.
-    const content = await readFile(implementSkillPath, "utf-8");
+    const content = await readImplementFlowSteps(implementAssistantDir);
     const policy = await readFile(
       path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
       "utf-8",

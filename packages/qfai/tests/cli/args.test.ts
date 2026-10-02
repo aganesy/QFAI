@@ -76,15 +76,15 @@ describe("parseArgs", () => {
     // it had not been given — `--dry-run` most sharply, since an operator who
     // believes a run is a rehearsal gets a real one.
     //
-    // `handoff` and `prototyping` take a subcommand, so their rows name one: a
-    // bare `handoff` is invalid for its own reasons and would pass a rejection
+    // `prototyping` takes a subcommand, so its rows name one: a bare
+    // `prototyping` is invalid for its own reasons and would pass a rejection
     // row without testing the flag.
     const OWNERS = [
-      ["--force", [["init"], ["handoff", "upgrade"], ["prototyping", "iterate"]], ["validate"]],
+      ["--force", [["init"], ["prototyping", "iterate"]], ["validate"]],
       ["--yes", [["init"], ["doctor"]], ["validate", "report"]],
       [
         "--dry-run",
-        [["init"], ["doctor"], ["handoff", "upgrade"], ["prototyping", "iterate"]],
+        [["init"], ["doctor"], ["prototyping", "iterate"]],
         ["validate", "report", "atdd"],
       ],
     ] as const;
@@ -164,41 +164,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("parses guardrails options", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(
-      [
-        "guardrails",
-        "extract",
-        "--path",
-        "18_delta.md",
-        "--path",
-        "more",
-        "--max",
-        "12",
-        "--keyword",
-        "layout",
-      ],
-      cwd,
-    );
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.options.guardrailsAction).toBe("extract");
-    expect(parsed.options.guardrailsPaths).toEqual(["18_delta.md", "more"]);
-    expect(parsed.options.guardrailsMax).toBe(12);
-    expect(parsed.options.guardrailsKeyword).toBe("layout");
-  });
-
-  it.each(["-1", "1.5", "2junk", "+2", "9007199254740992"])(
-    "rejects guardrails extract --max %s as a non-negative integer",
-    (value) => {
-      const parsed = parseArgs(["guardrails", "extract", "--max", value], process.cwd());
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.invalidExitCode).toBe(2);
-      expect(parsed.options.guardrailsMax).toBeUndefined();
-      expect(parsed.invalidReason).toContain("Expected: a non-negative integer");
-    },
-  );
-
   it("parses --profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "atdd"], cwd);
@@ -249,24 +214,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("accepts --format text|json for guardrails", () => {
-    const cwd = process.cwd();
-    const json = parseArgs(["guardrails", "check", "--format", "json"], cwd);
-    expect(json.invalid).toBe(false);
-    expect(json.options.guardrailsFormat).toBe("json");
-
-    const text = parseArgs(["guardrails", "list", "--format", "text"], cwd);
-    expect(text.invalid).toBe(false);
-    expect(text.options.guardrailsFormat).toBe("text");
-  });
-
-  it("rejects unsupported --format values for guardrails", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["guardrails", "check", "--format", "github"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.invalidExitCode).toBe(2);
-  });
-
   it("parses sdd profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);
@@ -288,14 +235,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  it("marks guardrails without action as invalid", () => {
-    const cwd = process.cwd();
-    const parsed = parseArgs(["guardrails", "--path", "18_delta.md"], cwd);
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.options.help).toBe(true);
-    expect(parsed.options.invalidExitCode).toBe(2);
-  });
-
   // Flag parsing for spec-0012:
   //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
 
@@ -309,6 +248,7 @@ describe("parseArgs", () => {
     expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
   });
 
+  // QFAI:EX-0001-0144-03
   it("parses --skeleton-mode {placeholder|full|stub} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["placeholder", "full", "stub"] as const) {
@@ -334,6 +274,7 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  // QFAI:EX-0001-0144-03
   it("parses --mode {convergence|exploration} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["convergence", "exploration"] as const) {
@@ -346,6 +287,7 @@ describe("parseArgs", () => {
     expect(bogus.options.help).toBe(true);
   });
 
+  // QFAI:EX-0001-0144-03
   it("requires a value for --mode", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode"], cwd);
@@ -413,7 +355,7 @@ describe("parseArgs", () => {
     });
   });
 
-  // `--dry-run` is implemented by init, doctor, handoff upgrade and
+  // `--dry-run` is implemented by init, doctor and
   // prototyping iterate|rescope. On every other command it used to be
   // accepted and then ignored, so an operator reaching for a preview flag
   // got a real write instead. `prototyping` wired the flag upstream while
@@ -426,7 +368,7 @@ describe("parseArgs", () => {
       expect(parsed.options.dryRun).toBe(true);
     });
 
-    it.each([["validate"], ["report"], ["guardrails"], ["audit"], ["atdd"], ["discussion"]])(
+    it.each([["validate"], ["report"], ["audit"], ["atdd"], ["discussion"]])(
       "marks --dry-run invalid on %s and leaves dryRun off",
       (command) => {
         const parsed = parseArgs([command, "--dry-run"], process.cwd());
@@ -443,17 +385,6 @@ describe("parseArgs", () => {
       expect(parsed.invalid).toBe(false);
       expect(parsed.options.dryRun).toBe(true);
       expect(parsed.options.prototypingAction).toBe(action);
-    });
-
-    // `handoff upgrade` implements the flag as a preview, so it must NOT be
-    // rejected: the guard above is about commands that would ignore it.
-    it("keeps --dry-run on handoff upgrade, which previews instead of writing", () => {
-      const parsed = parseArgs(["handoff", "upgrade", "legacy.yaml", "--dry-run"], process.cwd());
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.dryRun).toBe(true);
-      // The subcommand and its positional still parse alongside the flag.
-      expect(parsed.options.handoffAction).toBe("upgrade");
-      expect(parsed.options.handoffLegacyFile).toBe("legacy.yaml");
     });
 
     it("does not consume a following token when rejecting --dry-run", () => {
@@ -544,8 +475,8 @@ describe("parseArgs", () => {
       expect(parsed.options.auditScope).toBe("deviation");
     });
   });
-  // 引数拒否の理由 (invalidReason) は main.ts が stderr に出す診断文。
-  // 「どのトークンが拒否されたか」が出力に現れることを固定する。
+  // The rejection reason (invalidReason) is the diagnostic main.ts writes to
+  // stderr. Pin that the output names which token was rejected.
   describe("invalidReason", () => {
     it("names the flag when a value-taking flag has no value", () => {
       const parsed = parseArgs(["validate", "--format"], process.cwd());
@@ -574,17 +505,11 @@ describe("parseArgs", () => {
       expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
         "qfai atdd: unknown or missing subcommand. Expected: scaffold",
       );
-      expect(parseArgs(["handoff"], cwd).invalidReason).toBe(
-        "qfai handoff: unknown or missing subcommand. Expected: upgrade",
-      );
       expect(parseArgs(["discussion"], cwd).invalidReason).toBe(
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
         "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-ui-contract|rescope",
-      );
-      expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
-        "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
         "qfai sdd: unknown or missing subcommand. Expected: preflight",
@@ -617,17 +542,13 @@ describe("parseArgs", () => {
   // Unknown-flag handling. Pre-fix the flag switch ended with a bare
   // `default: break;`, so any unrecognized `--token` was silently
   // dropped: `qfai init --dryrun` performed a REAL init and still
-  // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
+  // exited 0. `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` reserves exit 2 for
   // CLI-arg errors, so an unknown flag must markInvalid() with 2.
   describe("unknown flags", () => {
-    // The usage-error code is one number for every command. It used to be 1 by
-    // default with `guardrails` alone raised to 2 by name, which contradicted
-    // `prototyping iterate`'s canonical matrix. The default is 2 now, so
-    // the by-name branch assigned the value it already had - dead, and still
-    // reading as "guardrails is special". Asserted over a spread of commands
-    // rather than one, because a single case cannot tell a default from a
-    // special case.
-    it.each(["init", "validate", "report", "doctor", "guardrails", "atdd", "discussion", "audit"])(
+    // The usage-error code is one number for every command. Asserted over a
+    // spread of commands rather than one, because a single case cannot tell a
+    // default from a special case.
+    it.each(["init", "validate", "report", "doctor", "atdd", "discussion", "audit"])(
       "reserves the same usage-error code on %s",
       (command) => {
         const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
@@ -668,14 +589,9 @@ describe("parseArgs", () => {
       expect(use.invalid).toBe(false);
       expect(use.options.discussionId).toBe("disc-0001");
       expect(use.options.unknownFlags).toEqual([]);
-
-      const handoff = parseArgs(["handoff", "upgrade", "legacy.md"], cwd);
-      expect(handoff.invalid).toBe(false);
-      expect(handoff.options.handoffLegacyFile).toBe("legacy.md");
-      expect(handoff.options.unknownFlags).toEqual([]);
     });
 
-    it("routes arg errors on non-guardrails commands to exit 2 as well", () => {
+    it("routes a missing flag value to exit 2 as well", () => {
       const cwd = process.cwd();
       const parsed = parseArgs(["validate", "--format"], cwd);
       expect(parsed.invalid).toBe(true);
@@ -772,27 +688,6 @@ describe("parseArgs", () => {
         untouched: (o) => expect(o.reportBaseUrl).toBeUndefined(),
       },
       {
-        flag: "--path",
-        value: "18_delta.md",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsPaths).toEqual([]),
-      },
-      {
-        flag: "--max",
-        value: "12",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsMax).toBeUndefined(),
-      },
-      {
-        flag: "--keyword",
-        value: "layout",
-        wrongCommand: ["validate"],
-        probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.guardrailsKeyword).toBeUndefined(),
-      },
-      {
         flag: "--platform",
         value: "web",
         wrongCommand: ["report"],
@@ -822,7 +717,7 @@ describe("parseArgs", () => {
       },
       {
         flag: "--primary-ui-contract",
-        value: "CON-UI-0001",
+        value: "UI-0001",
         wrongCommand: ["validate"],
         probe: (o) => expect(o.validateFormat).toBe("github"),
         untouched: (o) => expect(o.prototypingPrimaryUiContract).toBeUndefined(),
@@ -901,28 +796,6 @@ describe("parseArgs", () => {
       const check = parseArgs(["prototyping", "iterate", "--cycle", "0", "--check"], cwd);
       expect(check.invalid).toBe(true);
       expect(check.options.prototypingCheckOnly).toBeUndefined();
-    });
-
-    it("rejects guardrails flags used on a non-owning guardrails action", () => {
-      const cwd = process.cwd();
-
-      // runGuardrails reads `max` only on the extract path.
-      const listMax = parseArgs(["guardrails", "list", "--max", "0"], cwd);
-      expect(listMax.invalid).toBe(true);
-      expect(listMax.options.guardrailsMax).toBeUndefined();
-
-      // `check` returns before the keyword filter is applied.
-      const checkKeyword = parseArgs(["guardrails", "check", "--keyword", "foo"], cwd);
-      expect(checkKeyword.invalid).toBe(true);
-      expect(checkKeyword.options.guardrailsKeyword).toBeUndefined();
-
-      const extractMax = parseArgs(["guardrails", "extract", "--max", "0"], cwd);
-      expect(extractMax.invalid).toBe(false);
-      expect(extractMax.options.guardrailsMax).toBe(0);
-
-      const listKeyword = parseArgs(["guardrails", "list", "--keyword", "foo"], cwd);
-      expect(listKeyword.invalid).toBe(false);
-      expect(listKeyword.options.guardrailsKeyword).toBe("foo");
     });
 
     it("accepts --active only on `discussion list`", () => {
@@ -1032,7 +905,7 @@ describe("parseArgs", () => {
           "--license-patch",
           "patch.json",
           "--primary-ui-contract",
-          "CON-UI-0001",
+          "UI-0001",
         ],
         cwd,
       );
@@ -1045,7 +918,7 @@ describe("parseArgs", () => {
       expect(iterate.options.prototypingSkeletonMode).toBe("stub");
       expect(iterate.options.prototypingMode).toBe("exploration");
       expect(iterate.options.prototypingLicensePatch).toBe("patch.json");
-      expect(iterate.options.prototypingPrimaryUiContract).toBe("CON-UI-0001");
+      expect(iterate.options.prototypingPrimaryUiContract).toBe("UI-0001");
       expect(iterate.options.prototypingTargetUrl).toBe("https://x/");
 
       const certify = parseArgs(["prototyping", "certify", "--check"], cwd);
@@ -1074,38 +947,11 @@ describe("parseArgs", () => {
 
   // The contract block in args.ts claims to govern EVERY value-taking
   // arm of the flag switch. These cases pin the arms that used to opt
-  // out of it: the command-guarded four (`--path` / `--max` /
-  // `--keyword` / `--platform`, which returned before `i += 1` and so
-  // left the value token unconsumed) and the eight that carried no
-  // guard at all and were therefore accepted on any command.
+  // out of it: the command-guarded `--platform`, which returned before
+  // `i += 1` and so left the value token unconsumed, and the eight that
+  // carried no guard at all and were therefore accepted on any command.
   describe("command-scoped value-taking flags: markInvalid + consume value token", () => {
     const cwd = process.cwd();
-
-    it("--path / --max / --keyword outside guardrails mark invalid AND consume the value", () => {
-      for (const [flag, value] of [
-        ["--path", "18_delta.md"],
-        ["--max", "12"],
-        ["--keyword", "layout"],
-      ] as const) {
-        const parsed = parseArgs(["validate", flag, value, "--format", "github"], cwd);
-        expect(parsed.invalid).toBe(true);
-        // The value must NOT have shifted into a positional, so the
-        // trailing --format is still honored.
-        expect(parsed.options.validateFormat).toBe("github");
-        expect(parsed.options.guardrailsPaths).toEqual([]);
-        expect(parsed.options.guardrailsMax).toBeUndefined();
-        expect(parsed.options.guardrailsKeyword).toBeUndefined();
-      }
-    });
-
-    it("a misplaced --path consumes its value before a downstream audit --scope", () => {
-      const parsed = parseArgs(
-        ["audit", "log", "--path", "README.md", "--scope", "deviation"],
-        cwd,
-      );
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.auditScope).toBe("deviation");
-    });
 
     it("--platform outside validate marks invalid AND consumes the value", () => {
       const parsed = parseArgs(["report", "--platform", "linux", "--format", "json"], cwd);
@@ -1161,7 +1007,7 @@ describe("parseArgs", () => {
       for (const [flag, value] of [
         ["--cycle", "5"],
         ["--license-patch", "patch.json"],
-        ["--primary-ui-contract", "CON-UI-0003"],
+        ["--primary-ui-contract", "UI-0003"],
         ["--skeleton-mode", "stub"],
         ["--mode", "exploration"],
       ] as const) {
@@ -1242,15 +1088,7 @@ describe("parseArgs --version", () => {
   // The subcommand scan runs before the flag loop and only skipped `--`
   // tokens, so a short flag was shifted away as an unknown action: the long
   // form worked on these commands and the short one printed help.
-  for (const command of [
-    "prototyping",
-    "guardrails",
-    "audit",
-    "handoff",
-    "atdd",
-    "discussion",
-    "sdd",
-  ] as const) {
+  for (const command of ["prototyping", "audit", "atdd", "discussion", "sdd"] as const) {
     for (const flag of ["--version", "-V"] as const) {
       it(`sets version for \`qfai ${command} ${flag}\``, () => {
         const parsed = parseArgs([command, flag], process.cwd());
@@ -1258,13 +1096,6 @@ describe("parseArgs --version", () => {
       });
     }
   }
-
-  it("does not read a short flag as the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-V"], process.cwd());
-    expect(parsed.options.handoffAction).toBe("upgrade");
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
-    expect(parsed.options.version).toBe(true);
-  });
 
   it("does not read a short flag as the discussion use id", () => {
     const parsed = parseArgs(["discussion", "use", "-V"], process.cwd());
@@ -1289,28 +1120,8 @@ describe("parseArgs --version", () => {
 
 describe("parseArgs dash-leading positionals", () => {
   // A subcommand name is a closed set and never starts with `-`, but the
-  // positional after it is caller data: a relative path may legitimately begin
-  // with a single `-`. Excluding every dash-prefixed token from both positions
-  // stopped `qfai handoff upgrade -legacy.yaml` from converting anything —
-  // the file was left unread and the command died on `<legacy-file> is
-  // required.`
-  it("accepts a legacy file whose name starts with a dash", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-legacy.yaml"], process.cwd());
-    expect(parsed.options.handoffAction).toBe("upgrade");
-    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
-    expect(parsed.invalid).toBe(false);
-  });
-
-  it("accepts a legacy file that starts with a dash alongside a trailing flag", () => {
-    const parsed = parseArgs(
-      ["handoff", "upgrade", "-legacy.yaml", "--root", "/tmp/example"],
-      process.cwd(),
-    );
-    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
-    expect(parsed.options.root).toBe("/tmp/example");
-    expect(parsed.invalid).toBe(false);
-  });
-
+  // positional after it is caller data and may legitimately begin with a
+  // single `-`.
   it("accepts a discussion id that starts with a dash", () => {
     const parsed = parseArgs(["discussion", "use", "-discussion-0001"], process.cwd());
     expect(parsed.options.discussionAction).toBe("use");
@@ -1318,17 +1129,21 @@ describe("parseArgs dash-leading positionals", () => {
     expect(parsed.invalid).toBe(false);
   });
 
-  // Over-correction pins: relaxing the positional must not re-admit the two
-  // short flags the parser reserves, nor any long flag.
-  it("keeps -h out of the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "-h"], process.cwd());
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
-    expect(parsed.options.help).toBe(true);
+  it("accepts a dash-leading discussion id alongside a trailing flag", () => {
+    const parsed = parseArgs(
+      ["discussion", "use", "-discussion-0001", "--root", "/tmp/example"],
+      process.cwd(),
+    );
+    expect(parsed.options.discussionId).toBe("-discussion-0001");
+    expect(parsed.options.root).toBe("/tmp/example");
+    expect(parsed.invalid).toBe(false);
   });
 
-  it("keeps a long flag out of the handoff upgrade legacy file", () => {
-    const parsed = parseArgs(["handoff", "upgrade", "--root", "/tmp/example"], process.cwd());
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+  // Over-correction pins: relaxing the positional must not re-admit the two
+  // short flags the parser reserves, nor any long flag.
+  it("keeps a long flag out of the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "--root", "/tmp/example"], process.cwd());
+    expect(parsed.options.discussionId).toBeUndefined();
     expect(parsed.options.root).toBe("/tmp/example");
   });
 
@@ -1339,9 +1154,9 @@ describe("parseArgs dash-leading positionals", () => {
   });
 
   it("still refuses a dash-leading token in the subcommand position", () => {
-    const parsed = parseArgs(["handoff", "-legacy.yaml"], process.cwd());
-    expect(parsed.options.handoffAction).toBeUndefined();
-    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    const parsed = parseArgs(["discussion", "-discussion-0001"], process.cwd());
+    expect(parsed.options.discussionAction).toBeUndefined();
+    expect(parsed.options.discussionId).toBeUndefined();
     expect(parsed.invalid).toBe(true);
   });
 });
@@ -1403,11 +1218,21 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
   it("collects repeatable --assume values for sdd preflight", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(
-      ["sdd", "preflight", "--assume", "OQ-0001 は次フェーズ", "--assume", "W-PENDING-PROMOTION"],
+      [
+        "sdd",
+        "preflight",
+        "--assume",
+        "OQ-0001 deferred to the next phase",
+        "--assume",
+        "W-PENDING-PROMOTION",
+      ],
       cwd,
     );
     expect(parsed.invalid).toBe(false);
-    expect(parsed.options.sddAssumptions).toEqual(["OQ-0001 は次フェーズ", "W-PENDING-PROMOTION"]);
+    expect(parsed.options.sddAssumptions).toEqual([
+      "OQ-0001 deferred to the next phase",
+      "W-PENDING-PROMOTION",
+    ]);
   });
 
   it("keeps a help flag out of the sdd subcommand slot", () => {

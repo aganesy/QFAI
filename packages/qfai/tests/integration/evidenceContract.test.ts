@@ -4,11 +4,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
 
 const skillDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-implement");
 
 async function readSkill(): Promise<string> {
-  return readFile(path.join(skillDir, "SKILL.md"), "utf-8");
+  return readImplementFlowSteps(path.join(getInitAssetsDir(), ".qfai", "assistant"));
 }
 
 async function readReference(name: string): Promise<string> {
@@ -64,6 +65,6 @@ describe("implementation evidence contract", () => {
     expect(revision).toMatch(
       /A verdict is stale when the state it claims to have reviewed differs/,
     );
-    expect(revision).toMatch(/Recompute every recorded seal when the pack is present/);
+    expect(revision).toMatch(/Recompute every recorded seal before accepting a verdict/);
   });
 });

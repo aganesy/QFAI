@@ -7,15 +7,12 @@
  * All 10 TDD items are Exception-pattern backfill (DR-0006-0002).
  * Existing coverage: tests/cli/doctor.test.ts.
  */
-// QFAI:EX-0003-0001-01
 // QFAI:EX-0003-0001-03
 // QFAI:EX-0003-0002-01
 // QFAI:EX-0003-0003-01
 // QFAI:EX-0003-0004-01
-// QFAI:EX-0003-0005-01
 // QFAI:EX-0003-0012-01
 // QFAI:EX-0003-0012-02
-// QFAI:EX-0003-0005-02
 // QFAI:EX-0003-0001-02
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

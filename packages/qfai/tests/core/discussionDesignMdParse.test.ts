@@ -9,13 +9,11 @@
  * stage that AUTHORED it and surfaced a review round later, under a different
  * skill.
  *
- * The rows here are the four states the split has to get right: a malformed
- * file is reported, a well-formed one is not, an absent one is not (that is
- * `QFAI-DCON-030`'s), and the lock is left alone — the lock comparison is
- * `/qfai-sdd` Phase 0's to clear, and pulling it in would make a discussion run
- * fail for a reason the discussion stage cannot fix.
+ * The rows here are the three states the split has to get right: a malformed
+ * file is reported, a well-formed one is not, and an absent one is not (that
+ * is `QFAI-DCON-030`'s).
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -129,23 +127,6 @@ describe("the discussion profile's DESIGN.md parse check", () => {
     // the file necessarily exists. Reporting here would either double up on one
     // state or fail a project that has not reached this artifact.
     const root = await project();
-
-    expect(await validateRootDesignMdParse(root)).toEqual([]);
-  });
-
-  it("does not report lock drift, which is a later stage's to clear", async () => {
-    // The reason this is a separate entry point rather than a flag on the
-    // readiness gate. A DESIGN.md that parses but no longer matches its frozen
-    // hash is `/qfai-sdd` Phase 0's failure; making a discussion run fail on it
-    // would block the stage that cannot fix it.
-    const root = await project();
-    await writeFile(path.join(root, "DESIGN.md"), withAccessibility("  motion: reduced"), "utf-8");
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(
-      path.join(root, "DESIGN.md.lock.yaml"),
-      "sha256: 0000000000000000000000000000000000000000000000000000000000000000\n",
-      "utf-8",
-    );
 
     expect(await validateRootDesignMdParse(root)).toEqual([]);
   });

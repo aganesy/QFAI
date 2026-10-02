@@ -3,13 +3,11 @@
 ## Criteria
 
 ```gherkin
-Feature:
-
-# AC-0001-0103-01
-# Parent: US-0001-0103
-Scenario: AC-0001-0103-01
-  Given declared screens require evidence
-  When the evidence paths are documented
-  Then Declared screen evidence uses the canonical screenshot and HTML snapshot paths.
-  And Documentation names the canonical paths explicitly.
+Feature: Structural design checklist
+  # AC-0001-0103-01
+  Scenario: Structural review uses DESIGN.md
+    Given root `DESIGN.md` declares visual tokens and guidance for color, typography, spacing, radius, shadow, and do's and don'ts
+    When the reviewer examines a screen in a live prototype
+    Then the review addresses those declared categories
+    And an observed departure is recorded as a design violation or a concrete qualitative finding
 ```

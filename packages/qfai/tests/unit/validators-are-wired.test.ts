@@ -601,23 +601,6 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(referencesName("const s = `a${`dropped validateFoo `}d`;", "validateFoo")).toBe(false);
   });
 
-  it("agrees with the tree about parser prose and a validator declaration", async () => {
-    // Regression pins on the measured cases rather than on the mechanism, so
-    // they keep their meaning if the reduction is rewritten again.
-    //
-    const parsers = await readFile(path.resolve(SRC_ROOT, "core/specPackParsers.ts"), "utf-8");
-    expect(referencesName(parsers, "validateStoryTreeCoverageDepth")).toBe(false);
-
-    // The mirror direction: a validator's own declaration must survive the
-    // reduction of its own module. `main` erased this one, having re-framed the
-    // file from a regex some lines above it.
-    const depth = await readFile(
-      path.resolve(SRC_ROOT, "core/validators/storyTreeCoverageDepth.ts"),
-      "utf-8",
-    );
-    expect(referencesName(depth, "validateStoryTreeCoverageDepth")).toBe(true);
-  });
-
   it("keeps import edges the module-edge walk reads", () => {
     // `stripComments` feeds `MODULE_EDGE_RE`, so the specifier text has to
     // survive — and the same phantom-comment bug would drop edges here, which
@@ -686,7 +669,6 @@ const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
   "validateAssistantAssets",
   "validateContractConsistency",
   "validateContracts",
-  "validateDbContractExecutability",
   "validateDiscussionMermaid",
   "validateSkillsIntegrity",
   "validateClassification",

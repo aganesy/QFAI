@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { buildStoryTreeModel, nextStoryTreeId } from "../../src/core/storyTree/tree.js";
 import {
   validateStoryDirectories,
   validateStoryTreeStructureModel,
@@ -108,6 +108,22 @@ describe("BF-0001 story-tree acceptance", () => {
         (finding) => finding.code === "QFAI-STORY-002" && finding.refs?.includes("US-0002-0001"),
       ),
     ).toBe(true);
+  });
+
+  // QFAI:AC-0001-0008-03
+  it("allocates the next story ID from its own flow and the decision rows, never filling a gap", () => {
+    const files = storyFiles();
+    files.set(
+      `${spec}/02_business-flow/business-flow-0002/user-story-0002-0007/01_User-story.md`,
+      "# US-0002-0007: Refund\n",
+    );
+    expect(nextStoryTreeId(buildStoryTreeModel(files), "US", "BF-0001")).toBe("US-0001-0002");
+
+    files.set(
+      `${spec}/decisions.md`,
+      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired US-0001-0003 | Keep its ID reserved | DONE |\n",
+    );
+    expect(nextStoryTreeId(buildStoryTreeModel(files), "US", "BF-0001")).toBe("US-0001-0004");
   });
 
   // QFAI:AC-0001-0009-01
