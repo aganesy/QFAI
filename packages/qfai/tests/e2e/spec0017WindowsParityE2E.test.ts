@@ -29,9 +29,9 @@ function needsWith(lanes: string, windows: string): Needs {
   );
 }
 
-// QFAI:SPEC-0017:US-0017-0016
-describe("E2E: the control-core and init suites run on Windows (US-0017-0016)", () => {
-  it("US-0017-0016: a Windows regression fails the verdict on the pull request that causes it", () => {
+// QFAI:BF-0002
+describe("E2E: the init suites run on Windows", () => {
+  it("a Windows regression fails the verdict on the pull request that causes it", () => {
     const windows = job(WINDOWS_JOB);
 
     // Selected exactly when the test lanes are, and so skipped on a documentation-only change.

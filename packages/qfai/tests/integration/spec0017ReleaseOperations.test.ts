@@ -16,15 +16,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 describe("spec-0017 release operation capabilities", () => {
-  // QFAI:SPEC-0017:TC-0017-0090
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0090 (TDD-0099): classifies exact operation capabilities", () => {
     const current = classify(currentRoot(), currentPackage());
     expect(current.status, current.output).toBe(0);
     expect([current.shape, current.checks]).toEqual(["sliced", "operations"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0093
-  it("TC-0017-0093 (TDD-0107): preserves the ordered operation vector", () => {
+  // QFAI:EX-0002-0017-07
+  it("preserves the ordered operation vector", () => {
     const parsed: unknown = JSON.parse(currentRoot());
     if (!isRecord(parsed) || !isRecord(parsed["scripts"])) throw new Error("root scripts missing");
     const scripts = parsed["scripts"];
@@ -45,8 +45,8 @@ describe("spec-0017 release operation capabilities", () => {
     expect(selected.sort()).toEqual([...operationScripts].sort());
   });
 
-  // QFAI:SPEC-0017:TC-0017-0090
-  it("TC-0017-0090 (TDD-0108): runs one complete suite on each runtime", () => {
+  // QFAI:EX-0002-0017-06
+  it("TC-0017-0090: runs one complete suite on each runtime", () => {
     const slices = declaredSlices()
       .map((slice) => `test:${slice}`)
       .sort();

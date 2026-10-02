@@ -1,10 +1,11 @@
 /**
- * `--strict` と `--fail-on` の優先順位が CLI 表層から読み取れること。
+ * The precedence between `--strict` and `--fail-on` can be read from the CLI surface.
  *
- * `--fail-on` は `--strict` より優先される。この優先順位そのものは仕様だが、
- * 診断が無ければ、既定の `text` 出力にも run-log にも実効しきい値が現れない。
- * `--strict` レーンに後から `--fail-on error` を足すと warning ゲートが
- * 黙って外れ、差分は「締めた」ようにしか見えない。
+ * `--fail-on` takes precedence over `--strict`. The precedence itself is
+ * specified, but without a diagnostic the effective threshold appears neither
+ * in the default `text` output nor in the run-log. Adding `--fail-on error` to
+ * an existing `--strict` lane silently drops the warning gate, while the diff
+ * looks like a tightening.
  */
 
 import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";

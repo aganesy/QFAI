@@ -110,6 +110,6 @@ Cutting stops here. None of these is excess at any size.
 - The same standard for prose: `documentation-clarity.md`
 - How much code implements it, whatever the medium: `minimal-implementation.md`
 - Where the UI definition a screen implements is read from:
-  `.qfai/assistant/catalog/ui-definition-protocol.md`
+  `.qfai/assistant/rule/ui-definition-protocol.md`
 - Where a screen's components and layouts come from:
-  `.qfai/assistant/catalog/ui-procurement.md`
+  `.qfai/assistant/rule/ui-procurement.md`

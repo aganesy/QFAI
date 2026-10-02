@@ -25,25 +25,25 @@ afterEach(async () => {
 });
 
 async function seedUiContracts(root: string): Promise<void> {
-  const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+  const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(contractsDir, { recursive: true });
   await writeFile(
     path.join(contractsDir, "ui-0001-orders.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: orders-dashboard",
       "    title: Orders Dashboard",
       "    route: /orders",
       "    primary_tasks:",
-      "      - View latest orders",
+      "      - { id: view_orders, label: View latest orders, acceptance: done }",
     ].join("\n"),
     "utf-8",
   );
 }
 
 describe("validateUiEvidenceArtifacts", () => {
-  it("declared screen に screenshot と HTML が無い場合は両方 error を返す", async () => {
+  it("returns errors for both when a declared screen has no screenshot and no HTML", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -53,7 +53,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues.every((issue) => issue.severity === "error")).toBe(true);
   });
 
-  it("declared screen の screenshot と HTML が揃っていれば issue を返さない", async () => {
+  it("returns no issue when a declared screen has both its screenshot and its HTML", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -69,7 +69,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("iter-NN 配下の v2 screenshot と HTML が揃っていれば issue を返さない", async () => {
+  it("returns no issue when the v2 screenshot and HTML under iter-NN are both present", async () => {
     const root = await newTempRoot();
     await seedUiContracts(root);
 
@@ -83,8 +83,8 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  // QFAI:SPEC-0004:TC-0004-0005
-  it("contracts/ui が無い場合はチェックをスキップする", async () => {
+  // QFAI:EX-0001-0040-03
+  it("skips the check when contracts/ui is absent", async () => {
     const root = await newTempRoot();
 
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
@@ -92,7 +92,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("custom contractsDir から導出した evidence 配下を参照する", async () => {
+  it("reads the evidence directory derived from a custom contractsDir", async () => {
     const root = await newTempRoot();
     const config = {
       ...defaultConfig,
@@ -126,9 +126,9 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(issues).toEqual([]);
   });
 
-  it("危険な screenId を evidence filename として使わず error を返す", async () => {
+  it("returns an error instead of using a dangerous screenId as an evidence filename", async () => {
     const root = await newTempRoot();
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(contractsDir, { recursive: true });
     await writeFile(
       path.join(contractsDir, "ui-0001-orders.yaml"),
@@ -144,7 +144,7 @@ describe("validateUiEvidenceArtifacts", () => {
     const issues = await validateUiEvidenceArtifacts(root, defaultConfig);
 
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-UIE-003"]);
-    expect(issues[0]?.file).toContain(".qfai/contracts/ui/ui-0001-orders.yaml#../escape");
+    expect(issues[0]?.file).toContain(".qfai/spec/03_contract/ui/ui-0001-orders.yaml#../escape");
   });
 
   it("reads the evidence where iterate writes it when specsDir is moved", async () => {
@@ -156,7 +156,7 @@ describe("validateUiEvidenceArtifacts", () => {
       ...defaultConfig,
       paths: { ...defaultConfig.paths, specsDir: "workspace/specs" },
     };
-    const contractsDir = path.join(root, ".qfai", "contracts", "ui");
+    const contractsDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(contractsDir, { recursive: true });
     await writeFile(
       path.join(contractsDir, "ui-0001-orders.yaml"),
@@ -173,9 +173,9 @@ describe("validateUiEvidenceArtifacts", () => {
 
     // A copy beside the moved specs directory is not where iterate writes.
     const beside = await newTempRoot();
-    await mkdir(path.join(beside, ".qfai", "contracts", "ui"), { recursive: true });
+    await mkdir(path.join(beside, ".qfai", "spec", "03_contract", "ui"), { recursive: true });
     await writeFile(
-      path.join(beside, ".qfai", "contracts", "ui", "ui-0001-orders.yaml"),
+      path.join(beside, ".qfai", "spec", "03_contract", "ui", "ui-0001-orders.yaml"),
       ["screens:", "  - id: orders-dashboard", '    route: "/orders"'].join("\n"),
       "utf-8",
     );
@@ -186,7 +186,7 @@ describe("validateUiEvidenceArtifacts", () => {
     expect(codes).toContain("QFAI-UIE-001");
   });
 
-  it("custom contractsDir でも suggested_action は実際の evidence path を案内する", async () => {
+  it("points suggested_action at the actual evidence path even with a custom contractsDir", async () => {
     const root = await newTempRoot();
     const config = {
       ...defaultConfig,

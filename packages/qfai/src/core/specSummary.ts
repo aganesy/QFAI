@@ -141,7 +141,7 @@ export function extractScopeBullets(md: string, label: "In" | "Out"): string[] {
     return [];
   }
   return joined
-    .split(/[、,;；]/)
+    .split(/[\u3001,;\uFF1B]/)
     .map((part) => part.replace(/\s+/g, " ").trim())
     .filter((part) => part.length > 0);
 }
