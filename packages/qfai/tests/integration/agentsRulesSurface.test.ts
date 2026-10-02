@@ -1235,9 +1235,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /`version-discipline\.md`\s+bounds\s+the\s+release\s+operations/,
         // The four classes, each with the examples that place an action in it.
         /\|\s*Local and reversible\s*\|\s*Editing a file, running a test\s*\|\s*Yes\s*\|/,
-        /\|\s*Destructive\s*\|\s*Deleting a file or a branch, dropping a table/,
-        /\|\s*Hard to reverse\s*\|\s*A force push, a hard reset, amending a published commit, restoring a file that holds uncommitted work/,
-        /\|\s*Visible to others\s*\|\s*Pushing, commenting on a pull request or issue, sending a message, changing shared infrastructure/,
+        /\|\s*Destructive\s*\|\s*Deleting a file or a branch, dropping a table, a recursive remove\s*\|\s*With the user, or a standing instruction\s*\|/,
+        /\|\s*Hard to reverse\s*\|\s*A force push, a hard reset, amending a published commit, restoring a file that holds uncommitted work\s*\|\s*With the user, or a standing instruction\s*\|/,
+        /\|\s*Visible to others\s*\|\s*Pushing, commenting on a pull request or issue, sending a message, changing shared infrastructure\s*\|\s*With the user, or a standing instruction\s*\|/,
         // The one push that needs neither, and the pushes that stay classified.
         /an\s+ordinary\s+push,\s+without\s+force,\s+to\s+a\s+branch\s+the\s+agent\s+created\s+for\s+the\s+current\s+task/,
         /to\s+a\s+protected\s+branch\s+or\s+to\s+someone\s+else's\s+branch,\s+and\s+every\s+force\s+push/,
@@ -1254,6 +1254,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /covers\s+the\s+push,\s+and\s+not\s+a\s+merge\s+or\s+a\s+force\s+push/,
         // A run that may not ask leaves the action undone and opens a question.
         /Under\s+a\s+mode\s+that\s+may\s+not\s+ask\s+the\s+user/,
+        /an\s+action\s+that\s+needs\s+the\s+user\s+and\s+has\s+no\s+standing\s+instruction\s+is\s+not\s+taken/,
         /Record\s+it\s+as\s+an\s+open\s+question\s+where\s+the\s+run's\s+gates\s+read\s+it/,
         /carry\s+on\s+with\s+the\s+rest\s+of\s+the\s+work/,
         // An obstacle is found, not destroyed.
