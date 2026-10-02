@@ -1,0 +1,34 @@
+route: apply-settled-build
+family: change
+stages:
+  - id: spec
+    kind: sdd
+    steps:
+      - { step: sdd-triage, mode: settled }
+      - { step: sdd-story, passThrough: true }
+      - sdd-gate
+  - id: acceptance
+    kind: acceptance
+    steps:
+      - atdd-scaffold
+      - { step: atdd-credentials, passThrough: true }
+      - { step: atdd-author, passThrough: true }
+    after: [spec]
+  - id: implement
+    kind: implement
+    steps: [implement-tdd, implement-checkpoint]
+    after: [acceptance]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [implement]
+defaultModifiers: []
+decisionPoints: [sdd-triage]
+branchPoints:
+  - step: sdd-triage
+    outcomes:
+      - { outcome: outside-record, routes: [decide-acceptance, decide-design] }

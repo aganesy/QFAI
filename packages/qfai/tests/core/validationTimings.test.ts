@@ -20,7 +20,6 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-"));
   try {
     await mkdir(path.join(root, ".qfai", "discussion"), { recursive: true });
-    await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "discussion", "pack.md"), MOCK_DOC, "utf-8");
     // A budget small enough that any real run overshoots it, so the
     // over-budget branch is exercised without depending on machine speed.

@@ -41,7 +41,7 @@ const SCAFFOLDING_REFERENCE = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-atdd",
   "references",
   "scaffolding.md",

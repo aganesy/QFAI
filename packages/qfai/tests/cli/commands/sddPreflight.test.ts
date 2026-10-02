@@ -186,15 +186,14 @@ describe("qfai sdd preflight", () => {
       "..",
     );
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
-      const skill = await read(
-        pathMod.default.join(tree, "assistant/skills/qfai-sdd/SKILL.md"),
-        "utf-8",
-      ).catch(() =>
-        read(pathMod.default.join(repoRoot, tree, "assistant/skills/qfai-sdd/SKILL.md"), "utf-8"),
-      );
-      expect(skill, tree).toContain("**The pack Stage 0 selected**");
-      expect(skill, tree).toContain("`selectedInputPath`");
-      expect(skill, tree).toContain("Never re-derive it");
+      const step = "assistant/step/sdd-triage/STEP.md";
+      const skill = (
+        await read(pathMod.default.join(tree, step), "utf-8").catch(() =>
+          read(pathMod.default.join(repoRoot, tree, step), "utf-8"),
+        )
+      ).replace(/\s+/g, " ");
+      expect(skill, tree).toContain("use its `selectedInputPath`");
+      expect(skill, tree).toContain("a selected discussion pack may be older than the newest pack");
       // The instruction that caused it must be gone.
       expect(skill, tree).not.toContain("(lexicographically largest), validated by Stage 0");
     }
@@ -275,13 +274,13 @@ describe("qfai sdd preflight", () => {
     expect(
       await runSddPreflightCommand({
         root,
-        assumptions: ["OQ-0001 は次フェーズへ持ち越し"],
+        assumptions: ["OQ-0001 carried over to the next phase"],
         write: first.write,
         writeErr: first.writeErr,
       }),
     ).toBe(0);
     expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain(
-      "- OQ-0001 は次フェーズへ持ち越し",
+      "- OQ-0001 carried over to the next phase",
     );
 
     // Required Process step 3 re-runs the command with no flags; the
@@ -292,7 +291,7 @@ describe("qfai sdd preflight", () => {
     ).toBe(0);
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
     const carryOver = summary.slice(summary.indexOf("## Open Questions (Carry-over)"));
-    expect(carryOver).toContain("- OQ-0001 は次フェーズへ持ち越し");
+    expect(carryOver).toContain("- OQ-0001 carried over to the next phase");
     expect(carryOver).not.toContain("- none");
   });
 
@@ -307,13 +306,13 @@ describe("qfai sdd preflight", () => {
     expect(
       await runSddPreflightCommand({
         root,
-        assumptions: ["W-PENDING-PROMOTION は Stage 1 で昇格させる"],
+        assumptions: ["W-PENDING-PROMOTION to be promoted in Stage 1"],
         write: first.write,
         writeErr: first.writeErr,
       }),
     ).toBe(1);
     expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain(
-      "- W-PENDING-PROMOTION は Stage 1 で昇格させる",
+      "- W-PENDING-PROMOTION to be promoted in Stage 1",
     );
 
     const second = newSinks();
@@ -321,7 +320,7 @@ describe("qfai sdd preflight", () => {
       await runSddPreflightCommand({ root, write: second.write, writeErr: second.writeErr }),
     ).toBe(1);
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
-    expect(summary).toContain("- W-PENDING-PROMOTION は Stage 1 で昇格させる");
+    expect(summary).toContain("- W-PENDING-PROMOTION to be promoted in Stage 1");
     expect(summary).not.toContain("- none");
   });
 
@@ -347,7 +346,7 @@ describe("qfai sdd preflight", () => {
     const template = await readFile(
       path.join(
         repoRoot,
-        "assets/init/.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
+        "assets/init/.qfai/assistant/skill/qfai-sdd/templates/report/preflight_summary.md",
       ),
       { encoding: "utf-8" },
     );
@@ -430,16 +429,16 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "  U->>S: request",
         "```",
         "",
-        "補足: Mermaid diagram を含む Story Workshop テスト用データ。",
+        "Note: test data for the Story Workshop that includes a Mermaid diagram.",
       ].join("\n");
     case "06_REQ.md":
       return [
         "# 06 REQ",
         "",
-        "- REQ-0001: ユーザーは要件セットを保存できる。背景として監査対応が必要である。",
-        "- REQ-0002: システムは保存した要件セットを再読込できる。再読込時の整合性チェックも含む。",
+        "- REQ-0001: The user can save a requirement set. Audit compliance is the background need.",
+        "- REQ-0002: The system can reload a saved requirement set, including an integrity check on reload.",
         "",
-        "補足: 最小内容チェックを通すため、説明文を十分な文字数で保持する。",
+        "Note: the description is kept long enough to pass the minimum-content check.",
       ].join("\n");
     case "11_OQ-Register.md":
       return [
@@ -448,9 +447,9 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
-        "- Reason: 現段階では実装着手に影響しないため deferred とする。",
+        "- Reason: it does not affect the start of implementation at this stage, so it is deferred.",
         "",
-        "補足: blocking 条件（Disposition=open）に該当しない。",
+        "Note: this does not meet the blocking condition (Disposition=open).",
       ].join("\n");
     case "13_Deferred.md":
       return [
@@ -458,18 +457,18 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "",
         "### OQ-0001: contract versioning policy",
         "",
-        "- Reason: 現段階では実装着手に影響しないため deferred とする。",
-        "- Next decision point: 次回の cycle review",
+        "- Reason: it does not affect the start of implementation at this stage, so it is deferred.",
+        "- Next decision point: the next cycle review",
         "",
-        "補足: 11_OQ-Register.md の deferred OQ は本ファイルに記載する。",
+        "Note: the deferred OQ of 11_OQ-Register.md is recorded in this file.",
       ].join("\n");
     default:
       return [
         `# ${fileName}`,
         "",
-        "このファイルは preflight テスト用のダミー本文です。",
-        "最低100文字要件を満たすため、仕様意図と制約を記述しています。",
-        "テンプレート占位子だけではない実文を含め、validator の incomplete 判定を回避します。",
+        "This file is dummy content for the preflight tests.",
+        "It describes the spec intent and constraints to meet the 100-character minimum.",
+        "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
       ].join("\n");
   }
 }

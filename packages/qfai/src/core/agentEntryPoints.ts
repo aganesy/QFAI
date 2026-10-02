@@ -220,12 +220,22 @@ function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
 }
 
+const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
+
 /** Prepend the template's review directive only when no operative copy exists. */
 export function addReviewPointer(existing: string, template: string | null): string {
-  const pointer = template
-    ?.split(/\r?\n/)
-    .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
-  if (pointer === undefined) return existing;
+  const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(REVIEW_DIRECTIVE_PREFIX));
+  return pointer === undefined ? existing : prependDirective(existing, pointer);
+}
+
+/**
+ * `existing` with `pointer` on its first line, followed by a blank line, unless
+ * an operative copy is already there.
+ */
+function prependDirective(existing: string, pointer: string): string {
+  // A code span the directive itself contains is part of its visible text; any
+  // other span is opaque, so a copy quoted inside one is not operative.
+  const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
 
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
@@ -843,7 +853,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           let span = codeSpan.exec(tail)?.[0];
           if (span !== undefined && crossesTable(offset + index, offset + index + span.length))
             span = undefined;
-          if (span === "`REVIEW.md`") {
+          if (span !== undefined && pointerSpans.has(span)) {
             visible += span;
             index += span.length;
             continue;
@@ -1098,6 +1108,12 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    ],
+  ],
+  [
+    ".agents/rules/user-questions.md",
+    [
+      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     ],
   ],
 ]);

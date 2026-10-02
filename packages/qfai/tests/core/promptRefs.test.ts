@@ -15,7 +15,7 @@ function toRel(base: string, abs: string): string {
 
 describe("skill references", () => {
   it("fails when skill workflows reference missing /qfai-* commands", async () => {
-    const skillsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skills");
+    const skillsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill");
     const skillDirs = (await readdir(skillsDir, { withFileTypes: true }))
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
