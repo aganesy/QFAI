@@ -74,6 +74,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The orchestrator keeps working while a delegated work order runs**
+  (#2244). The shared delegation baseline now says the orchestrator is not
+  required to block on a delegation, and that where it has work to do it does
+  not wait. This holds where the host starts a delegation and returns at once,
+  delivers the result later as a message, and lets the orchestrator wait on
+  purpose; a host without these keeps waiting. Meanwhile the orchestrator may
+  plan, prepare the next work order, integrate outputs already returned, and
+  start another delegation that does not depend on the running one when the
+  parallelization policy's technical conditions hold. It still does not do the
+  delegated work, author the primary artifact or review, and an ordering the
+  parallelization policy makes mandatory still holds.
+
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work
   nobody asked for. A new section names the four shapes that takes: wider
@@ -678,18 +690,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The shipped `/qfai-sdd` allocation still reads only the local tree.
 
 ### Changed
-
-- **The orchestrator keeps working while a delegated work order runs**
-  (#2244). The shared delegation baseline now says the orchestrator is not
-  required to block on a delegation, and that where it has work to do it does
-  not wait. This holds where the host starts a delegation and returns at once,
-  delivers the result later as a message, and lets the orchestrator wait on
-  purpose; a host without these keeps waiting. Meanwhile the orchestrator may
-  plan, prepare the next work order, integrate outputs already returned, and
-  start another delegation that does not depend on the running one when the
-  parallelization policy's technical conditions hold. It still does not do the
-  delegated work, author the primary artifact or review, and an ordering the
-  parallelization policy makes mandatory still holds.
 
 - **The repository is written in English throughout.** Every Japanese comment,
   message, test description, document and changelog entry is now English, and
