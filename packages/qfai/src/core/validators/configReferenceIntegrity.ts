@@ -3,17 +3,20 @@
  *
  * Verifies that values in `qfai.config.yaml` resolve to real filesystem
  * entities:
- *   - QFAI-CFG-LINK-001: prototyping.primarySpecId points to a missing spec dir
- *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning)
+ *   - QFAI-CFG-LINK-001: prototyping.primaryUiContract names no UI contract
+ *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning), or, for
+ *     the shipped default srcDir and testsDir that do not exist yet, info
  *   - QFAI-CFG-LINK-003: prototyping.calibration.packPath points to a missing dir
  *
  * Catches dangling IDs in config that would otherwise go undetected.
  */
 
-import { stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { defaultConfig, type QfaiConfig, type ConfigPathKey } from "../config.js";
+import { isEnoent } from "../fs/errno.js";
+import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -23,6 +26,16 @@ async function isDirectory(absolutePath: string): Promise<boolean> {
     return s.isDirectory();
   } catch {
     return false;
+  }
+}
+
+/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
+async function isAbsent(absolutePath: string): Promise<boolean> {
+  try {
+    await lstat(absolutePath);
+    return false;
+  } catch (err: unknown) {
+    return isEnoent(err);
   }
 }
 
@@ -59,34 +72,45 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
+  srcDir: "the project has no source yet",
+  testsDir: "the project has no tests yet",
+};
+
+/** What an absent directory at its shipped default means, or undefined where it is a fault. */
+function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
+    ? DEFAULT_ABSENT_NOTES[key]
+    : undefined;
+}
+
 export async function validateConfigReferenceIntegrity(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // ─── QFAI-CFG-LINK-001: primarySpecId existence ──────────────────────────
-  const primarySpecId = config.prototyping?.primarySpecId;
-  if (primarySpecId !== undefined) {
-    const specDir = path.join(path.resolve(root, config.paths.specsDir), `spec-${primarySpecId}`);
-    if (!(await isDirectory(specDir))) {
-      const relSpecDir = path.relative(root, specDir).replace(/\\/g, "/");
+  // ─── QFAI-CFG-LINK-001: primary UI contract existence ────────────────────
+  const primaryUiContract = config.prototyping?.primaryUiContract;
+  if (primaryUiContract !== undefined) {
+    const inventory = await readUiContractInventory(root, config);
+    if (!inventory.some((entry) => entry.uiContractId === primaryUiContract)) {
       issues.push(
         issue(
           "QFAI-CFG-LINK-001",
-          `qfai.config.yaml: prototyping.primarySpecId="${primarySpecId}" but ${relSpecDir} does not exist.`,
+          `qfai.config.yaml: prototyping.primaryUiContract="${primaryUiContract}" does not name a UI contract under ${config.paths.contractsDir}/ui/.`,
           "error",
           "qfai.config.yaml",
-          "config.prototyping.primarySpecId.reality",
+          "config.prototyping.primaryUiContract.reality",
           undefined,
           "canonical",
-          "prototyping.primarySpecId を実在する spec-NNNN ディレクトリに合わせるか、対応する spec を `.qfai/specs/spec-NNNN/` に作成してください。",
+          "Set prototyping.primaryUiContract to a declared UI-NNNN ID in the configured UI contracts directory.",
         ),
       );
     }
   }
 
-  // ─── QFAI-CFG-LINK-002: paths.* directory existence (warning) ────────────
+  // ─── QFAI-CFG-LINK-002: paths.* directory existence ───────────────────────
   for (const key of VERIFIED_PATH_KEYS) {
     const relPath = config.paths[key];
     const absolutePath = path.resolve(root, relPath);
@@ -94,16 +118,23 @@ export async function validateConfigReferenceIntegrity(
       if (isDefaultSkillCreatedPath(key, relPath)) {
         continue;
       }
+      const absentNote = (await isAbsent(absolutePath))
+        ? defaultAbsentNote(key, relPath)
+        : undefined;
       issues.push(
         issue(
           "QFAI-CFG-LINK-002",
-          `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`,
-          "warning",
+          absentNote === undefined
+            ? `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`
+            : `qfai.config.yaml: paths.${key}="${relPath}" is the shipped default and does not exist yet: ${absentNote}.`,
+          absentNote === undefined ? "warning" : "info",
           "qfai.config.yaml",
           `config.paths.${key}.reality`,
           undefined,
           "canonical",
-          `paths.${key} を実在するディレクトリに合わせるか、対応するディレクトリを作成してください。`,
+          absentNote === undefined
+            ? `Point paths.${key} at an existing directory, or create the directory it names.`
+            : undefined,
         ),
       );
     }
@@ -131,7 +162,7 @@ export async function validateConfigReferenceIntegrity(
           "config.prototyping.calibration.packPath.reality",
           undefined,
           "canonical",
-          "prototyping.calibration.packPath を実在する calibration pack (YAML ファイル または ディレクトリ) に合わせてください。",
+          "Point prototyping.calibration.packPath at an existing calibration pack (a YAML file or a directory).",
         ),
       );
     }

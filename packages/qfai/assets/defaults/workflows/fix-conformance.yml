@@ -1,0 +1,43 @@
+route: fix-conformance
+family: fix
+stages:
+  - id: parity
+    kind: implement
+    steps: [implement-oracle-parity]
+  - id: diagnose
+    kind: diagnose
+    steps: [implement-diagnose]
+    after: [parity]
+  - id: spec
+    kind: sdd
+    steps:
+      - sdd-triage
+      - sdd-story
+      - { step: sdd-contract, passThrough: true }
+      - sdd-gate
+    after: [diagnose]
+  - id: implement
+    kind: implement
+    steps: [implement-tdd, implement-checkpoint]
+    after: [spec]
+  - id: verify
+    kind: verify
+    steps:
+      - { step: verify-change-note, passThrough: true }
+      - verify-context
+      - verify-qfai-gate
+      - verify-repo-gate
+    after: [implement]
+defaultModifiers: []
+decisionPoints: [sdd-triage]
+branchPoints:
+  - step: implement-diagnose
+    outcomes:
+      - { outcome: as-specified, routes: [answer-question] }
+      - { outcome: not-ours, routes: [close-no-change] }
+      - { outcome: duplicate, routes: [close-duplicate] }
+      - { outcome: needs-info, routes: [request-info] }
+      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: defective-test, routes: [repair-test] }
+      - { outcome: regression, routes: [fix-red-main] }
+      - { outcome: surface-conflict, routes: [repair-consistency] }
