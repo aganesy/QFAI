@@ -36,7 +36,14 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
 
 - The files under `<paths.contractsDir>`, and a row in
   `<paths.contractsDir>/contracts.md` in the same change as every contract file
-  written.
+  written. A row has the columns `ID`, `Title`, `File`, `Depends On`,
+  `Reconciled With` and `Purpose`.
+
+A new contract takes its kind from its directory (`cli/`, `api/`, `db/` or
+`ui/`) and the next contract number, one more than the highest of any kind. A
+number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
+its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
+`QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
 Inside a workflow run, write only in the attempt the operator's answer
 authorizes, as
@@ -49,13 +56,16 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
    the first write, and record it with `common-grilling-record`.
 2. Write a BR only after the EX it cites exists. Every BR cites at least one
-   full EX ID; every EX is cited by at least one BR. The relation may be
-   many-to-many.
-3. Put each BR in the contract that enforces it: `x-qfai-rules` in YAML or JSON,
-   `-- Rule` and `-- Examples:` in SQL, and a `## Rules` table in Markdown.
-4. Define a rule shared by contracts once, in its authoritative contract; other
-   contracts cite its ID through their file-level rule refs.
-5. Reconcile API and DB fields, state transitions, errors and persisted
+   full EX ID, and nothing but EX IDs; every EX is cited by at least one BR.
+   The relation may be many-to-many.
+3. Put each BR in the contract that enforces it, numbered
+   `BR-<contract number>-NNNN`: `x-qfai-rules` in YAML or JSON, `-- Rule` and
+   `-- Examples:` in SQL, and a `## Business rules` table in Markdown.
+4. Define a rule shared by contracts once, in its authoritative contract. No
+   other contract restates or cites it: only code and tests cite a BR.
+5. Name no implementation file in a contract. The implementation points at the
+   contract, never the other way round.
+6. Reconcile API and DB fields, state transitions, errors and persisted
    attributes, and run the executable DB contract checks
    `contract-artifact-rules.md` requires. Record the command and result under
    Contract executability in the flow evidence.
@@ -64,13 +74,13 @@ states.
 
 For a UI-bearing flow, write the screen contracts under
 `<paths.contractsDir>/ui/` as the UI guides above state. A visual prototyping
-surface also needs the root `DESIGN.md` and its lock, which `common-design-md`
-writes after this step. A CLI-only surface does not require a visual brand
-lock. Do not freeze a sample design.
+surface also needs the root `DESIGN.md`, which `common-design-md` writes and
+validates after this step. A CLI-only surface does not require one. Do not
+adopt a sample design.
 
 ## A named contract
 
-With `--contract <CON-ID-or-path>`, select the existing contract by ID or by a
+With `--contract <contract-ID-or-path>`, select the existing contract by ID or by a
 repository-relative path under `<paths.contractsDir>`. An unknown target stops
 the run.
 
@@ -93,7 +103,9 @@ the run.
 `solution-architect` accepts the connected BF → US → AC → EX ← BR design and
 its contract realization before `sdd-gate` runs.
 
-## Skipped when
+## Passes when
 
-Inside a run, the plan may gate this step with `when: proposed`: a change that
-writes no BR and no contract leaves it out of the proposal.
+Read first: the triage rows, the examples `sdd-story` wrote or kept, and the
+contracts whose rules cite them. The step passes when the change writes no BR
+and changes no contract or `contracts.md` row. The pass names the contracts it
+read.

@@ -35,7 +35,7 @@ const repairStub = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../../src/cli/commands/init.js", () => ({
+vi.mock("../../../../src/core/init/wrapperRepair.js", () => ({
   repairIntegrationWrappers: repairStub.run,
 }));
 

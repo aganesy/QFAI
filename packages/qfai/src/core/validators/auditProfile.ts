@@ -2,9 +2,8 @@
  * Audit profile entry surface — thin wrapper / re-export over
  * `./designAudit.js`.
  *
- * The audit lane behavior (band warning, closed-schema rejection,
- * legacy string-only acceptance during the deprecation window) is
- * implemented in `designAudit.ts`. This module exposes the same
+ * The audit lane behavior (ceiling warning, closed-schema rejection)
+ * is implemented in `designAudit.ts`. This module exposes the same
  * surface under the contract-named filename so consumers can import
  * the audit profile entrypoints from a stable identifier.
  *

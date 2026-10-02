@@ -7,9 +7,9 @@ import {
 
 describe("readUiContractsCovered", () => {
   it("accepts a non-empty, unique array of UI contract IDs", () => {
-    expect(readUiContractsCovered({ uiContractsCovered: ["CON-UI-0001", "CON-UI-0002"] })).toEqual({
+    expect(readUiContractsCovered({ uiContractsCovered: ["UI-0001", "UI-0002"] })).toEqual({
       kind: "ok",
-      value: ["CON-UI-0001", "CON-UI-0002"],
+      value: ["UI-0001", "UI-0002"],
     });
   });
 
@@ -33,26 +33,26 @@ describe("readUiContractsCovered", () => {
   it.each([
     { uiContractsCovered: [""] },
     { uiContractsCovered: ["0001"] },
-    { uiContractsCovered: ["CON-UI-1"] },
-    { uiContractsCovered: ["CON-API-0001"] },
-    { uiContractsCovered: ["CON-UI-0001", 42] },
+    { uiContractsCovered: ["UI-1"] },
+    { uiContractsCovered: ["API-0001"] },
+    { uiContractsCovered: ["UI-0001", 42] },
   ])("rejects an invalid UI contract ID: %s", (value) => {
     expect(readUiContractsCovered(value)).toEqual({
       kind: "malformed",
-      reason: "uiContractsCovered entries must match CON-UI-NNNN",
+      reason: "uiContractsCovered entries must match UI-NNNN",
     });
   });
 
   it("rejects duplicate IDs so a frozen scope is unambiguous", () => {
-    expect(readUiContractsCovered({ uiContractsCovered: ["CON-UI-0001", "CON-UI-0001"] })).toEqual({
+    expect(readUiContractsCovered({ uiContractsCovered: ["UI-0001", "UI-0001"] })).toEqual({
       kind: "malformed",
       reason: "uiContractsCovered contains duplicate IDs",
     });
   });
 
   it.each([
-    { specsCovered: ["0001"], uiContractsCovered: ["CON-UI-0001"] },
-    { frozenSpecsCovered: null, uiContractsCovered: ["CON-UI-0001"] },
+    { specsCovered: ["0001"], uiContractsCovered: ["UI-0001"] },
+    { frozenSpecsCovered: null, uiContractsCovered: ["UI-0001"] },
   ])("rejects a legacy scope rather than silently certifying it: %s", (value) => {
     expect(readUiContractsCovered(value)).toEqual({ kind: "legacy" });
   });
@@ -61,20 +61,19 @@ describe("readUiContractsCovered", () => {
 describe("checkUiContractsCoveredDrift", () => {
   it("reports added and removed contracts in stable order", () => {
     expect(
-      checkUiContractsCoveredDrift(
-        ["CON-UI-0003", "CON-UI-0001"],
-        ["CON-UI-0004", "CON-UI-0002", "CON-UI-0002"],
-      ),
+      checkUiContractsCoveredDrift(["UI-0003", "UI-0001"], ["UI-0004", "UI-0002", "UI-0002"]),
     ).toEqual({
       drifted: true,
-      added: ["CON-UI-0002", "CON-UI-0004"],
-      removed: ["CON-UI-0001", "CON-UI-0003"],
+      added: ["UI-0002", "UI-0004"],
+      removed: ["UI-0001", "UI-0003"],
     });
   });
 
   it("accepts the same contract set regardless of order", () => {
-    expect(
-      checkUiContractsCoveredDrift(["CON-UI-0002", "CON-UI-0001"], ["CON-UI-0001", "CON-UI-0002"]),
-    ).toEqual({ drifted: false, added: [], removed: [] });
+    expect(checkUiContractsCoveredDrift(["UI-0002", "UI-0001"], ["UI-0001", "UI-0002"])).toEqual({
+      drifted: false,
+      added: [],
+      removed: [],
+    });
   });
 });

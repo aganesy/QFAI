@@ -78,7 +78,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
 - P2: `.qfai/assistant/skill/qfai-grilling/SKILL.md` — the method
-- P3: when the subject belongs to a QFAI project, its policy files under `<paths.specsDir>/01_policy/` and its technology and structure contracts under `<paths.contractsDir>/`
+- P3: when the subject belongs to a QFAI project, its policy files under `<paths.specsDir>/01_policy/` and its technology contract `<paths.contractsDir>/tech.md`
 - P4: whatever the subject names, as facts to read rather than decisions to
   re-open
 
@@ -178,13 +178,7 @@ the primitive's, because the decisions are.
     an empty argument is asked for rather than guessed)
 
 The asking is what this skill performs, so its `ask-user` entries are its own operations
-rather than an entry added to the prototype. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations` — with the
-operations its own run cannot authorize for itself. `hard-required` also takes the
-undefaultable inputs this skill itself consumes, declared per skill and checked against
-that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill must not introduce an
-entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+rather than an entry added to the prototype.
 
 ## Related
 

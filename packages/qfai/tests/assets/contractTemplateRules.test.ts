@@ -15,7 +15,6 @@ const SHIPPED_ASSISTANT = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const TEMPLATE_DIRS = [
   "skill/qfai-sdd/templates/spec/03_contract",
   "skill/qfai-sdd/templates/contracts",
-  "skill/qfai-prototyping/templates/contracts",
 ];
 
 async function templates(): Promise<string[]> {
@@ -33,25 +32,25 @@ async function templates(): Promise<string[]> {
 }
 
 describe("shipped contract templates", () => {
-  // QFAI:EX-0001-0057-09
+  // QFAI:EX-0001-0055-08
   it("parse as contracts with no rule-shape finding", async () => {
     const files = await templates();
-    expect(files.length).toBeGreaterThanOrEqual(8);
+    expect(files.length).toBeGreaterThanOrEqual(6);
     for (const file of files) {
       const scan = parseContractRules(file, await readFile(file, "utf-8"));
       expect(scan.errors, path.relative(SHIPPED_ASSISTANT, file)).toEqual([]);
     }
   });
 
-  // QFAI:EX-0001-0057-09
+  // QFAI:EX-0001-0055-08
   it("show a Markdown rule as a BR-ID, Statement and Examples row", async () => {
     const file = path.join(
       SHIPPED_ASSISTANT,
-      "skill/qfai-sdd/templates/spec/03_contract/cli/command.md",
+      "skill/qfai-sdd/templates/spec/03_contract/cli/cli-NNNN-title.md",
     );
     const scan = parseContractRules(file, await readFile(file, "utf-8"));
     expect(scan.rules.map(({ id, examples }) => ({ id, examples }))).toEqual([
-      { id: "BR-0001", examples: ["EX-0001-0001-01"] },
+      { id: "BR-0001-0001", examples: ["EX-0001-0001-01"] },
     ]);
   });
 });

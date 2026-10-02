@@ -30,7 +30,7 @@ describe("parallel EX dispatch and integration", () => {
   });
 
   it("denies concurrent fixture writes while allowing a shared read-only fixture", async () => {
-    // QFAI:EX-0001-0096-01
+    // QFAI:EX-0001-0093-01
     const policy = await readFile(policyPath, "utf-8");
     expect(policy).toContain(
       "Deny parallel dispatch when two items write the same shared fixture or mock file",

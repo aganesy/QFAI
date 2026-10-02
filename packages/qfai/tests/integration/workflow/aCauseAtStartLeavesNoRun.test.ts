@@ -1,14 +1,14 @@
-// QFAI:AC-0001-0199-03
-// QFAI:EX-0001-0199-06
+// QFAI:AC-0001-0192-03
+// QFAI:EX-0001-0192-06
 // Fault seeds: FAULT-023
 
-import { readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "yaml";
 
-import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { defaultRoutingEntries } from "../../helpers/shippedAssistant.js";
 import {
   field,
   inbox,
@@ -21,7 +21,6 @@ import {
 
 afterEach(removeProjects);
 
-const DEFAULT_ROUTING = path.resolve(getInitAssetsDir(), "..", "defaults", "agent-routing.yml");
 const VERIFY_STEP = path.join(".qfai", "assistant", "step", "verify-repo-gate", "STEP.md");
 
 // `start` in `root`, and the run directories it left behind.
@@ -38,11 +37,7 @@ async function startIn(root: string) {
 // A `qfai.config.yaml` routing override for `step`: the package default with the first blocking
 // agent of its first phase dropped from every list of that phase.
 async function dropBlockingAgent(root: string, step: string): Promise<void> {
-  const routing: unknown = parseYaml(await readFile(DEFAULT_ROUTING, "utf8"));
-  const entries: unknown = field(routing, "routing");
-  const entry: unknown = Array.isArray(entries)
-    ? entries.find((each) => field(each, "step") === step)
-    : undefined;
+  const entry: unknown = (await defaultRoutingEntries()).find((each) => each.step === step);
   const phase: unknown = field(entry, "phases.0");
   const blocking = field(phase, "blocking_agents");
   const dropped: unknown = Array.isArray(blocking) ? blocking[0] : undefined;

@@ -1,9 +1,9 @@
 /**
  * verify semantics audit tests — spec-0014 migration / compatibility alignment
  *
- * QFAI:EX-0001-0163-01
- * QFAI:EX-0001-0162-03
- * QFAI:EX-0001-0162-02
+ * QFAI:EX-0001-0157-01
+ * QFAI:EX-0001-0156-03
+ * QFAI:EX-0001-0156-02
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,7 +40,7 @@ afterEach(async () => {
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0157-01
 describe("TC-0014-0009: stale sidecar migration guidance", () => {
   it("legacy strategy-style filename is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();
@@ -75,7 +75,7 @@ describe("TC-0014-0009: stale sidecar migration guidance", () => {
   });
 });
 
-// QFAI:EX-0001-0162-03
+// QFAI:EX-0001-0156-03
 describe("TC-0014-0018: canonical UIX in verify path", () => {
   it("validate.ts imports the canonical group and no retired one", async () => {
     // Source text, and only about which symbols are named. Whether the group
@@ -222,7 +222,7 @@ describe("UI-bearing discussion sidecars in project validation", () => {
   });
 });
 
-// QFAI:EX-0001-0162-02
+// QFAI:EX-0001-0156-02
 describe("TC-0014-0019: removed compatibility surface", () => {
   it("package surface exposes no legacy namespace or compatibility category", async () => {
     const [validatorsIndexSrc, typesSrc] = await Promise.all([
@@ -240,7 +240,7 @@ describe("TC-0014-0019: removed compatibility surface", () => {
   });
 });
 
-// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0157-01
 describe("TC-0014-0009: stale sidecar migration errors", () => {
   it("legacy evaluation content is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();

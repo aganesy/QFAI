@@ -3,42 +3,39 @@
 ## Criteria
 
 ```gherkin
-Feature: TDD Micro-Cycle Execution
+Feature: Item Completion Gate
+  # AC-0001-0094-01
+  Scenario: Completion Gate Enforcement
+    Given an implemented EX with test-first, RED, GREEN and refactor evidence
+    When checking completion
+    Then qa-gatekeeper has confirmed RED and GREEN
+    And completion-reviewer and implementation-reviewer have each returned PASS
+    And checkpoint verification has passed without writing a ledger status.
 
-# AC-0001-0094-01
-# Parent: US-0001-0094
-Scenario: TDD Cycle Completeness
-  Given an EX that no test annotates on the story tree
-  When `/qfai-implement` takes that EX
-  Then it runs Red, Green and Refactor with evidence at each phase
-  And the test it writes carries `QFAI:EX-NNNN-NNNN-NN`
-  And no ledger status is written
+  # AC-0001-0094-02
+  Scenario: Fresh Evidence Required
+    Given a TDD item
+    When evidence is checked
+    Then both RED and GREEN evidence include exact command + result; status-only evidence is rejected.
 
-# AC-0001-0094-02
-# Parent: US-0001-0094
-Scenario: Minimal Code In Phase Green
-  Given a failing test
-  When Phase Green writes production code for it
-  Then the code written is the least that makes that test pass, and behaviour no test yet demands is not generalized ahead of its own RED.
+  # AC-0001-0094-03
+  Scenario: Completed Items Skipped
+    Given every EX in scope is annotated by a test or exempted by a `Test exception:` row in force
+    And the scoped `tdd` validate result is current
+    When `/qfai-implement` runs
+    Then it reports "nothing to do" and exits
 
-# AC-0001-0094-03
-# Parent: US-0001-0094
-Scenario: Gate Commands From the Contract Directory
-  Given a project on the story tree
-  When `/qfai-implement` needs a Test, Lint, Typecheck or Build command
-  Then it takes the command from the Standard commands section of `<paths.contractsDir>/tech.md` and from no other file.
+  # AC-0001-0094-04
+  Scenario: Scoped Validate Gate Runs Per Business Flow
+    Given a project on the story tree
+    When `/qfai-implement` runs a checkpoint verification or its completion gate
+    Then the scoped validate run is `qfai validate --profile tdd --fail-on error --flow BF-NNNN` for the flow the invocation owns, and it runs no `--spec` validation.
 
-# AC-0001-0094-04
-# Parent: US-0001-0094
-Scenario: Exempted Examples Are Not Selected
-  Given a project on the story tree and an EX that no test annotates, named by a `decisions.md` row whose Content opens `Test exception:`
-  When `/qfai-implement` selects its next test
-  Then the EX is skipped while that row's Status is DONE, and is selected like any other unannotated EX while the row is TODO or WIP.
-
-# AC-0001-0094-05
-# Parent: US-0001-0094
-Scenario: Shipped Minimal-Implementation Rule Drops TC and the Ledger
-  Given a project on the story tree
-  When § 2 of the shipped rule `minimal-implementation.md` is read
-  Then it restates the traceability chain of the constitution's Article V with no TC hop and names no execution ledger, and it defines an observation as an EX row in a story's `03_Example.md` under `<paths.specsDir>`.
+  # AC-0001-0094-05
+  Scenario: Stale or missing validation blocks completion
+    Given every EX in scope is annotated or exempted
+    And the scoped validate result is missing, stale, or from a profile other than `tdd`
+    When `/qfai-implement` checks completion
+    Then it stops and reports the validate command, exit code and output
+    And it does not report "nothing to do"
 ```

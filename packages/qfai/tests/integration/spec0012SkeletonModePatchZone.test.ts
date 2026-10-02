@@ -1,6 +1,6 @@
 /**
  * Integration acceptance for spec-0012 CHG-006 test cases
- * Emit-skeletons coverage, DESIGN.md patch-zone,
+ * Emit-skeletons coverage,
  * prototyping.mode discriminator, taskFidelity keywords, mutation-log).
  *
  * Converted from `.skip` test-first skeletons to deterministic
@@ -17,10 +17,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
-import {
-  computeDesignMdHashes,
-  parseDesignMdPatchZone,
-} from "../../src/core/design/designMdPatchZone.js";
 import { buildSkeletonsForUnion } from "../../src/core/prototyping/emitSkeletons.js";
 import { detectEvidenceMutationUnlogged } from "../../src/core/validators/evidenceMutationUnlogged.js";
 import {
@@ -110,7 +106,7 @@ async function seedProject(
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "ui-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - Browse\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n    primary_tasks:\n      - { id: browse, label: Browse, acceptance: done }\n",
     "utf-8",
   );
 }
@@ -128,7 +124,7 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
     await writeFile(
       path.join(uiDir, "screens.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "# QFAI-CONTRACT-ID: UI-0002",
         "screens:",
         "  - id: home",
         "    route: /",
@@ -157,7 +153,7 @@ describe("iterate --cycle 0 --emit-skeletons writes one placeholder HTML per scr
 });
 
 describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () => {
-  // QFAI:EX-0001-0147-02
+  // QFAI:EX-0001-0143-02
   it("absence of --emit-skeletons writes zero placeholder HTML files (v1.9.1 no-regression)", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -166,7 +162,7 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
     await writeFile(
       path.join(uiDir, "screens.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0002",
+        "# QFAI-CONTRACT-ID: UI-0002",
         "screens:",
         "  - id: home",
         "    route: /",
@@ -208,53 +204,6 @@ describe("--emit-skeletons opt-in default + --skeleton-mode discriminator", () =
     });
     expect(skeletons[0].html).toContain("Inter"); // token still consumed
     expect(skeletons[0].html).toContain("skeleton-mode=full");
-  });
-});
-
-// ─── DESIGN.md patch_zone ────────────────────
-
-const PATCH_ZONE_FIXTURE = `---
-brand:
-  name: "Acme"
-visual:
-  colors:
-    primary: "#2563eb"
-    accent: "#f59e0b"
-  radius:
-    sm: "4px"
-    md: "8px"
-patch_zone:
-  tokens:
-    - visual.colors.accent
-    - visual.radius.md
----
-# DESIGN.md body content
-`;
-
-describe("in-zone edit updates only patchHash", () => {
-  it("an in-zone color-token value edit keeps majorHash byte-stable and bumps patchHash", () => {
-    const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
-    const DESIGN_AFTER = DESIGN_BEFORE.replace('"#f59e0b"', '"#fa6500"');
-    const before = computeDesignMdHashes(DESIGN_BEFORE);
-    const after = computeDesignMdHashes(DESIGN_AFTER);
-    expect(before.majorHash).toBe(after.majorHash);
-    expect(before.patchHash).not.toBe(after.patchHash);
-  });
-});
-
-describe("out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
-  it("an out-of-zone token value (visual.colors.primary) bumps majorHash", () => {
-    const DESIGN_BEFORE = PATCH_ZONE_FIXTURE;
-    const DESIGN_AFTER = DESIGN_BEFORE.replace('"#2563eb"', '"#7777FF"');
-    const before = computeDesignMdHashes(DESIGN_BEFORE);
-    const after = computeDesignMdHashes(DESIGN_AFTER);
-    expect(before.majorHash).not.toBe(after.majorHash);
-  });
-
-  it("a DESIGN.md without a patch_zone block leaves parseDesignMdPatchZone with ok=false", () => {
-    const DESIGN_NO_ZONE = ["---", "brand:", '  name: "Acme"', "---", "# body"].join("\n");
-    const parsed = parseDesignMdPatchZone(DESIGN_NO_ZONE);
-    expect(parsed.ok).toBe(false);
   });
 });
 
@@ -364,7 +313,7 @@ describe("QFAI-CRIT-009 keyword surface SSOT", () => {
 });
 
 describe("iterate --capture emits a taskFidelity template with named sections", () => {
-  // QFAI:EX-0001-0150-02
+  // QFAI:EX-0001-0145-02
   it("includes cta_visibility and four_state_check sections with TODO placeholders for all keywords", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -384,12 +333,12 @@ describe("iterate --capture emits a taskFidelity template with named sections", 
 // ─── mutation-log + R-EVIDENCE-MUTATION-UNLOGGED ─
 
 describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
-  // QFAI:EX-0001-0151-01
+  // QFAI:EX-0001-0146-01
   it("records a 2048-byte UI review file with its source path and prior size", async () => {
     const root = await newTempDir();
     await seedProject(root);
     // Plant prior iter-00 content.
-    const reviewRel = ".qfai/evidence/prototyping/iter-00/CON-UI-0001/home.review.json";
+    const reviewRel = ".qfai/evidence/prototyping/iter-00/UI-0001/home.review.json";
     const reviewAbs = path.join(root, reviewRel);
     await mkdir(path.dirname(reviewAbs), { recursive: true });
     await writeFile(reviewAbs, `{}` + " ".repeat(2046), "utf-8");

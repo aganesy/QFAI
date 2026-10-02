@@ -2,5 +2,5 @@
 
 ## Contract Index
 
-| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |
-| -------- | ------ | ----------- | ---- | ---------- | --------------- | ------- |
+| ID  | Title | File | Depends On | Reconciled With | Purpose |
+| --- | ----- | ---- | ---------- | --------------- | ------- |

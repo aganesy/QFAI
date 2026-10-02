@@ -144,13 +144,13 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
       "utf8",
     );
     await writeFile(
-      path.join(contractDir, "repair.md"),
-      "# Repair contract\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003 | Recheck the diagnosed source after repair. | EX-0003-0001-01 |\n",
+      path.join(contractDir, "cli-0003-repair.md"),
+      "# CLI-0003: Repair\n\n## Ownership boundary\n\nThis contract decides how a targeted repair is confirmed.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0001 | Recheck the diagnosed source after repair. | EX-0003-0001-01 |\n",
       "utf8",
     );
     await writeFile(
       path.join(root, "docs/contracts/contracts.md"),
-      "# Contracts\n\n## Contract Index\n\n| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- | --- |\n| CLI-003 | Repair | - | cli/repair.md | - | - | Confirm a targeted repair. |\n",
+      "# Contracts\n\n## Contract Index\n\n| ID | Title | File | Depends On | Reconciled With | Purpose |\n| --- | --- | --- | --- | --- | --- |\n| CLI-0003 | Repair | cli/cli-0003-repair.md | - | - | Confirm a targeted repair. |\n",
       "utf8",
     );
     const after = cli(

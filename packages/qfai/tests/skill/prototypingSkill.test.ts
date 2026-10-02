@@ -16,6 +16,7 @@ import {
   hasEnvironmentPreconditions,
   hasPreflightGuidance,
   hasPlaywrightCliFallback,
+  validatePrototypingSkillContent,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,7 +45,7 @@ const VALID_SKILL_CONTENT = [
   "",
   "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
   "cli is not a prototyping execution target and is rejected.",
-  "Only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] enter prototyping execution.",
+  "Only UI contracts with a full UI-NNNN ID and non-empty screens[] enter prototyping execution.",
   "",
   "## Required References",
   "Read the reference documents before execution.",
@@ -94,6 +95,19 @@ describe("prototyping skill validator", () => {
   it("limits prototyping to UI contracts with declared screens", () => {
     expect(hasUiContractScope(VALID_SKILL_CONTENT)).toBe(true);
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
+  });
+
+  it("does not read the retired CON-UI-NNNN form as the UI contract scope", () => {
+    // QFAI:EX-0001-0042-15
+    const retired = VALID_SKILL_CONTENT.replace("full UI-NNNN ID", "full CON-UI-NNNN ID");
+
+    expect(hasUiContractScope(retired)).toBe(false);
+    expect(validatePrototypingSkillContent(retired).issues.map((item) => item.code)).toContain(
+      "UIX-VAL-SKILL-UI-BEARING-FALSE",
+    );
+    expect(
+      validatePrototypingSkillContent(VALID_SKILL_CONTENT).issues.map((item) => item.code),
+    ).not.toContain("UIX-VAL-SKILL-UI-BEARING-FALSE");
   });
 
   it("documents static-first semantics", () => {
@@ -193,7 +207,7 @@ describe("prototyping skill validator", () => {
 describe("prototyping skill asset — UI contract scope", () => {
   it("requires canonical UI contracts with screens and no spec-pack primary pin", async () => {
     const skillContent = await readPrototypingAsset("SKILL.md");
-    expect(skillContent).toContain("CON-UI-NNNN");
+    expect(skillContent).toContain("UI-NNNN");
     expect(skillContent).toContain("screens[]");
     expect(skillContent).toContain("primaryUiContract");
     expect(skillContent).not.toContain("primarySpecId");
@@ -202,7 +216,7 @@ describe("prototyping skill asset — UI contract scope", () => {
 
   it("places review evidence under full UI contract IDs", async () => {
     const loop = await readPrototypingAsset("references/iteration-loop.md");
-    expect(loop).toContain("CON-UI-NNNN");
+    expect(loop).toContain("UI-NNNN");
     expect(loop).not.toContain("iter-NN/spec-NNNN/");
   });
 });

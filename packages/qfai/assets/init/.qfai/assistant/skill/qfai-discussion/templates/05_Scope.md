@@ -22,6 +22,8 @@
 
 > IDs use the `DSC-` prefix. Bare `SC-NNNN-NNNN` is reserved for the traceability
 > scenario tag (`QFAI:SC-...`) and must not be used for a success criterion.
+> `/qfai-sdd` carries each criterion into the story tree's `objective.md` as an
+> observable result and its measurement, without the ID.
 
 | Criterion | Measurement | Target  | Priority |
 | --------- | ----------- | ------- | -------- |

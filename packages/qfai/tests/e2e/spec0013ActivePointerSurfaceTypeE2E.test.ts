@@ -83,7 +83,10 @@ describe("spec-0013 US-0013-0014 primary_tasks ceiling + shape", () => {
   }
 
   it("QFAI:BF-0001 — normal: structured items accepted and the ceiling named in the warning when count is over it", async () => {
-    const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
+    const tasks = Array.from(
+      { length: 9 },
+      (_, i) => `      - { id: task_${i + 1}, label: task_${i + 1}, acceptance: done }`,
+    ).join("\n");
     const issues = await seedUi(
       [
         "screens:",

@@ -31,9 +31,32 @@ These values are restated from `.qfai/assistant/rule/change-classification.md` (
 Do not proceed without a declared Change Type.
 
 The workflow routes are orthogonal to the Change Type. A route of
-`npx qfai workflow` (`direct`, `bugfix`, `bounded-change`, `feature` or
-`discovery`) says which stages run; the Change Type says what kind of change it
-is. Neither selects the other, and a run declares both.
+`npx qfai workflow`, such as `fix-defect`, `add-feature` or `edit-text`, says
+which stages run; the Change Type says what kind of change it is. Neither
+selects the other, and a run declares both: a `fix-defect` run may declare
+`Behavior`, and an `add-feature` run `Structural`. No route maps to a Change
+Type.
+
+---
+
+## Workflow routes
+
+A run of `npx qfai workflow` follows one route. The CLI chooses it from the
+facts `qfai-run` reads out of the request, and the route fixes the plan.
+
+- A stage runs every step its plan names, in plan order. Nothing a request says
+  adds, drops or reorders a step.
+- A pass-through step still runs. When it can show it has nothing to write, it
+  records a pass with the evidence it read. A pass whose work remains is
+  refused.
+- A modifier, `review:heavy`, `gate:user` or `gate:release`, raises the review or
+  stops the run at a decision point its route declares. It never changes the
+  steps, and a run never drops one.
+- A stage that finds work no step of its route does, does none of it. At a
+  branch point its route declares, it reports the outcome that moves the run to
+  another route. Anywhere else it returns the finding as a debt.
+- A request that ends without a change to the project runs a route owned by
+  `qfai-triage`.
 
 ---
 
@@ -122,9 +145,9 @@ At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping
 1. Check the current story-tree steering files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`
    - `01_policy/principle.md` and `01_policy/constraint.md`
-   - `03_contract/structure.md` and `03_contract/tech.md`
-2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts).
-3. If the current stage owns the file, fill verified facts. Otherwise follow the drift protocol and rerun the owning stage.
+   - `03_contract/tech.md`
+2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts). A table with no rows or a `- None.` list is complete where the template allows it.
+3. If the current stage owns the file, fill verified facts into the sections its template has, adding none. Otherwise follow the drift protocol and rerun the owning stage.
 4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
 5. Record new facts discovered during the stage and route an upstream change to its owner.
 

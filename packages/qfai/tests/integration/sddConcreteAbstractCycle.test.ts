@@ -103,7 +103,7 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
     ],
     [
       `${SPECS}/03_contract/api/orders.yaml`,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
     ],
     [`${SPECS}/decisions.md`, registers.decisions ?? empty],
     [`${SPECS}/open-questions.md`, registers.openQuestions ?? empty],
@@ -112,7 +112,7 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
 }
 
 describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
-  // QFAI:AC-0001-0152-08
+  // QFAI:AC-0001-0147-08
   it("sits between the contracts and the gate, and sends an independent test-design-analyst to find", async () => {
     const steps = /^steps: \[(.*)\]$/m.exec(await readShipped(SKILL))?.[1] ?? "";
     const contracts = steps.indexOf("sdd-contract");
@@ -149,7 +149,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     );
   });
 
-  // QFAI:AC-0001-0152-09
+  // QFAI:AC-0001-0147-09
   it("hands each finding to one independent griller under the agent-to-agent grilling rule", async () => {
     const text = await section(CYCLE, "## Adjudication");
     await expectResolvedCitation(
@@ -163,7 +163,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(text, "critical goes to the user", /goes to the user/i, /no agent decides it/i);
   });
 
-  // QFAI:AC-0001-0152-10
+  // QFAI:AC-0001-0147-10
   it("changes an existing item only by the drift protocol's approval and the triage operations", async () => {
     const text = await section(CYCLE, "## Applying an adopted finding");
     await expectResolvedCitation(
@@ -184,7 +184,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(text, "the same route here", /`--contract`/, /wider change request/i);
   });
 
-  // QFAI:AC-0001-0152-11
+  // QFAI:AC-0001-0147-11
   it("runs inside a workflow run before the one change question, as the step and the reference both say", async () => {
     await expectResolvedCitation(CYCLE_STEP, await readShipped(CYCLE_STEP), CYCLE_CITATION);
     const note = await section(CYCLE_STEP, "## Inside a workflow run");
@@ -216,7 +216,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(reference, "no further cycle", /runs no further cycle/i);
   });
 
-  // QFAI:AC-0001-0152-12
+  // QFAI:AC-0001-0147-12
   it("opens an Unadjudicated row the gate holds until the finding is decided", async () => {
     const text = await section(CYCLE, "## Two cycles at most");
     expectSentence(text, "no third cycle", /No third cycle runs/i);
@@ -227,21 +227,21 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     );
     expect(row).not.toBe("");
     const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001 | Ask the user | ${status} |`;
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001-0001 | Ask the user | ${status} |`;
     const open = validateStoryTreeStructureModel(storyTree({ openQuestions: register("TODO") }));
     expect(open.filter((issue) => issue.code === "QFAI-SPACK-102")).toHaveLength(1);
     const decided = validateStoryTreeStructureModel(storyTree({ openQuestions: register("DONE") }));
     expect(decided.some((issue) => issue.code === "QFAI-SPACK-102")).toBe(false);
   });
 
-  // QFAI:AC-0001-0152-13
+  // QFAI:AC-0001-0147-13
   it("records a rejected finding as a decisions row the register accepts", async () => {
     const text = await section(CYCLE, "## Rejected findings");
     expectSentence(text, "the row", /one `decisions\.md` row at REJECTED/i);
     const template = await readShipped(DECISIONS_TEMPLATE);
     expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach", "Status"]);
     const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | ${status} |`;
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | ${status} |`;
     const decisionsIssues = (status: string) =>
       validateStoryTreeStructureModel(storyTree({ decisions: register(status) })).filter(
         (issue) => issue.file?.endsWith("decisions.md") ?? false,
@@ -250,7 +250,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expect(decisionsIssues("CLOSED")).not.toEqual([]);
   });
 
-  // QFAI:AC-0001-0152-14
+  // QFAI:AC-0001-0147-14
   it("holds the record in the evidence template and has the completion reviewer's gate read it", async () => {
     const reference = await section(CYCLE, "## The record");
     await expectResolvedCitation(CYCLE, reference, "../templates/evidence/sdd-flow.md");

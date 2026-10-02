@@ -3,10 +3,10 @@
 ## Phases
 
 ```text
-[Freeze] cycle 0:    cache the lock-anchored sha256(DESIGN.md) into prototyping.json
+[Freeze] cycle 0:    record sha256(DESIGN.md) in prototyping.json#designMd
 [Seed]   cycle 0:    generate one iter-00/index.html under DESIGN.md tokens
 [Loop]   cycle 1..9:  reviewer operates Playwright -> review -> iterate (DESIGN.md hash held)
-[Cert]   final:      handoff yaml + completion-certificate.json
+[Cert]   final:      prototyping.json#handoff + completion-certificate.json
 ```
 
 ## Per-iter artifacts
@@ -14,7 +14,7 @@
 ```text
 .qfai/prototype/iter-NN/index.html
 .qfai/evidence/prototyping/iter-NN/review.json
-.qfai/evidence/prototyping/iter-NN/CON-UI-NNNN/<screen>.review.json
+.qfai/evidence/prototyping/iter-NN/UI-NNNN/<screen>.review.json
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, <screen>.signals.json} (--capture only)
 ```
 
@@ -40,7 +40,7 @@ unexpected screen, duplicate screen/kind pair, or duplicate path. Check that
 every cited artifact exists and store paths relative to
 `.qfai/evidence/prototyping/`. Without `--capture`, store `[]`;
 with it, require screenshot and HTML entries for every screen. The closed
-`CON-UI-NNNN/<screen>.review.json` payload has no `evidenceRefs` key. The pure
+`UI-NNNN/<screen>.review.json` payload has no `evidenceRefs` key. The pure
 `buildEvidenceRefs()` helper does not perform this write for the CLI.
 
 `progress.md` is one file for the whole run. The generator appends a
@@ -58,8 +58,8 @@ Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
 - `65` — max-iterations: latest iter `index === 9`.
 - `2` — input error, including:
   - root `DESIGN.md` missing or unparseable;
-  - `<contractsDir>/design/DESIGN.md.lock.yaml` missing;
-  - `sha256(DESIGN.md)` mismatch with the lock.
+  - on cycle ≥ 1, `sha256(DESIGN.md)` differing from
+    `prototyping.json#designMd.sha256`, the hash cycle 0 recorded.
 
 LLM subjective DONE declarations are forbidden.
 
@@ -78,28 +78,22 @@ It is neutral with respect to AI behavior.
 
 - UI-bearing contract set under `<contractsDir>/ui/`
 - root `DESIGN.md`
-- `<contractsDir>/design/DESIGN.md.lock.yaml`
 
-## Contracts produced (post-loop)
+## Produced after the loop
 
-- `<contractsDir>/design/design-system.yaml` — deterministic mirror of
-  DESIGN.md tokens, written by `iterate` on the cycle that ends the loop.
-  No HTML extraction. See `handoff.md`.
-- `<contractsDir>/design/prototype-handoff.yaml`
+- `.qfai/prototype/final/index.html` and `prototyping.json#handoff`. See
+  `handoff.md`.
 - `.qfai/evidence/prototyping/completion-certificate.json` (records
-  `designMdPath` + `designMdSha256`)
+  `designMd`, the path and sha256 of root `DESIGN.md`)
 
 ## Frozen brand identity
 
-The single source of truth for the frozen DESIGN.md sha256 is
-`<contractsDir>/design/DESIGN.md.lock.yaml#designMdSha256`. At cycle 0
-the loop reads the lock, hashes the live `DESIGN.md`, and refuses to
-proceed unless the two match; the lock value is then cached into
-`prototyping.json` so subsequent cycles can re-verify the
-`live === lock === cache` invariant cheaply. Any of the three
-diverging exits with `2`. To change brand identity mid-project, edit
-`DESIGN.md`, rerun `/qfai-sdd`'s `common-design-md` step to refreeze the lock, and
-start `/qfai-prototyping` from cycle 0.
+`npx qfai prototyping iterate --cycle 0` hashes root `DESIGN.md` and
+records it in `prototyping.json#designMd` as `{ path, sha256 }`. Every
+later cycle and `npx qfai prototyping certify` compare the live
+`DESIGN.md` with that record, and a mismatch exits `2` ("DESIGN.md hash
+mismatch"). To change brand identity mid-loop, edit `DESIGN.md` and start
+`/qfai-prototyping` again from cycle 0.
 
 ## Sealed loop
 

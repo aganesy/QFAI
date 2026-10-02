@@ -175,7 +175,7 @@ does the confirmation that closes the session.
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
-- P2: `.qfai/assistant/rule/agent-selection.md`, then the project's policy files under `<paths.specsDir>/01_policy/` and its technology and structure contracts under `<paths.contractsDir>/`
+- P2: `.qfai/assistant/rule/agent-selection.md`, then the project's policy files under `<paths.specsDir>/01_policy/` and its technology contract `<paths.contractsDir>/tech.md`
 - P3: the subject the invoking stage named, and the artifacts it points at
 - P4: the story tree under `<paths.specsDir>/**` and contracts under `<paths.contractsDir>/**`, as facts to read rather than
   decisions to re-open
@@ -261,11 +261,11 @@ Completion is how a session ends on its own. It is not the only way one ends.
   each decision still open recorded as an assumption and labelled as one.
 
 **Two kinds of node are never assumed, whatever the user answered.** A decision
-some document requires the user to make and record — an SDD triage `Approved By`
-among them — and an input declared `hard-required` are outside the assumption
-path. They are still asked, and where a no-question mode forbids asking, the run
-stops and names them instead. Closing the questions waives the agent's own
-uncertainty, never an authorization the user has not given.
+some document requires the user to make and record — the approval an SDD triage
+row waits on among them — and an input declared `hard-required` are outside the
+assumption path. They are still asked, and where a no-question mode forbids
+asking, the run stops and names them instead. Closing the questions waives the
+agent's own uncertainty, never an authorization the user has not given.
 
 ## When talking cannot settle it
 
@@ -433,13 +433,7 @@ Every decision this skill meets falls in one of three named buckets.
     what it is about)
 
 The asking is what this skill performs, so its `ask-user` entries are its own operations
-rather than an entry added to the prototype. A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
-MAY instantiate a category entry — `approval-required governance operations` — with the
-operations its own run cannot authorize for itself. `hard-required` also takes the
-undefaultable inputs this skill itself consumes, declared per skill and checked against
-that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill must not introduce an
-entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
+rather than an entry added to the prototype.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question without the rounds. A

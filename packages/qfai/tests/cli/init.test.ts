@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
-import { copyTemplateTree } from "../../src/cli/lib/fs.js";
+import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   isPathIgnored,
@@ -1722,6 +1722,133 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0028-05
+  it("says the config file is shared when init runs inside a linked worktree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+      const shared = /shared by every worktree of this repository/;
+
+      // Before the real run, which sets the shared value to true and so ends the write
+      // this output would otherwise describe.
+      const mainOutput = await captureStdout(async () => {
+        await runInit({ dir: main, force: false, dryRun: true, yes: true });
+      });
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: true, yes: true });
+      });
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      expect(mainOutput).toContain("would set: git config --local core.symlinks true");
+      expect(mainOutput).not.toMatch(shared);
+      expect(dryRunOutput).toMatch(shared);
+      expect(realOutput).toMatch(shared);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("stops before writing anything when a symlink cannot be created", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-eperm-"));
+    let attempts = 0;
+    try {
+      await expect(
+        runInit(
+          { dir: root, force: false, dryRun: false, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+              throw Object.assign(new Error("operation not permitted"), { code: "EPERM" });
+            },
+          },
+        ),
+      ).rejects.toThrow(/Developer Mode has to be enabled/);
+
+      expect(attempts).toBe(1);
+      expect(await readdir(root)).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("makes no symlink attempt on --dry-run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dry-probe-"));
+    let attempts = 0;
+    try {
+      await captureStdout(async () => {
+        await runInit(
+          { dir: root, force: false, dryRun: true, yes: true },
+          {
+            platform: "win32",
+            createSymlink: async () => {
+              attempts += 1;
+            },
+          },
+        );
+      });
+
+      expect(attempts).toBe(0);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0028-04
+  it("goes ahead when the symlink probe succeeds or fails for another reason", async () => {
+    for (const failure of [undefined, Object.assign(new Error("read-only"), { code: "EROFS" })]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-probe-"));
+      try {
+        await captureStdout(async () => {
+          await runInit(
+            { dir: root, force: false, dryRun: false, yes: true },
+            {
+              platform: "win32",
+              createSymlink: async (target, linkPath, type) => {
+                if (
+                  failure !== undefined &&
+                  path.basename(linkPath).startsWith("qfai-symlink-probe")
+                ) {
+                  throw failure;
+                }
+                await symlink(target, linkPath, type);
+              },
+            },
+          );
+        });
+
+        await access(path.join(root, ".qfai"));
+      } finally {
+        await removeTempTree(root);
+      }
+    }
+  });
+
   // QFAI:EX-0001-0028-03
   it("stays silent about core.symlinks outside a git repository", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -2924,8 +3051,9 @@ describe("qfai init", () => {
     }
   });
 
-  // 出力先の開示。`--dir` の既定値は cwd なので、宛先を名指ししない出力では
-  // 誤ったディレクトリへの実行が正しい実行とバイト単位で同一になる。
+  // Destination disclosure. The default for `--dir` is the cwd, so output that
+  // does not name the destination makes a run in the wrong directory
+  // byte-for-byte identical to a correct one.
   it("names the destination directory before the work starts and in the report header", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dest-"));
     try {
@@ -2937,7 +3065,7 @@ describe("qfai init", () => {
       const header = `qfai init: dry-run (dest=${dest})`;
       expect(output).toContain(opening);
       expect(output).toContain(header);
-      // 開示は処理開始前に出す — 中断・失敗した実行でも対象が残る。
+      // The disclosure comes before any work, so the target stays visible even when a run is interrupted or fails.
       expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
     } finally {
       await removeTempTree(root);
@@ -3040,7 +3168,6 @@ describe("qfai init", () => {
         "01_policy/initiative.md",
         "01_policy/principle.md",
         "03_contract/tech.md",
-        "03_contract/structure.md",
       ]) {
         await access(path.join(root, ".qfai", "spec", ...relative.split("/")));
       }
@@ -3181,7 +3308,7 @@ describe("qfai init", () => {
     // could be deleted for looking like init's after mangling.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
     try {
-      // Shift_JIS for「プロジェクト」— not a valid UTF-8 sequence.
+      // Shift_JIS for the katakana word for "project" — not a valid UTF-8 sequence.
       const shiftJis = Buffer.from([
         0x83, 0x76, 0x83, 0x8d, 0x83, 0x57, 0x83, 0x46, 0x83, 0x4e, 0x83, 0x67,
       ]);

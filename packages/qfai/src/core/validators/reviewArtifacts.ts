@@ -17,10 +17,6 @@ const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
-// The two forms `evidence-revision.md` defines, and nothing else. Shared with
-// the `REV:` token of the ledger `Evidence` grammar (`tddList.ts`), because the
-// two values are compared against each other — see `evidenceRevision.ts`.
-
 /**
  * What a `--spec` run is allowed to judge here.
  *
@@ -57,9 +53,11 @@ export type ReviewArtifactsScope = {
  * `--profile sdd --fail-on error` with `QFAI-REVIEW-004/005` on a downstream
  * pack the SDD cycle has no business gating. The producer is the stable
  * attribute: one value per stage, written once when the pack is created, and
- * unrelated to what the pack points at.
+ * unrelated to what the pack points at. `qfai-atdd` has a value of its own
+ * rather than borrowing `implement`, so an acceptance-test pack can be told
+ * apart from an implementation pack of the same flow.
  */
-const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement"]);
+const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement", "atdd"]);
 
 /** The producers each stage-scoped profile is the gate for. */
 export const SDD_PACK_PRODUCERS: ReadonlySet<string> = new Set(["sdd"]);
@@ -75,6 +73,7 @@ function producerKind(producer: string): string | null {
       return "discussion";
     case "sdd":
     case "implement":
+    case "atdd":
       return "flow";
     default:
       return null;
@@ -152,13 +151,13 @@ export async function validateReviewArtifacts(
       issues.push(
         issue(
           "QFAI-REVIEW-001",
-          "ルート `.gitignore` に QFAI 管理ブロック（`qfai init` が自動生成）用のエントリがありません。",
+          "The root `.gitignore` has no entries for the QFAI managed block (generated automatically by `qfai init`).",
           "error",
           rootGitignorePath,
           "reviewArtifacts.gitignore",
           undefined,
           "change",
-          "`qfai init` を再実行して、ルート `.gitignore` に QFAI 管理ブロック（例: `.qfai/review/*` 等）を追記してください。",
+          "Rerun `qfai init` to add the QFAI managed block (for example `.qfai/review/*`) to the root `.gitignore`.",
         ),
       );
     }
@@ -168,13 +167,13 @@ export async function validateReviewArtifacts(
     issues.push(
       issue(
         "QFAI-REVIEW-008",
-        `ルート .gitignore に推奨エントリがありません: ${missingRecommendedEntries.join(", ")}`,
+        `The root .gitignore is missing recommended entries: ${missingRecommendedEntries.join(", ")}`,
         "info",
         rootGitignorePath,
         "reviewArtifacts.gitignoreRecommended",
         [...missingRecommendedEntries],
         "change",
-        "意図的に追跡している場合は対応不要です。`qfai init` を再実行しても、削除したエントリは復活しません（管理ブロックの鮮度判定は governance negation の有無と順序だけを見ます）。既定に戻す場合はエントリを手動で追加してください。",
+        "No action is needed if you track them on purpose. Rerunning `qfai init` does not restore an entry you removed (the freshness check of the managed block looks only at whether the governance negation is present and where it sits). To return to the default, add the entries by hand.",
       ),
     );
   }
@@ -207,13 +206,13 @@ export async function validateReviewArtifacts(
     issues.push(
       issue(
         "QFAI-REVIEW-010",
-        `\`.qfai/review/\` に review pack として認識されないディレクトリがあります: ${unrecognized.join(", ")}`,
+        `\`.qfai/review/\` contains directories that are not recognized as review packs: ${unrecognized.join(", ")}`,
         "info",
         reviewRoot,
         "reviewArtifacts.packDirName",
         [...unrecognized],
         "canonical",
-        "review pack のディレクトリ名は `review-YYYYMMDDhhmmssSSS`（17桁）のみです。一致しないディレクトリは `review_request.md` / `summary.json` / `Rxx_*.md` の検査対象外となり、欠落があっても検出されません。`review-<timestamp>/` にリネームするか、`.qfai/review/` の外へ移動してください。",
+        "Review pack directories must be named `review-YYYYMMDDhhmmssSSS` (17 digits) and nothing else. A directory that does not match is skipped when `review_request.md` / `summary.json` / `Rxx_*.md` are checked, so a missing file goes unnoticed. Rename it to `review-<timestamp>/`, or move it out of `.qfai/review/`.",
       ),
     );
   }
@@ -224,13 +223,13 @@ export async function validateReviewArtifacts(
     issues.push(
       issue(
         "QFAI-REVIEW-002",
-        "review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` が未生成のため、このチェックは warning 扱いです。",
+        "No review artifacts were found. `review-YYYYMMDDhhmmssSSS/` has not been generated, so this check is reported as a warning.",
         "warning",
         reviewRoot,
         "reviewArtifacts.presence",
         undefined,
         "change",
-        "review 実行後に `review_request.md` / `Rxx_*.md` / `summary.json` を含む `review-*` ディレクトリがあることを確認してください。",
+        "After a review run, confirm that a `review-*` directory containing `review_request.md` / `Rxx_*.md` / `summary.json` exists.",
       ),
     );
     return issues;
@@ -364,7 +363,7 @@ async function validateReviewPack(
     issues.push(
       issue(
         "QFAI-REVIEW-003",
-        "review pack に `review_request.md` がありません。",
+        "The review pack has no `review_request.md`.",
         "error",
         reviewPackDir,
         "reviewArtifacts.reviewRequest",
@@ -376,7 +375,7 @@ async function validateReviewPack(
     issues.push(
       issue(
         "QFAI-REVIEW-004",
-        "review pack に `summary.json` がありません。",
+        "The review pack has no `summary.json`.",
         "error",
         reviewPackDir,
         "reviewArtifacts.summary",
@@ -402,8 +401,8 @@ async function validateReviewPack(
     issues.push(
       issue(
         "QFAI-REVIEW-005",
-        "review pack に `Rxx_*.md` が1件もありません。応答ゼロで終わった回なら " +
-          "`summary.json` に `reviewers: []` を宣言してください。",
+        "The review pack has no `Rxx_*.md` file. If the round ended with zero responses, " +
+          "declare `reviewers: []` in `summary.json`.",
         "error",
         reviewPackDir,
         "reviewArtifacts.reviewerFiles",
@@ -414,8 +413,8 @@ async function validateReviewPack(
     issues.push(
       issue(
         "QFAI-REVIEW-005",
-        "`summary.json` は `reviewers: []`（応答ゼロ）を宣言していますが `Rxx_*.md` が " +
-          `${String(reviewerFiles.length)} 件存在します。`,
+        "`summary.json` declares `reviewers: []` (zero responses), but there are " +
+          `${String(reviewerFiles.length)} \`Rxx_*.md\` file(s).`,
         "error",
         reviewPackDir,
         "reviewArtifacts.reviewerFiles",
@@ -455,16 +454,16 @@ function targetViolations(parsed: Record<string, unknown>, selection: PackSelect
   const declaredKind = readString(target?.kind);
   const targetPath = readString(target?.path);
   if (declaredKind === null || !ALLOWED_TARGET_KINDS.has(declaredKind)) {
-    violations.push("`target.kind` は spec|flow|discussion のいずれかが必須です");
+    violations.push("`target.kind` must be one of spec|flow|discussion");
   }
   if (targetPath === null) {
-    violations.push("`target.path` は非空文字列が必須です");
+    violations.push("`target.path` must be a non-empty string");
   }
 
   const producer = readString(parsed.producer)?.toLowerCase() ?? null;
   if (producer !== null && !ALLOWED_PRODUCERS.has(producer)) {
     violations.push(
-      `\`producer\` は ${[...ALLOWED_PRODUCERS].join("|")} のいずれかが必須です（省略時は \`target.kind\` から推定します）`,
+      `\`producer\` must be one of ${[...ALLOWED_PRODUCERS].join("|")} (when omitted it is inferred from \`target.kind\`)`,
     );
   }
 
@@ -475,13 +474,13 @@ function targetViolations(parsed: Record<string, unknown>, selection: PackSelect
   const targetKind = declaredKind?.toLowerCase() ?? null;
   if (targetKind !== null && ALLOWED_TARGET_KINDS.has(targetKind) && targetKind !== proven) {
     violations.push(
-      `\`target.kind\` (${targetKind}) が \`target.path\` (${targetPath}) と矛盾しています。このパスは ${proven} を指しています`,
+      `\`target.kind\` (${targetKind}) contradicts \`target.path\` (${targetPath}). The path points to ${proven}`,
     );
   }
   const declared = producer === null ? null : producerKind(producer);
   if (declared !== null && !compatibleTargetKind(declared, proven)) {
     violations.push(
-      `\`producer\` (${producer}) が \`target.path\` (${targetPath}) と矛盾しています。このパスは ${proven} を指しています`,
+      `\`producer\` (${producer}) contradicts \`target.path\` (${targetPath}). The path points to ${proven}`,
     );
   }
   return violations;
@@ -556,7 +555,7 @@ async function validateSummarySchema(
     return [
       issue(
         "QFAI-REVIEW-006",
-        `summary.json の JSON parse に失敗しました: ${formatError(error)}`,
+        `Failed to parse summary.json as JSON: ${formatError(error)}`,
         "error",
         summaryPath,
         "reviewArtifacts.summaryJson",
@@ -568,7 +567,7 @@ async function validateSummarySchema(
     return [
       issue(
         "QFAI-REVIEW-007",
-        "summary.json のトップレベルは object である必要があります。",
+        "The top level of summary.json must be an object.",
         "error",
         summaryPath,
         "reviewArtifacts.summarySchema",
@@ -579,19 +578,19 @@ async function validateSummarySchema(
   const violations: string[] = [];
   const version = readString(parsed.version);
   if (!version || !ALLOWED_VERSIONS.has(version)) {
-    violations.push('`version` は "1.0" または "2.0" が必須です');
+    violations.push('`version` must be "1.0" or "2.0"');
   }
 
   const createdAt = readString(parsed.created_at);
   if (!createdAt || !isParsableDate(createdAt)) {
-    violations.push("`created_at` は日時文字列が必須です");
+    violations.push("`created_at` must be a datetime string");
   }
 
   violations.push(...targetViolations(parsed, selection));
 
   const overallStatus = readString(parsed.overall_status);
   if (!overallStatus || !ALLOWED_OVERALL_STATUS.has(overallStatus)) {
-    violations.push("`overall_status` は PASS|FAIL のいずれかが必須です");
+    violations.push("`overall_status` must be PASS|FAIL");
   }
 
   if (version === "2.0") {
@@ -608,7 +607,7 @@ async function validateSummarySchema(
   // present-but-malformed value is an error like any other field.
   const revision = parsed.revision;
   if (revision !== undefined && !readString(revision)) {
-    violations.push("`revision` は非空文字列が必須です（省略は可）");
+    violations.push("`revision` must be a non-empty string (it may be omitted)");
   }
   // Absence is a warning because existing packs predate the field; a value that
   // is present is checked, because the form it takes is what makes the gate
@@ -626,7 +625,7 @@ async function validateSummarySchema(
   const revisionForm = readString(parsed.revision_form);
   if (revisionForm === null || !ALLOWED_REVISION_FORMS.has(revisionForm)) {
     violations.push(
-      `\`revision_form\` は "${REVISION_FORM_MARKER}"（現行契約）または "${REVISION_FORM_LEGACY}"（形式導入前の pack、履歴から一度だけ付与）が必須です`,
+      `\`revision_form\` must be "${REVISION_FORM_MARKER}" (the current contract) or "${REVISION_FORM_LEGACY}" (a pack from before the form was introduced, granted once from history)`,
     );
   }
   // Only an explicit `legacy` excuses a malformed value — **and only when the
@@ -642,7 +641,7 @@ async function validateSummarySchema(
   const migrated = claimsLegacy && legacyPacks.has(packName);
   if (claimsLegacy && !migrated) {
     violations.push(
-      `\`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言していますが、\`.qfai/review/${LEGACY_MANIFEST}\` に ${packName} が記録されていません。移行記録にない pack の自己申告は受理しません`,
+      `\`revision_form: "${REVISION_FORM_LEGACY}"\` is declared, but \`.qfai/review/${LEGACY_MANIFEST}\` does not record ${packName}. A pack's self-declaration is not accepted unless the migration record lists it`,
     );
   }
   const declaresForm = !migrated;
@@ -662,13 +661,13 @@ async function validateSummarySchema(
         ? [
             issue(
               "QFAI-REVIEW-009",
-              `\`revision\` (${revisionText}) はこのリポジトリの commit に解決できません。判定対象の tree を再現できません。`,
+              `\`revision\` (${revisionText}) does not resolve to a commit in this repository, so the tree that was judged cannot be reproduced.`,
               "warning",
               summaryPath,
               "reviewArtifacts.summaryRevisionResolves",
               [revisionText],
               "canonical",
-              "shallow clone や未 fetch のブランチでも同じ結果になるため warning です。値そのものが誤っている場合は、判定時の `git rev-parse HEAD` を記録し直してください。",
+              "A shallow clone or a branch that was not fetched gives the same result, so this is a warning. If the value itself is wrong, record `git rev-parse HEAD` as of the judgement again.",
             ),
           ]
         : []
@@ -704,10 +703,10 @@ async function validateSummarySchema(
       ? [
           issue(
             declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
-            "summary.json に `revision` がありません。判定がどの状態に対するものか特定できず、後続コミットによる無効化もできません。" +
+            "summary.json has no `revision`. The verdict cannot be tied to a state of the tree, and a later commit cannot invalidate it." +
               (declaresForm
                 ? ""
-                : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。）`),
+                : ` (This pack declares \`revision_form: "${REVISION_FORM_LEGACY}"\`, so this is reported as a warning.)`),
             declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
@@ -736,7 +735,7 @@ async function validateSummarySchema(
     ...unresolvableRevision,
     issue(
       "QFAI-REVIEW-007",
-      `summary.json の最小スキーマを満たしていません: ${violations.join(" / ")}`,
+      `summary.json does not satisfy the minimum schema: ${violations.join(" / ")}`,
       "error",
       summaryPath,
       "reviewArtifacts.summarySchema",
@@ -1064,9 +1063,11 @@ async function attributionFromRequest(
  * backticked value — because the line is prose in a prose file. An unrecognized
  * value is no declaration: the pack falls back to its kind rather than being
  * filed under a stage that does not exist.
+ *
+ * The colon may be ASCII or full-width (\uFF1A).
  */
 const REQUEST_PRODUCER_RE =
-  /^[ \t]*(?:[-*+][ \t]*)?(?:\*\*|__|`)?producer(?:\*\*|__|`)?[ \t]*[:：][ \t]*(?:\*\*|__|`)?([A-Za-z][\w-]*)/im;
+  /^[ \t]*(?:[-*+][ \t]*)?(?:\*\*|__|`)?producer(?:\*\*|__|`)?[ \t]*[:\uFF1A][ \t]*(?:\*\*|__|`)?([A-Za-z][\w-]*)/im;
 
 function requestProducer(content: string): string | null {
   const declared = REQUEST_PRODUCER_RE.exec(content)?.[1]?.toLowerCase() ?? null;
@@ -1149,7 +1150,7 @@ function validateReviewerEntry(
 ): void {
   const record = asRecord(item);
   if (!record) {
-    violations.push(`${fieldName}[${index}] は object である必要があります`);
+    violations.push(`${fieldName}[${index}] must be an object`);
     return;
   }
   const reviewer = readString(record.reviewer);
@@ -1157,20 +1158,20 @@ function validateReviewerEntry(
   const feedbackCount = readNonNegativeInt(record.feedback_count);
 
   if (!reviewer) {
-    violations.push(`${fieldName}[${index}].reviewer は必須です`);
+    violations.push(`${fieldName}[${index}].reviewer is required`);
   }
   if (!status || !ALLOWED_ROSTER_STATUS.has(status)) {
-    violations.push(`${fieldName}[${index}].status は PASS|FAIL|NA が必須です`);
+    violations.push(`${fieldName}[${index}].status must be PASS|FAIL|NA`);
   }
   if (feedbackCount === null) {
-    violations.push(`${fieldName}[${index}].feedback_count は 0 以上の整数が必須です`);
+    violations.push(`${fieldName}[${index}].feedback_count must be an integer of 0 or more`);
   }
 }
 
 function validateV1Roster(parsed: Record<string, unknown>, violations: string[]): void {
   const roster = Array.isArray(parsed.roster) ? parsed.roster : null;
   if (!roster || roster.length === 0) {
-    violations.push("`roster` は1件以上の配列が必須です");
+    violations.push("`roster` must be an array with at least one entry");
     return;
   }
   for (const [index, item] of roster.entries()) {
@@ -1181,7 +1182,7 @@ function validateV1Roster(parsed: Record<string, unknown>, violations: string[])
 function validateV2Reviewers(parsed: Record<string, unknown>, violations: string[]): void {
   const routingProfile = readString(parsed.routing_profile);
   if (!routingProfile) {
-    violations.push("`routing_profile` は非空文字列が必須です");
+    violations.push("`routing_profile` must be a non-empty string");
   }
 
   // An EMPTY array is legal, and it is a statement rather than an omission: "this round was opened and
@@ -1191,7 +1192,9 @@ function validateV2Reviewers(parsed: Record<string, unknown>, violations: string
   // declaration from the absence. `QFAI-REVIEW-005` reads the same field and stands down for it.
   const reviewers = Array.isArray(parsed.reviewers) ? parsed.reviewers : null;
   if (!reviewers) {
-    violations.push("`reviewers` は配列が必須です（応答ゼロの回は空配列で宣言する）");
+    violations.push(
+      "`reviewers` must be an array (declare an empty array for a round with zero responses)",
+    );
     return;
   }
   for (const [index, item] of reviewers.entries()) {
@@ -1199,7 +1202,7 @@ function validateV2Reviewers(parsed: Record<string, unknown>, violations: string
   }
 
   if (parsed.conditional_reviewers !== undefined && !Array.isArray(parsed.conditional_reviewers)) {
-    violations.push("`conditional_reviewers` は配列が必須です");
+    violations.push("`conditional_reviewers` must be an array");
   }
 }
 

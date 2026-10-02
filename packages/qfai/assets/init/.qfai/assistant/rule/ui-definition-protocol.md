@@ -19,7 +19,9 @@ A downstream skill reads the UI definition in this order.
    - `business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md`
    - `business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md`
 
-2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`)
+2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`):
+   the contracts whose rules cite the flow's examples
+   - contract ID (`UI-NNNN`, in a file named `ui-NNNN-<slug>.yaml`)
    - screen ID
    - route
    - primary tasks
@@ -27,24 +29,27 @@ A downstream skill reads the UI definition in this order.
    - actions
 
 3. **Brand SSOT**
-   - root `DESIGN.md` (front-matter + `# Brand Philosophy` body)
-   - `<paths.contractsDir>/design/DESIGN.md.lock.yaml` (frozen sha256 + token schema)
-   - `<paths.contractsDir>/design/design-system.yaml` (post-loop token mirror)
-   - `<paths.contractsDir>/design/prototype-handoff.yaml` (post-loop handoff facts)
+   - root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only
+     source of brand tokens
 
-4. **Evidence** (`.qfai/evidence/**`)
+4. **Evidence** (`.qfai/evidence/**`, local to the checkout)
+   - `prototyping/prototyping.json#handoff`: the final prototype, procurement
+     and implementation notes
    - prototyping screenshots / HTML / snapshots / command logs
    - evaluator reviews
    - implementation and verification evidence
 
+The paths that render a user-visible surface are declared by `uiux.surfacePaths`
+in `qfai.config.yaml`, and nowhere else.
+
 ## Failure Rules
 
-| Missing Definition               | Behavior                                                   |
-| -------------------------------- | ---------------------------------------------------------- |
-| UI contract                      | Stop UI-bearing downstream execution                       |
-| Pre-prototyping design contract  | Return to `/qfai-sdd` and normalize contracts              |
-| Post-prototyping design contract | Return to `/qfai-prototyping` and extract winner artifacts |
-| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd`              |
+| Missing Definition               | Behavior                                                  |
+| -------------------------------- | --------------------------------------------------------- |
+| UI contract                      | Stop UI-bearing downstream execution                      |
+| Root `DESIGN.md`                 | Return to `/qfai-sdd`, whose `common-design-md` writes it |
+| Prototype handoff                | Return to `/qfai-prototyping` and record the handoff      |
+| Discussion sidecar in downstream | Do not read it; normalize through `/qfai-sdd`             |
 
 ## Forbidden Fallbacks
 

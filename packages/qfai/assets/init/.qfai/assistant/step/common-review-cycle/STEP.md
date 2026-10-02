@@ -24,6 +24,10 @@ them; it is the procedure that applies them.
   states, resolved through `.qfai/assistant/rule/agent-selection.md`, plus each
   conditional reviewer whose condition holds. In a run: the work order's
   `requiredReviewerRoles`, as issued.
+- **Under `review:heavy`.** When the work order's `modifiers` hold it, its
+  `requiredReviewerRoles` also hold the reviewers of the `heavy` review
+  profile, and every one of them is blocking; drop none. The stage evidence
+  lists every decision the stage adopted, for the completion report.
 - **The review target.** Every path and ID the stage wrote or changed, and the
   source it was written from.
 - **The stage's gate result**, fresh on the revision the reviewers will read.
@@ -42,13 +46,12 @@ Orders Summary instead.
 | `qfai-discussion` | `discussion` | `discussion`  | `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS`        |
 | `qfai-sdd`        | `sdd`        | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
 | `qfai-implement`  | `implement`  | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
-| `qfai-atdd`       | `implement`  | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
+| `qfai-atdd`       | `atdd`       | `flow`        | `<paths.specsDir>/02_business-flow/business-flow-NNNN` |
 | any other owner   | none         | none          | no pack                                                |
 
 `producer` decides which stage gate judges the pack, and a `target.kind` the
-path contradicts is a finding. An acceptance-test pack declares `implement`
-because it reviews test-and-code evidence of one flow, which the SDD gate has
-no business judging.
+path contradicts is a finding. Neither the SDD nor the discussion gate judges an
+`implement` or `atdd` pack; a full run judges every pack.
 
 One pack per flow. A stage that changed several flows writes one pack for each.
 

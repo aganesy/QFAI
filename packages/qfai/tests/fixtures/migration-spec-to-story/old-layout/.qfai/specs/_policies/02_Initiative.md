@@ -1,5 +1,5 @@
 # Initiative
 
-## Milestones
+## Assumptions
 
-The first order flow is available.
+- The first order flow is available.

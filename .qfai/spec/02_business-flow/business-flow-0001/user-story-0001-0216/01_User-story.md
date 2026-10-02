@@ -1,20 +1,10 @@
-# US-0001-0216: Run only the steps a change needs, reviewed once per stage
+# US-0001-0216: Pass a step with evidence when it has nothing to write
 
 ## User Story
 
-- Goal: As an operator, I want each stage of a run to do only the steps its
-  plan and the checked route proposal make active, and to be reviewed once, at
-  its end, by the reviewers those steps need, so that a small change does not
-  pay for the whole of a large skill and its reviews.
-- Non-goals: a new route or predicate family beyond `proposed`; a review at the
-  end of every step; the whole-change review at `finish`, which stays the
-  independent `qa-gatekeeper` PASS; which steps exist and where they are
-  installed (`.qfai/spec/03_contract/cli/assistant-steps.md`).
-- Notes: decided by the user on 2026-09-27 (`decisions.md#DEC-0938`). The plan
-  format and the work-order fields are
-  `.qfai/spec/03_contract/cli/workflow-files.md` and
-  `.qfai/spec/03_contract/cli/qfai-workflow.md`.
+As an operator, I want a step that has nothing to write for my change to say so with evidence instead of being dropped from the plan, and to be refused when work it owns remains, so that fixed routes stay small for small changes without hiding an obligation.
 
-## Source Provenance
+## Non-goals
 
-- Change request: `decisions.md#DEC-0939`
+- A step that passes without running.
+- A pass for a step outside the closed list.

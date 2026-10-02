@@ -20,8 +20,8 @@ async function initQuietly(root: string, force = false): Promise<string> {
 }
 
 describe("the skipped skills are counted", () => {
-  // QFAI:AC-0001-0203-07
-  // QFAI:EX-0001-0203-19
+  // QFAI:AC-0001-0196-07
+  // QFAI:EX-0001-0196-19
   it("counts a skipped skill once and leaves a CRLF-only copy out", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai init skill count-"));
     try {
@@ -46,7 +46,7 @@ describe("the skipped skills are counted", () => {
     }
   });
 
-  // QFAI:EX-0001-0203-20
+  // QFAI:EX-0001-0196-20
   it("prints no count under --force, which replaces the edited skill", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai init skill count-"));
     try {

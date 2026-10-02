@@ -2,12 +2,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { declaredContractId } from "../contractsDecl.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
 import { nextId, type StoryTreeIdKind } from "./ids.js";
-import { resolveStoryTreeRoots } from "./layout.js";
+import {
+  directoryOutsideContractKinds,
+  markdownOutsideContractForm,
+  resolveStoryTreeRoots,
+} from "./layout.js";
 import { parseRecordTable, type ParsedRecordTable } from "./tables.js";
 
 export type StoryTreeDeclaration = { id: string; file: string };
@@ -15,7 +20,6 @@ export type FlowDefinition = StoryTreeDeclaration & { directory: string };
 export type StoryDefinition = StoryTreeDeclaration & { flowId: string; directory: string };
 export type CriterionDefinition = StoryTreeDeclaration & { storyId: string };
 export type ExampleDefinition = StoryTreeDeclaration & { storyId: string; acRef: string };
-export type RuleReference = StoryTreeDeclaration;
 export type StoryTreeIndex = { file: string; ids: string[] };
 
 export type StoryTreeModel = {
@@ -26,7 +30,8 @@ export type StoryTreeModel = {
   acceptanceCriteria: CriterionDefinition[];
   examples: ExampleDefinition[];
   rules: ContractRule[];
-  ruleRefs: RuleReference[];
+  /** The `<KIND>-NNNN` ID each contract file under a kind directory declares. */
+  contracts: StoryTreeDeclaration[];
   declarations: StoryTreeDeclaration[];
   decisions: ParsedRecordTable | null;
   decisionFile: string | null;
@@ -69,7 +74,7 @@ function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
 }
 
 const RESERVED_ID =
-  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
+  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}-\d{4}(?![\w-])|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
 
 /** Allocates after every declaration and every ID named in a decision row. */
 export function nextStoryTreeId(
@@ -119,7 +124,7 @@ export function buildStoryTreeModel(
     acceptanceCriteria: [],
     examples: [],
     rules: [],
-    ruleRefs: [],
+    contracts: [],
     declarations: [],
     decisions: null,
     decisionFile: null,
@@ -194,17 +199,15 @@ export function buildStoryTreeModel(
       relative = /(?:^|\/)03_contract\/(.+)$/.exec(file)?.[1] ?? null;
     }
     if (!relative) continue;
-    if (
-      !/^(?:api|db|ui|cli|design)\//.test(relative) &&
-      relative !== "tech.md" &&
-      relative !== "structure.md"
-    )
-      continue;
+    if (!relative.includes("/") && relative !== "tech.md") continue;
     model.contractFiles.push(file);
-    if (/^(?:cli|design)\//.test(relative)) model.additionalContractFiles.push(file);
+    // Listed for the index check to report, but it declares no ID and no rule.
+    if (markdownOutsideContractForm(relative) || directoryOutsideContractKinds(relative)) continue;
+    if (relative.startsWith("cli/")) model.additionalContractFiles.push(file);
+    const contractId = relative.includes("/") ? declaredContractId(file, text) : null;
+    if (contractId) model.contracts.push({ id: contractId, file });
     const scan = parseContractRules(file, text);
     model.rules.push(...scan.rules);
-    model.ruleRefs.push(...scan.refs.map((id) => ({ id, file })));
     model.errors.push(...scan.errors);
   }
   const decisions = recordTableFor(texts, "decisions.md", options.specsDir);
@@ -229,7 +232,6 @@ export function buildStoryTreeModel(
   model.acceptanceCriteria.sort((left, right) => left.id.localeCompare(right.id));
   model.examples.sort((left, right) => left.id.localeCompare(right.id));
   model.rules.sort((left, right) => left.id.localeCompare(right.id));
-  model.ruleRefs.sort((left, right) => left.id.localeCompare(right.id));
   return model;
 }
 

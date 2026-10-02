@@ -1,17 +1,9 @@
-# US-0003-0007: doctor 出力 group 分け + skills.integrity downgrade
+# US-0003-0007: Grouped doctor output and a skills.integrity downgrade
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: `qfai doctor` の summary を "errors blocking the active profile" / "warnings advisory of drift" の 2 group に明示的に分割表示する。`skills.integrity` は既定で `warning` severity として後者の group に表示される (message 文言にかかわらず active profile を block しない)。
-- Non-goals: skill 整合性 check 自体のロジック変更
+As an operator, I want the `qfai doctor` summary split into an "errors blocking the active profile" group and a "warnings advisory of drift" group, with `skills.integrity` shown at `warning` severity in the second group by default, so that skill drift never blocks the active profile whatever its message says.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0006
-- Story block: `us-0006-0007` of retired spec-0006
+- Changing the logic of the skill integrity check itself.

@@ -102,7 +102,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
   });
 
   it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {
-    // QFAI:EX-0001-0155-02
+    // QFAI:EX-0001-0150-02
     const content = await skill();
     expect(content).toContain("Each BF written or changed");
     expect(content).toContain(
@@ -113,7 +113,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
   });
 
   it("runs the current BF-0001 SDD validators without error findings", async () => {
-    // QFAI:EX-0001-0155-03
+    // QFAI:EX-0001-0150-03
     const content = await skill();
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
     const result = await validateProject(repoRoot, undefined, {
@@ -170,7 +170,8 @@ describe("SDD preflight stops only when no usable source exists", () => {
     expect(result.packGaps.length).toBeGreaterThan(0);
   });
 
-  // QFAI:EX-0001-0153-01
+  // QFAI:AC-0001-0148-03
+  // QFAI:EX-0001-0148-01
   it("continues when the selected pack has no 06_REQ.md and records it as a gap", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
     roots.push(root);
@@ -183,7 +184,9 @@ describe("SDD preflight stops only when no usable source exists", () => {
     expect(result.packGaps.some((gap) => gap.includes("06_REQ.md"))).toBe(true);
   });
 
-  // QFAI:EX-0001-0156-01
+  // QFAI:EX-0001-0151-01
+  // QFAI:AC-0001-0148-01
+  // QFAI:EX-0001-0148-03
   it("stops when no usable discussion or import-lite source exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
     roots.push(root);

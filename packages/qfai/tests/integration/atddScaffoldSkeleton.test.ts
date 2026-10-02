@@ -69,6 +69,8 @@ describe("atdd scaffold story-tree targets", () => {
     expect(findings[0]?.refs).toEqual([flowId]);
   });
 
+  // QFAI:AC-0001-0073-02
+  // QFAI:EX-0001-0073-05
   it("preserves an existing test and creates no duplicate on a second run", async () => {
     await seedStory([acIds[0] ?? ""]);
     const file = path.join(root, "tests", "integration", storyId, `${acIds[0]}.test.ts`);
@@ -79,6 +81,8 @@ describe("atdd scaffold story-tree targets", () => {
     expect(await readdir(path.dirname(file))).toEqual([`${acIds[0]}.test.ts`]);
   });
 
+  // QFAI:AC-0001-0073-04
+  // QFAI:EX-0001-0073-03
   it("rejects missing, mixed, malformed, undefined, and retired spec targets before writes", async () => {
     await seedStory();
     for (const options of [

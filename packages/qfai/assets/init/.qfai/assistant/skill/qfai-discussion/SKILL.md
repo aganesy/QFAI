@@ -18,12 +18,17 @@ roles:
     product-surface-reviewer,
   ]
 steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq, discussion-uiux]
+requires: [common-review-cycle, common-gate-run]
 mode: interactive-by-default
 ---
 
 ## /qfai-discussion - Exploration Planner
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
 
 Produces the unified 15-file discussion pack at
 `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`, plus the exploration-first UI
@@ -78,7 +83,7 @@ UI-bearing surface including `cli`.
 A **cli-only** pack (`primary_surface: cli`, no visual `secondary_surfaces`
 entry) keeps all three sidecars, but the brand questions do not apply to it:
 `/qfai-prototyping` rejects `cli`, so nothing downstream reads a `visual.*`
-token tree, and `/qfai-sdd`'s `common-design-md` step skips the freeze. The test is
+token tree, and `/qfai-sdd`'s `common-design-md` step writes no `DESIGN.md`. The test is
 the whole classified surface set — `primary_surface` **and** every
 `secondary_surfaces` entry.
 
@@ -89,15 +94,12 @@ After the last step, run one review of the pack under work with
 of the reviewers of the steps that ran: `completion-reviewer` and
 `requirements-reviewer` always, `product-surface-reviewer` when
 `discussion-uiux` ran, and `architecture-reviewer` when the pack records an
-architecture-affecting decision.
+architecture-affecting decision. Roles are selected under
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ### Reviewer Gate
 
 The reviewers check each `## Gate` section of the steps that ran.
-The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
-planning and coverage heuristics are signals, not gates, apply as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
-states.
 
 ## Completion
 
@@ -116,26 +118,14 @@ The full logic, including the UI-bearing conditions, is
 
 ## Completion Message & Next Actions (MUST)
 
-End the user-facing output with a handoff sentence to `/qfai-sdd` in the active user language.
-
-- Japanese output (use this exact sentence): ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
+End the turn with a question listing the next actions, `/qfai-sdd` recommended, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question mode, list them in the report instead.
 
 ## Default Autopilot Policy
 
-- auto-decide:
-  - output formatting
-  - ID / sequence numbering
-  - append-vs-create on subject overlap
-  - equivalent-option pick — demonstrably equivalent, which a design choice is not: moving one here is how a design nobody agreed to gets recorded as decided
 - ask-user:
   - every decision the interview puts on the frontier, over every topic in `references/discussion-coverage-checklist.md`. Running the interview is what this skill performs, so these are its own operations
   - the confirmation that closes the session
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
-  - destructive operations (rm / overwrite / force-push)
-  - version-pin changes (`package.json#version`, branch pin)
-  - scope expansions outside the active envelope
 - hard-required:
-  - brand intent
   - a usable requirement source
   - an identifiable affected BF or an explicit decision to create one
 

@@ -20,8 +20,9 @@ which owns the delegation rules these sit beside.
   - _Accept as Open Question_ or _drop from scope_ — the artifact may reach
     DONE with the finding recorded; the reviewer's outstanding `REVISE` is
     superseded by the recorded user decision. Cite the decision where the
-    stage records decisions (`*_delta.md` / `07_Decisions.md` / a Change
-    Request).
+    stage records decisions: the discussion pack's `99_delta.md`, or a row of
+    `<paths.specsDir>/decisions.md`, which is a `Change request:` row when the
+    decision changes a settled item.
   - _Apply a named fix_ — one **verification review** of exactly that fix is
     permitted and does not consume budget (it is round 2b, not round 3). Its
     remit is the named fix only. It may not raise findings unrelated to that
@@ -68,8 +69,8 @@ which owns the delegation rules these sit beside.
 
     Required before the review runs — all of it, in the stage's evidence:
     1. the originating artifact, and the Round 2b finding verbatim;
-    2. the user's decision, recorded where the stage records decisions
-       (`*_delta.md` / `07_Decisions.md` / a Change Request);
+    2. the user's decision, recorded where the stage records decisions, as
+       _Accept as Open Question_ above names;
     3. what was changed to fix it;
     4. the before and after revision of every artifact the fix touched, as
        digests a reader can re-derive rather than as a round name.
@@ -77,8 +78,9 @@ which owns the delegation rules these sit beside.
     Constraints on the review itself:
     - **Remit is the finding and the named fix, nothing else.** Narrower than a
       round: a corrective reviewer may not re-open the artifact generally. An
-      unrelated finding goes to the owning stage's delta or a Change Request
-      under the convergence rules, and does NOT extend this review.
+      unrelated finding goes to the owning stage's decision record or a
+      `Change request:` row under the convergence rules, and does NOT extend
+      this review.
     - **One independent review, once.** Recorded as `Round: corrective` — not
       `2c`, and not a numbered round, because a number invites a successor.
     - **`PASS` supersedes the Round 2b finding** on the originating artifact
@@ -104,8 +106,7 @@ which owns the delegation rules these sit beside.
 - A finding first raised in round N > 1 MUST state why it was not raisable in
   round N-1 — the fix introduced it, or the fix exposed it. A finding that was
   raisable in round 1 and was not raised is **out of budget**: record it as an
-  Open Question or a `*_delta.md` Decision Record for the owning stage, do not
-  block on it.
+  Open Question or a decision row for the owning stage, do not block on it.
 - A reviewer MUST NOT open a new blocking _class_ of finding after the artifact
   under review has been declared stable. New classes go to the owning stage.
 - **Severity overrides lateness.** The out-of-budget rule is about review

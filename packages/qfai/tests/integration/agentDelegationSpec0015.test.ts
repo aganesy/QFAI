@@ -2,9 +2,9 @@
  * Integration coverage for agent card definitions, package routing defaults,
  * and delegation behavior.
  */
-// QFAI:AC-0001-0167-01
-// QFAI:EX-0001-0169-01
-// QFAI:EX-0001-0169-02
+// QFAI:AC-0001-0161-01
+// QFAI:EX-0001-0163-01
+// QFAI:EX-0001-0163-02
 import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -14,6 +14,7 @@ import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
+import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -118,23 +119,21 @@ describe("agent cards are the only definitions", () => {
 });
 
 describe("routing defaults are package data", () => {
-  // QFAI:EX-0001-0164-01
+  // QFAI:EX-0001-0158-01
   it("keeps routing and review profiles together outside init assets", async () => {
-    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
-      routing: Array<{ step?: string; phases: Array<{ id: string }>; review_profile: string }>;
-    };
+    const routing = await defaultRoutingEntries();
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       profiles: Record<string, unknown>;
       optional_modes: Record<string, unknown>;
     };
-    expect(routing.routing.some((entry) => entry.step === "sdd-triage")).toBe(true);
+    expect(routing.some((entry) => entry.step === "sdd-triage")).toBe(true);
     expect(Object.keys(profiles.profiles)).not.toContain("full-harness");
     expect(profiles.optional_modes).toHaveProperty("pattern-doubler");
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
   });
 
-  // QFAI:AC-0001-0170-02
-  // QFAI:EX-0001-0170-01
+  // QFAI:AC-0001-0164-02
+  // QFAI:EX-0001-0164-01
   it("defines devils-advocate as an advisory mode that needs an alternative", async () => {
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       optional_modes: Record<string, Record<string, unknown>>;
@@ -147,7 +146,7 @@ describe("routing defaults are package data", () => {
   });
 
   it("routes the migration skill through the required three phases", async () => {
-    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
+    const routing = { routing: await defaultRoutingEntries() } as {
       routing: Array<{
         skill: string;
         phases: Array<{ id: string; mandatory_agents: string[]; blocking_agents: string[] }>;
@@ -343,7 +342,7 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
-  // QFAI:EX-0001-0169-06
+  // QFAI:EX-0001-0163-06
   it("retries a saturated delegation and reports an exhausted budget", async () => {
     for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
       const content = await readAsset(file);
@@ -355,8 +354,8 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
-  // QFAI:AC-0001-0169-06
-  // QFAI:EX-0001-0169-07
+  // QFAI:AC-0001-0163-06
+  // QFAI:EX-0001-0163-07
   it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
     // The reviewer-budget branch mandates recording the gate as PENDING;
     // a schema that allows only PASS/REVISE leaves an agent no legal way
@@ -408,10 +407,10 @@ describe("delegation failure taxonomy is actionable", () => {
         "spec",
         "03_contract",
         "cli",
-        "assistant-routing.md",
+        "cli-0001-assistant-routing.md",
       ),
     );
-    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0344 |"));
+    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0001-0004 |"));
     expect(rule).toBeDefined();
     expect(rule).toContain("`unavailable`");
     expect(rule).toContain("`saturated`");

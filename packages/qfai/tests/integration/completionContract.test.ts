@@ -56,7 +56,7 @@ describe("BF completion gate", () => {
   });
 
   it("requires current evidence and independent reviewer PASS for the integrated revision", async () => {
-    // QFAI:EX-0001-0097-04
+    // QFAI:EX-0001-0094-04
     const c = await loadContent();
     expect(c).toMatch(/implementation-reviewer checks code and tests/);
     expect(c).toMatch(
@@ -69,7 +69,7 @@ describe("BF completion gate", () => {
   });
 
   it("requires phase evidence, checkpoint verification and both independent reviewer passes", async () => {
-    // QFAI:EX-0001-0097-01
+    // QFAI:EX-0001-0094-01
     const c = await loadContent();
     expect(c).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
     expect(c).toContain("A fresh validate result has no test-obligation EX finding for this BF");
@@ -81,7 +81,7 @@ describe("BF completion gate", () => {
   });
 
   it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
-    // QFAI:EX-0001-0097-02
+    // QFAI:EX-0001-0094-02
     const c = await loadContent();
     expect(c).toContain("including decision exceptions");
     expect(c).toContain("fresh validate result has no test-obligation EX finding for this BF");
@@ -91,7 +91,7 @@ describe("BF completion gate", () => {
   });
 
   it("rejects stale phase evidence from an earlier revision", async () => {
-    // QFAI:EX-0001-0097-03
+    // QFAI:EX-0001-0094-03
     const c = await loadContent();
     const parallelPolicy = await readFile(
       path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
@@ -104,14 +104,14 @@ describe("BF completion gate", () => {
   });
 
   it("rejects a phase entry with a status and no command or result", async () => {
-    // QFAI:EX-0001-0097-07
+    // QFAI:EX-0001-0094-07
     const c = await loadContent();
     expect(c).toContain("Evidence without a command and result pair does not prove a");
     expect(c).toMatch(/RED, GREEN, and Refactor commands and observed\s+results/);
   });
 
   it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {
-    // QFAI:EX-0001-0097-05
+    // QFAI:EX-0001-0094-05
     const c = await loadContent();
     const checkpoint = await readFile(
       path.join(path.dirname(implementSkillPath), "references", "checkpoint-verification.md"),
@@ -126,7 +126,8 @@ describe("BF completion gate", () => {
   });
 
   it("stops selection when the scoped result is missing, stale or from another profile", async () => {
-    // QFAI:EX-0001-0097-06
+    // QFAI:AC-0001-0094-05
+    // QFAI:EX-0001-0094-06
     const c = await loadContent();
     expect(c).toContain("Read its `validate.flow-<ids>.json` result even when the command exits");
     expect(c).toContain("the file exists, `profile` is");

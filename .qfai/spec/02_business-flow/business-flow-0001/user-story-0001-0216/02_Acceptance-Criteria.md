@@ -3,57 +3,29 @@
 ## Criteria
 
 ```gherkin
-Feature: Run only the steps a change needs, reviewed once per stage
+Feature: Pass a step with evidence when it has nothing to write
+  # AC-0001-0216-01
+  Scenario: A pass-through step runs and records why it wrote nothing
+    Given a work order that marks a step pass-through
+    When the step finds nothing to write
+    Then its result records a pass with the reason and a record of what it read
+    And the step stays in the work order and the result, reviewed like any other
 
-# AC-0001-0216-01
-# Parent: US-0001-0216
-Scenario: A stage runs only the steps its plan and proposal make active
-  Given a built-in plan whose stage lists its steps in order, some gated by `proposed`
-  And a checked route proposal whose `optionalSteps` names some of those gated steps
-  When the core issues the stage's work order
-  Then the work order names every step of the stage whose predicate holds, in plan order
-  And a step gated by `proposed` is named only when `optionalSteps` lists it
+  # AC-0001-0216-02
+  Scenario: Only the listed steps may pass
+    Given a result that records a pass for a step its work order does not mark pass-through
+    When `accept` checks it
+    Then it is refused
 
-# AC-0001-0216-02
-# Parent: US-0001-0216
-Scenario: A proposal may only propose a step its plan leaves to the proposal
-  Given a route proposal whose `optionalSteps` names a step
-  When the core checks the proposal
-  Then it is refused `proposal-refused` with reason `stage-set` when the plan does not gate that step with `proposed`
-  And routing stays where it was
+  # AC-0001-0216-03
+  Scenario: A pass is refused while the step's obligation remains
+    Given a pass for a step whose obligation check shows work left
+    When `accept` checks it
+    Then it is refused and the run is unchanged
 
-# AC-0001-0216-03
-# Parent: US-0001-0216
-Scenario: A stage that needs an unproposed step goes back to routing
-  Given a stage whose work order does not name a step the plan gates with `proposed`
-  When the stage finds that the change needs that step
-  Then it runs no step its work order does not name
-  And its result returns the run to `routing`
-  And a checked proposal that lists the step makes the next work order of that stage name it
-
-# AC-0001-0216-04
-# Parent: US-0001-0216
-Scenario: A work order carries its steps and the union of their reviewers
-  Given a stage whose active steps are known
-  When the core issues its work order
-  Then the work order lists each active step by name and by its project-root-relative `STEP.md` path, in plan order
-  And it names no executor skill and no operation
-  And its `requiredReviewerRoles` are the union of the `always_required` reviewers of each active step's review profile, each role once
-  And a step with no review profile adds no reviewer
-
-# AC-0001-0216-05
-# Parent: US-0001-0216
-Scenario: A stage is reviewed once, after its last step
-  Given a stage work order naming several steps
-  When the stage returns its result
-  Then one result answers the whole work order
-  And its review results hold one verdict for each required reviewer role, given after the last step
-
-# AC-0001-0216-06
-# Parent: US-0001-0216
-Scenario: A restored authorization raises the reviewers of implementation and acceptance steps only
-  Given a run whose routing result carries `authorization-restored`
-  When the core issues a work order
-  Then a work order holding a step owned by `qfai-implement` or `qfai-atdd` takes the `implementation-heavy` reviewers for that step
-  And a work order holding no such step keeps the union of its steps' own profiles
+  # AC-0001-0216-04
+  Scenario: Each pass-through step states when it passes
+    Given the `STEP.md` of a step on the pass-through list
+    When an agent reads it
+    Then it states what the step reads first and what shows it has nothing to write
 ```

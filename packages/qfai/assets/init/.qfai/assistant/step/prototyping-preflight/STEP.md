@@ -1,7 +1,7 @@
 ---
 name: prototyping-preflight
 owner: qfai-prototyping
-purpose: "Confirm the UI contracts, the locked DESIGN.md and the Playwright environment the loop needs."
+purpose: "Confirm the UI contracts, the root DESIGN.md and the Playwright environment the loop needs."
 requires: [common-design-md]
 roles: [orchestrator, devops-ci-engineer, product-experience-architect, completion-reviewer]
 routing-profile: default
@@ -16,8 +16,7 @@ changes no file.
 
 - The UI contracts under `<contractsDir>/ui/` that `prototyping-grill` put in
   scope.
-- Root `DESIGN.md` and `<contractsDir>/design/DESIGN.md.lock.yaml`, through
-  `common-design-md`.
+- Root `DESIGN.md`, through `common-design-md`.
 
 ## Writes
 
@@ -33,11 +32,11 @@ Nothing. The CLI checks are read-only.
   UI-bearing contracts at cycle 0 is a deterministic no-op exit `0`, which ends
   the run.
 - Confirm `<contractsDir>/ui/*.yaml` exists.
-- Run `common-design-md` § Check against the lock
-  (`.qfai/assistant/step/common-design-md/STEP.md#check-against-the-lock`). It
+- Run `common-design-md` § Check before building
+  (`.qfai/assistant/step/common-design-md/STEP.md#check-before-building`). It
   runs `npx qfai prototyping preflight --target-url <url>` and stops on a
-  mismatch. Run only that section: this step neither authors nor freezes
-  `DESIGN.md`. The recovery is `prototyping-recover` § Lock drift.
+  missing, unparseable or sample `DESIGN.md`. Run only that section: this step
+  does not author `DESIGN.md`.
 
 ### Step 2-B — Verify environment preconditions
 

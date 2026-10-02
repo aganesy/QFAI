@@ -1,4 +1,8 @@
+import type { FailOn } from "../config.js";
+import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
+import type { WorkflowModifierEntry } from "./modifiers.js";
 import type { WorkflowMeasurement } from "./parse.js";
+import type { PlanBranchPoint } from "./planFormat.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
@@ -29,6 +33,27 @@ export interface WorkflowQuestion {
   story?: WorkflowStorySlot;
   // On a question a story-authoring stage opened: its answer authorizes that stage's change.
   changeRequest?: true;
+  // On a question the core opens itself: which route to take, whether to run the plan, whether
+  // to release, or whether to change route once more.
+  purpose?: "route" | "plan" | "release" | "reroute";
+}
+
+// A decision a step took itself rather than put to the operator, and why.
+export interface WorkflowAdopted {
+  step: string;
+  decision: string;
+  reason: string;
+}
+
+// A route the unsure reading of a request could take, with its plan and the rule that gave it.
+export interface WorkflowRouteCandidate {
+  route: string;
+  rule: number | null;
+  clause: number;
+  plan: WorkflowPlan;
+  flowId?: string;
+  // The route's default modifiers, which the run gains when the route is chosen.
+  modifiers: WorkflowModifierEntry[];
 }
 
 // The run's own view of the bound flow's obligations when a work order was issued.
@@ -60,6 +85,10 @@ export interface WorkflowEvent {
   flowId?: string;
   plan?: WorkflowPlan;
   notRun?: WorkflowNotRun;
+  // On an accepted stage result: each pass-through step that recorded a pass.
+  passes?: WorkflowPass[];
+  // On an accepted `triage-close` result: how it closed the request.
+  closure?: WorkflowClosure;
   seamRequest?: { targetTestId: string };
   repairs?: WorkflowDebt[];
   debts?: WorkflowDebt[];
@@ -82,6 +111,56 @@ export interface WorkflowEvent {
   recordsAtIssue?: WorkflowRecordsAtIssue;
   // On an accepted story-authoring result: the `decisions.md` rows it appended.
   appendedRows?: string[];
+  // On `route-decided`: the route, the decision rule that chose it (`null` for the fallback),
+  // and the extraction it was chosen from.
+  route?: string;
+  rule?: number | null;
+  extraction?: WorkflowExtraction;
+  // The modifiers this event adds to the run.
+  modifiers?: WorkflowModifierEntry[];
+  // The decisions this event records as adopted.
+  adopted?: WorkflowAdopted[];
+  // On routing that asks which route to take: the candidate routes.
+  candidates?: WorkflowRouteCandidate[];
+  // On a re-route, and on the result that asks the operator for one: where the run goes.
+  reroute?: WorkflowReroute;
+  // On an accepted stage result: the revision it was accepted at.
+  revision?: string;
+  // On the plan a re-route settled: the step an earlier receipt already satisfies.
+  reused?: WorkflowReusedStep;
+}
+
+// Where a declared branch point sends the run: the destination route, the step and the outcome
+// that sent it, and for a destination the decision rules gave, the rule that gave it.
+export interface WorkflowReroute {
+  route: string;
+  fromStep: string;
+  outcome: string;
+  rule?: number | null;
+}
+
+// One re-route the run made, as the run summary lists it.
+export interface WorkflowRerouteRecord {
+  from: string;
+  to: string;
+  step: string;
+  outcome: string;
+}
+
+// The destination's first step, and the receipt accepted at the same revision that satisfies it.
+export interface WorkflowReusedStep {
+  stageInstanceId: string;
+  step: string;
+  receiptRef: string;
+}
+
+// What a step at a branch point other than `implement-diagnose` reports: its outcome, the
+// destination it names among several, and for a destination the decision rules give, the reading
+// they are given.
+export interface WorkflowBranch {
+  outcome: string;
+  route?: string;
+  extraction?: RoutingReading;
 }
 
 // A path an in-force change request changed outside the run, admitted into the run change
@@ -170,6 +249,7 @@ export type UnmetCondition =
   | "gate-failed"
   | "diff-out-of-scope"
   | "approval-unanswered"
+  | "release-unapproved"
   | "debt-open"
   | "tool-drift"
   | "policy-drift"
@@ -186,6 +266,24 @@ export type CompletionTarget = "qfai_done" | "working_tree";
 
 export type WorkflowNotRun =
   { kind: "not_applicable"; reason?: string } | { kind: "reused"; receiptRef: string };
+
+// A pass-through step that ran and had nothing to write: why, and the git-ignored record of what
+// it read.
+export interface WorkflowPass {
+  step: string;
+  reason: string;
+  evidenceRef: string;
+}
+
+// One step of a work order, as the stage runs it.
+export interface WorkflowStepRef {
+  name: string;
+  path: string;
+  mode: string | null;
+  passThrough: boolean;
+  decisionPoint: "user" | "release" | null;
+  branchPoint: boolean;
+}
 
 export interface WorkflowBinding {
   slotId: string;
@@ -205,8 +303,8 @@ export interface WorkflowWorkOrder {
   // The routing work order's executor and operation, which no plan names.
   executor?: { skill: string };
   operation?: string;
-  // A plan stage's active steps, in order, each with its entry file's project-relative path.
-  steps?: { name: string; path: string }[];
+  // Every step of a plan stage, in order, each with its entry file's project-relative path.
+  steps?: WorkflowStepRef[];
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
   checkpointRef?: string;
@@ -218,6 +316,10 @@ export interface WorkflowWorkOrder {
   requiredReviewerRoles?: string[];
   actorHistory?: WorkflowActor[];
   settled?: WorkflowSettled;
+  // The run's modifiers when the work order was issued.
+  modifiers?: string[];
+  // On a routing work order a re-route issued: the destination and what sent the run there.
+  reroute?: Omit<WorkflowReroute, "rule">;
 }
 
 export interface WorkflowActor {
@@ -265,6 +367,8 @@ export interface WorkflowVerdict {
   classedReceipts?: WorkflowReceiptClass[];
   retry?: { attempt: number; nextDelaySeconds: number };
   halt?: WorkflowHalt;
+  // At `finish`: every decision the run adopted, which the completion report lists.
+  adopted?: WorkflowAdopted[];
   error?:
     | { code: "invalid-input"; message: string; reasons?: InputRefusal[] }
     | {
@@ -308,7 +412,11 @@ export type InputRefusalReason =
   | "example-added"
   | "record-rewritten"
   | "record-unauthorized"
-  | "rule-changed";
+  | "rule-changed"
+  | "pass-not-allowed"
+  | "pass-obligation-open"
+  | "decision-unasked"
+  | "branch-undeclared";
 
 export interface InputRefusal {
   reason: InputRefusalReason;
@@ -321,7 +429,6 @@ export type ProposalRefusalReason =
   | "protected-surface"
   | "scope-escape"
   | "unresolved-approval"
-  | "stage-set"
   | "flow-binding";
 
 export interface ProposalRefusal {
@@ -329,18 +436,29 @@ export interface ProposalRefusal {
   subject: string;
 }
 
-// One step of a plan stage, with the step predicate it runs under when it has one.
+// One step of a plan stage: whether it may pass with evidence when it has nothing to write, the
+// mode the route fixes for it, and whether the route declares it a decision, release or branch
+// point.
 export interface PlanStep {
   name: string;
-  when?: string;
+  passThrough?: boolean;
+  mode?: string;
+  decisionPoint?: "user" | "release";
+  branchPoint?: boolean;
+}
+
+// How a `triage-close` result closed the request, and the further requests it found.
+export interface WorkflowClosure {
+  outcome: string;
+  followUps: { goal: string; reason: string }[];
 }
 
 export type PlanStages = {
   stageInstanceId: string;
   stageKind: string;
   steps?: PlanStep[];
-  when?: string;
   effects?: string[];
+  review?: "none";
 }[];
 
 export interface WorkflowPlan {
@@ -351,8 +469,6 @@ export interface WorkflowPlan {
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
   riskSignals?: string[];
-  // The `proposed` steps the checked proposal asked for.
-  optionalSteps?: string[];
 }
 
 export interface WorkflowDiagnosis {
@@ -373,10 +489,10 @@ export interface WorkflowSnapshot {
   scopeDigest?: string;
   plan?: {
     route: string;
+    goal?: string;
     stages: PlanStages;
     writeScope?: string[];
     riskSignals?: string[];
-    optionalSteps?: string[];
   };
   flowBinding?: { flowId: string };
   diagnosis?: WorkflowDiagnosis | null;
@@ -402,8 +518,6 @@ export interface WorkflowSnapshot {
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   // The results of stages issued out of plan order to repair a finding.
   repairedStages?: WorkflowAcceptedStage[];
-  // The current plan's stages the run skipped because their predicate did not hold.
-  skippedStages?: string[];
   // The current plan's stages the run has issued a work order for.
   issuedStages?: string[];
   // The stage results of every plan a replan replaced, kept for their receipts and debts.
@@ -445,6 +559,24 @@ export interface WorkflowSnapshot {
   appendedRows?: string[];
   // The bounded adjustments `resume` made to the run's starting state.
   startAdjustments?: WorkflowStartAdjustment[];
+  // The route the decision rules chose and the rule that chose it.
+  routeDecision?: { route: string; rule: number | null };
+  // The facts routing read out of the request.
+  extraction?: WorkflowExtraction;
+  // Each modifier the run carries, with where it came from. It only grows.
+  modifiers?: WorkflowModifierEntry[];
+  // The candidate routes while the question choosing among them is open.
+  routeCandidates?: WorkflowRouteCandidate[];
+  // The authorization that approved the release, once one is recorded.
+  releaseApproval?: string;
+  // Every decision the run adopted rather than put to the operator.
+  adopted?: WorkflowAdopted[];
+  // The destination a declared branch point fixed, until routing settles its plan.
+  pendingReroute?: WorkflowReroute;
+  // Every re-route the run made, in order.
+  reroutes?: WorkflowRerouteRecord[];
+  // The step of the current plan an earlier receipt satisfied, which its stage runs without.
+  reusedStep?: WorkflowReusedStep;
 }
 
 export interface WorkflowAuthorizationRef {
@@ -477,6 +609,13 @@ export interface WorkflowAcceptedStage {
   gateResults?: WorkflowGateReceipt[];
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
+  passes?: WorkflowPass[];
+  closure?: WorkflowClosure;
+  // The steps the stage ran, and the revision its result was accepted at.
+  steps?: string[];
+  revision?: string;
+  // The receipt that satisfied the stage in place of a run of it.
+  reused?: string;
 }
 
 export interface WorkflowReview {
@@ -503,21 +642,17 @@ export interface WorkflowNewStory {
 
 export interface WorkflowProposal {
   requestKind: string;
-  candidateRoute: string | null;
+  extraction: WorkflowExtraction;
   goal?: string;
   affectedFlowIds?: string[];
   riskSignals?: string[];
   unresolvedQuestions?: unknown[];
   proposedWriteScope?: string[];
   protectedTargets?: string[];
-  confidence?: number;
   rationale?: string;
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
   newStories: WorkflowNewStory[];
-  requiredStages: string[];
-  // The steps the plan gates with `proposed` that this request needs.
-  optionalSteps?: string[];
 }
 
 export interface WorkflowResult {
@@ -530,9 +665,14 @@ export interface WorkflowResult {
   expectedSequence: number;
   outcome: string;
   diagnosis?: WorkflowDiagnosis;
+  branch?: WorkflowBranch;
   bindings?: WorkflowBinding[];
   notRun?: WorkflowNotRun;
+  passes?: WorkflowPass[];
+  adopted?: WorkflowAdopted[];
+  raise?: { modifier: string; reason: string }[];
   debts?: WorkflowDebt[];
+  closure?: WorkflowClosure;
   seamRequest?: { targetTestId: string };
   seam?: { targetTestId: string; observation: string };
   testObservation?: string;
@@ -600,12 +740,27 @@ export interface WorkflowFacts {
   specsDir?: string;
   contractsDir?: string;
   pathExistence?: Record<string, boolean>;
+  // Whether a BF or AC of the bound flow still lacks its acceptance-layer test, which keeps
+  // `atdd-author` from passing.
   acceptanceObligationsUnmet?: boolean;
-  // Whether a UI contract serves the bound flow, which a prototype stage needs.
-  prototypeDecisionNeeded?: boolean;
-  plans?: Record<string, { route: string; stages: PlanStages }>;
+  plans?: Record<
+    string,
+    {
+      route: string;
+      stages: PlanStages;
+      family?: string;
+      defaultModifiers?: string[];
+      branchPoints?: PlanBranchPoint[];
+    }
+  >;
+  // The always-required reviewers of the `heavy` review profile, which `review:heavy` adds.
+  heavyReviewerRoles?: string[];
+  // Each `decisions.md` row and whether it is in force.
+  decisionRows?: { rowId: string; inForce: boolean }[];
   // The business flows the story tree declares.
   flows?: string[];
+  // Where the project keeps its discussion packs.
+  discussionDir?: string;
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
   fileDigests?: Record<string, string>;
   obligations?: WorkflowObligationFacts;
@@ -624,6 +779,8 @@ export interface WorkflowFacts {
   changedRealPaths?: Record<string, string | null>;
   // The run's cumulative changed paths, observed at this write operation.
   observedChangedPaths?: string[];
+  // The commit checked out at this write operation, `null` before the first commit.
+  head?: string | null;
   // The worktree and branch this operation runs in, and the watched digests now.
   identity?: WorkflowIdentity;
   policyNow?: WorkflowPolicyDigests;
@@ -634,7 +791,7 @@ export interface WorkflowFacts {
 // What `finish` observes: validate run in process, the offered verify report, the tool and
 // policy digests, and the run's cumulative changed and uncommitted paths.
 export interface WorkflowCompletionFacts {
-  validate: { failOn: Severity; findings: (FindingIdentity & { severity: Severity })[] };
+  validate: { failOn: FailOn; findings: (FindingIdentity & { severity: Severity })[] };
   verifyReport?: { runId: string; stageInstanceId: string; status: string; scope: string };
   toolVersion: string;
   cliEntryDigest: string;

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
 
+import { readRoutingDefaultsFiles } from "../../src/core/routingDefaults.js";
 import { nextHeadingAt } from "./recordProse.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -30,6 +31,25 @@ export function readShipped(relativePath: string): Promise<string> {
 /** A file under the package defaults, by its path relative to `assets/defaults`. */
 export function readDefault(relativePath: string): Promise<string> {
   return readFile(path.join(PACKAGE_DEFAULTS, relativePath), "utf-8");
+}
+
+/** Every routing defaults file's text, joined in the order the package reads them. */
+export async function readDefaultRoutingText(): Promise<string> {
+  return (await readRoutingDefaultsFiles()).map((file) => file.text).join("\n");
+}
+
+function isEntry(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The package's routing defaults as the one `routing:` list the package reads them as. */
+export async function defaultRoutingEntries(): Promise<Record<string, unknown>[]> {
+  return (await readRoutingDefaultsFiles()).flatMap((file) => {
+    const parsed: unknown = parse(file.text);
+    const routing: unknown = isEntry(parsed) ? parsed.routing : undefined;
+    if (!Array.isArray(routing)) throw new Error(`${file.rel} holds no routing list`);
+    return routing.filter(isEntry);
+  });
 }
 
 /**
@@ -63,30 +83,79 @@ export const PLAN_STEP_OWNERS = [
   "qfai-discussion",
   "qfai-prototyping",
   "qfai-maintain",
+  "qfai-triage",
 ] as const;
 
-/** The five built-in plans, one per route. */
-export const PLAN_ROUTES = ["direct", "bugfix", "bounded-change", "feature", "discovery"] as const;
+/** The built-in plans, one per route of the catalog. */
+export const PLAN_ROUTES = [
+  "close-no-change",
+  "answer-question",
+  "investigate-question",
+  "request-info",
+  "close-duplicate",
+  "cluster-reports",
+  "decide-acceptance",
+  "decide-design",
+  "decompose-epic",
+  "retriage-bundle",
+  "repair-consistency",
+  "sweep-guard",
+  "retire-mechanism",
+  "restate-records",
+  "add-feature",
+  "prototype-feature",
+  "change-compatibility",
+  "apply-settled-spec",
+  "apply-settled-build",
+  "refactor-code",
+  "edit-text",
+  "fix-defect",
+  "fix-regression",
+  "improve-performance",
+  "fix-vulnerability",
+  "fix-crash",
+  "fix-intermittent",
+  "fix-env-bound",
+  "fix-conformance",
+  "quarantine-flaky",
+  "repair-test",
+  "fix-red-main",
+  "change-tooling",
+  "bump-dependency",
+  "revert-culprit",
+  "hand-off-operation",
+  "backport-fix",
+  "draft-release-notes",
+  "verify-manually",
+] as const;
 
-/** One step of a built-in plan stage, with the predicate of its own it carries, if any. */
+/** One step of a built-in plan stage, whether the plan marks it pass-through, and its mode. */
 export interface ShippedPlanStep {
   name: string;
-  when?: string;
+  passThrough?: boolean;
+  mode?: string;
 }
 
 function planStepOf(entry: unknown): ShippedPlanStep[] {
   if (typeof entry === "string") return [{ name: entry }];
   if (typeof entry !== "object" || entry === null || !("step" in entry)) return [];
   const { step } = entry;
-  const when = "when" in entry ? entry.when : undefined;
+  const passThrough = "passThrough" in entry ? entry.passThrough : undefined;
+  const mode = "mode" in entry ? entry.mode : undefined;
   if (typeof step !== "string") return [];
-  return [typeof when === "string" ? { name: step, when } : { name: step }];
+  return [
+    {
+      name: step,
+      ...(passThrough === true ? { passThrough } : {}),
+      ...(typeof mode === "string" ? { mode } : {}),
+    },
+  ];
 }
 
-/** Each stage of a built-in plan: its ID, kind and predicate, and its steps in order. */
+/** Each stage of a built-in plan: its ID and kind, and its steps in order. */
 export async function planStageSteps(
   route: string,
-): Promise<{ id: string; kind: string; when: string; steps: ShippedPlanStep[] }[]> {
+): Promise<{ id: string; kind: string; steps: ShippedPlanStep[] }[]> {
   const parsed: unknown = parse(await readDefault(`workflows/${route}.yml`));
   const stages: unknown[] =
     typeof parsed === "object" && parsed !== null && "stages" in parsed
@@ -102,7 +171,6 @@ export async function planStageSteps(
       {
         id: String(record.id),
         kind: String(record.kind),
-        when: String(record.when),
         steps: steps.flatMap(planStepOf),
       },
     ];

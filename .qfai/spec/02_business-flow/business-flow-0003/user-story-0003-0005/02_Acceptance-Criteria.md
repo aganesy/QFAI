@@ -3,19 +3,16 @@
 ## Criteria
 
 ```gherkin
-Feature: JSON 診断出力
+Feature: JSON diagnosis output
+  # AC-0003-0005-01
+  Scenario: The diagnosis is printed as JSON
+    Given `qfai.config.yaml` exists
+    When `qfai doctor --format json` runs
+    Then root, config, checks and summary are printed as JSON
 
-# AC-0003-0005-01
-# Parent: US-0003-0005
-Scenario: JSON 出力
-  Given qfai.config.yaml が存在する
-  When `qfai doctor --format json` を実行する
-  Then JSON 形式で root, config, checks, summary が出力される
-
-# AC-0003-0005-02
-# Parent: US-0003-0005
-Scenario: --out ファイル出力
-  Given doctor チェックが完了する
-  When `qfai doctor --format json --out /tmp/doctor.json` を実行する
-  Then /tmp/doctor.json に診断結果が出力される
+  # AC-0003-0005-02
+  Scenario: `--out` writes the diagnosis to a file
+    Given the doctor checks complete
+    When `qfai doctor --format json --out /tmp/doctor.json` runs
+    Then the diagnosis is written to `/tmp/doctor.json`
 ```

@@ -18,7 +18,7 @@ import {
 import { loadConfig } from "../../core/config.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
-import { error as logError, info as logInfo } from "../lib/logger.js";
+import { error as logError, info as logInfo } from "../../core/logger.js";
 
 export type AtddScaffoldOptions = {
   root: string;

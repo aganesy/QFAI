@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: レガシー警告
-
-# AC-0003-0004-01
-# Parent: US-0003-0004
-Scenario: レガシー警告
-  Given レガシーファイルレイアウトが検出される
-  When `qfai doctor` を実行する
-  Then レガシー警告が表示される
+Feature: Legacy layout warning
+  # AC-0003-0004-01
+  Scenario: A legacy file layout is warned about
+    Given a legacy file layout is detected
+    When `qfai doctor` runs
+    Then a legacy warning is shown
 ```

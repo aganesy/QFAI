@@ -5,8 +5,9 @@ import {
   isRunChange,
   refusedInput,
 } from "./common.js";
-import { activeStages } from "./stages.js";
-import { activeSteps, ownerOfSteps, stepNamesOf } from "./steps.js";
+import { carries } from "./modifiers.js";
+import { endsAtTriageClose, flowBindingOf, runsVerifyBlock } from "./stages.js";
+import { ownerOfSteps, stageSteps, stepNamesOf } from "./steps.js";
 import type {
   FindingIdentity,
   Severity,
@@ -30,8 +31,10 @@ function findingKey(finding: FindingIdentity): string {
   return JSON.stringify([finding.code, finding.file, [...finding.refs].sort()]);
 }
 
+// Under `failOn: never` no finding fails the gate, while each still keeps its debt open.
 function failingFindings(completion: WorkflowCompletionFacts): FindingIdentity[] {
   const { failOn, findings } = completion.validate;
+  if (failOn === "never") return [];
   return findings
     .filter((finding) => SEVERITY_RANK[finding.severity] >= SEVERITY_RANK[failOn])
     .map(({ code, file, refs }) => ({ code, file, refs }));
@@ -67,24 +70,26 @@ function runStateUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   return unmetOf("run-waiting", [named ?? "blocked"], halt?.owner);
 }
 
-function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowUnmet[] {
+function stageUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   const plan = snapshot.plan;
   if (!plan) return [];
   const accepted = snapshot.acceptedStages ?? [];
   const isAccepted = (stageInstanceId: string) =>
     accepted.some((stage) => stage.stageInstanceId === stageInstanceId);
-  return activeStages(plan, snapshot, facts)
+  return plan.stages
     .filter((stage) => stage.stageKind !== "verify" && !isAccepted(stage.stageInstanceId))
     .flatMap((stage) =>
       unmetOf(
         "stage-unaccepted",
         [stage.stageInstanceId],
-        ownerOfSteps(activeSteps(stage, plan, snapshot.diagnosis)),
+        ownerOfSteps(stageSteps(stage).map((step) => step.name)),
       ),
     );
 }
 
+// A run with a plan needs the verify report only when its route runs the verify block.
 function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  if (snapshot.plan && !runsVerifyBlock(snapshot.plan.stages)) return [];
   const verifyStages = (snapshot.acceptedStages ?? []).filter(
     (stage) => stage.stageKind === "verify",
   );
@@ -102,7 +107,9 @@ function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionF
     : unmetOf("gate-failed", ["verify"]);
 }
 
+// A route that ends at `triage-close` changes nothing a gatekeeper has to pass.
 function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  if (endsAtTriageClose(snapshot.plan?.stages ?? [])) return [];
   const actorHistory = snapshot.actorHistory ?? [];
   const independentPass = (snapshot.acceptedStages ?? [])
     .flatMap((stage) => stage.reviewResults ?? [])
@@ -113,6 +120,14 @@ function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
         !isAuthorOrRecommender(actorHistory, review.agentInstance),
     );
   return independentPass ? [] : unmetOf("review-missing", ["qa-gatekeeper"]);
+}
+
+// A run under `gate:release` completes only once a release approval is recorded. While the
+// release question is open, the run's wait is what `finish` names.
+function releaseUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  if (!carries(snapshot, "gate:release") || snapshot.releaseApproval) return [];
+  const asking = (snapshot.openQuestions ?? []).some((question) => question.purpose === "release");
+  return asking ? [] : unmetOf("release-unapproved", ["gate:release"]);
 }
 
 function inForceChangeRequests(facts: WorkflowFacts) {
@@ -166,8 +181,10 @@ function scopeUnmet(
       : [];
   const escaped = escapedPaths(snapshot, completion.changedPaths, facts);
   const approval = snapshot.approval;
+  const unbound =
+    flowBindingOf(snapshot.plan?.stages ?? []) === "required" && !snapshot.flowBinding;
   const unanswered =
-    (approval && !approval.authorizationId) || (snapshot.plan?.route === "feature" && !approval)
+    (approval && !approval.authorizationId) || (unbound && !approval)
       ? [approval?.target?.slotId ?? "CREATE"]
       : [];
   return [
@@ -224,11 +241,12 @@ function completionUnmet(
 ): WorkflowUnmet[] {
   const unmet = [
     ...runStateUnmet(snapshot),
-    ...stageUnmet(snapshot, facts),
+    ...stageUnmet(snapshot),
     ...verifyUnmet(snapshot, completion),
     ...reviewUnmet(snapshot),
     ...validateGate(snapshot, failingFindings(completion)),
     ...scopeUnmet(snapshot, facts, completion),
+    ...releaseUnmet(snapshot),
     ...debtUnmet(snapshot, completion),
     ...driftUnmet(snapshot, completion),
     ...unmetOf("uncommitted", completion.uncommittedPaths),
@@ -275,13 +293,15 @@ export function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): 
   const receipts: WorkflowGateReceipt[] = [
     { gateId: "validate", verdict, trustLevel: "cli_observed" },
   ];
+  const adopted = snapshot.adopted?.length ? { adopted: snapshot.adopted } : {};
   if (unmet.length > 0 || run.state !== "ready") {
-    return { verdict: { ok: true, run, unmet, ...delivery, receipts }, events: [] };
+    return { verdict: { ok: true, run, unmet, ...delivery, receipts, ...adopted }, events: [] };
   }
   const completed = { ...run, state: "completed", sequence: run.sequence + 1 };
   const validate = { verdict, findings: failing, trustLevel: "cli_observed" as const };
+  const target = completionTarget;
   return {
-    verdict: { ok: true, run: completed, target: completionTarget, unmet, ...delivery, receipts },
+    verdict: { ok: true, run: completed, target, unmet, ...delivery, receipts, ...adopted },
     events: [{ type: "validated-final-result-and-target", validate }],
   };
 }

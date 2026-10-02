@@ -2,9 +2,9 @@
  * Integration: the installed shipped-workflow drift advisory is severity `info`
  * and leaves `qfai doctor --fail-on error` at exit 0.
  *
- * TC-0006-0029 (AC-0006-0022 / BR-0006-0019) — Setup 「`workflows.integrity` が
- * drift を返すフィクスチャ」, Action 「`runDoctor({ root, format: 'text', failOn:
- * 'error' })` 相当を呼び、finding severity と `shouldFailDoctor` の判定を観測する」.
+ * The test case for BR-0008-0019 — Setup "a fixture on which `workflows.integrity`
+ * returns drift", Action "call the equivalent of `runDoctor({ root, format: 'text', failOn:
+ * 'error' })` and observe the finding severity and the verdict of `shouldFailDoctor`".
  *
  * The TC carries THREE Verify bullets and this row owns the FIRST TWO: the finding
  * is included at `severity: 'info'`, and `shouldFailDoctor` returns false so the
@@ -171,7 +171,7 @@ describe("TC-0006-0029 (TDD-0031): the drift advisory is severity info and leave
       "the rendered run must carry the workflows.integrity finding, or its exit code belongs to some other code path",
     ).toContain("workflows.integrity");
 
-    // CLAIM, Verify bullet 1 — 「finding が `severity: 'info'` で含まれる」.
+    // CLAIM, Verify bullet 1 — "the finding is included with `severity: 'info'`".
     // Observed at the registration site rather than in the rendered text, matching
     // every other suite in this family: severity is decided at `addCheck`, so a finding the
     // reader reports but nobody registers must fail here instead of passing on the
@@ -181,8 +181,8 @@ describe("TC-0006-0029 (TDD-0031): the drift advisory is severity info and leave
       .soft(check?.severity, "an installed shipped-workflow drift finding is an info advisory")
       .toBe("info");
 
-    // CLAIM, Verify bullet 2 — 「`shouldFailDoctor` が false を返す (exit 0 —
-    // advisory は exit code を変えない)」. What this line cannot see is in the
+    // CLAIM, Verify bullet 2 — "`shouldFailDoctor` returns false (exit 0 —
+    // an advisory does not change the exit code)". What this line cannot see is in the
     // header: it is invariant under `info` → `warning`, so it discriminates the
     // `error` severity alone and the `--fail-on warning` leg (TDD-0034 /
     // TDD-0035) owns the rest.

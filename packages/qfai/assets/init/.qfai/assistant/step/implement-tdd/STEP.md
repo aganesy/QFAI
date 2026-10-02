@@ -1,7 +1,7 @@
 ---
 name: implement-tdd
 owner: qfai-implement
-purpose: "Select each owed example of one business flow from a fresh validator result and take it through an observed Red, Green and Refactor cycle."
+purpose: "Select each owed example of one business flow from a fresh validator result, take it through an observed Red, Green and Refactor cycle, and align every surface that does not own the truth."
 requires:
   - common-steering-refresh
   - common-gate-run
@@ -63,7 +63,9 @@ states the case is worked as an EX no test annotates, and where none does,
    `<paths.contractsDir>/tech.md`, as
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`
    states. Obtain Test, Lint, Typecheck, and Build commands only from that
-   section, and run each gate with `common-gate-run`.
+   section, and run each gate with `common-gate-run`. Read its
+   `## Architecture` table too: place each new module in one layer, and
+   import only from the layers that layer's row lists.
 3. Read the current `/qfai-atdd` handoff in
    `.qfai/evidence/atdd-BF-NNNN.md`. The file is local; where this checkout
    lacks it, find the tests by their `QFAI:BF-NNNN` and
@@ -172,6 +174,23 @@ result. Those three review once, at the end of the stage, as
 affected suite selection. A reviewer
 REVISE follows `.qfai/assistant/rule/review-convergence.md`; repair and
 re-review the current revision. The author does not certify their own result.
+
+## Align the other surfaces
+
+Where the run recorded which of two disagreeing surfaces owns the truth, the
+other surfaces follow it once the examples are done:
+
+1. Change each surface that does not own the truth to match: documents, help
+   text, comments, configuration defaults, and assistant text the project
+   ships to others.
+2. Move each test that pins the old wording or value to the new one. A test
+   whose assertion would then check different behaviour is not moved here; it
+   goes to its owner as a finding.
+3. Run the project's generation or synchronisation command, where it has one,
+   so generated copies match their source. Do not edit a generated file by
+   hand.
+
+Change nothing on the surface that owns the truth.
 
 ## Evidence
 

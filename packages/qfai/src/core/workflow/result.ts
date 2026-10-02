@@ -1,8 +1,8 @@
 import {
   areaCovers,
+  firstMatchedKind,
   isAuthorOrRecommender,
   notReady,
-  REPLAN_BUDGET,
   RESULT_ID,
   refusedWith,
   skillOwnerOf,
@@ -10,10 +10,22 @@ import {
   type PlanStage,
 } from "./common.js";
 import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
+import { carries, entriesOf, isModifier, withModifiers } from "./modifiers.js";
 import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
+import { DIAGNOSIS_VERDICTS } from "./payloadShapes.js";
 import { storyTreeChecks } from "./records.js";
-import { activeStages } from "./stages.js";
-import { activeSteps, repairOwnerOf, servingStage, servingSteps, stepNamesOf } from "./steps.js";
+import { needsDiagnosis } from "./stages.js";
+import { resolveBranch, REROUTE_CAP, revisionOf } from "./reroute.js";
+import { rerouteQuestion } from "./routeDecision.js";
+import {
+  issuableSteps,
+  repairOwnerOf,
+  servingStage,
+  servingSteps,
+  skillToInvoke,
+  stageSteps,
+  stepNamesOf,
+} from "./steps.js";
 import type {
   InputRefusal,
   InputRefusalReason,
@@ -25,6 +37,7 @@ import type {
   WorkflowHalt,
   WorkflowNotRun,
   WorkflowQuestion,
+  WorkflowReroute,
   WorkflowResult,
   WorkflowRun,
   WorkflowSnapshot,
@@ -85,15 +98,17 @@ function reviewerRefusals(result: WorkflowResult, actorHistory: readonly Workflo
   );
 }
 
-// SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
-// Lift when: the command adapter supplies the digest of every file a result names.
+// Every submitted digest of a changed file or an artifact is checked against the core's own. A
+// path the facts carry no digest for names no readable file: a changed file outside the project's
+// real root is refused as `write-scope`, an artifact as `schema`, and a deleted file has no
+// digest to compare.
 function digestRefusals(result: WorkflowResult, facts: WorkflowFacts): InputRefusal[] {
-  return (result.changedFiles ?? [])
-    .filter((changed) => {
-      const own = facts.fileDigests?.[changed.path];
-      return own !== undefined && own !== changed.digest;
+  return [...(result.changedFiles ?? []), ...(result.artifactRefs ?? [])]
+    .filter((named) => {
+      const own = facts.fileDigests?.[named.path];
+      return own !== undefined && own !== named.digest;
     })
-    .map((changed) => ({ reason: "digest-mismatch", subject: changed.path }));
+    .map((named) => ({ reason: "digest-mismatch", subject: named.path }));
 }
 
 function measurementRefusals(result: WorkflowResult): InputRefusal[] {
@@ -178,6 +193,106 @@ function receiptRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): 
   return refusals;
 }
 
+const EXAMPLE_FILE = /(^|\/)03_Example\.md$/;
+
+// Whether a pass-through step's own check shows work it owns remains. A step with no such check
+// is judged by the stage's reviewers.
+function passObligationOpen(
+  step: string,
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): boolean {
+  const kind = firstMatchedKind(snapshot.diagnosis);
+  switch (step) {
+    case "atdd-author":
+      return facts.acceptanceObligationsUnmet === true;
+    // An example states the diagnosed case only when the diagnosis matched one first, and a
+    // story-authoring stage that passes the step changes no example.
+    case "sdd-story":
+      return workOrder.stageKind === "sdd_append"
+        ? kind !== "EX"
+        : (result.changedFiles ?? []).some((file) => EXAMPLE_FILE.test(file.path));
+    // A BF or an AC names the acceptance layer, and an EX the example layer.
+    case "atdd-test-fix":
+      return kind === "BF" || kind === "AC";
+    case "implement-test-fix":
+      return kind === "EX";
+    // A route that changes compatibility always has a migration and a breaking change to state.
+    case "verify-change-note":
+      return snapshot.plan?.route === "change-compatibility";
+    default:
+      return false;
+  }
+}
+
+// A pass stands only for a step its work order marks pass-through, and only while nothing the
+// step owns remains.
+function passRefusals(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  return (result.passes ?? []).flatMap((pass): InputRefusal[] => {
+    const step = workOrder.steps?.find((each) => each.name === pass.step);
+    if (!step?.passThrough) return [{ reason: "pass-not-allowed", subject: pass.step }];
+    return passObligationOpen(pass.step, snapshot, result, workOrder, facts)
+      ? [{ reason: "pass-obligation-open", subject: pass.step }]
+      : [];
+  });
+}
+
+function isAccepted(result: WorkflowResult): boolean {
+  return result.outcome === "accepted" || result.outcome === "accepted_with_debt";
+}
+
+// A result that runs `triage-close` and is accepted says how it closed the request, unless it
+// re-routes the request instead, and no other result does.
+function closureRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): InputRefusal[] {
+  const closes = stepNamesOf(workOrder).includes("triage-close");
+  const wanted = closes && isAccepted(result) && result.branch === undefined;
+  return wanted === (result.closure !== undefined)
+    ? []
+    : [{ reason: "schema", subject: "closure" }];
+}
+
+const DECISION_ROW = /\bDEC-\d{4}(?:-\d{4})?\b/g;
+
+// A step at a user decision point under `gate:user` puts its decision to the operator: it takes
+// the decision itself only where the request's upstream record already made it, a
+// `decisions.md` row in force that its reason cites. A cited row that is missing or not in force
+// answers nothing, whether or not `gate:user` holds.
+function adoptedRefusals(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  const gated = carries(snapshot, "gate:user");
+  const upstream = snapshot.extraction?.entryFlags.includes("upstream") === true;
+  const inForce = (id: string) =>
+    (facts.decisionRows ?? []).some((row) => row.rowId === id && row.inForce);
+  return (result.adopted ?? []).flatMap((entry, index): InputRefusal[] => {
+    const step = workOrder.steps?.find((each) => each.name === entry.step);
+    if (step?.decisionPoint !== "user") return [];
+    const cited = entry.reason.match(DECISION_ROW) ?? [];
+    const answered = upstream && cited.length > 0 && cited.every(inForce);
+    const unanswered = upstream && cited.some((id) => !inForce(id));
+    return unanswered || (gated && !answered)
+      ? [{ reason: "decision-unasked", subject: `adopted[${index}]` }]
+      : [];
+  });
+}
+
+// A result may raise only a modifier of the closed set.
+function raiseRefusals(result: WorkflowResult): InputRefusal[] {
+  return (result.raise ?? []).flatMap((entry, index): InputRefusal[] =>
+    isModifier(entry.modifier) ? [] : [{ reason: "schema", subject: `raise[${index}]` }],
+  );
+}
+
 export function resultRefusals(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -185,12 +300,18 @@ export function resultRefusals(
   facts: WorkflowFacts,
 ): InputRefusal[] {
   const refusals: InputRefusal[] = [
+    ...adoptedRefusals(snapshot, result, workOrder, facts),
+    ...raiseRefusals(result),
     ...reviewerRefusals(result, snapshot.actorHistory ?? []),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
     ...blockedRefusals(snapshot, result, workOrder, facts),
     ...scopeRefusals(result, workOrder, facts),
+    ...passRefusals(snapshot, result, workOrder, facts),
+    ...closureRefusals(result, workOrder),
   ];
+  const branch = resolveBranch(snapshot, workOrder, result, facts).refusal;
+  if (branch) refusals.push(branch);
   const notRun = notRunRefusalOf(result.notRun, facts);
   if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
   refusals.push(...receiptRefusals(result, workOrder));
@@ -244,9 +365,9 @@ export function blockOnResult(
   };
 }
 
-// SIMPLIFIED: the replan budget is checked on a replan from `running` and from `next`'s plan
-// revision only; an answer that changes the scope replans from `awaiting_input` unchecked, since
-// the state machine gives that state no edge to `blocked`.
+// SIMPLIFIED: the replan budget is checked on `next`'s plan revision only; an answer that changes
+// the scope replans from `awaiting_input` unchecked, since the state machine gives that state no
+// edge to `blocked`.
 // Lift when: the state machine names the edge a replan at its cap takes from `awaiting_input`.
 
 const REPAIR_BUDGET = 3;
@@ -360,8 +481,6 @@ function outcomeIsAcceptable(result: WorkflowResult, stageKind: string): boolean
   }
 }
 
-const DIAGNOSIS_VERDICTS = ["missing-test", "defective-test", "regression", "expectation-differs"];
-
 // The outstanding work order's stage when it repairs a finding another stage detected, and the
 // steps that serve the finding's owner there.
 function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[]) {
@@ -371,32 +490,49 @@ function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[
   if (workOrder.stageInstanceId === request.stageInstanceId) return undefined;
   const stage = selected.find((each) => each.stageInstanceId === workOrder.stageInstanceId);
   if (!stage) return undefined;
-  return { stage, steps: servingSteps(stage, owner, plan, snapshot.diagnosis) };
+  return { stage, steps: servingSteps(stage, owner) };
 }
 
-// Whether the result names the plan stage the run is at, with the fields that stage needs.
-function stageResultIsBroken(
+// Whether the outstanding work order is the plan stage the run is at, with the steps that stage
+// issues.
+function issuedStageIsNext(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   stage: PlanStage,
-  result: WorkflowResult,
   steps: string[],
 ): boolean {
   const flowTarget = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
-  const diagnosis = result.diagnosis;
   return (
-    workOrder.stageInstanceId !== stage.stageInstanceId ||
-    workOrder.stageKind !== stage.stageKind ||
-    stepNamesOf(workOrder).join(",") !== steps.join(",") ||
-    (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
-    (stage.stageKind === "diagnose" &&
-      (!diagnosis ||
-        !DIAGNOSIS_VERDICTS.includes(diagnosis.verdict) ||
-        !diagnosis.reproductionRef ||
-        !Array.isArray(diagnosis.matchedIds))) ||
-    !outcomeIsAcceptable(result, stage.stageKind) ||
-    result.proposal !== undefined
+    workOrder.stageInstanceId === stage.stageInstanceId &&
+    workOrder.stageKind === stage.stageKind &&
+    stepNamesOf(workOrder).join(",") === steps.join(",") &&
+    (flowTarget === undefined || flowTarget === snapshot.flowBinding?.flowId)
   );
+}
+
+// The fields of a stage result whose presence depends on the stage it answers.
+function stageFieldRefusals(
+  stage: PlanStage,
+  result: WorkflowResult,
+  steps: string[],
+): InputRefusal[] {
+  const refusals: InputRefusal[] = [];
+  const diagnosis = result.diagnosis;
+  const diagnosed =
+    diagnosis !== undefined &&
+    DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) &&
+    Boolean(diagnosis.reproductionRef) &&
+    Array.isArray(diagnosis.matchedIds);
+  const needed = needsDiagnosis({
+    ...stage,
+    steps: stageSteps(stage).filter((s) => steps.includes(s.name)),
+  });
+  if (needed && !diagnosed) refusals.push({ reason: "schema", subject: "diagnosis" });
+  if (!outcomeIsAcceptable(result, stage.stageKind)) {
+    refusals.push({ reason: "schema", subject: "outcome" });
+  }
+  if (result.proposal !== undefined) refusals.push({ reason: "schema", subject: "proposal" });
+  return refusals;
 }
 
 // A gate verdict a result submits is informative only; the core never decides a gate from it.
@@ -415,16 +551,19 @@ function measuredOf(result: WorkflowResult) {
 function acceptedEvents(
   workOrder: WorkflowWorkOrder,
   result: WorkflowResult,
-  needsReplan: boolean,
+  type: string,
   extras: Partial<WorkflowEvent>,
 ): WorkflowEvent[] {
   return [
     {
-      type: needsReplan ? "scope-or-obligation-revision" : "accept-nonfinal-result",
+      type,
       resultRef: `results/${result.resultId}.json`,
       stageInstanceId: workOrder.stageInstanceId,
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
+      ...(result.passes?.length ? { passes: result.passes } : {}),
+      ...(result.adopted?.length ? { adopted: result.adopted } : {}),
+      ...(result.closure ? { closure: result.closure } : {}),
       ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
       ...(result.diagnosis ? { diagnosis: result.diagnosis } : {}),
       ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
@@ -440,46 +579,94 @@ function acceptedEvents(
   ];
 }
 
-// A repair needs a new plan when no active step of the plan serves a finding's owner: a step the
-// plan gates with `proposed` and the proposal did not list is not active.
-function repairOutsidePlan(
+// A finding whose owner no stage of the route serves blocks the run: the run never leaves its
+// route for it. The halt names the findings and the skill to invoke by name for the first.
+function unservedHalt(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
-  facts: WorkflowFacts,
-): boolean {
+): WorkflowHalt | undefined {
   const plan = snapshot.plan;
-  if (result.outcome !== "needs_repair" || !plan) return false;
-  const selected = activeStages(plan, snapshot, facts);
-  return (result.debts ?? []).some((debt) => {
+  if (result.outcome !== "needs_repair" || !plan) return undefined;
+  const unserved = (result.debts ?? []).filter((debt) => {
     const owner = skillOwnerOf(debt);
-    return owner !== undefined && !servingStage(selected, owner, plan, snapshot.diagnosis);
+    return owner !== undefined && !servingStage(plan.stages, owner);
   });
+  const owner = unserved.map(skillOwnerOf).find(Boolean);
+  if (owner === undefined) return undefined;
+  return {
+    blocker: "stage-blocked",
+    owner: skillToInvoke(owner),
+    subjects: unserved.map((debt) => `${debt.findingCode}@${debt.path}`),
+  };
 }
 
-// The run cannot go on past this result: a budget reached is `blocked`, never a pass.
-function budgetHalt(
-  snapshot: WorkflowSnapshot,
-  result: WorkflowResult,
-  needsReplan: boolean,
-): WorkflowDecision | undefined {
-  const halt = { blocker: "budget-exhausted" as const, owner: "operator" };
-  if (needsReplan && (snapshot.replans ?? 0) >= REPLAN_BUDGET) {
-    return blockOnResult(snapshot.run, result, undefined, { ...halt, subjects: ["replan"] });
-  }
+// A repair the budget no longer allows is `blocked`, never a pass.
+function budgetHalt(snapshot: WorkflowSnapshot, result: WorkflowResult): WorkflowHalt | undefined {
   const exhausted = exhaustedRepairCauses(snapshot, result);
   if (exhausted.length === 0) return undefined;
-  return blockOnResult(snapshot.run, result, undefined, { ...halt, subjects: exhausted });
+  return { blocker: "budget-exhausted", owner: "operator", subjects: exhausted };
 }
 
-// The transition a checked result takes: a wait, a block, a new approval, or the stage accepted.
+// A re-route a declared branch point reports moves the run to routing with its destination
+// fixed. Past the cap it opens one question instead, and the run waits on the operator.
+function rerouted(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  result: WorkflowResult,
+  reroute: WorkflowReroute,
+  facts: WorkflowFacts,
+  extras: Partial<WorkflowEvent>,
+): WorkflowDecision {
+  const { run } = snapshot;
+  if ((snapshot.reroutes ?? []).length < REROUTE_CAP) {
+    const events = acceptedEvents(workOrder, result, "declared-reroute", { ...extras, reroute });
+    const routing = { ...run, state: "routing", sequence: run.sequence + events.length };
+    return { verdict: { ok: true, run: routing }, events };
+  }
+  const destination = facts.plans?.[reroute.route];
+  const stages = (destination?.stages ?? []).map((stage) => stage.stageInstanceId);
+  const question = rerouteQuestion(`question-${run.sequence + 1}-1`, destination?.family, stages);
+  const events: WorkflowEvent[] = [
+    ...acceptedEvents(workOrder, result, "reroute-asked", { ...extras, reroute }),
+    { type: "question-opened", question },
+    { type: "material-decision" },
+  ];
+  const waiting = { ...run, state: "awaiting_input", sequence: run.sequence + events.length };
+  return { verdict: { ok: true, run: waiting, questions: [question] }, events };
+}
+
+// The transition of a result the run can take: a block, a re-route, or the stage accepted.
+function settleAccepted(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  result: WorkflowResult,
+  facts: WorkflowFacts,
+  extras: Partial<WorkflowEvent>,
+): WorkflowDecision {
+  const { run } = snapshot;
+  const halt = budgetHalt(snapshot, result) ?? unservedHalt(snapshot, result);
+  if (halt) return blockOnResult(run, result, undefined, halt, extras);
+  const reroute = isAccepted(result)
+    ? resolveBranch(snapshot, workOrder, result, facts).reroute
+    : undefined;
+  if (reroute) return rerouted(snapshot, workOrder, result, reroute, facts, extras);
+  const events = acceptedEvents(workOrder, result, "accept-nonfinal-result", extras);
+  return {
+    verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + events.length } },
+    events,
+  };
+}
+
+// The transition a checked result takes: a wait, a block, a new approval, a re-route, or the
+// stage accepted.
 function settleResult(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   result: WorkflowResult,
-  checked: { extras: Partial<WorkflowEvent>; facts: WorkflowFacts; lastOfPlan: boolean },
+  facts: WorkflowFacts,
+  extras: Partial<WorkflowEvent>,
 ): WorkflowDecision {
-  const { extras, facts, lastOfPlan } = checked;
-  const { run, plan } = snapshot;
+  const { run } = snapshot;
   const delegated = decideDelegation(snapshot, workOrder, result);
   if (delegated) return delegated;
   // Rows a story-authoring result appended are the run's whatever the result's outcome.
@@ -498,18 +685,7 @@ function settleResult(
       currentStory(snapshot) ?? { ...story, slotId: workOrder.target.slotId },
     );
   }
-  const needsReplan =
-    (plan?.route === "discovery" && lastOfPlan) ||
-    (workOrder.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs") ||
-    repairOutsidePlan(snapshot, result, facts);
-  const halted = budgetHalt(snapshot, result, needsReplan);
-  if (halted) return halted;
-  const events = acceptedEvents(workOrder, result, needsReplan, extras);
-  const state = needsReplan ? "routing" : "ready";
-  return {
-    verdict: { ok: true, run: { ...run, state, sequence: run.sequence + events.length } },
-    events,
-  };
+  return settleAccepted(snapshot, workOrder, result, facts, extras);
 }
 
 // `accept` of a plan stage's result on a run in `running`.
@@ -520,20 +696,47 @@ export function acceptStageResult(
 ): WorkflowDecision {
   const { run, plan, outstandingWorkOrder: workOrder } = snapshot;
   const accepted = snapshot.acceptedStages ?? [];
-  const selected = plan ? activeStages(plan, snapshot, facts) : [];
+  const selected = plan?.stages ?? [];
   // A repair stage is one of the plan's own, issued out of order to the finding's owner.
   const repair = repairStageOf(snapshot, selected);
   const stage = repair?.stage ?? selected[accepted.length];
   if (!plan || !workOrder || !stage) return notReady(run, "stage result");
-  const steps = repair?.steps ?? activeSteps(stage, plan, snapshot.diagnosis);
-  if (stageResultIsBroken(snapshot, workOrder, stage, result, steps)) {
-    return notReady(run, "stage result");
+  const steps = (repair?.steps ?? issuableSteps(snapshot, stage)).map((step) => step.name);
+  if (!issuedStageIsNext(snapshot, workOrder, stage, steps)) {
+    return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
   }
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
-  const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
+  const refusals = [
+    ...stageFieldRefusals(stage, result, steps),
+    ...resultRefusals(snapshot, result, workOrder, facts),
+    ...storyTree.refusals,
+  ];
   if (refusals.length > 0) return refusedWith(run, refusals);
-  const lastOfPlan = !repair && accepted.length + 1 === selected.length;
-  return settleResult(snapshot, workOrder, result, { extras: storyTree.extras, facts, lastOfPlan });
+  const revision = revisionOf(facts);
+  const extras = { ...storyTree.extras, ...(revision ? { revision } : {}) };
+  return withRaised(snapshot, result, settleResult(snapshot, workOrder, result, facts, extras));
+}
+
+// A result that raises a modifier the run does not carry yet adds it, whatever its outcome: the
+// core appends `modifier-raised` before the result's own transition. Nothing lowers one.
+function withRaised(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  decision: WorkflowDecision,
+): WorkflowDecision {
+  const held = snapshot.modifiers ?? [];
+  const raised = (result.raise ?? []).flatMap((entry) =>
+    isModifier(entry.modifier)
+      ? entriesOf([entry.modifier], "raised").map((each) => ({ ...each, reason: entry.reason }))
+      : [],
+  );
+  const added = withModifiers(held, raised).slice(held.length);
+  const run = decision.verdict.run;
+  if (!decision.verdict.ok || added.length === 0 || !run) return decision;
+  return {
+    verdict: { ...decision.verdict, run: { ...run, sequence: run.sequence + 1 } },
+    events: [{ type: "modifier-raised", modifiers: added }, ...decision.events],
+  };
 }
 
 // A seam-only result closes its seam request and returns the run to the acceptance stage it

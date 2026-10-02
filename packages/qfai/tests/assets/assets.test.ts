@@ -39,6 +39,7 @@ import {
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -411,7 +412,7 @@ describe("assets guardrails", () => {
   it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
     // Every file under assistant/ is copied verbatim by `qfai init`, so
     // "this repository" resolves to the consuming project. Pairing that phrase
-    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `CON-API-NNNN` id
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `API-NNNN` id
     // therefore asserts a fact about an artifact the consumer does not have.
     //
     // The matcher, the soft-wrap normalizer and the file list live in
@@ -438,7 +439,6 @@ describe("assets guardrails", () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(defaultsDir, "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
@@ -449,7 +449,7 @@ describe("assets guardrails", () => {
     const verifyPath = path.join(assistantDir, "step", "verify-context", "STEP.md");
 
     const [routing, configure, verify] = await Promise.all([
-      readFile(routingPath, "utf-8"),
+      readDefaultRoutingText(),
       readFile(configurePath, "utf-8"),
       readFile(verifyPath, "utf-8"),
     ]);
@@ -528,29 +528,22 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/qfai prototyping iterate/);
     expect(content).toMatch(/10 iterations|10 cycles|up to 10/);
     expect(content).toContain("<contractsDir>/ui/*.yaml");
-    // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml; legacy
-    // per-aspect brand yaml references are dropped from this skill.
+    // The brand SSOT is root DESIGN.md, whose hash cycle 0 records in
+    // prototyping.json.
     expect(content).toContain("DESIGN.md");
-    expect(content).toContain("<contractsDir>/design/DESIGN.md.lock.yaml");
+    expect(content).toContain("prototyping.json#designMd");
     expect(content).toContain(".qfai/prototype/iter-00/index.html");
     expect(content).toContain("certify --check");
   });
 
-  it("ensures qfai-prototyping v2.0 references and handoff sample exist", async () => {
+  it("ensures qfai-prototyping v2.0 references exist", async () => {
     const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
-    const handoffTemplatePath = path.join(
-      skillDir,
-      "templates",
-      "contracts",
-      "prototype-handoff.sample.yaml",
-    );
 
-    const [iterRef, generatorRef, reviewerRef, handoffRef, handoffTemplate] = await Promise.all([
+    const [iterRef, generatorRef, reviewerRef, handoffRef] = await Promise.all([
       readFile(path.join(skillDir, "references", "iteration-loop.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "generator-prompt.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "reviewer-prompt.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "handoff.md"), "utf-8"),
-      readFile(handoffTemplatePath, "utf-8"),
     ]);
 
     // iteration-loop.md describes the deterministic stop conditions.
@@ -564,15 +557,11 @@ describe("assets guardrails", () => {
     expect(reviewerRef).toMatch(/lap-\d{3}/);
     expect(reviewerRef).toMatch(/cap/i);
 
-    // handoff.md describes design-system extraction.
-    expect(handoffRef).toMatch(/design-system\.yaml/);
-
-    // handoff sample carries the canonical fields and no legacy preserve/copy concepts.
-    expect(handoffTemplate).toContain("finalIterIndex");
-    expect(handoffTemplate).toContain("designSystemMirror");
-    expect(handoffTemplate).not.toContain("extractedDesignSystem");
-    expect(handoffTemplate).not.toContain("mustPreserve");
-    expect(handoffTemplate).not.toContain("mustNotCopy");
+    // handoff.md records the handoff in prototyping.json with its three keys.
+    expect(handoffRef).toContain("prototyping.json#handoff");
+    expect(handoffRef).toContain('"finalArtifact": ".qfai/prototype/final/index.html"');
+    expect(handoffRef).toContain('"procurement": {');
+    expect(handoffRef).toContain('"implementationNotes":');
   });
 
   it("keeps the per-screen skeleton shape from breaking handoff", async () => {
@@ -684,15 +673,15 @@ describe("assets guardrails", () => {
       expect(reviewerRef).toContain("readable HTML is re-scanned on convergence and certification");
 
       // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
-      // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
-      // on any mismatch, so "widen DESIGN.md" is not a mid-loop escape
-      // hatch. The prompt must route a brand change through a refreeze +
+      // compares the live DESIGN.md with the cycle-0 recorded sha256 and
+      // exits 2 on a mismatch, so "widen DESIGN.md" is not a mid-loop escape
+      // hatch. The prompt must route a brand change through an edit +
       // cycle-0 restart instead.
       expect(generatorRef).toMatch(
         /Do\s+\*\*not\*\* edit `DESIGN\.md` to widen the allowlist mid-loop/,
       );
       expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
-      expect(generatorRef).toMatch(/refreeze the lock via `\/qfai-sdd`/);
+      expect(generatorRef).toMatch(/operation: edit `DESIGN\.md`, then restart the loop/);
       // The restart must be a runnable command: the prior loop always left
       // an `iter-00` behind, and the cycle-0 destructive-rerun gate in
       // `prototypingIterate` exits 2 without `--force`. A bare `--cycle 0`
@@ -889,7 +878,7 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     // Same ceiling as every other skill; the trailing `project_memory:` block
-    // and the mandatory `## Default Autopilot Policy` section fit inside it.
+    // and the skill's own `## Default Autopilot Policy` section fit inside it.
     expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
   });
 
@@ -1385,15 +1374,6 @@ describe("assets guardrails", () => {
       absolute: true,
     });
     const japanesePattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/;
-    const mandatoryDiscussSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
-    const discussSkillPath = path.resolve(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
     const approvedJapanesePaths = new Set([
       path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
@@ -1404,17 +1384,11 @@ describe("assets guardrails", () => {
       if (approvedJapanesePaths.has(normalizedPath)) {
         continue;
       }
-      const sanitized =
-        normalizedPath === discussSkillPath
-          ? content.replaceAll(mandatoryDiscussSentence, "")
-          : content;
-      if (japanesePattern.test(sanitized)) {
+      if (japanesePattern.test(content)) {
         matches.push(path.relative(repoRoot, filePath));
       }
     }
 
-    const discussContent = await readFile(discussSkillPath, "utf-8");
-    expect(discussContent).toContain(mandatoryDiscussSentence);
     expect(matches).toEqual([]);
   });
 
@@ -1831,15 +1805,9 @@ describe("assets guardrails", () => {
       absolute: false,
     });
 
-    // Per-aspect brand yaml contracts were removed; root DESIGN.md +
-    // DESIGN.md.lock.yaml are the brand SSOT.
+    // Root DESIGN.md is the brand SSOT; no brand contract template ships here.
     expect(templates.sort()).toEqual(
-      [
-        "api-contract.sample.yaml",
-        "db-contract.sample.sql",
-        "design-md-lock.sample.yaml",
-        "ui-contract.sample.yaml",
-      ].sort(),
+      ["api-contract.sample.yaml", "db-contract.sample.sql", "ui-contract.sample.yaml"].sort(),
     );
 
     const stepPath = path.join(templateQfaiDir, "assistant", "step", "sdd-contract", "STEP.md");
@@ -1895,7 +1863,7 @@ describe("assets guardrails", () => {
     expect(skill).toContain(canonicalPhrase);
   });
 
-  it("ensures qfai-discussion includes localized completion handoff guidance", async () => {
+  it("ensures qfai-discussion hands off to /qfai-sdd through the next-action question", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
@@ -1904,13 +1872,11 @@ describe("assets guardrails", () => {
       "SKILL.md",
     );
     const content = await readFile(discussPromptPath, "utf-8");
-    const requiredSentence =
-      "ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。";
 
     expect(content).toContain("## Completion Message & Next Actions (MUST)");
-    expect(content).toContain(requiredSentence);
-    expect(content).toMatch(/active user language/i);
-    expect(content).toContain("`/qfai-sdd`");
+    expect(content).toContain(
+      "End the turn with a question listing the next actions, `/qfai-sdd` recommended",
+    );
   });
 
   it("ensures qfai-discussion template packs exist", async () => {
@@ -2068,7 +2034,7 @@ describe("assets guardrails", () => {
       }
     }
 
-    const routing = await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf-8");
+    const routing = await readDefaultRoutingText();
     const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
     expect(routing).toContain("routing:");
     expect(profiles).toContain("profiles:");
@@ -2306,9 +2272,8 @@ describe("assets guardrails", () => {
     expect(findTableArityMismatches(contractsTemplate)).toEqual([]);
     const [table] = parseAllMarkdownTables(contractsTemplate);
     expect(table?.headers).toEqual([
-      "Short ID",
-      "Entity",
-      "Declared ID",
+      "ID",
+      "Title",
       "File",
       "Depends On",
       "Reconciled With",
@@ -2547,9 +2512,8 @@ describe("assets guardrails", () => {
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
-      "03_contract/cli/command.md",
+      "03_contract/cli/cli-NNNN-title.md",
       "03_contract/contracts.md",
-      "03_contract/structure.md",
       "03_contract/tech.md",
       "decisions.md",
       "open-questions.md",
@@ -2818,7 +2782,7 @@ describe("assets guardrails", () => {
     // bucket to the entries that do have one — `brand intent` (routed to root
     // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
     //
-    // A skill may narrow this bucket, and may hard-require an input only it
+    // A skill may hard-require an input only it
     // reads — declared per skill, so adding one is a reviewed change. What it
     // may not do is carry an entry nothing declares.
     //
@@ -3175,11 +3139,10 @@ function shouldSkipReference(ref: string): boolean {
   if (ref === ".qfai/install-provenance.json") {
     return true;
   }
-  // A path inside the installed package. This repository ships that package
-  // and never installs it — `scripts/check-not-a-dependency.mjs` refuses an
-  // install that would create one — so no checkout of this tree holds the
-  // directory. Naming a file under it is how the README tells an adopter where
-  // the packaged copy of a shipped file sits in THEIR tree.
+  // A path inside the installed package. Naming a file under it is how the
+  // README tells an adopter where the packaged copy of a shipped file sits in
+  // THEIR tree. Whether it exists here depends only on whether this checkout
+  // has been installed, so the walk does not judge it.
   if (ref.startsWith("node_modules/")) {
     return true;
   }

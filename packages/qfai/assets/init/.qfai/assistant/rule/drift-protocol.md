@@ -48,7 +48,9 @@ Both classes use the same approval and owner-rerun path.
    only when the proposed change and affected set are approved as written. If the answer changes either, append a
    replacement row and mark the earlier row SUPERSEDED (by DEC-NNNN). A declined request becomes REJECTED. A WIP or DONE
    Change request: row is the in-force authorization that the drift gate reads; TODO is not authorization.
-4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it. A contract with a CON ID is selected by its full ID; a contract without one is selected by its repository-relative path. The owner updates the specification and its tests together, then validates the relevant flow.
+4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
+   A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
+   The owner updates the specification and its tests together, then validates the relevant flow.
 5. Recheck every dependent BF, AC, and EX test obligation and every affected contract reference. Rewrite tests and evidence where their former expectation is invalid. Report any uncovered obligation. No execution ledger, TC row, or status reset substitutes for this check.
 6. Complete the decision row by changing Status from WIP to DONE only after the owner artifact and dependent checks are complete. Record immutable completion evidence in the stage evidence file and cite the DEC ID. A second open request on the same artifact waits for the first outcome and is restated if its premise changed.
 
@@ -68,9 +70,9 @@ New scope adds product behavior or a quality bar the approved story tree and con
 
 ### Provenance and routing
 
-Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,
-a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten CON-API, CON-DB,
-or CON-UI references. A finding against a record names the record and stays advisory when the product and its evidence
+Every reviewer finding names either the governing AC, BR, or full contract ID, a shared rule, a concrete deliverable defect,
+a record defect, or new scope. Use full contract IDs, including every numeric segment. Do not shorten API, DB,
+or UI references. A finding against a record names the record and stays advisory when the product and its evidence
 remain sound. A false claim that work ran, or that a reviewer independently checked it, is an evidence defect and
 remains blocking.
 

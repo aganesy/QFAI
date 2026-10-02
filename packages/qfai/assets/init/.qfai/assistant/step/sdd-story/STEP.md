@@ -46,10 +46,18 @@ states.
 1. Run the pre-draft grilling checkpoint for `Stories and examples` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
    the first write, and record it with `common-grilling-record`.
-2. Write the story index and the three files of each affected story.
-3. State each AC as a Gherkin scenario.
+2. Write the story index and the three files of each affected story, each in
+   its template's shape and nothing more, as
+   `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
+   states. The index's `Story` cell repeats the title in the story's H1, after
+   its ID, word for word, and the story is one
+   `As a <actor>, I want <goal>, so that <benefit>.` sentence.
+3. State each AC as its ID comment and one named Gherkin `Scenario:` inside the
+   story's one `gherkin` block. A `Scenario Outline:` is not an AC; write each
+   case as its own EX instead.
 4. Give each EX exactly one existing AC in its `AC-Ref` cell, and give each AC
-   at least one EX.
+   at least one EX. `Input` and `Expected` hold plain values, not Gherkin
+   steps.
 5. Preserve normal outcomes and meaningful failure boundaries.
 6. Follow `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
    and `.qfai/assistant/rule/test-layers.md` when deriving the later BF/E2E,
@@ -59,6 +67,23 @@ states.
 
 Inside a run, a `new_story` target's result reports one `bindings` entry per
 slot, naming the flow and the stories it created.
+
+## Passes when
+
+Read first: the diagnosis or the triage rows, and the `03_Example.md` of each
+story they touch. The step passes in two cases, and the pass names both facts
+it rests on:
+
+- **In an append stage**, when an existing example already states the case the
+  diagnosis matched. The pass cites that example, and no row is appended to
+  `decisions.md`.
+- **In an `sdd` stage**, when the change stays inside the documents that own
+  the truth, as `sdd-triage` recorded the owner, and adds and changes no
+  example. The pass names the owning document and says that no example is added
+  or changed.
+
+A pass is refused while no example states the append stage's case, and in an
+`sdd` stage whose result adds, changes or removes an example.
 
 ## A diagnosed missing test
 

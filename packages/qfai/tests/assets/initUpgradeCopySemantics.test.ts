@@ -4,12 +4,21 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const readRepo = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
-const flat = (text: string): string => text.replace(/\s+/g, " ");
 
-const CONTRACT = ".qfai/spec/03_contract/cli/qfai-init.md";
+const CONTRACT = ".qfai/spec/03_contract/cli/cli-0009-qfai-init.md";
 const IMPL = "packages/qfai/src/cli/commands/init.ts";
+
+/** The init contract's business-rule statement that holds `needle`. */
+async function ruleWith(needle: string): Promise<string> {
+  const scan = parseContractRules(CONTRACT, await readRepo(CONTRACT));
+  const rule = scan.rules.find((candidate) => candidate.statement.includes(needle));
+  expect(rule, `no init business rule states: ${needle}`).toBeDefined();
+  return rule?.statement ?? "";
+}
 
 function upgradeHelperBody(source: string): string | undefined {
   const start = source.indexOf("async function runUpgradeAssistantTree(");
@@ -21,22 +30,25 @@ function upgradeHelperBody(source: string): string | undefined {
 
 describe("assistant-tree upgrade preserves adopter files", () => {
   it("copies only relocation-table files and leaves legacy originals", async () => {
-    const contract = flat(await readRepo(CONTRACT));
-    expect(contract).toContain("A file the relocation table names is copied to its destination");
-    expect(contract).toContain("An unrecognised file stays at its legacy path");
-    expect(contract).toContain("no legacy path is deleted and no destination is overwritten");
+    const rule = await ruleWith("`--upgrade-assistant-tree` copies each file");
+    expect(rule).toContain("copies each file the relocation table names");
+    expect(rule).toContain("A file the table does not recognise stays at its legacy path");
+    expect(rule).toContain("no legacy path is deleted and no destination is overwritten");
   });
 
   it("excludes adopter-owned spec files and retired assistant layers", async () => {
-    const contract = flat(await readRepo(CONTRACT));
+    const rule = await ruleWith("`--upgrade-assistant-tree` copies each file");
     for (const file of ["product.md", "manifest.md", "tech.md", "structure.md"]) {
-      expect(contract).toContain(file);
+      expect(rule).toContain(file);
     }
-    expect(contract).toContain("are not copied. Migration step 3 merges them into the spec tree");
-    expect(contract).toContain(
-      "Init writes no `README.md` or assistant `manifest/`, `catalog/`, `constitution/` or `process/` tree",
+    expect(rule).toContain("which migration step 3 merges into the spec tree");
+    expect(rule).toContain("writes no migration memo");
+
+    const seeding = await ruleWith("Init seeds `.qfai/assistant/`");
+    expect(seeding).toContain(
+      "It writes none of `constitution/`, `manifest/`, `catalog/`, `process/` and `steering/`",
     );
-    expect(contract).toContain("writes no migration memo");
+    await ruleWith("Init writes no `README.md` into `.qfai/assistant/`");
   });
 
   it("matches the implementation: the helper copies without removing legacy files", async () => {

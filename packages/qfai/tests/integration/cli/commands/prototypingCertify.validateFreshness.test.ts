@@ -198,7 +198,7 @@ describe("certify relates validate.json to the evidence it seals", () => {
     expect(lines.join("")).not.toContain("changed after");
   });
 
-  // QFAI:EX-0001-0140-02
+  // QFAI:EX-0001-0136-02
   it("seals when only a file in a reset backup is newer than the run", async () => {
     // The certificate leaves a cycle-0 reset's backups out, so a copy touched
     // inside one after the run changes nothing it seals.

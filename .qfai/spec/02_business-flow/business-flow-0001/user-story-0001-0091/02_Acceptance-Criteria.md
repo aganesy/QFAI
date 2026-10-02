@@ -3,12 +3,36 @@
 ## Criteria
 
 ```gherkin
-Feature: Legacy Sidecar Drop
+Feature: TDD Micro-Cycle Execution
+  # AC-0001-0091-01
+  Scenario: TDD Cycle Completeness
+    Given an EX that no test annotates on the story tree
+    When `/qfai-implement` takes that EX
+    Then it runs Red, Green and Refactor with evidence at each phase
+    And the test it writes carries `QFAI:EX-NNNN-NNNN-NN`
+    And no ledger status is written
 
-# AC-0001-0091-01
-# Parent: US-0001-0091
-Scenario: legacy sidecars not emitted
-  Given a fresh `/qfai-discussion` UI-bearing run,
-  When the produced sidecars are listed,
-  Then `33_exploration_rubric.md`, `34_evaluator_calibration.md`, `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md` are NOT created. Producing them is a regression and triggers the skill validator under this spec.
+  # AC-0001-0091-02
+  Scenario: Minimal Code In Phase Green
+    Given a failing test
+    When Phase Green writes production code for it
+    Then the code written is the least that makes that test pass, and behaviour no test yet demands is not generalized ahead of its own RED.
+
+  # AC-0001-0091-03
+  Scenario: Gate Commands From the Contract Directory
+    Given a project on the story tree
+    When `/qfai-implement` needs a Test, Lint, Typecheck or Build command
+    Then it takes the command from the Standard commands section of `<paths.contractsDir>/tech.md` and from no other file.
+
+  # AC-0001-0091-04
+  Scenario: Exempted Examples Are Not Selected
+    Given a project on the story tree and an EX that no test annotates, named by a `decisions.md` row whose Content opens `Test exception:`
+    When `/qfai-implement` selects its next test
+    Then the EX is skipped while that row's Status is DONE, and is selected like any other unannotated EX while the row is TODO or WIP.
+
+  # AC-0001-0091-05
+  Scenario: Shipped Minimal-Implementation Rule Drops TC and the Ledger
+    Given a project on the story tree
+    When § 2 of the shipped rule `minimal-implementation.md` is read
+    Then it restates the traceability chain of the constitution's Article V with no TC hop and names no execution ledger, and it defines an observation as an EX row in a story's `03_Example.md` under `<paths.specsDir>`.
 ```

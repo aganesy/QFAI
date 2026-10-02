@@ -84,6 +84,7 @@ describe("scaffold output reaches the ATDD test homes", () => {
     );
   });
 
+  // QFAI:EX-0001-0073-06
   it("refuses unsupported and excluded destinations before creating files", async () => {
     for (const globs of [["tests/**/*.rb"], ["src/**/*.test.ts"]]) {
       await withStory(async (root) => {

@@ -1,28 +1,5 @@
-# US-0001-0166: Scoped SaaS package certificate
+# US-0001-0166: All-Reviewer FAIL Obligation
 
 ## User Story
 
-As a delivery lead shipping a SaaS-tenant project, I want `qfai prototyping certify --scope saas-package` to seal a `completion-certificate.json` that explicitly carries `scope: "saas-package"` and a `notes:` field naming every skipped gate, so that the certificate never overstates completion as full DONE and an `--upgrade-scope full` path exists once the missing gates land.
-
-## Legacy Source Scope
-
-- In:
-  - `/qfai-verify` quality gates
-  - `qfai validate --fail-on error`
-  - review artifact presence and PASS/REVISE semantics
-  - contract-first design/UI validators
-  - prototyping design-system and evidence-related validators that still exist in code
-  - direct discussion-pack validation path の coexistence
-  - prototyping evidence path is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}` per iter; legacy `screenshots/` / `html/` directory layout is no longer the active SSOT
-  - `/qfai-verify` no longer references "full-harness profile" / "perfect-100 completion gate" / "weighted-total scoring"; review-profiles.yml drops the full-harness profile entirely
-  - SaaS-package certify scope (REQ-0166 certify side): `qfai prototyping certify --scope saas-package` seals `completion-certificate.json` with `scope: "saas-package"` + a `notes:` field naming what was skipped; MUST NOT claim full DONE; `--upgrade-scope full` upgrades only after the skipped gates land
-  - `/qfai-verify` references on the story tree: the Article V chain without TC or a ledger (`references/articles.md`), the spec, contract and policy files it loads (`references/context-load.md`), and `decisions.md` as the decision source (`SKILL.md`)
-  - `/qfai-verify` with the `rule/ skill/ agent/ prompt/` assistant tree: the constitution read from `rule/`, and routing and review profiles read from the built-in defaults plus `qfai.config.yaml` overrides
-- Out:
-  - diff-only verification
-  - resurrecting a removed prototyping runtime
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0014
-- Story block: `us-0014-0020` of retired spec-0014
+As a QFAI user, I want every reviewer to provide a concrete alternative or fix proposal when returning FAIL, so that feedback is actionable and not merely negative.

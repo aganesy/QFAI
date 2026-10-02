@@ -12,7 +12,7 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe.each(trees)("%s open-question routing", (tree) => {
   const registers = {
-    "qfai-configure": "08_Open-questions.md",
+    "qfai-configure": "open-questions.md",
     "qfai-verify": "open-questions.md",
   };
   for (const [name, register] of Object.entries(registers)) {
@@ -33,7 +33,9 @@ describe.each(trees)("%s open-question routing", (tree) => {
     for (const name of ["qfai-atdd", "qfai-implement"]) {
       const skill = await read(tree, `assistant/skill/${name}/SKILL.md`);
       expect(skill).toContain("[DRIFT-PROTOCOL:MANDATORY]");
-      expect(skill).toContain("rule/drift-protocol.md");
+      expect(skill).toContain("rule/shared-skill-delegation-baseline.md");
     }
+    const baseline = await read(tree, "assistant/rule/shared-skill-delegation-baseline.md");
+    expect(baseline).toContain("rule/drift-protocol.md");
   });
 });

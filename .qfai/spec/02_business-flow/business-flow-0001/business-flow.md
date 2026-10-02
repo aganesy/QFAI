@@ -44,6 +44,10 @@ flowchart TD
   driven through `npx qfai workflow`, which chains the planned stages with no
   stage typed by the operator and ends at `finish`. A new story, and each change
   a story-authoring stage makes to the tree, wait for the operator's approval.
-  A request that is not a change, or a mode of `off` or `shadow`, starts no run.
+  Text that is not a request, or a mode of `off` or `shadow`, starts no run.
+- Fixed decision rules choose the route from the facts read out of the request.
+  A request that needs no change runs a route that answers, closes, splits or
+  hands it back and writes nothing. A diagnosis showing the run is on the wrong
+  route moves it, at a branch point the route declares, to the route that fits.
 - A scope change discovered after an accepted implementation item follows the
   drift protocol through SDD before another item is selected.

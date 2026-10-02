@@ -1,48 +1,83 @@
-# Document schema: 01_policy/initiative.md
+# Document schema: <specsDir>/01_policy/initiative.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# Initiative$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: How the project works toward its objective.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## Initiative$"
           regex: true
-        description: Initiative definition.
-        allow_additional: true
-      - heading:
-          pattern: "^## Initiative overview$"
-          regex: true
-        description: Initiative context.
-        allow_additional: true
-        optional: true
+        description: What the initiative does, and how it leads to the outcome in objective.md.
+        allow_additional: false
+        paragraphs:
+          min: 1
+        forbidden_text:
+          - pattern: '(?m)^\s*([-*+]|[0-9]+[.)])\s'
+            regex: true
+          - pattern: '(?m)^\s*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:>|```|~~~)'
+            regex: true
+          - pattern: '(?m)^[ \t]{0,3}<[!/?A-Za-z]'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+          - pattern: '(?:\A(?:[ \t]*\n)*|\n[ \t]*\n)(?: {4}|\t)'
+            regex: true
       - heading:
           pattern: "^## Assumptions$"
           regex: true
         description: Conditions the initiative relies on.
-        allow_additional: true
         optional: true
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
       - heading:
           pattern: "^## Dependencies$"
           regex: true
-        description: Dependencies on other work.
-        allow_additional: true
+        description: Work or external elements the initiative depends on.
         optional: true
-      - heading:
-          pattern: "^## Priorities$"
-          regex: true
-        description: Initiative priority order.
-        allow_additional: true
-        optional: true
+        allow_additional: false
+        lists:
+          - min: 1
+        forbidden_text:
+          - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
       - heading:
           pattern: "^## Milestones$"
           regex: true
-        description: Initiative milestones.
-        allow_additional: true
+        description: Milestones and what reaching each one means.
         optional: true
+        allow_additional: false
         tables:
           - min: 1
-            required_headers:
-              - Milestone
-              - Description
+            max: 1
+            required_headers: [Milestone, Description]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){2}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true

@@ -1,7 +1,7 @@
 import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../cli/commands/init.js";
+import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../core/init/rootGitignore.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { reincludesEvidence, trackedEvidence, untrackEvidence } from "./evidenceIndex.js";
 import type {

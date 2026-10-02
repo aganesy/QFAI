@@ -3,12 +3,12 @@
 ## Criteria
 
 ```gherkin
-Feature: Design System As Input
-
-# AC-0001-0099-01
-# Parent: US-0001-0099
-Scenario: Design System As Deterministic DESIGN.md Mirror
-  Given `extractedDesignSystem` resolves to `<paths.contractsDir>/design/design-system.yaml`
-  When `/qfai-implement` reads token tables
-  Then those tables are byte-equivalent to the parsed token tables of root `DESIGN.md` (color / typography / radius / shadow). The mirror invariant is enforced at validate time by the design contract validators owned by spec-0004.
+Feature: Prototyping execution plan
+  # AC-0001-0099-01
+  Scenario: Step 0 execution planning is documented
+    Given a prototyping run is being planned
+    When the skill prepares execution before the first capture or evaluation cycle
+    Then `/qfai-prototyping` documents Step 0 execution planning before the first capture/evaluation cycle.
+    And Step 0 names `targetIterations`, `evaluationAxesSource`, `delegationMap`, and `plannedAt`.
+    And delegation scope and invalid role handling are documented in the same execution-planning posture.
 ```

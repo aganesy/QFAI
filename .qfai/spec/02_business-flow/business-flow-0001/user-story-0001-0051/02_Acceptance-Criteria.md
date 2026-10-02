@@ -3,13 +3,50 @@
 ## Criteria
 
 ```gherkin
-Feature:
+Feature: Story-tree layout and ID validation
+  # AC-0001-0051-01
+  Scenario: The story tree runs the story-tree validators
+    Given a project whose `paths.specsDir` holds no `spec-*/` and no `_policies/` directory (the story tree)
+    When `qfai validate --profile sdd` runs
+    Then the story-tree finding families run on it and the spec-pack validators report nothing about it
+    And a `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files raises `QFAI-LAYOUT-001` as the only finding, and no other validator runs
 
-# AC-0001-0051-01
-# Parent: US-0001-0051
-Scenario: AC-0001-0051-01
-  Given a SaaS-tenant repo whose prototyping-profile validate PASSes, with a DCON-005 design-system attestation present at `<paths.contractsDir>/design/design-system.yaml` and a conforming CLI-HANDOFF cross-skill handoff
-  When `qfai validate --profile saas-package` runs
-  Then validate PASSes; the ATDD / implement-class gates are SKIPPED and each skip is surfaced as a `D-SAAS-PACKAGE-VERIFY-SKIPPED` (severity info) finding naming the skipped gate
-  And when any of the three required conditions fails (prototyping-profile fails, DCON-005 attestation absent, or CLI-HANDOFF schema fails), `qfai validate --profile saas-package` does NOT PASS
+  # AC-0001-0051-02
+  Scenario: A story directory without exactly its three files is reported
+    Given the story tree, and a `user-story-NNNN-NNNN/` directory that lacks `01_User-story.md`, `02_Acceptance-Criteria.md` or `03_Example.md`, holds any other file, or holds a subdirectory
+    When `qfai validate --profile sdd` runs
+    Then an error names the directory and each missing or extra entry
+    And a story directory holding exactly the three files raises no such error
+
+  # AC-0001-0051-03
+  Scenario: A malformed ID is reported
+    Given the story tree, and an ID the tree defines that does not match its shape — `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN`, `DEC-NNNN` or `OQ-NNNN`
+    When `qfai validate --profile sdd` runs
+    Then an error names the ID and the file that defines it
+
+  # AC-0001-0051-04
+  Scenario: An ID defined twice is reported
+    Given the story tree, and an ID of one of the seven shapes defined in more than one place
+    When `qfai validate --profile sdd` runs
+    Then one error names the ID and every file that defines it
+
+  # AC-0001-0051-05
+  Scenario: An ID out of place is reported
+    Given the story tree, and a story ID that does not start with its flow's number, an AC or EX ID that does not start with its story's ID, or a `business-flow-NNNN/` or `user-story-NNNN-NNNN/` directory whose name does not match the ID it holds
+    When `qfai validate --profile sdd` runs
+    Then an error names the ID and the file that defines it
+
+  # AC-0001-0051-06
+  Scenario: A constraint ID out of sequence is reported
+    Given the story tree, and a row of `01_policy/constraint.md` whose ID is not its section's prefix followed by its place in the table, counted from 01
+    When `qfai validate --profile sdd` runs
+    Then an error names the ID and the ID its place gives
+    And a constraint document whose IDs run from 01 in each section raises no such error
+
+  # AC-0001-0051-07
+  Scenario: An architecture whose diagram and table disagree is reported
+    Given the story tree, and a `tech.md` whose Architecture table has a Depends on entry that is not a layer in a row below its own, or whose diagram draws a layer or an edge the table does not give, or leaves one out
+    When `qfai validate --profile sdd` runs
+    Then an error names `tech.md` and each disagreement
+    And an architecture whose rows run from the uppermost layer down, and whose diagram draws exactly its layers and dependencies, raises no such error
 ```

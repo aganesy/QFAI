@@ -1,25 +1,11 @@
-# US-0001-0207: Implement as a stage of a run
+# US-0001-0207: Run `/qfai-sdd` as a stage of a run
 
 ## User Story
 
-- Goal: As an operator who asked for a feature once, I want `/qfai-implement`
-  to take its work order from the run, work only the examples of the flow the
-  order binds and resume where a long stage stopped, so that the run reaches
-  verification without my choosing the flow or typing a stage.
-- Non-goals: deciding the plan; adding an example; judging whether the run is
-  complete.
-- Notes: discussion-20260923171450572#DUS-001 (its implement side, with the
-  `implement-seam` work order the acceptance stage asks for),
-  discussion-20260923171450572#REQ-0013,
-  discussion-20260923171450572#REQ-0034,
-  discussion-20260923171450572#REQ-0038,
-  discussion-20260923171450572#REQ-0051,
-  discussion-20260923171450572#REQ-0052,
-  discussion-20260923171450572#REQ-0056.
+As an operator, I want `/qfai-sdd` to do exactly the work order it is handed for exactly the target that work order names, to change the story tree only on an answer I gave for that stage, and to end at SDD when I invoke it directly, so that a run stays inside its scope and the expert path keeps working as it does today.
 
-## Source Provenance
+## Non-goals
 
-- Story block: US-0011-0009, which `main` added to spec-0011 (archived pre-merge
-  pack of spec-0011; main's
-  text at `b5d357c14:.qfai/specs/spec-0011/02_User-stories.md`).
-  `decisions.md#DEC-0745` records the carry.
+- Running every flow when a work order names no target
+- Continuing from a direct call into implementation
+- The check the workflow core makes when it accepts the stage's result

@@ -16,7 +16,7 @@ key, misspelled field, legacy flat key) fails the whole file.
 ```
 
 One file per (UI contract × screen × cycle). `<ui-contract-id>` is the full
-`CON-UI-NNNN` ID, and `<screen>` is declared in that contract's `screens[]`.
+`UI-NNNN` ID, and `<screen>` is declared in that contract's `screens[]`.
 `<screen>.review.json` is the **only**
 per-(UI contract × screen) artifact the Reviewer writes — no `.html`, no
 `.png`, no `.interaction.json`.
@@ -31,7 +31,7 @@ is never parsed against this schema.
 
 ```ts
 type ReviewerPayload = {
-  uiContractId: string; // full CON-UI-NNNN ID
+  uiContractId: string; // full UI-NNNN ID
   screenId: string; // non-empty; declared screen id
   cycle: number; // integer, 0..9
   sessionStatus: "ok" | "retryExhausted" | "launchFailed";
@@ -70,7 +70,7 @@ by overstating rather than by fixing.
 
 | Field                        | Rule                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `uiContractId` / `screenId`  | full `CON-UI-NNNN` ID / non-empty screen ID                                                                                                                                                                                                                                                                                                                                                                  |
+| `uiContractId` / `screenId`  | full `UI-NNNN` ID / non-empty screen ID                                                                                                                                                                                                                                                                                                                                                                      |
 | `cycle`                      | integer, `0..9`; both bounds are enforced                                                                                                                                                                                                                                                                                                                                                                    |
 | `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                                                                                                                                                                                                                                                                                                                                                      |
 | `retryCount`                 | non-negative integer                                                                                                                                                                                                                                                                                                                                                                                         |

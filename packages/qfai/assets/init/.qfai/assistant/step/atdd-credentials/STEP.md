@@ -33,6 +33,13 @@ Follow `.qfai/assistant/skill/qfai-atdd/references/credential-reuse.md`.
 It holds the seven session-reuse rules, the rule for a caller-injected
 environment and a worked example. Keep actors and sessions isolated by worker.
 
+## Passes when
+
+Read first: the obligations `atdd-scaffold` recorded, and which actor each test
+needs. The step passes when no test in scope needs an authenticated actor, or
+when every actor one needs is already served by per-worker setup that follows
+the reference. The pass names the tests and the setup it read.
+
 ## Review
 
 The completion reviewer checks the setup against each rule of that reference,

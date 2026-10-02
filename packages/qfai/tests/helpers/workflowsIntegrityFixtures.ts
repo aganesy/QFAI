@@ -97,47 +97,26 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
 }
 
 /**
- * The subset of the bare-install path and traceability warnings a caller may
- * ask to LEAVE standing.
- *
- * Narrower than the full five, and not by preference. `output.validateJson`
- * resolves under `paths.outDir`, so quieting the former creates the directory the
- * latter looks for: the two cannot be varied independently, and offering
- * `paths.outDir` here would hand back a tree with a warning count the caller did
- * not ask for. These three each answer a distinct probe with no shared operand.
- *
- * A `BARE_INIT_WARNING_IDS` constant stood here listing the original five, with a docblock
- * arguing that a literal list makes another default warning break a caller's
- * guard. It was deleted: nothing read it, `quietUnrelatedWarnings` hard-codes its
- * repairs, and the guard that would actually break is the callers'
- * `failingIdsOtherThanDrift(...)` assertion, which never referenced it. The
- * argument was sound and the code did not implement it, which is worse than not
- * making the argument.
+ * The warning a caller may ask to LEAVE standing: the empty
+ * `traceability.testGlobs` list. The absent default `paths.srcDir`,
+ * `paths.testsDir` and `paths.outDir` and a missing `output.validateJson` are
+ * `info`, so none of them can serve as a warning to leave.
  */
-export type LeavableWarningId = "paths.srcDir" | "paths.testsDir" | "traceability.testGlobs";
+export type LeavableWarningId = "traceability.testGlobs";
 
 /**
- * Repairs unrelated fixture warnings, optionally leaving exactly ONE named
- * path or traceability warning standing. Callers verify the final set: a
- * shipped asset over the line budget remains a product warning to fix.
+ * Repairs unrelated fixture warnings, optionally leaving the `traceability.testGlobs`
+ * warning standing. Callers verify the final set: a shipped asset over the line
+ * budget remains a product warning to fix.
  *
- * The path and traceability warnings a bare `qfai init` tree leaves at
- * `warning` include `paths.srcDir`,
- * `paths.testsDir`, `paths.outDir`, `output.validateJson` and
- * `traceability.testGlobs`. They matter
- * because `--fail-on warning` reads `summary.warning + summary.error`, a whole-run
- * total with no per-check exclusions, so a row asserting exit 0 on that flag needs
- * every OTHER warning gone. `qfai init` alone does not deliver that state, which
- * is the opposite of what "a clean tree" suggests.
+ * `--fail-on warning` reads `summary.warning + summary.error`, a whole-run total
+ * with no per-check exclusions, so a row asserting exit 0 on that flag needs every
+ * OTHER warning gone. A bare `qfai init` tree leaves one at `warning`,
+ * `traceability.testGlobs`, which is the opposite of what "a clean tree" suggests.
  *
  * Each repair is the minimum the check's own condition asks for, read from
  * `src/core/doctor.ts` rather than guessed:
  *
- * - `paths.*` tests `exists(resolved)`, so an empty directory answers it;
- * - `output.validateJson` tests `exists(validateJsonAbs)` and nothing else, so
- *   file CONTENT is out of scope — `{}` is written rather than a synthesized
- *   report, because a fixture that fabricates a plausible-looking validate.json
- *   invites a later reader to trust its numbers;
  * - `traceability.testGlobs` warns on `globs.length === 0`; with globs present the
  *   check only warns again when scenario files exist AND none match, and a tree
  *   with no `.qfai/specs` has no scenarios. So a non-empty list suffices and it
@@ -154,13 +133,6 @@ export async function quietUnrelatedWarnings(
 ): Promise<void> {
   const leave = options?.leaveWarning;
 
-  if (leave !== "paths.srcDir") {
-    await mkdir(path.join(dir, "src"), { recursive: true });
-  }
-  if (leave !== "paths.testsDir") {
-    await mkdir(path.join(dir, "tests"), { recursive: true });
-  }
-
   // This fixture measures workflow drift. The retired prompt directory is
   // installed by init but is unrelated to that check and warns in doctor.
   const deprecatedPromptsDir = path.resolve(dir, ".qfai", "assistant", "prompt");
@@ -168,12 +140,6 @@ export async function quietUnrelatedWarnings(
     throw new Error("quietUnrelatedWarnings: prompt path escaped the adopter fixture");
   }
   await rm(deprecatedPromptsDir, { recursive: true, force: true });
-
-  // `paths.outDir` and `output.validateJson` in one step, in that order: the
-  // second cannot be satisfied without the first, which is why neither is
-  // `LeavableWarningId`.
-  await mkdir(path.join(dir, ".qfai", "report"), { recursive: true });
-  await writeFile(path.join(dir, ".qfai", "report", "validate.json"), "{}", "utf-8");
 
   if (leave !== "traceability.testGlobs") {
     const configPath = path.join(dir, "qfai.config.yaml");
@@ -197,7 +163,7 @@ export async function quietUnrelatedWarnings(
  * Removes the whole install-provenance record from the adopter tree, leaving
  * every installed file on disk. This is the state of an adopter who installed
  * before the record existed: no entry for any name, so every shipped name is
- * `adopter-owned` under the shipped-workflows contract's §3 enum.
+ * `adopter-owned` under the shipped-workflows contract's state enum (BR-0018-0021).
  *
  * The record path is duplicated from `src/shared/provenance.ts`, whose
  * `PROVENANCE_SEGMENTS` is module-private. The duplication is safe in the
@@ -214,7 +180,7 @@ export async function deleteInstallProvenanceRecord(dir: string): Promise<void> 
  * Removes ONE name's entry from the install-provenance record, leaving every
  * other entry — and every file on disk — untouched. Paired with
  * `deleteShippedWorkflow` it produces the `absent` state of the
- * shipped-workflows contract's §3 enum (no entry AND nothing on disk) for a
+ * shipped-workflows contract's state enum, BR-0018-0021 (no entry AND nothing on disk), for a
  * name the running package still ships, inside a record that stays non-empty.
  *
  * Goes through the production reader and writer instead of duplicating the
@@ -222,7 +188,7 @@ export async function deleteInstallProvenanceRecord(dir: string): Promise<void> 
  * edit needs the parsed record anyway. What that route costs, at least:
  *
  * - The round trip keeps only what the reader RETURNS and drops the rest: any
- *   top-level key beside `workflows` (contract §2 anticipates a second artifact
+ *   top-level key beside `workflows` (BR-0018-0020 anticipates a second artifact
  *   kind — make this a targeted JSON edit in the change that adds one), and any
  *   per-entry field outside the three the reader validates, an entry missing
  *   one of which the reader drops whole.
@@ -310,7 +276,7 @@ export type DoctorTextRun = { exitCode: number; stdout: string };
  * `summary:` line, which only the diagnostic pass emits.
  *
  * `stdout` is captured rather than left to leak into the reporter because
- * `runDoctor` renders through `cli/lib/logger`'s `info`, i.e.
+ * `runDoctor` renders through `core/logger`'s `info`, i.e.
  * `process.stdout.write`, which is exactly what `captureStdout` swaps out. It is
  * returned rather than discarded so the rendered text is available to the row
  * that owns 2-group placement.

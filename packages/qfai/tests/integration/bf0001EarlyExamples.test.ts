@@ -77,16 +77,7 @@ describe("BF-0001 init preserves project content", () => {
         ]),
       );
       expect(await readdir(path.join(spec, "03_contract"))).toEqual(
-        expect.arrayContaining([
-          "contracts.md",
-          "tech.md",
-          "structure.md",
-          "api",
-          "db",
-          "ui",
-          "cli",
-          "design",
-        ]),
+        expect.arrayContaining(["contracts.md", "tech.md", "api", "db", "ui", "cli"]),
       );
       const assistant = path.join(root, ".qfai", "assistant");
       expect(await readdir(assistant)).toEqual(

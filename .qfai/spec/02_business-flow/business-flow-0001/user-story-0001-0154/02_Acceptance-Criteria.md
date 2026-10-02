@@ -3,12 +3,16 @@
 ## Criteria
 
 ```gherkin
-Feature: Required Edge Enforcement
+Feature: Resolve active discussion pack via single helper
+  # AC-0001-0154-01
+  Scenario: Active discussion pack resolved via single helper over `state.json`
+    Given downstream `/qfai-sdd` skills need the active discussion pack,
+    When the pack is resolved,
+    Then it is read through one helper from `.qfai/state.json#discussion.currentId` (the SSOT written by `/qfai-discussion`, spec-0010) and is NOT inferred from filesystem mtime.
 
-# AC-0001-0154-01
-# Parent: US-0001-0154
-Scenario: Story-Tree Required Edges
-  Given the story tree,
-  When `/qfai-sdd` gates it with `qfai validate --profile sdd --fail-on error`,
-  Then every EX names exactly one AC in its `AC-Ref` cell, every AC has at least one EX, every BR cites at least one EX, and every EX is cited by at least one BR. A missing or broken edge fails the gate, naming the ID and its file.
+  # AC-0001-0154-02
+  Scenario: Ambiguous active pointer surfaces recovery guidance
+    Given `.qfai/state.json#discussion.currentId` is absent OR resolves to a missing/duplicate pack,
+    When the helper resolves the active pack,
+    Then it raises an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`).
 ```

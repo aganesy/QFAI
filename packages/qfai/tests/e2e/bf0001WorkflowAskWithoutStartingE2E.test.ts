@@ -3,8 +3,8 @@
  * E2E: asking about the repository starts nothing.
  *
  * The entry's own `status` call on a `qfai init` project answers with no run and the mode in
- * force, and leaves the tree byte for byte as it was. A routing result that classes the request
- * as anything but a change is refused, so an explanation never becomes a run.
+ * force, and leaves the tree byte for byte as it was. A routing result whose request kind is anything
+ * but a routed request is refused, so an explanation never becomes a run outside its route.
  */
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -22,6 +22,7 @@ import {
   treeDigest,
   workflow,
 } from "./workflowJourney.js";
+import { extractionFor } from "../helpers/workflowExtraction.js";
 
 afterEach(removeProjects);
 
@@ -40,13 +41,13 @@ it("the entry's status call leaves no run and a byte-identical tree", async () =
   }).toEqual({ exit: 0, run: null, mode: "active", runs: false, unchanged: true });
 }, 180_000);
 
-it("a routing result for an explanation only is refused, and the run stays in routing", async () => {
+it("a routing result that only asks to verify is refused, and the run stays in routing", async () => {
   const root = await initProject();
   const runId = await startRun(root);
   const routing = workflow(root, ["next", "--run", runId]);
   const readOnly = {
-    requestKind: "read_only",
-    candidateRoute: null,
+    requestKind: "verify_only",
+    extraction: extractionFor("investigate-question"),
     goal: "Explain why the export answers 500.",
     expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
     observedRefs: [],
@@ -56,7 +57,6 @@ it("a routing result for an explanation only is refused, and the run stays in ro
     newStories: [],
     proposedWriteScope: [],
     protectedTargets: [],
-    requiredStages: [],
     rationale: "An explanation is not a change.",
   };
   const refused = await submit(
