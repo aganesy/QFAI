@@ -523,11 +523,14 @@ describe("automerge is declared together with the check that decides whether any
     // does not name, which is the reading the provider's own peer range makes unsafe. So the
     // package names are the only selector such a rule may carry.
     for (const rule of disablingRules) {
-      const selectors = [...rule.matchAll(/\b(match[A-Z]\w*)\s*:/g)].map((match) => match[1]);
+      const selectors = [...rule.matchAll(/\b((?:match|exclude)[A-Z]\w*)\s*:/g)].map(
+        (match) => match[1],
+      );
       expect(
         selectors,
         "a package switched off must be switched off outright: any selector besides " +
-          "`matchPackageNames` in the same rule, such as `matchUpdateTypes` or `matchDepTypes`, " +
+          "`matchPackageNames` in the same rule, such as `matchUpdateTypes`, `matchDepTypes` or " +
+          "`excludePackageNames`, " +
           "leaves the updates it does not name arriving exactly as before",
       ).toEqual(["matchPackageNames"]);
     }
