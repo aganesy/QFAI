@@ -436,11 +436,39 @@ describe("automerge is declared together with the check that decides whether any
     // green over an invariant it no longer holds.
     const EXEMPT = ["@vitest/coverage-v8", "vitest"];
 
+    // The config without its comments. A commented-out property is not a property Renovate
+    // reads, so every assertion below reads this text and not the file's.
+    const withoutComments = (text: string): string => {
+      let out = "";
+      let quote = "";
+      for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i] ?? "";
+        const next = text[i + 1] ?? "";
+        if (quote !== "") {
+          out += ch;
+          if (ch === "\\") {
+            out += next;
+            i += 1;
+          } else if (ch === quote) quote = "";
+        } else if (ch === "/" && next === "/") {
+          while (i < text.length && text[i] !== "\n") i += 1;
+          out += "\n";
+        } else if (ch === "/" && next === "*") {
+          const close = text.indexOf("*/", i + 2);
+          i = close === -1 ? text.length : close + 1;
+        } else {
+          if (ch === '"' || ch === "'") quote = ch;
+          out += ch;
+        }
+      }
+      return out;
+    };
+
     // Each `packageRules` entry, WHOLE. A bounded lookahead from `matchPackageNames` reads a
     // window rather than an object, and JSON5 fixes no property order — so a `matchUpdateTypes`
     // written after `enabled: false` falls outside the window and the narrowing it performs is
-    // invisible. This walks braces instead, skipping strings and comments, so the block a claim
-    // below reads is the rule Renovate reads.
+    // invisible. This walks braces instead, skipping strings, so the block a claim below reads
+    // is the rule Renovate reads. It takes comment-free text.
     const ruleObjects = (config: string): string[] => {
       const at = config.indexOf("packageRules:");
       if (at === -1) return [];
@@ -450,59 +478,30 @@ describe("automerge is declared together with the check that decides whether any
       let depth = 0;
       let from = -1;
       let quote = "";
-      let comment = false;
-      let block = false;
       for (let i = open; i < config.length; i += 1) {
         const ch = config[i] ?? "";
-        const next = config[i + 1] ?? "";
-        if (block) {
-          if (ch === "*" && next === "/") {
-            block = false;
-            i += 1;
-          }
-          continue;
-        }
-        if (comment) {
-          if (ch === "\n") comment = false;
-          continue;
-        }
         if (quote !== "") {
           if (ch === "\\") i += 1;
           else if (ch === quote) quote = "";
           continue;
         }
-        if (ch === "/" && next === "/") {
-          comment = true;
-          continue;
-        }
-        if (ch === "/" && next === "*") {
-          block = true;
-          i += 1;
-          continue;
-        }
         if (ch === '"' || ch === "'") {
           quote = ch;
-          continue;
-        }
-        if (ch === "{") {
+        } else if (ch === "{") {
           if (depth === 0) from = i;
           depth += 1;
-          continue;
-        }
-        if (ch === "}") {
+        } else if (ch === "}") {
           depth -= 1;
           if (depth === 0 && from !== -1) {
             rules.push(config.slice(from, i + 1));
             from = -1;
           }
-          continue;
-        }
-        if (ch === "]" && depth === 0) break;
+        } else if (ch === "]" && depth === 0) break;
       }
       return rules;
     };
 
-    const config = configText();
+    const config = withoutComments(configText());
     const disablingRules = ruleObjects(config).filter((rule) => /enabled:\s*false/.test(rule));
     const disabled = disablingRules
       .flatMap((rule) => [
@@ -552,6 +551,24 @@ describe("automerge is declared together with the check that decides whether any
           "as a package that does",
       ).toContain(name);
     }
+
+    // The names alone can survive the section that says what to do about them, so the section
+    // is read too: its own heading, and the manual step it exists to describe.
+    const section =
+      /^### The test runner and its coverage provider\s*$([\s\S]*?)(?=^#{1,3} )/m.exec(
+        guide,
+      )?.[1] ?? "";
+    for (const name of EXEMPT) {
+      expect(
+        section,
+        `the guide's section on the held-back pair has to name ${name} and say how it is raised`,
+      ).toContain(name);
+    }
+    expect(
+      section,
+      "the guide's section on the held-back pair has to say that raising it is a manual step, " +
+        "because Renovate sends no pull request that would remind anyone",
+    ).toMatch(/manual step/);
   });
 });
 
