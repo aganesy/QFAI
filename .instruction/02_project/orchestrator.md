@@ -5,26 +5,26 @@ dependencies: [00_universal/*, 02_project/mcp.md]
 version: 2.0.0
 ---
 
-# オーケストレータ運用ガイド（QFAI Toolkit）
+# Orchestrator Operations Guide (QFAI Toolkit)
 
-サブエージェントを使う場合の分担と合流ルールを定義する。
+This guide defines how work is divided and merged when sub-agents are used.
 
-## 基本方針
+## Basic Policy
 
-- 役割が明確に分離できる場合のみ委譲する（要件整理/実装/テストなど）
-- 仕様と実装が密結合のタスクは分割しすぎない
-- Plan は必ず共有し、進捗は更新する
-- 調査/編集は MCP を優先活用する（一覧: `.instruction/02_project/mcp.md`）
+- Delegate only when the roles can be clearly separated (requirements, implementation, testing and so on)
+- Do not over-split tasks where the specification and implementation are tightly coupled
+- Always share the plan and keep progress up to date
+- Prefer MCP for investigation and editing (list: `.instruction/02_project/mcp.md`)
 
-## 進め方
+## Workflow
 
-1. **状況把握**: 目的/制約/完了条件を整理し、対象ファイルを特定
-2. **計画**: フェーズごとに担当を割り当て、依存関係を明確化
-3. **実行と統合**: 変更を統合し、テストと整合性を確認
-4. **報告**: 変更概要/影響/テスト/残リスクを共有
+1. **Assess the situation**: clarify the goal, constraints and completion criteria, and identify the target files
+2. **Plan**: assign an owner to each phase and make dependencies explicit
+3. **Execute and integrate**: merge the changes and check tests and consistency
+4. **Report**: share the summary of changes, impact, tests and remaining risks
 
-## 注意事項
+## Notes
 
-- 仕様ドキュメントとコードの整合を最優先する
-- テストが通るまで完了としない
-- 不明点は推測せず、早めに相談する
+- Consistency between the specification documents and the code comes first
+- Do not treat work as complete until the tests pass
+- Do not guess about unknowns; ask early

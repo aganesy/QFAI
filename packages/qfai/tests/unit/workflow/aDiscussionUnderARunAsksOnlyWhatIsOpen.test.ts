@@ -1,26 +1,22 @@
-// QFAI:SPEC-0018:TC-0018-0241
+// QFAI:EX-0001-0188-11
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Decision = ReturnType<typeof decide>;
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
-  ["bounded-implement", "implement", "qfai-implement", "implement"],
-  ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when: "always",
-}));
+  planStage("bounded-sdd-delta", "sdd"),
+  planStage("bounded-implement", "implement"),
+  planStage("bounded-verify", "verify"),
+];
 const facts = {
-  plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
-  specs: { "spec-0007": { lifecycle: "active" } },
+  plans: { "add-feature": { route: "add-feature", stages: boundedStages } },
+  flows: ["BF-0007"],
 };
 const statusQuestion = {
   kind: "fact",
@@ -49,17 +45,16 @@ function route(): Decision {
         expectedSequence: 2,
         outcome: "accepted",
         proposal: {
-          requestKind: "change",
-          candidateRoute: "bounded-change",
+          requestKind: "routed",
+          extraction: extractionFor("add-feature"),
           goal: "Return the agreed status for a missing export.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: ["spec-0007"],
+          affectedFlowIds: ["BF-0007"],
           unresolvedQuestions: [statusQuestion],
-          newCapabilities: [],
+          newStories: [],
           proposedWriteScope: ["src/exports/**"],
           protectedTargets: [],
-          requiredStages: ["sdd_delta", "implement", "verify"],
         },
       },
     },
@@ -74,7 +69,7 @@ function settledOf(decision: Decision) {
   return settled;
 }
 
-it("TC-0018-0241 (TDD-0470): settled names the routing result and the answered question", () => {
+it("settled names the routing result and the answered question", () => {
   const routed = route();
   const run = routed.verdict.run;
   const question = routed.verdict.questions?.[0];
@@ -83,7 +78,7 @@ it("TC-0018-0241 (TDD-0470): settled names the routing result and the answered q
   const waiting: NonNullable<Snapshot> = {
     run,
     plan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
     openQuestions: [question],
     scopeDigest: "a".repeat(64),
     digestKey: "b".repeat(64),

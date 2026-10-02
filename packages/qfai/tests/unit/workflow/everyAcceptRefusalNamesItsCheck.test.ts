@@ -1,61 +1,36 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
+import { planStage } from "./kindSteps.js";
 
-type Snapshot = Parameters<typeof decide>[0];
-type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
-type Plan = NonNullable<NonNullable<Snapshot>["plan"]>;
+type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
+type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
-const specBinding = { specId: "spec-0007" };
-const directPlan: Plan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+const flowBinding = { flowId: "BF-0007" };
+const plan = {
+  route: "fix-defect",
+  stages: [planStage("bugfix-diagnose", "diagnose"), planStage("bugfix-verify", "verify")],
 };
-const bugfixPlan: Plan = {
-  route: "bugfix",
-  stages: [
-    {
-      stageInstanceId: "bugfix-diagnose",
-      stageKind: "diagnose",
-      skill: "qfai-implement",
-      operation: "diagnose-only",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bugfix-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-      when: "always",
-    },
-  ],
+const diagnosis = {
+  verdict: "missing-test",
+  reproductionRef: "evidence/reproduction.json",
+  matchedIds: ["EX-0007-0002-01"],
 };
 
 // Issues the plan's first work order, then accepts a result for it.
-function acceptFirst(plan: Plan, change: Partial<AcceptResult>) {
-  const issued = decide(
-    { run: { id: "run-named", state: "ready", sequence: 4 }, plan, specBinding },
-    { operation: "next" },
-    {},
-  );
+function acceptDiagnose(change: Partial<Result>, withDiagnosis = true) {
+  const ready: Snapshot = {
+    run: { id: "run-named", state: "ready", sequence: 4 },
+    plan,
+    flowBinding,
+  };
+  const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
-  if (!workOrder || !run) throw new Error("no work order was issued");
+  if (!workOrder || !run) throw new Error("the ready run issues its diagnose work order");
   return decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -65,6 +40,9 @@ function acceptFirst(plan: Plan, change: Partial<AcceptResult>) {
         attempt: workOrder.attempt,
         expectedSequence: run.sequence,
         outcome: "accepted",
+        testObservation: "not_applicable",
+        actor: { agentInstance: "diagnose-1" },
+        ...(withDiagnosis ? { diagnosis } : {}),
         ...change,
       },
     },
@@ -86,20 +64,19 @@ function refused(subject: string, reason = "schema") {
 }
 
 it("an awaiting_input result with no question is refused naming its outcome", () => {
-  const decision = acceptFirst(directPlan, { outcome: "awaiting_input" });
+  const decision = acceptDiagnose({ outcome: "awaiting_input" });
 
   expect(refusalOf(decision)).toEqual(refused("outcome"));
 });
 
 it("a stage result carrying a route proposal is refused naming the proposal", () => {
-  const decision = acceptFirst(directPlan, {
+  const decision = acceptDiagnose({
     proposal: {
       requestKind: "change",
-      candidateRoute: "direct",
+      extraction: extractionFor("answer-question"),
       expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
       observedRefs: [],
-      newCapabilities: [],
-      requiredStages: [],
+      newStories: [],
     },
   });
 
@@ -107,13 +84,13 @@ it("a stage result carrying a route proposal is refused naming the proposal", ()
 });
 
 it("a diagnose result without its diagnosis is refused naming the diagnosis", () => {
-  const decision = acceptFirst(bugfixPlan, {});
+  const decision = acceptDiagnose({}, false);
 
   expect(refusalOf(decision)).toEqual(refused("diagnosis"));
 });
 
 it("every failed field check is named in one refusal", () => {
-  const decision = acceptFirst(bugfixPlan, { outcome: "needs_repair" });
+  const decision = acceptDiagnose({ outcome: "awaiting_input" }, false);
 
   expect(refusalOf(decision).reasons).toEqual([
     { reason: "schema", subject: "diagnosis" },
@@ -124,13 +101,13 @@ it("every failed field check is named in one refusal", () => {
 it("an outstanding work order the plan does not issue next is refused as work-order", () => {
   const run = { id: "run-named", state: "running", sequence: 5 };
   const workOrder = {
-    workOrderId: "work-order-direct-verify-1",
-    stageInstanceId: "direct-verify",
+    workOrderId: "work-order-bugfix-verify-1",
+    stageInstanceId: "bugfix-verify",
     attempt: 1,
     stageKind: "verify",
   };
   const decision = decide(
-    { run, plan: directPlan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {

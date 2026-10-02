@@ -8,7 +8,7 @@
  * a shared timeout — nothing about how it runs. Everything else came from the runner's
  * defaults, which means this suite's concurrency was whatever the installed version
  * happened to default to, and an upgrade could change it with no diff in this repository.
- * `BR-0017-0047` closes that by requiring the knobs to be **declared**.
+ * `BR-0016-0046` closes that by requiring the knobs to be **declared**.
  *
  * Declaring a value that equals today's default is not a no-op. It moves the value from
  * the runner's release notes into this repository's diff.
@@ -46,15 +46,15 @@
  *
  * ## The starting value is a hypothesis, and it is the user's
  *
- * `BR-0017-0048` fixes ten on the worker axis and ten on the within-file concurrency axis
- * and requires each to stay **overridable**. `BR-0017-0051` is the other half: no agent
+ * `BR-0016-0047` fixes ten on the worker axis and ten on the within-file concurrency axis
+ * and requires each to stay **overridable**. `BR-0016-0050` is the other half: no agent
  * may substitute a different starting value on the strength of its own measurement. So
  * this row asserts ten, and asserts that ten is a default rather than a literal — the
  * measurement-gated adoption of a FINAL value is `TC-0017-0065`, a later change with a
  * timing artifact behind it.
  *
  * Each axis is then held to the cores the machine has, on a measurement of its own. That is
- * not the revision `BR-0017-0051` reserves: the declared value is still ten and both
+ * not the revision `BR-0016-0050` reserves: the declared value is still ten and both
  * overrides are still honoured as asked, so what the cap changes is the number handed to a
  * machine that could not have run ten anyway. The rows below therefore compare against the
  * held value, re-derived from this machine rather than read out of the file under test.
@@ -64,14 +64,14 @@
  *
  * ## Retries are forbidden, and this is the row that says so
  *
- * `BR-0017-0052`: a search of the runner workspace for a retry setting must return zero
+ * `BR-0016-0051`: a search of the runner workspace for a retry setting must return zero
  * results, "even to stabilize a tuning change". Asserted structurally over the resolved
  * configuration and textually over every file that configures the runner — the rule is
  * phrased as a search, and a commented-out retry is still a retry someone will uncomment.
  */
-// QFAI:SPEC-0017:TC-0017-0060
-// QFAI:SPEC-0017:TC-0017-0061
-// QFAI:SPEC-0017:TC-0017-0068
+// QFAI:EX-0002-0019-01
+// QFAI:EX-0002-0019-02
+// QFAI:EX-0002-0019-06
 
 import { readFileSync, readdirSync } from "node:fs";
 import { availableParallelism } from "node:os";
@@ -259,6 +259,30 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
       .soft(inert, "an axis that bounds the whole run is declared once, at the root")
       .toEqual([]);
   });
+
+  // QFAI:EX-0002-0019-01
+  it("declares the worker ceiling, the worker floor and file parallelism in the root knobs only", async () => {
+    const knobs: unknown = await import("../../vitest.knobs");
+    const rootKnobs = isRecord(knobs) ? knobs["rootKnobs"] : undefined;
+    const projectKnobs = isRecord(knobs) ? knobs["projectKnobs"] : undefined;
+    if (!isRecord(rootKnobs) || !isRecord(projectKnobs)) {
+      throw new Error("vitest.knobs.ts must export rootKnobs and projectKnobs");
+    }
+
+    expect([...ROOT_ONLY].sort()).toEqual(["fileParallelism", "maxWorkers", "minWorkers"]);
+    expect(Object.keys(rootKnobs).sort()).toEqual([...ROOT_ONLY].sort());
+    expect(rootKnobs["maxWorkers"]).toBeTypeOf("number");
+    expect(rootKnobs["minWorkers"]).toBeTypeOf("number");
+    expect(rootKnobs["fileParallelism"]).toBeTypeOf("boolean");
+    expect(ROOT_ONLY.filter((key) => key in projectKnobs)).toEqual([]);
+
+    const { projects } = await load();
+    expect(
+      projects.flatMap((project) =>
+        ROOT_ONLY.filter((key) => key in project).map((key) => `${nameOf(project)}: ${key}`),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both axes", () => {
@@ -427,7 +451,7 @@ describe("the knob set stays portable, because a fixture spreads it into a forei
 describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry settings", () => {
   it("declares no retry in the resolved configuration and holds no retry setting in any runner file", async () => {
     // CLAIM 1 — structural, over both halves of the split. `retry` is the runner's key;
-    // a configuration carrying it would re-run a failing test, which `BR-0017-0052`
+    // a configuration carrying it would re-run a failing test, which `BR-0016-0051`
     // forbids outright.
     const { projects, root } = await load();
     const withRetry = [
@@ -440,7 +464,7 @@ describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry setti
       .soft(withRetry, "a retry would mask the concurrent-writer races more workers surface")
       .toEqual([]);
 
-    // CLAIM 2 — textual, because `BR-0017-0052` is phrased as a search returning zero
+    // CLAIM 2 — textual, because `BR-0016-0051` is phrased as a search returning zero
     // results. This catches what the structural claim cannot: a commented-out retry, one
     // behind a branch not taken, or one inside a pool options block. None of those appears
     // in the resolved configuration, and each is a retry the next person enables.

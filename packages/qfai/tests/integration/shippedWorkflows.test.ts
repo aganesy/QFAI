@@ -3,8 +3,8 @@
  * hygiene.
  *
  * Covers the operational-bounding half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5 dimension 3 and
- * §6): every shipped job is bounded (reachable least-privilege
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0030
+ * and BR-0018-0001): every shipped job is bounded (reachable least-privilege
  * `permissions:` block, `timeout-minutes:`) and every shipped workflow
  * cancels superseded runs via a ref-scoped `concurrency:` group. The
  * shipped/retired name lists' disjointness invariant (the write/prune sets
@@ -56,7 +56,7 @@ function collectSteps(job: Record<string, unknown>): Array<Record<string, unknow
   return steps.filter(isRecord);
 }
 
-// QFAI:SPEC-0003:TC-0003-0027
+// QFAI:EX-0002-0001-01
 describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permissions block, a timeout and a cancelling concurrency group", () => {
   // One it() per TC-0003-0027 verify bullet, plus the carried advisory-27
   // obligation (SHIPPED/RETIRED disjointness) whose ruled home is this
@@ -110,6 +110,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0001-01
   it("every workflow declares a ref-scoped concurrency group with cancel-in-progress: true", async () => {
     const violations: string[] = [];
     for (const [name, body] of await loadShippedWorkflows()) {
@@ -189,6 +190,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0007-01
   it("the shipped and retired workflow name lists are disjoint", () => {
     // Carried obligation (advisory 27, ruled home): the contract's
     // write/prune sets may never claim the same name — a name moves from
@@ -201,7 +203,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
 });
 
 describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist credentials and full history stays job-scoped", () => {
-  // The STATIC half of TC-0003-0028 (AC-0003-0025 / BR-0003-0022): checkout
+  // The STATIC half of this TC (BR-0018-0002): checkout
   // credential hygiene asserted directly against the shipped tree. The
   // TC's lane bullets (planted-tree exit 1 / clean exit 0, and the
   // file+job+rule naming in the lane output) are the workflow-hygiene
@@ -291,10 +293,10 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0029
+// QFAI:EX-0002-0006-01
 describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
-  // Realizes TC-0003-0029 (AC-0003-0026 / BR-0003-0023 "extend, never
-  // replace"), one it() per verify bullet. Scoping decisions, disclosed:
+  // Realizes this TC (BR-0018-0003: every new shipped file carries the same
+  // install branches, which are never replaced), one it() per verify bullet. Scoping decisions, disclosed:
   //   - Install-shape bullets apply to shipped files that HAVE install
   //     steps. The qfai-tests lanes ship install-less by the skeleton's
   //     staging design (their install bodies land with the lane-enabling
@@ -306,7 +308,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   //     at run time (never hardcoded). Prose-form header completeness is
   //     TC-0003-0042's surface.
 
-  /** The five install branches BR-0003-0023 requires, as body markers. */
+  /** The five install branches BR-0018-0003 requires, as body markers. */
   const INSTALL_BRANCH_MARKERS: readonly string[] = [
     "pnpm install --frozen-lockfile",
     "yarn install --immutable",
@@ -541,7 +543,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
   });
 
   it("every install-bearing shipped file carries the same five-branch install shape", async () => {
-    // The "extend, never replace" half of BR-0003-0023: a new shipped file
+    // The "every new shipped file" half of BR-0018-0003: a new shipped file
     // that introduces an install step must reproduce the full branch form.
     // Deliberate overlap with the first it (per-step branch presence) —
     // this it judges at file level so a future file with a partial install

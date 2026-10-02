@@ -116,12 +116,12 @@ type DbFieldBinding = {
  * Not merged into a single bound, because the pairing is by normalized field
  * name across all DB contracts while the severity and the domain are then
  * attributed to one specific API field. Flattening the two lost that
- * distinction: `sim_lines.status` is bounded by a `CHECK` in
- * `db-0003-sim-lines.sql`, and OR-ing `enumBacked` across the eight contracts
+ * distinction: `sim_lines.status` is bounded by a `CHECK` in the DB contract
+ * that declares that table, and OR-ing `enumBacked` across the eight contracts
  * that happen to declare a column called `status` made it `error` on the
  * strength of `call_list_status` — an ENUM on a different table, which rejects
  * no insert into `sim_lines` at all. The message said so in as many words
- * (`insert 時に拒絶される物理制約`), of a field that does not have one.
+ * (`a physical constraint rejected at insert time`), of a field that does not have one.
  *
  * The "enum wins" rule is unaffected: it is about ONE field bound by both
  * forms, which is a per-file question and is settled per file.
@@ -222,7 +222,7 @@ function describeDbConstraint(domain: DbDomain): string {
  * ENUM and the CHECK are in the same contract — two tables in one file, each
  * with a `status` column — every candidate is an ENUM contributor, so the
  * "contracts that bound it with a CHECK" list is EMPTY and the remedy read
- * `CHECK で束縛する契約 ()`. Empty brackets are not a shorter answer; they are a
+ * `contracts that bound it with a CHECK ()`. Empty brackets are not a shorter answer; they are a
  * reader looking for a file name that is not there. That case has its own
  * sentence, and it points at the table rather than at another contract, because
  * the contract is already settled and the column is not.
