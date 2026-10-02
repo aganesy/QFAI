@@ -73,13 +73,21 @@ it("The shipped plans, an extra plan, a missing plan, and a plan its row no long
     ),
   );
 
+  const reviewed = new Map(plans);
+  reviewed.set(
+    "answer-question",
+    (plans.get("answer-question") ?? "").replace("    review: none\n", ""),
+  );
+
   expect({
     shipped: planFaults(contract, plans),
+    reviewed: planFaults(contract, reviewed),
     extra: planFaults(contract, extra),
     missing: planFaults(contract, missing),
     drifted: planFaults(contract, drifted),
   }).toEqual({
     shipped: [],
+    reviewed: ["answer-question: the plan's plan is not what its route row states"],
     extra: ["triage-everything.yml: no route row of the catalog names it"],
     missing: ["fix-crash: the package ships no plan for this route row"],
     drifted: ["fix-crash: the plan's plan is not what its route row states"],

@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
@@ -66,6 +66,7 @@ describe("unattended runs: ending a turn", () => {
     it(`${tree}: allows only the two endings, as a stop report`, async () => {
       const body = flat(section(await read(tree, BASELINE), "## Unattended Runs: Ending a Turn"));
 
+      expect(body).toContain("A turn may end with work still owed only when one of these holds:");
       expect(body).toContain("- nothing can move without the user");
       expect(body).toContain(
         "- the thing blocking the run is deliberately protected from the agent",

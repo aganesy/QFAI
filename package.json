@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/aganesy/QFAI.git"
   },
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@12.5.1",
   "engines": {
     "node": ">=20.19.0"
   },
