@@ -194,11 +194,14 @@ describe("the minimal-implementation rule names the four shapes an addition take
     );
     expect(shapes).toEqual(["Shape", "Scope", "Documentation", "Defensive coding", "Abstraction"]);
     const flat = section?.replace(/\s+/g, " ");
+    expect(flat).toContain("Additions take four shapes, and each stays out.");
     expect(flat).toContain("Cleanup of the code around a bug fix");
+    expect(flat).toContain("Configurability on a simple feature.");
     expect(flat).toContain("on code the change did not touch");
     expect(flat).toContain("for a case that cannot happen");
     expect(flat).toContain("A helper for an operation done once");
     expect(flat).toContain("or one extracted for length alone");
+    expect(flat).toContain("A design for a requirement nobody has.");
     expect(flat).toContain("where the logic is not self-evident");
     expect(flat).toContain("Nothing here removes what § 2 keeps");
     expect(flat).toContain("Article VII of `.qfai/assistant/rule/constitution.md`");
