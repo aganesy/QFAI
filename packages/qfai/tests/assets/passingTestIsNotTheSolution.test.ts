@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const ASSISTANT = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai", "assistant");
 const HEADING = "## A passing test is not the solution";
@@ -34,9 +34,13 @@ describe("an example is not met by code written for its test", () => {
     expect(body).not.toBe("");
 
     expect(body).toContain("The test checks the solution; it does not define it.");
+    expect(body).toContain("other valid inputs");
     expect(body).toContain("Do not hard-code a value to match a test case");
+    expect(body).toContain("do not branch on a test's own inputs");
     expect(body).toContain("stand in for the standard tools the task calls for");
+    expect(body).toContain("Where the task cannot be done as specified");
     expect(body).toContain("a test case is itself wrong, stop and report it");
+    expect(body).toContain("Change Request");
     expect(body).toContain("rule/drift-protocol.md");
     expect(body).toContain("Article V");
   });
@@ -61,6 +65,10 @@ describe("an example is not met by code written for its test", () => {
     for (const place of places) {
       const body = unwrap(await readAssistant(...place));
       expect(body, place.join("/")).toContain(CHECK);
+      expect(body, place.join("/")).toContain("no branch written only for the test");
+      expect(body, place.join("/")).toContain(
+        "a wrong test or infeasible task raised as a Change Request, not worked around",
+      );
       expect(body, place.join("/")).toContain(ANCHOR);
     }
   });
