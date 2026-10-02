@@ -26,8 +26,19 @@
  * guard that needs `node_modules` to decide whether `node_modules` is trustworthy has a hole in
  * the middle of it.
  *
- * Usage: `node verify-rebuild-sources.mjs <pnpm-lock.yaml> <dependency-builds.txt>`.
+ * The package manager keeps a permission list of its own, and the two have to agree. Under
+ * `--ignore-scripts` its list grants nothing, so in this job the allow-list beside this file is
+ * what decides; on any other install the manager's list is what decides, and a name present
+ * there and absent here is a permission nobody reviewed. Each list is therefore read against
+ * the other.
+ *
+ * Usage:
+ * `node verify-rebuild-sources.mjs <pnpm-lock.yaml> <dependency-builds.txt> <pnpm-workspace.yaml>`.
  * Exits 1 on any finding.
+ *
+ * SHIPPED-CI: not-applicable
+ * Because: the shipped templates install with an adopter's own package manager and lockfile and
+ * deliberately run install scripts, so there is no allow-list there for this to check.
  */
 import { readFileSync } from "node:fs";
 import { argv, exit, stdout } from "node:process";
@@ -41,6 +52,92 @@ function allowedNames(listPath) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+/**
+ * Refuse a root key this scan cannot be sure it reads the way the package manager does.
+ *
+ * A root key is read only as a bare identifier at column zero. A quoted key, an escaped spelling,
+ * the explicit `? key` form and a root mapping that is indented all name `allowBuilds` to the
+ * manager and name nothing to a line scan, so each would pass as "no list" with a permission
+ * standing. Rather than enumerate those spellings, any root line that is not the one plain form is
+ * refused. Indented lines belong to the key above them and are read there.
+ *
+ * @param {string[]} lines the workspace configuration, split into lines
+ * @param {string} workspacePath the file the lines came from, for the message
+ */
+function refuseUnreadableRoots(lines, workspacePath) {
+  let rooted = false;
+  for (const line of lines) {
+    if (line.trim() === "" || /^\s*#/.test(line)) continue;
+    if (/^---\s*(?:#.*)?$/.test(line)) {
+      rooted = false;
+      continue;
+    }
+    const indented = /^\s/.test(line);
+    const plain = /^-(?:\s|$)/.test(line) || /^[A-Za-z_][A-Za-z0-9_-]*\s*:(?:\s|$)/.test(line);
+    if (indented ? rooted : plain) {
+      rooted = true;
+      continue;
+    }
+    throw new Error(`${workspacePath} holds a root line this check cannot read: ${line.trim()}`);
+  }
+}
+
+/**
+ * The packages the package manager's own configuration permits to build, or `null` where it keeps
+ * no such list.
+ *
+ * Scanned line by line, for the reason the lockfile is: this runs before anything guarantees a
+ * dependency is present, and a guard that needs `node_modules` to decide whether `node_modules`
+ * is trustworthy has a hole in the middle of it.
+ *
+ * **Which means it reads less of YAML than the package manager does, so it fails CLOSED.** A
+ * value it does not recognise is refused rather than skipped: `!!bool true`, an alias, an
+ * anchor and a flow mapping are all permissions the manager would honour and a line scan would
+ * pass over in silence, which is the drift this comparison exists to stop. Only a bare `true`
+ * or `false` is read, and anything else — including the key carrying a value on its own line —
+ * throws.
+ *
+ * **No list at all is not a disagreement.** A tree written before the manager required one keeps
+ * none, and the re-publish path checks out exactly such a tree. There the manager decides nothing
+ * and the allow-list beside this file is the whole answer, so the comparison is skipped rather
+ * than failed. A tree whose manager does require a list cannot reach that branch quietly: the
+ * rebuild it performs refuses every package the list does not name.
+ *
+ * @param {string} workspacePath the workspace configuration file
+ * @returns {string[] | null} the permitted package names, or null where no list is declared
+ */
+function permittedNames(workspacePath) {
+  const lines = readFileSync(workspacePath, "utf-8").split(/\r?\n/);
+  refuseUnreadableRoots(lines, workspacePath);
+  const names = [];
+  let inBlock = false;
+  for (const line of lines) {
+    if (/^allowBuilds\s*:/.test(line)) {
+      if (!/^allowBuilds\s*:\s*(?:#.*)?$/.test(line)) {
+        throw new Error(
+          `allowBuilds in ${workspacePath} carries a value this check cannot read: ${line.trim()}`,
+        );
+      }
+      inBlock = true;
+      continue;
+    }
+    if (!inBlock) continue;
+    if (line.trim() === "" || /^\s*#/.test(line)) continue;
+    if (!/^\s/.test(line)) break;
+    const entry = /^\s+(?:'([^']+)'|"([^"]+)"|([A-Za-z0-9@._/-]+))\s*:\s*(true|false)\s*$/.exec(
+      line,
+    );
+    if (entry === null) {
+      throw new Error(
+        `allowBuilds in ${workspacePath} holds an entry this check cannot read: ${line.trim()}`,
+      );
+    }
+    const name = entry[1] ?? entry[2] ?? entry[3];
+    if (name !== undefined && entry[4] === "true") names.push(name);
+  }
+  return inBlock ? names : null;
 }
 
 /**
@@ -99,7 +196,7 @@ function resolutionsFor(lockText, wanted) {
   return found;
 }
 
-function main(lockPath, listPath) {
+function main(lockPath, listPath, workspacePath) {
   let names;
   try {
     names = allowedNames(listPath);
@@ -109,6 +206,47 @@ function main(lockPath, listPath) {
     );
     return 1;
   }
+  let permitted;
+  try {
+    permitted = permittedNames(workspacePath);
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error);
+    stdout.write(
+      `::error::verify-rebuild-sources: ${why}. What the package manager permits to build has to be readable here, or the comparison below passes over a permission nobody reviewed.\n`,
+    );
+    return 1;
+  }
+
+  if (permitted === null) {
+    // A tree whose manager keeps no such list, which the re-publish path checks out by design.
+    // Stated rather than silent: a skipped comparison reads exactly like a satisfied one.
+    stdout.write(
+      `verify-rebuild-sources: ${workspacePath} declares no allowBuilds, so the allow-list is the whole permission\n`,
+    );
+  } else {
+    // Both directions. A name the manager permits and the list does not is a permission nobody
+    // reviewed; a name the list carries and the manager does not is a rebuild that cannot run,
+    // and naming it here beats reading it out of the manager's own error one step later.
+    let disagreed = false;
+    for (const name of permitted) {
+      if (!names.includes(name)) {
+        stdout.write(
+          `::error::verify-rebuild-sources: ${name} may build according to ${workspacePath} and is absent from ${listPath}. What may run install scripts is decided in one place, and the list is that place.\n`,
+        );
+        disagreed = true;
+      }
+    }
+    for (const name of names) {
+      if (!permitted.includes(name)) {
+        stdout.write(
+          `::error::verify-rebuild-sources: ${name} is on ${listPath} and ${workspacePath} does not permit it to build, so the rebuild beside this check cannot run it.\n`,
+        );
+        disagreed = true;
+      }
+    }
+    if (disagreed) return 1;
+  }
+
   if (names.length === 0) {
     // An empty allow-list is a legitimate state: nothing is rebuilt, so nothing needs verifying.
     stdout.write("verify-rebuild-sources: the allow-list names no package\n");
@@ -162,4 +300,10 @@ function main(lockPath, listPath) {
   return 0;
 }
 
-exit(main(argv[2] ?? "pnpm-lock.yaml", argv[3] ?? ".github/actions/setup/dependency-builds.txt"));
+exit(
+  main(
+    argv[2] ?? "pnpm-lock.yaml",
+    argv[3] ?? ".github/actions/setup/dependency-builds.txt",
+    argv[4] ?? "pnpm-workspace.yaml",
+  ),
+);
