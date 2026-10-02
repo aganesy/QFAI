@@ -107,11 +107,15 @@ async function realPathsOf(
 
 // The core's own digest of each file a result or a work order names (a changed file, an artifact,
 // an input of the outstanding work order, the diagnosis's reproduction record), after CRLF
-// normalization. A file that cannot be read has none.
+// normalization. A file that cannot be read, or whose real path lies outside the project's real
+// root, has none.
 async function fileDigestsOf(root: string, files: readonly string[]) {
+  const realRoot = await realpath(root);
   const entries = await Promise.all(
     [...new Set(files)].map(async (file): Promise<[string, string][]> => {
-      const text = await readFile(path.join(root, file), "utf8").catch(() => undefined);
+      const real = await realpath(path.resolve(root, file)).catch(() => undefined);
+      if (real === undefined || !real.startsWith(`${realRoot}${path.sep}`)) return [];
+      const text = await readFile(real, "utf8").catch(() => undefined);
       return text === undefined ? [] : [[file, hashAssistantAssetText(text)]];
     }),
   );
