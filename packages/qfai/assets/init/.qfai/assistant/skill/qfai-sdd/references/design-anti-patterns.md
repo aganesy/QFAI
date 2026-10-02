@@ -244,7 +244,7 @@ naming the pattern is what works.
 - Microcopy is formulaic and upbeat: exclamation marks everywhere ("Let's
   go!"), or the same encouraging line under every login heading.
 - Slogans use forced contrast: "Not a feature. A platform."
-- Meta strings are joined with middle dots: "A · B · C".
+- Meta strings are joined with middle dots (U+00B7).
 - Subtitles run to several sentences.
 - Paragraphs come out at matching lengths.
 - Copy uses odd metaphors that read like a translated book.
@@ -297,17 +297,17 @@ Ban a first default and a model moves to its usual substitute. The substitutes
 are defaults in their own right, so each one is a pattern to avoid as well. A
 ban names both sides of its row, or the output only moves sideways.
 
-| First default                     | What a model falls back to once it is banned                                                                                              |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Purple-to-blue gradient on white  | Warm cream or beige ground (near `#F4F1EA`) with a terracotta (near `#D97757`) or espresso accent                                         |
-| Purple-to-blue gradient on white  | Near-black ground, tinted rather than true black (`#0B0B0B`, `#111`), with one acid-green or vermilion accent                             |
-| Purple glow on a dark theme       | The same near-black ground with one neon accent                                                                                           |
-| Inter everywhere                  | The "tasteful" free families: Space Grotesk, Instrument Serif, Geist, Fraunces, Satoshi                                                   |
-| A plain sans-serif page           | One headline word in serif italic on an otherwise sans-serif page                                                                         |
-| Sans-serif type and rounded cards | The newspaper look: a high-contrast serif or Mincho display face, hairline rules, zero radius, dense columns                              |
-| One corner radius everywhere      | Zero radius everywhere, with hairline rules between blocks                                                                                |
-| Plain section headings            | Template chrome: tracked all-caps monospace eyebrow labels, "01 / 02 / 03" numbering, "A · B · C" meta strings, an arrow after every link |
-| The same fade-up on every section | No motion at all                                                                                                                          |
+| First default                     | What a model falls back to once it is banned                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Purple-to-blue gradient on white  | Warm cream or beige ground (near `#F4F1EA`) with a terracotta (near `#D97757`) or espresso accent                                                           |
+| Purple-to-blue gradient on white  | Near-black ground, tinted rather than true black (`#0B0B0B`, `rgb(17,17,17)`), with one acid-green or vermilion accent                                      |
+| Purple glow on a dark theme       | The same near-black ground with one neon accent                                                                                                             |
+| Inter everywhere                  | The "tasteful" free families: Space Grotesk, Instrument Serif, Geist, Fraunces, Satoshi                                                                     |
+| A plain sans-serif page           | One headline word in serif italic on an otherwise sans-serif page                                                                                           |
+| Sans-serif type and rounded cards | The newspaper look: a high-contrast serif or Mincho display face, hairline rules, zero radius, dense columns                                                |
+| One corner radius everywhere      | Zero radius everywhere, with hairline rules between blocks                                                                                                  |
+| Plain section headings            | Template chrome: tracked all-caps monospace eyebrow labels, "01 / 02 / 03" numbering, middle-dot-separated meta strings (U+00B7), an arrow after every link |
+| The same fade-up on every section | No motion at all                                                                                                                                            |
 
 The last row is one mistake in two directions: motion chosen by default rather
 than for the content.
