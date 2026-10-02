@@ -1,4 +1,3 @@
-// QFAI:AC-0001-0189-03
 // QFAI:EX-0001-0189-06
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
