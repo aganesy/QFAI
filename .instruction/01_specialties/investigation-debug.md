@@ -5,20 +5,20 @@ dependencies: [00_universal/thinking.md]
 version: 1.0.0
 ---
 
-# 調査・デバッグ手順
+# Investigation and Debugging Procedure
 
-問題を特定し解決するための型。
+A pattern for identifying and solving problems.
 
-## 手順
+## Steps
 
-1. **事象の再現**: 再現手順と期待値/実際値を記録。再現できない場合は状況差分を列挙。
-2. **影響範囲の把握**: 関連コンポーネント・データ・ログを特定し、影響をマッピング。
-3. **仮説の列挙と優先度付け**: 発生条件や変更履歴から原因候補を洗い出し、優先度順に検証。
-4. **修正と検証**: 再現テストを追加→修正→再実行。副作用の有無を確認。
+1. **Reproduce the issue**: Record the reproduction steps and the expected and actual values. If it cannot be reproduced, list the differences in circumstances.
+2. **Understand the scope of impact**: Identify the related components, data and logs, and map the impact.
+3. **List hypotheses and prioritize them**: Draw up candidate causes from the conditions under which it occurs and the change history, and verify them in priority order.
+4. **Fix and verify**: Add a reproduction test, fix, and rerun. Check for side effects.
 
-## 報告テンプレート
+## Report Template
 
-- 事象/再現手順/期待・実際/環境
-- 調査結果と除外した仮説
-- 行った修正とテスト結果
-- 残リスクとフォローアップ
+- Issue / reproduction steps / expected and actual / environment
+- Findings and the hypotheses ruled out
+- The fix made and the test results
+- Remaining risks and follow-up

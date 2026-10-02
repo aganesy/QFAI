@@ -154,8 +154,7 @@ export const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
  * date is not decoration: it is the only field standing between a
  * `deprecated` / `removed` bullet and a whole ledger dropping out of the gate.
  * Round-tripping through UTC catches the rollover (`2026-02-30` becomes
- * `2026-03-02`), the same way `waivers.ts` and `worklogSurface.ts` check the
- * dates they act on.
+ * `2026-03-02`).
  */
 export function isValidDeprecatedAt(value: string): boolean {
   const match = DEPRECATED_AT_RE.exec(value);
@@ -203,7 +202,7 @@ const HEADER_BLOCK_END_RE = /^ {0,3}#{2,6}\s/m;
  * `extractBulletField` matches the first bullet anywhere in the text it is
  * given, so an illustrative `- Status: deprecated` quoted in a prose section
  * would otherwise read as the spec's own lifecycle. `QFAI-STATUS-001` places
- * the bullet in "01_Spec.md の冒頭 bullet ブロック", so a lifecycle branch
+ * the bullet in "the opening bullet block of 01_Spec.md", so a lifecycle branch
  * honours exactly that block.
  *
  * The block is masked first, because the header block is where a rewrite parks

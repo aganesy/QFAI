@@ -8,6 +8,9 @@
 /** Project-root relative directory holding all prototyping evidence. */
 export const PROTOTYPING_EVIDENCE_REL = ".qfai/evidence/prototyping" as const;
 
+/** Project-root relative directory containing the runnable prototype. */
+export const PROTOTYPE_REL = ".qfai/prototype" as const;
+
 /** Project-root relative path to the canonical prototyping state file. */
 export const PROTOTYPING_JSON_REL = ".qfai/evidence/prototyping/prototyping.json" as const;
 
