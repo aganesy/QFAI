@@ -14,6 +14,10 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 ## Inputs
 
 - The text or comment to change, and the write scope the request or the work

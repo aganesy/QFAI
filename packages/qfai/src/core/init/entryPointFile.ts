@@ -2,61 +2,8 @@ import { randomUUID } from "node:crypto";
 import { chmod, lstat, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getInitAssetsDir } from "../../shared/assets.js";
-import type { AGENT_ENTRY_POINT_FILES } from "../agentEntryPoints.js";
-import { addEntryDirective } from "../agentEntryPoints.js";
-import { firstLinkedComponent, keepOwner, readTextFileIfPresent, safeLstat } from "./fsGuards.js";
+import { firstLinkedComponent, keepOwner } from "./fsGuards.js";
 import { formatReportPath } from "./reportPath.js";
-
-export type EntryDirectivePlan =
-  | { kind: "current" }
-  | { kind: "refused"; reason: string }
-  | { kind: "create" | "prepend"; apply: () => Promise<void> };
-
-/**
- * What giving one agent entry point the entry directive takes, by init's
- * mechanism: an absent file is written from the package's seed, and an
- * existing one has the directive prepended where no operative copy exists. A
- * file that mechanism will not rewrite is refused with the reason.
- */
-export async function planEntryDirective(
-  destRoot: string,
-  name: (typeof AGENT_ENTRY_POINT_FILES)[number],
-): Promise<EntryDirectivePlan> {
-  const target = path.join(destRoot, name);
-  const template = await readTextFileIfPresent(path.join(getInitAssetsDir(), "root", name));
-  if (template === null) throw new Error(`The installed package has no ${name} seed.`);
-  const entry = await safeLstat(target);
-  if (entry === undefined) {
-    return {
-      kind: "create",
-      apply: async () => {
-        await writeFile(target, template, { encoding: "utf-8", flag: "wx" });
-      },
-    };
-  }
-  if (!entry.isFile() && !entry.isSymbolicLink()) {
-    return { kind: "refused", reason: "It is not a regular file." };
-  }
-  const existing = await readTextFileIfPresent(target);
-  if (existing === null) return { kind: "refused", reason: "It is a link to nothing." };
-  const merged = addEntryDirective(existing, template);
-  if (merged === existing) return { kind: "current" };
-  const refusal = await refuseUnsafeEntryPointRewrite(
-    target,
-    existing,
-    destRoot,
-    "Add the entry directive",
-  );
-  if (refusal !== null) return { kind: "refused", reason: refusal };
-  return {
-    kind: "prepend",
-    apply: async () => {
-      const failure = await replaceEntryPointFile(target, merged, destRoot, existing);
-      if (failure !== null) throw new Error(`${name} was left unchanged. ${failure}`);
-    },
-  };
-}
 
 /**
  * Replaces an entry point's content without ever leaving it truncated.

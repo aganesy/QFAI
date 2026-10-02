@@ -12,8 +12,9 @@ version: 2.0.0
 Agent cards under `.qfai/assistant/agent/` define each agent. Routing and
 review profiles come from the files in `packages/qfai/assets/defaults/agent-routing/`
 and `packages/qfai/assets/defaults/review-profiles.yml`, with project overrides
-in `qfai.config.yaml`. QFAI reads these source files directly: this repository
-does not install its own package. Select agents by artifact and phase.
+in `qfai.config.yaml`. QFAI reads these source files directly: the root's `qfai`
+dependency is a workspace link to `packages/qfai`, not a separate installed copy.
+Select agents by artifact and phase.
 
 > This file is a navigation guide. The agent cards, resolved routing and
 > review profiles decide mandatory agents, blocking reviewers and reruns.
@@ -56,7 +57,7 @@ does not install its own package. Select agents by artifact and phase.
 
 - Implementers (`frontend-engineer`, `backend-engineer`) apply the viewpoints in `.github/instructions/principles.instructions.md` and `.instruction/00_universal/development-principles-checklist.md` as decision criteria during implementation.
 - Designers (`solution-architect`, `product-experience-architect`) apply the same principles as design criteria for structure, contracts and UX direction.
-- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) apply `.github/instructions/code-review.instructions.md` and `.github/instructions/principles.instructions.md` as review viewpoints, and name the principle and the reason for the improvement when raising a finding.
+- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) apply `.github/instructions/principles.instructions.md` and the code-review files beside it — `code-review.instructions.md`, `code-review-checklist.instructions.md`, `code-review-typescript.instructions.md` and `code-review-public-api.instructions.md` — as review viewpoints, and name the principle and the reason for the improvement when raising a finding.
 
 ## When in Doubt
 

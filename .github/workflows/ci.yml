@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          ea6c9d33da3a2ab3ce1eefcd25d59985a7067f7e1971ba9f815d4ea2035156bc  .github/pinned-bytes.txt
+          31c75f37be5645e4ef748370a460017f656912ce16039e05ee8e44951df1ee36  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -815,11 +815,12 @@ jobs:
           # and `sdd`, so deleting it without this step would have dropped
           # coverage rather than removed a duplicate.
           #
-          # The LOCAL binary, not a resolver. The root manifest declares no
-          # dependency on the package and provides no local binary, so `npx qfai`
-          # from here resolves to the PUBLISHED release — CI would validate a
-          # version nobody is reviewing. That is why the run was folded in rather
-          # than repointed at the shipped workflow file.
+          # The LOCAL binary, not a resolver. This job installs before it
+          # builds, so the root's workspace link to the package has no
+          # `node_modules/.bin/qfai`, and `npx qfai` from here resolves to the
+          # PUBLISHED release — CI would validate a version nobody is reviewing.
+          # That is why the run was folded in rather than repointed at the
+          # shipped workflow file.
           # The lane is a ratchet, not a clean gate. The ledger rules it runs
           # report `error`, and this repository carries rows written before
           # they existed. `check-dogfood-backlog.mjs` holds every file absent

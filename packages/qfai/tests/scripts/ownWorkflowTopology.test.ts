@@ -653,8 +653,9 @@ describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shippe
 // duplicate. `BR-0016-0058` is what makes the deletion safe: the full-profile run moves
 // into the `build` job first.
 //
-// Why the fold and not a repoint at the shipped file: the root manifest declares no
-// dependency on the package and provides no local binary, so `npx qfai` from the root
+// Why the fold and not a repoint at the shipped file: the root reaches the package only
+// through a workspace link, and the shipped workflow installs without building it. pnpm
+// links no binary for a package whose `bin` target is missing, so `npx qfai` from the root
 // resolves to the PUBLISHED package. That inverts the dogfooding — CI would validate a
 // release instead of the change under review.
 
@@ -780,9 +781,9 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
     const run = stepRun(only);
 
     // CLAIM 2 — it runs through the ratchet guard, and the guard targets the repository root
-    // with the LOCAL binary. The binary is the half that matters: the root manifest declares
-    // no dependency on the package, so any resolution through the package name would reach
-    // the published release instead of the build under review.
+    // with the LOCAL binary. The binary is the half that matters: every job installs before it
+    // builds, so pnpm links no `node_modules/.bin/qfai`, and any resolution through the package
+    // name would reach the published release instead of the build under review.
     expect
       .soft(run, `the folded run must go through the ratchet: ${JSON.stringify(run)}`)
       .toContain(DOGFOOD_GUARD);
@@ -812,9 +813,11 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       .soft(published, "a resolver-based invocation would reach the published package")
       .toEqual([]);
 
-    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest really
-    // does not depend on the package. If that ever changes, CLAIM 3's rationale changes with
-    // it and this row should be revisited rather than silently kept.
+    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest reaches
+    // the package only through the workspace link, which has no binary until the package is
+    // built. A registry range would put the published copy in `node_modules/.bin` of every job
+    // instead. If that ever changes, CLAIM 3's rationale changes with it and this row should
+    // be revisited rather than silently kept.
     const rootManifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
     );
@@ -826,8 +829,10 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
       : {};
     expect
       .soft(
-        Object.keys(declared).filter((name) => name === "qfai"),
-        "the root manifest declaring a dependency on qfai would change why a repoint is unsafe",
+        Object.entries(declared).filter(
+          ([name, specifier]) => name === "qfai" && specifier !== "workspace:*",
+        ),
+        "the root manifest may depend on qfai only through the workspace link",
       )
       .toEqual([]);
   });
@@ -2730,11 +2735,17 @@ describe("a permitted rebuild is verified against where the package comes from",
     try {
       const list = path.join(dir, "dependency-builds.txt");
       writeFileSync(list, `# probe\nesbuild\n`, "utf-8");
+      // The package manager's own permission list, which the verifier reads against the one
+      // above. It agrees here, so what each case below measures is the lockfile resolution.
+      const workspace = path.join(dir, "pnpm-workspace.yaml");
+      writeFileSync(workspace, `allowBuilds:\n  esbuild: true\n`, "utf-8");
 
       const verify = (lock: string): number => {
         const lockPath = path.join(dir, "pnpm-lock.yaml");
         writeFileSync(lockPath, lock, "utf-8");
-        const run = spawnSync("node", [VERIFIER, lockPath, list], { encoding: "utf-8" });
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
         if (run.error !== undefined) throw run.error;
         return run.status ?? -1;
       };
@@ -2793,6 +2804,97 @@ describe("a permitted rebuild is verified against where the package comes from",
       expect
         .soft(verify(absent), "a permitted name the lockfile never resolves must be reported")
         .toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses either list holding a name the other does not", () => {
+    // The agreeing fixture above measures the lockfile resolution. This measures the comparison
+    // itself: each branch of it, and the two shapes that must not be read as agreement.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-rebuild-agree-"));
+    try {
+      const lockPath = path.join(dir, "pnpm-lock.yaml");
+      writeFileSync(
+        lockPath,
+        [
+          "lockfileVersion: '9.0'",
+          "",
+          "packages:",
+          "",
+          "  esbuild@0.21.5:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+          "  sharp@0.33.0:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const verify = (listText: string, workspaceText: string): { status: number; out: string } => {
+        const list = path.join(dir, "dependency-builds.txt");
+        const workspace = path.join(dir, "pnpm-workspace.yaml");
+        writeFileSync(list, listText, "utf-8");
+        writeFileSync(workspace, workspaceText, "utf-8");
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
+        if (run.error !== undefined) throw run.error;
+        return { status: run.status ?? -1, out: `${run.stdout}${run.stderr}` };
+      };
+
+      const agreeing = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n");
+      expect
+        .soft(agreeing.status, `two lists naming the same package agree:\n${agreeing.out}`)
+        .toBe(0);
+
+      // The manager permits what nobody reviewed. This is the direction that matters: under an
+      // ordinary install — one this job does not perform — that permission is what runs code.
+      const managerOnly = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: true\n");
+      expect.soft(managerOnly.status, "a permission absent from the allow-list must fail").toBe(1);
+      expect
+        .soft(managerOnly.out, "and name the package the allow-list never reviewed")
+        .toContain("sharp");
+
+      // And the other way: the list names what the manager will refuse to build, which is a
+      // rebuild that stops the step later and with a worse message.
+      const listOnly = verify("esbuild\nsharp\n", "allowBuilds:\n  esbuild: true\n");
+      expect.soft(listOnly.status, "an allow-list entry the manager denies must fail").toBe(1);
+      expect.soft(listOnly.out, "and name it").toContain("sharp");
+
+      // A denial is not a permission, so it owes the allow-list nothing.
+      const denied = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: false\n");
+      expect.soft(denied.status, `an explicit false needs no counterpart:\n${denied.out}`).toBe(0);
+
+      // FAIL CLOSED on a value this check cannot read. The manager honours more of YAML than a
+      // line scan does, and a permission it skips in silence is the drift this exists to stop.
+      for (const [shape, why] of [
+        ["allowBuilds:\n  esbuild: true\n  sharp: !!bool true\n", "a tagged boolean"],
+        ["allowBuilds:\n  esbuild: true\n  sharp: yes\n", "another spelling of true"],
+        ["allowBuilds: { esbuild: true }\n", "a flow mapping on the key's own line"],
+        ['"allowBuilds":\n  esbuild: true\n  sharp: true\n', "a double-quoted key"],
+        ["'allowBuilds':\n  esbuild: true\n  sharp: true\n", "a single-quoted key"],
+        [" allowBuilds:\n   esbuild: true\n   sharp: true\n", "a root mapping that is indented"],
+        [
+          '"\\u0061llowBuilds":\n  esbuild: true\n  sharp: true\n',
+          "an escaped spelling of the key",
+        ],
+        ["? allowBuilds\n: esbuild: true\n  sharp: true\n", "the explicit key form"],
+      ] as Array<[string, string]>) {
+        const unreadable = verify("esbuild\n", shape);
+        expect.soft(unreadable.status, `${why} must be refused, not skipped`).toBe(1);
+      }
+
+      // And no list at all is not a disagreement. The re-publish path checks out a tree written
+      // before the manager required one, and there the allow-list is the whole permission.
+      const absent = verify("esbuild\n", 'packages:\n  - "packages/qfai"\n');
+      expect
+        .soft(absent.status, `a tree declaring no allowBuilds must still pass:\n${absent.out}`)
+        .toBe(0);
+      expect
+        .soft(absent.out, "and say so, because a skipped comparison reads like a satisfied one")
+        .toContain("declares no allowBuilds");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

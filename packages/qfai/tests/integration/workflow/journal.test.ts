@@ -2,6 +2,7 @@
 // QFAI:AC-0001-0189-01
 // QFAI:AC-0001-0189-04
 // QFAI:AC-0001-0189-05
+// QFAI:AC-0001-0189-07
 // QFAI:AC-0001-0189-09
 // QFAI:AC-0001-0192-01
 // QFAI:AC-0001-0194-05
@@ -11,6 +12,7 @@
 // QFAI:EX-0001-0189-10
 // QFAI:EX-0001-0189-11
 // QFAI:EX-0001-0189-12
+// QFAI:EX-0001-0189-19
 // QFAI:EX-0001-0192-03
 // QFAI:EX-0001-0194-18
 // QFAI:EX-0001-0194-20
@@ -410,6 +412,32 @@ it("A changed file named by a case variant of a write-area path", async () => {
       ? { ok: true, reasons: undefined }
       : { ok: false, reasons: [{ reason: "write-scope", subject: "SRC/total.ts" }] },
   );
+});
+
+it("accept refuses an artifact whose submitted digest is not the file's own", async () => {
+  const root = await minimalProject();
+  const record = ".qfai/report/stage-record.md";
+  const text = "Reviewed.\r\n";
+  await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
+  await writeFile(path.join(root, record), text);
+  const { runId, issued } = await featureRunAt(root, "implement");
+  const result = (resultId: string, digest: string) =>
+    resultFor(issued.json, resultId, { artifactRefs: [{ path: record, digest }] });
+  const refused = await submit(root, runId, "accept", result("implement-1", "0".repeat(64)));
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    result("implement-2", hashAssistantAssetText(text)),
+  );
+
+  expect({
+    reasons: field(refused.json, "error.reasons"),
+    ok: field(accepted.json, "ok"),
+  }).toEqual({
+    reasons: [{ reason: "digest-mismatch", subject: record }],
+    ok: true,
+  });
 });
 
 async function integrityRefusal(root: string, runId: string) {

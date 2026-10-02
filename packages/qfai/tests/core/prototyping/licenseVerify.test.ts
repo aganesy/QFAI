@@ -399,7 +399,7 @@ describe("licenseVerify — attribution is required", () => {
     ["spaces", "   "],
     ["tab + newline", "\t\n"],
     ["mixed whitespace", " \t \n "],
-    ["ideographic space (U+3000)", "　"],
+    ["ideographic space (U+3000)", "\u{3000}"],
   ])(
     "emits license-missing-attribution when attribution is whitespace-only (%s)",
     (_label, attribution) => {

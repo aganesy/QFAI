@@ -29,6 +29,10 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Run the entry check of
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+first.
+
 Turn a requirement into a checkable story tree: BF → US → AC → EX, with each BR
 in the contract that enforces it.
 

@@ -8,7 +8,7 @@
 | Platform            | Linux and Windows; CI runs the suite on Linux and a Windows parity subset |
 | CI                  | GitHub Actions (`.github/workflows/`)                                     |
 | Language            | TypeScript 6 (`^6.0.3`), compiled to ESM and CommonJS                     |
-| Package manager     | pnpm 9.15.9 (root `package.json#packageManager`)                          |
+| Package manager     | pnpm 12.5.1 (root `package.json#packageManager`)                          |
 | Build tool          | tsup 8 (`^8.3.5`)                                                         |
 | Test runner         | Vitest 4 (`^4.1.11`), one project per test layer                          |
 | Lint / format       | ESLint 10 and Prettier 3                                                  |
