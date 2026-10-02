@@ -761,7 +761,7 @@ describe("BF-0004 migration examples", () => {
     expect(markers.filter((_, index) => (positions[index] ?? -1) < 0)).toEqual([]);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(prose).toMatch(
-      /already has the story tree and no migration ID map, run steps 1 to 10\. When every one of them prints `no 1\.x layout found under <specsDir> \(paths\.specsDir=<value>\)` first, then `none` under every section, and exits 0, report that there is nothing to migrate in the directory that line names and ask the person to check that the specs live there/,
+      /already has the story tree and no migration ID map, run steps 1 to 10\. When every one of them prints `no 1\.x layout found under <specsDir> \(paths\.specsDir=<value>\)` first, then `none` under every section but step 10's `## Git index`, and exits 0, report that there is nothing to migrate in the directory that line names and ask the person to check that the specs live there/,
     );
   });
 
