@@ -139,8 +139,7 @@ async function countTests(includes: readonly string[]): Promise<number> {
  * Bound to the change rather than to the project: the identifiers count only in the decision row
  * that records THIS move, the last row naming the project and every setting it now departs with,
  * each in backticks. An earlier change to the same project is a different change, and its greens say
- * nothing about this one. Losing that binding is the mistake `CR-20260820-0012` records its own first
- * split making.
+ * nothing about this one.
  *
  * Whether the runs were consecutive is not something a record can show, so this counts distinct
  * identifiers.
@@ -270,7 +269,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
       unjustifiedMoves(
         [unit],
         [
-          `| DEC-X | tuned \`unit\` to \`maxConcurrency=6\` — ${THREE} |`,
+          `| DEC-X | tuned \`unit\` to \`maxConcurrency=4\` — ${THREE} |`,
           "| DEC-Y | tuned `unit` to `maxConcurrency=4`, and it was faster |",
         ],
       ),
@@ -280,7 +279,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
       unjustifiedMoves(
         [unit],
         [
-          "| DEC-X | tuned `unit` to `maxConcurrency=6`, and it was faster |",
+          "| DEC-X | tuned `unit` to `maxConcurrency=4`, and it was faster |",
           `| DEC-Y | tuned \`unit\` to \`maxConcurrency=4\` — ${THREE} |`,
         ],
       ),

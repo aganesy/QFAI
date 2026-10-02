@@ -348,6 +348,26 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("not a directory");
   });
 
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools names no directory", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--scope", "all", "--tools"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option, which it must not swallow", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--tools", "--scope", "all"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newTempDir();
 
@@ -639,6 +659,45 @@ describe("check-mdschema command resolution", () => {
     );
 
     expect(findMdschemaCommand(inner)?.args).toEqual([entry]);
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("prefers the installation in the tools directory over the tree's own", async () => {
+    // The shipped document lane installs the checker into a directory of its own
+    // and names it with `--tools`; that copy is the one the lane pinned.
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    await seedPackage(root, { mdschema: "bin/cli.js" });
+    const pinned = await seedPackage(tools, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)).toEqual({ command: process.execPath, args: [pinned] });
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("falls back to the tree's own installation when the tools directory holds none", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("ignores a bin that points outside its own package", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(packageDir, { recursive: true });
+    const outside = path.join(tools, "node_modules", "@jackchuka", "outside.js");
+    await writeFile(outside, "", "utf-8");
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "../outside.js" } }),
+      "utf-8",
+    );
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
   });
 
   it.each([

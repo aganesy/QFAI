@@ -53,6 +53,11 @@ const PACK_LIFECYCLE_HELPERS = [
   { script: "scripts/check-publish-dry-run.mjs", call: 'runNpm(["publish", "--dry-run"]' },
 ] as const;
 
+/** The helpers use these literal calls; update the oracle if their spelling changes. */
+function hasOneLifecycleCall(source: string, call: string): boolean {
+  return source.split(call).length === 2;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -215,10 +220,17 @@ describe("the build-artifact reuse rule holds, and holds vacuously until reuse i
     // The helpers are named rather than followed, so each one's call is read here: a helper that
     // stopped packing would otherwise go on counting as a build.
     for (const { script, call } of PACK_LIFECYCLE_HELPERS) {
+      const source = await readFile(path.join(REPO_ROOT, script), "utf8");
       expect(
-        await readFile(path.join(REPO_ROOT, script), "utf8"),
-        `${script} must still fire the pack lifecycle for its leaf to count as a build`,
-      ).toContain(call);
+        hasOneLifecycleCall(source, call),
+        `${script} must fire the pack lifecycle exactly once for its leaf to count as one build`,
+      ).toBe(true);
+      if (script === "scripts/verify-pack.mjs") {
+        expect(
+          hasOneLifecycleCall(`${source}\nrunNpm(["pack"]);\n`, call),
+          "a second pack call must fail even when the root script still reaches one helper",
+        ).toBe(false);
+      }
     }
     expect(
       state.packLifecycleBuilds,

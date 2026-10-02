@@ -15,6 +15,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runStep } from "../../src/migration/specToStory/harness.js";
+import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 
 const roots: string[] = [];
 
@@ -36,11 +37,12 @@ async function snapshot(root: string): Promise<string> {
     for (const name of (await readdir(directory)).sort()) {
       const absolute = path.join(directory, name);
       const relative = path.relative(root, absolute).replace(/\\/g, "/");
+      if (isMigrationReportPath(relative)) continue;
       const stats = await lstat(absolute);
       if (stats.isSymbolicLink()) {
         entries.push(`${relative}:link:${await readlink(absolute)}`);
       } else if (stats.isDirectory()) {
-        entries.push(`${relative}:dir`);
+        if (!isMigrationReportAncestor(relative)) entries.push(`${relative}:dir`);
         await visit(absolute);
       } else {
         entries.push(`${relative}:file:${(await readFile(absolute)).toString("base64")}`);
