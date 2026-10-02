@@ -47,6 +47,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The capture URL and response-status tests now fail on the mistakes they
+  guard against** (#2228). The `composeCaptureUrl` cases use inputs where a URL
+  join and a string concatenation give different results, so an implementation
+  that concatenated would fail. An absolute screen URL is checked on a bare
+  origin a join would rewrite. The default capture runner's status test gains
+  a case that refuses HTTP 400, the first status of the rejected range, beside
+  the existing case that accepts 399.
 - **The slice alignment test refuses a sliced matrix that holds anything but
   its slice list** (#2213). An `include` or `exclude` beside `slice` changes the
   legs a job runs without changing the list the test compared, so a matrix
