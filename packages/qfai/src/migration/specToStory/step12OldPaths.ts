@@ -55,9 +55,13 @@ function gitOutput(root: string, args: readonly string[]): string {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
-    if (!isRecord(error) || typeof error.stderr !== "string") throw error;
-    const message = error.stderr.trim() || `git ${args.join(" ")} failed`;
-    throw new MigrationInputError(message, { cause: error });
+    if (!isRecord(error)) throw error;
+    // A git that cannot be started has no stderr: its own message says why.
+    const stderr = typeof error.stderr === "string" ? error.stderr.trim() : "";
+    const own = typeof error.message === "string" ? error.message : "";
+    throw new MigrationInputError(stderr || own || `git ${args.join(" ")} failed`, {
+      cause: error,
+    });
   }
 }
 
@@ -88,7 +92,9 @@ function trackedEntries(root: string): TrackedEntry[] | null {
 function directoryPrefix(root: string, directory: string): string[] {
   const relative = path.relative(root, directory);
   const outside = relative === ".." || relative.startsWith(`..${path.sep}`);
-  if (relative === "" || outside || path.isAbsolute(relative)) return [];
+  if (outside || path.isAbsolute(relative)) return [];
+  // The project root itself holds every tracked path, which the empty prefix matches.
+  if (relative === "") return [""];
   return [`${relative.split(path.sep).join("/")}/`];
 }
 
@@ -115,6 +121,16 @@ async function readableText(root: string, file: string): Promise<string | null> 
   return content.includes(0) ? null : content.toString("utf8");
 }
 
+/** A file name for one report line: a control character is written as an escape, so a name cannot split it. */
+export function reportableName(file: string): string {
+  return Array.from(file, (character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code < 0x20 || (code >= 0x7f && code <= 0x9f)
+      ? `\\x${code.toString(16).padStart(2, "0")}`
+      : character;
+  }).join("");
+}
+
 function oldPathItems(file: string, text: string): string[] {
   const items: string[] = [];
   for (const [at, line] of text.split(/\r?\n/).entries()) {
@@ -122,7 +138,9 @@ function oldPathItems(file: string, text: string): string[] {
       (oldPath) => `\`${oldPath.label}\``,
     );
     if (labels.length > 0) {
-      items.push(`old-path: ${file}:${at + 1}: still names 1.x paths: ${labels.join(", ")}`);
+      items.push(
+        `old-path: ${reportableName(file)}:${at + 1}: still names 1.x paths: ${labels.join(", ")}`,
+      );
     }
   }
   return items;
