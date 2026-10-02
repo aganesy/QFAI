@@ -112,9 +112,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   or `already migrated (id-map.json present)`, followed by an empty line and `## Operations`. The
   directory is written from the project root, never as an absolute path. Step 10 also ends with a
   `Summary:` line for the first two cases, and the already-done line stays last on a migrated
-  project. Steps 11 and 12 are unchanged. The skill and the migration guide name the three lines
-  and tell the AI to report that there is nothing to migrate in the directory the line names, and
-  to ask the person to check that the specs live there. Fixes #2727.
+  project. Steps 11 and 12 are unchanged. Apart from that line and the closing line of step 10,
+  each report is unchanged, so this is not a breaking change; a script that reads the report from
+  its first line should start at `## Operations`. The skill and the migration guide name the three
+  lines and tell the AI to report that there is nothing to migrate in the directory the line names,
+  and to ask the person to check that the specs live there. Fixes #2727.
 
 ### Fixed
 

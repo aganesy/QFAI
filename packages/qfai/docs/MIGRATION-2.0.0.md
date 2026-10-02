@@ -129,7 +129,9 @@ shows one or the step has work of its own, and
 `already migrated (id-map.json present)` when an earlier run finished. If every
 one of steps 1 to 10 prints the first, nothing was found to migrate in the
 directory it names: check that your specs live there. Step 10 also ends with a `Summary:` line
-for the first two cases. Steps 11 and 12 print neither line.
+for the first two cases. Steps 11 and 12 print neither line. A script that reads
+the report from its first line should start at `## Operations`, which still
+opens the rest of the report.
 
 Step 10 removes every `.gitignore` negation that re-includes `.qfai/evidence/`
 and takes that directory out of the git index. The files stay on disk. Commit
