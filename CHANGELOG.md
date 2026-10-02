@@ -337,9 +337,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   elsewhere in a criteria or example file leaves the digest as it was. Every
   receipt also holds `qfai.config.yaml`, the root lockfiles, the assistant rule
   tree, the skill that owns the work order's steps, each step's directory, the
-  tool, and the selected discussion pack with its files. A changed file the
-  stage deleted is held as absent, so the receipt goes stale when the file
-  comes back.
+  tool, and the selected discussion pack with its files. In a receipt for a
+  result that observed a test, a changed file the stage deleted is held as
+  absent, so the receipt goes stale when the file comes back.
 - **Under `failOn: never`, `finish` keeps the validate findings (#2340,
   #2344).** No finding fails the gate, and a debt whose finding remains stays
   open. Before, every finding was dropped, so every debt closed.
@@ -363,8 +363,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout's copy.
 - **The question-form reminder stays silent on a turn the host starts
   (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
-  of the prompt opens with `<task-notification>` or `<wake>`. A typed prompt,
-  and input it cannot read, still get the reminder. `qfai init` replaces an
+  of the prompt opens with `<task-notification>` or `<wake>`, whoever wrote
+  it. A prompt with no such line, and input it cannot read, still get the
+  reminder. `qfai init` replaces an
   unedited copy of the earlier hook group.
 - **`qfai init` rewrites an earlier wording of the `REVIEW.md` directive
   instead of adding a second line (#2266).** The two lines disagreed on which
