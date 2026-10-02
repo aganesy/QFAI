@@ -1939,6 +1939,27 @@ describe("optional review directive detection", () => {
       );
     });
 
+    it.each(["\n", "\r\n"])(
+      "keeps the indentation and trailing whitespace of the line it rewrites",
+      (end) => {
+        const existing = `# Rules${end}${end}  - ${EARLIER}  ${end}- Keep this bullet.${end}`;
+        expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+          `# Rules${end}${end}  - ${REVIEW_POINTER}  ${end}- Keep this bullet.${end}`,
+        );
+      },
+    );
+
+    it.each([
+      ["emphasis", "**Read it before writing the PR description as well.**"],
+      ["inline HTML", "Read it <b>before</b> writing the PR description as well."],
+      ["a link", "See [the guide](https://example.com/guide) as well."],
+    ])("is not rewritten when its text carries %s", (_name, tail) => {
+      const existing = `Read \`REVIEW.md\` before reviewing a pull request. ${tail}\n`;
+      expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(
+        `${REVIEW_POINTER}\n\n${existing}`,
+      );
+    });
+
     it("is left alone when the current wording is already operative", () => {
       const existing = `${REVIEW_POINTER}\n\n${EARLIER}\n`;
       expect(addReviewPointer(existing, `${REVIEW_POINTER}\n`)).toBe(existing);

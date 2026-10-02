@@ -902,14 +902,15 @@ function prependDirective(existing: string, pointer: string): string {
         .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
       if (pass === 1 && container === "" && !lazyQuote) {
         if (operative === pointer) return existing;
-        // Only a line that reads exactly as written: rewriting one that carries
-        // markup would drop it.
+        // Only a line that reads exactly as written, with no markup after the
+        // directive's own opening: rewriting one that carries markup would drop it.
         const line = raw.replace(/\r$/, "");
         const lead =
           /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
         if (
           earlier === null &&
           operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
+          !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
           line.slice(lead.length).trimEnd() === operative
         )
           earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
