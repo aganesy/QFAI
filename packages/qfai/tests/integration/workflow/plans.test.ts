@@ -373,11 +373,29 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   expect({
     split: await refusalsOf("fix-defect", splitVerify),
     answer: await refusalsOf("answer-question", (text) =>
-      text.replace("steps: [triage-close]", "steps: [triage-answer]"),
+      text.replace("steps: [triage-answer, triage-close]", "steps: [triage-answer]"),
     ),
   }).toEqual({
     split: [{ reason: "terminal", subject: "gate" }],
-    answer: [{ reason: "terminal", subject: "close" }],
+    answer: [{ reason: "terminal", subject: "answer" }],
+  });
+});
+
+// QFAI:AC-0001-0218-06
+// QFAI:EX-0001-0218-08
+it("A review marker kept, one with another value, and one on a stage that is not a triage stage", async () => {
+  expect({
+    kept: await refusalsOf("answer-question", (text) => text),
+    other: await refusalsOf("answer-question", (text) =>
+      text.replace("review: none", "review: all"),
+    ),
+    elsewhere: await refusalsOf("edit-text", (text) =>
+      text.replace(EDIT_STEPS, `${EDIT_STEPS}\n    review: none`),
+    ),
+  }).toEqual({
+    kept: [],
+    other: [{ reason: "shape", subject: "answer" }],
+    elsewhere: [{ reason: "shape", subject: "edit" }],
   });
 });
 

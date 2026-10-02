@@ -13,8 +13,8 @@
  * coupling.
  *
  * Six branches cover every composition arm:
- *   1. absolute URL passthrough (`http://` / `https://`), with inputs a
- *      join would change or reject;
+ *   1. absolute URL passthrough (`http://` / `https://`, in any letter case),
+ *      with inputs a join would change or reject;
  *   2. route-relative URL + targetUrl (leading slash);
  *   3. route-relative URL + targetUrl (no leading slash, resolved
  *      against the base's directory — WHATWG URL semantics), on bases
@@ -42,6 +42,12 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     // Joining would normalise the bare origin to `http://example.com/`.
     const result = composeCaptureUrl("http://example.com", "http://localhost:5173");
     expect(result).toEqual({ ok: true, url: "http://example.com" });
+  });
+
+  it("forwards an upper-case HTTPS:// scheme verbatim rather than joining it to the base", () => {
+    // A join would lower-case the scheme, so only the passthrough keeps it as written.
+    const result = composeCaptureUrl("HTTPS://example.com/page", "http://localhost:5173");
+    expect(result).toEqual({ ok: true, url: "HTTPS://example.com/page" });
   });
 
   it("joins a leading-slash route to the origin of --target-url", () => {

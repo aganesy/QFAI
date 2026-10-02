@@ -153,6 +153,7 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
       htmlPath: path.join(dir, "x.html"),
     });
     expect(result.ok).toBe(true);
+    expect(page.screenshot).toHaveBeenCalledTimes(1);
   });
 
   it("ACCEPTS a 399 response, the last status below the 400 rejection boundary", async () => {
@@ -166,5 +167,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
       htmlPath: path.join(dir, "x.html"),
     });
     expect(result.ok).toBe(true);
+    expect(page.screenshot).toHaveBeenCalledTimes(1);
   });
 });
