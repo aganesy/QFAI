@@ -340,9 +340,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tool, and the selected discussion pack with its files. In a receipt for a
   result that observed a test, a changed file the stage deleted is held as
   absent, so the receipt goes stale when the file comes back.
-- **Under `failOn: never`, `finish` keeps the validate findings (#2340,
-  #2344).** No finding fails the gate, and a debt whose finding remains stays
-  open. Before, every finding was dropped, so every debt closed.
+- **`qfai workflow` judges a run's changes against where the run started**
+  (#2340, #2344). `start` now records `HEAD` and the state of every path that
+  was dirty or untracked then. Every write operation and `finish` compare the
+  tree against that record, so a change the run commits outside its write scope
+  blocks the run with `invariant-violation` and is reported as
+  `diff-out-of-scope`. A path that was dirty at `start` counts only once its
+  content, type or mode changes. `uncommitted` names only the run's own
+  changes. Under `validation.failOn: never`, `finish` still reads the
+  validate findings to decide whether a debt is settled, so a debt whose
+  finding remains stays `debt-open` while the validate gate passes. Before,
+  every finding was dropped, so every debt closed.
 - **A route proposal cannot reach a protected path by spelling it differently
   (#2458).** A write area such as `./src/notify/**`, `.qfai\run\**`, or one
   with a doubled or trailing `/`, was compared as written and not refused. Both
@@ -371,7 +379,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   instead of adding a second line (#2266).** The two lines disagreed on which
   branch to read `REVIEW.md` from. The earlier line is replaced where it
   stands, keeping its list marker and line ending. A line carrying emphasis,
-  inline HTML, a link or a code span is left alone.
+  inline HTML, a link, or a code span other than the `REVIEW.md` one the
+  directive itself holds is left alone.
 
 ## [2.0.1] - 2026-09-30
 
