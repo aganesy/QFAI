@@ -16,17 +16,21 @@ import {
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { isDeepStrictEqual } from "node:util";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
-import { defaultConfig } from "../../src/core/config.js";
+import { defaultConfig, routingEntryName } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
+import { legacyRoutingEntries } from "../helpers/legacyRouting.js";
+import { atLocation } from "../helpers/reportLocation.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
+import { sentencesOf } from "../helpers/shippedSentences.js";
 import {
   isMigrationReportAncestor,
   isMigrationReportPath,
@@ -143,6 +147,25 @@ function prepareAllowingPerson(root: string, last: number): Result[] {
     results.push(result);
   }
   return results;
+}
+
+/** The name a routing entry is listed under: its step, or its skill in a 1.x manifest. */
+function entryName(entry: Record<string, unknown>): string {
+  const name = routingEntryName(entry);
+  if (name === undefined) throw new Error("A routing entry names neither a step nor a skill");
+  return name;
+}
+
+/** A property of a value read from a file, or undefined where the value has none. */
+function field(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
+}
+
+/** The new ID an ID map gives an old ID of one spec pack. */
+function mappedId(map: unknown, pack: string, oldId: string): string {
+  const mapped = field(field(field(map, "ids"), pack), oldId);
+  if (typeof mapped !== "string") throw new Error(`ID map omitted ${oldId}`);
+  return mapped;
 }
 
 function section(report: string, name: string): string[] {
@@ -1340,7 +1363,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0006-02
-  it("keeps only changed manifest routing entries as configuration overrides", async () => {
+  it("keeps only changed manifest routing entries as configuration overrides and lists them", async () => {
     const root = await project();
     const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
     const defaults = { routing: await defaultRoutingEntries() };
@@ -1348,22 +1371,37 @@ describe("BF-0004 acceptance criteria", () => {
     const original = defaults.routing[1];
     if (!unchanged || !original) throw new Error("Routing defaults need two entries");
     const changed = { ...original, review_profile: "migration-acceptance" };
+    const copied = (await legacyRoutingEntries()).find(
+      (entry) => !defaults.routing.some((candidate) => isDeepStrictEqual(candidate, entry)),
+    );
+    if (!copied) throw new Error("The 1.x manifest needs an entry that differs from every default");
     const manifest = path.join(root, ".qfai/assistant/manifest");
     await writeFile(
       path.join(manifest, "agent-routing.yml"),
-      stringifyYaml({ routing: [unchanged, changed] }),
+      stringifyYaml({ routing: [unchanged, copied, changed] }),
     );
     await writeFile(
       path.join(manifest, "review-profiles.yml"),
       await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf8"),
     );
-    prepareThrough(root, 3);
+    const results = prepareAllowingPerson(root, 3);
     const config = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8")) as {
       routing?: Array<Record<string, unknown>>;
       reviewProfiles?: Record<string, unknown>;
     };
-    expect(config.routing).toEqual([changed]);
     expect(config.reviewProfiles).toBeUndefined();
+    // The entry the project changed is carried; the one equal to a default is not.
+    // An entry copied from a 1.x manifest is not carried: it would hide the roles 2.x declares.
+    expect(config.routing).toEqual([changed]);
+    const step3 = results[2];
+    expect(step3?.status).toBe(3);
+    const listed = section(step3?.stdout ?? "", "For a person");
+    const warning = listed.filter((line) => line.includes(entryName(changed)));
+    expect(warning).toHaveLength(1);
+    expect(warning.join("\n")).toMatch(/1\.x/);
+    expect(warning.join("\n")).toMatch(/hides?\b/i);
+    expect(warning.join("\n")).toMatch(/roles?\b/i);
+    expect(listed.filter((line) => line.includes(entryName(copied)))).toEqual([]);
   });
 
   // QFAI:AC-0004-0007-01
@@ -2069,6 +2107,154 @@ describe("BF-0004 acceptance criteria", () => {
     expect(e2e).toContain(["QFAI", "BF-0001"].join(":"));
   });
 
+  // QFAI:AC-0004-0010-04
+  it("keeps a test-case annotation in an E2E file and lists the way to settle it", async () => {
+    const root = await project();
+    prepareAllowingPerson(root, 7);
+    const example = mappedId(
+      JSON.parse(
+        await readFile(
+          path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
+          "utf8",
+        ),
+      ),
+      "spec-0001",
+      "TC-0001-0001",
+    );
+    const e2e = path.join(root, "tests/e2e/order.test.ts");
+    const input = [
+      "// QFAI:SPEC-0001:US-0001-0001",
+      "// QFAI:SPEC-0001:TC-0001-0001",
+      'export const receipt = "accepted";',
+      "",
+    ].join("\n");
+    await writeFile(e2e, input);
+    const result = step(root, 8);
+    // The story annotation of an E2E file is rewritten to its flow.
+    const after = await readFile(e2e, "utf8");
+    const flowAnnotation = ["QFAI", "BF-0001"].join(":");
+    expect(after.split("\n")[0]).toBe(`// ${flowAnnotation}`);
+    // The test-case annotation stays as written, and the run asks a person to settle it.
+    expect(after).toBe(input.replace("QFAI:SPEC-0001:US-0001-0001", flowAnnotation));
+    expect(result.status, result.stderr).toBe(3);
+    const items = section(result.stdout, "For a person").filter((line) =>
+      line.includes("QFAI:SPEC-0001:TC-0001-0001"),
+    );
+    expect(items).toHaveLength(1);
+    const item = items[0] ?? "";
+    expect(item).toMatch(atLocation("tests/e2e/order.test.ts", 2));
+    expect(item).toContain(example);
+    expect(item).toMatch(/outside[^.]*E2E/i);
+    expect(item).toMatch(/decisions\.md/);
+    expect(item).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
+    expect(item).toMatch(/Approach/);
+    expect(item).toMatch(/\bDONE\b/);
+    expect(item).toMatch(/delet/i);
+    // The old form is not an example annotation, so validation has no misplaced EX to report.
+    const validated = await validateProject(root, undefined, { profile: "tdd" });
+    // Control: validation reached the story rules, so the absence below is a finding not raised.
+    // The integration file of the fixture annotates the same test case, so no example is owed.
+    expect(validated.profileValidatorsRan).toBe(true);
+    expect(validated.issues.filter((issue) => issue.code === "QFAI-STORY-007")).toEqual([]);
+  });
+
+  // QFAI:AC-0004-0009-01
+  it("writes a heading-form rule as its Rule field alone, on one line in a SQL contract", async () => {
+    const root = await project();
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/04_Business-Rules.md"),
+      [
+        "# Business Rules",
+        "",
+        "## BR-0001-0001: Receipt",
+        "",
+        "- **Rule**: A valid order receives a receipt.",
+        "- **Notes**: Receipts are numbered.",
+        "",
+        "## BR-0001-0002: Order identity",
+        "",
+        "- **Rule**: An accepted order keeps its identifier",
+        "  for as long as the order exists.",
+        "- **Notes**: Identifiers are never reused.",
+        "- **NFRs**: None.",
+        "- **Contracts**: DB-0001",
+        "",
+        "## BR-0001-0003: Empty order",
+        "",
+        "- **Rule**: An empty order has no receipt screen.",
+        "",
+      ].join("\n"),
+    );
+    prepareAllowingPerson(root, 7);
+    const sqlName = (await readdir(path.join(root, ".qfai/spec/03_contract/db"))).find((name) =>
+      name.endsWith("-orders.sql"),
+    );
+    if (!sqlName) throw new Error("Step 7 wrote no orders contract");
+    const sql = await readFile(path.join(root, ".qfai/spec/03_contract/db", sqlName), "utf8");
+    const apiName = (await readdir(path.join(root, ".qfai/spec/03_contract/api"))).find((name) =>
+      name.endsWith("-order.yaml"),
+    );
+    if (!apiName) throw new Error("Step 7 wrote no order contract");
+    const api = await readFile(path.join(root, ".qfai/spec/03_contract/api", apiName), "utf8");
+    const words = "An accepted order keeps its identifier for as long as the order exists\\.".split(
+      " ",
+    );
+    // The rule is one line followed by its examples line, and nothing of its other fields.
+    // Runs of blanks inside the statement are not pinned.
+    expect(sql).toMatch(
+      new RegExp(
+        `^-- Rule BR-0002-0001: ${words.join("[ \\t]+")}\\n-- Examples: EX-\\d{4}-\\d{4}-\\d{2}`,
+        "m",
+      ),
+    );
+    expect(sql).not.toContain("Order identity");
+    expect(sql).not.toContain("Identifiers are never reused");
+    expect(api).toContain("A valid order receives a receipt.");
+    expect(api).not.toContain("Receipts are numbered");
+    const validated = await validateProject(root, undefined, { profile: "sdd" });
+    // Control: no old spec pack is left, so validation reads the contracts.
+    expect(validated.issues.filter((issue) => issue.code === "QFAI-LAYOUT-001")).toEqual([]);
+    expect(validated.issues.filter((issue) => issue.code === "QFAI-STORY-005")).toEqual([]);
+  });
+
+  // QFAI:AC-0004-0009-01
+  it("keeps a YAML contract's dependency list on one line however many IDs it holds", async () => {
+    const root = await project();
+    const dependencies = Array.from(
+      { length: 8 },
+      (_, index) => `CON-DB-${String(index + 1).padStart(4, "0")}`,
+    );
+    const api = path.join(root, ".qfai/contracts/api/order.yaml");
+    await writeFile(
+      api,
+      (await readFile(api, "utf8")).replace(
+        "x-qfai-depends-on: []",
+        `x-qfai-depends-on: [${dependencies.join(", ")}]`,
+      ),
+    );
+    for (const [index, id] of dependencies.entries()) {
+      if (index === 0) continue;
+      await writeFile(
+        path.join(root, `.qfai/contracts/db/table${index}.sql`),
+        `-- QFAI-CONTRACT-ID: ${id}\n-- Depends on: -\nCREATE TABLE table${index} (id INT);\n`,
+      );
+    }
+    prepareAllowingPerson(root, 3);
+    const apiDirectory = path.join(root, ".qfai/spec/03_contract/api");
+    const name = (await readdir(apiDirectory)).find((entry) => entry.endsWith("-order.yaml"));
+    if (!name) throw new Error("Step 3 wrote no order contract");
+    const onOneLine = /^x-qfai-depends-on: \[[ \t]*DB-\d{4}(?:,[ \t]*DB-\d{4}){7}[ \t]*\]$/m;
+    // Step 3 writes the list on one line; step 7 must not wrap it.
+    expect(await readFile(path.join(apiDirectory, name), "utf8")).toMatch(onOneLine);
+    for (let number = 4; number <= 7; number += 1) {
+      expect(step(root, number).status).not.toBe(2);
+    }
+    expect(await readFile(path.join(apiDirectory, name), "utf8")).toMatch(onOneLine);
+    const validated = await validateProject(root, undefined, { profile: "sdd" });
+    expect(validated.issues.filter((issue) => issue.code === "QFAI-LAYOUT-001")).toEqual([]);
+    expect(validated.issues.filter((issue) => issue.code === "QFAI-CONTRACT-015")).toEqual([]);
+  });
+
   // QFAI:AC-0004-0009-01
   it("places three rules in their selected API and DB contracts", async () => {
     const api = await readFile(
@@ -2334,6 +2520,77 @@ describe("BF-0004 acceptance criteria", () => {
       sentenceWith(/by hand/i, /annotation/i, "step 4"),
       "a rewritten annotation is edited by hand only for an example step 4 left unplaced",
     ).toBe(true);
+  });
+
+  // QFAI:AC-0004-0012-03
+  it("teaches the routing entries, the E2E annotation, the outline and shared-criterion items and an unfinished test", async () => {
+    const guide = await readFile(
+      path.join(
+        packageRoot,
+        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
+      ),
+      "utf8",
+    );
+    const sentences = sentencesOf(guide);
+    const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
+      sentences.some((sentence) =>
+        parts.every((part) =>
+          typeof part === "string" ? sentence.includes(part) : part.test(sentence),
+        ),
+      );
+
+    const markers: ReadonlyArray<readonly [string, boolean]> = [
+      [
+        "an entry copied from a 1.x routing manifest hides the roles 2.x declares",
+        sentenceWith("routing", "1.x", /\bhides?\b/, /\broles\b/),
+      ],
+      [
+        "step 3 lists each routing entry it keeps",
+        sentenceWith("Step 3", /routing entr/i, "`## For a person`"),
+      ],
+      [
+        "step 8 leaves a test-case annotation in an E2E file as it is",
+        sentenceWith(/test-case annotation/i, "E2E", /\b(?:unchanged|stays|kept|keeps|leaves)\b/),
+      ],
+      [
+        "a DONE Test exception row in decisions.md settles an annotation no test can carry",
+        sentenceWith("`Test exception:", "`decisions.md`", "Approach", "DONE"),
+      ],
+      [
+        "the old annotation is deleted once the test or the row exists",
+        sentenceWith(/\bdelet\w*/, /old annotation/i),
+      ],
+      [
+        "the item for an outline names its line and the header row of its Examples table",
+        sentenceWith("`Examples:`", /header row/i, /\bline\b/),
+      ],
+      [
+        "the cases of an outline and the further scenarios are placed through the SDD skill",
+        sentenceWith("/qfai-sdd", /\boutline\b/i, /\bscenarios?\b/i),
+      ],
+      [
+        "the item for a story with no criterion names the old criteria that named it",
+        sentenceWith(/no criterion/i, /old criteri(?:a|on)/i, /\bnamed\b/),
+      ],
+      [
+        "the criterion of a story that shared one is written through the SDD skill",
+        sentenceWith("/qfai-sdd", /no criterion/i, /\b(?:shared|shares?)\b/),
+      ],
+      [
+        "a todo, blocked or red row of the old ledger is read by no step",
+        sentenceWith(/\bledger\b/i, "`todo`", "`blocked`", "`red`"),
+      ],
+      [
+        "the example of an unfinished test has no test and validate lists it",
+        sentenceWith("QFAI-STORY-006", /\bexample\b/i, /\bno test\b/i),
+      ],
+      [
+        "the same applies to a criterion that lost its integration or API annotation",
+        sentenceWith(/\bcriterion\b/i, /\blost\b/i, /integration or API/i, /\bannotation\b/i),
+      ],
+    ];
+    // Every missing marker is named at once.
+    expect(markers.filter(([, found]) => !found).map(([label]) => label)).toEqual([]);
   });
 
   // QFAI:AC-0004-0012-01

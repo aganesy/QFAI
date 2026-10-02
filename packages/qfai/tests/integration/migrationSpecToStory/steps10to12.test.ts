@@ -33,6 +33,7 @@ import { checkPlans } from "../../../src/core/workflow/plans.js";
 import { isRecord } from "../../../src/core/workflow/parse.js";
 import { runStep } from "../../../src/migration/specToStory/harness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { deleteE2eCaseAnnotation } from "../../helpers/migrationE2eAnnotation.js";
 import {
   MIGRATION_REPORT_DIR,
   isMigrationReportPath,
@@ -329,6 +330,7 @@ async function migratedByEarlierRelease(): Promise<EarlierMigration> {
   const test = "tests/integration/order.test.ts";
   await reannotate(root, test, "CON-API-0001", "API-0001");
   await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+  await deleteE2eCaseAnnotation(root, "tests/e2e/order.test.ts");
   // What an earlier release left: no Claude Code settings, its own Codex hook
   // file, and a recorded reminder text without the free-text entry.
   await rm(path.join(root, ".claude/settings.json"));

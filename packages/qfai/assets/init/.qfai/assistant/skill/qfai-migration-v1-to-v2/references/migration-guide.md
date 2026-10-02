@@ -28,6 +28,14 @@ the 2.x validation and authoring workflow.
 Do not run `npx qfai init --force` to migrate. It can write beyond the migration
 scripts' allowed paths and replace local edits.
 
+The first `npx qfai init` records the workflows it installs in
+`.qfai/install-provenance.json`, so delete a shipped workflow the project does
+not want after that run and commit the record, and later `npx qfai init` runs
+leave it deleted. A workflow already in the 1.x tree has no record, because
+`init` records only the files it writes. To keep such a workflow deleted, delete
+it before that run, let `init` write it and record it, then delete it again and
+commit the record.
+
 ## Place stories and rules
 
 The AI writes `.qfai/evidence/migration-spec-to-story/plan.yaml` before running
@@ -149,7 +157,8 @@ the file to match:
 - The new ID replaces the old one in the file's declaration: the H1 of a
   Markdown contract, as `# CLI-0001: <title>`, and the `QFAI-CONTRACT-ID` line
   of any other. The old IDs in `-- Depends on:` and `x-qfai-depends-on` become
-  the new ones.
+  the new ones, and a YAML contract keeps its `x-qfai-depends-on` list on one
+  line.
 - `contracts.md` becomes one index table listing every contract. The old
   index's other sections are reported for a person.
 - `.qfai/evidence/migration-spec-to-story/contract-map.json` records each old
@@ -187,6 +196,13 @@ Step 3 groups its `## For a person` items under `### Content` and
 or decides. `### Identifiers` holds an item that only pairs an old ID with its
 new one, such as a changed constraint ID. A group with no item is not printed.
 
+Step 3 writes a `routing:` override into `qfai.config.yaml` only for an entry
+of `agent-routing.yml` that differs from the installed default. It writes none
+for an entry equal to a default or to an entry a 1.x release shipped. Step 3
+lists each routing entry it does write under `## For a person`, with its name
+and a warning that a routing entry copied from a 1.x manifest hides the roles
+the 2.x skills declare.
+
 ## Business rules
 
 Rules are numbered per contract, `BR-<contract number>-NNNN` from `0001` in plan
@@ -200,7 +216,9 @@ each rule into its contract in the form the contract's format takes:
 | SQL             | A `-- Rule BR-0002-0001: <statement>` line, then an `-- Examples:` line |
 
 A Markdown contract without a `## Business rules` section gets one as its last
-section. A rule's examples are the new IDs of the examples that cited it.
+section. A rule's examples are the new IDs of the examples that cited it. A
+rule written as a heading section takes the value of its `Rule` field as its
+statement, and a SQL contract holds that statement on one line.
 
 ## Documents in their template's shape
 
@@ -412,6 +430,30 @@ Finish each kind of item that a step leaves as follows:
   it before step 4 with an `examples` entry, or a rule mark, in `plan.yaml`. After
   step 4, place it through `/qfai-sdd` as above; a rule mark is the exception
   while a spec pack is left.
+- **An outline or a further scenario.** Step 4 lists a `Scenario Outline:`, a
+  `Scenario Template:`, a further `Scenario:` and a `Background:` with the old
+  file and line, and the item for an outline also carries the header row of its
+  `Examples:` table. Place the cases of an outline and the further scenarios
+  through `/qfai-sdd`.
+- **A story with no criterion.** Step 4 lists a story none of whose criteria
+  takes a new ID, with the old criteria that named it, and writes no
+  `02_Acceptance-Criteria.md` for it. Where a story with no criterion shared
+  one with another story, write its criterion through `/qfai-sdd`.
+- **An unfinished test of the old ledger.** A `todo`, `blocked` or `red` row of
+  the old ledger leaves with the archived ledger, and no step reads it. Its
+  example has no test, and `npx qfai validate` lists it as `QFAI-STORY-006`.
+  The same holds for a criterion that lost its integration or API annotation
+  when step 8 rewrote the old annotations to the example level. Finish each
+  with the test, or with a `decisions.md` row whose Content is `Test exception:`
+  followed by the ID of the example or criterion, whose Approach holds the
+  reason and whose Status is DONE.
+- **A test-case annotation in an E2E file.** Step 8 leaves it unchanged,
+  because an example annotation there is an error, and lists its file, line,
+  annotation and example. Settle it with a test outside the E2E layer annotated
+  with that example, or with a `decisions.md` row whose Content is
+  `Test exception: <EX>`, whose Approach holds the reason and whose Status is
+  DONE. Then delete the old annotation, because step 8 lists it on each run
+  until it is deleted.
 - **An annotation of an unplaced example.** Step 8 keeps it as written and lists
   its file and line. Edit an annotation by hand only for an example step 4 left
   unplaced: place the example through `/qfai-sdd`, then write
@@ -428,10 +470,13 @@ An old ID may stand in one old file as an index table row, as a heading section
 or as both. The steps read them as one record, and the two forms must hold equal
 values: a difference ends the run with exit 2 before any write, naming both
 locations. When a step removes a record it moved, it removes only that record's
-table row and heading section.
+table row and heading section. A table of `04_Business-Rules.md`,
+`05_Examples.md` or `06_Test-Cases.md` whose header reads `BR ID`, `EX ID` or
+`TC ID` is read as the hyphen form, and a table whose first column holds only
+IDs under any other header stops the run with exit 2, naming the file and line.
 
 Step 8 changes test-case annotations to example annotations where the ID map
-resolves them, and contract annotations to the new contract IDs. It changes an
+resolves them, outside the E2E layer, and contract annotations to the new contract IDs. It changes an
 old user-story annotation to a business-flow annotation only in an E2E test.
 Unresolved annotations and old deferral markers stay in place and are
 reported. Step 9 changes only the host integration links.

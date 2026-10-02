@@ -15,10 +15,11 @@ Feature: Move policy and catalog content into the merged files once
     And the consumed source files are gone
 
   # AC-0004-0006-02
-  Scenario: A manifest entry that equals the built-in default is not carried
-    Given a project whose agent manifests hold one entry changed from the package default and one equal to it
+  Scenario: A manifest entry that equals a shipped default is not carried, and a changed entry is listed
+    Given a project whose agent manifests hold one entry changed from the package default, one equal to it, and one equal to an entry of a 1.x release's routing manifest
     When step 3 runs
     Then qfai.config.yaml holds an override for the changed entry only
+    And the changed routing entry is listed under For a person with a warning that a copied 1.x entry hides roles the 2.x skills declare
 
   # AC-0004-0006-03
   Scenario: An overlay moves beside its rule, or is archived for a person

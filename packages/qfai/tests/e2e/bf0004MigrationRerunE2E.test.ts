@@ -21,6 +21,7 @@ import process from "node:process";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { deleteE2eCaseAnnotation } from "../helpers/migrationE2eAnnotation.js";
 import {
   isMigrationReportPath,
   migrationReportFiles,
@@ -303,6 +304,7 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     const test = "tests/integration/order.test.ts";
     await reannotate(root, test, "CON-API-0001", "API-0001");
     await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+    await deleteE2eCaseAnnotation(root, "tests/e2e/order.test.ts");
     await rm(path.join(root, ".claude/settings.json"));
     await cp(EARLIER_CODEX_HOOKS, path.join(root, ".codex/hooks.json"));
     const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
