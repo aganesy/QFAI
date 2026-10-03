@@ -209,7 +209,7 @@
         "scripts/check-changelog-released-sections.mjs": "a852f0e21c2a4cfee83a673b52ace2d607e7d6d3fc94f6f4e237799f8c18a1eb",
         "scripts/check-conflict-markers.mjs": "9759695e9cf3f2590a046c45640124a09ae4ce9146cf6cf24b2dfaf01e31b0da",
         "scripts/check-doc-clarity.mjs": "0795973a46d983c204cad0d8164d23d1ed03c96f4e280e6708afbfdbf602246b",
-        "scripts/check-dogfood-backlog.mjs": "fda18879206a3ab0ac54325482d7ba2d725b37539648a016a98f78fef68f0c04",
+        "scripts/check-dogfood-backlog.mjs": "c482118c8cb1bc33b5617c313563af47961c73d190fbf804a82714ea7d2e7b66",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
         "scripts/check-lifecycle-manifests.mjs": "1c701af6c814c2a9e5e6d5a5c8070a58d378f35d5caec24ba0152b95b7f28786",
         "scripts/check-mdschema.mjs": "4900c69ba7e51c2766ee41579e4b41dd7edc3aaf0915f22b1432a74d8f15bebe",
