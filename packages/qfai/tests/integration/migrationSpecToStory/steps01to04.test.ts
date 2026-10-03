@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,6 +18,7 @@ import { step02 } from "../../../src/migration/specToStory/step02MergeTables.js"
 import { step04 } from "../../../src/migration/specToStory/step04RenumberIds.js";
 import { step07 } from "../../../src/migration/specToStory/step07RulesToContracts.js";
 import { isMigrationReportPath } from "../../helpers/migrationReport.js";
+import { atLocation } from "../../helpers/reportLocation.js";
 
 async function withProject(run: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migrate-01-04-"));
@@ -134,6 +135,78 @@ async function treeHash(root: string): Promise<string> {
   return hash.digest("hex");
 }
 
+const OLD_LAYOUT = path.resolve(__dirname, "../../fixtures/migration-spec-to-story/old-layout");
+const OLD_CRITERIA = path.resolve(
+  __dirname,
+  "../../fixtures/bf0004MigrationCutover/legacy-criteria.md",
+);
+const SPEC_TABLES = ["04_Business-Rules.md", "05_Examples.md", "06_Test-Cases.md"];
+
+/**
+ * Steps 1 to 5 over a copy of the old-layout project. Each replacement renames the ID header of
+ * one table file in both of its packs. The result holds the exit codes and reports of steps 4 and
+ * 5, and every file the project then holds, the three table files by name only since they differ
+ * in the header they were given.
+ */
+async function runOldPack(...headers: [file: string, from: string, to: string][]): Promise<{
+  codes: number[];
+  outputs: string[];
+  snapshot: [string, string][];
+}> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migrate-old-pack-"));
+  try {
+    await cp(OLD_LAYOUT, root, { recursive: true });
+    await cp(OLD_CRITERIA, path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"));
+    await rename(path.join(root, "gitignore.input"), path.join(root, ".gitignore"));
+    await rename(
+      path.join(root, ".qfai/assistant/skill-local.input"),
+      path.join(root, ".qfai/assistant/skills.local"),
+    );
+    await writeFile(path.join(root, "AGENTS.md"), "# Our agents\n\nProject text.\n");
+    await writeFile(path.join(root, "CLAUDE.md"), "# Our Claude\n\nProject text.\n");
+    for (const [file, from, to] of headers) {
+      for (const pack of ["spec-0001", "spec-0002"]) {
+        const target = path.join(root, ".qfai/specs", pack, file);
+        const text = await readFile(target, "utf8");
+        expect(text).toContain(`| ${from} `);
+        await writeFile(target, text.replace(`| ${from} `, `| ${to} `), "utf8");
+      }
+    }
+    const codes: number[] = [];
+    const outputs: string[] = [];
+    for (const step of [1, 2, 3, 4, 5]) {
+      const output: string[] = [];
+      const code = await runStep(step, [], {
+        cwd: root,
+        stdout: { write: (value) => output.push(value) },
+        stderr: { write: () => true },
+      });
+      if (step >= 4) {
+        codes.push(code);
+        outputs.push(output.join(""));
+      } else {
+        expect(code, `step ${step}`).not.toBe(2);
+      }
+    }
+    const snapshot: [string, string][] = [];
+    for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const relative = path.relative(root, path.join(entry.parentPath, entry.name));
+      const posix = relative.replaceAll("\\", "/");
+      if (isMigrationReportPath(posix)) continue;
+      const content = SPEC_TABLES.includes(entry.name)
+        ? "present"
+        : createHash("sha256")
+            .update(await readFile(path.join(root, relative)))
+            .digest("hex");
+      snapshot.push([posix, content]);
+    }
+    return { codes, outputs, snapshot: snapshot.sort(([a], [b]) => a.localeCompare(b)) };
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function expectNoIdMap(root: string): Promise<void> {
   await expect(readFile(path.join(root, MAP_FILE))).rejects.toMatchObject({ code: "ENOENT" });
 }
@@ -144,6 +217,44 @@ function namedLines(message: string, file: string): number[] {
   return [...message.matchAll(new RegExp(`${escaped}:(\\d+)`, "g"))].map((match) =>
     Number(match[1]),
   );
+}
+
+/** The list items of the `## For a person` section of a step report. */
+function personItems(output: string): string[] {
+  return reportSection(output, "For a person")
+    .split("\n")
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2));
+}
+
+/** The one item of `## For a person` that names `file` and matches every one of `parts`. */
+function itemNaming(output: string, file: string, parts: readonly RegExp[]): string {
+  const items = personItems(output).filter(
+    (item) => item.includes(file) && parts.every((part) => part.test(item)),
+  );
+  expect(items, `${file} ${parts.map(String).join(" ")}`).toHaveLength(1);
+  return items[0] ?? "";
+}
+
+/** The criteria file step 4 writes for one story whose criteria each hold the placeholder Scenario. */
+function placeholderCriteria(...ids: string[]): string {
+  const placeholder = [
+    "  Scenario: <the outcome this criterion accepts>",
+    "    Given <a starting state>",
+    "    When <the user acts>",
+    "    Then <the expected outcome>",
+  ];
+  return [
+    "# Acceptance Criteria",
+    "",
+    "## Criteria",
+    "",
+    "```gherkin",
+    "Feature: Order",
+    ...ids.flatMap((id, index) => [...(index === 0 ? [] : [""]), `  # ${id}`, ...placeholder]),
+    "```",
+    "",
+  ].join("\n");
 }
 
 const BASE_FLOWS =
@@ -821,6 +932,7 @@ describe("migration steps 1 to 4", () => {
   });
 
   it("keeps prose criteria for a person instead of writing invalid Gherkin", async () => {
+    // QFAI:AC-0004-0007-02
     // QFAI:EX-0004-0007-17
     await withProject(async (root) => {
       await put(
@@ -853,6 +965,14 @@ describe("migration steps 1 to 4", () => {
       expect((await readdir(path.join(root, storyDir))).sort()).toEqual([
         "01_User-story.md",
         "03_Example.md",
+      ]);
+      expect(clean.output).toContain(
+        `${storyDir}/02_Acceptance-Criteria.md: US-0001-0001 has no criterion that takes a new ID`,
+      );
+      itemNaming(clean.output, `${storyDir}/02_Acceptance-Criteria.md`, [
+        /US-0001-0001/,
+        /no criterion that takes a new ID/,
+        /AC-0001-0001/,
       ]);
       await put(root, `${storyDir}/02_Acceptance-Criteria.md`, "# Acceptance Criteria\n\nstale\n");
       const result = await run(step04, await context(root));
@@ -889,6 +1009,115 @@ describe("migration steps 1 to 4", () => {
       expect(await readFile(path.join(root, storyDir, "02_Acceptance-Criteria.md"), "utf8")).toBe(
         authored,
       );
+    });
+  });
+
+  it("lists a story left with no criterion together with the old criteria its catalog row named", async () => {
+    // QFAI:AC-0004-0007-02
+    // QFAI:EX-0004-0007-39
+    await withProject(async (root) => {
+      await put(
+        root,
+        "qfai.config.yaml",
+        "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      );
+      await put(root, `${PACK_DIR}/01_Spec.md`, "# Spec\n\n- Status: active\n");
+      await put(
+        root,
+        `${PACK_DIR}/02_User-stories.md`,
+        "# Stories\n\n## US-0001-0001: Place order\n\nPlace order.\n\n## US-0001-0002: Review order\n\nReview order.\n",
+      );
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        [
+          "# Criteria",
+          "",
+          "| AC-ID | US Ref | Title |",
+          "| --- | --- | --- |",
+          "| AC-0001-0001 | US-0001-0001, US-0001-0002 | Place an order |",
+          "| AC-0001-0002 | US-0001-0001 | Reject an empty order |",
+          "",
+          "```gherkin",
+          "# AC-0001-0001",
+          "Scenario: Place an order",
+          "  Given a cart",
+          "  When an order is placed",
+          "  Then the order is accepted",
+          "",
+          "# AC-0001-0002",
+          "Scenario: Reject an empty order",
+          "  Given an empty cart",
+          "  When an order is placed",
+          "  Then the order is rejected",
+          "```",
+          "",
+        ].join("\n"),
+      );
+      await put(root, `${PACK_DIR}/04_Business-Rules.md`, "# Rules\n");
+      await put(root, `${PACK_DIR}/05_Examples.md`, "# Examples\n");
+      await put(root, `${PACK_DIR}/06_Test-Cases.md`, "# Cases\n");
+      await put(
+        root,
+        PLAN_FILE,
+        [
+          "flows:",
+          "  - title: Order flow",
+          "    stories:",
+          "      - id: US-0001-0001",
+          "        criteria:",
+          "          - AC-0001-0001",
+          "          - AC-0001-0002",
+          "      - id: US-0001-0002",
+          "rules: []",
+          "",
+        ].join("\n"),
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      const second = path.join(root, FLOW_DIR, "user-story-0001-0002");
+      expect((await readdir(second)).sort()).toEqual(["01_User-story.md", "03_Example.md"]);
+      const criteriaFile = `${FLOW_DIR}/user-story-0001-0002/02_Acceptance-Criteria.md`;
+      expect(result.output).toContain(
+        `${criteriaFile}: US-0001-0002 has no criterion that takes a new ID`,
+      );
+      const item = itemNaming(result.output, criteriaFile, [
+        /US-0001-0002/,
+        /no criterion that takes a new ID/,
+        /AC-0001-0001/,
+      ]);
+      expect(item).not.toMatch(/AC-0001-0002/);
+    });
+  });
+
+  it("lists a story left with no criterion together with the old criterion its plan entry named", async () => {
+    // QFAI:AC-0004-0007-02
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        "# Criteria\n\n## AC-0001-0001: Order is accepted\n\nThe order is accepted.\n",
+      );
+      await put(
+        root,
+        PLAN_FILE,
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\n        criteria:\n          - AC-0001-0001\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      const criteriaFile = `${STORY_DIR}/02_Acceptance-Criteria.md`;
+      expect(result.output).toContain(
+        `${criteriaFile}: US-0001-0001 has no criterion that takes a new ID`,
+      );
+      itemNaming(result.output, criteriaFile, [
+        /US-0001-0001/,
+        /no criterion that takes a new ID/,
+        /AC-0001-0001/,
+      ]);
+      // The plan, not the old file, placed that criterion, and the item says so.
+      expect(result.output).toContain("placed under it by plan.yaml: AC-0001-0001");
+      expect(result.output).not.toContain("named by AC-0001-0001 in 03_Acceptance-Criteria.md");
     });
   });
 
@@ -1004,12 +1233,26 @@ describe("migration steps 1 to 4", () => {
         ].join("\n"),
       );
       const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
-      const reason = "is not written; a criterion holds one named Scenario";
-      expect(result.output).toContain(`- ${source}: AC-0001-0001 Background ${reason}\n`);
-      expect(result.output).toContain(
-        `- ${source}: AC-0001-0001 further Scenario "Place two orders" ${reason}\n`,
-      );
+      // Line 6 of the old file holds the Background and line 15 the second Scenario.
+      const background = itemNaming(result.output, source, [/AC-0001-0001/, /Background/]);
+      const further = itemNaming(result.output, source, [/AC-0001-0001/, /Place two orders/]);
+      expect(background).toMatch(atLocation(source, 6));
+      expect(further).toMatch(atLocation(source, 15));
       expect(result.output).not.toContain("placeholder");
+    });
+  });
+
+  it("names the header row of an Examples table that follows a description", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    Counts a buyer may place.\n    | count |\n    | 2     |\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.output).toContain("with Examples header row | count |");
     });
   });
 
@@ -1049,18 +1292,85 @@ describe("migration steps 1 to 4", () => {
         ].join("\n"),
       );
       const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
-      const reason = "is not written; a criterion holds one named Scenario";
-      expect(result.output).toContain(
-        `- ${source}: AC-0001-0001 Scenario Outline "Place <count> items" ${reason}\n`,
-      );
-      expect(result.output).toContain(
-        `- ${source}: AC-0001-0002 Scenario named only by its ID AC-0001-0002 ${reason}\n`,
-      );
+      // The outline is on line 6 of the old file and the header row of its Examples table on
+      // line 11; the Scenario named only by its ID is on line 16.
+      const outline = itemNaming(result.output, source, [/AC-0001-0001/, /Place <count> items/]);
+      const named = itemNaming(result.output, source, [/AC-0001-0002/]);
+      expect(outline).toMatch(atLocation(source, 6));
+      expect(outline).toMatch(/\|\s*count\s*\|/);
+      expect(named).toMatch(atLocation(source, 16));
       for (const id of ["AC-0001-0001-01", "AC-0001-0001-02"]) {
         expect(result.output).toContain(
           `- ${criteriaFile}: ${id} holds a placeholder Scenario; write it\n`,
         );
       }
+    });
+  });
+
+  it("lists a Scenario Template with the line of its keyword and the header row of its Examples table", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Template: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    | count |\n    | 2     |\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect(result.output).toContain(
+        `- ${STORY_DIR}/02_Acceptance-Criteria.md: AC-0001-0001-01 holds a placeholder Scenario; write it\n`,
+      );
+      expect(
+        await readFile(path.join(root, `${STORY_DIR}/02_Acceptance-Criteria.md`), "utf8"),
+      ).toBe(placeholderCriteria("AC-0001-0001-01"));
+      const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
+      // The keyword is on line 6 of the old file and the header row of its Examples table on line 11.
+      const template = itemNaming(result.output, source, [/AC-0001-0001/, /Place <count> items/]);
+      expect(template).toMatch(atLocation(source, 6));
+      expect(template).toMatch(/\|\s*count\s*\|/);
+    });
+  });
+
+  it("lists a Scenario with no name with the line of its keyword", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place one order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\nScenario:\n  Given two carts\n  When both orders are placed\n  Then both are accepted\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect(
+        await readFile(path.join(root, `${STORY_DIR}/02_Acceptance-Criteria.md`), "utf8"),
+      ).toContain("  Scenario: Place one order\n");
+      const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
+      // The nameless Scenario is on line 11 of the old file.
+      expect(itemNaming(result.output, source, [/AC-0001-0001/])).toMatch(atLocation(source, 11));
+    });
+  });
+
+  it("holds a placeholder for a criterion whose only Scenario has no name and lists it with its line", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario:\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect(result.output).toContain(
+        `- ${STORY_DIR}/02_Acceptance-Criteria.md: AC-0001-0001-01 holds a placeholder Scenario; write it\n`,
+      );
+      expect(
+        await readFile(path.join(root, `${STORY_DIR}/02_Acceptance-Criteria.md`), "utf8"),
+      ).toBe(placeholderCriteria("AC-0001-0001-01"));
+      const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
+      expect(itemNaming(result.output, source, [/AC-0001-0001/])).toMatch(atLocation(source, 6));
     });
   });
 
@@ -1663,7 +1973,7 @@ describe("migration steps 1 to 4", () => {
   it("converts indented Scenario, Scenario Outline and Background keywords as unindented ones", async () => {
     // QFAI:EX-0004-0007-33
     const criteria = (indent: string): string =>
-      `# Criteria\n\n\`\`\`gherkin\n${indent === "" ? "" : "Feature: Orders\n"}# AC-0001-0001\n# Parent: US-0001-0001\n${indent}Scenario: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n\n# AC-0001-0002\n# Parent: US-0001-0001\n${indent}Background:\n  Given a signed-in buyer\n\n${indent}Scenario: Place one order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\n@later\n${indent}Scenario: Place two orders\n  Given two carts\n  When both orders are placed\n  Then both are accepted\n\n# AC-0001-0003\n# Parent: US-0001-0001\n${indent}Scenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    | count |\n    | 2     |\n\`\`\`\n`;
+      `# Criteria\n\n\`\`\`gherkin\n${indent === "" ? "# Orders\n" : "Feature: Orders\n"}# AC-0001-0001\n# Parent: US-0001-0001\n${indent}Scenario: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n\n# AC-0001-0002\n# Parent: US-0001-0001\n${indent}Background:\n  Given a signed-in buyer\n\n${indent}Scenario: Place one order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\n@later\n${indent}Scenario: Place two orders\n  Given two carts\n  When both orders are placed\n  Then both are accepted\n\n# AC-0001-0003\n# Parent: US-0001-0001\n${indent}Scenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    | count |\n    | 2     |\n\`\`\`\n`;
     const converted = async (indent: string) => {
       let outcome = { output: "", criteria: "" };
       await withProject(async (root) => {
@@ -1834,6 +2144,124 @@ describe("migration steps 1 to 4", () => {
         await expectNoIdMap(root);
       });
     }
+  });
+
+  it("reads the steps' tables headed with a space as it reads them headed with a hyphen", async () => {
+    // QFAI:EX-0004-0007-37
+    const hyphen = await runOldPack();
+    expect(hyphen.codes).toEqual([3, 0]);
+    const again = await runOldPack();
+    expect(again.codes).toEqual(hyphen.codes);
+    expect(again.outputs).toEqual(hyphen.outputs);
+    expect(again.snapshot).toEqual(hyphen.snapshot);
+    const spaced = await runOldPack(
+      ["04_Business-Rules.md", "BR-ID", "BR ID"],
+      ["05_Examples.md", "EX-ID", "EX ID"],
+      ["06_Test-Cases.md", "TC-ID", "TC ID"],
+    );
+    expect(spaced.codes).toEqual(hyphen.codes);
+    expect(spaced.outputs).toEqual(hyphen.outputs);
+    expect(spaced.snapshot).toEqual(hyphen.snapshot);
+  });
+
+  it("stops step 4 before writing when a rules table holds only rule IDs under an unknown header", async () => {
+    // QFAI:EX-0004-0007-38
+    const rules = (header: string): string =>
+      `# Rules\n\n| ${header} | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n| BR-0001-0002 | Orders may be free. |\n`;
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(root, `${PACK_DIR}/04_Business-Rules.md`, rules("BR-ID"));
+      expect((await run(step04, await context(root))).code).toBe(3);
+    });
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(root, `${PACK_DIR}/04_Business-Rules.md`, rules("Rule No"));
+      const before = await treeHash(root);
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(2);
+      expect(namedLines(result.errors, "04_Business-Rules.md")).toContain(3);
+      expect(await treeHash(root)).toBe(before);
+      expect(await readFile(path.join(root, PACK_DIR, "04_Business-Rules.md"), "utf8")).toBe(
+        rules("Rule No"),
+      );
+      await expectNoIdMap(root);
+    });
+  });
+
+  // QFAI:AC-0004-0007-06
+  it("reads an old table headed with a space and stops on one whose IDs stand under an unknown header", async () => {
+    const example = (header: string): string =>
+      `# Examples\n\n| ${header} | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | one item | accepted |\n`;
+    const testCase = (header: string): string =>
+      `# Cases\n\n| ${header} | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | submit | accepted |\n`;
+    const rule = (header: string): string =>
+      `# Rules\n\n| ${header} | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n`;
+    const kinds = [
+      { kind: "rule", file: "04_Business-Rules.md", text: rule, spaced: "BR ID", hyphen: "BR-ID" },
+      { kind: "example", file: "05_Examples.md", text: example, spaced: "EX ID", hyphen: "EX-ID" },
+      {
+        kind: "test case",
+        file: "06_Test-Cases.md",
+        text: testCase,
+        spaced: "TC ID",
+        hyphen: "TC-ID",
+      },
+    ];
+    const readWith = async (file: string, content: string) => {
+      let outcome = { code: 0, output: "", written: "" };
+      await withProject(async (root) => {
+        await putMinimalPack(root);
+        await put(root, `${PACK_DIR}/04_Business-Rules.md`, rule("BR-ID"));
+        await put(root, `${PACK_DIR}/05_Examples.md`, example("EX-ID"));
+        await put(root, `${PACK_DIR}/06_Test-Cases.md`, testCase("TC-ID"));
+        await put(root, `${PACK_DIR}/${file}`, content);
+        const result = await run(step04, await context(root));
+        const map = await readFile(path.join(root, MAP_FILE), "utf8").catch(() => "");
+        const examples = await readFile(path.join(root, STORY_DIR, "03_Example.md"), "utf8").catch(
+          () => "",
+        );
+        outcome = { code: result.code, output: result.output, written: `${map}\n${examples}` };
+      });
+      return outcome;
+    };
+    for (const { kind, file, text, spaced, hyphen } of kinds) {
+      const control = await readWith(file, text(hyphen));
+      expect(control.code, kind).toBe(3);
+      expect(await readWith(file, text(spaced)), kind).toEqual(control);
+      await withProject(async (root) => {
+        await putMinimalPack(root);
+        await put(root, `${PACK_DIR}/${file}`, text("Number"));
+        const before = await treeHash(root);
+        const result = await run(step04, await context(root));
+        expect(result.code, kind).toBe(2);
+        expect(namedLines(result.errors, file), kind).toContain(3);
+        expect(await treeHash(root), kind).toBe(before);
+        await expectNoIdMap(root);
+      });
+    }
+  });
+
+  it("still reads a criteria catalog by the criterion IDs in its rows and refuses no table of other text", async () => {
+    // QFAI:AC-0004-0007-06
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        `${PACK_DIR}/03_Acceptance-Criteria.md`,
+        "# Criteria\n\n| Criterion | US Ref |\n| --- | --- |\n| AC-0001-0001 | US-0001-0001 |\n\n```gherkin\n# AC-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      await put(
+        root,
+        `${PACK_DIR}/04_Business-Rules.md`,
+        "# Rules\n\n| Area | Owner |\n| --- | --- |\n| Orders | Ann |\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | Orders have an item. |\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.errors).toBe("");
+      expect(result.code).toBe(3);
+      expect(
+        await readFile(path.join(root, STORY_DIR, "02_Acceptance-Criteria.md"), "utf8"),
+      ).toMatch(/# AC-0001-0001-01/);
+    });
   });
 
   // QFAI:AC-0004-0009-04
