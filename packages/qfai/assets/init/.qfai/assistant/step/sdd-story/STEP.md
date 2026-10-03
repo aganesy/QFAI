@@ -2,7 +2,7 @@
 name: sdd-story
 owner: qfai-sdd
 purpose: "Write the stories, acceptance criteria and examples of each affected flow, or append the one example a diagnosed defect needs."
-requires: [common-grilling-record, common-evidence-record]
+requires: [common-evidence-record]
 roles:
   [
     requirements-analyst,
@@ -20,8 +20,8 @@ Stage 3 of the story tree: stories and examples.
 
 ## Reads
 
-- The triage rows `sdd-triage` appended and the scope they approve, and the
-  flows `sdd-flow` wrote.
+- The triage decisions `sdd-triage` made and the scope the user approved, and
+  the flows `sdd-flow` wrote.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN/`.
 - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md` and
@@ -36,16 +36,15 @@ Stage 3 of the story tree: stories and examples.
   `02_Acceptance-Criteria.md`, and `03_Example.md`, from their paired templates.
   Do not create another document inside a story directory.
 
-Inside a workflow run, write only in the attempt the operator's answer
-authorizes, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#inside-a-workflow-run`
+Write only what the user approved, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
 states.
 
 ## Procedure
 
 1. Run the pre-draft grilling checkpoint for `Stories and examples` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and record it with `common-grilling-record`.
+   the first write, and list each decision it adopted in the final report.
 2. Write the story index and the three files of each affected story, each in
    its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
@@ -63,14 +62,12 @@ states.
    and `.qfai/assistant/rule/test-layers.md` when deriving the later BF/E2E,
    AC/API or Integration, and EX/other test obligations. Do not author
    acceptance tests in this step.
-7. Record a retired story as a decision row and never recycle its IDs.
-
-Inside a run, a `new_story` target's result reports one `bindings` entry per
-slot, naming the flow and the stories it created.
+7. Retire a story by removing its directory under the change request that names
+   it, and never recycle its IDs.
 
 ## Passes when
 
-Read first: the diagnosis or the triage rows, and the `03_Example.md` of each
+Read first: the diagnosis or the triage decisions, and the `03_Example.md` of each
 story they touch. The step passes in two cases, and the pass names both facts
 it rests on:
 
@@ -102,10 +99,9 @@ existing AC already states:
   takes the new example is the operator's to settle.
 - Add or change no US or AC, and no existing EX. Write or annotate no test: the
   new EX stays an example no test annotates.
-- Record the appended EX as one `decisions.md` triage row naming UPDATE:APPEND,
-  the story and the diagnosis as its source. The operation needs no approval, so
-  the row cites no `human_decision`.
-- `.qfai/evidence/sdd-BF-NNNN.md`, written with `common-evidence-record`,
-  records the diagnosed defect and the run ID, and names no path under
-  `.qfai/run/`.
-- No concrete-abstract cycle runs, and the evidence gets no cycle row.
+- Append no triage or seeding row of its own: the operation needs no triage
+  approval. The two file changes still go to the user, and on approval the
+  stage's one `Change request:` row names them, as
+  `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+  sets out.
+- No concrete-abstract cycle runs.
