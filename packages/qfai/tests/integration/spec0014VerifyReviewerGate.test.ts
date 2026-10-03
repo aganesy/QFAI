@@ -9,8 +9,8 @@
  *
  * The routed reviewers' gate is a clause an agent executes, not a code path, so
  * what a test can hold there is that the clauses stay: the reviewer answers only
- * `PASS` or `REVISE`, and no DONE or handoff is declared until every routed
- * blocking reviewer returns `PASS`. The first two are the shared delegation
+ * `PASS` or `REVISE`, and no DONE is declared until every finding of the one
+ * review is fixed or answered. The first two are the shared delegation
  * baseline's, which every skill inherits; the handoff clause is the skill's own.
  * Each clause is read under the section that makes it binding, in the copy
  * `qfai init` ships and in the copy this repository runs.
@@ -120,18 +120,22 @@ describe("TC-0014-0009: verify holds completion behind a reviewer PASS", () => {
       );
     });
 
-    it(`${copy}: a REVISE from a routed blocking reviewer blocks DONE and handoff`, async () => {
+    it(`${copy}: a REVISE finding blocks DONE until it is fixed or answered`, async () => {
       const baseline = await readFile(path.join(root, BASELINE_REL), "utf-8");
       expect(section(baseline, "## Reviewer Gate Baseline")).toContain(
         "- Final completion gate must be delegated to an independent reviewer.",
       );
       expect(baseline).toContain(
-        "- Do not declare DONE until all routed blocking reviewers return `PASS`.",
+        "- Do not declare DONE until every finding of its one review is fixed or answered",
       );
-      const review = section(await readFile(path.join(root, SKILL_REL), "utf-8"), "## Review");
-      expect(review).toContain(
-        "- Do not hand off until all routed blocking reviewers return `PASS`.",
+      expect(baseline).toContain(
+        "- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.",
       );
+      const completion = section(
+        await readFile(path.join(root, SKILL_REL), "utf-8"),
+        "## Completion",
+      ).replace(/\s+/g, " ");
+      expect(completion).toContain("every finding of the code review above is fixed or answered");
     });
   }
 });

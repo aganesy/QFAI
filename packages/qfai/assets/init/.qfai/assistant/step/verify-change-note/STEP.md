@@ -65,4 +65,4 @@ changed behaviour.
 - Every change a user sees has an entry, or the pass names why none is needed.
 - Every breaking change names its migration step.
 - No version, release heading or tag was written.
-- The completion reviewer checked the entries against the change.
+- The code review checked the entries against the change.

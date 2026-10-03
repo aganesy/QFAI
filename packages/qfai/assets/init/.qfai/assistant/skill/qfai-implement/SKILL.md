@@ -112,8 +112,8 @@ written only to pass a test: no value hard-coded to the test's inputs and no bra
 
 ## Completion
 
-The invocation completes on the gate of its last step and a PASS of the review
-above. For `<BF-ID>`, that is the completion gate of `implement-checkpoint`.
+The invocation completes on the gate of its last step once
+every finding of its one review is fixed or answered. For `<BF-ID>`, that is the completion gate of `implement-checkpoint`.
 The report ends with a question listing the next actions, `/qfai-verify`
 recommended, as `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.

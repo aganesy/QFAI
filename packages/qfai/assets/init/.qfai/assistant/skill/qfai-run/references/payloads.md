@@ -220,7 +220,7 @@ A routing or stage result carries a question as:
   "recordAreas": [".qfai/evidence/implement-BF-0002.md"],
   "inputs": [],
   "requiredGates": [],
-  "requiredReviewerRoles": ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"],
+  "requiredReviewerRoles": ["qa-gatekeeper", "implementation-reviewer"],
   "actorHistory": [],
   "authorizationRefs": [],
   "priorStageReceiptRefs": [],

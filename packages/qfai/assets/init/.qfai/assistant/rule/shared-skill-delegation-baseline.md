@@ -193,9 +193,8 @@ The field asks about the artifact **as it now stands**. A recommendation the art
   (`.qfai/assistant/rule/test-layers.md`).
 - Test volume ratios, floors and planning estimates are signals, not gates,
   unless the skill explicitly says so.
-- Do not declare DONE until all routed blocking reviewers return `PASS`.
-- Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
-  `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
+- Do not declare DONE until every finding of its one review is fixed or answered, as `.qfai/assistant/rule/review-convergence.md` sets out.
+- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
 ### Review convergence (MUST)

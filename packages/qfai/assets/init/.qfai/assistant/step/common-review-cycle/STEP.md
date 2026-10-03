@@ -22,8 +22,10 @@ them; it is the procedure that applies them.
   joined by `architecture-reviewer` when a contract changed. The code review of
   the whole diff: `implementation-reviewer`. On a flow a UI contract with
   screens serves, `product-surface-reviewer` joins either review.
-- **The review target.** Every path and ID the stage wrote or changed, and the
-  source it was written from.
+- **The review target.** The specification review: every path and ID the
+  stage it follows wrote or changed, and the source it was written from. The
+  code review: the route's whole diff against the revision the route started
+  from, so the code and tests earlier stages wrote are read with the change note.
 - **The stage's gate result**, fresh on the revision the reviewers will read.
 - **The stage evidence file** (`common-evidence-record`), including its
   `## Grilling Session` block and Work Orders Summary.
@@ -119,7 +121,7 @@ evidence. The pack is immutable after sealing; a later attempt gets a new pack
 and a new seal.
 
 Before reporting completion, recompute every recorded seal, and recompute the
-audited hash of the evidence subject the completion reviewer read. A mismatch
+audited hash of the evidence subject the reviewer read. A mismatch
 means something moved after the verdict: request a fresh review of the current
 subject. A passing validate run does not replace this check.
 

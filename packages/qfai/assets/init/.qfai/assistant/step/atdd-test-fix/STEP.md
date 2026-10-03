@@ -65,7 +65,7 @@ before and after the fix (`citedBefore`, `citedAfter`), the independent review
 
 ## Review
 
-The qa-gatekeeper checks the retaken proof. The completion reviewer checks
+The qa-gatekeeper checks the retaken proof. The code review checks
 that the fixed test still discharges the same obligation at its layer.
 The author of the fix cannot certify it.
 

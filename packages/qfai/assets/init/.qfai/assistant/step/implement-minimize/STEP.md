@@ -18,9 +18,11 @@ removed.
 
 ## Passes when
 
-Read first: the reproduction the report gives. The step passes when it is
-already one command or one input with nothing left to remove. The pass names
-that reproduction.
+Read first: the report and the reproduction it gives. The step passes when the
+report holds no input to reduce, such as a defect with no crashing input or
+trace, or when its reproduction is already one command or one input with
+nothing left to remove. The pass names which of the two holds and the
+reproduction, where there is one.
 
 ## Reads
 

@@ -67,11 +67,14 @@ function releasePointOf(statement) {
   return stated === "the end" ? "end" : ticked(stated)[0];
 }
 
-// The branch points a row states, in order: the names it lists that its plan runs as a step.
-// The other names are the outcomes and the routes they lead to.
-function branchStepsOf(statement, plan) {
-  const steps = new Set(plan?.match(/[a-z-]+(?=\(|°| →|\])/g) ?? []);
-  return listAfter(statement, "Branch points")?.filter((name) => steps.has(name));
+// The branch points a row states, in order. The list joins entries with commas: a branch point
+// is an entry that is one name alone, and every other entry is an outcome with the routes it
+// leads to, such as `revert` to `revert-culprit`. A misspelled step stays in the list, so a row
+// naming a step its plan lacks disagrees with the plan.
+function branchStepsOf(statement) {
+  const listed = /Branch points: ([^.]*)\./.exec(statement)?.[1];
+  if (listed === undefined) return undefined;
+  return listed.split(", ").flatMap((entry) => /^`([^`]+)`$/.exec(entry.trim())?.slice(1) ?? []);
 }
 
 /** Each route row of the contract, by route. */
@@ -90,7 +93,7 @@ export function routeRowsOf(contractText) {
       plan,
       decisionPoints: listAfter(statement, "Decision points"),
       releasePoint: releasePointOf(statement),
-      branchPoints: branchStepsOf(statement, plan),
+      branchPoints: branchStepsOf(statement),
       approvedBy: /Approved by (DEC-\d{4})\b/.exec(statement)?.[1],
     });
   }

@@ -40,7 +40,7 @@ or at once when none was owed.
 5. Record each command, exit code and output with `common-evidence-record`.
 
 The stage review runs after this step, once, over every example the stage
-implemented. The completion reviewer checks the integrated BF and its evidence
+implemented. The code review checks the integrated BF and its evidence
 there, and the gate below is read after that review.
 
 ## Completion gate

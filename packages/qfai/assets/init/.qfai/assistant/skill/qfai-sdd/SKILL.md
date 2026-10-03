@@ -84,8 +84,8 @@ under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ## Completion
 
-A flow is complete when its `sdd-gate` passed and every blocking reviewer
-returned PASS. When a step needs user input or cannot proceed, record the
+A flow is complete when its `sdd-gate` passed and every finding of the
+specification review is fixed or answered. When a step needs user input or cannot proceed, record the
 question as a row of `open-questions.md` and report what the stage waits on.
 
 Report the source selected, BF and US IDs touched, decision and OQ IDs, contract

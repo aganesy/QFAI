@@ -112,7 +112,7 @@ The full logic, including the UI-bearing conditions, is
   with `.qfai/assistant/step/common-gate-run/STEP.md`, passes with no
   discussion-owned finding. Repair a failure under
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
-- Every blocking reviewer returned `PASS` on the final revision.
+- Every finding of the one review is fixed or answered.
 
 ## Completion Message & Next Actions (MUST)
 

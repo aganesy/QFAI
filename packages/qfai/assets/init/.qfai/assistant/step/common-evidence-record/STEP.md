@@ -86,4 +86,4 @@ record says `none` with the reason; deleting the heading is a gap, not a pass.
 
 The file exists at its path, every required section is present and filled or
 justified as `none`, and every gate result pairs a command with its result and
-revision. The completion reviewer reads this before any verdict.
+revision. The reviewer reads this before any verdict.

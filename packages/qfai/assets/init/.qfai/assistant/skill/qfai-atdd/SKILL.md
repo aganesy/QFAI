@@ -66,8 +66,8 @@ no value hard-coded to the test's inputs and no branch written only for the test
 
 ## Completion
 
-The invocation completes on the gate of its last step and a PASS of that
-review. Report what that gate names. The report ends with a question listing the
+The invocation completes on the gate of its last step once
+every finding of its one review is fixed or answered. Report what that gate names. The report ends with a question listing the
 next actions, `/qfai-implement` recommended, as
 `.agents/rules/user-questions.md` § 6 sets out.
 Under a no-question mode, list them in the report instead.

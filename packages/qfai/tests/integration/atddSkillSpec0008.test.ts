@@ -30,6 +30,6 @@ describe("ATDD authoring step acceptance obligations", () => {
     const content = await readFile(stepPath, "utf8");
     expect(content).toMatch(/A load error or broken fixture is not a\s+RED proof/);
     expect(content).toContain("An author cannot certify their own tests");
-    expect(content).toContain("completion reviewer checks flow coverage");
+    expect(content).toContain("code review checks flow coverage");
   });
 });

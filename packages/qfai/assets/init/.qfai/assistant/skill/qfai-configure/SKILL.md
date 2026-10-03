@@ -104,7 +104,7 @@ Use the shared schema.
 - Route specialist reviewers from `.qfai/assistant/rule/agent-selection.md`.
 - Default configure review set:
   - `qa-gatekeeper`
-- Do not declare DONE or handoff until all routed blocking reviewers return `PASS`.
+- Do not declare DONE or handoff until every finding of its one review is fixed or answered.
 
 ### Work order template (copy/paste)
 

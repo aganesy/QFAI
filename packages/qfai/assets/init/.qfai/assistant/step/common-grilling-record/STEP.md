@@ -138,7 +138,7 @@ Escalated S1: <the critical decision> — answered: <the answer> | not yet answe
 
 ## Reviewer checks
 
-The completion reviewer reads the record against the run start from its work
+The reviewer reads the record against the run start from its work
 order and returns `REVISE` on any of these:
 
 - a missing record, a duplicate session key, or a block whose heading differs

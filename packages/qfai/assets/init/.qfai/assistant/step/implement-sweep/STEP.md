@@ -23,8 +23,11 @@ deals with what it finds.
 
 ## Passes when
 
-Read first: the widened check's result over the whole tree. The step passes
-when it reports no new hit. The pass names the check command and its result.
+Read first: the diff of the implement stage. The step passes when that diff
+adds or widens no check, such as a repair that only reconciles two declared
+surfaces, or when the widened check's result over the whole tree reports no
+new hit. The pass names which of the two holds, and the check command and its
+result where there is one.
 
 ## Reads
 

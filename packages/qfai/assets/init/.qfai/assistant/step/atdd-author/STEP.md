@@ -135,7 +135,7 @@ unresolved findings and implementation work. Follow
 - The delivery planner rules on whether a selector covers enough of its
   obligation, before its RED is submitted.
 - The qa-gatekeeper checks the observed RED or falsifiability proof.
-- The completion reviewer checks flow coverage and evidence independently.
+- The code review checks flow coverage and evidence independently.
 
 An author cannot certify their own tests.
 

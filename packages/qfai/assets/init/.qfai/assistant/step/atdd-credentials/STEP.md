@@ -42,7 +42,7 @@ the reference. The pass names the tests and the setup it read.
 
 ## Review
 
-The completion reviewer checks the setup against each rule of that reference,
+The code review checks the setup against each rule of that reference,
 one by one. Sign-in in a test body, one account shared across workers, and a
 cache that outlives its worker are each `REVISE`.
 

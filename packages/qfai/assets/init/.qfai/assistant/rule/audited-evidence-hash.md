@@ -16,12 +16,12 @@ Use the field inventory in
 
 - RED or falsifiability command, result, failure mode, test hash, and revision;
 - GREEN command, result, oracle proof, and revision when GREEN has run;
-- refactor verification command, result, and revision for completion review;
+- refactor verification command, result, and revision for the code review;
 - shared-artifact re-verification and UI surface-artifact manifest when they
   apply.
 
 An earlier RED reviewer hashes only RED or falsifiability evidence. A GREEN
-reviewer also hashes GREEN evidence. A completion reviewer hashes the full
+reviewer also hashes GREEN evidence. A code reviewer hashes the full
 current round through refactor verification. Do not include fields written
 by a reviewer after taking the subject: reviewer verdict, review pack path,
 review pack seal, or the final status. Do not include a later round in an
