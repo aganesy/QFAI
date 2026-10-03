@@ -88,6 +88,7 @@
     "tests/assets/projectMemoryReadScope.test.ts",
     "tests/assets/qaGatekeeperEvidenceField.test.ts",
     "tests/assets/prototypingGrilling.test.ts",
+    "tests/assets/passingTestIsNotTheSolution.test.ts",
     "tests/assets/prototypingScopeFloorHome.test.ts",
     "tests/assets/reviewerExcessRoute.test.ts",
     "tests/assets/reOpenRecordShape.test.ts",
