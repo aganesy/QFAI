@@ -1,13 +1,13 @@
 # Evidence Requirements: `taskFidelity` section
 
-Prototyping evidence files MUST include a `taskFidelity` section so the
+Prototyping evidence files must include a `taskFidelity` section so the
 `QFAI-CRIT-009` gate passes. Below is the required keyword set and
 the canonical markdown shape consumed by the validator and the
 `npx qfai prototyping iterate --capture` template emitter.
 
 ## Required keywords
 
-Every evidence file that records a critique iteration MUST surface
+Every evidence file that records a critique iteration must surface
 these `taskFidelity` keys with concrete values:
 
 - `cta_visibility` — does the primary call-to-action stay on-screen and

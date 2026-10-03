@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { CANONICAL_TIMESTAMP_DIGITS } from "../packLocator.js";
+import { resultRefOf } from "./common.js";
 import { isRecord } from "./parse.js";
-import type { WorkflowDecision, WorkflowEvent, WorkflowSnapshot } from "./types.js";
+import type { WorkflowDecision, WorkflowEvent, WorkflowResult, WorkflowSnapshot } from "./types.js";
 
 export type WriteFile = (filePath: string, content: string | Buffer) => Promise<void>;
 
@@ -261,7 +262,10 @@ function parseRecord(bytes: Buffer): JournalRecord | null | undefined {
 // Every published event from `000001`, with no gap, each chained to the bytes before it.
 export async function readJournal(runDir: string): Promise<JournalRead> {
   const journal = path.join(runDir, "journal");
-  const listed = await readdir(journal).catch(() => undefined);
+  const listed = await readdir(journal).catch((error: unknown) => {
+    if (systemCode(error) === "ENOENT") return undefined;
+    throw error;
+  });
   if (!listed) return { ok: false, fault: "legacy" };
   const names = listed.filter((name) => EVENT_FILE.test(name)).sort();
   const records: JournalRecord[] = [];
@@ -286,9 +290,9 @@ export interface ResultFile {
   bytes: Buffer;
 }
 
-export function resultFileOf(result: { resultId: string }): ResultFile {
+export function resultFileOf(result: WorkflowResult): ResultFile {
   const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`, "utf8");
-  return { path: `results/${result.resultId}.json`, digest: sha256(bytes), bytes };
+  return { path: resultRefOf(result.resultId), digest: sha256(bytes), bytes };
 }
 
 // The result is written before its event, so a retry can replace a file left by a crash.

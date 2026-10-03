@@ -7,6 +7,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { snapshotOf } from "../../../src/core/workflow/fold.js";
+import { readJournal } from "../../../src/core/workflow/persistence.js";
 import {
   commitAll,
   featureRunAt,
@@ -22,8 +24,6 @@ export const STORY = `${FLOW}/user-story-0001-0001`;
 export const AC_FILE = `${STORY}/02_Acceptance-Criteria.md`;
 export const TEST_FILE = "src/export.test.ts";
 export const PRODUCTION_FILE = "src/export.ts";
-export const RED_RECEIPT = "results/red-1.json";
-export const GREEN_RECEIPT = "results/green-1.json";
 
 /** The criterion file, stating the export as `format`. */
 export function criteria(format: string): string {
@@ -91,9 +91,18 @@ export async function receiptProject(): Promise<string> {
 async function accepted(root: string, runId: string, issued: unknown, id: string, extra: object) {
   const done = await submit(root, runId, "accept", resultFor(issued, id, extra));
   if (field(done.json, "ok") !== true) throw new Error(done.stdout);
+  const stageId = field(issued, "workOrder.stageInstanceId");
+  if (typeof stageId !== "string" || !stageId) throw new Error("missing submitted stage identity");
+  const journal = await readJournal(path.join(root, ".qfai", "run", runId));
+  if (!journal.ok) throw new Error(`invalid accepted journal: ${journal.fault}`);
+  const receiptRef = snapshotOf(journal.records)?.acceptedStages?.find(
+    (stage) => stage.stageInstanceId === stageId,
+  )?.receiptRef;
+  if (typeof receiptRef !== "string" || !receiptRef)
+    throw new Error("missing accepted stage receipt");
   const next = workflow(root, ["next", "--run", runId]);
   if (field(next.json, "run.state") !== "running") throw new Error(next.stdout);
-  return next;
+  return { next, receiptRef };
 }
 
 /**
@@ -109,11 +118,22 @@ export async function runWithReceipts(root: string, green: boolean) {
     changedFiles: [await changed(root, TEST_FILE)],
   };
   const implement = await accepted(root, runId, issued.json, "red-1", red);
-  if (!green) return { runId, outstanding: implement };
+  if (!green)
+    return {
+      runId,
+      outstanding: implement.next,
+      redReceipt: implement.receiptRef,
+      greenReceipt: undefined,
+    };
   await write(root, PRODUCTION_FILE, "export const exportCsv = () => ['a', 'b'];\n");
   const pass = { testObservation: "pass", changedFiles: [await changed(root, PRODUCTION_FILE)] };
-  const verify = await accepted(root, runId, implement.json, "green-1", pass);
-  return { runId, outstanding: verify };
+  const verify = await accepted(root, runId, implement.next.json, "green-1", pass);
+  return {
+    runId,
+    outstanding: verify.next,
+    redReceipt: implement.receiptRef,
+    greenReceipt: verify.receiptRef,
+  };
 }
 
 /** Each classed receipt of a `resume` document, by its reference. */

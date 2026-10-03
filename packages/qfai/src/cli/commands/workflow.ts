@@ -42,7 +42,7 @@ import {
   writeRecord,
   writeResultFile,
 } from "../../core/workflow/persistence.js";
-import type { JournalRecord } from "../../core/workflow/persistence.js";
+import type { JournalRead, JournalRecord } from "../../core/workflow/persistence.js";
 import { reportedRoute } from "../../core/workflow/routes.js";
 import { obligationOf } from "../../core/workflow/storyFacts.js";
 import type {
@@ -138,7 +138,14 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
   if (!isRunId(runId) || !(await stat(runDir).catch(() => undefined))?.isDirectory()) {
     return { ok: false, run: null, error: { code: "unknown-run", message: UNKNOWN_RUN } };
   }
-  const journal = await readJournal(runDir);
+  let journal: JournalRead;
+  try {
+    journal = await readJournal(runDir);
+  } catch (thrown) {
+    const error = ioRefusalOf(thrown);
+    if (!error) throw thrown;
+    return { ok: false, run: null, error };
+  }
   if (!journal.ok && journal.fault === "legacy") {
     const run = { id: runId, state: "legacy", sequence: 0 };
     return { ok: false, run, error: { code: "unknown-run", message: LEGACY } };
@@ -158,11 +165,11 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
   return { ok: true, run: { runId, runDir, ...journal, snapshot } };
 }
 
-// The worktree's one run that has not ended, or none. A run a newer package wrote is refused.
+// The worktree's one run that has not ended, or none. Refuse I/O faults and newer-format runs.
 async function activeRun(runsDir: string): Promise<LoadedRun | Refusal | undefined> {
   for (const runId of (await listRuns(runsDir)).reverse()) {
     const loaded = await loadRun(runsDir, runId);
-    if (!loaded.ok && loaded.error.code === "newer-record") return loaded.error;
+    if (!loaded.ok && ["newer-record", "io-error"].includes(loaded.error.code)) return loaded.error;
     if (loaded.ok && !TERMINAL.includes(loaded.run.snapshot.run.state)) return loaded.run;
   }
   return undefined;
