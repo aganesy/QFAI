@@ -4,6 +4,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Doctor integration tests omit unused helper code and inputs** (#2849).
+  Profile assertions and explicit archive timestamp setup are unchanged.
+
 ### Added
 
 - **Context summaries preserve requests, decisions, open work and stage state**
