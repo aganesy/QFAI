@@ -71,7 +71,7 @@ describe("the work order template bans upstream patching unconditionally", () =>
       expect(drift).toContain(
         "Protected project artifacts include the policy and business-flow trees",
       );
-      expect(drift).toContain("Obtain the operator's explicit answer");
+      expect(drift).toContain("Obtain the user's explicit answer");
       expect(drift).toContain("Rerun the owner skill against the affected artifact");
     });
 

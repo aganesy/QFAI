@@ -322,7 +322,7 @@ in the order, before the review.
 A workflow sub-agent handed a QFAI work order runs the steps the work order
 names, in its `steps:` list, and no other.
 
-1. Run the entry check in the `worker` state.
+1. Run the entry check in the `step` state.
 2. For each listed step, in order: read the `STEP.md` at its `path` and no
    other, run it, and pass its gate. A step the parent lists and the work order
    does not is not run. Where the work needs an unlisted step, return the
@@ -372,8 +372,8 @@ can resolve stops at preflight.
 ## Rejected Option Guard (Mandatory)
 
 - Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Status `REJECTED`.
-- To reconsider it, ask for explicit approval and append a new `DEC-NNNN` row. Its Content begins `Change request:` and names the authorized paths or IDs, the rejected row's full `DEC-NNNN` ID, and the option being reopened. Its Approach states the changed evidence, intended story or contract change, and approval source. Leave the rejected row intact.
-- The new row stays `TODO` while approval is pending, becomes `WIP` after approval, and becomes `DONE` only after the owning SDD rerun and dependent checks. A PR description or completion report alone does not reopen the option.
+- To reconsider it, ask the user. Only on approval append a new `DEC-NNNN` row. Its Content begins `Change request:` and names the authorized paths or IDs, the rejected row's full `DEC-NNNN` ID, and the option being reopened. Its Approach states the changed evidence, the intended story or contract change, and who approved it, when, and the option chosen. Leave the rejected row intact.
+- The new row starts at `WIP` and becomes `DONE` only after the owning SDD rerun and dependent checks. A PR description or completion report alone does not reopen the option.
 - The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `npx qfai validate` checks the four-column decision-table shape, status vocabulary, and append-only cells; it does not infer that two differently worded options are the same.
 
 ## Gate Failure Autorepair Protocol

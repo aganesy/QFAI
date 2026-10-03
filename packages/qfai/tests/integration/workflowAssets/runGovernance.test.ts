@@ -2,7 +2,7 @@
  * Integration: the shared rules a workflow run relies on, as the shipped assistant tree states them.
  *
  * The stage-skill entry check, what authorizes a run's work, how each autopilot bucket is satisfied
- * inside a run, Stage 0 reuse, actor history and grilling in a run, routes against change types,
+ * inside a run, Stage 0 reuse, reviewer independence, routes against change types,
  * and the drift protocol's bugfix case. Each is stated once, in a rule file; the workflow core's
  * own checks are not this module's.
  */
@@ -71,7 +71,6 @@ describe("governance inside a run", () => {
     const constitution = flat(await readShipped("rule/constitution.md"));
     expect(constitution).toMatch(pointer);
     expect(constitution).toMatch(/they add to these articles and except none/i);
-    expect(await passage(DELEGATION, "## Inside a workflow run")).toMatch(pointer);
   });
 
   // QFAI:AC-0001-0004-04
@@ -139,29 +138,19 @@ describe("governance inside a run", () => {
 
   // QFAI:AC-0001-0163-04
   // QFAI:EX-0001-0163-04
-  it("carries the actor history and never counts an author as its own reviewer", async () => {
-    const text = await passage(DELEGATION, "### Actor history in a run");
-    expect(text).toMatch(/travels with every work order, in its `actorHistory` field/i);
+  it("never counts an author as its own reviewer, and drops no required reviewer", async () => {
+    const text = await passage(DELEGATION, "## Reviewer independence");
     expect(text).toMatch(
-      /author or recommender of an artifact never counts as that artifact's independent reviewer/i,
+      /authored or recommended an artifact never counts as that artifact's independent reviewer/i,
     );
     expect(text).toMatch(/no required reviewer is dropped to save tokens/i);
-  });
-
-  // QFAI:AC-0001-0163-05
-  // QFAI:EX-0001-0163-05
-  it("limits grilling in a run to the remaining frontier and invokes no qfai-grill", async () => {
-    const text = await passage(DELEGATION, "### Grilling in a run");
-    expect(text).toMatch(/takes what the work order's `settled` field records as settled/i);
-    expect(text).toMatch(/works only the remaining frontier/i);
-    expect(text).toMatch(/split between user sessions and delegated sessions/i);
-    expect(text).toMatch(/no run invokes `qfai-grill`/i);
+    expect(text).toMatch(/a required review that cannot be delegated stops the stage/i);
   });
 
   it("gives the two entry skills a reviewer remit", async () => {
     const remit = sectionOf(await readShipped(DELEGATION), "### Reviewer remit");
     expect(rowOf(remit, "`/qfai-maintain`")).toMatch(/changes no behaviour/i);
-    expect(rowOf(remit, "`/qfai-run`")).toMatch(/it writes no artifact/i);
+    expect(rowOf(remit, "`/qfai-run`")).toMatch(/the artifacts the session writes/i);
   });
 
   // QFAI:AC-0001-0002-02
