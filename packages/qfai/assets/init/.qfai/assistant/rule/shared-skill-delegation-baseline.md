@@ -10,7 +10,9 @@ not change; it states only an override, under the subsection it overrides.
 
 Delegation is optional. The session agent, called the orchestrator below, may
 author any artifact itself. It uses a sub-agent only for work that runs in
-parallel and for a review that someone other than the author should do.
+parallel and for a review that someone other than the author should do. The
+griller of a delegated grilling session is such a review: it examines decisions
+it did not author, before the draft rather than after it.
 Whatever the skill, a role is never simulated, and a failed delegation is
 classified by the taxonomy below before any response.
 

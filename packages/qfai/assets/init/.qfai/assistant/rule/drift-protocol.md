@@ -45,8 +45,8 @@ Both classes use the same approval and owner-rerun path.
    paths.specsDir. Its four columns are ID, Content, Approach, and Status. Content starts with Change request: followed
    by the affected paths or IDs, separated by commas. Approach records the proposed change and who approved it, when,
    and the option chosen. The row starts at WIP. A declined request appends no row and the artifact stays as it is.
-   When the user cannot be asked, record the proposed change as an open-questions.md row at TODO and keep the affected
-   items stopped. A WIP or DONE Change request: row is the in-force authorization that the drift gate reads.
+   When the user cannot be asked, write no row to either table: report the proposed change as the decision still
+   needed and keep the affected items stopped. A WIP or DONE Change request: row is the in-force authorization that the drift gate reads.
    TODO is not authorization.
 4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.

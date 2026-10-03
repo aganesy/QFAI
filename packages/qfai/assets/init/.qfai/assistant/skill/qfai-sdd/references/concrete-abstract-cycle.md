@@ -104,8 +104,9 @@ Within a session, the finder does not raise a finding again when either holds:
 - It has the kind and target IDs of a finding the session already decided, and
   its case is equal to that case, includes it, or is included in it.
 - The proposed change of a change request the user declined already answers
-  it. A declined change request is the user deciding that finding, and so is a
-  `decisions.md` row at REJECTED.
+  it. A declined change request is the user deciding that finding; the session
+  keeps that answer and writes no row for it. A REJECTED row already in
+  `decisions.md` bars the finding it answers the same way.
 
 Matching never goes by wording. A declined change for `BR-0003-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order

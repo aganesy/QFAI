@@ -50,7 +50,10 @@ describe("defect example seeding", () => {
   // QFAI:EX-0001-0206-03
   it("appends no decision row for the approval-free seeding", async () => {
     const text = await section(STORY_STEP, SEEDING);
-    expect(text).toMatch(/append no row to `decisions\.md`: the operation needs no approval/i);
+    expect(text).toMatch(
+      /append no triage or seeding row of its own: the operation needs no triage approval/i,
+    );
+    expect(text).toMatch(/on approval the stage's one `Change request:` row names them/i);
   });
 });
 

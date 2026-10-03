@@ -99,5 +99,9 @@ existing AC already states:
   takes the new example is the operator's to settle.
 - Add or change no US or AC, and no existing EX. Write or annotate no test: the
   new EX stays an example no test annotates.
-- Append no row to `decisions.md`: the operation needs no approval.
+- Append no triage or seeding row of its own: the operation needs no triage
+  approval. The two file changes still go to the user, and on approval the
+  stage's one `Change request:` row names them, as
+  `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+  sets out.
 - No concrete-abstract cycle runs.

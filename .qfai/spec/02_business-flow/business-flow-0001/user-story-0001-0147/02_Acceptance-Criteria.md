@@ -64,7 +64,7 @@ Feature: Unified SDD Workflow
   Scenario: Adopted Findings Change The Tree By The Existing Routes
     Given a finding the cycle adopted,
     When its change is applied,
-    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US keeps its triage approval however recently the item was written.
+    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
     And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
 
   # AC-0001-0147-12
