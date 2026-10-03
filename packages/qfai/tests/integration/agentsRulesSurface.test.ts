@@ -180,6 +180,43 @@ describe("the retained-failure test stays under the safety floor", () => {
   });
 });
 
+describe("the minimal-implementation rule names the four shapes an addition takes", () => {
+  it("lists scope, documentation, defensive coding and abstraction beside § 2", async () => {
+    const text = await readFile(
+      path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
+      "utf-8",
+    );
+    const section = text.split("## 4. What a change leaves out")[1]?.split(/^## /m)[0];
+    expect(section).toBeDefined();
+    const shapes = Array.from(
+      section?.matchAll(/^\|\s*([A-Z][a-z]+(?: [a-z]+)?)\s*\|/gm) ?? [],
+      (match) => match[1],
+    );
+    expect(shapes).toEqual(["Shape", "Scope", "Documentation", "Defensive coding", "Abstraction"]);
+    const flat = section?.replace(/\s+/g, " ");
+    expect(flat).toContain("Additions take four shapes, and each stays out.");
+    expect(flat).toContain("Cleanup of the code around a bug fix");
+    expect(flat).toContain("Configurability on a simple feature.");
+    expect(flat).toContain("on code the change did not touch");
+    expect(flat).toContain("for a case that cannot happen");
+    expect(flat).toContain("A helper for an operation done once");
+    expect(flat).toContain("or one extracted for length alone");
+    expect(flat).toContain("A design for a requirement nobody has.");
+    expect(flat).toContain("where the logic is not self-evident");
+    expect(flat).toContain("Nothing here removes what § 2 keeps");
+    expect(flat).toContain("Article VII of `.qfai/assistant/rule/constitution.md`");
+    expect(text).toContain("## 5. What this rule is not");
+  });
+
+  it("CLAUDE.md does not ask for extraction by line count", async () => {
+    const flat = (await readFile(path.join(ROOT, "CLAUDE.md"), "utf-8")).replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "Keep each function focused on one job. Length alone is not a reason to extract one.",
+    );
+    expect(flat).not.toContain("~50 lines");
+  });
+});
+
 /**
  * Every rule master, read off the directory.
  *
@@ -1217,6 +1254,85 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     });
   });
 
+  // An agent in an adopter's repository can delete, overwrite and publish there
+  // as easily as here, so the master ships, and both copies are held to the same
+  // clauses.
+  describe("action-reversibility rule", () => {
+    const MASTERS = [
+      ".agents/rules/action-reversibility.md",
+      "packages/qfai/assets/init/root/.agents/rules/action-reversibility.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // One token per clause that no other clause in the file carries, so a
+      // clause cannot be dropped and still leave the master looking complete.
+      for (const clause of [
+        // The release operations stay with the rule that names them.
+        /`version-discipline\.md`\s+bounds\s+the\s+release\s+operations/,
+        // The four classes, each with the examples that place an action in it.
+        /\|\s*Local and reversible\s*\|\s*Editing a file, running a test\s*\|\s*Yes\s*\|/,
+        /\|\s*Destructive\s*\|\s*Deleting a file or a branch, dropping a table, a recursive remove\s*\|\s*With the user, or a standing instruction\s*\|/,
+        /\|\s*Hard to reverse\s*\|\s*A force push, a hard reset, amending a published commit, restoring a file that holds uncommitted work\s*\|\s*With the user, or a standing instruction\s*\|/,
+        /\|\s*Visible to others\s*\|\s*Pushing, commenting on a pull request or issue, sending a message, changing shared infrastructure\s*\|\s*With the user, or a standing instruction\s*\|/,
+        // The one push that needs neither, and the pushes that stay classified.
+        /an\s+ordinary\s+push,\s+without\s+force,\s+to\s+a\s+branch\s+the\s+agent\s+created\s+for\s+the\s+current\s+task/,
+        /to\s+a\s+protected\s+branch\s+or\s+to\s+someone\s+else's\s+branch,\s+and\s+every\s+force\s+push/,
+        // The class follows the effect, which is what the two examples show.
+        /Classify\s+by\s+the\s+effect,\s+not\s+by\s+what\s+the\s+command\s+looks\s+like/,
+        /Probing\s+which\s+flags\s+a\s+command\s+accepts\s+by\s+running\s+it\s+runs\s+the\s+command/,
+        // What counts as a standing instruction, and how far one reaches.
+        /the\s+user's\s+explicit\s+request,\s+in\s+the\s+current\s+session,\s+for\s+that\s+action/,
+        /a\s+skill\s+the\s+user\s+invoked,\s+whose\s+documented\s+steps\s+include\s+that\s+action/,
+        /A\s+request\s+to\s+push\s+a\s+branch\s+does\s+not\s+cover\s+a\s+force\s+push/,
+        // A recorded instruction counts only when it is specific and the user's own.
+        /an\s+instruction\s+recorded\s+in\s+memory\s+or\s+settings\s+that\s+names\s+the\s+action\s+and\s+its\s+context/,
+        /was\s+written\s+from\s+the\s+user's\s+own\s+words/,
+        /covers\s+the\s+push,\s+and\s+not\s+a\s+merge\s+or\s+a\s+force\s+push/,
+        // A run that may not ask leaves the action undone and opens a question.
+        /Under\s+a\s+mode\s+that\s+may\s+not\s+ask\s+the\s+user/,
+        /an\s+action\s+that\s+needs\s+the\s+user\s+and\s+has\s+no\s+standing\s+instruction\s+is\s+not\s+taken/,
+        /Record\s+it\s+as\s+an\s+open\s+question\s+where\s+the\s+run's\s+gates\s+read\s+it/,
+        /carry\s+on\s+with\s+the\s+rest\s+of\s+the\s+work/,
+        // An obstacle is found, not destroyed.
+        /An\s+obstacle\s+is\s+not\s+a\s+reason\s+for\s+a\s+destructive\s+shortcut/,
+        /skipping\s+a\s+hook\s+to\s+get\s+a\s+commit\s+through/,
+        /Taking\s+the\s+destructive\s+path\s+is\s+then\s+the\s+user's\s+call/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it.each(MASTERS)("%s does not restate the release operations", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      // `version-discipline.md` names them; a second list here would drift from it.
+      expect(text).not.toMatch(/create\s+or\s+push\s+a\s+release\s+tag/);
+      expect(text).not.toMatch(/publish\s+the\s+package\s+to\s+a\s+registry/);
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/action-reversibility.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      // The list `qfai init` appends to a project that already has an entry
+      // point, and the only rule list a populated project ever sees.
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("action-reversibility.md");
+    });
+  });
+
   // An adopter's spec tree is held to the same closed schemas, by the same
   // checker, in `qfai validate` and in the docs lane. So the master ships, and
   // what only this repository has — its lanes and how a schema is changed — is
@@ -1583,6 +1699,22 @@ describe("rule overlays", () => {
         // The override, and the unpinned case.
         "coordinated release",
         "On an unpinned branch",
+        // The default release path, and that the user names its version.
+        "this is the default path",
+        "never chooses one",
+        // The merge is the tag instruction; publishing waits on approval.
+        "Merging that pull request is the instruction for the tag",
+        "publishes only after a reviewer of",
+        // No hand bump before the dispatch, no hand tag on that path, and
+        // re-publishing an existing tag.
+        "Do not bump the manifest by hand first",
+        "Never push a tag by hand on this path",
+        "To publish a tag that already exists again",
+        // The pin edits belong to the manual path, and a pin is no tag.
+        "What a pin authorizes on the manual path",
+        "version, never a tag",
+        // Only a merge from the exact release branch is tagged.
+        "exactly `release/vX.Y.Z`",
       ],
     },
     {
