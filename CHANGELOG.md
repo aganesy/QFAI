@@ -4,7 +4,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Journal test reads preserve filesystem errors** (#2846).
+  Required artifact reads keep their original error instead of replacing it
+  with an empty result; rebuilt-snapshot checks still clean up after failure.
+
 ### Added
+
+- **A shared rule records what a stage costs and which lever changes it**
+  (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
+  and its levels, and runs every agent at the host's default until a
+  measurement chooses another level for a role. It records two costs: a high
+  level on a long deliverable such as spec authoring, contract normalization
+  or a full review pack, and whole-file rewrites for small changes. The work
+  order template gains an advisory `Time budget: none | <seconds>` and an
+  elapsed line the agent ends every message with. Neither is a cap.
 
 - **Context summaries preserve requests, decisions, open work and stage state**
   (#2243), including question and review budgets. User wording stays close to
@@ -104,6 +119,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   decisions; a slip that changes none of those is fixed without comment. This
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
+
+### Fixed
+
+- Host-capability refusals at workflow start state the reason and the next
+  action in one sentence while preserving the refusal fields (#2839).
 
 ## [2.0.2] - 2026-10-03
 
