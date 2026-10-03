@@ -109,7 +109,6 @@ import {
 } from "../../core/init/reminderHooks.js";
 import {
   AGENT_INTEGRATION_CONFIGS,
-  SKILL_ARCHIVE_DIR,
   SKILL_INTEGRATION_DIRS,
   collectCanonicalAgentNames,
   collectCanonicalSkillIds,
@@ -481,7 +480,7 @@ export async function runInit(
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
   const retiredSkillNotes = options.force
-    ? await archiveRetiredAssistantDirs(destRoot, options.dryRun)
+    ? await keepRetiredAssistantDirs(destRoot, options.dryRun)
     : [];
 
   const removed = [...removedLegacySkills, ...wrappersResult.removed];
@@ -1709,35 +1708,35 @@ function report(
   }
 }
 
-/**
- * Assistant directories a release withdrew: the migration skill of earlier 2.0
- * releases, and the ATDD skill with the steps it owned.
- */
-const RETIRED_ASSISTANT_DIRS: readonly { layer: "skill" | "step"; id: string }[] = [
-  { layer: "skill", id: "qfai-migration-spec-to-story" },
-  { layer: "skill", id: "qfai-atdd" },
-  { layer: "step", id: "atdd-scaffold" },
-  { layer: "step", id: "atdd-credentials" },
-  { layer: "step", id: "atdd-author" },
-  { layer: "step", id: "atdd-test-fix" },
-];
+/** Skills a release withdrew, kept in `skill.local/` rather than deleted. */
+const RETIRED_SKILLS = ["qfai-migration-spec-to-story", "qfai-atdd"] as const;
 
 /**
- * Moves each retired skill or step directory into its archive.
- *
- * Nothing records what the release that shipped it wrote, so a copy the
- * project edited cannot be told from an untouched one. Moving it whole keeps
- * either, and leaves nothing under the assistant tree that validate would
- * report.
+ * Steps a release withdrew. There is no local step tree to keep them in, so
+ * init lists them for the person instead of moving or deleting them.
  */
-async function archiveRetiredAssistantDirs(destRoot: string, dryRun: boolean): Promise<string[]> {
+const RETIRED_STEPS = [
+  "atdd-scaffold",
+  "atdd-credentials",
+  "atdd-author",
+  "atdd-test-fix",
+] as const;
+
+/**
+ * Moves each retired skill's directory to `skill.local/`, where a project
+ * keeps its own skills, and lists each retired step still in the step tree.
+ *
+ * Nothing records what the release that shipped one wrote, so a copy the
+ * project edited cannot be told from an untouched one. Moving a skill whole
+ * keeps either; a step is left for the person to move or delete.
+ */
+async function keepRetiredAssistantDirs(destRoot: string, dryRun: boolean): Promise<string[]> {
   const notes: string[] = [];
+  const assistant = path.join(destRoot, ".qfai", "assistant");
   const shown = (entry: string) => formatReportPath(toRelativePath(destRoot, entry));
-  for (const { layer, id } of RETIRED_ASSISTANT_DIRS) {
-    const source = path.join(destRoot, ".qfai", "assistant", layer, id);
-    const archive =
-      layer === "skill" ? SKILL_ARCHIVE_DIR : path.join(path.dirname(SKILL_ARCHIVE_DIR), "step");
-    const target = path.join(destRoot, archive, id);
+  for (const id of RETIRED_SKILLS) {
+    const source = path.join(assistant, "skill", id);
+    const target = path.join(assistant, "skill.local", id);
     const sourceStats = await lstat(source).catch(() => null);
     if (sourceStats?.isDirectory() !== true) continue;
     if (
@@ -1745,13 +1744,13 @@ async function archiveRetiredAssistantDirs(destRoot: string, dryRun: boolean): P
       (await firstLinkedComponent(path.dirname(target), destRoot)) !== null
     ) {
       notes.push(
-        `NOTE: ${shown(source)}, a retired ${layer}, was left in place because its path or the archive's passes through a symbolic link. Move it out of the assistant tree by hand.`,
+        `NOTE: ${shown(source)}, a retired skill, was left in place because its path or the destination's passes through a symbolic link. Move it out of the skill tree by hand.`,
       );
       continue;
     }
     if (await pathExists(target)) {
       notes.push(
-        `NOTE: ${shown(source)}, a retired ${layer}, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
+        `NOTE: ${shown(source)}, a retired skill, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
       );
       continue;
     }
@@ -1760,7 +1759,14 @@ async function archiveRetiredAssistantDirs(destRoot: string, dryRun: boolean): P
       await rename(source, target);
     }
     notes.push(
-      `  ${dryRun ? "would move" : "moved"} retired ${layer}: ${shown(source)} → ${shown(target)}`,
+      `  ${dryRun ? "would move" : "moved"} retired skill: ${shown(source)} → ${shown(target)}`,
+    );
+  }
+  for (const id of RETIRED_STEPS) {
+    const step = path.join(assistant, "step", id);
+    if ((await lstat(step).catch(() => null))?.isDirectory() !== true) continue;
+    notes.push(
+      `NOTE: ${shown(step)} is a step this release no longer ships, and was left in place. Delete it, or move it out of the step tree if you changed it.`,
     );
   }
   return notes;

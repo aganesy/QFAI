@@ -106,8 +106,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `atdd` block left in `qfai.config.yaml` is ignored. A placeholder an earlier
   release scaffolded still raises `QFAI-TEST-003` (JavaScript) or
   `QFAI-TEST-001` (Python) until its body is written. `qfai init --force`
-  removes the `qfai-atdd` skill links it installed and moves the retired
-  `qfai-atdd` skill and `atdd-*` steps into the skill and step archives.
+  removes the `qfai-atdd` skill links it installed, moves the retired
+  `qfai-atdd` skill into `.qfai/assistant/skill.local/`, and lists each retired
+  `atdd-*` step still in the step tree for you to move or delete.
 
 - **Code written only to pass a test does not meet its example** (#2235). The
   shipped test-layer rule now states what the code under test may not do to

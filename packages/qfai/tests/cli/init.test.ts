@@ -22,7 +22,6 @@ import { describe, expect, it } from "vitest";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
-import { SKILL_ARCHIVE_DIR } from "../../src/core/init/integrationDirs.js";
 import { copyTemplateTree } from "../../src/core/fs/templateCopy.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
@@ -1018,34 +1017,40 @@ describe("qfai init", () => {
     }
   });
 
-  it("moves the retired qfai-atdd skill and its steps out of the assistant tree on --force", async () => {
+  it("moves the retired qfai-atdd skill to skill.local and lists its retired steps on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // What an earlier release left in the canonical tree, one file edited.
+      // What an earlier release left in the canonical tree, the skill edited.
       const assistant = path.join(root, ".qfai", "assistant");
       await mkdir(path.join(assistant, "skill", "qfai-atdd"), { recursive: true });
-      await writeFile(path.join(assistant, "skill", "qfai-atdd", "SKILL.md"), "# atdd\n", "utf-8");
-      await mkdir(path.join(assistant, "step", "atdd-author"), { recursive: true });
-      const edited = "---\nname: atdd-author\nrouting-profile: runtime-heavy\n---\nedited\n";
-      await writeFile(path.join(assistant, "step", "atdd-author", "STEP.md"), edited, "utf-8");
+      await writeFile(
+        path.join(assistant, "skill", "qfai-atdd", "SKILL.md"),
+        "# edited\n",
+        "utf-8",
+      );
+      const step = path.join(assistant, "step", "atdd-author");
+      await mkdir(step, { recursive: true });
+      const stepBody = "---\nname: atdd-author\n---\n";
+      await writeFile(path.join(step, "STEP.md"), stepBody, "utf-8");
 
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: true, dryRun: false, yes: true }),
+      );
 
       await expect(lstat(path.join(assistant, "skill", "qfai-atdd"))).rejects.toMatchObject({
         code: "ENOENT",
       });
-      await expect(lstat(path.join(assistant, "step", "atdd-author"))).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      const stepArchive = path.join(root, path.dirname(SKILL_ARCHIVE_DIR), "step");
-      expect(await readFile(path.join(stepArchive, "atdd-author", "STEP.md"), "utf-8")).toBe(
-        edited,
-      );
       expect(
-        await readFile(path.join(root, SKILL_ARCHIVE_DIR, "qfai-atdd", "SKILL.md"), "utf-8"),
-      ).toBe("# atdd\n");
+        await readFile(path.join(assistant, "skill.local", "qfai-atdd", "SKILL.md"), "utf-8"),
+      ).toBe("# edited\n");
+      // No local step tree exists, so the step stays where it is and is listed.
+      expect(await readFile(path.join(step, "STEP.md"), "utf-8")).toBe(stepBody);
+      expect(output).toContain(
+        ".qfai/assistant/step/atdd-author is a step this release no longer ships",
+      );
+      expect(existsSync(path.join(root, ".qfai", "evidence"))).toBe(false);
     } finally {
       await removeTempTree(root);
     }
