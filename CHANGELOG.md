@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Context summaries preserve requests, decisions, open work and stage state**
+  (#2243), including question and review budgets. User wording stays close to
+  verbatim.
+
 ### Changed
 
 - **The shipped guidance now bounds test-suite size and unrequested fixes**
@@ -18,6 +24,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reviewer cards, and the review checks the implement and ATDD skills give,
   each gain one check for these. Test coverage for every source change is still
   required.
+
+- **The routing eval's release verdict lists the failing cases outside the
+  safety list** (#2303). Only a failing safety case blocks the release. Every
+  other failing case is listed in the eval record beside the safety failures,
+  and the maintainer accepts or rejects that list at release.
+
+- **The implementation reviewer checks silent failure and type design**
+  (#2248). It reads the whole of every file a change touches, not only the
+  lines the change adds or alters.
+
+  - Silent failure: an empty catch or a silent return, a catch that also
+    catches errors it did not expect, a fallback that masks the problem, a
+    failure that should propagate instead, a log entry too thin to debug from,
+    and user feedback that does not say what to do next.
+  - Type design: mutable internals exposed, an invariant held only by
+    documentation, validation missing at construction, enforcement that
+    differs between mutations, and outside code left to maintain an invariant
+    the type should own.
+  - A finding on what the change added or altered can block. A finding on code
+    that was already there is recorded and deferred, never blocking. Findings
+    are concrete problems, with no rating per check.
+  - The `/qfai-implement` row of the reviewer remit table says the same.
 
 - **The patterns that mark a design as generated are named** (#2241). A new
   `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from

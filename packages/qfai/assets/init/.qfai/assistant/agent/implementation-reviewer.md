@@ -39,6 +39,18 @@ specialization_tags:
   `.agents/rules/minimal-implementation.md` § 4).
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
+- Read the whole of every file the change touches for silent failure and type design, not only the lines the change adds or alters.
+  A finding on what the change added or altered can block. A finding on code that was already there is recorded and deferred, never blocking,
+  as the reviewer remit in `rule/shared-skill-delegation-baseline.md` sets out.
+  Write each finding as a concrete problem; give no rating per check.
+- Silent failure, against `.agents/rules/minimal-implementation.md` § 2 and § 3. Flag an empty catch or a silent return;
+  a catch that also catches errors it did not expect; a fallback that masks the problem instead of handling it;
+  a failure handled where § 2 does not admit it, which should propagate instead; a log entry without enough context to debug from;
+  and user feedback that does not say what to do next. A deliberate fallback carries the ceiling and lifting condition § 3 requires;
+  one without them is an unmarked simplification.
+- Type design, against § 2 of the same rule: a value crossing a trust boundary is parsed there into a form that cannot hold an invalid value.
+  Flag mutable internals exposed to outside code, an invariant held only by documentation, validation missing at construction,
+  enforcement that differs from one mutation to another, and outside code left to maintain an invariant the type should own.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
 - Check for code written only to pass a test: no value hard-coded to the test's
   inputs and no branch written only for the test, and a wrong test or infeasible
