@@ -107,7 +107,12 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 ## Decision provenance and drift
 
-Triage, change requests, retired stories, and rejected options are rows of decisions.md. Open questions are rows of open-questions.md. Both tables have ID, Content, Approach, Status, and only Status changes after append. The change request's Content begins Change request: and names its allowed repository-relative paths. A rejected option remains REJECTED unless a later decision explicitly reopens it.
+Triage, change requests, retired stories, and rejected options are rows of
+decisions.md. Open questions are rows of open-questions.md. Both tables have
+ID, Content, Approach, Status, and only Status changes after append. The change
+request's Content begins Change request: and names its allowed
+repository-relative paths. A rejected option remains REJECTED unless a later
+decision explicitly reopens it.
 
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 
