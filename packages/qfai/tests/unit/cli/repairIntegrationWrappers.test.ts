@@ -236,7 +236,7 @@ describe("repairIntegrationWrappers", () => {
 
       const lines = await repair(root, false, { onlyRelative: new Set([relative]) });
       expect(lines.join("\n")).toContain("canonical source has a linked parent");
-      expect(await readlink(wrapper)).toBe(oldTarget);
+      expect(path.normalize(await readlink(wrapper))).toBe(path.normalize(oldTarget));
     });
   });
 

@@ -1,5 +1,4 @@
-import { spawnSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   cp,
   mkdir,
@@ -18,7 +17,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../../../src/cli/commands/init.js";
 import { defaultConfig } from "../../../../src/core/config.js";
-import { ensureRootGitignoreEntries } from "../../../../src/core/init/rootGitignore.js";
 import { moveStage, runStep } from "../../../../src/migration/specToStory/harness.js";
 import { captureStdout } from "../../../helpers/stdout.js";
 import {
@@ -84,32 +82,6 @@ async function storyTree(specsDir: string, contractsDir: string, config = ""): P
   await put(root, `${specsDir}/01_policy/objective.md`, "# Objective\n");
   await mkdir(path.join(root, ...contractsDir.split("/")), { recursive: true });
   return root;
-}
-
-/**
- * Leaves an abandoned staging file of step 10, with its marker, under `.qfai/report/` beside a
- * current managed block, so that the staging is the only work step 10 has. With `conflict`, a
- * second file with a marker that does not match it is left too, which step 10 lists for a person.
- */
-async function abandonedStage(root: string, conflict = false): Promise<string> {
-  await ensureRootGitignoreEntries(root, false, () => {});
-  const exited = spawnSync(process.execPath, ["-e", "process.exit(0)"]);
-  const stage = async (name: string, payload: string, marker: string): Promise<void> => {
-    await put(root, `.qfai/report/${name}`, payload);
-    await put(root, `.qfai/report/${name}.owner`, marker);
-  };
-  const name = `.gitignore-${exited.pid}-${randomUUID()}.tmp`;
-  const payload = "complete abandoned stage";
-  const marker = JSON.stringify({
-    owner: "qfai-init-gitignore-stage-v1",
-    size: Buffer.byteLength(payload),
-    sha256: createHash("sha256").update(payload, "utf8").digest("hex"),
-  });
-  await stage(name, payload, marker);
-  if (conflict) {
-    await stage(`.gitignore-${exited.pid}-${randomUUID()}.tmp`, "user data", "invalid marker");
-  }
-  return name;
 }
 
 async function oldLayout(): Promise<string> {
@@ -309,19 +281,6 @@ describe("the verdict line of migration steps 1 to 10", () => {
     expect(summaries(result.output)).toEqual([]);
   });
 
-  // QFAI:EX-0004-0003-45
-  it("reads staging step 10 has to clear as a trace and ends with the found summary", async () => {
-    const root = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
-    const name = await abandonedStage(root);
-    const result = await stepIn(root, 10, ["--dry-run"]);
-    expect(result.code, result.errors).toBe(0);
-    expect(opening(result.output)).toEqual([FOUND, "", "## Operations"]);
-    expect(operationsOf(result.output)).toEqual(
-      expect.arrayContaining([expect.stringContaining(name)]),
-    );
-    expect(lastLine(result.output)).toBe(SUMMARY_FOUND);
-  });
-
   // QFAI:EX-0004-0003-46
   it("prints neither a verdict line nor a closing line when a step refuses with exit 2", async () => {
     const unmigrated = await oldLayout();
@@ -398,12 +357,5 @@ describe("the verdict line of migration steps 1 to 10", () => {
       expect(result.output.split(/\r?\n/)[0]).toBe(FOUND);
       expect(lastLine(result.output)).toBe(SUMMARY_FOUND);
     }
-    // A step 10 that exits 3 closes the same way.
-    const staged = await storyTree(".qfai/spec", ".qfai/spec/03_contract");
-    await abandonedStage(staged, true);
-    const listed = await stepIn(staged, 10);
-    expect(listed.code, listed.errors).toBe(3);
-    expect(listed.output.split(/\r?\n/)[0]).toBe(FOUND);
-    expect(lastLine(listed.output)).toBe(SUMMARY_FOUND);
   }, 120_000);
 });

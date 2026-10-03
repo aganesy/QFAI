@@ -48,7 +48,7 @@ specialization_tags:
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
 - `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
-- `.qfai/evidence/implement-BF-NNNN.md` for the reviewed EX; read `atdd-BF-NNNN.md` when its BF or AC acceptance obligation is affected.
+- `.qfai/evidence/implement-BF-NNNN.md` for the reviewed EX; read the BF or AC acceptance tests themselves when their obligation is affected.
 - The current EX review pack and its recorded revision. A missing required observation or an obsolete pack prevents PASS.
 
 ## Deliverables

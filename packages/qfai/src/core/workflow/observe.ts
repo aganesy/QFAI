@@ -5,7 +5,7 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../shared/text.js";
 import { loadConfig, type QfaiConfig } from "../config.js";
 import {
   ResolveActiveDiscussionPackError,

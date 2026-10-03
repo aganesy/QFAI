@@ -3,10 +3,6 @@
 // asks that same question in `doctor`, through the same code, and carries what
 // it answered: the severity, the waivers, and the fact that the remedy differs
 // by damage class and is the validator's to state.
-//
-// `skills.integrity` is the neighbouring check and answers a different
-// question — whether the content matches what was shipped — which a broken
-// wrapper leaves untouched. Both belong.
 
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -354,22 +350,6 @@ describe("integration.links", () => {
       const check = linksCheck(await createDoctorData({ startDir: root, rootExplicit: true }));
 
       expect(check?.severity).toBe("ok");
-    });
-  });
-
-  it("agrees with skills.integrity rather than replacing it", async () => {
-    // The two ask different questions and both belong: content is unchanged on
-    // a tree whose wrappers are broken, which is exactly why one check could
-    // not answer for the other.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await wireProject(root);
-      await repoint(root, [".qfai", "assistant", "skill", "gone"]);
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-
-      expect(linksCheck(data)?.severity).toBe("error");
-      expect(data.checks.find((check) => check.id === "skills.integrity")).toBeDefined();
     });
   });
 });

@@ -55,12 +55,17 @@ coverage depth before a stage claims completion.
   and target IDs and changes no file. The finder does not raise again a finding
   already decided, rejected, or answered by a pending or declined change
   request, and it does not decide its own findings.
-- During `implement-scaffold` and `implement-acceptance`, review the BF E2E
-  test and the AC integration or API tests
-  for depth. Report every gap with its owner, including an EX gap that
-  `/qfai-implement` will close.
+- During `implement-scaffold`, review only that each BF and AC has a test
+  with its annotation, at its layer, collected by the runner. Its body is
+  empty by design and is not reviewed for depth.
+- During `implement-acceptance`, review the BF E2E test and the AC
+  integration or API tests for depth. Report every gap with its owner,
+  including an EX gap that `/qfai-implement` will close.
 - During implementation, review the selected EX and its test against the
-  flow's acceptance tests. Report a new acceptance gap to `implement-scaffold`.
+  flow's acceptance tests. Report a BF or AC with no test to
+  `implement-scaffold`, an acceptance test with an empty body to
+  `implement-acceptance`, and a defective written assertion to
+  `implement-test-fix`.
 - Treat volume estimates as planning signals. A high count alone does not
   make an obligation invalid.
 
@@ -77,7 +82,9 @@ annotations are:
 
 A test must exercise behavior with a discriminating oracle. A file name,
 annotation, scaffold or assertion that cannot fail for the requirement does
-not establish coverage. Confirm the runner and
+not establish coverage. That is a finding against a written body only: an
+empty acceptance test `implement-scaffold` wrote waits for
+`implement-acceptance` and is not REVISE. Confirm the runner and
 `validation.traceability.testFileGlobs` both collect each proposed test.
 A DONE `Test exception:` decision may resolve a declared obligation; name its
 ID and decision in your review. Do not create a local exemption.
@@ -98,7 +105,7 @@ before a dependent stage proceeds.
   those examples.
 - `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for the
   project's Test, Lint, Typecheck and Build commands.
-- Current ATDD evidence when reviewing acceptance or implementation work.
+- The flow's acceptance tests when reviewing acceptance or implementation work.
 - Current validation findings, test paths, selectors and observed results.
 
 Read only what the active scope requires; follow linked obligations into
