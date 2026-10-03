@@ -1741,6 +1741,22 @@ describe("rule overlays", () => {
         // The override, and the unpinned case.
         "coordinated release",
         "On an unpinned branch",
+        // The default release path, and that the user names its version.
+        "this is the default path",
+        "never chooses one",
+        // The merge is the tag instruction; publishing waits on approval.
+        "Merging that pull request is the instruction for the tag",
+        "publishes only after a reviewer of",
+        // No hand bump before the dispatch, no hand tag on that path, and
+        // re-publishing an existing tag.
+        "Do not bump the manifest by hand first",
+        "Never push a tag by hand on this path",
+        "To publish a tag that already exists again",
+        // The pin edits belong to the manual path, and a pin is no tag.
+        "What a pin authorizes on the manual path",
+        "version, never a tag",
+        // Only a merge from the exact release branch is tagged.
+        "exactly `release/vX.Y.Z`",
       ],
     },
     {
