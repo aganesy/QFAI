@@ -85,6 +85,11 @@ empty bodies before the examples are implemented; `implement-acceptance`
 writes their bodies once the system's shape has settled. Unit and component
 tests stay test first, in `implement-tdd`.
 
+The completion gate above therefore leaves the acceptance bodies empty, by
+design. They are written by the `write-acceptance-tests` route, or by
+`implement-acceptance` run alone, and the report says which BF and AC tests
+still have an empty body.
+
 Each of these runs alone, instead of that order, when the request is not new
 behaviour but a failure, a repair or upkeep:
 

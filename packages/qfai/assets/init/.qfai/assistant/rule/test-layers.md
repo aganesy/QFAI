@@ -68,10 +68,15 @@ assertions independently prove every named obligation.
 
 A misplaced annotation is not coverage. A missing or invalid story-tree ID
 is not coverage. An annotation-only file, skipped placeholder, or assertion
-that cannot fail for the intended behavior is not behavioral proof. The one
-exception is an acceptance test `npx qfai atdd scaffold` wrote: it passes with
-an empty body and raises no finding until `implement-acceptance` writes its
-assertions. Check
+that cannot fail for the intended behavior is not behavioral proof.
+
+An acceptance test with an empty body raises no finding, whoever wrote it:
+`npx qfai atdd scaffold` writes acceptance tests that way, and
+`implement-acceptance` writes their assertions later. Validation cannot tell
+who wrote an empty body, so the exemption covers every one. It is still not
+behavioral proof until its assertions are written.
+
+Check
 `.qfai/report/validate.json#issues` by finding code and inspect the test
 it names. An unreadable or truncated test scan cannot certify absence of
 remaining obligations.

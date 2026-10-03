@@ -67,9 +67,10 @@ Read `rule/test-layers.md` and current flow-scoped validation findings.
 The BF obligation belongs in E2E with `QFAI:BF-NNNN`. Every AC belongs in
 integration or API with `QFAI:AC-NNNN-NNNN-NN`. Every EX belongs in another
 test layer with `QFAI:EX-NNNN-NNNN-NN`. A test must contain an executed,
-observable assertion. An annotation alone does not discharge an obligation,
-except an acceptance test `npx qfai atdd scaffold` wrote, which passes empty
-until `implement-acceptance` writes its assertions. A DONE `Test exception:` decision can resolve one only when it
+observable assertion. An annotation alone does not discharge an obligation.
+An acceptance test with an empty body raises no finding, whoever wrote it,
+until `implement-acceptance` writes its assertions; it is not proof before
+then. A DONE `Test exception:` decision can resolve one only when it
 names the item.
 
 Once the acceptance tests exist, read the annotated tests themselves. Check the normal,
@@ -87,7 +88,8 @@ its evidence on the revision submitted for review.
 - An ordinary RED must show the selected test command, selector and observed
   assertion failure before the production change. A missing dependency,
   load error, fixture failure or unrelated assertion is not RED.
-- When behavior already exists, require a controlled falsifiability check:
+- When behavior already exists, as it does for every acceptance test body
+  `implement-acceptance` writes, require a controlled falsifiability check:
   identify the production predicate the test should detect, change it
   temporarily, observe the selected assertion fail, restore it, and observe
   GREEN again. A syntax error, deleted export or throw without the relevant

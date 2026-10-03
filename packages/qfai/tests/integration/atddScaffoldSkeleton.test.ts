@@ -98,6 +98,22 @@ describe("atdd scaffold story-tree targets", () => {
     expect(await readdir(path.dirname(file))).toEqual([`${acIds[0]}.test.ts`]);
   });
 
+  it("fails rather than calling a directory at the destination an existing test", async () => {
+    await seedStory([acIds[0] ?? ""]);
+    const file = path.join(root, "tests", "integration", storyId, `${acIds[0]}.test.ts`);
+    await mkdir(file, { recursive: true });
+    const messages: string[] = [];
+    expect(
+      await runAtddScaffold({
+        root,
+        storyId,
+        write: () => {},
+        writeErr: (message) => messages.push(message),
+      }),
+    ).toBe(1);
+    expect(messages.join("\n")).toContain("is not a test file");
+  });
+
   // QFAI:AC-0001-0073-04
   // QFAI:EX-0001-0073-03
   it("rejects missing, mixed, malformed, undefined, and retired spec targets before writes", async () => {

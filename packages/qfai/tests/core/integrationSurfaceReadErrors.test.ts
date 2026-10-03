@@ -69,7 +69,7 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 
 /** A canonical tree with one shipped skill, so the roster is non-empty. */
 async function seedCanonical(root: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
+  const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-implement");
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
 }
@@ -158,9 +158,9 @@ describe("validateIntegrationSurface read errors", () => {
     // QFAI-LINK-001 an operator cannot clear by following it.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
       statSpy.mockImplementation(() => Promise.reject(errno("EACCES")));
 
       await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EACCES");
@@ -173,9 +173,9 @@ describe("validateIntegrationSurface read errors", () => {
     // `readlink` and fails the same way.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
       readlinkSpy.mockImplementation(() => Promise.reject(errno("EIO")));
 
       await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EIO");
@@ -209,9 +209,9 @@ describe("a structurally broken target is a finding, not a crash", () => {
     // precondition that reproduces in every Windows worktree.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
       // Rejected by PATH, not blanket: a worktree makes the wrapper links
       // wrong-type and leaves every other path readable. A blanket rejection
       // also hits the canonical `SKILL.md`, a regular file, where EPERM means
@@ -236,9 +236,9 @@ describe("a structurally broken target is a finding, not a crash", () => {
     // are written for, and the rule stopped being read as a rule.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
       statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
         path.resolve(String(target)) === path.resolve(wrapper)
           ? Promise.reject(errno("EPERM"))
@@ -262,10 +262,10 @@ describe("a structurally broken target is a finding, not a crash", () => {
     // — and downgrading on the errno alone would have taken it with it.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
-      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md"));
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
+      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-implement", "SKILL.md"));
       statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
         path.resolve(String(target)) === path.resolve(wrapper)
           ? Promise.reject(errno("EPERM"))
@@ -273,7 +273,9 @@ describe("a structurally broken target is a finding, not a crash", () => {
       );
 
       const issues = await validateIntegrationSurface(root);
-      const named = issues.filter((entry) => entry.message.includes(".claude/skills/qfai-atdd"));
+      const named = issues.filter((entry) =>
+        entry.message.includes(".claude/skills/qfai-implement"),
+      );
       expect(named).toHaveLength(1);
       expect(named[0]?.severity).toBe("error");
     });
@@ -288,10 +290,10 @@ describe("a structurally broken target is a finding, not a crash", () => {
     // would lose the propagation this module keeps deliberately.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
-      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-implement", "SKILL.md");
       statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
         path.resolve(String(target)) === path.resolve(doc)
           ? Promise.reject(errno("EPERM"))
@@ -308,9 +310,9 @@ describe("a structurally broken target is a finding, not a crash", () => {
     // validate` exited with a stack trace and named nothing to repair.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
       statSpy.mockImplementation(() => Promise.reject(errno("ELOOP")));
 
       const issues = await validateIntegrationSurface(root);
@@ -327,10 +329,10 @@ describe("a nested SKILL.md is inspected on the same terms as the wrapper", () =
     // for a `SKILL.md` that points at itself.
     await withProject(async (root) => {
       await seedCanonical(root);
-      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
       await mkdir(path.dirname(wrapper), { recursive: true });
-      await symlink("../../.qfai/assistant/skill/qfai-atdd", wrapper, "dir");
-      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
+      await symlink("../../.qfai/assistant/skill/qfai-implement", wrapper, "dir");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-implement");
       statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
         target.endsWith("SKILL.md") ? Promise.reject(errno("ELOOP")) : actual.stat(target, ...rest),
       );

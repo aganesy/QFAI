@@ -1,4 +1,4 @@
-import { mkdir, open } from "node:fs/promises";
+import { lstat, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 
 import { atddTestKindDirs } from "../atddTraceability.js";
@@ -51,6 +51,11 @@ export async function emitSkeleton(
     return { destPath, wrote: true };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    // Only an existing test file is kept. A directory or a dangling link at the
+    // destination is not a test, and reporting it as one hides the collision.
+    if (!(await lstat(destPath)).isFile()) {
+      throw new Error(`${destPath} exists and is not a test file`, { cause: error });
+    }
     return { destPath, wrote: false };
   }
 }
