@@ -192,6 +192,7 @@ const loadRefusals: [string, (text: string) => string][] = [
   ["family", (text) => text.replace("family: change", "family: chores")],
   ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
   ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
+  ["shape", (text) => text.replace("- id: edit", '- id: ""')],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
   [
     "after-order",

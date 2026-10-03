@@ -319,3 +319,23 @@ it("A low-confidence extraction whose readings reach one route returns that rout
     stages: field(planned.json, "stages"),
   }).toEqual({ status: 0, candidates: [["answer-question", true]], stages: undefined });
 });
+
+// QFAI:EX-0001-0222-08
+it("An input option given twice is refused, naming it", async () => {
+  const root = await minimalProject();
+  const refused = workflow(root, ["plan", "--route", "add-feature", "--route", "fix-defect"]);
+
+  expect([refused.status, field(refused.json, "reasons")]).toEqual([
+    2,
+    [{ reason: "invalid-input", subject: "--route" }],
+  ]);
+});
+
+// QFAI:EX-0001-0222-01
+it("A relative --in path is read from the project named by --root", async () => {
+  const { root, file } = await withRequest();
+  const elsewhere = await minimalProject();
+  const planned = workflow(elsewhere, ["plan", "--root", root, "--in", file]);
+
+  expect([planned.status, field(planned.json, "route")]).toEqual([0, "add-feature"]);
+});

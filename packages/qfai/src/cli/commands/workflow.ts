@@ -38,10 +38,10 @@ async function readStdin(): Promise<string> {
 type Read = { ok: true; value: unknown } | { ok: false; document: PlanDocument };
 
 // The extraction `--in` names, read from the file or from standard input and parsed as JSON.
-async function readExtraction(inPath: string): Promise<Read> {
+async function readExtraction(root: string, inPath: string): Promise<Read> {
   let text: string;
   try {
-    text = inPath === "-" ? await readStdin() : await readFile(path.resolve(inPath), "utf8");
+    text = inPath === "-" ? await readStdin() : await readFile(path.resolve(root, inPath), "utf8");
   } catch {
     const message = "The input file cannot be read. Check the path and try again.";
     return { ok: false, document: refusal(message, [{ reason: "io-error", subject: inPath }]) };
@@ -62,7 +62,7 @@ export async function runWorkflowPlan(options: WorkflowOptions): Promise<number>
   if (options.route !== undefined) {
     return emitPlanDocument(await planOf(options.root, { route: options.route }));
   }
-  const read = await readExtraction(options.inPath ?? "-");
+  const read = await readExtraction(options.root, options.inPath ?? "-");
   if (!read.ok) return emitPlanDocument(read.document);
   return emitPlanDocument(await planOf(options.root, { extraction: read.value }));
 }

@@ -280,7 +280,7 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
     refuse("effects", typeof id === "string" ? id : "stages");
   }
-  if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
+  if (typeof id !== "string" || id === "" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   if (!effects) return refused(refuse, "shape", id);

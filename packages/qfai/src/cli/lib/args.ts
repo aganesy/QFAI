@@ -710,6 +710,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "report") {
           options.reportIn = next;
         } else if (command === "workflow") {
+          if (options.workflowIn !== undefined)
+            markInvalid(`${refusedOption("--in")}: --in is given twice.`);
           options.workflowIn = next;
         } else {
           markInvalid(notValidHere("--in"));
@@ -723,6 +725,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         if (command === "workflow") {
+          if (options.workflowRoute !== undefined) {
+            markInvalid(`${refusedOption("--route")}: --route is given twice.`);
+          }
           options.workflowRoute = next;
         } else {
           markInvalid(notValidHere("--route"));
