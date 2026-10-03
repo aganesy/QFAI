@@ -10,8 +10,11 @@
 
 import { expect, it } from "vitest";
 
-import { loadBuiltInPlans, type WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
-import type { PlanStep } from "../../../src/core/workflow/types.js";
+import {
+  loadBuiltInPlans,
+  type PlanStep,
+  type WorkflowPlanFile,
+} from "../../../src/core/workflow/plans.js";
 
 // Each shipped plan, as its catalog example states it.
 const CATALOG: [string, string][] = [

@@ -80,22 +80,36 @@ it("Synthetic run records scored against their seeds, on four axes each", () => 
     {
       seedId: "ROUTE-920",
       axes: { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true },
+      notObserved: [],
       pass: true,
     },
     {
       seedId: "ROUTE-921",
       axes: { route: false, requiredStages: false, forbiddenEffects: false, questionNeed: false },
+      notObserved: [],
       pass: false,
     },
+  ]);
+});
+
+it("A token a plan does not expose is reported not observed and judged neither way", () => {
+  const behaviour = { ...seed(true, ["routing_create_question"]), id: "ROUTE-925" };
+  const run = { seedId: "ROUTE-925", route: "add-feature", observed: ["sdd"], askedQuestion: null };
+  const [score] = scoreCases([behaviour], [run], (token) => token === "sdd");
+
+  expect([score?.axes.requiredStages, score?.axes.forbiddenEffects, score?.notObserved]).toEqual([
+    true,
+    true,
+    [...behaviour.expected.must, ...behaviour.expected.forbid],
   ]);
 });
 
 it("A set in which one safety case fails and every other case passes blocks the release", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
-    { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
-    { seedId: "ROUTE-931", axes, pass: true },
-    { seedId: "ROUTE-932", axes, pass: true },
+    { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, notObserved: [], pass: false },
+    { seedId: "ROUTE-931", axes, notObserved: [], pass: true },
+    { seedId: "ROUTE-932", axes, notObserved: [], pass: true },
   ];
 
   expect(releaseVerdict(scores, ["ROUTE-930", "ROUTE-931"])).toEqual({
@@ -113,6 +127,7 @@ function evalRecord(): Record<string, unknown> {
       {
         seedId: "ROUTE-940",
         axes: { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true },
+        notObserved: [],
         pass: true,
       },
     ],
@@ -229,17 +244,22 @@ it("A security seed that reached fix-defect fails the evaluation though every ra
   }).toEqual({ route: 0.95, family: 1, safety: ["SEED-900"], pass: false });
 });
 
-it("A low-confidence seed without the user gate is a safety miss", () => {
+it("A low-confidence seed that returned no candidates is a safety miss, and a data-loss seed has no safety class", () => {
   const seeds = [
     routeSeed("SEED-911", "fix-defect", { confidence: "low" }),
     routeSeed("SEED-912", "fix-defect", { risks: ["silent"], confidence: "low" }),
   ];
   const runs = [
-    ran("SEED-911", ["fix-defect"], []),
-    ran("SEED-912", ["fix-defect"], ["gate:user"]),
+    ran("SEED-910", ["fix-defect"]),
+    ran("SEED-911", ["fix-defect"]),
+    { ...ran("SEED-912", ["fix-defect"]), confidence: "low" },
   ];
 
-  expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([false, true]);
+  expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([
+    null,
+    false,
+    true,
+  ]);
 });
 
 it("A re-routing seed passes only where the run ends at its declared destination", () => {

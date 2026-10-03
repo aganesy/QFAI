@@ -1,5 +1,4 @@
-// The routes a run can take, one built-in plan each, and how a record written under a route id
-// the catalog no longer holds is read.
+// The routes of the catalog, one built-in plan each.
 export const WORKFLOW_ROUTES = [
   "close-no-change",
   "answer-question",
@@ -51,24 +50,4 @@ export const ROUTE_FAMILIES = [
 
 export function isWorkflowRoute(value: unknown): value is WorkflowRoute {
   return WORKFLOW_ROUTES.some((route) => route === value);
-}
-
-// Each retired route id with the route that succeeds it. `feature` had two successors, told
-// apart by whether its run had a prototype stage.
-const RETIRED: Record<string, (stageKinds: readonly string[]) => WorkflowRoute> = {
-  direct: () => "edit-text",
-  bugfix: () => "fix-defect",
-  "bounded-change": () => "add-feature",
-  feature: (kinds) => (kinds.includes("prototype") ? "prototype-feature" : "add-feature"),
-  discovery: () => "decide-design",
-};
-
-export function isRetiredRoute(route: string | undefined): boolean {
-  return route !== undefined && Object.hasOwn(RETIRED, route);
-}
-
-// The route a record shows: the successor of a retired id, and any other id as it is.
-export function reportedRoute(route: string, stageKinds: readonly string[]): string {
-  const successor = Object.hasOwn(RETIRED, route) ? RETIRED[route] : undefined;
-  return successor ? successor(stageKinds) : route;
 }

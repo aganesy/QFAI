@@ -78,18 +78,8 @@ interface Seed {
   rationale: string;
 }
 
-interface Fault {
-  id: string;
-  trigger: string;
-  expected: string;
-}
-
 function isSeed(value: unknown): value is Seed {
   return typeof value === "object" && value !== null && "id" in value && "expected" in value;
-}
-
-function isFault(value: unknown): value is Fault {
-  return typeof value === "object" && value !== null && "trigger" in value;
 }
 
 // A fixture that is not there reads as empty, so every case fails at its assertion.
@@ -100,12 +90,6 @@ async function fixtureText(name: string): Promise<string> {
 async function routingSeeds(): Promise<Seed[]> {
   const lines = (await fixtureText("routing-seeds.jsonl")).split("\n").filter(Boolean);
   return lines.map((line): unknown => JSON.parse(line)).filter(isSeed);
-}
-
-async function faultSeeds(): Promise<Fault[]> {
-  const text = await fixtureText("fault-seeds.json");
-  const parsed: unknown = text ? JSON.parse(text) : [];
-  return (Array.isArray(parsed) ? parsed : []).filter(isFault);
 }
 
 // What a seed is scored on: the prompt, the facts and the expected result.
@@ -181,14 +165,10 @@ for (const [name, facts] of EXCLUDED_CLASSES) {
   });
 }
 
-it("The tracked fixtures hold 24 fault seeds and 64 unique routing seeds", async () => {
-  const faults = (await faultSeeds()).map((each) => each.id);
+it("The tracked fixture holds 64 unique routing seeds", async () => {
   const routes = (await routingSeeds()).map((each) => each.id);
 
-  expect({ faults, routes: new Set(routes).size }).toEqual({
-    faults: Array.from({ length: 24 }, (_, index) => `FAULT-${String(index + 1).padStart(3, "0")}`),
-    routes: 64,
-  });
+  expect(new Set(routes).size).toBe(64);
 });
 
 it("No seed expects a retired stage, or an annotated example to lose its test", async () => {
@@ -217,7 +197,7 @@ it("Every routing prompt and rationale is English, and shared prompts stay share
 });
 
 it("No seed names a spec or a ledger outside the prompt an operator typed", async () => {
-  const text = `${await fixtureText("routing-seeds.jsonl")}${await fixtureText("fault-seeds.json")}`;
+  const text = await fixtureText("routing-seeds.jsonl");
   const seeds = await routingSeeds();
 
   expect({
@@ -227,24 +207,6 @@ it("No seed names a spec or a ledger outside the prompt an operator typed", asyn
     ),
     rationales: seeds.filter((each) => /\bspecs?\b/i.test(each.rationale)).map((each) => each.id),
   }).toEqual({ ids: [], factKeys: [], rationales: [] });
-});
-
-it("FAULT-015: story authoring appends the missing example, and the covered one stays annotated", async () => {
-  const fault = (await faultSeeds()).find((each) => each.id === "FAULT-015");
-
-  expect(fault && [fault.trigger, fault.expected]).toEqual([
-    "same_obligation_done_repair",
-    "Story authoring appends the missing example. The covered example stays annotated and keeps its prior evidence, and no annotated example loses its test.",
-  ]);
-});
-
-it("FAULT-016: a test fix that changes the expectation's meaning goes back to story authoring", async () => {
-  const fault = (await faultSeeds()).find((each) => each.id === "FAULT-016");
-
-  expect(fault && [fault.trigger, fault.expected]).toEqual([
-    "changed_obligation_claimed_as_repair",
-    "A claimed test-defect fix that changes what the expectation means is refused and returned to SDD.",
-  ]);
 });
 
 it("ROUTE-007", async () => {
@@ -425,40 +387,6 @@ it("ROUTE-028", async () => {
     must: ["resume_checkpoint"],
     forbid: ["resume_terminal_run"],
   });
-});
-
-// Whether a vitest project of the pull-request job collects the package-relative `rel`.
-const INCLUDE_GLOBS = declaredIncludeGlobs().map(({ glob }) => glob);
-const collected = (rel: string) => INCLUDE_GLOBS.some((glob) => path.matchesGlob(rel, glob));
-
-// Every fault ID a collected test file cites, and the files citing it. The fixtures and this
-// file, which names seeds to read them, do not count as citing.
-async function faultCitations(): Promise<Map<string, string[]>> {
-  const cited = new Map<string, string[]>();
-  const entries = await readdir(TESTS, { recursive: true, withFileTypes: true });
-  const self = fileURLToPath(import.meta.url);
-  for (const entry of entries) {
-    const file = path.join(entry.parentPath, entry.name);
-    const rel = path.relative(path.resolve(TESTS, ".."), file).split(path.sep).join("/");
-    if (!entry.isFile() || !file.endsWith(".test.ts") || file === self || !collected(rel)) {
-      continue;
-    }
-    for (const id of new Set((await readFile(file, "utf8")).match(/\bFAULT-\d{3}\b/g) ?? [])) {
-      cited.set(id, [...(cited.get(id) ?? []), file]);
-    }
-  }
-  return cited;
-}
-
-it("Every fault seed is cited by a test the pull-request job runs, and no test cites an unknown one", async () => {
-  const known = (await faultSeeds()).map((each) => each.id);
-  const cited = await faultCitations();
-
-  expect({
-    faults: known.length,
-    uncited: known.filter((id) => !cited.has(id)),
-    unknown: [...cited.keys()].filter((id) => !known.includes(id)),
-  }).toEqual({ faults: 24, uncited: [], unknown: [] });
 });
 
 // The token vocabulary beside the seeds: each `must` and `forbid` token and its class.

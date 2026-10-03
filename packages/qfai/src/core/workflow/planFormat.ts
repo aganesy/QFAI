@@ -3,7 +3,13 @@ import { parse as parseYaml } from "yaml";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
-import type { PlanStep } from "./types.js";
+
+// One step of a stage, with the mode the route fixes for it and whether it is pass-through.
+export interface PlanStep {
+  name: string;
+  passThrough?: boolean;
+  mode?: string;
+}
 
 export interface PlanStage {
   id: string;
@@ -33,6 +39,7 @@ export interface WorkflowPlanFile {
 
 export type PlanRefusalReason =
   | "file-missing"
+  | "unreadable"
   | "not-mapping"
   | "unknown-key"
   | "route-name"
@@ -266,7 +273,7 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
     refuse("effects", typeof id === "string" ? id : "stages");
   }
-  if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
+  if (typeof id !== "string" || id === "" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   if (!effects) return refused(refuse, "shape", id);
@@ -410,7 +417,8 @@ function branchPointsOf(value: unknown, refuse: Refuse): PlanBranchPoint[] {
   return value.flatMap((entry) => branchPointOf(entry, refuse) ?? []);
 }
 
-// Each decision, release and branch point names a step the plan runs exactly once.
+// Each decision, release and branch point names a step the plan runs exactly once; a release
+// point of `end` names none.
 function pointRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const names = plan.stages.flatMap(namesOf);
   const points = [

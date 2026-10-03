@@ -31,30 +31,36 @@ These values are restated from `.qfai/assistant/rule/change-classification.md` (
 Do not proceed without a declared Change Type.
 
 The workflow routes are orthogonal to the Change Type. A route of
-`npx qfai workflow`, such as `fix-defect`, `add-feature` or `edit-text`, says
-which stages run; the Change Type says what kind of change it is. Neither
-selects the other, and a run declares both: a `fix-defect` run may declare
-`Behavior`, and an `add-feature` run `Structural`. No route maps to a Change
-Type.
+`npx qfai workflow plan`, such as `fix-defect`, `add-feature` or `edit-text`,
+says which stages run; the Change Type says what kind of change it is. Neither
+selects the other, and a change declares both: a `fix-defect` change may
+declare `Behavior`, and an `add-feature` change `Structural`. No route maps to
+a Change Type.
 
 ---
 
 ## Workflow routes
 
-A run of `npx qfai workflow` follows one route. The CLI chooses it from the
-facts `qfai-run` reads out of the request, and the route fixes the plan.
+A change request follows one route. `npx qfai workflow plan` chooses it from
+the facts `qfai-run` reads out of the request, returns the route's plan and
+writes nothing; the session runs the plan.
 
 - A stage runs every step its plan names, in plan order. Nothing a request says
   adds, drops or reorders a step.
 - A pass-through step still runs. When it can show it has nothing to write, it
-  records a pass with the evidence it read. A pass whose work remains is
-  refused.
-- A modifier, `gate:user` or `gate:release`, stops the run at a decision point
-  its route declares. It never changes the
-  steps, and a run never drops one.
+  writes nothing and states why, and the route's review reads that statement.
+- At a decision point the plan names, each critical decision goes to the user
+  before anything that depends on it changes. A decision is critical when it
+  contradicts a specification, a contract or a recorded decision, cannot be
+  taken back, or rests on product intent nothing written states. Every other
+  decision is taken and reported.
+- At the release point the plan names, the user approves the release before
+  anything after it runs. The approval authorizes no push, merge, tag or
+  publication.
 - A stage that finds work no step of its route does, does none of it. At a
-  branch point its route declares, it reports the outcome that moves the run to
-  another route. Anywhere else it returns the finding as a debt.
+  branch point its plan declares, it reports the outcome that moves the work to
+  another route. Anywhere else the work stops and names the stage skill to
+  invoke.
 - A request that ends without a change to the project runs a route owned by
   `qfai-triage`.
 

@@ -170,9 +170,13 @@ export type ParsedArgs = {
     reportFlowIds: string[];
     /** The operation of `qfai workflow <operation>`. */
     workflowAction?: WorkflowOperation;
-    /** `--run <runId>` for `qfai workflow`. */
-    workflowRun?: string;
-    /** `--in <path>` for `qfai workflow`: the payload file under `.qfai/run/`. */
+    /** The first option whose value or placement the parser refused. */
+    invalidOption?: string;
+    /** A token in the operation position of `qfai workflow` that names no operation. */
+    workflowUnknownOperation?: string;
+    /** `--route <route>` for `qfai workflow plan`. */
+    workflowRoute?: string;
+    /** `--in <path|->` for `qfai workflow plan`: the extraction file, or `-` for stdin. */
     workflowIn?: string;
     help: boolean;
     /**
@@ -194,16 +198,8 @@ export type ParsedArgs = {
   };
 };
 
-/** The seven operations of `qfai workflow`, and no other. */
-export const WORKFLOW_OPERATIONS = [
-  "start",
-  "next",
-  "accept",
-  "decision",
-  "status",
-  "resume",
-  "finish",
-] as const;
+/** The one operation of `qfai workflow`. */
+export const WORKFLOW_OPERATIONS = ["plan"] as const;
 
 export type WorkflowOperation = (typeof WORKFLOW_OPERATIONS)[number];
 
@@ -278,11 +274,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   };
 
   const scope = (): string => (command ? `qfai ${command}` : "qfai");
-  const missingValue = (flag: string): string => `${scope()}: ${flag} requires a value.`;
+  const refusedOption = (flag: string): string => {
+    options.invalidOption ??= flag;
+    return scope();
+  };
+  const missingValue = (flag: string): string =>
+    `${refusedOption(flag)}: ${flag} requires a value.`;
   const badValue = (flag: string, value: string, expected: string): string =>
-    `${scope()}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
+    `${refusedOption(flag)}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
   const notValidHere = (flag: string): string =>
-    `${scope()}: ${flag} is not valid for this command.`;
+    `${refusedOption(flag)}: ${flag} is not valid for this command.`;
   const formatReason = (value: string): string => {
     const choices = formatChoicesFor(command);
     return choices ? badValue("--format", value, choices) : notValidHere("--format");
@@ -376,6 +377,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (operation) {
         options.workflowAction = operation;
       } else {
+        options.workflowUnknownOperation = candidate;
         markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
@@ -679,22 +681,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "report") {
           options.reportIn = next;
         } else if (command === "workflow") {
+          if (options.workflowIn !== undefined)
+            markInvalid(`${refusedOption("--in")}: --in is given twice.`);
           options.workflowIn = next;
         } else {
           markInvalid(notValidHere("--in"));
         }
         break;
       }
-      case "--run": {
+      case "--route": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid(missingValue("--run"));
+          markInvalid(missingValue("--route"));
           break;
         }
         if (command === "workflow") {
-          options.workflowRun = next;
+          if (options.workflowRoute !== undefined) {
+            markInvalid(`${refusedOption("--route")}: --route is given twice.`);
+          }
+          options.workflowRoute = next;
         } else {
-          markInvalid(notValidHere("--run"));
+          markInvalid(notValidHere("--route"));
         }
         break;
       }
@@ -1039,6 +1046,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
+        } else if (command === "workflow" && arg !== undefined) {
+          // `workflow plan` takes no positional, so a stray token is refused rather than ignored.
+          options.unknownFlags.push(arg);
+          markInvalid(`qfai workflow: unexpected argument: ${arg}`);
         }
         break;
     }

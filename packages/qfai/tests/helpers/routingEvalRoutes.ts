@@ -89,14 +89,13 @@ export function isNoLighter(
   return holds(stepsOf(heavier), stepsOf(lighter));
 }
 
-// Whether the run carried every safety class the seed or its own extraction requires.
+// Whether the run met every safety class the seed's extraction has: a `security` request routes
+// `fix-vulnerability`, and a `low` one returns candidates, which the run records as `low`.
 function safetyHolds(seed: RouteSeed, run: RouteRun, entry: string | undefined): boolean | null {
   const { intent, confidence } = seed.extraction;
   const checks: boolean[] = [];
   if (intent === "security") checks.push(entry === "fix-vulnerability");
-  if (confidence === "low" || run.confidence === "low") {
-    checks.push(run.modifiers.includes("gate:user"));
-  }
+  if (confidence === "low") checks.push(run.confidence === "low");
   return checks.length === 0 ? null : checks.every(Boolean);
 }
 

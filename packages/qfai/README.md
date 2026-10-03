@@ -92,15 +92,14 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
-`npx qfai workflow` then picks one of 34 fixed routes from those facts by ordered decision rules,
-and each stage of the route runs through its own skill until `finish` confirms the completion target.
-You type no stage name.
+`npx qfai workflow plan` then picks one of 34 fixed routes from those facts by ordered decision rules
+and returns the route's plan, writing nothing. The session runs each step of the plan in order and
+asks you only the decisions that are yours and each release. You type no stage name.
 
 `npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
-Each stage of a run is a sub-agent, so a question that one command or one file read answers
-is answered directly, with no run. Any other question about the project that changes no file runs one
-stage, in one sub-agent, with no review.
+A question that one command or one file read answers is answered directly, with no plan. Any other
+question about the project that changes no file plans a route that answers it and changes nothing.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
@@ -119,18 +118,17 @@ parent directory. Where it is missing the hook says to run the project's install
 - Two modifiers, `gate:user` and `gate:release`, can add a stop for your approval. They never change the steps, and a run never loses one.
 - A question, a duplicate, a request missing information or an operation only a person can run
   takes a route that changes no file, run by `qfai-triage`.
-- When a diagnosis shows the run is on the wrong route, the run moves at a point its route
-  declares and keeps its evidence. A third move asks you first.
+- When a diagnosis shows the work is on the wrong route, it moves at a point its route
+  declares. A third move asks you first.
 
 The package ships one plan file per route under `assets/defaults/workflows/`,
 named after the route.
 
-- Say `continue` to resume an interrupted run where it stopped.
-- Say `stop` to cancel the run.
-- The run asks you only for a decision it cannot take: which route a request that reads two ways
-  should take, creating a new story, approving a change to the story tree, accepting a material
-  risk such as data loss, a broken public contract or a production effect, or a fact only you hold.
-- Say you do not want a commit, and the run stops at a verified working tree instead of done.
+- Say `stop` to end the work.
+- You are asked only which route a request that reads two ways should take, each decision that
+  contradicts a specification, a contract or a recorded decision, cannot be taken back or rests
+  on product intent nothing written states, each release, and a fact only you hold. Every other
+  decision is taken and listed in the final report.
 
 `workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
 
@@ -138,10 +136,7 @@ named after the route.
 | -------- | ------------------------------------------------------ |
 | `active` | The default. Runs the stages one after another         |
 | `shadow` | Says what the request asks and why, and writes nothing |
-| `off`    | Starts no run. You invoke the stage skills by name     |
-
-`active` chains stages only on a host whose capability report and first delegation pass.
-See [Supported hosts](#supported-hosts).
+| `off`    | Plans nothing. You invoke the stage skills by name     |
 
 ### Invoking a stage directly (expert path)
 
@@ -159,9 +154,8 @@ The agent reads QFAI assets under `.qfai/assistant/` and writes story-tree docum
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/`) designed to keep the workflow opinionated and repeatable.
 
-- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages of
-  the route the CLI picks, hands each stage to the skill below that owns it, and reports when
-  `finish` confirms the result.
+- **qfai-run**: The free-text entry. Takes a change stated in your own words through the steps of
+  the plan the CLI returns, and reports what changed and each gate's verdict.
 - **qfai-triage**: Answer a question, close a duplicate, ask for missing information, split a
   request, group automated reports, take in a security report or hand over an operation only a
   person can run. It changes no tracked file, and records any work needed as a follow-up request.
@@ -217,29 +211,19 @@ O->>R: Run npx qfai init
 R-->>O: Story tree and assistant kit installed
 
 O->>AG: Describe the change in your own words
-AG->>W: start, then the facts read from the request
+AG->>W: plan, with the facts read from the request
 W-->>AG: The route the rules chose, and its plan
 AG-->>O: The goal, the stages in order and the files it may change
 
-opt The change needs a new story
-AG-->>O: Ask whether to create it
-O->>AG: Answer
-end
-
 loop Each stage of the plan
-AG->>W: next
-W-->>AG: Work order for the stage
-AG->>R: Run the stage skill: story tree, acceptance tests, implementation or verification
-opt The stage changes the story tree
-AG-->>O: Ask to approve the change
+AG->>R: Run each step: story tree, tests, implementation or verification
+opt A decision point reaches a critical decision
+AG-->>O: Ask the decision
 O->>AG: Answer
 end
-AG->>W: accept the stage result
 end
 
-AG->>W: finish
-W-->>AG: Completion target confirmed by validate
-AG-->>O: Completion report
+AG-->>O: Final report
 ```
 
 Notes on the skills.
@@ -381,13 +365,12 @@ flowchart LR
   - `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
-- `npx qfai workflow`
-  - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
-    (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
-    JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
-    `.qfai/run/`; its summary and the answers it recorded are written to
-    `.qfai/evidence/workflow/<runId>/`, which stays local like all evidence. Only `finish`
-    reports a run complete, after it runs `validate` itself.
+- `npx qfai workflow plan`
+  - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
+    reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
+    document: the route's stages and step files with its decision, release and branch points, the
+    candidate routes of an unsure extraction, or a refusal. It starts nothing and writes no file.
+    Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (a shipped plan does not load).
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes the summary run-scoped at
@@ -468,7 +451,7 @@ Notes.
 1. `npx qfai init`
 2. Open your AI coding agent in the repository and describe the change in your own words.
    If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
-3. Answer the questions the run puts to you. Say `continue` to resume after an interruption, or `stop` to cancel.
+3. Answer the questions the work puts to you, or say `stop` to end it.
 4. Run `npx qfai validate` then `npx qfai report`.
 
 To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).

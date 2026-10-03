@@ -1,10 +1,10 @@
+// QFAI:AC-0001-0190-01
 // QFAI:AC-0001-0211-01
-// QFAI:AC-0001-0211-02
 // QFAI:AC-0001-0211-03
 // QFAI:AC-0001-0211-04
 // QFAI:AC-0001-0211-06
 
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import {
@@ -13,56 +13,49 @@ import {
   QUALIFIERS,
   SIGNALS,
   type RoutingReading,
+  type WorkflowExtraction,
 } from "../../../src/core/workflow/extraction.js";
-import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { loadPackagePlan } from "../../../src/core/workflow/plans.js";
+import { planOf, type PlanDocument } from "../../../src/core/workflow/plan.js";
 import { isWorkflowRoute } from "../../../src/core/workflow/routes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
-import { driveStages, proposalWith, quietCompletion, routedBy } from "./decisionRuns.js";
+import { minimalProject, removeProjects } from "./workflowProject.js";
+
+afterEach(removeProjects);
+
+async function planned(fields: Partial<WorkflowExtraction>): Promise<PlanDocument> {
+  return planOf(await minimalProject(), { extraction: extraction(fields) });
+}
 
 // QFAI:EX-0001-0211-01
-it("A routing result carrying facts, and no route, is routed by the rule that holds", async () => {
-  const { run, decision } = await routedBy({ intent: "defect", entryFlags: ["repro", "expect"] });
-  const decided = decision.events.find((event) => event.type === "route-decided");
-
-  expect({
-    state: decision.verdict.run?.state,
-    event: [decided?.route, decided?.rule],
-    context: run.snapshot.routeDecision,
-    plan: run.snapshot.plan?.route,
-  }).toEqual({
-    state: "ready",
-    event: ["fix-defect", 27],
-    context: { route: "fix-defect", rule: 27 },
-    plan: "fix-defect",
-  });
-});
-
-// QFAI:EX-0001-0211-02
-it("A proposal that names a route, a stage list or a step list is refused, naming the field", () => {
-  const refused = (field: string, value: unknown) =>
-    stageResultRefusals({
-      resultId: "route-1",
-      workOrderId: "work-order-route-1",
-      stageInstanceId: "route",
-      attempt: 1,
-      expectedSequence: 3,
-      outcome: "accepted",
-      testObservation: "not_applicable",
-      actor: { agentInstance: "router-1" },
-      proposal: { ...proposalWith({ intent: "defect" }), [field]: value },
-    });
+it("An extraction that names no route is routed by the rule that holds", async () => {
+  const document = await planned({ intent: "defect", entryFlags: ["repro", "expect"] });
 
   expect([
-    refused("candidateRoute", "fix-defect"),
-    refused("route", "fix-defect"),
-    refused("requiredStages", ["diagnose", "verify"]),
-    refused("optionalSteps", ["sdd-contract"]),
+    Reflect.get(document, "ok"),
+    Reflect.get(document, "route"),
+    Reflect.get(document, "rule"),
+  ]).toEqual([true, "fix-defect", 27]);
+});
+
+// QFAI:EX-0001-0211-03
+it("An extraction value outside its vocabulary is refused, naming the field", async () => {
+  const root = await minimalProject();
+  const refused = async (fields: Record<string, unknown>) => {
+    const document = await planOf(root, { extraction: { ...extraction(), ...fields } });
+    return document.ok ? [] : document.reasons;
+  };
+  const reading = { intent: "feature", entryFlags: [], qualifiers: [], signals: [] };
+
+  expect([
+    await refused({ intent: "bug" }),
+    await refused({ entryFlags: ["urgent"] }),
+    await refused({ confidence: 0.9 }),
+    await refused({ alternatives: [reading] }),
   ]).toEqual([
-    [{ reason: "schema", subject: "proposal.candidateRoute" }],
-    [{ reason: "schema", subject: "proposal.route" }],
-    [{ reason: "schema", subject: "proposal.requiredStages" }],
-    [{ reason: "schema", subject: "proposal.optionalSteps" }],
+    [{ reason: "schema", subject: "intent" }],
+    [{ reason: "schema", subject: "entryFlags[0]" }],
+    [{ reason: "schema", subject: "confidence" }],
+    [{ reason: "schema", subject: "alternatives" }],
   ]);
 });
 
@@ -90,8 +83,6 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
   return readings;
 }
 
-const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
-
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
@@ -104,14 +95,7 @@ it("Every extraction reaches exactly one catalog route by a rule, an unsignalled
       const choice = decideRoute(reading);
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
-      const released =
-        reading.intent === "release" &&
-        !reading.signals.some((signal) => RELEASE_SIGNALS.includes(signal)) &&
-        !reading.qualifiers.includes("distribution-incident");
-      if (choice.rule === null && !released) unrouted.push(JSON.stringify(reading));
-      if (choice.rule === null && choice.route !== "answer-question") {
-        outside.push(choice.route);
-      }
+      if (choice.rule === null) unrouted.push(JSON.stringify(reading));
     }
   }
   const bareRelease = decideRoute(extraction({ intent: "release" }));
@@ -130,45 +114,39 @@ it("Every extraction reaches exactly one catalog route by a rule, an unsignalled
 });
 
 // QFAI:EX-0001-0211-34
-it("A request no intent was read from is answered, and finishing it changes no file", async () => {
-  const { run, decision } = await routedBy(
-    { intent: null },
-    { affectedFlowIds: [], proposedWriteScope: [] },
-  );
-  const { issued } = await driveStages(run);
-  const finished = run.apply({ operation: "finish" }, { completion: quietCompletion() });
-  const closure = (run.snapshot.acceptedStages ?? []).at(-1)?.closure;
+it("A request no intent was read from plans the route that answers it and changes nothing", async () => {
+  const document = await planned({ intent: null });
+  const stages = document.ok && "stages" in document ? document.stages : [];
+  const steps = stages.flatMap((stage) => stage.steps.map((step) => step.name));
 
   expect({
-    route: [decision.events[0]?.route, decision.events[0]?.rule],
-    stages: issued.map((workOrder) => workOrder.stageInstanceId),
-    state: finished.verdict.run?.state,
-    unmet: finished.verdict.unmet,
-    closure: closure?.outcome,
-  }).toEqual({
-    route: ["answer-question", null],
-    stages: ["answer"],
-    state: "completed",
-    unmet: [],
-    closure: "answered",
-  });
+    route: Reflect.get(document, "route"),
+    rule: Reflect.get(document, "rule"),
+    verifies: steps.includes("verify-repo-gate"),
+    closes: steps.at(-1),
+  }).toEqual({ route: "answer-question", rule: null, verifies: false, closes: "triage-close" });
+});
+
+it("A question plans a route that answers it and changes no tracked file", async () => {
+  const document = await planned({ intent: "question-how", artifacts: [] });
+  const stages = document.ok && "stages" in document ? document.stages : [];
+  const steps = stages.flatMap((stage) => stage.steps.map((step) => step.name));
+
+  expect([steps.includes("verify-repo-gate"), steps.at(-1)]).toEqual([false, "triage-close"]);
 });
 
 // QFAI:EX-0001-0211-36
-it("Two fix-defect requests take the same stages and steps", async () => {
-  const planned = async (risks: "data-loss"[]) => {
-    const { route } = decideRoute(extraction({ intent: "defect", risks }));
-    const load = await loadPackagePlan(route);
-    if (!load.ok) throw new Error(`The ${route} plan does not load.`);
-    return load.plan.stages.map((stage) => [stage.id, stage.steps.map((step) => step.name)]);
-  };
-  const [risky, plain] = [await planned(["data-loss"]), await planned([])];
+it("Two fix-defect requests plan the same stages and steps, whatever their risks", async () => {
+  const shape = (document: PlanDocument) =>
+    document.ok && "stages" in document
+      ? document.stages.map((stage) => [stage.id, stage.steps.map((step) => step.name)])
+      : [];
+  const risky = shape(await planned({ intent: "defect", risks: ["data-loss"] }));
+  const plain = shape(await planned({ intent: "defect" }));
+  const ids = risky.map(([id]) => id);
 
   expect({
     same: JSON.stringify(risky) === JSON.stringify(plain),
-    stages: risky.map(([id]) => id),
-  }).toEqual({
-    same: true,
-    stages: ["diagnose", "spec", "implement", "note", "verify"],
-  });
+    inOrder: ["diagnose", "spec", "implement", "verify"].map((id) => ids.indexOf(id)),
+  }).toEqual({ same: true, inOrder: [0, 1, ids.length - 2, ids.length - 1] });
 });

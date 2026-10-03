@@ -19,16 +19,16 @@ function skillPath(skill: string, ...rest: string[]): string {
   return [".qfai/assistant/skill", skill, ...rest].join("/");
 }
 
-/** One `## For a person` item, named by its check as `workflow start` names the cause. */
+/** One `## For a person` item, named by its check as `workflow plan` names the reason. */
 function refusalItem(refusal: PlanRefusal): string {
   const [skill = refusal.subject, detail = ""] = refusal.subject.split(":");
   switch (refusal.reason) {
     case "reviewer-missing":
       return `reviewer-missing: qfai.config.yaml: the \`routing:\` override for \`${skill}\` drops \`${detail}\`, which the package's default routing requires`;
     case "step-missing":
-      return `contract-undeclared: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
+      return `plan-invalid: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
     default:
-      return `contract-undeclared: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
+      return `plan-invalid: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
   }
 }
 
@@ -102,11 +102,10 @@ async function runLinkItems(context: MigrationContext): Promise<string[]> {
 }
 
 /**
- * Makes the project checks `npx qfai workflow start` makes before it creates a
- * run, checks what step 11 installs, checks that git keeps `.qfai/evidence/`
- * out of the index as step 10 leaves it, and lists each line of a tracked
- * project file that still names a 1.x path. It writes nothing and repairs
- * nothing.
+ * Makes the project checks a shipped plan needs, checks what step 11
+ * installs, checks that git keeps `.qfai/evidence/` out of the index as step
+ * 10 leaves it, and lists each line of a tracked project file that still names
+ * a 1.x path. It writes nothing and repairs nothing.
  */
 export const step12: MigrationStep = {
   number: 12,

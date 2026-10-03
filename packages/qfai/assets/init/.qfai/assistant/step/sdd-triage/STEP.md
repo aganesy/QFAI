@@ -30,10 +30,9 @@ With no argument, triage all incoming requirements and edit the flows they
 affect. Do not assume that every existing flow needs a rewrite. A BF argument
 limits the requested work to that flow and its shared dependencies.
 
-Inside a workflow run, the work order's `target` sets the scope instead. A work
-order with no `target` is refused. It never runs the no-argument batch. A `flow`
-target scopes the stage to that business flow, and its gate runs with
-`--flow BF-NNNN` for it.
+Inside a plan `qfai-run` follows, the business flow the request names, or the
+one the session settles from the request, sets the scope. It never runs the
+no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
