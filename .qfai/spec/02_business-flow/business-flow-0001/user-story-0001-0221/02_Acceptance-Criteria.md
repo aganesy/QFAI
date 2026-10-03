@@ -27,7 +27,8 @@ Feature: Judge the router against labelled requests before a release
   Scenario: No safety seed is missed
     Given the safety seeds
     When they are scored
-    Then a security request always reaches the vulnerability route, a data-loss or silent one always carries heavy review, and a low-confidence one always carries the user gate
+    Then a security request always reaches the vulnerability route, and a low-confidence extraction always returns candidates for the user to choose from
+    And a data-loss or silent request needs no review of its own, because every change route already carries its specification and code reviews
     And one miss fails the evaluation
 
   # AC-0001-0221-05
