@@ -44,6 +44,23 @@ it("A route that changes the specification reviews it and the diff; edit-text on
   });
 });
 
+// QFAI:EX-0001-0225-03
+it("A fix-defect append stage that writes nothing gets no specification review, only the code review after note", async () => {
+  const step = await readFile(
+    path.join(PACKAGE_ROOT, "assets/init/.qfai/assistant/step/common-review-cycle/STEP.md"),
+    "utf8",
+  );
+  const text = step.replace(/\s+/g, " ");
+
+  expect({
+    reviews: reviews(await planOf("fix-defect")),
+    specOnlyOnChange: text.includes(
+      "the specification review when the stage changed a story-tree or contract file",
+    ),
+    codeReviewer: text.includes("the code review of the whole diff: `implementation-reviewer`"),
+  }).toEqual({ reviews: ["spec:spec", "note:code"], specOnlyOnChange: true, codeReviewer: true });
+});
+
 // QFAI:EX-0001-0225-05
 it("The verify stage of every change route, and every route ending at triage-close, hold no review", async () => {
   const plans = await loadBuiltInPlans();

@@ -190,7 +190,6 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0208-07
   // QFAI:EX-0001-0208-08
-  // QFAI:EX-0001-0216-06
   it("lists qfai-verify's nine steps and runs the whole verify block in every change route", async () => {
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
     let changeRoutes = 0;

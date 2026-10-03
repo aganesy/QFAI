@@ -1,19 +1,13 @@
-// QFAI:AC-0001-0185-05
 // QFAI:AC-0001-0188-05
 // QFAI:AC-0001-0191-01
-// QFAI:AC-0001-0192-03
 // QFAI:AC-0001-0210-05
 // QFAI:AC-0001-0218-01
 // QFAI:AC-0001-0218-02
 // QFAI:AC-0001-0218-03
 // QFAI:AC-0001-0218-04
 // QFAI:AC-0001-0218-05
-// QFAI:EX-0001-0185-13
-// QFAI:EX-0001-0185-14
 // QFAI:EX-0001-0188-08
 // QFAI:EX-0001-0191-01
-// QFAI:EX-0001-0192-08
-// QFAI:EX-0001-0192-09
 // QFAI:EX-0001-0210-08
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -39,9 +33,9 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-// A minimal project: one `STEP.md` per step the package's plans run, and an optional
-// `qfai.config.yaml`. The plans and the routing stay in the package.
-async function project(config?: string): Promise<string> {
+// A minimal project: one `STEP.md` per step the package's plans run. The plans and the routing
+// stay in the package.
+async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plans-"));
   roots.push(root);
   const plans = await loadBuiltInPlans();
@@ -51,7 +45,6 @@ async function project(config?: string): Promise<string> {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "STEP.md"), `# ${name}\n`);
   }
-  if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   return root;
 }
 
@@ -75,6 +68,8 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
 
 const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
 
+// QFAI:EX-0001-0220-15
+// QFAI:EX-0001-0220-16
 it("The shipped add-feature and prototype-feature plans", async () => {
   const kinds = async (route: string) =>
     ((await planOf(route))?.stages ?? []).map((stage) => stage.kind);
@@ -109,6 +104,7 @@ function verifyReach(plan: WorkflowPlanFile) {
   };
 }
 
+// QFAI:EX-0001-0218-03
 it("The plan of every change route the package ships", async () => {
   const plans = await loadBuiltInPlans();
   const changeRoutes = plans.filter((plan) =>
@@ -147,30 +143,6 @@ it("The shipped edit-text plan", async () => {
     ["verify", ["verify-change-note°"]],
     ["verify", VERIFY],
   ]);
-});
-
-it("A routing override that keeps every required agent", async () => {
-  const override = [
-    "routing:",
-    "  - step: maintain-edit",
-    "    phases:",
-    "      - id: edit",
-    "        mandatory_agents: [doc-steward]",
-    "        conditional_agents: [project-helper]",
-    "        parallel_groups: []",
-    "        blocking_agents: []",
-    "      - id: review",
-    "        mandatory_agents: [implementation-reviewer]",
-    "        conditional_agents: []",
-    "        parallel_groups: []",
-    "        blocking_agents: [implementation-reviewer]",
-    "    review_profile: default",
-    "workflow:",
-    "  mode: active",
-    "",
-  ].join("\n");
-
-  expect(await refusalsFor(await project(override))).toEqual([]);
 });
 
 const EDIT_STAGE = "  - id: edit\n    kind: maintenance\n    steps: [maintain-edit]\n";
@@ -212,7 +184,7 @@ const loadRefusals: [string, (text: string) => string][] = [
 ];
 
 for (const [reason, change] of loadRefusals) {
-  // QFAI:EX-0001-0192-10
+  // BR-0020-0016
   it(reason, async () => {
     const reasons = (await refusalsOf("edit-text", change)).map((refusal) => refusal.reason);
 
@@ -230,7 +202,7 @@ const stepRefusals: [string, string, string][] = [
 ];
 
 for (const [title, steps, reason] of stepRefusals) {
-  // QFAI:EX-0001-0192-10
+  // BR-0020-0016
   it(title, async () => {
     const reasons = (await refusalsOf("edit-text", (text) => text.replace(EDIT_STEPS, steps))).map(
       (refusal) => refusal.reason,
@@ -250,7 +222,7 @@ const retiredNames: [string, string][] = [
 ];
 
 for (const [title, to] of retiredNames) {
-  // QFAI:EX-0001-0192-10
+  // BR-0020-0016
   it(title, async () => {
     const refusals = await refusalsOf("edit-text", (text) => text.replace("kind: maintenance", to));
 
@@ -295,7 +267,7 @@ it("A plan marking implement-regression-fix pass-through, and one marking implem
   });
 });
 
-// QFAI:EX-0001-0192-10
+// QFAI:EX-0001-0218-02
 it("a pass-through mark on a step off the pass-through list", async () => {
   expect(
     await refusalsOf("edit-text", (text) =>

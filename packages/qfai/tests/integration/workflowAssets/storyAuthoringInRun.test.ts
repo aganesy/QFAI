@@ -46,6 +46,17 @@ describe("defect example seeding", () => {
     );
   });
 
+  // QFAI:AC-0001-0186-01
+  // QFAI:EX-0001-0186-02
+  it("carries the diagnosis as the reason for the appended example, and changes no statement", async () => {
+    const text = await section(STORY_STEP, SEEDING);
+    expect(text).toMatch(
+      /carry the diagnosis as the reason for the new EX: the stage report and the `Change request:` row name it/i,
+    );
+    expect(text).toMatch(/add or change no US or AC/i);
+    expect(text).toMatch(/the rule's Statement is unchanged/i);
+  });
+
   // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
   it("appends no decision row for the approval-free seeding", async () => {

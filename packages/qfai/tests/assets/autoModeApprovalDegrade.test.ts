@@ -17,7 +17,9 @@ describe("qfai-sdd approval in no-question mode", () => {
       expect(skill).toContain("--auto");
       expect(skill).toContain("sdd-triage.md");
       expect(triage).toContain("Do not self-approve");
-      expect(triage).toContain("ask no question, append no row");
+      expect(triage).toContain(
+        "ask no question: append one `open-questions.md` row per pending operation naming it and its target",
+      );
       expect(triage).toContain("stop before the dependent writes");
       expect(triage).toContain("report every pending operation with its target");
       expect(triage).toContain(

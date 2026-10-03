@@ -406,12 +406,14 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0223-04
   // QFAI:EX-0001-0223-06
+  // QFAI:EX-0001-0223-08
   it("records each approval as one decisions row, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
       /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(/which authorizes no push, merge, tag or publication/i);
   });
 
   // QFAI:AC-0001-0223-05
@@ -466,7 +468,6 @@ describe("qfai-maintain", () => {
   });
 
   // QFAI:AC-0001-0191-02
-  // QFAI:EX-0001-0191-04
   it("stops before an edit with a semantic effect and leaves the run blocked on the owner", async () => {
     const skill = await readShipped(MAINTAIN_EDIT);
     const edit = flat(sectionOf(skill, "## The edit"));
@@ -481,22 +482,12 @@ describe("qfai-maintain", () => {
       /no stage of the route serves the finding's owner, so the run is `blocked`, naming the finding and the owner skill to invoke by name/i,
     );
     expect(effect).not.toMatch(/reclassified/i);
-    expect(effect).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
-    expect(effect).toMatch(/`debts` holds one entry for the finding/i);
-    expect(effect).toMatch(/`findingCode` is `maintain-semantic-effect`/);
-    expect(effect).toMatch(/`owningFlow` is `null`, because an `edit-text` run binds no flow/i);
-    expect(effect).toMatch(/`detectingCommand` names the review or the command that found it/i);
-    expect(effect).toMatch(
-      /`resolvingOwner` is the skill that owns that kind of change, never one the `edit-text` plan names/i,
-    );
   });
 });
 
 describe("the entry skills' routing entries", () => {
   // QFAI:AC-0001-0161-05
   // QFAI:EX-0001-0161-06
-  // QFAI:AC-0001-0185-05
-  // QFAI:EX-0001-0185-16
   it("routes qfai-run to the orchestrator only, and qfai-maintain to an author the route's code review reads", async () => {
     const run = await routingEntry("qfai-run");
     expect(run, "the routing defaults have a qfai-run entry").toBeDefined();

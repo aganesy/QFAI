@@ -92,6 +92,8 @@ existing AC already states:
   takes the new example is the operator's to settle.
 - Add or change no US or AC, and no existing EX. Write or annotate no test: the
   new EX stays an example no test annotates.
+- Carry the diagnosis as the reason for the new EX: the stage report and the
+  `Change request:` row name it.
 - Append no triage or seeding row of its own: the operation needs no triage
   approval. The two file changes still go to the user, and on approval the
   stage's one `Change request:` row names them, as

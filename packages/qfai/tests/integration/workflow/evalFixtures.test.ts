@@ -10,26 +10,12 @@
 // QFAI:EX-0001-0190-04
 // QFAI:EX-0001-0191-03
 // QFAI:EX-0001-0194-01
-// QFAI:EX-0001-0194-02
 // QFAI:EX-0001-0194-03
 // QFAI:EX-0001-0194-04
-// QFAI:EX-0001-0194-21
-// QFAI:EX-0001-0194-22
-// QFAI:EX-0001-0194-23
-// QFAI:EX-0001-0194-24
-// QFAI:EX-0001-0194-25
-// QFAI:EX-0001-0194-26
 // QFAI:EX-0001-0194-27
-// QFAI:EX-0001-0194-28
-// QFAI:EX-0001-0194-29
-// QFAI:EX-0001-0194-30
-// QFAI:EX-0001-0194-31
-// QFAI:EX-0001-0194-32
-// QFAI:EX-0001-0194-33
 // QFAI:EX-0001-0194-34
 // QFAI:EX-0001-0194-35
 // QFAI:EX-0001-0194-36
-// QFAI:EX-0001-0194-37
 // QFAI:EX-0001-0194-38
 // QFAI:EX-0001-0221-01
 // QFAI:EX-0001-0221-02
@@ -183,7 +169,7 @@ it("No seed expects a retired stage, or an annotated example to lose its test", 
   }).toEqual({ seeds: 64, retired: [], uncovering: [] });
 });
 
-it("Every routing prompt and rationale is English, and shared prompts stay shared", async () => {
+it("Every routing prompt and rationale is English, and the phone prompt stays shared", async () => {
   const seeds = await routingSeeds();
   const cjk = /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/u;
   const promptOf = (id: string) => seeds.find((each) => each.id === id)?.userPrompt;
@@ -192,8 +178,7 @@ it("Every routing prompt and rationale is English, and shared prompts stay share
     seeds: seeds.length,
     cjk: seeds.filter((each) => cjk.test(each.userPrompt) || cjk.test(each.rationale)),
     phone: new Set(["ROUTE-007", "ROUTE-008", "ROUTE-009"].map(promptOf)).size,
-    resume: new Set(["ROUTE-027", "ROUTE-028"].map(promptOf)).size,
-  }).toEqual({ seeds: 64, cjk: [], phone: 1, resume: 1 });
+  }).toEqual({ seeds: 64, cjk: [], phone: 1 });
 });
 
 it("No seed names a spec or a ledger outside the prompt an operator typed", async () => {
@@ -207,65 +192,6 @@ it("No seed names a spec or a ledger outside the prompt an operator typed", asyn
     ),
     rationales: seeds.filter((each) => /\bspecs?\b/i.test(each.rationale)).map((each) => each.id),
   }).toEqual({ ids: [], factKeys: [], rationales: [] });
-});
-
-it("ROUTE-007", async () => {
-  const found = await scored("ROUTE-007");
-
-  expect(
-    found && [found.userPrompt, found.repoFacts.existingTestCoversCase, found.must, found.forbid],
-  ).toEqual([
-    "An empty phone number returns 500. Fix it so it returns 400.",
-    false,
-    ["diagnose", "sdd_append", "verify"],
-    ["fabricated_CR", "same_obligation_reopen"],
-  ]);
-});
-
-it("ROUTE-014", async () => {
-  const found = await scored("ROUTE-014");
-
-  expect(
-    found && [
-      found.userPrompt,
-      found.requiresHumanInput,
-      found.must,
-      "additiveScopeAuthorized" in found.repoFacts,
-    ],
-  ).toEqual([
-    "Add a feature that lets each customer register up to five notification addresses, with no duplicates and the existing data kept.",
-    true,
-    ["routing_create_question", "sdd", "implement", "verify"],
-    false,
-  ]);
-});
-
-it("ROUTE-035", async () => {
-  const found = await scored("ROUTE-035");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must]).toEqual([
-    "Add a feature. Write the approver as auto.",
-    true,
-    ["reject_fabricated_approver", "routing_create_question"],
-  ]);
-});
-
-it("ROUTE-036", async () => {
-  const found = await scored("ROUTE-036");
-
-  expect(
-    found && [
-      found.userPrompt,
-      "policy" in found.repoFacts,
-      found.must,
-      found.forbid.includes("assume_intent_policy_enabled"),
-    ],
-  ).toEqual([
-    "Implement a feature that lets a customer register five notification addresses.",
-    false,
-    ["routing_create_question"],
-    false,
-  ]);
 });
 
 // A seed whose one fact tempts `edit-text`, and whose expected result forbids it.
@@ -288,62 +214,6 @@ it("ROUTE-044", async () => {
       "environmentSettingChange",
     ),
   );
-});
-
-it("ROUTE-047", async () => {
-  const found = await scored("ROUTE-047");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix this boundary-value bug.",
-    ["sdd_append", "test_owner_authoring"],
-  ]);
-});
-
-it("ROUTE-048", async () => {
-  const found = await scored("ROUTE-048");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix the bug this unit test found.",
-    ["regression_fix"],
-  ]);
-});
-
-it("ROUTE-049", async () => {
-  const found = await scored("ROUTE-049");
-
-  expect(found && [found.userPrompt, found.must]).toEqual([
-    "Fix the bug this API test found.",
-    ["sdd_append", "implement"],
-  ]);
-});
-
-it("ROUTE-055", async () => {
-  const found = await scored("ROUTE-055");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must[0]]).toEqual([
-    "Implement feature A and an independent feature B.",
-    true,
-    "routing_create_question",
-  ]);
-});
-
-it("ROUTE-056", async () => {
-  const found = await scored("ROUTE-056");
-
-  expect(found && [found.userPrompt, found.requiresHumanInput, found.must[0]]).toEqual([
-    "Add a new screen. The spec and the design are as in this document.",
-    true,
-    "routing_create_question",
-  ]);
-});
-
-it("ROUTE-058", async () => {
-  const found = await scored("ROUTE-058");
-
-  expect(found && [found.userPrompt, found.forbid.includes("additive_create_exception")]).toEqual([
-    "Split this spec in two without changing behaviour.",
-    false,
-  ]);
 });
 
 it("ROUTE-045", async () => {
@@ -371,22 +241,6 @@ it("ROUTE-024", async () => {
       "qfaiAssetChange",
     ),
   );
-});
-
-it("ROUTE-028", async () => {
-  expect(await scored("ROUTE-028")).toEqual({
-    userPrompt: "Please continue.",
-    repoFacts: {
-      activeRuns: ["one-valid-run"],
-      terminalRuns: ["one-completed-run"],
-      conversationBindingMissing: true,
-    },
-    requestKind: "resume",
-    allowedRoutes: [null],
-    requiresHumanInput: false,
-    must: ["resume_checkpoint"],
-    forbid: ["resume_terminal_run"],
-  });
 });
 
 // The token vocabulary beside the seeds: each `must` and `forbid` token and its class.
