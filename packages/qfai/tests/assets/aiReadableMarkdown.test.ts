@@ -225,6 +225,11 @@ describe("the guard's own readers", () => {
     expect(contentsItems(text)).toEqual(["A"]);
   });
 
+  it("keeps a fence open when its marker has an info string", () => {
+    const text = ["~~~md", "~~~js", "## Not a heading", "~~~"].join("\n");
+    expect(levelTwoHeadings(text)).toEqual([]);
+  });
+
   it("finds a hop by every path form a reference can use", () => {
     const tree = new Map([
       ["skill/alpha/SKILL.md", "Read `references/one.md`."],
