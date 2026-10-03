@@ -1,3 +1,4 @@
+import type { FailOn } from "../config.js";
 import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
 import type { WorkflowModifierEntry } from "./modifiers.js";
 import type { WorkflowMeasurement } from "./parse.js";
@@ -405,7 +406,6 @@ export type InputRefusalReason =
   | "test-fix-meaning"
   | "option"
   | "reviewer-not-independent"
-  | "review-missing"
   | "blocked-repairable"
   | "authorization-kind"
   | "example-uncovered"
@@ -791,7 +791,7 @@ export interface WorkflowFacts {
 // What `finish` observes: validate run in process, the offered verify report, the tool and
 // policy digests, and the run's cumulative changed and uncommitted paths.
 export interface WorkflowCompletionFacts {
-  validate: { failOn: Severity; findings: (FindingIdentity & { severity: Severity })[] };
+  validate: { failOn: FailOn; findings: (FindingIdentity & { severity: Severity })[] };
   verifyReport?: { runId: string; stageInstanceId: string; status: string; scope: string };
   toolVersion: string;
   cliEntryDigest: string;

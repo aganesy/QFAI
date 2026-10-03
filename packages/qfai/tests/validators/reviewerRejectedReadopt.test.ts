@@ -33,6 +33,9 @@ it("rejects an empty R-REJECTED-READOPT justification", async () => {
   ]) {
     expect(await ingest(finding)).toEqual([{ code: "R-REJECTED-READOPT", severity: "error" }]);
   }
+});
+
+it("accepts a non-empty R-REJECTED-READOPT justification", async () => {
   expect(
     await ingest({ code: "R-REJECTED-READOPT", justification: "Re-adopted after the fix landed" }),
   ).toEqual([]);

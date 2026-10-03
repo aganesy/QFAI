@@ -113,7 +113,7 @@ exit codes. Run the next step only after the preceding one has completed.
 | 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                          |
 | 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`. |
 | 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, links, `.gitignore` and the hooks.     |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.           |
+| 12   | `12-check-entry.mjs`         | Check, without writing, the free-text entry and the project's 1.x paths.    |
 
 For example:
 
@@ -121,6 +121,17 @@ For example:
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs --dry-run
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs
 ```
+
+Steps 1 to 10 each print one line before their report, in a dry run and a real
+run. It is `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` when
+the tree shows no trace of the old layout, `1.x layout found, migrating` when it
+shows one or the step has work of its own, and
+`already migrated (id-map.json present)` when an earlier run finished. If every
+one of steps 1 to 10 prints the first, nothing was found to migrate in the
+directory it names: check that your specs live there. Step 10 also ends with a `Summary:` line
+for the first two cases. Steps 11 and 12 print neither line. A script that reads
+the report from its first line should start at `## Operations`, which still
+opens the rest of the report.
 
 Step 10 removes every `.gitignore` negation that re-includes `.qfai/evidence/`
 and takes that directory out of the git index. The files stay on disk. Commit
@@ -131,8 +142,14 @@ the project changed is moved whole to
 `.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/` first, never
 deleted. Step 12 lists under `## For a person` each check
 `npx qfai workflow start` would fail, such as a `qfai.config.yaml` routing
-override that drops a reviewer the defaults require. Rerunning step 11 settles
-what it installs; a routing override is yours to change. Step 11 also installs
+override that drops a reviewer the defaults require. It also lists, as an
+`old-path` item, each line of a tracked project file that still names a 1.x
+path, and it prints `## Files scanned` with the number of files it read, or a note that the project
+is not a git repository. The
+migration does not rewrite skills, agents or documents you wrote. The path table
+in `references/migration-guide.md` of the migration skill gives the 2.x path for
+each 1.x path. Rerunning step 11 settles what it installs; a routing override is
+yours to change. Step 11 also installs
 the reminder hooks `qfai init` installs, in `.claude/settings.json` and
 `.codex/hooks.json`, through the same merge, and brings the text they print,
 `.agents/rules/reminders.json`, to this release unless you edited it.

@@ -1,7 +1,7 @@
 import {
   areaCovers,
-  authoredStage,
   everyStageResult,
+  isAuthorOrRecommender,
   isRunChange,
   refusedInput,
 } from "./common.js";
@@ -31,8 +31,10 @@ function findingKey(finding: FindingIdentity): string {
   return JSON.stringify([finding.code, finding.file, [...finding.refs].sort()]);
 }
 
+// Under `failOn: never` no finding fails the gate, while each still keeps its debt open.
 function failingFindings(completion: WorkflowCompletionFacts): FindingIdentity[] {
   const { failOn, findings } = completion.validate;
+  if (failOn === "never") return [];
   return findings
     .filter((finding) => SEVERITY_RANK[finding.severity] >= SEVERITY_RANK[failOn])
     .map(({ code, file, refs }) => ({ code, file, refs }));
@@ -105,19 +107,18 @@ function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionF
     : unmetOf("gate-failed", ["verify"]);
 }
 
-// A route that ends at `triage-close` changes nothing a gatekeeper has to pass. A PASS counts
-// from a reviewer that did not author the stage it reviewed.
+// A route that ends at `triage-close` changes nothing a gatekeeper has to pass.
 function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
   if (endsAtTriageClose(snapshot.plan?.stages ?? [])) return [];
   const actorHistory = snapshot.actorHistory ?? [];
-  const independentPass = (snapshot.acceptedStages ?? []).some((stage) =>
-    (stage.reviewResults ?? []).some(
+  const independentPass = (snapshot.acceptedStages ?? [])
+    .flatMap((stage) => stage.reviewResults ?? [])
+    .some(
       (review) =>
         review.role === "qa-gatekeeper" &&
         review.verdict === "PASS" &&
-        !authoredStage(actorHistory, review.agentInstance, stage.stageInstanceId),
-    ),
-  );
+        !isAuthorOrRecommender(actorHistory, review.agentInstance),
+    );
   return independentPass ? [] : unmetOf("review-missing", ["qa-gatekeeper"]);
 }
 

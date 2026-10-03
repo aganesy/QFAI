@@ -18,6 +18,11 @@ function lineItems(content: string, pattern: RegExp, file: string, root: string)
   return items;
 }
 
+/** What a person does with a test-case annotation that stays in a file of the E2E layer. */
+function e2eExampleItem(example: string): string {
+  return `maps to ${example}, and an example annotation is not allowed in the E2E layer; annotate ${example} in a test outside the E2E layer, or add a decisions.md row whose Content is "Test exception: ${example}", whose Approach holds the reason and whose Status is DONE; then delete this annotation`;
+}
+
 export const step08: MigrationStep = {
   number: 8,
   writeSet: ["test-annotations"],
@@ -65,7 +70,11 @@ export const step08: MigrationStep = {
             return whole;
           }
           const mapped = map.ids[`spec-${packNumber}`]?.[oldId];
-          if (oldId.startsWith("TC-") && mapped?.startsWith("EX-")) return `QFAI:${mapped}`;
+          if (oldId.startsWith("TC-") && mapped?.startsWith("EX-")) {
+            if (!isE2e) return `QFAI:${mapped}`;
+            forAPerson.push(`${location}: ${whole}: ${e2eExampleItem(mapped)}`);
+            return whole;
+          }
           if (oldId.startsWith("US-") && isE2e && mapped?.startsWith("US-"))
             return `QFAI:BF-${mapped.slice(3, 7)}`;
           forAPerson.push(`${location}: ${whole}: no usable ID mapping`);

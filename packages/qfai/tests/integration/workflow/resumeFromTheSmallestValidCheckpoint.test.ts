@@ -6,14 +6,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import {
-  RED_RECEIPT,
-  STORY,
-  TEST_FILE,
-  receiptProject,
-  receiptsOf,
-  runWithReceipts,
-} from "./receiptRun.js";
+import { STORY, TEST_FILE, receiptProject, receiptsOf, runWithReceipts } from "./receiptRun.js";
 import { field, removeProjects, workflow } from "./workflowProject.js";
 
 afterEach(removeProjects);
@@ -27,7 +20,7 @@ async function readRecords(root: string): Promise<Buffer[]> {
 
 it("Built CLI", async () => {
   const root = await receiptProject();
-  const { runId } = await runWithReceipts(root, false);
+  const { runId, redReceipt } = await runWithReceipts(root, false);
   const before = await readRecords(root);
   const resumed = workflow(root, ["resume", "--run", runId]);
   const after = await readRecords(root);
@@ -35,7 +28,7 @@ it("Built CLI", async () => {
   expect({
     stageKind: field(resumed.json, "workOrder.stageKind"),
     obligations: field(resumed.json, "workOrder.obligations.ids"),
-    red: receiptsOf(resumed.json)[RED_RECEIPT],
+    red: receiptsOf(resumed.json)[redReceipt],
     untouched: before.every((bytes, index) => after[index]?.equals(bytes)),
   }).toEqual({
     stageKind: "implement",

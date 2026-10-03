@@ -25,7 +25,10 @@ const review = (role: string, verdict: string) => ({
   reportRef: `${role}.md`,
 });
 
-function acceptWith(reviewResults: ReturnType<typeof review>[]) {
+function acceptWith(
+  reviewResults?: ReturnType<typeof review>[],
+  outcome: "accepted" | "accepted_with_debt" = "accepted",
+) {
   const decision = decide(
     {
       run,
@@ -44,7 +47,22 @@ function acceptWith(reviewResults: ReturnType<typeof review>[]) {
         stageInstanceId: workOrder.stageInstanceId,
         attempt: 1,
         expectedSequence: run.sequence,
-        outcome: "accepted",
+        outcome,
+        ...(outcome === "accepted_with_debt"
+          ? {
+              debts: [
+                {
+                  findingCode: "QFAI-TRACE-003",
+                  path: "src/orders.ts",
+                  cause: "A separate story owns the missing example.",
+                  owningFlow: "BF-0003",
+                  detectingCommand: "qfai validate",
+                  resolvingOwner: "qfai-sdd",
+                  blockingExtent: "completion",
+                },
+              ],
+            }
+          : {}),
         actor: { agentInstance: "implement-1" },
         reviewResults,
       },
@@ -74,4 +92,39 @@ it("Accept an implement result missing a qa-gatekeeper PASS, then one with a REV
     acceptWith([review("completion-reviewer", "PASS"), review("qa-gatekeeper", "REVISE")]),
     acceptWith([review("completion-reviewer", "PASS"), review("qa-gatekeeper", "PASS")]),
   ]).toEqual([refused, refused, { ok: true, state: "ready", reasons: [], events: 1 }]);
+});
+
+it.each([
+  { name: "absent", reviews: undefined },
+  { name: "empty", reviews: [] },
+])("refuses a $name reviewer list", ({ reviews }) => {
+  expect(acceptWith(reviews)).toEqual({
+    ok: false,
+    state: "running",
+    reasons: [
+      { reason: "review-missing", subject: "completion-reviewer" },
+      { reason: "review-missing", subject: "qa-gatekeeper" },
+    ],
+    events: 0,
+  });
+});
+
+it("does not substitute an unrelated PASS for a required role", () => {
+  expect(
+    acceptWith([review("completion-reviewer", "PASS"), review("implementation-reviewer", "PASS")]),
+  ).toEqual({
+    ok: false,
+    state: "running",
+    reasons: [{ reason: "review-missing", subject: "qa-gatekeeper" }],
+    events: 0,
+  });
+});
+
+it("keeps a debt-bearing result unaccepted when a required PASS is missing", () => {
+  expect(acceptWith([review("completion-reviewer", "PASS")], "accepted_with_debt")).toEqual({
+    ok: false,
+    state: "running",
+    reasons: [{ reason: "review-missing", subject: "qa-gatekeeper" }],
+    events: 0,
+  });
 });

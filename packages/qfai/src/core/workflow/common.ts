@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
 import type {
@@ -13,6 +14,10 @@ import type {
 } from "./types.js";
 
 export const RESULT_ID = /^[A-Za-z0-9._-]{1,64}$/;
+
+export function resultRefOf(resultId: string): string {
+  return path.posix.join("results", `~${Buffer.from(resultId, "utf8").toString("hex")}.json`);
+}
 
 export const TERMINAL_STATES = ["completed", "cancelled", "failed"];
 
@@ -40,17 +45,13 @@ export function areaCovers(area: string, filePath: string): boolean {
   );
 }
 
-// Whether the run's history records an agent instance as an author or recommender of a stage
-// instance's output. Authoring another stage's output does not count.
-export function authoredStage(
+export function isAuthorOrRecommender(
   actorHistory: readonly WorkflowActor[],
   agentInstance: string,
-  stageInstanceId: string,
 ) {
   return actorHistory.some(
     (actor) =>
       actor.agentInstance === agentInstance &&
-      actor.stageInstanceId === stageInstanceId &&
       (actor.role === "author" || actor.role === "recommender"),
   );
 }

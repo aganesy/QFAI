@@ -1,9 +1,10 @@
 import {
   areaCovers,
-  authoredStage,
   firstMatchedKind,
+  isAuthorOrRecommender,
   notReady,
   RESULT_ID,
+  resultRefOf,
   refusedWith,
   skillOwnerOf,
   STORY_AUTHORING_KINDS,
@@ -86,45 +87,29 @@ function notRunRefusalOf(
   return undefined;
 }
 
-// A review reviews the output of the stage the result answers. Its reviewer is not independent
-// when it is the result's own actor or the history records it as an author of that stage's
-// output; having authored another stage of the run does not count.
+// A review by the result's own actor reviews its own work.
+// SIMPLIFIED: a reviewer recorded as an author or recommender anywhere in the run is refused.
+// Lift when: a review result names the stage it reviewed.
 function reviewerRefusals(result: WorkflowResult, actorHistory: readonly WorkflowActor[]) {
   return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
     review.agentInstance === result.actor?.agentInstance ||
-    authoredStage(actorHistory, review.agentInstance, result.stageInstanceId)
+    isAuthorOrRecommender(actorHistory, review.agentInstance)
       ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
       : [],
   );
 }
 
-// A result that reports its stage accepted carries a PASS from each reviewer role the work order
-// requires. A result that re-routes at a declared branch point hands its work on, and needs none.
-// Who gave a PASS is checked by `reviewerRefusals`.
-function missingReviewRefusals(
-  result: WorkflowResult,
-  workOrder: WorkflowWorkOrder,
-): InputRefusal[] {
-  if (!isAccepted(result) || result.branch !== undefined) return [];
-  const passed = new Set(
-    (result.reviewResults ?? [])
-      .filter((review) => review.verdict === "PASS")
-      .map((review) => review.role),
-  );
-  return (workOrder.requiredReviewerRoles ?? [])
-    .filter((role) => !passed.has(role))
-    .map((role) => ({ reason: "review-missing", subject: role }));
-}
-
-// SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
-// Lift when: the command adapter supplies the digest of every file a result names.
+// Every submitted digest of a changed file or an artifact is checked against the core's own. A
+// path the facts carry no digest for names no readable file: a changed file outside the project's
+// real root is refused as `write-scope`, an artifact as `schema`, and a deleted file has no
+// digest to compare.
 function digestRefusals(result: WorkflowResult, facts: WorkflowFacts): InputRefusal[] {
-  return (result.changedFiles ?? [])
-    .filter((changed) => {
-      const own = facts.fileDigests?.[changed.path];
-      return own !== undefined && own !== changed.digest;
+  return [...(result.changedFiles ?? []), ...(result.artifactRefs ?? [])]
+    .filter((named) => {
+      const own = facts.fileDigests?.[named.path];
+      return own !== undefined && own !== named.digest;
     })
-    .map((changed) => ({ reason: "digest-mismatch", subject: changed.path }));
+    .map((named) => ({ reason: "digest-mismatch", subject: named.path }));
 }
 
 function measurementRefusals(result: WorkflowResult): InputRefusal[] {
@@ -319,7 +304,6 @@ export function resultRefusals(
     ...adoptedRefusals(snapshot, result, workOrder, facts),
     ...raiseRefusals(result),
     ...reviewerRefusals(result, snapshot.actorHistory ?? []),
-    ...missingReviewRefusals(result, workOrder),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
     ...blockedRefusals(snapshot, result, workOrder, facts),
@@ -372,7 +356,7 @@ export function blockOnResult(
     events: [
       {
         type,
-        resultRef: `results/${result.resultId}.json`,
+        resultRef: resultRefOf(result.resultId),
         stageInstanceId: result.stageInstanceId,
         outcome: result.outcome,
         ...(halt ? { halt } : {}),
@@ -439,7 +423,7 @@ function decideDelegation(
   const kept = { ...workOrder, attempt: retry.attempt };
   const event = {
     type: "retry-scheduled",
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     workOrder: kept,
     retry,
   };
@@ -469,7 +453,7 @@ function openStageQuestions(
     ...questions.map((question) => ({ type: "question-opened", question })),
     {
       type: "material-decision",
-      resultRef: `results/${result.resultId}.json`,
+      resultRef: resultRefOf(result.resultId),
       stageInstanceId: result.stageInstanceId,
       outcome: result.outcome,
       ...extras,
@@ -510,29 +494,46 @@ function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[
   return { stage, steps: servingSteps(stage, owner) };
 }
 
-// Whether the result names the plan stage the run is at, with the fields that stage needs.
-function stageResultIsBroken(
+// Whether the outstanding work order is the plan stage the run is at, with the steps that stage
+// issues.
+function issuedStageIsNext(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   stage: PlanStage,
-  result: WorkflowResult,
   steps: string[],
 ): boolean {
   const flowTarget = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
-  const diagnosis = result.diagnosis;
   return (
-    workOrder.stageInstanceId !== stage.stageInstanceId ||
-    workOrder.stageKind !== stage.stageKind ||
-    stepNamesOf(workOrder).join(",") !== steps.join(",") ||
-    (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
-    (needsDiagnosis({ ...stage, steps: stageSteps(stage).filter((s) => steps.includes(s.name)) }) &&
-      (!diagnosis ||
-        !DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) ||
-        !diagnosis.reproductionRef ||
-        !Array.isArray(diagnosis.matchedIds))) ||
-    !outcomeIsAcceptable(result, stage.stageKind) ||
-    result.proposal !== undefined
+    workOrder.stageInstanceId === stage.stageInstanceId &&
+    workOrder.stageKind === stage.stageKind &&
+    stepNamesOf(workOrder).join(",") === steps.join(",") &&
+    (flowTarget === undefined || flowTarget === snapshot.flowBinding?.flowId)
   );
+}
+
+// The fields of a stage result whose presence depends on the stage it answers.
+function stageFieldRefusals(
+  stage: PlanStage,
+  result: WorkflowResult,
+  steps: string[],
+): InputRefusal[] {
+  const refusals: InputRefusal[] = [];
+  const diagnosis = result.diagnosis;
+  const diagnosed =
+    diagnosis !== undefined &&
+    DIAGNOSIS_VERDICTS.some((verdict) => verdict === diagnosis.verdict) &&
+    Boolean(diagnosis.reproductionRef) &&
+    Array.isArray(diagnosis.matchedIds);
+  const needed = needsDiagnosis({
+    ...stage,
+    steps: stageSteps(stage).filter((s) => steps.includes(s.name)),
+  });
+  if (needed && !diagnosed) refusals.push({ reason: "schema", subject: "diagnosis" });
+  if (!outcomeIsAcceptable(result, stage.stageKind)) {
+    refusals.push({ reason: "schema", subject: "outcome" });
+  }
+  if (result.proposal !== undefined) refusals.push({ reason: "schema", subject: "proposal" });
+  return refusals;
 }
 
 // A gate verdict a result submits is informative only; the core never decides a gate from it.
@@ -557,7 +558,7 @@ function acceptedEvents(
   return [
     {
       type,
-      resultRef: `results/${result.resultId}.json`,
+      resultRef: resultRefOf(result.resultId),
       stageInstanceId: workOrder.stageInstanceId,
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
@@ -702,11 +703,15 @@ export function acceptStageResult(
   const stage = repair?.stage ?? selected[accepted.length];
   if (!plan || !workOrder || !stage) return notReady(run, "stage result");
   const steps = (repair?.steps ?? issuableSteps(snapshot, stage)).map((step) => step.name);
-  if (stageResultIsBroken(snapshot, workOrder, stage, result, steps)) {
-    return notReady(run, "stage result");
+  if (!issuedStageIsNext(snapshot, workOrder, stage, steps)) {
+    return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
   }
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
-  const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
+  const refusals = [
+    ...stageFieldRefusals(stage, result, steps),
+    ...resultRefusals(snapshot, result, workOrder, facts),
+    ...storyTree.refusals,
+  ];
   if (refusals.length > 0) return refusedWith(run, refusals);
   const revision = revisionOf(facts);
   const extras = { ...storyTree.extras, ...(revision ? { revision } : {}) };
@@ -756,7 +761,7 @@ export function acceptSeamOnly(
   }
   const event = {
     type: "accept-nonfinal-result",
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     stageInstanceId: workOrder.stageInstanceId,
     outcome: result.outcome,
   };

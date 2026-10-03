@@ -20,7 +20,9 @@ import {
   findDeclaringDir,
   findPackageJsonUpward,
   locateToolAgainstProject,
+  reachedThroughLinkedNodeModules,
   resolveToolPackageDir,
+  resolvesThroughOwnNodeModules,
 } from "../../src/core/version.js";
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
@@ -332,6 +334,133 @@ describe("findDeclaringDir", () => {
       );
 
       expect(await findDeclaringDir(pkg)).toBe(root);
+    });
+  });
+});
+
+describe("resolvesThroughOwnNodeModules", () => {
+  it("counts a copy behind a worktree's linked node_modules as the project's own", async () => {
+    // A worktree that links its `node_modules` to the main checkout's. Node
+    // reports the package at its real path, under the main checkout, but the
+    // worktree's own entry is what resolved it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("counts pnpm's virtual store behind the link as the project's own", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, ".pnpm", "qfai@1.12.3", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count the enclosing checkout's copy when the worktree has no node_modules", async () => {
+    // The hazard the check exists for: `npx` walked parents and found another
+    // checkout's install. Nothing in the worktree pointed there.
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(false);
+    });
+  });
+
+  it("does not count a copy outside where the link points", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      await mkdir(mainModules, { recursive: true });
+      const elsewhere = path.join(dir, "global", "lib", "node_modules", "qfai");
+      await mkdir(elsewhere, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, elsewhere)).toBe(false);
+    });
+  });
+
+  it("does not count a source checkout that the linked node_modules links to", async () => {
+    // A workspace dependency: `node_modules/qfai` is itself a link to another
+    // checkout's source, which is another branch's build, not an installed copy.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const sourceDir = path.join(dir, "main", "packages", "qfai");
+      await mkdir(mainModules, { recursive: true });
+      await mkdir(sourceDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, sourceDir)).toBe(false);
+    });
+  });
+});
+
+describe("reachedThroughLinkedNodeModules", () => {
+  it("counts the declaring directory's linked node_modules for a workspace package", async () => {
+    // The worktree's top level declares qfai and links its `node_modules` to
+    // the main checkout's; the project being validated is a package below it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      const webDir = path.join(worktree, "packages", "web");
+      await mkdir(webDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await reachedThroughLinkedNodeModules(webDir, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count a copy hoisted into the declaring directory's real node_modules", async () => {
+    await withTempDir(async (dir) => {
+      const worktree = path.join(dir, "worktree");
+      const packageDir = path.join(worktree, "node_modules", "qfai");
+      const outDir = path.join(worktree, "out");
+      await mkdir(packageDir, { recursive: true });
+      await mkdir(outDir, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(outDir, packageDir)).toBe(false);
+    });
+  });
+
+  it("does not count a copy when neither directory links to it", async () => {
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await writeFile(
+        path.join(worktree, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^1.0.0" } }),
+      );
+
+      expect(await reachedThroughLinkedNodeModules(worktree, packageDir)).toBe(false);
     });
   });
 });
