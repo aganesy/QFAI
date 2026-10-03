@@ -10,7 +10,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Missing directories still identify a legacy run; permission and I/O failures
   reach the workflow's I/O refusal instead of being reported as legacy.
 
+### Added
+
+- **Context summaries preserve requests, decisions, open work and stage state**
+  (#2243), including question and review budgets. User wording stays close to
+  verbatim.
+
 ### Changed
+
+- **The implementation reviewer checks silent failure and type design**
+  (#2248). It reads the whole of every file a change touches, not only the
+  lines the change adds or alters.
+
+  - Silent failure: an empty catch or a silent return, a catch that also
+    catches errors it did not expect, a fallback that masks the problem, a
+    failure that should propagate instead, a log entry too thin to debug from,
+    and user feedback that does not say what to do next.
+  - Type design: mutable internals exposed, an invariant held only by
+    documentation, validation missing at construction, enforcement that
+    differs between mutations, and outside code left to maintain an invariant
+    the type should own.
+  - A finding on what the change added or altered can block. A finding on code
+    that was already there is recorded and deferred, never blocking. Findings
+    are concrete problems, with no rating per check.
+  - The `/qfai-implement` row of the reviewer remit table says the same.
 
 - **The patterns that mark a design as generated are named** (#2241). A new
   `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
