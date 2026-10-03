@@ -1098,44 +1098,18 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
 
   const forbiddenCalls = (text: string): string[] => text.match(FORBIDDEN_FS_CALL_RE) ?? [];
 
-  /**
-   * Extracts a function's body text by brace counting from the
-   * `function <name>(` definition marker (call sites never match: they
-   * are not preceded by `function `). The body opens at the first `{`
-   * that ends a line after the parameter list closes, so a type literal
-   * among the parameters or in the return type is never taken for it.
-   * Returns undefined when absent so the caller's assertion is what fails.
-   */
   function extractFunctionBody(source: string, name: string): string | undefined {
-    const idx = source.indexOf(`function ${name}(`);
-    if (idx === -1) {
-      return undefined;
-    }
-    let parens = 0;
-    let paramsEnd = idx + `function ${name}`.length;
-    do {
-      const ch = source.charAt(paramsEnd);
-      if (ch === "(") parens += 1;
-      if (ch === ")") parens -= 1;
-      paramsEnd += 1;
-    } while (paramsEnd < source.length && parens > 0);
-    const opening = /\{[ \t]*\r?\n/.exec(source.slice(paramsEnd));
-    if (!opening) {
-      return undefined;
-    }
-    const braceStart = paramsEnd + opening.index;
-    let depth = 1;
-    let end = braceStart + 1;
-    while (end < source.length && depth > 0) {
-      const ch = source.charAt(end);
-      if (ch === "{") {
-        depth += 1;
-      } else if (ch === "}") {
-        depth -= 1;
-      }
-      end += 1;
-    }
-    return source.slice(braceStart + 1, end - 1);
+    const parsed = ts.createSourceFile(
+      "init.ts",
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
+    );
+    const body = parsed.statements
+      .filter(ts.isFunctionDeclaration)
+      .find((node) => node.name?.text === name)?.body;
+    return body ? source.slice(body.getStart(parsed) + 1, body.getEnd() - 1) : undefined;
   }
 
   it.each(["", 'const marker = "}";', "/* } */"])(
