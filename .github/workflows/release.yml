@@ -960,13 +960,8 @@ jobs:
           echo "rebuilt ${names} permitted dependency package(s)"
         shell: bash
       - name: Drop the placeholder auth line so npm reaches the OIDC exchange
-        # setup-node writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
-        # and exports NODE_AUTH_TOKEN as the literal `XXXXX-XXXXX-XXXXX-XXXXX`
-        # when no token is supplied. npm reads that as a configured credential,
-        # skips trusted publishing entirely, and sends a token the registry has
-        # never seen. Removing the line is the workaround tracked in
-        # actions/setup-node#1551; npm then finds ACTIONS_ID_TOKEN_REQUEST_* and
-        # exchanges properly.
+        # setup-node writes an auth-token entry for registry-url. Remove that
+        # entry before trusted publishing so npm uses the OIDC exchange.
         run: |
           set -euo pipefail
           npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"

@@ -30,7 +30,7 @@ import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { legacyRoutingEntries } from "../helpers/legacyRouting.js";
 import { atLocation } from "../helpers/reportLocation.js";
 import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
-import { sentencesOf } from "../helpers/shippedSentences.js";
+import { expectSentence, sentencesOf } from "../helpers/shippedSentences.js";
 import {
   isMigrationReportAncestor,
   isMigrationReportPath,
@@ -172,7 +172,9 @@ function section(report: string, name: string): string[] {
   const heading = "## " + name;
   const start = report.indexOf(heading + "\n");
   if (start < 0) return [];
-  const body = report.slice(start + heading.length + 1).split(/\r?\n## /, 1)[0] ?? "";
+  // Step 10's closing line follows its last section and belongs to none of them.
+  const body =
+    report.slice(start + heading.length + 1).split(/\r?\n## |\r?\nSummary: /, 1)[0] ?? "";
   return body
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -196,6 +198,61 @@ function completedAsExpected(number: number, result: Result): boolean {
 
 function reportPath(kind: "dry-run" | "run", number: number, count: number): string {
   return `${MIGRATION_REPORT_DIR}/${kind}/step-${String(number).padStart(2, "0")}-${String(count).padStart(3, "0")}.md`;
+}
+
+const VERDICT_FOUND = "1.x layout found, migrating";
+const VERDICT_DONE = "already migrated (id-map.json present)";
+const SUMMARY_FOUND = "Summary: a 1.x layout was found, so the steps are migrating it.";
+const ALREADY_DONE =
+  "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
+
+function verdictNone(specsDir: string): string {
+  return `no 1.x layout found under ${specsDir} (paths.specsDir=${specsDir})`;
+}
+
+function summaryNone(specsDir: string): string {
+  return `Summary: no 1.x layout was found under ${specsDir} (paths.specsDir=${specsDir}). Check that this is where the specs live.`;
+}
+
+/** The first three lines of a report: the verdict line, an empty line and the first heading. */
+function opening(text: string): string[] {
+  return text.split(/\r?\n/).slice(0, 3);
+}
+
+function summaryLines(text: string): string[] {
+  return text.split(/\r?\n/).filter((line) => line.startsWith("Summary"));
+}
+
+function lastLine(text: string): string | undefined {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "")
+    .at(-1);
+}
+
+/** A project on the story tree with no ID map and no 1.x trace, its specs under `specsDir`. */
+async function storyTreeProject(specsDir: string, contractsDir: string): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-verdict-"));
+  temporary.push(root);
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    stringifyYaml({ paths: { specsDir, contractsDir } }),
+  );
+  const policy = path.join(root, ...specsDir.split("/"), "01_policy");
+  await mkdir(policy, { recursive: true });
+  await writeFile(path.join(policy, "objective.md"), "# Objective\n");
+  await linkPackage(root);
+  return root;
+}
+
+/** Makes the package under test resolvable from `root`, as the migration scripts need. */
+async function linkPackage(root: string): Promise<void> {
+  await mkdir(path.join(root, "node_modules"), { recursive: true });
+  await symlink(
+    packageRoot,
+    path.join(root, "node_modules/qfai"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
 }
 
 /** A kept report holds what the run printed, and its exit code as the last line. */
@@ -634,7 +691,7 @@ describe("BF-0004 acceptance criteria", () => {
       for (const name of ["Operations", "For a person", "Annotations kept"]) {
         expect(result.stdout, name).toContain(`## ${name}\nnone`);
       }
-      expect(result.stdout).toMatch(/^## Operations\n/);
+      expect(opening(result.stdout)).toEqual([VERDICT_FOUND, "", "## Operations"]);
       results.push(result);
     }
     const after = await fileSnapshot(root);
@@ -868,7 +925,7 @@ describe("BF-0004 acceptance criteria", () => {
     const before = await fileSnapshot(root);
     const result = step(root, 1);
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/^## Operations\n- /);
+    expect(result.stdout).toMatch(/^1\.x layout found, migrating\n\n## Operations\n- /);
     expect(await migrationReportFiles(root, "run", 1)).toEqual([reportPath("run", 1, 1)]);
     const after = await fileSnapshot(root);
     const added = [...after.keys()].filter((name) => !before.has(name));
@@ -882,6 +939,7 @@ describe("BF-0004 acceptance criteria", () => {
     const again = step(root, 1);
     expect(again.status).toBe(0);
     expect(again.stdout).toContain("## Operations\nnone\n");
+    expect(opening(again.stdout)).toEqual([VERDICT_FOUND, "", "## Operations"]);
     expect(await fileSnapshot(root)).toEqual(after);
   });
 
@@ -1083,6 +1141,116 @@ describe("BF-0004 acceptance criteria", () => {
       ).toBe(content);
     }
   });
+
+  // QFAI:AC-0004-0003-08
+  it("opens each of steps 1 to 10 on a tree with no 1.x layout with a line naming the specs directory", async () => {
+    for (const [specsDir, contractsDir] of [
+      [".qfai/spec", ".qfai/spec/03_contract"],
+      ["docs/specs", "docs/contracts"],
+    ] as const) {
+      const root = await storyTreeProject(specsDir, contractsDir);
+      const before = await fingerprint(root);
+      for (let number = 1; number <= 10; number += 1) {
+        for (const [kind, args] of [
+          ["dry-run", ["--dry-run"]],
+          ["run", []],
+        ] as const) {
+          const label = `${specsDir} step ${number} ${kind}`;
+          const result = step(root, number, [...args]);
+          expect(result.status, `${label}: ${result.stderr}`).toBe(0);
+          expect(opening(result.stdout), label).toEqual([
+            verdictNone(specsDir),
+            "",
+            "## Operations",
+          ]);
+          expect(summaryLines(result.stdout), label).toEqual(
+            number === 10 ? [summaryNone(specsDir)] : [],
+          );
+          if (number === 10) expect(lastLine(result.stdout), label).toBe(summaryNone(specsDir));
+          const kept = await readMigrationReport(root, reportPath(kind, number, 1));
+          expect(kept.split(/\r?\n/)[0], label).toBe(verdictNone(specsDir));
+          expectKeptReport(kept, result);
+        }
+      }
+      expect(await fingerprint(root)).toBe(before);
+    }
+  }, 120_000);
+
+  // QFAI:AC-0004-0003-08
+  it("opens each step of a 1.x project with the found line and closes only step 10 with a summary", async () => {
+    for (let number = 1; number <= 10; number += 1) {
+      for (const [kind, result] of [
+        ["dry-run", journey.dry[number - 1]],
+        ["run", journey.applied[number - 1]],
+      ] as const) {
+        const label = `step ${number} ${kind}`;
+        if (result === undefined) throw new Error(`${label} has no result`);
+        expect(opening(result.stdout), label).toEqual([VERDICT_FOUND, "", "## Operations"]);
+        expect(summaryLines(result.stdout), label).toEqual(number === 10 ? [SUMMARY_FOUND] : []);
+        if (number === 10) expect(lastLine(result.stdout), label).toBe(SUMMARY_FOUND);
+        const kept = await readMigrationReport(journey.root, reportPath(kind, number, 1));
+        expect(kept.split(/\r?\n/)[0], label).toBe(VERDICT_FOUND);
+      }
+    }
+  });
+
+  // QFAI:AC-0004-0003-08
+  it("opens each rerun step with the found line while the migration still keeps an annotation for a person", async () => {
+    for (let number = 1; number <= 10; number += 1) {
+      const rerun = await readMigrationReport(journey.root, reportPath("run", number, 2));
+      const label = `step ${number} rerun`;
+      expect(opening(rerun), label).toEqual([VERDICT_FOUND, "", "## Operations"]);
+      expect(rerun, label).not.toContain(ALREADY_DONE);
+      expect(summaryLines(rerun), label).toEqual(number === 10 ? [SUMMARY_FOUND] : []);
+    }
+  });
+
+  // QFAI:AC-0004-0003-08
+  it("opens each rerun step of a finished migration with the already-migrated line and keeps the already-done line last", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-finished-"));
+    temporary.push(root);
+    await cp(journey.root, root, { recursive: true, verbatimSymlinks: true });
+    await rm(path.join(root, "node_modules"), { recursive: true, force: true });
+    await linkPackage(root);
+    const test = path.join(root, "tests/integration/order.test.ts");
+    const kept = (await readFile(test, "utf8"))
+      .split("\n")
+      .filter((line) => !line.includes("QFAI:SPEC-0001:US-0001-0001"));
+    await writeFile(test, kept.join("\n"));
+    // A first pass settles what copying the tree changed, such as the host links.
+    for (let number = 1; number <= 10; number += 1) step(root, number);
+    for (let number = 1; number <= 10; number += 1) {
+      const result = step(root, number);
+      const label = `step ${number} rerun`;
+      expect(result.status, `${label}: ${result.stderr}`).toBe(0);
+      expect(opening(result.stdout), label).toEqual([VERDICT_DONE, "", "## Operations"]);
+      expect(summaryLines(result.stdout), label).toEqual([]);
+      expect(lastLine(result.stdout), label).toBe(ALREADY_DONE);
+      const [latest] = (await migrationReportFiles(root, "run", number)).slice(-1);
+      const report = await readMigrationReport(root, latest ?? "");
+      expect(report.split(/\r?\n/)[0], label).toBe(VERDICT_DONE);
+    }
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-08
+  it("prints no verdict line and no closing line from steps 11 and 12", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf4-entry-"));
+    temporary.push(root);
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await linkPackage(root);
+    for (const number of [11, 12]) {
+      for (const args of [["--dry-run"], []]) {
+        const label = `step ${number} ${args.join(" ")}`;
+        const result = step(root, number, args);
+        expect([0, 3], `${label}: ${result.stderr}`).toContain(result.status);
+        expect(opening(result.stdout)[0], label).toBe("## Operations");
+        expect(summaryLines(result.stdout), label).toEqual([]);
+        for (const verdict of [VERDICT_FOUND, VERDICT_DONE, "no 1.x layout found"]) {
+          expect(result.stdout, label).not.toContain(verdict);
+        }
+      }
+    }
+  }, 120_000);
 
   // QFAI:AC-0004-0004-01
   it("moves the configured spec and contract roots", async () => {
@@ -2610,6 +2778,34 @@ describe("BF-0004 acceptance criteria", () => {
     ];
     const prose = skill.replace(/\s+/g, " ");
     for (const phrase of required) expect(prose).toContain(phrase);
+  });
+
+  // QFAI:AC-0004-0012-01
+  it("directs the AI to name the specs directory and ask the person to check it when no layout was found", async () => {
+    const skillDirectory = path.join(
+      packageRoot,
+      "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2",
+    );
+    for (const file of ["SKILL.md", "references/migration-guide.md"]) {
+      const text = await readFile(path.join(skillDirectory, file), "utf8");
+      const prose = text.replace(/\s+/g, " ");
+      for (const line of [
+        "no 1.x layout found under",
+        "(paths.specsDir=",
+        VERDICT_DONE,
+        VERDICT_FOUND,
+      ]) {
+        expect(prose, `${file} names ${line}`).toContain(line);
+      }
+      expectSentence(
+        text,
+        `${file} directs the report, the directory and the question`,
+        /nothing to migrate/i,
+        /\bdirector/i,
+        /\bask/i,
+        /\bcheck/i,
+      );
+    }
   });
 
   // QFAI:AC-0004-0001-01

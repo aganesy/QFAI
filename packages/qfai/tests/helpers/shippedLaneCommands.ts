@@ -1375,8 +1375,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
+    //
+    // The generated rule list cites action-reversibility and untrusted-content.
+    // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "dfa370bc935f988bf29374437af39a24cba55aacf178387e82e5a9f982869b0c",
+    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1461,11 +1464,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // Re-pinned for the removal of the opening line that sent a first free-text change request to
-  // `qfai-run`, and the blank line after it. Putting both back at the top of the two written files
-  // reproduces `6d12562c…` and `1832d267…` byte for byte.
-  ["AGENTS.md", "ec22cd82c8c97e0b42517127b7f7a8e531d4691ee8882953dda511c134cc0984"],
-  ["CLAUDE.md", "8d7086b0adc28b94074bba2b32c59d6511a3dcc5bac211943b89b87f0c26a3ae"],
+  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
+  // These digests cover the shipped root templates, which init copies into a fresh project.
+  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
+  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1519,7 +1521,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // after one read the tool call and print nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
   // looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
   // the project up to its git root and prints only where there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
-  [".claude/settings.json", "87ae0f312dfbfaa49c5bdb665287ad8e9e9d692f2c43d614b0be5e54162ab78d"],
+  //
+  // Re-pinned when the structured-question group started reading its input. Its program parses the
+  // prompt from stdin and stays silent when a line of it opens with a `<task-notification>` or
+  // `<wake>` wrapper, which marks a turn the host started rather than one the user typed. Any other
+  // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
+  // one message key, no shell and no network. Events, matchers and markers are unchanged; the
+  // previous group is listed as superseded so the merge refreshes it.
+  [".claude/settings.json", "d3c9b6f5b4d4adde281fe0c36dec12dc1673eb8f07d06c4c854a0ce5ffa2897c"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1700,6 +1709,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
@@ -1710,6 +1720,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/untrusted-content.md",
   "root/.agents/rules/user-questions.md",
   "root/.agents/rules/version-discipline.md",
   "root/.gitattributes",
