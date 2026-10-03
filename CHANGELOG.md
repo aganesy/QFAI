@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Journal test reads preserve filesystem errors** (#2846).
+  Required artifact reads keep their original error instead of replacing it
+  with an empty result; rebuilt-snapshot checks still clean up after failure.
+
 ### Added
 
 - **Context summaries preserve requests, decisions, open work and stage state**
