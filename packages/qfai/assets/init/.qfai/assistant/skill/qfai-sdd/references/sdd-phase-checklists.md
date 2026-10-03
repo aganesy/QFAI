@@ -44,13 +44,12 @@ The one example a diagnosed missing test needs is appended as `.qfai/assistant/s
 
 Follow concrete-abstract-cycle.md.
 
-- A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or in an `sdd_append` stage.
-- The finder is a test-design-analyst that wrote none of the BRs it read. Each cycle had one griller, neither the finder nor an author of a targeted item.
-- A finding resting on product intent nothing written states went to the user. A proposed EX that no existing BR, existing AC or the request implies was rejected.
+- A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or in an append stage.
+- The finder is a sub-agent that wrote none of the BRs it read. The session agent decided each finding that is not critical.
+- A finding resting on product intent nothing written states went to the user. A proposed EX that no existing BR, existing AC or the request implies was dropped.
 - Each adopted change took the route its target's age allows, and the affected BRs were rewritten from their updated EXs.
-- No more than two cycles ran, and a cycle that adopted nothing ended the loop. A finding with no decision at the end is an `Unadjudicated:` open-question row.
-- Each rejected finding is a REJECTED decision row naming its kind, target IDs and case. No decided or rejected finding was raised again.
-- The flow evidence has a row per finding, a row for each cycle that raised nothing, and the finder in the Work Orders Summary.
+- No more than two cycles ran, and a cycle that adopted nothing ended the loop. A finding still undecided at the end is one `Unadjudicated:` open-question row, and no other record was written.
+- No decided finding, and none a declined change request answers, was raised again.
 
 ## Validation and review
 
