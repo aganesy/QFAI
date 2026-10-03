@@ -50,7 +50,7 @@ when no cycle runs. The pass names the contracts it read.
 
 ## Record
 
-The flow evidence's `## Concrete-Abstract Cycle` table holds the cycles, as
+The SDD report's `## Concrete-Abstract Cycle` table holds the cycles, as
 `.qfai/assistant/skill/qfai-sdd/references/concrete-abstract-cycle.md#the-record`
 states. Where the concrete-abstract cycle ran, the completion reviewer returns
 REVISE on the grounds in

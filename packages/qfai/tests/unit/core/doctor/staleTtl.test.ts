@@ -1,5 +1,3 @@
-// QFAI:AC-0003-0008-04
-//
 // Unit-level boundary check for the run-log TTL helper behind
 // `doctor --clean`.
 

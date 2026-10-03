@@ -179,7 +179,7 @@ describe("repository attribution matcher", () => {
 
     expect(files).toContain("skill/qfai-prototyping/templates/DESIGN.md.sample");
     expect(files).toContain("skill/qfai-sdd/templates/contracts/db-contract.sample.sql");
-    expect(files).toContain("skill/qfai-discussion/templates/review/summary.json");
+    expect(files).toContain("skill/qfai-sdd/templates/contracts/api-contract.sample.yaml");
     // And the markdown the narrower glob already covered.
     expect(files).toContain("skill/qfai-sdd/references/contract-artifact-rules.md");
   });

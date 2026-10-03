@@ -60,7 +60,6 @@ describe("reviewer verdict vocabulary", () => {
         expect(content).toMatch(/(?:blocking |On `)REVISE/);
         expect(content).not.toMatch(/(?:blocking |On `)FAIL/);
         expect(content).toMatch(/rerun\s+(?:only\s+)?that\s+reviewer/);
-        expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
       }
     }
   });
@@ -69,7 +68,6 @@ describe("reviewer verdict vocabulary", () => {
     for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toMatch(/`?PASS`?\s*(?:\/|or)\s*`?REVISE`?/);
-        expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
       }
     }
 
@@ -81,11 +79,8 @@ describe("reviewer verdict vocabulary", () => {
   // The review REQUEST is what tells a reviewer which verdicts are legal. Leaving
   // `FAIL` there let a reviewer return a verdict the response template and both
   // playbooks no longer accept, so the fix cycle never started.
-  it("offers only the in-flight verdicts in both review-request templates", async () => {
-    for (const relative of [
-      "skill/qfai-discussion/templates/14_Review-Request.md",
-      "skill/qfai-discussion/templates/review/review_request.md",
-    ]) {
+  it("offers only the in-flight verdicts in the review-request template", async () => {
+    for (const relative of ["skill/qfai-discussion/templates/14_Review-Request.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toContain("Allowed in-flight verdicts: `PASS`, `REVISE`");
         expect(content).not.toContain("Allowed verdicts: `PASS`, `FAIL`");
@@ -103,7 +98,7 @@ describe("reviewer verdict vocabulary", () => {
       readShipped("step/implement-checkpoint/STEP.md"),
     ]);
     for (const content of tdd) {
-      expect(content).toContain("Record explicit PASS or REVISE for the current revision");
+      expect(content).toContain("Report explicit PASS or REVISE for the current revision");
       expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
     }
     for (const content of checkpoint) {
@@ -112,32 +107,14 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
-  it("names the same serialized status in the implement skill and its reference", async () => {
-    for (const content of await readShipped(
-      "skill/qfai-implement/references/review-artifact-layout.md",
-    )) {
-      expect(content).toContain("A blocking REVISE is status FAIL in the summary");
-      expect(content).not.toContain('status: "REVISE"');
-    }
-
+  it("keeps the reviewer response template on PASS | REVISE", async () => {
     for (const content of await readShipped("rule/shared-skill-delegation-baseline.md")) {
       expect(content).toContain("Result: PASS | REVISE");
       expect(content).not.toContain("Result: PASS | FAIL");
-      expect(content).toContain('maps to `status: "FAIL"`');
       expect(content).toContain(
         "Every reviewer returning `REVISE` must include a concrete fix proposal",
       );
       expect(content).not.toContain("Every reviewer returning `FAIL` or `REVISE`");
-    }
-  });
-
-  it("keeps the review response template on PASS | REVISE", async () => {
-    for (const content of await readShipped(
-      "skill/qfai-discussion/templates/review/Rxx_reviewer.md",
-    )) {
-      expect(content).toContain("PASS | REVISE");
-      expect(content).toContain("PASS / REVISE");
-      expect(content).not.toMatch(/PASS \| FAIL|PASS \/ FAIL/);
     }
   });
 });

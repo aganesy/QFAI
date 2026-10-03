@@ -1,8 +1,9 @@
 # Verify Output Contract — `.qfai/report/verify.json`
 
-`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<run-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `npx qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator. Only `certify` fails closed: it refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. The validator is advisory in the other direction — a missing, unparseable, scope-less or unknown-scope `verify.json` produces no finding (`reviewerGate.ts#detectCertifyVerifyCircular`), because its job is to catch a wrong-phase verdict, not to demand that one exist. So an absent `verify.json` will not fail `npx qfai validate`; it will stop `certify`.
+`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account.
+`npx qfai prototyping certify` reads it and refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. `npx qfai validate` does not read it, so an absent `verify.json` will not fail validate; it will stop `certify`.
 
-Canonical path: `.qfai/report/verify.json` (NOT `.qfai/evidence/`, NOT `.qfai/output/`). Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
+Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
 
 `.qfai/output/verify.json` is the legacy location. Readers still fall back to it when the canonical file is absent, and `npx qfai prototyping certify` prints a migration note when they do — it is read-only history for projects created before the move. Never write there.
 
@@ -12,7 +13,7 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/evidence/`, NOT `.qfai/ou
 | `scope`      | string           | yes\*    | Which stage's gate set this run covers. See the enum below. \*Required on every new run. `certify` still accepts a file written before this field existed, so a reader MUST treat absence as "legacy file", never as a licence to omit it. |
 | `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                                                                                                                                                                |
 | `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                                                                                                                                                    |
-| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                                                                                                                                                           |
+| `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                                                                                                                                                                |
 | `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                                                                                                                                                      |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.

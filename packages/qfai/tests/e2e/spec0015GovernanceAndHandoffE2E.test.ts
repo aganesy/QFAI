@@ -19,7 +19,7 @@
 // QFAI:BF-0001
 // QFAI:BF-0001
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -32,7 +32,6 @@ import {
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
 import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
-import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 let root: string;

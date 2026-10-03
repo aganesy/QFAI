@@ -61,7 +61,6 @@ specialization_tags:
 - Phased plan with owners, dependencies, and risks
 - Explicit DoD and gate commands
 - Parallelization decision and rerun policy
-- Evidence summary for `.qfai/evidence/`
 
 ## Stop conditions
 

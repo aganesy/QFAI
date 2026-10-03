@@ -19,6 +19,6 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 - Read existing policy, decisions, open questions, discussion provenance, and current contracts before asking. Do not ask the user for facts already recorded there.
 - The griller identifies options and failure cases, gives an evidence-based recommendation, and stops when a critical product decision needs the user. The orchestrator routes that question to the user; an agent's preference cannot supply approval.
 - Settle a critical question before the affected author writes.
-- Record each checkpoint in the affected `.qfai/evidence/sdd-BF-NNNN.md`, and each decision it settled, as `.qfai/assistant/step/common-grilling-record/STEP.md#checkpoints` and `.qfai/assistant/step/common-grilling-record/STEP.md#decision-rows` state. A skipped checkpoint fails the gate; it is not an implicit approval.
+- Record each checkpoint in the SDD report, per affected flow, and each decision it settled, as `.qfai/assistant/step/common-grilling-record/STEP.md#checkpoints` and `.qfai/assistant/step/common-grilling-record/STEP.md#decision-rows` state. A skipped checkpoint fails the gate; it is not an implicit approval.
 
 Pre-draft grilling settles a premise before drafting. The independent reviewer gate then checks the written artifact, its traceability, and its validation evidence. Both are required.

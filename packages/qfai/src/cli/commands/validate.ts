@@ -529,12 +529,7 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: FULL_GATE_GROUPS,
   verify: FULL_GATE_GROUPS,
-  discussion: [
-    "discussion",
-    "research-summary",
-    "canonical-uix",
-    "root-design-md-parse",
-  ],
+  discussion: ["discussion", "research-summary", "canonical-uix", "root-design-md-parse"],
   sdd: [
     "story-structure",
     "document-schema",

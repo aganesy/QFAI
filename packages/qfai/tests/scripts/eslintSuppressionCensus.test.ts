@@ -119,5 +119,4 @@ describe("the source tree adds no ESLint suppression nobody approved", () => {
         "diff; a removal only makes this list shorter and needs no permission at all.",
     ).toEqual([...PINNED]);
   });
-
 });

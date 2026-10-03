@@ -186,7 +186,6 @@ export type QfaiPrototypingConfig = {
   mode?: "convergence" | "exploration";
 };
 
-
 export type QfaiReportConfig = {
   /**
    * Stale run-log TTL (calendar days) used by `qfai doctor --clean` to
@@ -850,7 +849,6 @@ function normalizePrototypingExecution(
     browserTool,
   };
 }
-
 
 function readNonNegativeInteger(
   raw: unknown,

@@ -67,7 +67,7 @@ it, then move to the next.
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
 | `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |
 | `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                | `sdd-contract` wrote or changed no BR Statement or Example |
-| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow evidence        | Never                                                      |
+| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow report          | Never                                                      |
 
 `sdd-triage` records whether each affected flow is UI-bearing. A step that
 changes an input an earlier step consumed reruns that step's authors and

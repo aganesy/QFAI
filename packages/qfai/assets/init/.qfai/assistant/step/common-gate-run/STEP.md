@@ -40,7 +40,7 @@ Neither is restated here.
    the gap as the rule says; never substitute a command from another stack.
 3. **Run it** on the tree the stage will hand to its reviewer, in the
    environment the `Runtime` and `Platform` rows declare.
-4. **Record** in the stage evidence (`common-evidence-record`): the exact
+4. **Report** in the stage report: the exact
    command, the exit code, the counts or outcome, the revision the run read,
    and for a validate run the `<paths.outDir>/validate.log` path and the
    `run-*/` directory its `run_log:` line names. The CLI writes that log on

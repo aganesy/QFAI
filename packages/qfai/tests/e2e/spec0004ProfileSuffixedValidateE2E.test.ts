@@ -7,7 +7,7 @@
 // QFAI:BF-0002
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
+import { mkdtemp, readFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -15,7 +15,6 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);

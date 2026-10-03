@@ -91,5 +91,4 @@ describe("US-0015-0008: Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     const issues = await validateReviewerGate(root, await getConfig(root));
     expect(issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT")).toEqual([]);
   });
-
 });

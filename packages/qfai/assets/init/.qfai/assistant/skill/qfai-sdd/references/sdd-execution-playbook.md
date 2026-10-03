@@ -5,11 +5,9 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 ## Stage 0: source inventory
 
 1. Run npx qfai sdd preflight and read its selectedInputPath and source. Respect an explicitly selected discussion pack, including one older than the newest pack.
-2. Read the selected pack, completed reviews that target it, explicit user requirements, and the existing story tree. A pack is reference and provenance material. Disposition its applicable review advice in SDD evidence, a decision row, or an open question. A pack discrepancy does not itself block SDD.
+2. Read the selected pack, completed reviews that target it, explicit user requirements, and the existing story tree. A pack is reference and provenance material. Disposition its applicable review advice in the SDD report, a decision row, or an open question. A pack discrepancy does not itself block SDD.
 3. Stop if there is no usable input source. Stop on an unresolved product decision that cannot safely be inferred; record the question in open-questions.md.
-4. If no discussion pack exists and an imported specification or an explicit source does, create .qfai/evidence/import-lite-<ts>.md from ../templates/evidence/import-lite.md before editing the tree. Fill the timestamp, source or user excerpt, and selected input path. Do not manufacture a discussion pack.
-
-A review is completed only when its summary.json exists. Match the resolved pack path, include archived reviews, and distinguish a tracked pack's diff from an ignored or untracked pack whose earlier bytes cannot be compared. Do not treat an incomparable review as a current binding verdict.
+4. If no discussion pack exists and an imported specification or an explicit source does, use it as the input source and name it in the SDD report before editing the tree. Do not manufacture a discussion pack.
 
 ## Stage 1: triage and decisions
 
@@ -50,8 +48,7 @@ When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in 
 
 Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning
 source and rerun. A document that fails its schema is reshaped to its template; adding a section or a note to explain the
-error is never the fix. Record each command, result, log path, and contract executability in .qfai/evidence/sdd-BF-NNNN.md
-from ../templates/evidence/sdd-flow.md. Route independent reviewers under .qfai/assistant/step/common-review-cycle/STEP.md; all blocking
+error is never the fix. Report each command, result, log path, and contract executability per flow. Route independent reviewers under .qfai/assistant/step/common-review-cycle/STEP.md; all blocking
 verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 
 For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, say so in the report, record the pending ownership as an `open-questions.md` row, and do not claim a flow gate passed.

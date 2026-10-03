@@ -20,7 +20,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
-import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
@@ -36,21 +35,6 @@ async function pathExists(p: string): Promise<boolean> {
 
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-spec0004-chg005-${prefix}-`));
-}
-
-async function getConfig(root: string) {
-  const r = await loadConfig(root);
-  return r.config;
-}
-
-async function seedReviewerReport(root: string, body: unknown): Promise<void> {
-  const dir = path.join(root, ".qfai", "review", "review-2026-05-25");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "reviewer-completion.json"),
-    JSON.stringify(body, null, 2),
-    "utf-8",
-  );
 }
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";

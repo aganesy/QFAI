@@ -17,7 +17,7 @@
 // QFAI:EX-0001-0174-01
 // QFAI:EX-0001-0174-01
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 

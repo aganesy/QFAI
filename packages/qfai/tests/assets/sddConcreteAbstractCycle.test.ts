@@ -1,7 +1,7 @@
 /**
  * The concrete-abstract cycle `/qfai-sdd` runs between its contracts and the per-flow gate.
  *
- * The cycle is agent guidance with no validator of its own: the evidence record and the completion
+ * The cycle is agent guidance with no validator of its own: the report and the completion
  * reviewer are its assurance. So each example is discharged by the shipped statement that makes
  * the agent do what the example expects, read from the section that owns it:
  *
@@ -10,7 +10,7 @@
  * | Trigger, finder, adjudication, routes    | `references/concrete-abstract-cycle.md`                   |
  * | What each attempt of a run does          | `step/sdd-cycle/STEP.md`, its run section                 |
  * | The REVISE grounds                       | `references/sdd-quality-gate.md`, its cycle-record section |
- * | The record's columns and empty-cycle row | `templates/evidence/sdd-flow.md`                          |
+ * | The record's columns and empty-cycle row | `references/concrete-abstract-cycle.md`, its record section |
  *
  * Each assertion requires the distinguishing terms of one obligation inside one statement, so a
  * word left behind by a rewrite that dropped the obligation does not keep the test green.
@@ -24,7 +24,6 @@ const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const CYCLE_STEP = "step/sdd-cycle/STEP.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
-const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = sectionOf(await readShipped(file), heading);
@@ -41,7 +40,6 @@ const rejected = (): Promise<string> => section(CYCLE, "## Rejected findings");
 const record = (): Promise<string> => section(CYCLE, "## The record");
 const inRun = (): Promise<string> => section(CYCLE_STEP, "## Inside a workflow run");
 const revise = (): Promise<string> => section(GATE, "## Concrete-abstract cycle record");
-const template = (): Promise<string> => section(EVIDENCE, "## Concrete-Abstract Cycle");
 
 /** The five kinds, each by the phrase that names it. */
 const KINDS = [
@@ -359,12 +357,6 @@ describe("how many cycles run", () => {
       "the empty cycle's row",
       /one row for each cycle that raised nothing/i,
     );
-    expectSentence(
-      await template(),
-      "the row's form",
-      /one row for a cycle that raised nothing/i,
-      /`none` in Finding/,
-    );
   });
 
   // QFAI:EX-0001-0147-24
@@ -388,9 +380,9 @@ describe("how many cycles run", () => {
       "the row at once",
       /would go to the user becomes that row in the cycle that raised it/i,
     );
-    expectSentence(text, "no decision recorded", /evidence records it with no decision/i);
+    expectSentence(text, "no decision recorded", /report names it with no decision/i);
     expectSentence(text, "the gate", /per-flow gate reports that row as `QFAI-SPACK-102`/i);
-    expectSentence(await template(), "the record's form", /no decision has `none` in Decision/i);
+    expectSentence(await record(), "the record's form", /left with no decision records `none`/i);
   });
 
   // QFAI:EX-0001-0147-34
@@ -417,7 +409,6 @@ describe("how many cycles run", () => {
     expectSentence(text, "the finding's row", /one row per finding/i, /decision/i);
     // The empty row answers raising nothing, so a cycle that raised a finding and adopted none has none.
     expectSentence(text, "the empty row", /one row for each cycle that raised nothing/i);
-    expectSentence(await template(), "the empty row's form", /cycle that raised nothing/i);
   });
 });
 
@@ -505,15 +496,14 @@ describe("the record the completion reviewer checks", () => {
       "the fault is named",
       /returns REVISE, naming the cycle, finding or item at fault/i,
     );
-    const form = await template();
-    expect(
-      rowOf(form, "Adjudicator")
-        .split("|")
-        .map((cell) => cell.trim())
-        .filter(Boolean),
-    ).toEqual(["Cycle", "Finding", "Kind", "Target IDs", "Decision", "Adjudicator", "Reason"]);
-    expectSentence(form, "the adjudicator", /Adjudicator is the cycle's griller, or `user`/i);
-    expectSentence(form, "the finder is named", /Name the finder in the Work Orders Summary/i);
+    const form = await record();
+    expectSentence(
+      form,
+      "the columns",
+      /cycle, finding, kind, target IDs, decision, adjudicator and reason/i,
+    );
+    expectSentence(form, "the adjudicator", /adjudicator is the griller, or `user`/i);
+    expectSentence(form, "the finder is named", /finder, named in the Work Orders Summary/i);
   });
 
   // QFAI:EX-0001-0147-29

@@ -2,7 +2,7 @@
 name: verify-context
 owner: qfai-verify
 purpose: "Load what the change is verified against, fix the run's scope, and give every gate in that scope a command."
-requires: [common-steering-refresh, common-evidence-record, common-grilling-record]
+requires: [common-steering-refresh, common-grilling-record]
 roles: [orchestrator, delivery-planner, qa-strategist]
 ---
 
@@ -36,8 +36,7 @@ contracts and evidence only.
 
 ## Writes
 
-- `.qfai/evidence/verify-<run-id>.md`, opened as `common-evidence-record`
-  says where `verify-change-note` has not opened it already: the Objective with the declared scope, the inputs reviewed, and this
+- In the stage report: the declared scope, the inputs reviewed, and this
   invocation's `## Grilling Session` block.
 - Gate commands found here, in
   `.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`.
@@ -136,8 +135,7 @@ recommendation.
   input must change, `.qfai/assistant/rule/drift-protocol.md` governs. Where it
   concludes the obstacle is this run's to solve, the run solves it.
 
-Record both as `common-grilling-record` says, in
-`.qfai/evidence/verify-<run-id>.md`, under the heading
+Record both as `common-grilling-record` says, under the heading
 `### /qfai-verify — run started <time>`. The preflight session's `Subject` is
 `preflight`. `Work resumed` is the first gate result after the preflight
 session, and the first edit after a detected one.

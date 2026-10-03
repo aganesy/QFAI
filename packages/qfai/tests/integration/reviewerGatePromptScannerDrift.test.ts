@@ -142,7 +142,6 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
       ].sort(),
     );
   });
-
 });
 
 /**

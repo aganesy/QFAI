@@ -68,7 +68,7 @@ states.
 6. Reconcile API and DB fields, state transitions, errors and persisted
    attributes, and run the executable DB contract checks
    `contract-artifact-rules.md` requires. Record the command and result under
-   Contract executability in the flow evidence.
+   Contract executability in the SDD report.
 
 ## UI contracts
 

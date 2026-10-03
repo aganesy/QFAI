@@ -10,7 +10,7 @@ while the author of the rule is still in the invocation.
 A cycle runs when Stage 4 of this invocation wrote or changed the Statement or
 the Examples cell of at least one BR.
 
-No cycle runs, and the evidence gets no cycle row, when:
+No cycle runs, and the report gets no cycle row, when:
 
 - the invocation wrote or changed no BR Statement and no Examples cell, even if
   it changed an AC or an EX;
@@ -97,7 +97,7 @@ target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` until it is
 decided.
 
 Under `--auto`, outside a run, nothing is asked. A finding that would go to the
-user becomes that row in the cycle that raised it, and the evidence records it
+user becomes that row in the cycle that raised it, and the report names it
 with no decision.
 
 ## Rejected findings
@@ -132,8 +132,8 @@ states what each attempt writes.
 
 ## The record
 
-The flow's `.qfai/evidence/sdd-BF-NNNN.md` records every cycle under
-`## Concrete-Abstract Cycle` (`../templates/evidence/sdd-flow.md`):
+The SDD report records every cycle, per flow, under
+`## Concrete-Abstract Cycle`:
 
 - one row per finding: cycle, finding, kind, target IDs, decision, adjudicator
   and reason;

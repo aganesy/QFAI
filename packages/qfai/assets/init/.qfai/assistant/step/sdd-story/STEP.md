@@ -2,7 +2,7 @@
 name: sdd-story
 owner: qfai-sdd
 purpose: "Write the stories, acceptance criteria and examples of each affected flow, or append the one example a diagnosed defect needs."
-requires: [common-grilling-record, common-evidence-record]
+requires: [common-grilling-record]
 roles:
   [
     requirements-analyst,
@@ -105,7 +105,5 @@ existing AC already states:
 - Record the appended EX as one `decisions.md` triage row naming UPDATE:APPEND,
   the story and the diagnosis as its source. The operation needs no approval, so
   the row cites no `human_decision`.
-- `.qfai/evidence/sdd-BF-NNNN.md`, written with `common-evidence-record`,
-  records the diagnosed defect and the run ID, and names no path under
-  `.qfai/run/`.
-- No concrete-abstract cycle runs, and the evidence gets no cycle row.
+- The stage report names the diagnosed defect.
+- No concrete-abstract cycle runs, and the report gets no cycle row.

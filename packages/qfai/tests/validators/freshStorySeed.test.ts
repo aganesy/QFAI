@@ -110,5 +110,4 @@ describe("fresh story seed validation", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
-
 });

@@ -18,12 +18,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ARTICLE_XI_TMP_ENTRY,
-  QFAI_GITIGNORE_BLOCK,
-  QFAI_GITIGNORE_MARKER,
-  QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
-} from "../../src/core/gitignore.js";
+import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
@@ -50,7 +45,6 @@ describe("the managed block ships the ignore Article XI mandates", () => {
     // Before the negations, which git's last-match rule requires to stay last.
     expect(lines.indexOf("/tmp/")).toBeLessThan(lines.indexOf("!.qfai/"));
   });
-
 });
 
 describe("git honours the entry the block writes", () => {

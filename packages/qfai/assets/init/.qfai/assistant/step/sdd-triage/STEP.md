@@ -44,12 +44,12 @@ target scopes the stage to that business flow, and its gate runs with
    Stage 0 snapshot.
 3. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
-   normative SSOT. Record a discrepancy in an SDD-owned row or evidence; do not
+   normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
    edit the pack to clear this stage.
 4. Stop if no usable source exists or a product decision cannot be inferred
-   safely. An imported tree without a discussion pack uses the import-lite
-   evidence route in
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
+   safely. An imported tree without a discussion pack takes its source as
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
+   says.
 
 ## Stage 1: triage and records
 
@@ -145,7 +145,7 @@ reaches — the owner, wire or retire, how to repair — is taken here:
   on product intent nothing written states. The result also raises `gate:user`
   through `raise`, as `{ modifier, reason }`, for the rest of the run.
 
-Invoked by name, record each such decision in the flow evidence with whether
+Invoked by name, record each such decision in the SDD report with whether
 this step took it or the operator answered it.
 
 ## ID allocation

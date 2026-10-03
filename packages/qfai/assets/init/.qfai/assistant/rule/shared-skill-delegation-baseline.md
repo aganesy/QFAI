@@ -244,8 +244,8 @@ the row of the skill whose stage ran it.
   - `record:<CODE>` — a defect in the run's own record rather than in the product: an evidence section, a round block, an anchor, or provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
 - `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the record-defect queue the reviewing stage's own completion contract names, and that contract is what drains it (`.qfai/assistant/rule/drift-protocol.md#the-record-defect-queue`). **The class needs a drain:
-  only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record, re-attested in a new pack where a
-  reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair — a record rule worth a round is worth a validator code.
+  only a stage whose completion conditions require that queue drained may use it — today `/qfai-implement` alone, so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`, `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT, and there the finding keeps the class it would otherwise have had.** An entry closes only on a repaired record;
+  `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair — a record rule worth a round is worth a validator code.
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false `Authored/edited under review` or `Recommended and unadjudicated` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS` built on them,
   so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
 - A `none` advisory takes the Change Request / Open Question path (`.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
@@ -340,8 +340,7 @@ Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bou
 Round: 1 | 2 | 2b
 Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # the budget is counted per series, not per instance
 Result: PASS | REVISE
-Reviewed revision: <git rev> | working-tree+<content hash>
-Audited evidence hash: <content hash of the evidence read>   # one line per EX round reviewed, as audited-evidence-hash.md defines
+Reviewed revision: <git rev> | working-tree
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
@@ -356,8 +355,7 @@ Evidence checked:
 
 `Round` is required — the round budget in `.qfai/assistant/rule/review-convergence.md` is counted from it. `2b` is the post-escalation verification review of a user-named fix.
 
-- `Audited evidence hash` is required when a verdict audits ATDD or implementation evidence. The reviewer computes it over the phase-authored EX round or BF acceptance evidence. Use `rule/audited-evidence-hash.md` for subjects, normalization and serialization. An orchestrator cannot compute the hash on the reviewer's behalf.
-- `Reviewed revision` is required. Compute it by `skill/qfai-implement/references/evidence-revision.md`. The evidence tree and review pack are excluded from that code-revision address; their contents are bound by the audited evidence hash and pack seal. The reviewer names the integrated tree actually inspected. If it changes during review, report the stale verdict and review the new revision.
+- `Reviewed revision` is required: the commit the reviewer read, or `working-tree` when the tree it read has uncommitted changes. The reviewer names the integrated tree actually inspected. If it changes during review, report the stale verdict and review the new revision.
 - `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.
 - A non-`none` `Authored/edited under review` is a declared independence conflict: the verdict cannot be `PASS`, and the review is handed to a non-participating reviewer (see `Definition: independent reviewer`).
 - A non-`none` `Recommended and unadjudicated` is not a routing problem, and a handoff does not answer it. The verdict is `REVISE` naming the decision, and the decision is reopened and put to the user — or recorded open where no question can be asked. A replacement reviewer would attest `none` truthfully and clear nothing, because what is unsettled is the decision the artifact carries,
@@ -366,6 +364,4 @@ Evidence checked:
 
 ### Verdict vocabulary
 
-- Reviewer responses in-flight use `Result: PASS | REVISE` (this file).
-- `summary.json` archived into review packs historically uses `status: "PASS|FAIL"` (validated by the review-artifact validator shipped inside the QFAI package, which `npx qfai validate` runs).
-- A `REVISE` verdict during iteration maps to `status: "FAIL"` when the final `summary.json` is written; they represent the same outcome. Review packs should not invent a third verdict.
+- Reviewer responses use `Result: PASS | REVISE` (this file). There is no third verdict.

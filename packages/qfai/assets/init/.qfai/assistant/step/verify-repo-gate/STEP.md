@@ -2,7 +2,7 @@
 name: verify-repo-gate
 owner: qfai-verify
 purpose: "Run the repository's quality gates, repair failures until every gate in scope passes, and write the verify evidence and verdict."
-requires: [common-gate-run, common-evidence-record, common-grilling-record]
+requires: [common-gate-run, common-grilling-record]
 roles:
   [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
 routing-profile: runtime-heavy
@@ -15,7 +15,7 @@ outputs: the evidence a person reads and the verdict downstream gates read.
 
 ## Reads
 
-- The scope and the QFAI gate results in `.qfai/evidence/verify-<run-id>.md`.
+- The scope and the QFAI gate results `verify-qfai-gate` reported.
 - The gate commands, through `common-gate-run`.
 - `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`,
   before writing the verdict.
@@ -23,8 +23,7 @@ outputs: the evidence a person reads and the verdict downstream gates read.
 
 ## Writes
 
-Create and update: `.qfai/evidence/verify-<run-id>.md`, and
-`.qfai/report/verify.json`.
+Create and update `.qfai/report/verify.json`.
 
 ## Procedure
 
@@ -69,13 +68,10 @@ Quality gates are the decision mechanism. Fix until PASS.
   `/qfai-sdd`, `/qfai-atdd` or `/qfai-implement`.
 - A fix that changes code brings `implementation-reviewer` into the review.
 
-## Evidence
+## Report
 
-Complete the file as `common-evidence-record` says, with every section of
-`.qfai/assistant/skill/qfai-verify/templates/verify-evidence.md`, the next
-actions included. Summarize its key outcomes in the PR description.
-
-End with a concise evidence summary (copy‑paste for PR), including the Change
+Report the scope, every gate command with its result, the open risks and the
+next actions. End with a concise evidence summary (copy‑paste for PR), including the Change
 Classification (Primary/Tags) that
 `.qfai/assistant/rule/change-classification.md` defines:
 

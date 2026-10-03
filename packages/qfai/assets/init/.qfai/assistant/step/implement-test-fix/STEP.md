@@ -6,7 +6,6 @@ requires:
   - common-steering-refresh
   - common-gate-run
   - common-grilling-record
-  - common-evidence-record
 roles:
   - frontend-engineer
   - backend-engineer
@@ -42,8 +41,7 @@ those layers. A pass while the first matched ID is an EX is refused.
 2. Fix the test. The fixed test annotates the same IDs as before. Its file or
    test title may change. No story, contract or `decisions.md` file changes.
 3. Re-run the fixed test and record the result.
-4. The re-run is recorded in `.qfai/evidence/implement-BF-NNNN.md` for the
-   bound flow, by `common-evidence-record`.
+4. The re-run is reported in the stage report.
 
 The stage review after the last step judges the fix.
 

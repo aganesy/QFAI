@@ -44,9 +44,8 @@ is follows from whether the run already carries a baseline record.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the conditions, the numbers and, on
-  the second run, the comparison. It is git-ignored and is named in
-  `artifactRefs`.
+- The stage report holds the conditions, the numbers and, on
+  the second run, the comparison.
 
 ## Gate
 
