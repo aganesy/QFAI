@@ -4,20 +4,6 @@
 
 ```gherkin
 Feature: Item Completion Gate
-  # AC-0001-0094-01
-  Scenario: Completion Gate Enforcement
-    Given an implemented EX with test-first, RED, GREEN and refactor evidence
-    When checking completion
-    Then qa-gatekeeper has confirmed RED and GREEN
-    And completion-reviewer and implementation-reviewer have each returned PASS
-    And checkpoint verification has passed without writing a ledger status.
-
-  # AC-0001-0094-02
-  Scenario: Fresh Evidence Required
-    Given a TDD item
-    When evidence is checked
-    Then both RED and GREEN evidence include exact command + result; status-only evidence is rejected.
-
   # AC-0001-0094-03
   Scenario: Completed Items Skipped
     Given every EX in scope is annotated by a test or exempted by a `Test exception:` row in force

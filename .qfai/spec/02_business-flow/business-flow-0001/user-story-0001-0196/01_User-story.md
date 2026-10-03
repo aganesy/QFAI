@@ -11,4 +11,4 @@ As an adopter maintainer, I want `qfai init` and an upgrade to install `qfai-run
 - Writing a `workflow.mode` key or asking for one.
 - Installing the built-in plans, which the package holds.
 - Overwriting a skill the project edited without `--force`.
-- The ignore entries for run state and run evidence in the managed `.gitignore` block.
+- The ignore entries for the run state and run records an earlier release left in the managed `.gitignore` block.

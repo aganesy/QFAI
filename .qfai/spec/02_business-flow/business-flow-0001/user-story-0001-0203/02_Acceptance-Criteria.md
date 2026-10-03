@@ -8,11 +8,9 @@ Feature: Fix a defective example test with example coverage untouched
   Scenario: A test fix leaves example coverage untouched
     Given diagnosis found a defective existing test that checks an EX
     When /qfai-implement fixes the test in a test_fix stage
-    Then the result names the ID the expectation checks before and after the fix
-    And it carries an independent review and a re-run of the test
+    Then the fix names the ID the expectation checks before and after it, and the test is re-run
     And the fixed test annotates the same IDs it annotated before the fix
     And no story, contract or decisions.md file changes
-    And the re-run is recorded in the flow's implement evidence file
 
   # AC-0001-0203-02
   Scenario: A fix that changes the expectation's meaning goes back to SDD

@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator, I want a run whose diagnosis shows the request is something else — a question, a duplicate, a broken test, a feature — to move to the route that fits, only at points its route declares and keeping the evidence already gathered, so that a wrong first reading costs neither a restart nor an unplanned change.
+As an operator, I want a run whose diagnosis shows the request is something else — a question, a duplicate, a broken test, a feature — to move to the route that fits, only at points its route declares and keeping the work already done, so that a wrong first reading costs neither a restart nor an unplanned change.
 
 ## Non-goals
 

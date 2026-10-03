@@ -31,9 +31,9 @@ Feature: Refuse a route catalog a run cannot use
     And each branch destination is a catalog route or the decision table
 
   # AC-0001-0218-05
-  Scenario: A plan holds no predicate and only known modes and modifiers
-    Given a plan with a `when` key, an unknown mode or an unknown modifier
-    When the core loads it
+  Scenario: A plan holds no predicate, no modifier and only known modes
+    Given a plan with a `when` key, an unknown mode or a modifier
+    When `plan` loads it
     Then it is refused
 
   # AC-0001-0218-06

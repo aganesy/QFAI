@@ -5,11 +5,11 @@
 ```gherkin
 Feature: Route a request through a fixed decision table
   # AC-0001-0211-01
-  Scenario: The routing result carries facts and the core decides the route
-    Given a routing result whose proposal carries an extraction
-    When `accept` checks it
-    Then the core decides the route from the extraction and records the rule that chose it
-    And a proposal that names a route, a stage list or a step list is refused
+  Scenario: The extraction carries facts and `plan` decides the route
+    Given an extraction of a request
+    When `plan` reads it
+    Then it decides the route from the extraction and names the rule that chose it
+    And an input that names a route, a stage list or a step list is refused
     And an extraction value outside its vocabulary is refused
 
   # AC-0001-0211-02

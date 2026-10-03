@@ -50,8 +50,8 @@ Feature: Unified SDD Workflow
   Scenario: The Rules Are Checked Against The Examples Before The Gate
     Given a `/qfai-sdd` invocation whose 03-contract step wrote or changed the Statement or the Examples cell of at least one BR,
     When that step is complete and before the per-flow gate runs,
-    Then a test-design-analyst that wrote none of those BRs reads each of them, the EXs each cites and the EXs this invocation wrote or changed, and raises findings of five kinds: a case the rule implies that no example states, a redundant example, an example no rule explains, a rule its examples do not support, and a flow, story or criterion split the rules show to be wrong.
-    And when the 03-contract step wrote or changed no BR, or the work order is `sdd_append`, no cycle runs.
+    Then a sub-agent that wrote none of those BRs reads each of them, the EXs each cites and the EXs this invocation wrote or changed, and raises findings of five kinds: a case the rule implies that no example states, a redundant example, an example no rule explains, a rule its examples do not support, and a flow, story or criterion split the rules show to be wrong.
+    And when the 03-contract step wrote or changed no BR, or the stage is an append stage, no cycle runs.
 
   # AC-0001-0147-09
   Scenario: Each Finding Is Decided Once, By The Right Party
@@ -66,15 +66,6 @@ Feature: Unified SDD Workflow
     When its change is applied,
     Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US keeps its triage approval however recently the item was written.
     And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
-
-  # AC-0001-0147-11
-  Scenario: Inside A Run The Cycle Shapes The One Question
-    Given an `sdd` stage inside a workflow run whose change touches a protected file,
-    When its first attempt runs,
-    Then the cycle runs on the proposal before the stage asks its one change question, the question shows the proposal as the cycle left it, each finding that goes to the user is a further `decision` question of the same `awaiting_input` result, and the attempt writes nothing.
-    And the attempt holding the answer runs no further cycle, and writes the rejected findings and the records of the cycles the first attempt ran.
-    And that attempt applies the answer to each finding the user decided, and appends an `Unadjudicated:` row for each finding the user left open.
-    And an adopted finding on an item outside the run's checked scope appends no `Change request:` row, and the stage returns `blocked`.
 
   # AC-0001-0147-12
   Scenario: At Most Two Cycles
@@ -91,16 +82,10 @@ Feature: Unified SDD Workflow
     And the finder raises no finding that has the kind and target IDs of a finding already decided in this invocation or of a REJECTED row and a case equal to, including or included in that finding's case, and no finding that the proposed change of a `Change request:` row at TODO or REJECTED already answers.
     And matching never goes by wording, and an appended reopening decision lifts the REJECTED row.
 
-  # AC-0001-0147-14
-  Scenario: The Cycle Leaves A Record The Reviewer Checks
-    Given an invocation in which the cycle ran,
-    When the flow's SDD evidence is written and the completion reviewer reads it,
-    Then the evidence holds one row per finding carrying the cycle, the finding, its kind, the target IDs, the decision, the adjudicator and the reason, one row for each cycle that raised nothing, and the finder's name in the Work Orders Summary.
-    And the reviewer returns REVISE when a cycle has no row, when the finder wrote a BR it read, when a finding the user did not decide names as adjudicator its finder or an author of an item it targets, or when an adopted change to an item that existed when the invocation started was applied with no in-force triage approval or `Change request:` row whose approved change covers it.
   # AC-0001-0147-15
   Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
     Given an invocation of `/qfai-sdd` about to write in a design-writing stage,
     When the stage makes its first story-tree write,
-    Then a delegated grilling checkpoint has settled that stage's open decisions, and the flow's SDD evidence records it in its `## Pre-draft Grilling` table.
-    And the completion reviewer returns REVISE when a checkpoint is missing, and a Work Orders Summary row does not stand in for one.
+    Then a delegated grilling checkpoint has settled that stage's open decisions, a critical one by the user's answer.
+    And the final report lists each decision the checkpoint adopted, with its reason.
 ```

@@ -6,11 +6,11 @@
 Feature: Close, answer or hand back a request without a change
   # AC-0001-0214-01
   Scenario: A route without a change ends at triage-close and changes no tracked file
-    Given a run on a route that ends at `triage-close`
-    When `finish` judges it
-    Then it completes with no verify stage and no `qa-gatekeeper` PASS
-    And a proposal or a result that writes a tracked file outside its discussion records is refused
-    And the report states the closure outcome and never that a change is done
+    Given a route that ends at `triage-close`
+    When it ends
+    Then no verify stage and no review have run
+    And no tracked file outside its discussion records changed
+    And the final report states the closure outcome and never that a change is done
 
   # AC-0001-0214-02
   Scenario: triage-close records the outcome and the follow-ups
@@ -21,9 +21,9 @@ Feature: Close, answer or hand back a request without a change
 
   # AC-0001-0214-03
   Scenario: A request waiting for information is routed again once it arrives
-    Given a `request-info` run that asked for the missing facts
-    When the operator supplies them
-    Then `triage-close` re-routes the run by the decision rules
+    Given a `request-info` route that asked for the missing facts
+    When the user supplies them
+    Then `triage-close` moves the work to the route the decision rules give
 
   # AC-0001-0214-04
   Scenario: qfai-triage is a stage skill that owns the triage steps
@@ -44,12 +44,4 @@ Feature: Close, answer or hand back a request without a change
     Given a request that `triage-decompose` splits
     When the run closes
     Then each child is a follow-up request with its dependencies, and none is routed inside the run
-
-  # AC-0001-0214-07
-  Scenario: A question is answered in one stage with no separate reviewer
-    Given a run on `answer-question` or `investigate-question`
-    When its work order is issued
-    Then one work order runs every step of the route, the answer and the closure included
-    And it names no required reviewer, unless the run carries `review:heavy`
-    And `finish` follows its acceptance
 ```
