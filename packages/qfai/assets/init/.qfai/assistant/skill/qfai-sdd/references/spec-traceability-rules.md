@@ -107,7 +107,11 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 ## Decision provenance and drift
 
-Triage, change requests, retired stories, and rejected options are rows of decisions.md. Open questions are rows of open-questions.md. Both tables have ID, Content, Approach, Status, and only Status changes after append. The change request's Content begins Change request: and names its allowed paths or IDs. A rejected option remains REJECTED unless a later decision explicitly reopens it.
+decisions.md records only what the user approved: each change request, retired stories included, and
+each critical decision the user made. Open questions are rows of open-questions.md. Both tables have
+ID, Content, Approach, Status, and only Status changes after append. The change request's Content
+begins Change request: and names its allowed paths or IDs. A rejected option remains REJECTED unless
+a later decision explicitly reopens it.
 
 Use .qfai/assistant/rule/change-classification.md for Primary and Tags and references/requirements-decomposition.md for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
 

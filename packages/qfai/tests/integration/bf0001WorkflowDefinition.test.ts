@@ -164,8 +164,8 @@ describe("BF-0001 workflow definition", () => {
     const drift = await readFile(rule("drift-protocol.md"), "utf8");
     expect(drift).toContain("A downstream skill does not edit an approved specification");
     expect(drift).toContain("1. Stop work on the affected obligation");
-    expect(drift).toContain("2. Ask the SDD owner to append one DEC-NNNN row");
-    expect(drift).toContain("3. Obtain the operator's explicit answer");
+    expect(drift).toContain("2. Prepare the change request for the SDD owner");
+    expect(drift).toContain("3. Obtain the user's explicit answer");
     expect(drift).toContain("4. Rerun the owner skill");
     expect(drift).toContain("5. Recheck every dependent BF, AC, and EX test obligation");
     expect(drift).toContain("6. Complete the decision row");
@@ -180,20 +180,20 @@ describe("BF-0001 workflow definition", () => {
 
   // QFAI:EX-0001-0007-09
   // QFAI:EX-0001-0007-10
-  it("routes retirement, triage and change requests into decision rows", async () => {
+  it("records an approved change request, retirement included, as one decision row", async () => {
     const sdd = await readSdd();
-    const triage = await readFile(
-      path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
-      "utf8",
-    );
-    expect(sdd).toContain(
-      "Record triage, change requests, retired stories, and rejected options as rows",
-    );
+    const triage = (
+      await readFile(
+        path.join(assistant, "skill", "qfai-sdd", "references", "sdd-triage.md"),
+        "utf8",
+      )
+    ).replace(/\s+/g, " ");
+    expect(sdd).toContain("Record in `<paths.specsDir>/decisions.md` only what the user approved");
     expect(sdd).toContain(
       "Do not write a second decision-record directory or a retired story file",
     );
     expect(triage).toContain(
-      "Record a retired story in a decision row, not a separate retired-story file",
+      "Retiring a story removes its directory under the change request that names it, with no separate retired-story file",
     );
   });
 
