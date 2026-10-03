@@ -10,8 +10,19 @@
 
 import { afterEach, expect, it } from "vitest";
 
-import { planOf, type PlannedStage } from "../../../src/core/workflow/plan.js";
-import type { PlanBranchPoint } from "../../../src/core/workflow/plans.js";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import {
+  planned as plannedDocument,
+  planOf,
+  type PlannedStage,
+} from "../../../src/core/workflow/plan.js";
+import {
+  packagePlansDir,
+  parsePlan,
+  type PlanBranchPoint,
+} from "../../../src/core/workflow/plans.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
@@ -67,6 +78,19 @@ it("retire-mechanism asks at sdd-triage, before implement-retire runs", async ()
 // QFAI:EX-0001-0223-04
 it("backport-fix releases at its end", async () => {
   expect((await planned("backport-fix")).releasePoint).toBe("end");
+});
+
+// QFAI:EX-0001-0223-04
+it("A plan whose file declares releasePoint: end reports it, with no default modifier", async () => {
+  const text = await readFile(path.join(packagePlansDir(), "backport-fix.yml"), "utf8");
+  const declared = text.replace(
+    /^defaultModifiers: .*$/m,
+    "defaultModifiers: []\nreleasePoint: end",
+  );
+  const load = parsePlan(declared, "backport-fix");
+  const document = load.ok ? plannedDocument(load.plan) : load;
+
+  expect(Reflect.get(document, "releasePoint")).toBe("end");
 });
 
 // QFAI:EX-0001-0223-05

@@ -77,7 +77,7 @@ function releasePointOf(plan: WorkflowPlanFile): string | null {
   return plan.defaultModifiers.includes("gate:release") ? "end" : null;
 }
 
-function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocument {
+export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocument {
   return {
     ok: true,
     route: plan.route,

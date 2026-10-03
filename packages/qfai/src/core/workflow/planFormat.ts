@@ -431,12 +431,13 @@ function branchPointsOf(value: unknown, refuse: Refuse): PlanBranchPoint[] {
   return value.flatMap((entry) => branchPointOf(entry, refuse) ?? []);
 }
 
-// Each decision, release and branch point names a step the plan runs exactly once.
+// Each decision, release and branch point names a step the plan runs exactly once; a release
+// point of `end` names none.
 function pointRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const names = plan.stages.flatMap(namesOf);
   const points = [
     ...plan.decisionPoints,
-    ...(plan.releasePoint === undefined ? [] : [plan.releasePoint]),
+    ...(plan.releasePoint === undefined || plan.releasePoint === "end" ? [] : [plan.releasePoint]),
     ...plan.branchPoints.map((point) => point.step),
   ];
   for (const point of points) {
