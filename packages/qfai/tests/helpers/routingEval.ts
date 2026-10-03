@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../src/shared/text.js";
 
 /**
  * The deterministic halves of the routing eval: the fixture factory, the token vocabulary check,

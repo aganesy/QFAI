@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import { validateQuietly } from "../../../src/core/workflow/observe.js";
 import {
   CLI,

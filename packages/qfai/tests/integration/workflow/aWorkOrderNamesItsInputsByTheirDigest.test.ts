@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import { field, removeProjects, workflow, write } from "../../e2e/workflowJourney.js";
 import { EXAMPLE_IDS, REPORT, diagnosed, flowProject } from "./acceptanceRuns.js";
 

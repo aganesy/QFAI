@@ -16,7 +16,6 @@ import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
-import { AGENTS_RULES_DIR, REMINDERS_BASENAME } from "../../core/ruleMasterUpdates.js";
 import {
   loadConfig,
   resolvePath,
@@ -120,7 +119,7 @@ const HOST_LINKS = [
 const REMINDER_FILES = [
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
-  `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`,
+  ".agents/rules/reminders.json",
 ];
 
 function errorMessage(error: unknown): string {

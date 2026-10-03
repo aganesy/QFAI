@@ -1,18 +1,20 @@
+import { constants } from "node:fs";
 import {
+  copyFile,
   lstat,
   mkdir,
+  open,
   readFile,
   readdir,
   readlink,
   realpath,
   rm,
   stat,
-  writeFile,
 } from "node:fs/promises";
 import path from "node:path";
 
 import { collectTemplateFiles, copyTemplatePaths } from "../../core/fs/templateCopy.js";
-import { isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
   collectCanonicalSkillIds,
   SKILL_INTEGRATION_DIRS,
@@ -30,10 +32,63 @@ import {
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
 import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
-import { AGENTS_RULES_DIR, REMINDERS_BASENAME } from "../../core/ruleMasterUpdates.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { normalizeNewlines } from "../../shared/text.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
+
+const AGENTS_RULES_DIR = ".agents/rules";
+const REMINDERS_BASENAME = "reminders.json";
+
+/** The largest file step 11 reads to compare; a larger one compares as different. */
+const MAX_COMPARED_BYTES = 4 * 1024 * 1024;
+
+/**
+ * A regular file's text with CRLF folded to LF, or `null` when nothing comparable is there:
+ * absent, a link (unless `followLink`, as the package's own tree may hold one), not a regular
+ * file, or past the ceiling. The file is opened once, non-blocking where the platform has it, and
+ * the handle that is inspected is the one read, never more than the ceiling. Any other fault
+ * propagates.
+ */
+async function comparableText(
+  file: string,
+  options: { followLink?: boolean } = {},
+): Promise<string | null> {
+  if (options.followLink !== true) {
+    const entry = await lstat(file).catch((error: unknown) => {
+      if (isEnoent(error)) return null;
+      throw error;
+    });
+    if (entry === null || !entry.isFile()) return null;
+  }
+  // Windows defines neither flag; the `lstat` above is the link guard there.
+  const nonBlocking = typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0;
+  const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+  const flags = constants.O_RDONLY | nonBlocking | (options.followLink === true ? 0 : noFollow);
+  let handle;
+  try {
+    handle = await open(file, flags);
+  } catch (error) {
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ELOOP")) return null;
+    throw error;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile() || stats.size > MAX_COMPARED_BYTES) return null;
+    const buffer = Buffer.alloc(stats.size + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, null);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    // A file that grew past its size since the handle was inspected is not compared.
+    if (filled > stats.size) return null;
+    return normalizeNewlines(buffer.subarray(0, filled).toString("utf8"));
+  } finally {
+    await handle.close();
+  }
+}
 
 /** The package's `.qfai/` template, which init copies the skills from. */
 export function packageQfaiAssets(): string {
@@ -70,17 +125,15 @@ function projectPath(context: MigrationContext, absolute: string): string {
   return path.relative(context.root, absolute).split(path.sep).join("/");
 }
 
-/** A file's text with CRLF line endings read as LF, as `qfai init` compares a skill. */
-async function normalizedText(file: string): Promise<string> {
-  return (await readFile(file, "utf8")).replace(/\r\n/g, "\n");
-}
+/** A file to compare, and whether a link at its path is followed. */
+type ComparedFile = { readonly file: string; readonly followLink: boolean };
 
 /**
- * Each regular file under `dir`, by its path relative to `dir`, with its text
- * ignoring line endings. Any other entry maps to `null` and so never equals a
- * file. `null` when `dir` is absent.
+ * Each entry under `dir` other than a directory, by its path relative to `dir`.
+ * `null` when `dir` is absent. Only the paths are held: the content is read a
+ * pair at a time when compared, so memory does not grow with the tree.
  */
-async function treeTexts(dir: string): Promise<Map<string, string | null> | null> {
+async function treeFiles(dir: string): Promise<Map<string, ComparedFile> | null> {
   let entries;
   try {
     entries = await readdir(dir, { recursive: true, withFileTypes: true });
@@ -88,32 +141,46 @@ async function treeTexts(dir: string): Promise<Map<string, string | null> | null
     if (isEnoent(error)) return null;
     throw error;
   }
-  const texts = new Map<string, string | null>();
+  const files = new Map<string, ComparedFile>();
   for (const entry of entries) {
     if (entry.isDirectory()) continue;
     const file = path.join(entry.parentPath, entry.name);
-    texts.set(path.relative(dir, file), entry.isFile() ? await normalizedText(file) : null);
+    files.set(path.relative(dir, file), { file, followLink: false });
   }
-  return texts;
+  return files;
 }
 
-function sameTree(
-  left: ReadonlyMap<string, string | null>,
-  right: ReadonlyMap<string, string | null>,
-): boolean {
-  return (
-    left.size === right.size &&
-    [...left].every(([file, text]) => text !== null && right.get(file) === text)
-  );
+/** Whether every file of `part` is in `whole` with the same content, line endings aside. */
+async function containedIn(
+  part: ReadonlyMap<string, ComparedFile>,
+  whole: ReadonlyMap<string, ComparedFile>,
+): Promise<boolean> {
+  for (const [relative, mine] of part) {
+    const theirs = whole.get(relative);
+    if (theirs === undefined) return false;
+    const text = await comparableText(mine.file, { followLink: mine.followLink });
+    if (text === null) return false;
+    if (text !== (await comparableText(theirs.file, { followLink: theirs.followLink }))) {
+      return false;
+    }
+  }
+  return true;
 }
 
-async function packageTexts(layer: Layer, id: string): Promise<Map<string, string>> {
+async function sameTree(
+  left: ReadonlyMap<string, ComparedFile>,
+  right: ReadonlyMap<string, ComparedFile>,
+): Promise<boolean> {
+  return left.size === right.size && (await containedIn(left, right));
+}
+
+async function packageFiles(layer: Layer, id: string): Promise<Map<string, ComparedFile>> {
   const dir = path.join(packageQfaiAssets(), "assistant", layer, id);
-  const texts = new Map<string, string>();
+  const files = new Map<string, ComparedFile>();
   for (const file of await collectTemplateFiles(dir)) {
-    texts.set(path.relative(dir, file), await normalizedText(file));
+    files.set(path.relative(dir, file), { file, followLink: true });
   }
-  return texts;
+  return files;
 }
 
 function installOperation(
@@ -169,9 +236,9 @@ async function planLayerEntry(
   id: string,
   plan: StepPlan,
 ): Promise<void> {
-  const shipped = await packageTexts(layer, id);
-  const current = await treeTexts(layerDir(context, layer, id));
-  if (current !== null && sameTree(current, shipped)) return;
+  const shipped = await packageFiles(layer, id);
+  const current = await treeFiles(layerDir(context, layer, id));
+  if (current !== null && (await sameTree(current, shipped))) return;
   if (current !== null) plan.operations.push(removeOperation(context, layer, id));
   const install = installOperation(context, layer, id, [...shipped.keys()].sort());
   if (install !== null) plan.operations.push(install);
@@ -276,9 +343,9 @@ async function planReminderHookFiles(context: MigrationContext, plan: StepPlan):
 }
 
 /**
- * The text the reminder hooks print, brought to this release as `qfai init
- * --force` brings a shipped rule master: the file is replaced with the shipped
- * text, and an absent one is written.
+ * The text the reminder hooks print, brought to this release the way
+ * `qfai init --force` brings a shipped rule master: an absent file is written
+ * and any other is replaced with the shipped text.
  */
 async function planReminderText(context: MigrationContext, plan: StepPlan): Promise<void> {
   const shown = `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`;
@@ -288,28 +355,42 @@ async function planReminderText(context: MigrationContext, plan: StepPlan): Prom
     );
     return;
   }
-  const shipped = await readFile(
-    path.join(getInitAssetsDir(), "root", ...AGENTS_RULES_DIR.split("/"), REMINDERS_BASENAME),
-    "utf8",
+  const shipped = path.join(
+    getInitAssetsDir(),
+    "root",
+    ...AGENTS_RULES_DIR.split("/"),
+    REMINDERS_BASENAME,
   );
   const target = path.join(context.root, ...shown.split("/"));
-  const current = await readFile(target, "utf8").catch((error: unknown) => {
+  const entry = await lstat(target).catch((error: unknown) => {
     if (isEnoent(error)) return null;
     throw error;
   });
-  if (current === shipped) return;
-  const description =
-    current === null ? "write from the package" : "replace with the package's text";
+  if (entry !== null && !entry.isFile()) {
+    plan.forAPerson?.push(
+      `${shown} was left unchanged: it is not a regular file, so the reminder text is not refreshed.`,
+    );
+    return;
+  }
+  if (
+    entry !== null &&
+    (await comparableText(target)) === normalizeNewlines(await readFile(shipped, "utf8"))
+  ) {
+    return;
+  }
+  const description = entry === null ? "write from the package" : "replace with the package's text";
+  plan.reminderHooks?.push(`${shown}: ${description}`);
   plan.operations.push({
     kind: "delegate",
     target: shown,
     description,
     apply: async () => {
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, shipped, "utf8");
+      // Replaced as an entry, so a hard link's other names keep their content.
+      await rm(target, { force: true });
+      await copyFile(shipped, target);
     },
   });
-  plan.reminderHooks?.push(`${shown}: ${description}`);
 }
 
 export const step11: MigrationStep = {

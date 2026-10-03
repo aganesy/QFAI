@@ -274,8 +274,8 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     // link into a file link, which step 9 then has to repair. This is the last test.
     const root = journey.root;
     // What a person settles from the first run's reports, then what 2.0.0
-    // left: no Claude Code settings, its own Codex hook file, and a recorded
-    // reminder text without the free-text entry.
+    // left: no Claude Code settings, its own Codex hook file, and a reminder
+    // text without the free-text entry.
     await rm(path.join(root, ".qfai/spec/spec-0002"), { recursive: true });
     const test = "tests/integration/order.test.ts";
     await reannotate(root, test, "CON-API-0001", "API-0001");

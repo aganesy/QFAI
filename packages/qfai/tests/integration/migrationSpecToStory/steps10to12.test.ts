@@ -307,7 +307,7 @@ async function migratedByEarlierRelease(): Promise<EarlierMigration> {
   // file, and a reminder text without the free-text entry.
   await rm(path.join(root, ".claude/settings.json"));
   await cp(EARLIER_CODEX_HOOKS, path.join(root, ".codex/hooks.json"));
-  await put(root, REMINDERS, await remindersWithout("free-text-entry"));
+  await writeReminderText(root, await remindersWithout("free-text-entry"));
   return { root, afterStep7 };
 }
 
@@ -317,6 +317,11 @@ async function remindersWithout(key: string): Promise<string> {
   if (!isRecord(parsed) || !(key in parsed)) throw new Error(`no ${key} in reminders.json`);
   const rest = Object.fromEntries(Object.entries(parsed).filter(([name]) => name !== key));
   return `${JSON.stringify(rest, null, 2)}\n`;
+}
+
+/** Writes `text` as the project's reminder text. */
+async function writeReminderText(root: string, text: string): Promise<void> {
+  await put(root, REMINDERS, text);
 }
 
 function isUnknownArray(value: unknown): value is unknown[] {
@@ -817,7 +822,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
 
 describe("migration step 11: the text the reminder hooks print", () => {
   // QFAI:AC-0004-0013-01
-  it("writes a missing reminders.json, replaces one that differs and refuses a link", async () => {
+  it("brings reminders.json to the package's text, writes a missing one and refuses a link", async () => {
     // QFAI:EX-0004-0013-22
     const shipped = await readFile(SHIPPED_REMINDERS, "utf8");
 
@@ -831,15 +836,24 @@ describe("migration step 11: the text the reminder hooks print", () => {
     );
     expect(await textOrNull(absent, REMINDERS)).toBe(shipped);
 
-    const edited = await clone(migrated10);
-    await put(edited, REMINDERS, await remindersWithout("free-text-entry"));
-    const replaced = await stepIn(edited, 11);
+    const differing = await clone(migrated10);
+    await writeReminderText(differing, await remindersWithout("free-text-entry"));
+    const replaced = await stepIn(differing, 11);
     expect(replaced.code, replaced.output).toBe(0);
     expect(section(replaced.output, "Operations")).toContain(
       `${REMINDERS}: replace with the package's text`,
     );
-    expect(await textOrNull(edited, REMINDERS)).toBe(shipped);
-    expect(await textOrNull(edited, ".agents/rules/.qfai-rules.lock.json")).toBeNull();
+    expect(section(replaced.output, "Reminder hooks")).toContain(
+      `${REMINDERS}: replace with the package's text`,
+    );
+    expect(await textOrNull(differing, REMINDERS)).toBe(shipped);
+
+    // A copy that differs only in line endings is the package's text.
+    const crlf = await clone(migrated10);
+    await writeReminderText(crlf, shipped.replace(/\r?\n/g, "\r\n"));
+    const unchanged = await stepIn(crlf, 11);
+    expect(unchanged.code, unchanged.output).toBe(0);
+    expect(section(unchanged.output, "Operations").join("\n")).not.toContain(REMINDERS);
 
     const linked = await clone(migrated10);
     const elsewhere = await scratch("qfai-rules-elsewhere-");
