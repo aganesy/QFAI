@@ -17,3 +17,5 @@ Give each worker a separate worktree and an exact file ownership list. Workers d
 After integration, rerun every item selector on the merged tree, the relevant suites, and qfai validate --profile tdd --fail-on error --flow BF-NNNN. Retake evidence whose source revision changed and request the required reviews on that revision. A worker's isolated PASS is not an integrated PASS.
 
 On an integration failure, assign the defect to the owning item when the dependency is known. When the combination itself causes the failure, stop parallel dispatch and repair serially. Record the decision and results in the flow evidence. The decision's record carries the four labelled Approach items stated at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+
+Host limits above this policy: `.qfai/assistant/rule/shared-skill-delegation-baseline.md#host-backstops-above-the-declared-shape`.
