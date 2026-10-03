@@ -4,6 +4,78 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A test requires a refused capture URL to name its screen and exit 2**
+  (#2280). When `qfai prototyping iterate --capture` cannot compose a screen's
+  URL, it names the screen and `--target-url` and exits 2. No test checked the
+  screen in the reason, or ran a URL pair that does not compose. A new
+  integration test covers both refusals: a route-relative URL with no
+  `--target-url`, and a `--target-url` that is not a URL. Each asserts the
+  screen and `--target-url` in the reason, exit 2, and that nothing was
+  captured.
+
+- **The patterns that mark a design as generated are named** (#2241). A new
+  `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
+  color and typography to copy, flow and untouched library defaults. Each one
+  is a sentence a reviewer can check a screen against. It also pairs each
+  banned default with the substitute a model falls back to, such as cream and
+  terracotta after the purple gradient.
+  - The brand catalog, the review bundle and the UIX comparison review point
+    at that file. The review bundle's "AI slop" item is replaced by one that
+    fails on a named pattern the recorded brand direction does not ask for. The
+    comparison review no longer cites a pattern list that did not exist.
+  - All eight archetypes were checked against the list. None of them now
+    prescribes a listed pattern, such as `Tech`'s all-caps labels, `Organic`'s
+    terracotta or `Elegant`'s wide letter-spacing.
+  - Each archetype names two or three candidate typeface families, and the
+    catalog adds candidates for Japanese, Chinese and Cyrillic text. No
+    candidate is a default family or one of the families models fall back to.
+
+- **The delegation baseline names the host limits above the declared shape**
+  (#2239). Dispatch limits are read by the agent that dispatches, so nothing in
+  QFAI bounded a run that spawned more workers, nested delegation deeper or kept
+  spending past what it declared. A new section in
+  `rule/shared-skill-delegation-baseline.md` lists the controls a host provides
+  for nesting depth, concurrent sub-agents and spend, with their defaults: Claude
+  Code 2.1.217 or later, Codex, the GitHub Copilot CLI and the VS Code Local harness.
+  Where no equivalent was confirmed, it says so. QFAI sets none of them, and the
+  section states that such a limit sits above the declared shape, never at it.
+  The implementation skill's parallelization policy points to it.
+
+- **The reviewer gate is not self-verification.** The independent-reviewer
+  definition now says why guidance against using sub-agents to verify your own
+  work does not reach the reviewer gate: an independent reviewer authored none
+  of what it reviews, and its verdict is recorded and pinned to a hash of the
+  reviewed state. The author cannot accept its own output.
+
+- **The artifact-reuse and tuning-scope tests fail on the cases they reject**
+  (#2217).
+  - The artifact-reuse test counted the step that calls `ci:build-verify` as
+    one pack-lifecycle build. It now resolves that script through the root
+    `package.json` and counts the two helpers that pack, so dropping either
+    one changes the count.
+  - The tuning-scope test compared each project with the shared knob, so an
+    edit to the knob moved every project at once and nothing failed. It now
+    compares with the declared value, and reads the projects with the tuning
+    overrides cleared.
+  - The run identifiers that justify a tuning move now count only in the last
+    `DEC-` row of `.qfai/spec/decisions.md` that names the project and every
+    setting it moved. Before, any row naming the project counted, so an
+    earlier change's greens could justify a later one.
+
+- **The reporting contract covers what an agent says while it works**
+  (#2237). `.qfai/assistant/rule/communication.md` now has the agent say in
+  one sentence what it is about to do before its first tool call, and give an
+  update only when something important is found or the direction changes. The
+  final report leads with the outcome. An earlier statement is corrected
+  plainly when the error would change the user's code, conclusions or
+  decisions; a slip that changes none of those is fixed without comment. This
+  repository's `.instruction/00_universal/communication.md` drops its own
+  progress-report and completion-report sections and points to that article.
+
+## [2.0.2] - 2026-10-03
+
 ### Added
 
 - **A rule that classifies an action by how hard it is to undo** (#2232).
@@ -91,14 +163,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **A test requires a refused capture URL to name its screen and exit 2**
-  (#2280). When `qfai prototyping iterate --capture` cannot compose a screen's
-  URL, it names the screen and `--target-url` and exits 2. No test checked the
-  screen in the reason, or ran a URL pair that does not compose. A new
-  integration test covers both refusals: a route-relative URL with no
-  `--target-url`, and a `--target-url` that is not a URL. Each asserts the
-  screen and `--target-url` in the reason, exit 2, and that nothing was
-  captured.
+- **Every decision a stage records carries one fixed form** (#2236).
+  The thinking rule now names where each decision is recorded.
+  `qfai-sdd`, which owns `decisions.md`, records it as a row
+  there. Every other stage records it in its own evidence file. The seeded
+  `decisions.md` states the form both records use, in this order:
+
+  - `Evidence:` one or more `file:` or `command:` entries;
+  - `Grounds:` which evidence supports the decision, and how;
+  - `Residual risk:` the risk that remains, or `none — <reason>`;
+  - `Rollback:` the steps that undo it, or `none — <reason>`.
+
+  The shared decision-record step and the SDD guidance point to that form.
+  The table's columns are unchanged,
+  and existing rows and records are not rewritten. `qfai validate` does not
+  check the form yet.
 
 - **Code written only to pass a test does not meet its example** (#2235). The
   shipped test-layer rule now states what the code under test may not do to
@@ -333,6 +412,79 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout included. The setting itself stays `--local`: scoping it to the
   worktree needs `extensions.worktreeConfig`, which changes the same shared
   file.
+- **`qfai workflow accept` checks the digest of the artifacts a result names
+  (#2327, #2328).** It checked only the changed files. It now also reads each
+  `artifactRefs` entry that is a readable file inside the project's real root,
+  and refuses a digest that differs from that file as `digest-mismatch`. An
+  entry that is missing, unreadable or outside the root gets no digest, so its
+  submitted digest is not compared. A reissued work order names each input
+  that is a readable file inside the root at the file's current digest. An
+  input that has since gone missing, become unreadable or left the root keeps
+  the digest recorded earlier. The `sdd_append` work order after a
+  missing-test diagnosis names the reproduction record as its input when that
+  record is a readable file inside the root.
+- **A fact question may offer its candidates as a choice (#2346).** The route
+  proposal schema allowed options on a fact question, but the parser refused
+  them. A fact is now either a choice, with options and a selection and no
+  recommendation, or a value request with one effect and no selection.
+  `decide` answers the choice by option IDs.
+- **A stage receipt depends on the obligation it covers and on what it ran
+  under (#2342, #2343).** A receipt for a result that observed a test held one
+  dependency per file declaring the bound flow, its criteria and its examples,
+  each digested whole. It now holds one obligation digest for the flow: the
+  flow and story files, each criterion's scenario block, each example's table
+  row, and each business rule citing one of the flow's examples. An edit
+  elsewhere in a criteria or example file leaves the digest as it was. Every
+  receipt also holds `qfai.config.yaml`, the root `pnpm-lock.yaml`,
+  `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` and `bun.lock`, the
+  assistant rule tree, the skill that owns the work order's steps, each step's
+  directory, the tool, and the selected discussion pack with its files. In a receipt for a
+  result that observed a test, a changed file the stage deleted is held as
+  absent, so the receipt goes stale when the file comes back.
+- **`qfai workflow` judges a run's changes against where the run started**
+  (#2340, #2344). `start` now records `HEAD` and the state of every path that
+  was dirty or untracked then, apart from the run's own records under
+  `.qfai/run/` and `.qfai/evidence/workflow/`. Every write operation and
+  `finish` compare the tree against that record, so a change the run commits
+  outside its write scope blocks the run with `invariant-violation` and is reported as
+  `diff-out-of-scope`. A path that was dirty at `start` counts only once its
+  content or kind changes: a regular file, a symbolic link and its target, a
+  directory, or another kind. A change to its mode alone is not seen.
+  `uncommitted` names only the run's own changes. Under
+  `validation.failOn: never`, `finish` still reads the validate findings to
+  decide whether a debt is settled, so a debt whose
+  finding remains stays `debt-open` while the validate gate passes. Before,
+  every finding was dropped, so every debt closed.
+- **A route proposal cannot reach a protected path by spelling it differently
+  (#2458).** A write area such as `./src/notify/**`, `.qfai\run\**`, or one
+  with a doubled or trailing `/`, was compared as written and not refused. Both
+  the fixed protected paths and the protected targets are now compared after
+  the area is normalized. The refusal still names the area as written.
+- **`qfai workflow accept` names the check behind four more refusals of a
+  stage result (#2338).** A result for a work order the plan does not issue
+  next, a missing bug diagnosis, an outcome the stage cannot take and an
+  invalid route proposal were refused as `invalid-input` with no `reasons[]`.
+  These four are now named:
+  `work-order`, or `schema` on `diagnosis`, `outcome` or `proposal`, beside the
+  reasons of the other checks.
+- **`qfai validate` no longer reports `QFAI-TOOL-002` in a worktree whose
+  `node_modules` links to another checkout's (#2262),** when the `qfai` behind
+  that link is an installed copy inside the linked `node_modules`. It is still
+  reported when that `qfai` is itself a workspace link to the other checkout's
+  source, and in a worktree with no `node_modules`, where `npx` finds another
+  checkout's copy.
+- **The question-form reminder stays silent on a turn the host starts
+  (#2282).** The Claude Code `UserPromptSubmit` hook prints nothing when a line
+  of the prompt opens with `<task-notification>` or `<wake>`, whoever wrote
+  it. A prompt with no such line, and input it cannot read, still get the
+  reminder. `qfai init` replaces an
+  unedited copy of the earlier hook group.
+- **`qfai init` rewrites an earlier wording of the `REVIEW.md` directive
+  instead of adding a second line (#2266).** The two lines disagreed on which
+  branch to read `REVIEW.md` from. The earlier line is replaced where it
+  stands, keeping its list marker and line ending. A line carrying emphasis,
+  inline HTML, a link, or a code span other than the `REVIEW.md` one the
+  directive itself holds is left alone.
 
 ## [2.0.1] - 2026-09-30
 
