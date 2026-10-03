@@ -12,27 +12,12 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
-  QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
 import { CANONICAL_TIMESTAMP_GLOB } from "../../src/core/packLocator.js";
-import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
-
-async function withGitignore(
-  content: string,
-  assertion: (issues: Awaited<ReturnType<typeof validateReviewArtifacts>>) => void,
-): Promise<void> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gitignore-"));
-  try {
-    await writeFile(path.join(root, ".gitignore"), content, "utf-8");
-    assertion(await validateReviewArtifacts(root));
-  } finally {
-    await removeTempTree(root);
-  }
-}
 
 /** Every negation an earlier managed block wrote under `.qfai/evidence/`. */
 const RETIRED_EVIDENCE_LINES = [
@@ -172,34 +157,4 @@ describe("git honours the managed block against a broad pre-existing rule", () =
       }
     });
   }
-});
-
-describe("QFAI-REVIEW-001 does not punish a project's own ignore choices", () => {
-  it("passes on a marker-only block with every ignore line removed", async () => {
-    await withGitignore(`${QFAI_GITIGNORE_MARKER}\nnode_modules/\n`, (issues) => {
-      expect(issues.some((entry) => entry.code === "QFAI-REVIEW-001")).toBe(false);
-    });
-  });
-
-  it("reports the removed defaults as info, not error", async () => {
-    await withGitignore(`${QFAI_GITIGNORE_MARKER}\nnode_modules/\n`, (issues) => {
-      const notice = issues.find((entry) => entry.code === "QFAI-REVIEW-008");
-      expect(notice?.severity).toBe("info");
-      expect(notice?.refs).toContain(".qfai/evidence/*");
-    });
-  });
-
-  it("still errors when the marker block is absent entirely", async () => {
-    await withGitignore("node_modules/\n", (issues) => {
-      const finding = issues.find((entry) => entry.code === "QFAI-REVIEW-001");
-      expect(finding?.severity).toBe("error");
-    });
-  });
-
-  it("stays silent on a full managed block", async () => {
-    await withGitignore(QFAI_GITIGNORE_BLOCK, (issues) => {
-      expect(issues.some((entry) => entry.code === "QFAI-REVIEW-001")).toBe(false);
-      expect(issues.some((entry) => entry.code === "QFAI-REVIEW-008")).toBe(false);
-    });
-  });
 });

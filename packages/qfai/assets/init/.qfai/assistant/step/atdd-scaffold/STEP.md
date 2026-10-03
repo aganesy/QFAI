@@ -2,7 +2,7 @@
 name: atdd-scaffold
 owner: qfai-atdd
 purpose: "Resolve one business flow's acceptance obligations, check that their tests will be collected, and scaffold the placeholders."
-requires: [common-evidence-record, common-grilling-record, common-gate-run]
+requires: [common-grilling-record, common-gate-run]
 roles: [orchestrator, test-design-analyst, qa-strategist]
 ---
 

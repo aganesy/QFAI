@@ -21,6 +21,6 @@ product-surface-reviewer. Do not infer that a change has no UI effect from its d
 
 ## Evidence
 
-For a UI affecting example, record the screen state, action, expected and observed result, and a capture or rendered artifact under .qfai/evidence/. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict and audited evidence hash refer to that revision.
+For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the stage review, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision.
 
 If the implementation or capture changes after the verdict, refresh the capture and review. A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.

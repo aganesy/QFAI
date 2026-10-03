@@ -137,9 +137,9 @@ describe("Coverage Placeholder for AC-0009-0007", () => {
 });
 
 describe("Coverage Placeholder for EX-0009-0005", () => {
-  it("SKILL.md defines evidence file requirement", async () => {
+  it("SKILL.md defines the final report requirement", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/evidence.*configure-<run-id>\.md/i);
-    expect(content).toContain("Evidence (MANDATORY)");
+    expect(content).toContain("## Final report (MANDATORY)");
+    expect(content).toContain("chosen tools per layer");
   });
 });

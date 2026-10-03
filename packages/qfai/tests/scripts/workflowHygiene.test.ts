@@ -76,7 +76,6 @@ import {
   onlyContext,
   plantedTree,
   runLane,
-  runLaneWithReport,
 } from "./helpers/hygieneTree.js";
 
 const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
@@ -1789,54 +1788,6 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
-  it("pins the artifact directory's inode across the whole write, in both producers", async () => {
-    // Comparing only `dev` proves the staging file and the verified directory
-    // are on ONE FILESYSTEM, which a checkout and any sibling directory on the same volume already
-    // are — so that alone would let swapping the report directory for a link to a sibling pass the
-    // test while the rename replaced an artifact over there. The inode is what says it is the
-    // same directory.
-    //
-    // Asserted on the SOURCE of both writers. The interleaving it closes is between two processes,
-    // and Node has no `openat` or `renameat`, so what the code can do is compare identities around
-    // each step — which is a shape a reader can check and an in-process test cannot produce.
-    const { readFile } = await import("node:fs/promises");
-    for (const [label, file, marker] of [
-      [
-        "the hygiene lane",
-        path.join(REPO_ROOT, "scripts", "check-workflow-hygiene.mjs"),
-        "function writeExclusivelyThenRename(",
-      ],
-      [
-        "the shape gate",
-        path.join(REPO_ROOT, "packages", "qfai", "tests", "integration", "shippedWorkflowShape.ts"),
-        "export async function writeShapeFindingsForReviewerGate(",
-      ],
-    ] as const) {
-      const source = await readFile(file, "utf-8");
-      const start = source.indexOf(marker);
-      expect(start, `${label} must define its writer`).toBeGreaterThan(-1);
-      const body = source.slice(start, source.indexOf("\n}\n", start) + 3);
-      // The helper's DEFINITION is not the check. Measured: a plant that removed both call
-      // sites and left `const sameDirectory = (a, b) => a.dev === b.dev && a.ino === b.ino`
-      // standing satisfied a pattern looking for `.ino === …ino`, and the row stayed green over
-      // a writer that compared only the device. So the definition is stripped and what is left
-      // has to carry the uses.
-      const withoutDefinition = body
-        .split(/\r?\n/)
-        .filter((line) => !line.includes("const sameDirectory"))
-        .join("\n");
-      expect(
-        body,
-        `${label} must compare the directory's INODE, not only its device — a device comparison ` +
-          "is satisfied by any sibling directory on the same volume",
-      ).toMatch(/\.ino\b/);
-      expect(
-        withoutDefinition.split("sameDirectory(").length - 1,
-        `${label} must compare the parent around the open AND again before the rename; one ` +
-          "comparison leaves the other operation resolving a name nobody re-checked",
-      ).toBeGreaterThanOrEqual(2);
-    }
-  });
   it("rejects a preload variable that makes node exit before it runs anything", () => {
     // `NODE_OPTIONS=--require=<file>` preloads that file before the entry
     // point, so a preload calling `process.exit(0)` makes every `node` — and every `pnpm`, which
@@ -2708,75 +2659,6 @@ describe("a shipped runner label literal must be a public GitHub-hosted runner",
   });
 });
 
-describe("the reviewer artifact is written to its name, never through it", () => {
-  // `.qfai/review/**` is gitignored but not unwritable, and a pull request
-  // can force-add a path under it. This producer runs on an untrusted checkout — from `ci:lint`
-  // and again from the `build` bridge — so a `writeFileSync` onto a name the pull request made a
-  // symlink would truncate whatever it points at: a file outside the repository on the runner, or
-  // the input of a later gate.
-
-  /** A junction on Windows, an ordinary symlink elsewhere; neither needs privilege. */
-  function link(target: string, at: string, type: "junction" | "file"): boolean {
-    try {
-      symlinkSync(target, at, type);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  it("replaces a symlinked artifact name instead of writing through it", () => {
-    const dir = plantedTree(() => undefined);
-    const outside = mkdtempSync(path.join(tmpdir(), "qfai-artifact-outside-"));
-    try {
-      const bystander = path.join(outside, "somebody-elses-file.txt");
-      writeFileSync(bystander, "not this lane's to write\n", "utf-8");
-
-      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
-      mkdirSync(path.join(dir, reportRel), { recursive: true });
-      const target = path.join(dir, reportRel, "workflow-hygiene.json");
-      if (!link(bystander, target, "file")) return;
-
-      const run = runLaneWithReport(dir, reportRel);
-      expect(run.exitCode, `the lane must still produce its artifact:\n${run.output}`).not.toBe(-1);
-      expect(
-        readFileSync(bystander, "utf-8"),
-        "the file the name pointed at must be exactly as it was",
-      ).toBe("not this lane's to write\n");
-      expect(
-        JSON.parse(readFileSync(path.join(dir, reportRel, "workflow-hygiene.json"), "utf-8")),
-        "and the artifact must be at the name, as a file of its own",
-      ).toHaveProperty("findings");
-    } finally {
-      rmSync(outside, { recursive: true, force: true });
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("refuses a report directory reached through a symlinked component", () => {
-    // The other half: `mkdirSync(..., { recursive: true })` FOLLOWS an existing component and
-    // creates nothing, so a linked directory inside the checkout puts the whole write elsewhere.
-    const dir = plantedTree(() => undefined);
-    const outside = mkdtempSync(path.join(tmpdir(), "qfai-artifact-dir-"));
-    try {
-      mkdirSync(path.join(dir, ".qfai"), { recursive: true });
-      if (!link(outside, path.join(dir, ".qfai", "review"), "junction")) return;
-
-      const run = runLaneWithReport(dir, path.join(".qfai", "review", "workflow-hygiene"));
-      expect(
-        run.output,
-        "the lane must say which component it refused rather than writing through it",
-      ).toMatch(/is not a real directory/);
-      expect(
-        existsSync(path.join(outside, "workflow-hygiene")),
-        "nothing may be created beyond the link",
-      ).toBe(false);
-    } finally {
-      rmSync(outside, { recursive: true, force: true });
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
 describe("a root this lane refuses to walk is reported, not silently empty", () => {
   // `yamlFilesUnder` answers the empty list for BOTH "absent" and
   // "refused", which is right for a walk and wrong for a report — so an empty-tree check applied
@@ -3038,59 +2920,6 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
   }
 });
 
-describe("the lane writes the artifact the Reviewer Gate ingests", () => {
-  it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
-    // The lane must write `{ findings: [...] }` JSON under `.qfai/review/**`, the shape the gate
-    // ingests, rather than prose to stderr with no production bridge between the two — the E2E
-    // that demonstrates the ingestion would otherwise have to parse stderr and build the JSON
-    // itself, and a hygiene violation would fail the CI log without ever reaching a reviewer.
-    const dir = plantedTree((d) => {
-      const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
-      writeFileSync(target, `${readFileSync(target, "utf-8")}# v9.9.9\n`, "utf-8");
-    });
-    try {
-      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
-      const run = runLaneWithReport(dir, reportRel);
-      expect.soft(run.exitCode, run.output).toBe(1);
-
-      const artifact = path.join(dir, reportRel, "workflow-hygiene.json");
-      const payload: unknown = JSON.parse(readFileSync(artifact, "utf-8"));
-      if (!isRecord(payload) || !Array.isArray(payload.findings)) {
-        throw new Error("the artifact must be an object with a findings array");
-      }
-      const first: unknown = payload.findings[0];
-      if (!isRecord(first)) throw new Error("the artifact carried no finding");
-
-      // The gate keys on `code`, and passes `file` / `job` / `rule` through untouched — so those
-      // four are the contract between the two, not a convenience.
-      expect.soft(first.code, "the code the gate keys on").toBe("R-WORKFLOW-HYGIENE-DRIFT");
-      expect.soft(first.rule).toBe("shipped-version-marker");
-      expect.soft(String(first.file)).toContain("qfai-tests.yml");
-      expect.soft(first.job, "the site, so a reviewer is not sent hunting").toBeTruthy();
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("emits an empty findings array on a clean tree, so a missing file means the bridge did not run", () => {
-    // Two different facts, and they have to stay distinguishable: nothing found, versus nothing
-    // asked. Writing on every run also overwrites a stale artifact rather than leaving one to be
-    // read as current.
-    const dir = plantedTree(() => undefined);
-    try {
-      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
-      const run = runLaneWithReport(dir, reportRel);
-      expect.soft(run.exitCode, run.output).toBe(0);
-      const artifact = path.join(dir, reportRel, "workflow-hygiene.json");
-      const payload: unknown = JSON.parse(readFileSync(artifact, "utf-8"));
-      if (!isRecord(payload)) throw new Error("the artifact must be an object");
-      expect(payload.findings).toEqual([]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
 // QFAI:EX-0002-0018-01
 describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened own tree", () => {
   // QFAI:EX-0002-0014-07
@@ -3329,8 +3158,7 @@ describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace"
       );
 
       // `BR-0016-0040` is a NAMESPACE decision and nothing more: the bare `R-` form, matching
-      // the `check-pack-locations` precedent. It does not decide catalog membership, which is
-      // settled by severity class and deferred as a lockstep change.
+      // the `check-pack-locations` precedent.
       expect
         .soft([...codes].sort(), `findings must use one bare-R code (rule ${rule})`)
         .toEqual(["R-WORKFLOW-HYGIENE-DRIFT"]);

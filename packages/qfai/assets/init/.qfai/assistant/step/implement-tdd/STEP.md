@@ -6,7 +6,6 @@ requires:
   - common-steering-refresh
   - common-gate-run
   - common-grilling-record
-  - common-evidence-record
 roles:
   - delivery-planner
   - test-design-analyst
@@ -66,9 +65,7 @@ states the case is worked as an EX no test annotates, and where none does,
    section, and run each gate with `common-gate-run`. Read its
    `## Architecture` table too: place each new module in one layer, and
    import only from the layers that layer's row lists.
-3. Read the current `/qfai-atdd` handoff in
-   `.qfai/evidence/atdd-BF-NNNN.md`. The file is local; where this checkout
-   lacks it, find the tests by their `QFAI:BF-NNNN` and
+3. Find the flow's acceptance tests by their `QFAI:BF-NNNN` and
    `QFAI:AC-NNNN-NNNN-NN` annotations. Confirm the BF E2E and AC integration
    or API tests and their observed results. A deliberate acceptance RED is
    handed to the matching implementation; it is not a passing test.
@@ -94,8 +91,7 @@ to the user; other decisions follow the recorded griller recommendation.
   change through `.qfai/assistant/rule/drift-protocol.md`; the run solves
   local obstacles.
 
-Record the sessions with `common-grilling-record` in
-`.qfai/evidence/implement-BF-NNNN.md`. Do not reopen settled requirements as
+Record the sessions with `common-grilling-record`. Do not reopen settled requirements as
 implementation preferences.
 
 ## Select the next example
@@ -196,18 +192,13 @@ other surfaces follow it once the examples are done:
 
 Change nothing on the surface that owns the truth.
 
-## Evidence
+## Report
 
-Write `.qfai/evidence/implement-BF-NNNN.md` with `common-evidence-record`.
-Give each example its own
-`### EX-NNNN-NNNN-NN` section with the obligation, test path and selector,
-RED, GREEN, and Refactor commands and observed results, revisions, hashes,
-reviewer verdicts, and open findings. Keep prior rounds as history; new work
-gets a new round. Evidence without a command and result pair does not prove a
-gate. Follow
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` and
-`.qfai/assistant/skill/qfai-implement/references/round-evidence.md` for
-freshness and round fields.
+The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
+the obligation, test path and selector,
+RED, GREEN, and Refactor commands and observed results, revisions,
+reviewer verdicts, and open findings.
+Evidence without a command and result pair does not prove a gate.
 
 ## Stage review
 
@@ -217,17 +208,13 @@ stage's steps' reviewers: the implementation-reviewer, the completion-reviewer,
 the qa-gatekeeper for the recorded RED and GREEN evidence, and the
 product-surface-reviewer where an example is UI-affecting.
 
-The stage's review pack identifies the BF, every EX the stage implemented, the
-evidence path, the revision and the requested reviewers.
+The review request identifies the BF, every EX the stage implemented, the
+revision and the requested reviewers.
 Each required reviewer must pass the same final revision.
-Record the pack path and its seal in the current round of each example it
-covers, following
-`.qfai/assistant/skill/qfai-implement/references/review-artifact-layout.md`
-and
-`.qfai/assistant/skill/qfai-implement/references/finding-classification.md`.
-A blocking REVISE opens the next round of the examples it names.
-A record correction follows `.qfai/assistant/rule/drift-protocol.md` and
-never changes a sealed pack.
+Classify findings as
+`.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
+says. A blocking REVISE opens the next round of the examples it names.
+A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 Record explicit PASS or REVISE for the current revision.
 
 ## Gate

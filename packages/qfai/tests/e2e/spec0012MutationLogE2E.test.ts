@@ -2,12 +2,9 @@
  * E2E acceptance for spec-0012 CHG-006 user story US-0012-0142
  * (`mutation-log.jsonl`: iterate appends a JSON-Lines entry for
  * every destructive mutation under `iter-NN/*`, including each file
- * moved by `--cycle 0 --force`; unlogged mutation surfaces
- * `R-EVIDENCE-MUTATION-UNLOGGED`).
+ * moved by `--cycle 0 --force`).
  *
- * Converted from `.skip` test-first skeleton to a deterministic
- * temp-fixture exercise of the iterate `--force` path + the SSOT
- * pair-scan reviewer-gate detector.
+ * A deterministic temp-fixture exercise of the iterate `--force` path.
  */
 // QFAI:BF-0001
 
@@ -18,7 +15,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
-import { detectEvidenceMutationUnlogged } from "../../src/core/validators/evidenceMutationUnlogged.js";
 
 const MUTATION_DESIGN_MD = [
   "---",
@@ -131,20 +127,5 @@ describe("US-0012-0142 — --cycle 0 --force appends a mutation-log line per mov
       expect(typeof entry.priorSize).toBe("number");
       expect(entry.newSize).toBe(0);
     }
-  });
-});
-
-describe("US-0012-0142 — R-EVIDENCE-MUTATION-UNLOGGED reviewer gate", () => {
-  it("the SSOT pair scan emits zero findings against the live repo (all mutation sites are paired)", async () => {
-    // Walk from this test file up to the repository root.
-    const repoRoot = path.resolve(
-      path.dirname(new URL(import.meta.url).pathname),
-      "..",
-      "..",
-      "..",
-      "..",
-    );
-    const issues = await detectEvidenceMutationUnlogged(repoRoot);
-    expect(issues.filter((i) => i.code === "R-EVIDENCE-MUTATION-UNLOGGED")).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@
 name: verify-release-notes
 owner: qfai-verify
 purpose: "Draft the release notes for a release from the changes it contains."
-requires: [common-evidence-record]
+requires: []
 roles: [orchestrator, doc-steward, completion-reviewer]
 routing-profile: default
 ---

@@ -28,7 +28,7 @@ describe("flow evidence identifies the test it proves", () => {
         "utf-8",
       );
       expect(atdd).toContain("test paths and selectors");
-      expect(implement).toContain(".qfai/evidence/atdd-BF-NNNN.md");
+      expect(implement).toContain("`QFAI:AC-NNNN-NNNN-NN` annotations");
       expect(implement).toContain("An EX test must be collected by the runner and by validation");
     });
   }

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -6,7 +6,6 @@ import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
 import { containsMermaidBlock } from "../validators/discussionPack.js";
-import { resolveImportLiteEntrypoint } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
@@ -22,12 +21,10 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 const PREFLIGHT_RUN_ROOT = "preflight";
 
 /**
- * `import-lite` is the entrypoint for a project that already carries specs but
- * never ran `/qfai-discussion`: Stage 0 records the input source as
- * `.qfai/evidence/import-lite-<timestamp>.md` instead, which is the same
- * artifact `QFAI-IMPLITE-001` accepts. Without it here, a consumer driving
- * Stage 0 through this public entrypoint stayed `blocked` forever on a project
- * the validator considered compliant.
+ * The input source preflight selected: the discussion pack, or an imported
+ * specification the caller names with `importPath`. An explicit user
+ * requirement is not a file, so a project with neither reports `blocked` and
+ * SDD decides whether the user gave one.
  */
 export type SddPreflightSource = "discussion-pack" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
@@ -40,6 +37,8 @@ export type RunSddPreflightOptions = {
    * pointed-at pack so an explicitly pinned (older) pack is the one gated.
    */
   packDir?: string;
+  /** An imported specification to use when no discussion pack is usable. */
+  importPath?: string;
   startedAt?: Date;
 };
 
@@ -52,14 +51,14 @@ export type SddPreflightResult = {
   blockers: string[];
   /**
    * What the selected pack lacks or contradicts. Listed, never a stop: the pack
-   * is non-normative reference material, so SDD records each gap in its own
-   * delta or evidence and carries on.
+   * is non-normative reference material, so SDD states each gap in its final
+   * report and carries on.
    */
   packGaps: string[];
   nextCommands: string[];
   /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
   runId: string;
-  /** Immutable, run-scoped summary — the path evidence files must cite. */
+  /** Immutable, run-scoped summary of this run. */
   preflightSummaryPath: string;
   /** Overwritten-every-run copy at `<outDir>/preflight_summary.md`, for humans. */
   latestPreflightSummaryPath: string;
@@ -95,29 +94,22 @@ export async function runSddPreflight(
   ];
 
   if (blockers.length > 0) {
-    // `resolveImportLiteEntrypoint` gates the fallback to the shape the shipped
-    // Stage 0 step describes: specs already exist and there is no discussion
-    // pack at all (a misnamed pack still blocks — evidence is an entrypoint,
-    // never an override).
-    const importLiteEvidencePath = await resolveImportLiteEntrypoint(root, config);
-    if (importLiteEvidencePath !== null) {
+    if (options.importPath !== undefined && (await isReadableFile(options.importPath))) {
       return await completeReadyPreflight({
         source: "import-lite",
-        selectedInputPath: importLiteEvidencePath,
-        // The shipped template is an explicit pointer artifact, "not
-        // requirement/spec SSOT", so it carries no REQ ids. Counting them would
-        // report a confident `0` for a project whose requirements live in the
-        // specs; the count is genuinely unknown on this path.
+        selectedInputPath: options.importPath,
+        // An imported specification carries no `REQ-*` index, so the count is
+        // unknown rather than a confident zero.
         importedReqCount: null,
         run,
         openQuestions: carryOverOpenQuestions,
         packGaps: [],
-        // `/qfai-discussion` is not the follow-up here — the input source is
-        // already recorded, so the caller continues the SDD workflow.
         nextCommands: ["/qfai-sdd"],
       });
     }
-
+    if (options.importPath !== undefined) {
+      blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
+    }
     await publishPreflightSummary(
       run,
       buildBlockedPreflightSummary({
@@ -157,10 +149,10 @@ export async function runSddPreflight(
 }
 
 /**
- * Write the ready summary and return the result. Shared by both sources so
- * `preflight_summary.md` and the returned record cannot drift apart between
- * them. `importedReqCount: null` means "not countable from this input source"
- * and renders as `unknown` rather than a confident zero.
+ * Write the ready summary and return the result, so `preflight_summary.md`
+ * and the returned record cannot drift apart. `importedReqCount: null` means
+ * "not countable from this input source" and renders as `unknown` rather than
+ * a confident zero.
  */
 async function completeReadyPreflight(input: {
   source: SddPreflightSource;
@@ -225,7 +217,7 @@ const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
 
 /**
  * Write the run-scoped summary first, then refresh the latest pointer with the
- * same body. The run-scoped copy is never rewritten, so an evidence file that
+ * same body. The run-scoped copy is never rewritten, so a report that
  * cites it keeps resolving to the state that justified its decisions.
  *
  * The pointer refresh is conditional, for the same reason
@@ -302,7 +294,7 @@ function resolvePreflightBlockers(readiness: PackReadiness): string[] {
  * The pack is non-normative reference material
  * (`constitution/drift-protocol.md#core-rule`), so an incomplete one, a
  * contradictory one or one carrying a blocking OQ does not stop SDD: each gap is
- * listed in the summary, recorded in the SDD-owned delta or evidence, and the
+ * listed in the summary and in the SDD final report, and the
  * correction lands in the spec rather than in the pack.
  */
 function resolvePackGaps(readiness: PackReadiness): string[] {
@@ -418,8 +410,7 @@ function buildReadyPreflightSummary(input: {
   packGaps: string[];
 }): string {
   const openQuestions = renderCarryOver(input.openQuestions);
-  const inputLabel =
-    input.source === "import-lite" ? "selected import-lite evidence" : "selected discussion-pack";
+  const inputLabel = `selected ${input.source}`;
 
   return [
     "# Preflight Summary",
@@ -527,5 +518,14 @@ async function readSafe(filePath: string): Promise<string> {
     return await readFile(filePath, "utf-8");
   } catch {
     return "";
+  }
+}
+
+/** Whether `filePath` names a regular file this process can read. */
+async function isReadableFile(filePath: string): Promise<boolean> {
+  try {
+    return (await stat(filePath)).isFile();
+  } catch {
+    return false;
   }
 }

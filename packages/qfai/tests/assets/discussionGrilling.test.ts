@@ -166,7 +166,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     );
     // And the exemption names where it goes. Left as the pack file it used to
     // be, the row would license the write the cancellation guard forbids.
-    expectPhrase(skill, "The research summary in this run's stage evidence");
+    expectPhrase(skill, "The research summary in this run's stage report");
     expectPhrase(skill, "no pack directory exists yet");
     expectPhrase(
       skill,
@@ -260,23 +260,12 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // And the gate reads the row rather than the event.
     expectPhrase(
       skill,
-      "the stage evidence's `## Grilling Session` row shows the session ended before authoring began",
+      "the stage report's `## Grilling Session` row shows the session ended before authoring began",
     );
 
     const matrix = await read(MATRIX);
-    expectPhrase(matrix, "The stage evidence's `## Grilling Session` row");
+    expectPhrase(matrix, "The stage report's `## Grilling Session` row");
     expectPhrase(matrix, "The no-question row is the one to read carefully");
-  });
-
-  it("gives the record a home before the pack has one", async () => {
-    // `Ended at` is required before the first pack file, and nothing named a
-    // file the run may write at that moment. A row with nowhere to go until the
-    // pack exists can only be written after drafting, which is the order the
-    // requirement was added to rule out.
-    const skill = await readSkill();
-    expectPhrase(skill, "`.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`");
-    expectPhrase(skill, "before anything else is written");
-    expectPhrase(skill, "have no other home before the pack exists");
   });
 
   it("keeps a cancelled run from leaving a pack behind", async () => {
@@ -291,7 +280,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     );
     expectPhrase(skill, "resolved by the greatest timestamp with no completeness check");
     // The summary still has somewhere to be, and reaches the pack when one opens.
-    expectPhrase(skill, "record its `research_summary` output in this run's stage evidence");
+    expectPhrase(skill, "report its `research_summary` output");
     expectPhrase(skill, "into the `## Research Summary` section of `04_Sources.md`");
   });
 
@@ -322,22 +311,13 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "What is forbidden is the assumption on its own");
   });
 
-  it("says which writes the pack-only rule was about", async () => {
-    // Read as every write, it forbids the stage evidence this run opens first —
-    // and it never covered the review pack either, which the cycle writes
-    // outside the pack by design.
-    const skill = await readSkill();
-    expectPhrase(skill, "Discussion authors no design artifact outside its own pack");
-    expectPhrase(skill, "record what the run did rather than specify anything");
-  });
-
   it("agrees with the protocol whose output it redirects", async () => {
     // The shared rule outranks the skill and sits at P1 in its own read order,
     // so a storage contract sending the summary straight into the pack is the
     // instruction an agent follows — and it rebuilds the partial pack this
     // change exists to prevent.
     const protocol = await read("assistant/rule/research-first-protocol.md");
-    expectPhrase(protocol, "goes to the invoking stage's own evidence when it is");
+    expectPhrase(protocol, "goes to the invoking stage's own report when it is");
     expectPhrase(protocol, "carried into the artifact that consumes it");
     expectPhrase(protocol, "a run cancelled before that authorization leaves it behind");
     expectPhrase(protocol, "Not persisted globally");

@@ -46,9 +46,8 @@ const PACK_RULES: Record<PackKind, PackRule> = {
  * The 17-digit `YYYYMMDDhhmmssSSS` stamp a canonical QFAI artifact name carries.
  *
  * Exported because it is the naming rule, not a pack-local detail: every writer
- * that stamps a name — the discussion packs here, the import-lite evidence file
- * the SDD preflight selects — has to admit exactly the same width, or one of
- * them starts accepting names the other rejects.
+ * that stamps a name has to admit exactly the same width, or one of them
+ * starts accepting names the other rejects.
  */
 export const CANONICAL_TIMESTAMP_DIGITS = 17;
 

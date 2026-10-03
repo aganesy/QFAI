@@ -191,7 +191,7 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   `.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md`
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
-- **qfai-verify**: Run documented quality gates and produce reviewer-approved evidence under `.qfai/evidence/`.
+- **qfai-verify**: Run documented quality gates and report the reviewer-approved result.
 
 On a project with the old spec layout, `qfai init` installs the migration skill
 without seeding a competing `.qfai/spec/` tree. Run the skill before adopting
@@ -235,7 +235,6 @@ Notes on the skills.
 - Skills delegate to role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer and so on), so each change passes through separate roles.
 - Triage decisions and change requests live in `.qfai/spec/decisions.md`;
   unresolved questions live in `.qfai/spec/open-questions.md`.
-- Review pack structure — `.qfai/review/review-<YYYYMMDDhhmmssSSS>/{review_request.md,R01_*.md,summary.json}` — is the one layout enforced by validation (`QFAI-REVIEW-*`).
 - Agent cards under `.qfai/assistant/agent/` define each role. The installed package supplies routing and review-profile defaults in `assets/defaults/`.
 - Project `routing` and `reviewProfiles` entries in `qfai.config.yaml` replace matching defaults as complete entries.
 
@@ -332,8 +331,7 @@ flowchart LR
     recognized files into the current tree without deleting their sources.
 
 - `npx qfai validate`
-  - Validates the story tree, contracts, test obligations and review artifacts
-    (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
+  - Validates the story tree, contracts and test obligations, writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
     Use `--flow BF-0001` to scope a run to one business flow. `--spec` is retired.
@@ -455,8 +453,7 @@ Notes.
 2. Open your AI coding agent in the repository and describe the change in your own words.
    If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
 3. Answer the questions the work puts to you, or say `stop` to end it.
-4. Keep each completed review under `.qfai/review/review-<timestamp>/`.
-5. Run `npx qfai validate` then `npx qfai report`.
+4. Run `npx qfai validate` then `npx qfai report`.
 
 To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
