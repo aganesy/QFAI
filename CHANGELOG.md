@@ -116,7 +116,8 @@ its code. Several commands, findings and files go with that.
   - `qfai validate` drops `QFAI-SKILLS-001` and `QFAI-ASSETS-004` to
     `QFAI-ASSETS-009`, the comparisons of the assistant tree against the
     package.
-- **A discussion pack holds nine files** (#2811), and they keep their numbers:
+- **A discussion pack holds nine files beside its `00_index.md`** (#2811), and
+  they keep their numbers:
   `01_Context.md`, `03_Story-Workshop.md`, `04_Sources.md`, `05_Scope.md`,
   `06_REQ.md`, `07_NFR.md`, `08_Glossary.md`, `09_Constraints.md` and
   `11_OQ-Register.md`.
@@ -360,8 +361,7 @@ its code. Several commands, findings and files go with that.
   one file read answers is answered directly.
 - **A question that changes no file is answered in one stage, with no separate
   reviewer.** `answer-question` is one stage that runs every step of the route
-  down to `triage-close`. A plan marks such a stage `review: none`, which is
-  admitted only on a triage stage. A defect found while investigating still
+  down to `triage-close`. A triage stage carries no review. A defect found while investigating still
   re-routes by the decision rules. This replaces the earlier multi-stage
   question routes and their reviews. Fixes #2730.
 - **`qfai init` allows the shipped skills and the launcher.** It merges one `Skill(<name>)`
