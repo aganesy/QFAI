@@ -24,11 +24,11 @@ export const REQUIRED_CAPABILITIES = [
 // lacks; undefined when the host and every capability are supported.
 function unsupportedHarness(harness: WorkflowHarness): string | undefined {
   if (!SUPPORTED_HOSTS.includes(harness.host)) {
-    return `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
+    return `No run was created because ${harness.host} is not supported; invoke a stage skill by name instead.`;
   }
   const missing = REQUIRED_CAPABILITIES.filter((name) => harness.capabilities[name] !== true);
   if (missing.length === 0) return undefined;
-  return `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
+  return `No run was created because the host does not report ${missing.join(", ")} as available; invoke a stage skill by name instead.`;
 }
 
 // The refusal message for a cause an observer found, naming the override a dropped reviewer

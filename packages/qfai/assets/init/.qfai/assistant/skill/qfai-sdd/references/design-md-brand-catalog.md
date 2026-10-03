@@ -11,64 +11,71 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 - representative_brand: Apple, Notion, Linear
 - aesthetic_properties:
-  - color_tendency: Near-white backgrounds, single accent hue, generous negative space
-  - typography: Geometric or humanist sans-serif at regular weight; large scale ratios
-  - spacing: Extra-generous gutters; element counts kept deliberately low per screen
+  - color_tendency: Light neutral ground with a tint of its own; one accent hue chosen for the brand
+  - typography: A sans-serif chosen for the brand at regular weight; large scale ratios carry the hierarchy
+  - spacing: Generous space that groups and separates; element counts kept deliberately low per screen
   - interaction: Subtle transitions; interactions feel frictionless and obvious
+- typeface_candidates: Hanken Grotesk, Schibsted Grotesk, Albert Sans
 
 ## Archetype: Bold
 
 - representative_brand: Nike, Spotify, Figma
 - aesthetic_properties:
-  - color_tendency: High-saturation primary colors; dark backgrounds with vivid accent pops
-  - typography: Condensed or display weights; heavy headlines that command attention
+  - color_tendency: One saturated brand color leads, with a supporting range ranked beneath it
+  - typography: Condensed or heavy display weights for headlines, sized against the content they lead
   - spacing: Tight internal component spacing; breath introduced only at section level
-  - interaction: Snappy, energetic micro-animations; decisive hover states
+  - interaction: Short, fast motion on the actions that matter; decisive pressed and selected states
+- typeface_candidates: Bricolage Grotesque, Archivo at a condensed width, Anton
 
 ## Archetype: Corporate
 
 - representative_brand: IBM, Salesforce, Microsoft 365
 - aesthetic_properties:
-  - color_tendency: Mid-range blues and grays; structured palette with clear semantic mapping
-  - typography: Neutral grotesque or humanist sans-serif; consistent weight hierarchy
-  - spacing: Grid-aligned with predictable rhythm; density leans compact
+  - color_tendency: A brand hue of its own with neutrals tinted toward it; semantic colors reserved for status
+  - typography: Grotesque or humanist sans-serif chosen for the brand; a clear weight and size hierarchy
+  - spacing: Grid-aligned; spacing varies to group related items; density leans compact
   - interaction: Minimal animation; reliability and predictability over delight
+- typeface_candidates: IBM Plex Sans, Source Sans 3, Public Sans
 
 ## Archetype: Playful
 
 - representative_brand: Duolingo, Mailchimp, Discord
 - aesthetic_properties:
-  - color_tendency: Multi-hue palette with 3–4 accent colors; high brightness
+  - color_tendency: Several bright hues in a clear order: one primary, the others supporting it
   - typography: Rounded or quirky sans-serif; variable weight for personality
   - spacing: Moderate; breathing room balanced with visual richness
-  - interaction: Bouncy easing curves; celebratory moments on key actions
+  - interaction: Springy easing and celebratory moments kept for key actions; hover stays calm
+- typeface_candidates: Fredoka, Baloo 2, Gluten
 
 ## Archetype: Organic
 
 - representative_brand: Airbnb, Etsy, Headspace
 - aesthetic_properties:
-  - color_tendency: Earth tones, warm neutrals, terracotta, sage; low saturation
+  - color_tendency: Earth tones taken from the brand's own materials or setting; low saturation
   - typography: Serif or humanist sans-serif with organic curves; medium weight
   - spacing: Comfortable; asymmetry acceptable to evoke craft and warmth
-  - interaction: Slow, gentle ease-in-out; softness preferred over speed
+  - interaction: Slow, gentle easing tuned to each element; softness preferred over speed
+- typeface_candidates: Alegreya, Alegreya Sans, Literata
 
 ## Archetype: Tech
 
 - representative_brand: Tesla, Vercel, Raycast
 - aesthetic_properties:
-  - color_tendency: Dark-mode-first; monochrome base with electric accent (cyan, neon)
-  - typography: Monospace or sharp geometric sans; uppercase labels common
+  - color_tendency: Dark and light themes both designed; monochrome base with one accent chosen for the brand
+  - typography: Sharp grotesque sans; monospace only for code and aligned figures; sentence-case labels
   - spacing: Dense with strong grid discipline; every pixel intentional
   - interaction: Instant response; minimal duration; mechanical precision
+- typeface_candidates: Chivo, Red Hat Text, JetBrains Mono for code only
 
 ## Archetype: Elegant
 
 - representative_brand: Chanel, Aesop, Stripe
 - aesthetic_properties:
-  - color_tendency: Neutral palette — ivory, charcoal, gold accent; restraint is the rule
-  - typography: Classic serif for headlines; refined sans for body; wide letter-spacing
-  - spacing: Generous; content-to-whitespace ratio strongly favors whitespace
-  - interaction: Slow, fade-based transitions; no sudden movements
+  - color_tendency: Restrained palette of deep and light neutrals with one precious accent
+  - typography: Classic serif for headlines; refined sans for body; tracking set per size
+  - spacing: Generous, with space that groups and paces the content
+  - interaction: Slow, quiet transitions chosen per element; no sudden movements
+- typeface_candidates: Cormorant Garamond, EB Garamond, Libre Franklin for body
 
 ## Archetype: Casual
 
@@ -78,8 +85,41 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
   - typography: Rounded humanist sans-serif; approachable weight and scale
   - spacing: Comfortable; interface feels familiar and non-intimidating
   - interaction: Light spring easing; feedback is immediate but unobtrusive
+- typeface_candidates: Figtree, Rubik, Atkinson Hyperlegible
 
 ---
+
+## Patterns to avoid
+
+`design-anti-patterns.md` lists the patterns that mark a design as generated,
+by aspect, and the substitutes a model falls back to once one is banned. Read it
+before turning an archetype's defaults into `DESIGN.md` values. A value that
+produces a listed pattern stays only where the recorded brand direction asks for
+it.
+
+## Typeface candidates
+
+`typeface_candidates` names families that suit an archetype. It is a starting
+point, not the answer, and it is not a `DESIGN.md` key: the chosen family goes
+into `visual.typography`.
+
+- Where a `brand.theme` is named, its published typeface wins over this list.
+- Choose for the recorded brand direction, not for looking distinctive. Any
+  family here becomes the new default once it is used everywhere, and a
+  candidate picked on reflex is the pattern this catalog exists to prevent.
+- Inter, Roboto, Arial, Open Sans, Lato, Poppins and the system font stack are
+  the first defaults. Space Grotesk, Geist, Instrument Serif, Fraunces and
+  Satoshi are what a model reaches for once those are banned. None of them is a
+  candidate here.
+- Every candidate is free to use under an open font licence.
+
+For text in another script, choose a family that covers it rather than leaving
+the browser to fall back. Put the Latin family first in the stack, so Latin
+letters and numerals do not fall back to a default family either.
+
+- Japanese: BIZ UDPGothic, Zen Kaku Gothic New, M PLUS 2
+- Chinese: LXGW WenKai, Source Han Serif SC, Smiley Sans for display only
+- Cyrillic: Golos Text, Onest, PT Serif
 
 ## Selection Guide
 
