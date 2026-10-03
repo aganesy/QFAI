@@ -1,5 +1,6 @@
 // QFAI:AC-0001-0189-09
 // QFAI:EX-0001-0189-09
+// QFAI:EX-0001-0189-33
 
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -18,7 +19,18 @@ const fault = vi.hoisted(
     error: Error | null;
     diagnosticError: Error | null;
     attempts: number;
-  } => ({ journal: null, error: null, diagnosticError: null, attempts: 0 }),
+    writeJournal: string | null;
+    writeError: Error | null;
+    writeAttempts: number;
+  } => ({
+    journal: null,
+    error: null,
+    diagnosticError: null,
+    attempts: 0,
+    writeJournal: null,
+    writeError: null,
+    writeAttempts: 0,
+  }),
 );
 
 vi.mock("node:fs/promises", async (importOriginal) => {
@@ -32,6 +44,18 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       }
       return actual.readdir(...args);
     },
+    writeFile: async (...args: Parameters<typeof actual.writeFile>) => {
+      const file = path.resolve(String(args[0]));
+      if (
+        fault.writeJournal !== null &&
+        path.dirname(file) === fault.writeJournal &&
+        path.basename(file).endsWith(".tmp")
+      ) {
+        fault.writeAttempts += 1;
+        throw fault.writeError;
+      }
+      return actual.writeFile(...args);
+    },
   };
 });
 
@@ -40,6 +64,9 @@ afterEach(async () => {
   fault.error = null;
   fault.diagnosticError = null;
   fault.attempts = 0;
+  fault.writeJournal = null;
+  fault.writeError = null;
+  fault.writeAttempts = 0;
   vi.restoreAllMocks();
   await removeProjects();
 });
@@ -65,15 +92,20 @@ it.each(CODES)(
   },
 );
 
-for (const operation of ["status", "next"] as const) {
+for (const { operation, named, label } of [
+  { operation: "status", named: true, label: "status --run" },
+  { operation: "next", named: true, label: "next --run" },
+  { operation: "status", named: false, label: "status" },
+  { operation: "start", named: false, label: "start" },
+] as const) {
   it.each(CODES)(
-    `${operation} reports the primary %s directory fault without changing the run`,
+    `${label} reports the primary %s directory fault after one attempt without changing runs`,
     async (code) => {
       const root = await minimalProject();
       const runId = await startRun(root);
       const runDir = path.join(root, RUNS_DIR, runId);
       const journal = path.join(runDir, "journal");
-      const before = await treeDigest(runDir);
+      const before = await treeDigest(path.join(root, RUNS_DIR));
       fault.journal = journal;
       fault.error = Object.assign(new Error(`Primary directory read failed with ${code}`), {
         code,
@@ -90,7 +122,7 @@ for (const operation of ["status", "next"] as const) {
       });
       let exit: number;
       try {
-        exit = await runWorkflow({ root, operation, runId });
+        exit = await runWorkflow({ root, operation, ...(named ? { runId } : {}) });
       } finally {
         stdout.mockRestore();
         fault.journal = null;
@@ -101,23 +133,67 @@ for (const operation of ["status", "next"] as const) {
         ok: field(document, "ok"),
         error: field(document, "error.code"),
         cause: field(document, "error.cause"),
+        run: field(document, "run"),
         exit,
-        unchanged: (await treeDigest(runDir)) === before,
+        unchanged: (await treeDigest(path.join(root, RUNS_DIR))) === before,
         lock: existsSync(path.join(root, RUNS_DIR, ".lock")),
       }).toEqual({
         ok: false,
         error: "io-error",
         cause: code,
+        run: null,
         exit: 1,
         unchanged: true,
         lock: false,
       });
-      // The failed operation reads once; error reporting may make one best-effort metadata read.
-      expect(fault.attempts).toBeGreaterThanOrEqual(1);
-      expect(fault.attempts).toBeLessThanOrEqual(2);
+      expect(fault.attempts).toBe(1);
     },
   );
 }
+
+it.each(CODES)(
+  "next retains verified run metadata after a later %s journal write fault",
+  async (code) => {
+    const root = await minimalProject();
+    const runId = await startRun(root);
+    const journal = path.join(root, RUNS_DIR, runId, "journal");
+    fault.writeJournal = journal;
+    fault.writeError = Object.assign(new Error(`Journal write failed with ${code}`), {
+      code,
+      path: journal,
+    });
+    const lines: string[] = [];
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    let exit: number;
+    try {
+      exit = await runWorkflow({ root, operation: "next", runId });
+    } finally {
+      stdout.mockRestore();
+      fault.writeJournal = null;
+    }
+    const document: unknown = JSON.parse(lines.join(""));
+
+    expect({
+      ok: field(document, "ok"),
+      error: field(document, "error.code"),
+      cause: field(document, "error.cause"),
+      run: field(document, "run"),
+      exit,
+      lock: existsSync(path.join(root, RUNS_DIR, ".lock")),
+    }).toEqual({
+      ok: false,
+      error: "io-error",
+      cause: code,
+      run: { id: runId, state: "routing", sequence: 2 },
+      exit: 1,
+      lock: false,
+    });
+    expect(fault.writeAttempts).toBe(1);
+  },
+);
 
 it("a missing journal directory remains legacy", async () => {
   const root = await minimalProject();
