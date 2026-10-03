@@ -68,6 +68,8 @@ Feature: Continue, or stop, an interrupted run
     Given a run operation
     When a file read or write fails with `EBUSY`, `EPERM` or `EACCES`, or the same run cycle runs on Linux and on Windows
     Then the failing operation is refused `io-error` after one attempt
+    And an initial canonical-journal read fault reports no run metadata when none has been verified for this operation
+    And a later fault keeps the run metadata already obtained from a verified journal
     And both platforms give the same verdicts, with equal digests for LF and CRLF copies
 
   # AC-0001-0189-10
@@ -76,4 +78,12 @@ Feature: Continue, or stop, an interrupted run
     When an operation has no edge from that state
     Then it is refused, or `finish` lists the unmet condition, and the state is unchanged
     And a terminal run accepts no further event
+
+  # AC-0001-0189-11
+  Scenario: Published result receipts keep their identity and bytes
+    Given a run whose journal references a result receipt
+    When another valid result is recorded or the run is continued
+    Then the reference names the stored result with its original logical ID
+    And a different logical ID never overwrites that receipt
+    And historical references keep their recorded paths and bytes
 ```

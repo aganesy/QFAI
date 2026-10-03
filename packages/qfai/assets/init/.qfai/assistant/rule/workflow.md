@@ -172,7 +172,7 @@ Recommended delegation rules:
 
 ### Subagent response contract (required)
 
-When a subagent is invoked, they MUST respond using this structure:
+When a subagent is invoked, it must respond using this structure:
 
 1. **Findings** (facts observed)
 2. **Recommendations** (what to do)
