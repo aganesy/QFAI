@@ -75,7 +75,7 @@ it("A file changed outside the boundary while the implement work order is outsta
 });
 
 // An add-feature run whose verify result is blocked on a finding in `docs/guide.md`, which lies
-// outside the run's scope, repaired outside the run under a change request at WIP.
+// outside the run's scope, repaired outside the run under a change request in the given status.
 async function repairedOutsideTheRun(unapproved?: string, status: "WIP" | "TODO" = "WIP") {
   const root = await initProject();
   // The finding's owning flow has to exist in the tree.
@@ -144,9 +144,10 @@ it("a repair whose change request is not in force stays outside the boundary", a
   }).toEqual({ code: "fail-closed", cause: "invariant-violation" });
 
   const finished = workflow(root, ["finish", "--run", runId]);
-  expect(outOfScope(finished.json)).toEqual(
-    expect.arrayContaining(["docs/guide.md", ".qfai/spec/decisions.md"]),
-  );
+  const subjects = outOfScope(finished.json);
+  expect(subjects).toHaveLength(1);
+  expect(subjects[0]).toEqual(expect.stringContaining("docs/guide.md"));
+  expect(subjects[0]).toEqual(expect.stringContaining(".qfai/spec/decisions.md"));
 });
 
 it("finish refuses a repair changed again after resume admitted its digest", async () => {
