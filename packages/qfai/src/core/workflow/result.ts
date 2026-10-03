@@ -4,6 +4,7 @@ import {
   isAuthorOrRecommender,
   notReady,
   RESULT_ID,
+  resultRefOf,
   refusedWith,
   skillOwnerOf,
   STORY_AUTHORING_KINDS,
@@ -355,7 +356,7 @@ export function blockOnResult(
     events: [
       {
         type,
-        resultRef: `results/${result.resultId}.json`,
+        resultRef: resultRefOf(result.resultId),
         stageInstanceId: result.stageInstanceId,
         outcome: result.outcome,
         ...(halt ? { halt } : {}),
@@ -422,7 +423,7 @@ function decideDelegation(
   const kept = { ...workOrder, attempt: retry.attempt };
   const event = {
     type: "retry-scheduled",
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     workOrder: kept,
     retry,
   };
@@ -452,7 +453,7 @@ function openStageQuestions(
     ...questions.map((question) => ({ type: "question-opened", question })),
     {
       type: "material-decision",
-      resultRef: `results/${result.resultId}.json`,
+      resultRef: resultRefOf(result.resultId),
       stageInstanceId: result.stageInstanceId,
       outcome: result.outcome,
       ...extras,
@@ -557,7 +558,7 @@ function acceptedEvents(
   return [
     {
       type,
-      resultRef: `results/${result.resultId}.json`,
+      resultRef: resultRefOf(result.resultId),
       stageInstanceId: workOrder.stageInstanceId,
       outcome: result.outcome,
       ...(result.notRun ? { notRun: result.notRun } : {}),
@@ -760,7 +761,7 @@ export function acceptSeamOnly(
   }
   const event = {
     type: "accept-nonfinal-result",
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     stageInstanceId: workOrder.stageInstanceId,
     outcome: result.outcome,
   };
