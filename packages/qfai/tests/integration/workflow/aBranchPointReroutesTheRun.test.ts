@@ -40,7 +40,7 @@ async function factsFor(run: JournalRun, extra: Facts = {}): Promise<Facts> {
   const { routingReceiptRef, receiptRefs } = run.snapshot;
   const refs = [...(routingReceiptRef ? [routingReceiptRef] : []), ...(receiptRefs ?? [])];
   const receiptValidity = Object.fromEntries(refs.map((ref) => [ref, "valid" as const]));
-  return runFacts({ ...REVISION, receiptValidity, ...extra });
+  return runFacts(run, { ...REVISION, receiptValidity, ...extra });
 }
 
 // A run routed by `reading`, its plan confirmed where `gate:user` asks for it.

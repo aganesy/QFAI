@@ -13,6 +13,7 @@ import { validateProject } from "../../src/core/validate.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
+import { expectSentence } from "../helpers/shippedSentences.js";
 import {
   executePlannedStep,
   runStep,
@@ -760,7 +761,7 @@ describe("BF-0004 migration examples", () => {
     expect(markers.filter((_, index) => (positions[index] ?? -1) < 0)).toEqual([]);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(prose).toMatch(
-      /already has the story tree and no migration ID map, run steps 1 to 10\. When steps 1 to 9 list no operation, report that there is nothing to migrate/,
+      /already has the story tree and no migration ID map, run steps 1 to 10\. When every one of them prints `no 1\.x layout found under <specsDir> \(paths\.specsDir=<value>\)` first, then `none` under every section but step 10's `## Git index`, and exits 0, report that there is nothing to migrate in the directory that line names and ask the person to check that the specs live there/,
     );
   });
 
@@ -779,6 +780,37 @@ describe("BF-0004 migration examples", () => {
     }
   });
 
+  it("names the three first lines and directs the AI to name the directory and ask for a check", async () => {
+    // QFAI:EX-0004-0012-08
+    const skillDir = path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2");
+    for (const file of ["SKILL.md", "references/migration-guide.md"]) {
+      const text = await readFile(path.join(skillDir, file), "utf8");
+      const prose = text.replace(/\s+/g, " ");
+      for (const line of [
+        "`no 1.x layout found under <specsDir> (paths.specsDir=<value>)`",
+        "`already migrated (id-map.json present)`",
+        "`1.x layout found, migrating`",
+      ]) {
+        expect(prose, `${file} names ${line}`).toContain(line);
+      }
+      for (const [line, meaning] of [
+        ["no 1.x layout found under", /no trace of the old layout/],
+        ["1.x layout found, migrating", /trace of the old layout, or step 1, 9 or 10 has work/],
+        ["already migrated (id-map.json present)", /earlier run migrated the project/],
+      ] as const) {
+        const row = expectSentence(text, `${file} says what ${line} means`, meaning);
+        expect(row, `${file} says what ${line} means`).toContain(line);
+      }
+      expectSentence(
+        text,
+        `${file} directs the report, the directory and the check`,
+        /every one of (?:them|steps 1 to 10) prints/,
+        /nothing to migrate in the directory (?:that|the) line names/,
+        /\bask the person to check that the specs live there/,
+      );
+    }
+  });
+
   it("reports no operations for all ten steps in an already migrated project", async () => {
     // QFAI:EX-0004-0012-02
     const context = await fixture(
@@ -786,10 +818,13 @@ describe("BF-0004 migration examples", () => {
     );
     await put(context.root, ".qfai/spec/01_policy/objective.md", "# Objective\n");
     const before = await treeHash(context.root);
+    const none = "no 1.x layout found under .qfai/spec (paths.specsDir=.qfai/spec)";
     for (let step = 1; step <= 10; step += 1) {
       const report = capture();
       expect(await runStep(step, [], { cwd: context.root, ...report.io })).toBe(0);
+      expect(report.output.split("\n").slice(0, 3)).toEqual([none, "", "## Operations"]);
       expect(report.output).toContain("## Operations\nnone");
+      expect(report.output.trimEnd().split("\n").at(-1)?.startsWith("Summary")).toBe(step === 10);
       expect(report.output).not.toContain("## For a person\n-");
       if (step === 10) {
         expect(report.output).toContain(

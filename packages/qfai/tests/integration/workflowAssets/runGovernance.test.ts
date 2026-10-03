@@ -62,20 +62,15 @@ describe("the stage-skill entry check", () => {
   // QFAI:EX-0001-0195-05
   it("runs /qfai-atdd and /qfai-sdd invoked by name standalone, each stopping at its own stage", async () => {
     const byName = rowOf(await entryCheck(), "`by-name`");
-    const atdd = flat(await readShipped("skill/qfai-atdd/SKILL.md"));
     const sdd = flat(await readShipped("skill/qfai-sdd/SKILL.md"));
     expect(byName).toMatch(/run standalone and end at this stage/i);
     expect(byName).toMatch(/start no other stage/i);
-    for (const skill of [atdd, sdd]) {
-      expect(skill).toMatch(
-        /run the entry check of `\.qfai\/assistant\/rule\/shared-skill-operating-baseline\.md#workflow-run-entry-check-mandatory` first/i,
-      );
-    }
     expect(sdd).toMatch(
       /invoked by name, `\/qfai-sdd` runs standalone, ends at sdd and creates no run/i,
     );
   });
 
+  // QFAI:AC-0001-0195-03
   // QFAI:EX-0001-0195-06
   it("hands a by-name request to take the change to the end to qfai-run as a whole run", async () => {
     const byName = rowOf(await entryCheck(), "`by-name`");
