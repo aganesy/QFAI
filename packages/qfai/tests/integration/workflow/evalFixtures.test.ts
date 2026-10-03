@@ -41,7 +41,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, expect, it } from "vitest";
+import type * as FsPromises from "node:fs/promises";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { loadBuiltInPlans, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
 
@@ -60,6 +61,11 @@ import {
 } from "../../helpers/routingEvalRoutes.js";
 import { declaredIncludeGlobs } from "../../helpers/runnerProjects.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, readFile: vi.fn(actual.readFile) };
+});
 
 const TESTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURES = path.join(TESTS, "fixtures", "workflow");
@@ -96,6 +102,28 @@ function isFault(value: unknown): value is Fault {
 async function fixtureText(name: string): Promise<string> {
   return readFile(path.join(FIXTURES, name), "utf8").catch(() => "");
 }
+
+it("An existing fixture returns its text", async () => {
+  await expect(fixtureText("routing-seeds.jsonl")).resolves.toContain('"ROUTE-001"');
+});
+
+it("A missing fixture still returns empty text", async () => {
+  const error = Object.assign(new Error("ENOENT: fixture not found"), { code: "ENOENT" });
+  vi.mocked(readFile).mockRejectedValueOnce(error);
+
+  await expect(fixtureText("missing-fixture.json")).resolves.toBe("");
+});
+
+it.each(["EACCES", "EPERM", "EIO", "EISDIR"])(
+  "An unexpected %s fixture read failure preserves the original error",
+  async (code) => {
+    const file = path.join(FIXTURES, "unreadable-fixture.json");
+    const error = Object.assign(new Error(`${code}: cannot read ${file}`), { code, path: file });
+    vi.mocked(readFile).mockRejectedValueOnce(error);
+
+    await expect(fixtureText("unreadable-fixture.json")).rejects.toBe(error);
+  },
+);
 
 async function routingSeeds(): Promise<Seed[]> {
   const lines = (await fixtureText("routing-seeds.jsonl")).split("\n").filter(Boolean);
@@ -511,6 +539,7 @@ it("The safety list derived from the tracked seeds follows the rule, with no fix
 const roots: string[] = [];
 
 afterEach(async () => {
+  vi.mocked(readFile).mockReset();
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
