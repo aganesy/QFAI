@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Verify as the final stage of a run
+Feature: Verify as the final stage of a route
   # AC-0001-0208-06
   Scenario: The verify stage follows the stage-skill handover
     Given workflow mode active
@@ -16,5 +16,5 @@ Feature: Verify as the final stage of a run
     Given the qfai-verify SKILL.md and the built-in plans
     When its steps frontmatter is read
     Then it lists every step whose owner is qfai-verify
-    And the verify block of every change route names `verify-change-note`, `verify-context`, `verify-qfai-gate` and `verify-repo-gate`, in that order, and every other verify stage names steps from that list
+    And the verify block of every change route names `verify-qfai-gate` and `verify-repo-gate`, in that order, after a stage running `verify-change-note`, and every other verify stage names steps from that list
 ```

@@ -211,18 +211,18 @@ async function writeConfig(root: string, edit: (config: Record<string, unknown>)
   await writeFile(file, stringifyYaml(config));
 }
 
-/** The default `sdd-triage` routing entry with `completion-reviewer` taken out of its review phase. */
-async function routingWithoutCompletionReviewer(): Promise<Record<string, unknown>> {
+/** The default `sdd-contract` routing entry with `architecture-reviewer` taken out of its review phase. */
+async function routingWithoutArchitectureReviewer(): Promise<Record<string, unknown>> {
   const routing = await defaultRoutingEntries();
-  const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-triage");
-  if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-triage routing");
+  const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-contract");
+  if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-contract routing");
   const phases = entry.phases.map((phase: unknown) =>
     isRecord(phase) && phase.id === "review"
       ? {
           ...phase,
-          mandatory_agents: ["architecture-reviewer"],
+          mandatory_agents: ["completion-reviewer"],
           conditional_agents: [],
-          blocking_agents: ["architecture-reviewer"],
+          blocking_agents: ["completion-reviewer"],
         }
       : phase,
   );
@@ -532,7 +532,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
   it("names a routing override that drops a required reviewer", async () => {
     // QFAI:EX-0004-0013-06
     const root = await clone(migrated11);
-    const override = await routingWithoutCompletionReviewer();
+    const override = await routingWithoutArchitectureReviewer();
     await writeConfig(root, (config) => {
       config.routing = [override];
     });
@@ -540,7 +540,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const result = await stepIn(root, 12);
     expect(result.code).toBe(3);
     expect(section(result.output, "For a person")).toEqual([
-      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-triage` drops `completion-reviewer`, which the package's default routing requires",
+      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-contract` drops `architecture-reviewer`, which the package's default routing requires",
     ]);
     expect(await fingerprint(root)).toBe(before);
   });

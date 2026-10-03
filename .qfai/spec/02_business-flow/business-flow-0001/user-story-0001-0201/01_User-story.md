@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an operator reporting a defect against behaviour the tree already states, I want `/qfai-implement` to reproduce it and name its cause without changing any code, so that the run picks the right repair from one verdict.
+As an operator reporting a defect against behaviour the tree already states, I want `/qfai-implement` to reproduce it and name its cause without changing any code, so that the session picks the right repair from one verdict.
 
 ## Non-goals
 
