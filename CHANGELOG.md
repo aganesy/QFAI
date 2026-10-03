@@ -7,8 +7,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Fixed
 
 - **Journal directory read errors retain their original cause** (#2841).
-  Missing directories still identify a legacy run; permission and I/O failures
-  reach the workflow's I/O refusal instead of being reported as legacy.
+  Missing directories still identify a legacy run. Busy or denied reads reach
+  the workflow's I/O refusal; other errors propagate.
 
 ### Added
 

@@ -260,7 +260,7 @@ function parseRecord(bytes: Buffer): JournalRecord | null | undefined {
 export async function readJournal(runDir: string): Promise<JournalRead> {
   const journal = path.join(runDir, "journal");
   const listed = await readdir(journal).catch((error: unknown) => {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    if (systemCode(error) === "ENOENT") return undefined;
     throw error;
   });
   if (!listed) return { ok: false, fault: "legacy" };
