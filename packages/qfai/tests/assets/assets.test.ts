@@ -315,6 +315,48 @@ describe("assets guardrails", () => {
     }
   });
 
+  it("ensures shared delegation baseline lets the orchestrator work while a delegation runs", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "rule",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const start = baseline.indexOf("### Orchestrator Protocol");
+    const end = baseline.indexOf("### Capability Probe (MUST)");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const protocol = baseline.slice(start, end);
+
+    const requiredPhrases = [
+      // The permission itself: without it "delegate, then integrate" reads as
+      // an order and the orchestrator blocks on every delegation.
+      "The orchestrator is not required to block while a delegated work order runs.",
+      // The three host capabilities the permission depends on.
+      "the call that starts it returns at once",
+      "the finished result arrives as a later message",
+      "the orchestrator can wait for a result on purpose",
+      // With all three host capabilities, the orchestrator works while work remains.
+      // Otherwise it waits.
+      "it carries on with its own work meanwhile, and waits only when it has nothing to do.",
+      "A host without all three keeps the orchestrator waiting.",
+      // What the orchestrator's own work covers, including an independent
+      // delegation gated by the parallelization policy.
+      "Its own work is planning, preparing the next work order, integrating outputs already returned, and starting another delegation that does not depend on the running one.",
+      "That last one needs the technical conditions of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md` to hold.",
+      // The bounds: carrying on is not doing the delegated work, and an
+      // ordering the parallelization policy makes mandatory still holds.
+      "That work never includes the delegated work itself, the primary artifact or a review",
+      "The orchestrator must not generate the primary artifact first draft.",
+      "the parallelization policy governs, and carrying on does not override it.",
+    ];
+
+    for (const phrase of requiredPhrases) {
+      expect(protocol).toContain(phrase);
+    }
+  });
+
   it("ensures shared operating baseline defines gate failure autorepair protocol", async () => {
     const baselinePath = path.join(
       templateQfaiDir,
