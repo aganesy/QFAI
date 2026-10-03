@@ -207,6 +207,7 @@ function assertAllowed(
 ): string {
   const target = absolutePath(context.root, relative);
   if (
+    inside(path.join(context.root, ".qfai", "evidence"), target) ||
     !step.writeSet.some((area) =>
       area === "test-annotations"
         ? annotationTargets.has(target)
@@ -380,6 +381,10 @@ async function applyOperation(
     case "move":
       {
         const source = absolutePath(context.root, operation.source);
+        // An earlier move of this run can create the destination after preflight.
+        if (await pathExists(target)) {
+          throw new MigrationRefusal(`Migration destination exists: ${operation.target}`);
+        }
         await mkdir(path.dirname(target), { recursive: true });
         try {
           await rename(source, target);
@@ -389,6 +394,8 @@ async function applyOperation(
             recursive: true,
             preserveTimestamps: true,
             verbatimSymlinks: true,
+            force: false,
+            errorOnExist: true,
           });
           await rm(source, { recursive: true });
         }
@@ -576,7 +583,15 @@ export async function executePlannedStep(
   const found =
     layoutTrace === true || (OWN_WORK_STEPS.has(step.number) && planHasWork(plan, operations));
   const layout = layoutTrace === undefined ? null : found ? "found" : "none";
-  if (!dryRun) await applyOperations(operations, context);
+  if (!dryRun) {
+    try {
+      await applyOperations(operations, context);
+    } catch (error) {
+      if (!(error instanceof MigrationRefusal)) throw error;
+      io.stderr.write(`${errorMessage(error)}\n`);
+      return 2;
+    }
+  }
   io.stdout.write(renderOutput(step, plan, operations, layout, context));
   return (plan.forAPerson?.length ?? 0) > 0 ? 3 : 0;
 }

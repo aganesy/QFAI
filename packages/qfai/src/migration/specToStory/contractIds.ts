@@ -70,7 +70,7 @@ function kindOf(relative: string): string {
 /**
  * Every file under a kind directory or `design/`, relative to the contracts
  * directory. A dot-prefixed path counts only under `design/`: that directory
- * moves whole, so every file the move carries is named for a person.
+ * is deleted whole, so every file the deletion takes is named for a person.
  */
 async function contractDirectoryFiles(context: MigrationContext): Promise<string[]> {
   const relativeOf = (file: string) =>

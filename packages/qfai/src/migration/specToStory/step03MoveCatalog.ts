@@ -16,7 +16,7 @@ import {
   type MigrationOperation,
   type MigrationStep,
 } from "./harness.js";
-import { oldContractIds, type ContractMap } from "./idMap.js";
+import { oldContractIds, readIdMap, type ContractMap } from "./idMap.js";
 import {
   isPolicyDocument,
   movePolicySection,
@@ -207,13 +207,23 @@ async function tiedUiContracts(
   specId: string,
 ): Promise<string[]> {
   const translated = oldContractIds(contractMap);
-  const rows = await readLegacyRows(context, "04_Business-Rules.md");
+  const rows = (await readLegacyRows(context, "04_Business-Rules.md")).filter(
+    (row) => row.specId === specId,
+  );
   const tied = new Set<string>();
   for (const row of rows) {
-    if (row.specId !== specId) continue;
     const refs = Object.entries(row.cells).find(([name]) => /^contract-refs$/i.test(name))?.[1];
     for (const token of refs?.match(OLD_CONTRACT_TOKEN) ?? []) {
       const id = translated[token];
+      if (id?.startsWith("UI-")) tied.add(id);
+    }
+  }
+  if (rows.length === 0) {
+    // Step 7 deleted the pack's rules; the ID map records the contract each was placed in.
+    const map = await readIdMap(context.root);
+    for (const [oldId, contract] of Object.entries(map?.placements[specId] ?? {})) {
+      if (!oldId.startsWith("BR-")) continue;
+      const id = contractMap[contract]?.id ?? map?.contracts?.[contract]?.id;
       if (id?.startsWith("UI-")) tied.add(id);
     }
   }

@@ -238,6 +238,48 @@ describe("migration harness", () => {
     });
   });
 
+  it("refuses a write under .qfai/evidence/ reached through a configured directory", async () => {
+    // QFAI:EX-0004-0003-14
+    const ctx = await context();
+    ctx.specsDir = path.join(ctx.root, ".qfai", "evidence", "spec");
+    const step: MigrationStep = {
+      number: 3,
+      writeSet: ["specs"],
+      plan: () =>
+        Promise.resolve({
+          operations: [{ kind: "write", target: ".qfai/evidence/spec/note.md", content: "n\n" }],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toContain("outside its write set");
+    await expect(lstat(path.join(ctx.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("refuses a move whose destination an earlier move of the same run created", async () => {
+    const ctx = await context();
+    await put(ctx.root, ".qfai/old/sub/a.md", "moved");
+    await put(ctx.root, ".qfai/other.md", "other");
+    const step: MigrationStep = {
+      number: 1,
+      writeSet: ["qfai"],
+      plan: () =>
+        Promise.resolve({
+          operations: [
+            { kind: "move", source: ".qfai/old", target: ".qfai/new" },
+            { kind: "move", source: ".qfai/other.md", target: ".qfai/new/sub/a.md" },
+          ],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, ctx, false, captured.io)).toBe(2);
+    expect(captured.error.join("")).toContain("Migration destination exists: .qfai/new/sub/a.md");
+    expect(await readFile(path.join(ctx.root, ".qfai/new/sub/a.md"), "utf8")).toBe("moved");
+    expect(await readFile(path.join(ctx.root, ".qfai/other.md"), "utf8")).toBe("other");
+  });
+
   it("refuses steps 3 to 8 until step 2 has merged its sources and retired packs", async () => {
     const ctx = await context();
     await put(

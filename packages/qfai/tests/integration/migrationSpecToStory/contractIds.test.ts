@@ -758,6 +758,28 @@ describe("migration primary spec becomes the primary UI contract", () => {
     expect(section(kept.output, "Operations")).toContain(OLD_NAME);
   });
 
+  // QFAI:AC-0004-0006-07
+  it("reads the tie from the ID map once step 7 has deleted the pack's rules", async () => {
+    const root = await primaryProject("CON-UI-0008", "");
+    expect((await runCli(3, root)).code).toBe(3);
+    await rm(path.join(root, ".qfai/spec/spec-0001/04_Business-Rules.md"));
+    await put(
+      root,
+      `${STATE}/id-map.json`,
+      `${JSON.stringify({
+        version: 1,
+        ids: { "spec-0001": { "BR-0001-0001": "BR-0003-0001" } },
+        placements: { "spec-0001": { "BR-0001-0001": "ui/receipt.yaml" } },
+        retiredPacks: {},
+      })}\n`,
+    );
+    await put(root, "qfai.config.yaml", `${await text(root, "qfai.config.yaml")}${PRIMARY_SPEC}`);
+    const result = await runCli(3, root);
+    expect(result.errors).toBe("");
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(section(result.output, "Operations")).toContain(NEW_NAME);
+  });
+
   it("leaves the key for a person where no single UI contract is tied, and stops the steps after", async () => {
     // QFAI:EX-0004-0006-31
     const markdown = async (root: string) => {

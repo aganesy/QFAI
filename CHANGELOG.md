@@ -210,11 +210,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Step 3 writes no `routing:` override for an unmodified 1.x manifest entry
-  (#2714).** An `agent-routing.yml` entry equal to an entry a 1.x release
-  shipped is no longer copied into `qfai.config.yaml`, where it hid the roles
-  the 2.x skills declare. Each entry step 3 does write is listed under
-  `## For a person` with a warning to that effect.
+- **Step 3 lists every `routing:` override it writes (#2714).** An
+  `agent-routing.yml` entry copied into `qfai.config.yaml` hides the roles the
+  2.x skills declare. Step 3 keeps every entry that differs from the installed
+  default, including an unmodified entry an earlier 1.x release shipped, and
+  lists each under `## For a person` with a warning to that effect, so a person
+  removes the ones nobody customised.
 - **Step 8 keeps a test-case annotation in an E2E file and lists it (#2720).**
   It rewrote the annotation to an example annotation, which `QFAI-STORY-007`
   rejects there. The item names the file, line, annotation and example, and the
