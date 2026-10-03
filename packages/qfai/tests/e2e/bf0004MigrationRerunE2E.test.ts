@@ -269,7 +269,10 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),
     );
-    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
 
     await expect(lstat(path.join(root, ".qfai/specs"))).rejects.toMatchObject({ code: "ENOENT" });
     expect(

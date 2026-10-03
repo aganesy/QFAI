@@ -35,7 +35,7 @@ async function withDamagedCanonical(task: (root: string) => Promise<boolean>): P
     await symlink(path.join("..", "..", ".qfai", "assistant", "skill", "qfai-sdd"), wrapper);
     // Enough of a surface that init counts as having run here.
     await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: []\n", "utf-8");
+    await writeFile(path.join(root, ".qfai", "waivers.yml"), "version: 1\nwaivers: []\n", "utf-8");
     // An obligation the ATDD validators own and nothing discharges — a defect
     // that has nothing to do with the assistant tree, and the one the profile
     // was being stopped from reporting.
@@ -70,7 +70,11 @@ describe("the short-circuit follows the configured skills directory", () => {
         await mkdir(path.dirname(stale), { recursive: true });
         await writeFile(stale, "not a directory\n", "utf-8");
         await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: []\n", "utf-8");
+        await writeFile(
+          path.join(root, ".qfai", "waivers.yml"),
+          "version: 1\nwaivers: []\n",
+          "utf-8",
+        );
 
         const result = await validateProject(root, undefined, { profile: "full" });
         const codes = new Set(result.issues.map((entry) => entry.code));
@@ -109,7 +113,11 @@ describe("the short-circuit covers the agent directory read by full", () => {
           wrapper,
         );
         await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: []\n", "utf-8");
+        await writeFile(
+          path.join(root, ".qfai", "waivers.yml"),
+          "version: 1\nwaivers: []\n",
+          "utf-8",
+        );
 
         const result = await validateProject(root, undefined, { profile: "full" });
         const codes = new Set(result.issues.map((entry) => entry.code));
@@ -145,7 +153,11 @@ describe("the agents tree is walked by the profiles that read it", () => {
           wrapper,
         );
         await mkdir(path.join(root, ".qfai"), { recursive: true });
-        await writeFile(path.join(root, ".qfai", "waivers.yml"), "waivers: []\n", "utf-8");
+        await writeFile(
+          path.join(root, ".qfai", "waivers.yml"),
+          "version: 1\nwaivers: []\n",
+          "utf-8",
+        );
 
         const result = await validateProject(root, undefined, { profile: "full" });
         const codes = new Set(result.issues.map((entry) => entry.code));

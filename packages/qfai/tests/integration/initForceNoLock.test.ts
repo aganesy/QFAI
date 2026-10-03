@@ -4,7 +4,7 @@
  * project's own files alone; `qfai init` lists what an earlier release left and
  * deletes none of it.
  */
-import { access, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { access, link, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -122,6 +122,25 @@ describe("init --force never writes through a link", () => {
   });
 
   // QFAI:EX-0001-0022-03
+  it("replaces a hard-linked rule master as an entry and leaves its other name alone", async () => {
+    const dir = await newTempDir();
+    const outside = await newTempDir();
+    await init(dir);
+    const master = path.join(dir, ".agents", "rules", "minimal-implementation.md");
+    const other = path.join(outside, "minimal-implementation.md");
+    await writeFile(other, "outside\n", "utf-8");
+    await rm(master);
+    await link(other, master);
+
+    await init(dir, true);
+
+    expect(await readFile(other, "utf-8")).toBe("outside\n");
+    expect(await readFile(master, "utf-8")).toBe(
+      await readFile(shippedMaster("minimal-implementation.md"), "utf-8"),
+    );
+  });
+
+  // QFAI:EX-0001-0022-03
   it("writes nothing under a linked rule directory that points outside the project", async () => {
     const dir = await newTempDir();
     const outside = await newTempDir();
@@ -146,7 +165,7 @@ describe("init --force never writes through a link", () => {
         expect(await readFile(path.join(outside, linked, name), "utf-8"), name).toBe("outside\n");
       }
     }
-    expect(output).toContain("was not overwritten: a directory above it is a symbolic link");
+    expect(output).toContain("was not written: a directory above it is a symbolic link");
   });
 });
 

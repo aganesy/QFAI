@@ -979,7 +979,11 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(section(first.output, "Operations")).toContain(
       ".claude/settings.json: update (reminder hooks: UserPromptSubmit; permission entries; existing settings kept)",
     );
-    expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
+    expect(section(first.output, "Reminder hooks")).toEqual([
+      kept,
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
     expect(merged).toBe(await readFile(path.join(byInit, ".claude/settings.json"), "utf8"));
     expect(merged).toContain('"our-own-question"');
@@ -1007,7 +1011,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(section(result.output, "For a person")).toEqual([
       ".codex/hooks.json was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder hooks are not wired up.",
     ]);
-    expect(section(result.output, "Reminder hooks")).toEqual([]);
+    expect(section(result.output, "Reminder hooks")).toEqual([
+      `${REMINDERS}: write from the package`,
+    ]);
     expect(await readlink(path.join(root, ".codex/hooks.json"))).toBe(outside);
     expect(await readFile(outside, "utf8")).toBe("{}\n");
     expect(await textOrNull(root, ".claude/settings.json")).toBe(

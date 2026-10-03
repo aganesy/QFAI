@@ -2,7 +2,7 @@ import type { Dirent } from "node:fs";
 import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { isEnoent } from "./fs/errno.js";
+import { hasErrnoCode, isEnoent } from "./fs/errno.js";
 
 /** Paths an earlier release wrote under the project root and this release no longer uses. */
 const LEFTOVER_PATHS = [
@@ -40,18 +40,22 @@ async function present(target: string): Promise<boolean> {
     await lstat(target);
     return true;
   } catch (error) {
-    if (isEnoent(error)) return false;
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR")) return false;
     throw error;
   }
 }
 
+/**
+ * The pack directories under `discussionDir`. A path that is absent or not a
+ * directory holds no pack; doctor's own path check reports that shape.
+ */
 async function packDirectories(discussionDir: string): Promise<Dirent[]> {
   try {
     return (await readdir(discussionDir, { withFileTypes: true })).filter((entry) =>
       entry.isDirectory(),
     );
   } catch (error) {
-    if (isEnoent(error)) return [];
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR")) return [];
     throw error;
   }
 }

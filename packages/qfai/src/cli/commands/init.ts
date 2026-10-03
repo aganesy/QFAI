@@ -79,6 +79,7 @@ import {
   SHIPPED_WORKFLOW_NAMES,
 } from "../../shared/shippedWorkflowNames.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
+import { normalizeNewlines } from "../../shared/text.js";
 import { refuseUnsafeEntryPointRewrite } from "../../core/init/entryPointFile.js";
 import {
   SIDECAR_RE,
@@ -316,7 +317,7 @@ export async function runInit(
   const workflowsDirIsOwn = await workflowAncestorsAreRealDirectories(destRoot);
   if (!workflowsDirIsOwn) {
     error(
-      "Skipped writing the shipped workflows: .github or .github/workflows is a symlink, and its target can point outside this repository. Replace it with a real directory and re-run.",
+      "Skipped writing the shipped workflows: .github or .github/workflows is a symlink or not a directory. Replace it with a real directory and re-run.",
     );
   }
   const workflowResult = await copyTemplatePaths(
@@ -402,7 +403,10 @@ export async function runInit(
     newlyWritten,
     // The masters whose file holds this release's text once the run is done; a
     // summary moves to the release's wording only for these.
-    new Set(newlyWrittenRuleMasters([...rulesCreated.copied, ...rulesForced.copied], destRoot)),
+    new Set([
+      ...newlyWrittenRuleMasters([...rulesCreated.copied, ...rulesForced.copied], destRoot),
+      ...(await mastersHoldingShippedText(rootAssets, destRoot)),
+    ]),
   );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
@@ -429,7 +433,17 @@ export async function runInit(
   // the one an earlier release left behind is removed here rather than
   // overwritten.
   const markerRemoved = await removeAssistantMarker(destRoot, options.dryRun);
-  reportRefusedForcedWrites([...rulesForced.refused, ...skillsResult.refused], destRoot);
+  reportRefusedWrites(
+    [
+      ...workflowResult.refused,
+      ...rootResult.refused,
+      ...rulesCreated.refused,
+      ...rulesForced.refused,
+      ...qfaiResult.refused,
+      ...skillsResult.refused,
+    ],
+    destRoot,
+  );
 
   // git config core.symlinks true (a precondition for creating symlinks).
   // This is the only change outside the working tree, so report it right
@@ -606,11 +620,36 @@ async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<bo
   return true;
 }
 
-/** Names each destination a forced copy refused because a directory above it is a link. */
-function reportRefusedForcedWrites(refused: readonly string[], destRoot: string): void {
+/** The largest rule master read to compare it with the shipped text. */
+const RULE_MASTER_MAX_BYTES = 1024 * 1024;
+
+/**
+ * The rule masters whose project file already holds this release's text, line
+ * endings aside, spelled as a citation spells them. A file that is not a
+ * readable regular file within the ceiling is not counted.
+ */
+async function mastersHoldingShippedText(rootAssets: string, destRoot: string): Promise<string[]> {
+  const shippedDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
+  const held: string[] = [];
+  for (const name of (await readdir(shippedDir)).filter((entry) => entry.endsWith(".md"))) {
+    const project = await readBoundedRegularFile(
+      path.join(destRoot, AGENTS_RULES_DIR_REL, name),
+      RULE_MASTER_MAX_BYTES,
+    );
+    if (project === undefined) continue;
+    const shipped = await readFile(path.join(shippedDir, name), "utf-8");
+    if (normalizeNewlines(project.toString("utf-8")) === normalizeNewlines(shipped)) {
+      held.push(`.agents/rules/${name}`);
+    }
+  }
+  return held;
+}
+
+/** Names each destination a copy refused because a directory above it is a link. */
+function reportRefusedWrites(refused: readonly string[], destRoot: string): void {
   for (const dest of refused) {
     warn(
-      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not overwritten: a directory above it is a symbolic link, and the write would land wherever it points.`,
+      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not written: a directory above it is a symbolic link, and the write would land wherever it points.`,
     );
   }
 }

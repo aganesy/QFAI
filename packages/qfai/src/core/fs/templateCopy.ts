@@ -31,7 +31,7 @@ export type CopyOptions = {
 export type CopyResult = {
   copied: string[];
   skipped: string[];
-  /** Destinations a forced copy did not write because a directory above them is a link. */
+  /** Destinations not written because a directory above them is a link. */
   refused: string[];
 };
 
@@ -117,16 +117,18 @@ async function copyFiles(
       continue;
     }
 
-    // `copyFile` follows a link at the destination and through any linked
-    // directory above it, so a forced overwrite would land wherever the link
-    // points. A linked directory is refused; a linked file is replaced as an
-    // entry, leaving its target as it was.
-    if (options.force) {
-      if ((await linkedAncestor(destRoot, dest)) !== undefined) {
-        refused.push(dest);
-        continue;
-      }
-      if (!options.dryRun && (await lstatOrUndefined(dest))?.isSymbolicLink() === true) {
+    // `copyFile` follows any linked directory above the destination, so the
+    // write would land wherever the link points: such a destination is refused.
+    if ((await linkedAncestor(destRoot, dest)) !== undefined) {
+      refused.push(dest);
+      continue;
+    }
+    // An overwrite follows a link at the destination, and truncates an inode
+    // every hard-linked name shares. Either one is replaced as an entry, so its
+    // target and its other names keep their content.
+    if (options.force && !options.dryRun) {
+      const existing = await lstatOrUndefined(dest);
+      if (existing !== undefined && (existing.isSymbolicLink() || existing.nlink > 1)) {
         await rm(dest);
       }
     }
