@@ -70,7 +70,7 @@ const ADOPTED = {
 
 // Issues and accepts stages with canned results until the next work order runs `step`.
 async function runUntil(run: JournalRun, step: string): Promise<WorkOrder> {
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   for (let at = 0; at < 8; at += 1) {
     const workOrder = run.next(facts);
     if ((workOrder.steps ?? []).some((each) => each.name === step)) return workOrder;
@@ -86,7 +86,7 @@ const names = (decision: { events: { type: string }[] }) =>
 // QFAI:EX-0001-0212-01
 it("Heavy review adds the heavy reviewers to every stage and changes nothing else", async () => {
   const { run } = await routedBy({ intent: "defect", risks: ["data-loss"] });
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   const diagnose = run.next(facts);
   run.accept({ ...cannedFields(diagnose), adopted: [{ ...ADOPTED, step: "implement-diagnose" }] });
   const { issued } = await driveStages(run);
@@ -120,7 +120,7 @@ it("A user gate stops at the declared decision point; without it the decision is
     questions: [OWNER],
   });
   const answered = answerOpen(gated.run, undefined, "validator");
-  const again = gated.run.next(await runFacts());
+  const again = gated.run.next(await runFacts(gated.run));
 
   const free = await routedBy({ intent: "surface-contradiction" });
   await runUntil(free.run, "sdd-triage");
@@ -179,10 +179,10 @@ it("A release gate asks at the end of a fix-regression run, and finish waits for
   const { run } = await routedBy(facts);
   await driveUntilDone(run);
   const unopened = run.apply({ operation: "finish" }, { completion: quietCompletion() });
-  const opened = run.apply({ operation: "next" }, await runFacts());
+  const opened = run.apply({ operation: "next" }, await runFacts(run));
   const waiting = run.apply({ operation: "finish" }, { completion: quietCompletion() });
   const approved = answerOpen(run, "release", "approve");
-  const after = run.apply({ operation: "next" }, await runFacts());
+  const after = run.apply({ operation: "next" }, await runFacts(run));
   const authorization = approved.events.find((event) => event.authorization)?.authorization;
 
   expect({
@@ -208,7 +208,7 @@ it("A release gate asks at the end of a fix-regression run, and finish waits for
     ...cannedFields(verify),
     raise: [{ modifier: "gate:release", reason: "The fix blocks the next release." }],
   });
-  const release = raised.run.apply({ operation: "next" }, await runFacts());
+  const release = raised.run.apply({ operation: "next" }, await runFacts(raised.run));
   expect({
     events: names(blocker),
     release: release.verdict.questions?.map((each) => each.purpose),
@@ -222,7 +222,7 @@ it("A release gate asks at the end of a fix-regression run, and finish waits for
 
 // Accepts every stage the run issues until `next` issues none or opens a question.
 async function driveUntilDone(run: JournalRun) {
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   for (let at = 0; at < 12; at += 1) {
     const snapshot = run.snapshot;
     const plan = snapshot.plan?.stages ?? [];
@@ -238,7 +238,7 @@ it("A hand-off puts the release question before the hand-off step runs", async (
     { intent: "order", qualifiers: ["human-run"] },
     { affectedFlowIds: [], proposedWriteScope: [] },
   );
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   const inspect = run.next(facts);
   run.accept(cannedFields(inspect), facts);
   const asked = run.apply({ operation: "next" }, facts);
@@ -309,7 +309,7 @@ it("No set of modifiers changes the stages or steps of any catalog route", async
 // QFAI:EX-0001-0212-07
 it("A raised modifier stays for the rest of the run and the summary says where it came from", async () => {
   const { run } = await routedBy({ intent: "defect" });
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   const diagnose = run.next(facts);
   const raised = run.accept({
     ...cannedFields(diagnose),
@@ -407,7 +407,7 @@ it("A cited decision row in force answers the decision it settled; a missing one
   };
   const { run } = await routedBy(facts);
   answerOpen(run, "plan", "proceed");
-  const spec = run.next(await runFacts());
+  const spec = run.next(await runFacts(run));
   const rows = { decisionRows: [{ rowId: "DEC-0001", inForce: true }] };
   const settledBy = (row: string) => ({
     testObservation: "not_applicable",
@@ -481,7 +481,7 @@ it("A critical decision reaches the operator without the user gate, which then h
     raise: [{ modifier: "gate:user", reason: "The winning side contradicts a recorded decision." }],
   });
   answerOpen(run, undefined, "validator");
-  const again = run.next(await runFacts());
+  const again = run.next(await runFacts(run));
 
   expect({
     critical: [critical.verdict.run?.state, names(critical)],

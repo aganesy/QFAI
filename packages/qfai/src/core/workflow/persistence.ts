@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { CANONICAL_TIMESTAMP_DIGITS } from "../packLocator.js";
+import { resultRefOf } from "./common.js";
 import { isRecord } from "./parse.js";
-import type { WorkflowDecision, WorkflowEvent, WorkflowSnapshot } from "./types.js";
+import type { WorkflowDecision, WorkflowEvent, WorkflowResult, WorkflowSnapshot } from "./types.js";
 
 export type WriteFile = (filePath: string, content: string | Buffer) => Promise<void>;
 
@@ -208,6 +209,8 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   reports?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reports"];
   // On an accepted stage result: what its receipt depends on.
   dependencies?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["dependencies"];
+  // On an accepted stage result: the digest of the result file its `resultRef` names.
+  resultDigest?: string;
   testObservation?: string;
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
@@ -278,6 +281,27 @@ export async function readJournal(runDir: string): Promise<JournalRead> {
     lastHash = sha256(bytes);
   }
   return { ok: true, records, lastHash };
+}
+
+// A stage result's stored bytes and their digest.
+export interface ResultFile {
+  path: string;
+  digest: string;
+  bytes: Buffer;
+}
+
+export function resultFileOf(result: WorkflowResult): ResultFile {
+  const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`, "utf8");
+  return { path: resultRefOf(result.resultId), digest: sha256(bytes), bytes };
+}
+
+// The result is written before its event, so a retry can replace a file left by a crash.
+export async function writeResultFile(
+  runDir: string,
+  file: ResultFile,
+): Promise<IoRefusal | undefined> {
+  await mkdir(path.join(runDir, "results"), { recursive: true });
+  return writeRecord(path.join(runDir, ...file.path.split("/")), file.bytes);
 }
 
 // Each event goes to `.NNNNNN.tmp` and is renamed to its published name, which the lock and

@@ -4,6 +4,7 @@
 // QFAI:AC-0001-0189-05
 // QFAI:AC-0001-0189-07
 // QFAI:AC-0001-0189-09
+// QFAI:AC-0001-0189-11
 // QFAI:AC-0001-0192-01
 // QFAI:AC-0001-0194-05
 // QFAI:EX-0001-0188-11
@@ -38,9 +39,24 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { runWorkflow } from "../../../src/cli/commands/workflow.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
 import { snapshotOf, writeSnapshot } from "../../../src/core/workflow/fold.js";
 import { readJournal } from "../../../src/core/workflow/persistence.js";
+import {
+  approvedFeature,
+  authorStory,
+  FEATURE_PROPOSAL,
+  throughAcceptance,
+} from "../../e2e/workflowFeatureRun.js";
+import {
+  ANSWER_PROPOSAL,
+  initProject as receiptProject,
+  removeProjects as removeReceiptProjects,
+  routedRun as routedReceiptRun,
+  submit as submitReceipt,
+} from "../../e2e/workflowJourney.js";
+import { diagnosed, flowProject } from "./acceptanceRuns.js";
 import {
   featureRunAt,
   field,
@@ -56,15 +72,84 @@ import {
   workflow,
 } from "./workflowProject.js";
 
+const receiptIo = vi.hoisted(
+  (): {
+    runDir: string | null;
+    observed: unknown;
+    publications: number;
+    fault: "mkdir" | "write" | null;
+    error: Error | null;
+    attempts: number;
+  } => ({
+    runDir: null,
+    observed: undefined,
+    publications: 0,
+    fault: null,
+    error: null,
+    attempts: 0,
+  }),
+);
+
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof FsPromises>();
-  return { ...actual, readdir: vi.fn(actual.readdir), readFile: vi.fn(actual.readFile) };
+  return {
+    ...actual,
+    readdir: vi.fn(actual.readdir),
+    readFile: vi.fn(actual.readFile),
+    mkdir: vi.fn(async (...args: Parameters<typeof actual.mkdir>) => {
+      if (
+        receiptIo.runDir !== null &&
+        receiptIo.fault === "mkdir" &&
+        path.resolve(String(args[0])) === path.join(receiptIo.runDir, "results")
+      ) {
+        receiptIo.attempts += 1;
+        throw receiptIo.error;
+      }
+      return actual.mkdir(...args);
+    }),
+    writeFile: vi.fn(async (...args: Parameters<typeof actual.writeFile>) => {
+      const file = path.resolve(String(args[0]));
+      if (
+        receiptIo.runDir !== null &&
+        receiptIo.fault === "write" &&
+        path.dirname(file) === path.join(receiptIo.runDir, "results") &&
+        file.endsWith(".tmp")
+      ) {
+        receiptIo.attempts += 1;
+        throw receiptIo.error;
+      }
+      if (
+        receiptIo.runDir !== null &&
+        path.dirname(file) === path.join(receiptIo.runDir, "journal") &&
+        file.endsWith(".tmp")
+      ) {
+        const record: unknown = JSON.parse(String(args[1]));
+        const ref = field(record, "resultRef");
+        if (typeof ref === "string") {
+          receiptIo.observed = JSON.parse(
+            await actual.readFile(path.join(receiptIo.runDir, ...ref.split("/")), "utf8"),
+          );
+          receiptIo.publications += 1;
+        }
+      }
+      return actual.writeFile(...args);
+    }),
+  };
 });
 
 afterEach(async () => {
   vi.mocked(readdir).mockReset();
   vi.mocked(readFile).mockReset();
+  vi.mocked(mkdir).mockReset();
+  vi.mocked(writeFile).mockReset();
+  receiptIo.runDir = null;
+  receiptIo.observed = undefined;
+  receiptIo.publications = 0;
+  receiptIo.fault = null;
+  receiptIo.error = null;
+  receiptIo.attempts = 0;
   await removeProjects();
+  await removeReceiptProjects();
 });
 
 // Every file under a directory, as text.
@@ -207,6 +292,42 @@ it("the tracked summary copies nothing of settled", async () => {
   }).toEqual({ summary: true, settledField: false, question: false, chosen: false });
 });
 
+// QFAI:EX-0001-0189-28
+it("Built CLI: each accepted result is kept under results/, and its digest leads the stage's receipt digests", async () => {
+  const root = await minimalProject();
+  const { runId } = await featureRunAt(root, "implement");
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  const accepted = journal.ok
+    ? journal.records.filter((record) => record.event === "accept-nonfinal-result")
+    : [];
+  const kept = await Promise.all(
+    accepted.map(async (record) => {
+      const file = path.join(runDir, ...String(record.resultRef).split("/"));
+      const bytes = await readFile(file);
+      const resultId = field(JSON.parse(bytes.toString("utf8")), "resultId");
+      await assertReceipt(root, runId, "accept-nonfinal-result", String(resultId));
+      return { resultId, digest: createHash("sha256").update(bytes).digest("hex") };
+    }),
+  );
+  const stages = field(await trackedSummary(root, runId), "stages");
+
+  expect({
+    accepted: accepted.length > 0,
+    resultIds: kept.map((each) =>
+      path.posix.join(
+        "results",
+        `~${Buffer.from(String(each.resultId), "utf8").toString("hex")}.json`,
+      ),
+    ),
+    leading: Array.isArray(stages) ? stages.map((stage) => field(stage, "receiptDigests.0")) : [],
+  }).toEqual({
+    accepted: true,
+    resultIds: accepted.map((record) => record.resultRef),
+    leading: kept.map((each) => each.digest),
+  });
+});
+
 const NEWER: [string, string[]][] = [
   ["next", ["next"]],
   ["accept", ["accept", "--in"]],
@@ -242,6 +363,339 @@ const RUNS = path.join(".qfai", "run");
 function runDirOf(root: string, runId: string): string {
   return path.join(root, RUNS, runId);
 }
+
+async function assertReceipt(root: string, runId: string, event: string, resultId: string) {
+  const runDir = runDirOf(root, runId);
+  const ref = path.posix.join("results", `~${Buffer.from(resultId, "utf8").toString("hex")}.json`);
+  const journal = await readJournal(runDir);
+  const record = journal.ok
+    ? journal.records.find((each) => each.event === event && each.resultRef === ref)
+    : undefined;
+  expect(record?.resultRef).toBe(ref);
+  const inboxDir = path.join(runDir, "inbox");
+  const payloads: unknown[] = await Promise.all(
+    (await readdir(inboxDir))
+      .filter((name) => name.endsWith(".json"))
+      .map(async (name) => JSON.parse(await readFile(path.join(inboxDir, name), "utf8"))),
+  );
+  const submitted = payloads.filter((payload) => field(payload, "resultId") === resultId);
+  expect(submitted).toHaveLength(1);
+  const bytes = await readFile(path.join(runDir, ...ref.split("/")));
+  expect(JSON.parse(bytes.toString("utf8"))).toEqual(submitted[0]);
+  if (typeof record?.resultDigest === "string") {
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(record.resultDigest);
+  }
+  return { record, result: submitted[0] };
+}
+
+// QFAI:EX-0001-0189-25
+it("case-distinct result IDs keep separate complete receipts without changing the first", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const runDir = runDirOf(root, runId);
+  const receipts = [
+    { id: "result-1", ref: "results/~726573756c742d31.json" },
+    { id: "RESULT-1", ref: "results/~524553554c542d31.json" },
+  ];
+  let firstBytes: Buffer | undefined;
+  let firstDigest: string | undefined;
+  for (const { id, ref } of receipts) {
+    const issued = workflow(root, ["next", "--run", runId]);
+    const result = resultFor(issued.json, id, {
+      outcome: "unrun",
+      testObservation: "unrun",
+      delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+    });
+    const processed = await submit(root, runId, "accept", result);
+    expect(field(processed.json, "run.state")).toBe("running");
+    const journal = await readJournal(runDir);
+    expect(journal.ok ? journal.records.at(-1)?.resultRef : undefined).toBe(ref);
+    const bytes = await readFile(path.join(runDir, ...ref.split("/")));
+    expect(JSON.parse(bytes.toString("utf8"))).toEqual(result);
+    if (firstBytes === undefined) {
+      firstBytes = bytes;
+      firstDigest = createHash("sha256").update(bytes).digest("hex");
+    }
+  }
+  const first = await readFile(path.join(runDir, "results", "~726573756c742d31.json"));
+  expect(first).toEqual(firstBytes);
+  expect(createHash("sha256").update(first).digest("hex")).toBe(firstDigest);
+});
+
+// QFAI:EX-0001-0189-26
+it.each([
+  { id: "CON", ref: "results/~434f4e.json" },
+  { id: "x".repeat(64), ref: `results/~${"78".repeat(64)}.json` },
+])("a valid $id result keeps its complete receipt at $ref", async ({ id, ref }) => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const result = resultFor(issued.json, id, {
+    actor: { agentInstance: "receipt-agent" },
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+  });
+  const processed = await submit(root, runId, "accept", result);
+  expect(field(processed.json, "run.state")).toBe("running");
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  expect(journal.ok ? journal.records.at(-1)?.resultRef : undefined).toBe(ref);
+  expect(JSON.parse(await readFile(path.join(runDir, ...ref.split("/")), "utf8"))).toEqual(result);
+});
+
+// QFAI:EX-0001-0189-27
+it("continuing a run preserves a literal historical receipt beside a new encoded receipt", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const runDir = runDirOf(root, runId);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const historical = resultFor(issued.json, "61", {
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+  });
+  const first = await submit(root, runId, "accept", historical);
+  expect(field(first.json, "run.state")).toBe("running");
+  const published = await readJournal(runDir);
+  const event = published.ok ? published.records.at(-1) : undefined;
+  if (!event || typeof event.resultRef !== "string") throw new Error("No historical receipt");
+  const oldFile = path.join(runDir, ...event.resultRef.split("/"));
+  const literalFile = path.join(runDir, "results", "61.json");
+  const historicalBytes = await readFile(oldFile);
+  await writeFile(literalFile, historicalBytes);
+  if (oldFile !== literalFile) await rm(oldFile);
+  await rewriteEvent(root, runId, event.sequence, (record) => ({
+    ...record,
+    resultRef: "results/61.json",
+  }));
+
+  const next = workflow(root, ["next", "--run", runId]);
+  const current = resultFor(next.json, "a", {
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(next.json, "workOrder.attempt") },
+  });
+  const second = await submit(root, runId, "accept", current);
+  expect(field(second.json, "run.state")).toBe("running");
+  const continued = await readJournal(runDir);
+  const references = continued.ok
+    ? continued.records
+        .filter((record) => record.event === "retry-scheduled")
+        .map((record) => record.resultRef)
+    : [];
+  expect(references).toEqual(["results/61.json", "results/~61.json"]);
+  expect(await readFile(literalFile)).toEqual(historicalBytes);
+  expect(JSON.parse(historicalBytes.toString("utf8"))).toEqual(historical);
+  expect(JSON.parse(await readFile(path.join(runDir, "results", "~61.json"), "utf8"))).toEqual(
+    current,
+  );
+  expect(field(workflow(root, ["status", "--run", runId]).json, "run.state")).toBe("running");
+});
+
+// QFAI:EX-0001-0189-28
+it("a failed seam observation keeps its complete result receipt", async () => {
+  const root = await receiptProject();
+  const feature = await approvedFeature(root);
+  const authored = await authorStory(
+    root,
+    feature.runId,
+    feature.sdd.json,
+    field(feature.create, "questionId"),
+  );
+  const round = await throughAcceptance(root, feature.runId, authored.next.json);
+  const receipt = await assertReceipt(root, feature.runId, "accept-nonfinal-result", "seam-1");
+  expect(field(receipt.result, "seam.observation")).toBe("fail");
+  expect(field(round.implement, "workOrder.stageKind")).toBe("implement");
+}, 300_000);
+
+// QFAI:EX-0001-0189-28
+it("a declared reroute keeps the complete diagnosis receipt", async () => {
+  const root = await flowProject();
+  const run = await diagnosed(root, {
+    verdict: "as-specified",
+    matchedIds: ["EX-0001-0001-01"],
+  });
+  await assertReceipt(root, run.runId, "declared-reroute", "diagnose-1");
+  expect(field(run.accepted.json, "run.state")).toBe("routing");
+}, 300_000);
+
+// QFAI:EX-0001-0189-29
+it.each([
+  { proposal: ANSWER_PROPOSAL, event: "plan-accepted", state: "ready" },
+  { proposal: FEATURE_PROPOSAL, event: "unsettled-material-input", state: "awaiting_input" },
+])("$event keeps the complete routing result", async ({ proposal, event, state }) => {
+  const root = await receiptProject();
+  const { runId, routed } = await routedReceiptRun(root, proposal);
+  await assertReceipt(root, runId, event, "route-1");
+  expect(field(routed.json, "run.state")).toBe(state);
+});
+
+// QFAI:EX-0001-0189-30
+it("a material decision keeps its complete result while the question has no receipt", async () => {
+  const root = await receiptProject();
+  const feature = await approvedFeature(root);
+  const question = {
+    kind: "decision",
+    text: "The change reaches documentation. Include it?",
+    options: [
+      {
+        optionId: "widen",
+        label: "Include documentation",
+        description: "Replan with documentation in scope.",
+        effect: "replan",
+      },
+      {
+        optionId: "keep",
+        label: "Keep scope",
+        description: "Continue with the current scope.",
+        effect: "proceed",
+      },
+    ],
+    selection: { min: 1, max: 1 },
+    recommendation: "widen",
+  };
+  const asked = await submitReceipt(
+    root,
+    feature.runId,
+    "accept",
+    resultFor(feature.sdd.json, "sdd-1", {
+      outcome: "awaiting_input",
+      questions: [question],
+    }),
+  );
+  await assertReceipt(root, feature.runId, "material-decision", "sdd-1");
+  expect(field(asked.json, "run.state")).toBe("awaiting_input");
+  const journal = await readJournal(runDirOf(root, feature.runId));
+  const questions = journal.ok
+    ? journal.records.filter((record) => record.event === "question-opened")
+    : [];
+  expect(questions.length).toBeGreaterThan(0);
+  expect(questions.every((record) => record.resultRef === undefined)).toBe(true);
+});
+
+// QFAI:EX-0001-0189-31
+it.each(["unrun", "blocked", "unavailable"])(
+  "a %s result keeps its complete blocking receipt",
+  async (kind) => {
+    const root = await minimalProject();
+    const { runId } = await routedRun(root);
+    const issued = workflow(root, ["next", "--run", runId]);
+    const result = resultFor(issued.json, "blocked-result", {
+      outcome: kind === "blocked" ? "blocked" : "unrun",
+      testObservation: "unrun",
+      ...(kind === "unavailable"
+        ? {
+            delegation: { status: "unavailable", attempt: field(issued.json, "workOrder.attempt") },
+          }
+        : {}),
+    });
+    const blocked = await submit(root, runId, "accept", result);
+    await assertReceipt(root, runId, "unrun-or-unresolved-dependency", "blocked-result");
+    expect(field(blocked.json, "run.state")).toBe("blocked");
+    if (kind === "unavailable")
+      expect(field(blocked.json, "halt.cause")).toBe("unsupported-capability");
+  },
+);
+
+// QFAI:EX-0001-0189-31
+it("a blocked routing result keeps its complete missing-capability receipt", async () => {
+  const root = await minimalProject();
+  const runId = await startRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const result = resultFor(issued.json, "routing-blocked", { outcome: "blocked" });
+  const blocked = await submit(root, runId, "accept", result);
+  await assertReceipt(root, runId, "missing-capability", "routing-blocked");
+  expect(field(blocked.json, "run.state")).toBe("blocked");
+});
+
+// QFAI:EX-0001-0189-31
+// QFAI:EX-0001-0189-32
+it("three retries and the final budget blocker keep all complete receipts", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const seen: unknown[] = [];
+  for (let n = 1; n <= 4; n += 1) {
+    const issued = workflow(root, ["next", "--run", runId]);
+    const resultId = `retry-${String(n)}`;
+    const result = resultFor(issued.json, resultId, {
+      outcome: "unrun",
+      testObservation: "unrun",
+      delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+    });
+    const processed = await submit(root, runId, "accept", result);
+    await assertReceipt(
+      root,
+      runId,
+      n < 4 ? "retry-scheduled" : "unrun-or-unresolved-dependency",
+      resultId,
+    );
+    seen.push([
+      field(processed.json, "run.state"),
+      field(processed.json, "retry.nextDelaySeconds"),
+    ]);
+  }
+  expect(seen).toEqual([
+    ["running", 30],
+    ["running", 60],
+    ["running", 120],
+    ["blocked", undefined],
+  ]);
+  expect(field(workflow(root, ["status", "--run", runId]).json, "halt.blocker")).toBe(
+    "budget-exhausted",
+  );
+});
+
+// QFAI:EX-0001-0189-28
+it.each([
+  { fault: null, code: undefined },
+  ...(["mkdir", "write"] as const).flatMap((fault) =>
+    ["EBUSY", "EPERM", "EACCES"].map((code) => ({ fault, code })),
+  ),
+])("result storage $fault/$code precedes journal publication", async ({ fault, code }) => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const result = resultFor(issued.json, "publication-result", {
+    outcome: "unrun",
+    testObservation: "unrun",
+  });
+  const payload = await inbox(root, runId, "publication-result", result);
+  const runDir = runDirOf(root, runId);
+  const before = await readJournal(runDir);
+  receiptIo.runDir = runDir;
+  receiptIo.fault = fault;
+  receiptIo.error = code
+    ? Object.assign(new Error(`Result storage failed with ${code}`), { code })
+    : null;
+  const lines: string[] = [];
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    lines.push(String(chunk));
+    return true;
+  });
+  let exit: number;
+  try {
+    exit = await runWorkflow({ root, operation: "accept", runId, inPath: payload });
+  } finally {
+    stdout.mockRestore();
+    receiptIo.runDir = null;
+  }
+  const document: unknown = JSON.parse(lines.join(""));
+  if (fault === null) {
+    expect(exit).toBe(0);
+    expect(receiptIo.publications).toBe(1);
+    expect(receiptIo.observed).toEqual(result);
+  } else {
+    expect({
+      exit,
+      error: field(document, "error.code"),
+      cause: field(document, "error.cause"),
+      attempts: receiptIo.attempts,
+    }).toEqual({ exit: 1, error: "io-error", cause: code, attempts: 1 });
+    expect(receiptIo.publications).toBe(0);
+    expect(await readJournal(runDir)).toEqual(before);
+  }
+});
 
 // A decide-design run routed and ready, whose journal holds four events.
 async function readyRun() {
