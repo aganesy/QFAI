@@ -37,6 +37,24 @@ it("An extraction that names no route is routed by the rule that holds", async (
   ]).toEqual([true, "fix-defect", 27]);
 });
 
+// QFAI:AC-0001-0211-02
+// QFAI:EX-0001-0211-04
+it("An extraction two rules could read is routed by the lower-numbered one", async () => {
+  const security = { intent: "security", entryFlags: ["repro"], risks: ["security"] } as const;
+  const plain = await planned(security);
+  const signalled = await planned({ ...security, signals: ["approved-record-task"] });
+
+  expect(
+    [plain, signalled].map((document) => [
+      Reflect.get(document, "route"),
+      Reflect.get(document, "rule"),
+    ]),
+  ).toEqual([
+    ["fix-vulnerability", 1],
+    ["fix-vulnerability", 1],
+  ]);
+});
+
 // QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused, naming the field", async () => {
   const root = await minimalProject();

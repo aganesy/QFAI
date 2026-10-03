@@ -29,6 +29,12 @@ import {
 const TODO = ".todo";
 // Same split for the `*.skip(` token, which the JS/TS dialect now matches too.
 const SKIP = ".skip";
+// Same split for the placeholder marker an earlier scaffold wrote, which the validator matches
+// anywhere in a test file.
+const PLACEHOLDER = "QFAI-SCAFFOLD" + "-PLACEHOLDER";
+// The fixture's annotation is assembled too, so the traceability scan does not read it as one
+// of this file's own.
+const FIXTURE_ANNOTATION = "QFAI" + ":AC-0001-0001-01";
 const JS_STUB = `it${TODO}('later');
 `;
 
@@ -125,8 +131,8 @@ describe("every supported stack's stub construct is detected", () => {
     // That release raised `NotImplementedError` instead of skipping, so no
     // dialect pattern sees it; the marker line it left is what does.
     const legacy = [
-      "# QFAI:AC-0001-0001-01",
-      "# QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+      `# ${FIXTURE_ANNOTATION}`,
+      `# ${PLACEHOLDER} — replace this block with a real assertion.`,
       "",
       "import unittest",
       "",
@@ -141,7 +147,7 @@ describe("every supported stack's stub construct is detected", () => {
       const issues = await validateTestTodoStubs(root, CONFIG);
       const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
       expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([
-        ["QFAI-SCAFFOLD-PLACEHOLDER", 2],
+        [PLACEHOLDER, 2],
       ]);
     });
   });

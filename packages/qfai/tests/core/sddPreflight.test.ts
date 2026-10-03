@@ -67,7 +67,6 @@ describe("runSddPreflight", () => {
     }
   });
 
-  // QFAI:AC-0001-0148-01
   it("selects an imported specification when no discussion pack exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -90,7 +89,6 @@ describe("runSddPreflight", () => {
     }
   });
 
-  // QFAI:AC-0001-0148-01
   it("stays blocked and names an imported specification that is not a readable file", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

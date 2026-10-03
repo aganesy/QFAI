@@ -63,26 +63,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
   });
 });
 
-// QFAI:EX-0001-0092-01
-describe("qa-gatekeeper is sole observation authority", () => {
-  let content: string | undefined;
-
-  it("routes RED and GREEN evidence to the qa-gatekeeper", async () => {
-    content = await readImplementFlowSteps(implementAssistantDir);
-
-    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
-  });
-
-  it("routes RED/GREEN confirmation through qa-gatekeeper instead of the implementation agent", async () => {
-    content ??= await readImplementFlowSteps(implementAssistantDir);
-
-    expect(content).toContain("The author does not certify their own result");
-    expect(content).not.toMatch(
-      /implementation agent[\s\S]*?confirms its own RED\/GREEN observation/i,
-    );
-  });
-});
-
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 

@@ -277,6 +277,7 @@ it("An --in file that cannot be read is an io-error, JSON that does not parse an
   ]);
 });
 
+// QFAI:AC-0001-0222-07
 // QFAI:EX-0001-0222-13
 it("An --in path that is a directory is an io-error, and nothing is written", async () => {
   const root = await minimalProject();

@@ -8,7 +8,6 @@
 // QFAI:EX-0001-0047-01
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0001-0047-02
-// QFAI:EX-0002-0010-02
 
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
@@ -155,7 +154,7 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
 });
 
 // QFAI:AC-0001-0047-02
-// QFAI:EX-0001-0047-03
+// QFAI:EX-0001-0047-02
 describe("legacy validate path becomes an error after the sunset", () => {
   it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk

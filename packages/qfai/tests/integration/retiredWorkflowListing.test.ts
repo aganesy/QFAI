@@ -22,6 +22,7 @@ const { captureStdout } = await import("../helpers/stdout.js");
 const newTempDir = useTempDirPool("qfai-wfretired-");
 
 describe("a formerly shipped workflow is listed and kept", () => {
+  // QFAI:AC-0002-0007-03
   // QFAI:EX-0002-0007-06
   it("lists an unchanged and a hand-edited copy and removes neither", async () => {
     for (const body of ["name: retired\n", "name: retired\n# hand edit\n"]) {

@@ -1,6 +1,8 @@
 // QFAI:AC-0001-0186-02
+// QFAI:AC-0001-0186-04
 // QFAI:AC-0001-0187-01
 // QFAI:AC-0001-0209-01
+// QFAI:AC-0001-0214-03
 // QFAI:AC-0001-0214-05
 // QFAI:AC-0001-0215-01
 // QFAI:AC-0001-0215-02
@@ -23,6 +25,7 @@ import {
   parsePlan,
   type PlanBranchPoint,
 } from "../../../src/core/workflow/plans.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
@@ -200,5 +203,108 @@ it("An outcome no branch point declares moves nothing", async () => {
   expect([editText.branchPoints, destinations(fixDefect, "implement-diagnose", "retire")]).toEqual([
     [],
     undefined,
+  ]);
+});
+
+// The route the decision rules give an extraction a step reports.
+async function routeOf(fields: Parameters<typeof extraction>[0]): Promise<unknown> {
+  const document = await planOf(await minimalProject(), { extraction: extraction(fields) });
+  return Reflect.get(document, "route");
+}
+
+// QFAI:EX-0001-0215-03
+// QFAI:EX-0001-0186-08
+it("fix-defect continues on missing-test and moves on each other diagnosis verdict", async () => {
+  const fixDefect = await planned("fix-defect");
+  const verdicts = [
+    "missing-test",
+    "as-specified",
+    "not-ours",
+    "duplicate",
+    "needs-info",
+    "expectation-differs",
+    "defective-test",
+    "regression",
+    "surface-conflict",
+  ];
+  const order = stepOrder(fixDefect);
+
+  expect({
+    moves: verdicts.map((verdict) => destinations(fixDefect, "implement-diagnose", verdict)),
+    diagnosedBeforeAnyEdit: order.indexOf("implement-diagnose") < order.indexOf("sdd-story"),
+  }).toEqual({
+    moves: [
+      undefined,
+      ["answer-question"],
+      ["close-no-change"],
+      ["close-duplicate"],
+      ["request-info"],
+      ["decide-design"],
+      ["repair-test"],
+      ["fix-red-main"],
+      ["repair-consistency"],
+    ],
+    diagnosedBeforeAnyEdit: true,
+  });
+});
+
+// QFAI:EX-0001-0215-05
+it("A revert reported by implement-bisect moves to revert-culprit, and no outcome continues to implement-diagnose", async () => {
+  const fixDefect = await planned("fix-defect");
+  const fixRedMain = await planned("fix-red-main");
+  const order = stepOrder(fixRedMain);
+
+  expect({
+    fixDefect: destinations(fixDefect, "implement-bisect", "revert"),
+    fixRedMain: destinations(fixRedMain, "implement-bisect", "revert"),
+    outcomes: fixRedMain.branchPoints
+      .find((point) => point.step === "implement-bisect")
+      ?.outcomes.map((each) => each.outcome),
+    next: order[order.indexOf("implement-bisect") + 1],
+  }).toEqual({
+    fixDefect: ["revert-culprit"],
+    fixRedMain: ["revert-culprit"],
+    outcomes: ["revert"],
+    next: "implement-diagnose",
+  });
+});
+
+// QFAI:EX-0001-0215-08
+it("apply-settled moves to decide-design when sdd-triage reports outside-record", async () => {
+  expect(destinations(await planned("apply-settled"), "sdd-triage", "outside-record")).toEqual([
+    "decide-design",
+  ]);
+});
+
+// QFAI:EX-0001-0215-09
+it("decide-design moves an adopted proposal to prototype-feature when triage-close names it", async () => {
+  expect(destinations(await planned("decide-design"), "triage-close", "adopted")).toContain(
+    "prototype-feature",
+  );
+});
+
+// QFAI:EX-0001-0215-10
+it("answer-question plans a found defect through the decision rules, which give fix-defect", async () => {
+  expect([
+    destinations(await planned("answer-question"), "triage-investigate", "defect-found"),
+    await routeOf({ intent: "defect", entryFlags: ["repro"] }),
+  ]).toEqual(["decision-table", "fix-defect"]);
+});
+
+// QFAI:EX-0001-0214-04
+it("request-info plans the received answers through the decision rules, which give fix-defect", async () => {
+  expect([
+    destinations(await planned("request-info"), "triage-close", "info-received"),
+    await routeOf({ intent: "defect", entryFlags: ["repro", "cause"] }),
+  ]).toEqual(["decision-table", "fix-defect"]);
+});
+
+// QFAI:EX-0001-0209-02
+it("write-acceptance-tests always runs implement-credentials before implement-acceptance", async () => {
+  const [implement] = (await planned("write-acceptance-tests")).stages;
+
+  expect(implement?.steps.map((step) => [step.name, step.passThrough])).toEqual([
+    ["implement-credentials", true],
+    ["implement-acceptance", false],
   ]);
 });

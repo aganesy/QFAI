@@ -82,6 +82,7 @@ describe("a workflows directory reached through a link is not this tree's to wri
 });
 
 describe("the write set is the shipped list and the listed set is the retired list", () => {
+  // QFAI:AC-0002-0007-01
   // QFAI:EX-0002-0007-01
   it("writes exactly the shipped names and leaves a qfai-prefixed orphan untouched and unlisted", async () => {
     expect([...SHIPPED_WORKFLOW_NAMES].filter((name) => RETIRED_WORKFLOW_NAMES.has(name))).toEqual(
@@ -141,6 +142,7 @@ describe("a shipped workflow is written only where none is on disk", () => {
     }
   });
 
+  // QFAI:AC-0002-0007-02
   // QFAI:EX-0002-0007-05
   it("writes a shipped workflow the adopter deleted again", async () => {
     const dir = await newTempDir();

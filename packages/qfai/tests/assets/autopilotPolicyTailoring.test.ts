@@ -10,7 +10,7 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("autopilot choices cannot supply missing approval", () => {
   for (const tree of trees) {
-    // QFAI:EX-0001-0205-04
+    // QFAI:EX-0001-0223-01
     it(tree + ": SDD classifies its own decisions and stops for pending approval", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");

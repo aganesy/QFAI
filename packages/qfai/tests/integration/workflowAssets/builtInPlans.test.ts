@@ -210,8 +210,9 @@ describe("the built-in plans", () => {
     ]);
   });
 
-  // QFAI:AC-0001-0185-05
-  // QFAI:EX-0001-0185-13
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-15
+  // QFAI:EX-0001-0220-16
   it("orders the add-feature and prototype-feature plans", async () => {
     const kinds = async (route: string) => (await plan(route)).stages.map((stage) => stage.kind);
     expect(await kinds("add-feature")).toEqual([
@@ -233,7 +234,8 @@ describe("the built-in plans", () => {
   });
 
   // QFAI:AC-0001-0186-01
-  // QFAI:EX-0001-0186-13
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-22
   it("holds the fix-defect plan's append and implement stages after the diagnosis", async () => {
     const { raw, stages } = await plan("fix-defect");
     expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
@@ -251,7 +253,8 @@ describe("the built-in plans", () => {
     expect(raw).not.toMatch(/\bwhen:/);
   });
 
-  // QFAI:EX-0001-0185-14
+  // QFAI:AC-0001-0218-03
+  // QFAI:EX-0001-0218-03
   it("ends every change route in the verify block that every stage reaches", async () => {
     let changeRoutes = 0;
     for (const route of PLAN_ROUTES) {

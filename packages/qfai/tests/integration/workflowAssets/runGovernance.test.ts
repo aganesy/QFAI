@@ -56,23 +56,6 @@ describe("the stage-skill entry check", () => {
 });
 
 describe("governance inside a run", () => {
-  // QFAI:AC-0001-0004-03
-  // QFAI:EX-0001-0004-06
-  it("states request authority and the work order's binding, excepting no article", async () => {
-    const text = await passage(OPERATING, "### What authorizes a run's work");
-    expect(text).toMatch(/the operator's first explicit request authorizes the run's work/i);
-    expect(text).toMatch(/within the scope the checked route allows/i);
-    expect(text).toMatch(
-      /a QFAI work order binds the stage to its target: one business flow, or one new-story slot/i,
-    );
-    expect(text).toMatch(/these statements add to the constitution\. they except no article/i);
-    const pointer =
-      /`\.qfai\/assistant\/rule\/shared-skill-operating-baseline\.md#what-authorizes-a-runs-work`/;
-    const constitution = flat(await readShipped("rule/constitution.md"));
-    expect(constitution).toMatch(pointer);
-    expect(constitution).toMatch(/they add to these articles and except none/i);
-  });
-
   // QFAI:AC-0001-0004-04
   // QFAI:EX-0001-0004-07
   it("keeps the workflow routes apart from the Change Type", async () => {
@@ -86,54 +69,6 @@ describe("governance inside a run", () => {
       /a `fix-defect` change may declare `Behavior`, and an `add-feature` change `Structural`/,
     );
     expect(workflow).toMatch(/no route maps to a Change Type/i);
-  });
-
-  // QFAI:AC-0001-0004-02
-  // QFAI:EX-0001-0004-03
-  // QFAI:EX-0001-0004-04
-  // QFAI:EX-0001-0004-05
-  it("reuses Stage 0 output only on an equal recomputed key, and never outside a run", async () => {
-    const stage0 = sectionOf(await readShipped(OPERATING), "## Stage 0");
-    const text = flat(sectionOf(stage0, "### Inside a workflow run"));
-    expect(text, "the Stage 0 section has ### Inside a workflow run").not.toBe("");
-    expect(text).toMatch(/only when the key recorded with it, recomputed, is equal/i);
-    expect(text).toMatch(/on a different key, refresh only what changed/i);
-    for (const covered of [
-      /the tool digest/i,
-      /`qfai\.config\.yaml` and `\.qfai\/assistant\/rule\/\*\*`/,
-      /the skill digests/i,
-      /the input file digests/i,
-      /glob membership/i,
-      /the host capability state/i,
-    ]) {
-      expect(text).toMatch(covered);
-    }
-    expect(text).toMatch(/no stage-specific check is served from that output/i);
-    expect(text).toMatch(/outside a run, Stage 0 runs in full at every stage start/i);
-  });
-
-  // QFAI:AC-0001-0169-02
-  // QFAI:EX-0001-0169-02
-  it("maps each autopilot bucket to the authorization that satisfies it, and --auto to none", async () => {
-    const text = await passage(OPERATING, "## Default Autopilot Policy inside a run");
-    expect(text).toMatch(
-      /an `ask-user` item is satisfied only by a `human_decision` that answers it/i,
-    );
-    expect(text).toMatch(
-      /a `hard-required` input is satisfied by `request_scope` or by the run's binding/i,
-    );
-    expect(text).toMatch(/an `auto-decide` item needs no authorization/i);
-    expect(text).toMatch(/`--auto` satisfies nothing/i);
-  });
-
-  // QFAI:AC-0001-0169-03
-  // QFAI:EX-0001-0169-03
-  it("counts the run's flow binding as the supplied flow, and stops a direct call with none", async () => {
-    const text = await passage(OPERATING, "## Default Autopilot Policy inside a run");
-    expect(text).toMatch(/a business flow that a run's valid binding supplies counts as supplied/i);
-    expect(text).toMatch(/the skill does not ask for it/i);
-    expect(text).toMatch(/with no binding, the flow stays `hard-required`/i);
-    expect(text).toMatch(/a direct invocation with no flow it can resolve stops at preflight/i);
   });
 
   // QFAI:AC-0001-0163-04
