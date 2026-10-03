@@ -93,8 +93,8 @@ It is neutral with respect to AI behavior.
 
 ## Produced after the loop
 
-- `.qfai/prototype/final/index.html` and `prototyping.json#handoff`. See
-  the handoff reference `prototyping-handoff` reads.
+- `.qfai/prototype/final/index.html` and `prototyping.json#handoff`. The
+  prototyping-handoff step defines the handoff.
 - `.qfai/evidence/prototyping/completion-certificate.json` (records
   `designMd`, the path and sha256 of root `DESIGN.md`)
 

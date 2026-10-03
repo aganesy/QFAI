@@ -21,8 +21,8 @@ a distinct tree from the **capture** artifacts at
 `npx qfai prototyping iterate --capture` fans out one pair per declared
 screen. Handoff copies the authoring artifact; `npx qfai prototyping
 certify` gates on the capture artifacts and never opens the
-`prototypes/` tree. Both must exist before handoff can complete: see
-"Output layout" in the generator prompt.
+`prototypes/` tree. Both must exist before handoff can complete. The generator
+prompt defines their output layout.
 
 Root `DESIGN.md` remains the brand SSOT through handoff.
 

@@ -9,6 +9,7 @@ the 2.x validation and authoring workflow.
 
 - Prepare
 - Place stories and rules
+- Retired configuration keys
 - Contract IDs
 - Business rules
 - Documents in their template's shape

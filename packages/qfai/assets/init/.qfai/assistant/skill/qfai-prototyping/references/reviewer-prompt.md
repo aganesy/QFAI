@@ -136,8 +136,8 @@ type Review = {
 review remains required when capture is off. When capture is on, the accepted
 iteration's readable HTML is re-scanned on convergence and certification; the
 re-scan result wins over a manually emptied array. Do not invent an
-`evidenceRefs` entry for a file that was not captured. See
-the generator prompt for the static gate.
+`evidenceRefs` entry for a file that was not captured. The generator prompt
+defines the static gate.
 
 ## The four ordinal UX axes
 
