@@ -1,5 +1,5 @@
 import { constants as fsConstants } from "node:fs";
-import { copyFile, lstat, mkdir, readdir, stat } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 /** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
@@ -31,6 +31,8 @@ export type CopyOptions = {
 export type CopyResult = {
   copied: string[];
   skipped: string[];
+  /** Destinations a forced copy did not write because a directory above them is a link. */
+  refused: string[];
 };
 
 export async function copyTemplateTree(
@@ -66,6 +68,7 @@ async function copyFiles(
 ): Promise<CopyResult> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const refused: string[] = [];
   const conflicts: string[] = [];
 
   const excludePrefixes = (options.exclude ?? [])
@@ -114,6 +117,20 @@ async function copyFiles(
       continue;
     }
 
+    // `copyFile` follows a link at the destination and through any linked
+    // directory above it, so a forced overwrite would land wherever the link
+    // points. A linked directory is refused; a linked file is replaced as an
+    // entry, leaving its target as it was.
+    if (options.force) {
+      if ((await linkedAncestor(destRoot, dest)) !== undefined) {
+        refused.push(dest);
+        continue;
+      }
+      if (!options.dryRun && (await lstatOrUndefined(dest))?.isSymbolicLink() === true) {
+        await rm(dest);
+      }
+    }
+
     if (!options.dryRun) {
       await mkdir(path.dirname(dest), { recursive: true });
       // EXCLUSIVE unless the caller asked to overwrite, and `copied` records only what this call
@@ -142,7 +159,28 @@ async function copyFiles(
     copied.push(dest);
   }
 
-  return { copied, skipped };
+  return { copied, skipped, refused };
+}
+
+/** `lstat`, or `undefined` when nothing is at `target`. Other faults propagate. */
+async function lstatOrUndefined(target: string) {
+  try {
+    return await lstat(target);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/** The first directory between `root` and `target` that is a symbolic link, if any. */
+async function linkedAncestor(root: string, target: string): Promise<string | undefined> {
+  let current = root;
+  for (const segment of path.relative(root, path.dirname(target)).split(path.sep)) {
+    if (segment === "") continue;
+    current = path.join(current, segment);
+    if ((await lstatOrUndefined(current))?.isSymbolicLink() === true) return current;
+  }
+  return undefined;
 }
 
 function resolveTemplateDestinationRelativePath(relative: string): string {

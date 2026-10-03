@@ -4,7 +4,7 @@
  * project's own files alone; `qfai init` lists what an earlier release left and
  * deletes none of it.
  */
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -93,6 +93,60 @@ describe("init --force overwrites the regenerated assets", () => {
     expect(await readFile(master, "utf-8")).toBe(
       await readFile(shippedMaster("minimal-implementation.md"), "utf-8"),
     );
+  });
+});
+
+describe("init --force never writes through a link", () => {
+  // QFAI:EX-0001-0022-02
+  it("replaces a linked rule file as an entry and leaves its target alone", async () => {
+    const dir = await newTempDir();
+    const outside = await newTempDir();
+    await init(dir);
+    const target = path.join(outside, "constitution.md");
+    await writeFile(target, "outside\n", "utf-8");
+    const rule = path.join(dir, ".qfai", "assistant", "rule", "constitution.md");
+    await rm(rule);
+    try {
+      await symlink(target, rule, "file");
+    } catch {
+      return; // A host without symlink permission cannot exercise this case.
+    }
+
+    await init(dir, true);
+
+    expect(await readFile(target, "utf-8")).toBe("outside\n");
+    expect((await lstat(rule)).isSymbolicLink()).toBe(false);
+    expect(await readFile(rule, "utf-8")).toBe(
+      await readFile(shippedAssistant("rule/constitution.md"), "utf-8"),
+    );
+  });
+
+  // QFAI:EX-0001-0022-03
+  it("writes nothing under a linked rule directory that points outside the project", async () => {
+    const dir = await newTempDir();
+    const outside = await newTempDir();
+    await init(dir);
+    for (const linked of [
+      [".agents", "rules"],
+      [".qfai", "assistant", "rule"],
+    ]) {
+      const at = path.join(dir, ...linked);
+      const elsewhere = path.join(outside, linked.join("-"));
+      await mkdir(elsewhere, { recursive: true });
+      await writeFile(path.join(elsewhere, "constitution.md"), "outside\n", "utf-8");
+      await writeFile(path.join(elsewhere, "minimal-implementation.md"), "outside\n", "utf-8");
+      await rm(at, { recursive: true });
+      await symlink(elsewhere, at, "junction");
+    }
+
+    const output = await init(dir, true);
+
+    for (const linked of [".agents-rules", ".qfai-assistant-rule"]) {
+      for (const name of ["constitution.md", "minimal-implementation.md"]) {
+        expect(await readFile(path.join(outside, linked, name), "utf-8"), name).toBe("outside\n");
+      }
+    }
+    expect(output).toContain("was not overwritten: a directory above it is a symbolic link");
   });
 });
 

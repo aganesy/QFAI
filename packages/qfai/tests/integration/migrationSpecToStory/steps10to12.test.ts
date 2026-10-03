@@ -941,7 +941,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(result.code).toBe(0);
     expect(section(preview.output, "Operations")).toEqual(expect.arrayContaining(HOOK_WRITES));
     expect(section(result.output, "Operations")).toEqual(section(preview.output, "Operations"));
-    expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    expect(section(result.output, "Reminder hooks")).toEqual([
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
     }
@@ -1055,6 +1058,9 @@ describe("migration step 11: the text the reminder hooks print", () => {
     const created = await stepIn(absent, 11);
     expect(created.code, created.output).toBe(0);
     expect(section(created.output, "Operations")).toContain(`${REMINDERS}: write from the package`);
+    expect(section(created.output, "Reminder hooks")).toContain(
+      `${REMINDERS}: write from the package`,
+    );
     expect(await textOrNull(absent, REMINDERS)).toBe(shipped);
 
     const differing = await clone(migrated10);
@@ -1064,7 +1070,17 @@ describe("migration step 11: the text the reminder hooks print", () => {
     expect(section(replaced.output, "Operations")).toContain(
       `${REMINDERS}: replace with the package's text`,
     );
+    expect(section(replaced.output, "Reminder hooks")).toContain(
+      `${REMINDERS}: replace with the package's text`,
+    );
     expect(await textOrNull(differing, REMINDERS)).toBe(shipped);
+
+    // A copy that differs only in line endings is the package's text.
+    const crlf = await clone(migrated10);
+    await writeReminderText(crlf, shipped.replace(/\r?\n/g, "\r\n"));
+    const unchanged = await stepIn(crlf, 11);
+    expect(unchanged.code, unchanged.output).toBe(0);
+    expect(section(unchanged.output, "Operations").join("\n")).not.toContain(REMINDERS);
 
     const linked = await clone(migrated10);
     const elsewhere = await scratch("qfai-rules-elsewhere-");
@@ -1121,7 +1137,10 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
             /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
           );
           expect(operations.slice(2)).toEqual([`${REMINDERS}: replace with the package's text`]);
-          expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+          expect(section(result.output, "Reminder hooks")).toEqual([
+            TRUST_CODEX_HOOKS,
+            `${REMINDERS}: replace with the package's text`,
+          ]);
         }
         if (step === 11 && pass === 2) {
           expect(section(result.output, "Operations")).toEqual([]);

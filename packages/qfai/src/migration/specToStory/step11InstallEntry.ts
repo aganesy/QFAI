@@ -32,29 +32,34 @@ import {
 } from "../../core/claudeCodeHooks.js";
 import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { hashAssistantAssetText } from "../../shared/text.js";
+import { normalizeNewlines } from "../../shared/text.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
 
 const AGENTS_RULES_DIR = ".agents/rules";
 const REMINDERS_BASENAME = "reminders.json";
 
+/** The largest file step 11 reads to compare; a larger one compares as different. */
+const MAX_COMPARED_BYTES = 4 * 1024 * 1024;
+
 /**
- * The content hash of a regular file, ignoring line endings, or `null` for
- * anything else. `allowSymlink` follows a link, as the package's own tree may
- * hold one.
+ * A regular file's text with CRLF folded to LF, or `null` when nothing comparable is there:
+ * absent, not a regular file, or past the ceiling. `followLink` follows a link, as the package's
+ * own tree may hold one. Any other read fault propagates.
  */
-async function hashAssistantAssetFile(
+async function comparableText(
   file: string,
-  options: { allowSymlink?: boolean } = {},
+  options: { followLink?: boolean } = {},
 ): Promise<string | null> {
+  let entry;
   try {
-    const entry = await lstat(file);
-    if (!entry.isFile() && !(options.allowSymlink === true && entry.isSymbolicLink())) return null;
-    return hashAssistantAssetText(await readFile(file, "utf8"));
-  } catch {
-    return null;
+    entry = await (options.followLink === true ? stat(file) : lstat(file));
+  } catch (error) {
+    if (isEnoent(error)) return null;
+    throw error;
   }
+  if (!entry.isFile() || entry.size > MAX_COMPARED_BYTES) return null;
+  return normalizeNewlines(await readFile(file, "utf8"));
 }
 
 /** The package's `.qfai/` template, which init copies the skills from. */
@@ -100,11 +105,11 @@ function projectPath(context: MigrationContext, absolute: string): string {
 }
 
 /**
- * Each regular file under `dir`, by its path relative to `dir`, with its hash
- * ignoring line endings as init compares a skill. Any other entry hashes to
+ * Each regular file under `dir`, by its path relative to `dir`, with its text
+ * with line endings folded. Any other entry maps to
  * `null` and so never equals a file. `null` when `dir` is absent.
  */
-async function treeHashes(dir: string): Promise<Map<string, string | null> | null> {
+async function treeTexts(dir: string): Promise<Map<string, string | null> | null> {
   let entries;
   try {
     entries = await readdir(dir, { recursive: true, withFileTypes: true });
@@ -112,13 +117,13 @@ async function treeHashes(dir: string): Promise<Map<string, string | null> | nul
     if (isEnoent(error)) return null;
     throw error;
   }
-  const hashes = new Map<string, string | null>();
+  const texts = new Map<string, string | null>();
   for (const entry of entries) {
     if (entry.isDirectory()) continue;
     const file = path.join(entry.parentPath, entry.name);
-    hashes.set(path.relative(dir, file), await hashAssistantAssetFile(file));
+    texts.set(path.relative(dir, file), await comparableText(file));
   }
-  return hashes;
+  return texts;
 }
 
 /** Whether every file of `part` is in `whole` with the same content. */
@@ -126,7 +131,7 @@ function containedIn(
   part: ReadonlyMap<string, string | null>,
   whole: ReadonlyMap<string, string | null>,
 ): boolean {
-  return [...part].every(([file, hash]) => hash !== null && whole.get(file) === hash);
+  return [...part].every(([file, text]) => text !== null && whole.get(file) === text);
 }
 
 function sameTree(
@@ -136,16 +141,13 @@ function sameTree(
   return left.size === right.size && containedIn(left, right);
 }
 
-async function packageHashes(layer: Layer, id: string): Promise<Map<string, string | null>> {
+async function packageTexts(layer: Layer, id: string): Promise<Map<string, string | null>> {
   const dir = path.join(packageQfaiAssets(), "assistant", layer, id);
-  const hashes = new Map<string, string | null>();
+  const texts = new Map<string, string | null>();
   for (const file of await collectTemplateFiles(dir)) {
-    hashes.set(
-      path.relative(dir, file),
-      await hashAssistantAssetFile(file, { allowSymlink: true }),
-    );
+    texts.set(path.relative(dir, file), await comparableText(file, { followLink: true }));
   }
-  return hashes;
+  return texts;
 }
 
 function installOperation(
@@ -213,10 +215,10 @@ async function planLayerEntry(
 ): Promise<void> {
   const dir = layerDir(context, layer, id);
   const archive = archiveDir(context, layer, id);
-  const shipped = await packageHashes(layer, id);
-  const current = await treeHashes(dir);
+  const shipped = await packageTexts(layer, id);
+  const current = await treeTexts(dir);
   if (current !== null && sameTree(current, shipped)) return;
-  const archived = await treeHashes(archive);
+  const archived = await treeTexts(archive);
   if (current !== null && archived !== null && !containedIn(current, shipped)) {
     const reason = sameTree(current, archived)
       ? `the archive already holds this copy; delete the ${layer} directory and run step 11 again`
@@ -351,10 +353,21 @@ async function planReminderText(context: MigrationContext, plan: StepPlan): Prom
     REMINDERS_BASENAME,
   );
   const target = path.join(context.root, ...shown.split("/"));
-  const current = await readFile(target, "utf8").catch(() => null);
-  if (current !== null && current === (await readFile(shipped, "utf8"))) return;
+  const entry = await lstat(target).catch((error: unknown) => {
+    if (isEnoent(error)) return null;
+    throw error;
+  });
+  if (entry !== null && !entry.isFile()) {
+    plan.forAPerson?.push(
+      `${shown} was left unchanged: it is not a regular file, so the reminder text is not refreshed.`,
+    );
+    return;
+  }
+  const current = entry === null ? null : normalizeNewlines(await readFile(target, "utf8"));
+  if (current !== null && current === normalizeNewlines(await readFile(shipped, "utf8"))) return;
   const description =
     current === null ? "write from the package" : "replace with the package's text";
+  plan.reminderHooks?.push(`${shown}: ${description}`);
   plan.operations.push({
     kind: "delegate",
     target: shown,

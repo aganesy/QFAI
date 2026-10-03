@@ -327,6 +327,17 @@ export async function runInit(
       : [],
     { force: false, dryRun: options.dryRun, conflictPolicy: "skip" },
   );
+  // Asked again after the copy: a parent swapped for a link while it ran had the
+  // workflows land wherever the link points, and nothing here can undo that.
+  if (
+    workflowsDirIsOwn &&
+    workflowResult.copied.length > 0 &&
+    !(await workflowAncestorsAreRealDirectories(destRoot))
+  ) {
+    error(
+      ".github or .github/workflows became a symlink while the shipped workflows were being written, so they may have landed outside this repository. Check where it points and remove any file written there.",
+    );
+  }
 
   // root/ is create-only (existing files are skipped), and that comes solely from
   // the `force: false` literal below: an adopter-authored DESIGN.md, a
@@ -356,7 +367,7 @@ export async function runInit(
         rulesCreated.skipped.map((dest) => path.relative(destRoot, dest)),
         { force: true, dryRun: options.dryRun },
       )
-    : { copied: [] as string[], skipped: [] as string[] };
+    : { copied: [] as string[], skipped: [] as string[], refused: [] as string[] };
   rootResult.copied = [
     ...workflowResult.copied,
     ...rootResult.copied,
@@ -389,7 +400,9 @@ export async function runInit(
     options.dryRun,
     options.force,
     newlyWritten,
-    await shippedRuleMasters(rootAssets),
+    // The masters whose file holds this release's text once the run is done; a
+    // summary moves to the release's wording only for these.
+    new Set(newlyWrittenRuleMasters([...rulesCreated.copied, ...rulesForced.copied], destRoot)),
   );
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
@@ -416,6 +429,7 @@ export async function runInit(
   // the one an earlier release left behind is removed here rather than
   // overwritten.
   const markerRemoved = await removeAssistantMarker(destRoot, options.dryRun);
+  reportRefusedForcedWrites([...rulesForced.refused, ...skillsResult.refused], destRoot);
 
   // git config core.symlinks true (a precondition for creating symlinks).
   // This is the only change outside the working tree, so report it right
@@ -549,43 +563,56 @@ export async function runInit(
 }
 
 /**
- * Stops the run before any copy when the shipped assistant assets cannot be read,
- * so a damaged install never leaves a project half initialised.
+ * Stops the run before any copy when a shipped assistant layer is missing, empty
+ * or unreadable, so a damaged install never leaves a project half initialised.
  */
 async function requireReadableShippedAssets(assistantAssets: string): Promise<void> {
-  try {
-    for (const relative of STANDARD_ASSET_PATHS) {
-      await collectTemplateFiles(path.join(assistantAssets, path.relative("assistant", relative)));
+  const damaged = new Error(
+    `qfai init cannot read the shipped assistant assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; nothing was copied.`,
+  );
+  for (const relative of STANDARD_ASSET_PATHS) {
+    let files: string[];
+    try {
+      files = await collectTemplateFiles(
+        path.join(assistantAssets, path.relative("assistant", relative)),
+      );
+    } catch (cause: unknown) {
+      throw new Error(damaged.message, { cause });
     }
-  } catch (cause: unknown) {
-    throw new Error(
-      `qfai init cannot read the shipped assistant assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; nothing was copied.`,
-      { cause },
-    );
+    if (files.length === 0) throw damaged;
   }
-}
-
-/** Each shipped rule master, spelled as a citation spells it. */
-async function shippedRuleMasters(rootAssets: string): Promise<ReadonlySet<string>> {
-  const names = await readdir(path.join(rootAssets, AGENTS_RULES_DIR_REL));
-  return new Set(names.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`));
 }
 
 /**
  * Whether every existing component of `<destRoot>/.github/workflows` is a real directory.
  *
  * A component that is not there yet passes: the copy creates it. One that is a symlink, or
- * not a directory at all, fails, because a write through it lands wherever it points.
+ * not a directory at all, fails, because a write through it lands wherever it points. A
+ * component that cannot be inspected fails the run.
  */
 async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
   let current = destRoot;
   for (const segment of [".github", "workflows"]) {
     current = path.join(current, segment);
-    const inspected = await lstat(current).catch(() => undefined);
-    if (inspected === undefined) return true;
+    let inspected: Stats;
+    try {
+      inspected = await lstat(current);
+    } catch (error: unknown) {
+      if (isEnoent(error)) return true;
+      throw error;
+    }
     if (inspected.isSymbolicLink() || !inspected.isDirectory()) return false;
   }
   return true;
+}
+
+/** Names each destination a forced copy refused because a directory above it is a link. */
+function reportRefusedForcedWrites(refused: readonly string[], destRoot: string): void {
+  for (const dest of refused) {
+    warn(
+      `WARN: ${formatReportPath(path.relative(destRoot, dest))} was not overwritten: a directory above it is a symbolic link, and the write would land wherever it points.`,
+    );
+  }
 }
 
 /**
@@ -1011,8 +1038,6 @@ async function emitLegacyAssistantSteeringSunset(destRoot: string): Promise<void
  */
 /** The masters' directory, relative to a project root and to the shipped tree alike. */
 const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
-/** The same directory as a citation spells it: with `/` on every platform. */
-const AGENTS_RULES_DIR_CITATION = ".agents/rules";
 
 async function ensureAgentEntryPointRules(
   rootAssets: string,
