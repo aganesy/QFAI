@@ -142,6 +142,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The init skill-link test compares where each link resolves.** It matched
+  the trailing text of the raw link target, so a dangling link, or one into a
+  copy outside the project, passed. It now compares the resolved path of each
+  link with that of the canonical skill directory. Fixes #2230.
+
 - **`qfai workflow` keeps each stage result it records under the run's
   `results/`** (#2348). Complete JSON is stored before its journal event.
   New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
