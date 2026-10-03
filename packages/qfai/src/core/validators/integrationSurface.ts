@@ -5,7 +5,6 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { ASSISTANT_ASSETS_LOCK_BASENAME } from "../assistantAssetProvenance.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 import { isEperm } from "../fs/errno.js";
@@ -77,36 +76,17 @@ const OPEN_READ_FLAGS =
     : constants.O_RDONLY;
 
 /**
- * Records `qfai init` writes and never removes, used as proof it ran.
+ * Files `qfai init` writes inside `.qfai/`, used as proof it ran.
  *
- * Either one is enough. Both live inside `.qfai/`, which init creates, and
- * both carry a name no project writes for its own reasons — so the path is the
- * evidence, and nothing has to be read to confirm it.
- *
- * That is the difference from the READMEs this probe used to read. Those sat
- * at conventional paths a project can already occupy, so presence proved
- * nothing and the body had to carry a signature: a title, a section heading
- * and a substring, all three, because any one of them appears in a README a
- * project wrote about where it keeps its own QFAI tree. Init also wrote a
- * README only when the path was free, so a project that already had its own at
- * every integration directory ran init and got no marker at all — and deleting
- * every wrapper afterwards left the surface reading as never initialised:
- * nothing checked, every profile passing, and the assistant loading nothing.
- *
- * Presence alone, deliberately, with no parse of the contents. A record init
- * wrote and something later truncated still proves init ran, and that state has
- * its own finding (`QFAI-ASSETS-008`); requiring a well-formed record here
- * would turn a damaged one into "never initialised", which is the reading this
- * marker exists to prevent.
+ * Either one is enough. Both carry a name no project writes for its own
+ * reasons, so the path is the evidence, and nothing has to be read to confirm
+ * it. Both sit inside `.qfai/` rather than in the integration directories, so
+ * they outlive every wrapper and the directories that held them, and the first
+ * outlives the assistant tree as well.
  */
 const INIT_MARKERS: readonly (readonly string[])[] = [
-  // Written whenever the assistant tree is installed, which is what this rule
-  // is asking about.
-  [".qfai", "assistant", ASSISTANT_ASSETS_LOCK_BASENAME],
-  // Written when files are recorded into the adopter tree. Deliberately not
-  // part of the managed gitignore block, so it reaches a fresh clone — the
-  // state the evidence is needed for.
-  [".qfai", "install-provenance.json"],
+  [".qfai", "waivers.yml"],
+  [".qfai", "assistant", "rule", "drift-protocol.md"],
 ];
 
 type Broken = {
@@ -922,8 +902,8 @@ async function isInitRecord(filePath: string): Promise<boolean> {
   // `lstat`, not `stat`, and a regular file only. A directory at the path makes
   // every read of it throw `EISDIR`, and a FIFO blocks a reader outright, so
   // neither can be treated as a record without deciding first what the entry
-  // is. A symlink is excluded for the same reason `QFAI-ASSETS-008` refuses to
-  // follow one: what it points at is outside the tree this rule is answering
+  // is. A symlink is excluded because
+  // what it points at is outside the tree this rule is answering
   // about, and `stat` would report the target instead of the entry.
   const entry = await lstatOrNull(filePath);
   return entry !== null && !entry.isSymbolicLink() && entry.isFile();
@@ -1106,7 +1086,7 @@ function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[]
  * (`git ls-files -s` reports mode `120000`); only the working tree is not.
  *
  * Nothing detected that. `qfai validate` never read these directories, and
- * `qfai doctor`'s `skills.integrity` / `agents.frontmatter` both read the
+ * `qfai doctor`'s `agents.frontmatter` reads the
  * canonical `.qfai/assistant/**` tree, which is unaffected. The assistant then
  * loads no skill and routes no agent, and every gate those files define stops
  * existing while work continues at full speed.
@@ -1279,8 +1259,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // Absent is "not created yet" **only before init has run**. Once it has,
       // and the project has the canonical document, `qfai init` created this
       // wrapper too, so its absence is a deletion — and nothing else reported
-      // it, because `validateSkillsIntegrity` reads the canonical tree
-      // (unchanged) and runs under `full` alone.
+      // it, because nothing else reads the wrappers.
       // The canonical is checked whether or not its wrapper directory is
       // there. Gating the whole branch on `!missingDirs.has` meant deleting
       // all four skill directories skipped every canonical check with them —
@@ -1495,9 +1474,9 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     // canonical document with a symlink to a readable file of the right kind
     // outside the repository and both sides of the comparison above follow it
     // to the same external path, so they agree — while the assistant loads
-    // instructions this project does not own. `skills.integrity` would say so,
-    // but it runs under `full` alone, so `discussion` / `sdd` / `atdd` / `tdd`
-    // reported a healthy surface. Reported against the canonical, once, because
+    // instructions this project does not own, and nothing else reports it.
+    // Without this, `discussion` / `sdd` / `atdd` / `tdd`
+    // would report a healthy surface. Reported against the canonical, once, because
     // one document is one thing to repair.
     // `init` writes the canonical as a real directory or a real file, so a
     // symlink there is damage whatever it points at. Outside the repository is
@@ -1544,7 +1523,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     // A skill is loaded from its `SKILL.md`. The link can resolve to a
     // directory that still holds `references/` and `templates/` while that one
     // file is gone, and then nothing reported it: this rule saw a resolving
-    // link, and `skills.integrity` — which would — runs only under `full`.
+    // link.
     if (wrapper.kind === "skill") {
       // `isFile`, not "exists": `access` succeeds on a directory named
       // `SKILL.md` too, and the assistant can load that no better than a
@@ -1586,8 +1565,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       }
       // Inside the project, like the directory holding it. A `SKILL.md`
       // replaced by a symlink to a readable file outside the repository passes
-      // `stat` and `access` — and `skills.integrity`, which would notice, runs
-      // under `full` alone.
+      // `stat` and `access`.
       if (realRoot !== null) {
         const docReal = await realpathOrNull(skillDoc);
         if (docReal !== null && !isInside(realRoot, docReal)) {

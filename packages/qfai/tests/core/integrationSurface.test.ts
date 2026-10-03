@@ -10,7 +10,7 @@
  * correct; only the working tree does not.
  *
  * `qfai validate` never read these directories, and `qfai doctor`'s
- * `skills.integrity` / `agents.frontmatter` both read the canonical
+ * `agents.frontmatter` reads the canonical
  * `.qfai/assistant/**` tree, which is unaffected. So the assistant silently
  * loaded no skill and routed no agent, and every gate they define stopped
  * existing while work continued at full speed.
@@ -102,15 +102,11 @@ const RETIRED_MARKER_README = [
   "",
 ].join("\n");
 
-/** One of the two records `qfai init` writes and never removes. */
-async function seedInitRecord(
-  root: string,
-  which: "lock" | "provenance" = "provenance",
-): Promise<void> {
-  const target =
-    which === "lock"
-      ? path.join(root, ".qfai", "assistant", ".assets.lock.json")
-      : path.join(root, ".qfai", "install-provenance.json");
+/** A file `qfai init` writes, which marks that it ran. */
+const INIT_RECORD = [".qfai", "waivers.yml"];
+
+async function seedInitRecord(root: string): Promise<void> {
+  const target = path.join(root, ...INIT_RECORD);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, "{}\n", "utf-8");
 }
@@ -423,8 +419,7 @@ describe("ownership is the roster init ships, not the canonical tree", () => {
 
 describe("a wrapper deleted from a populated surface is reported", () => {
   it("reports the one that is gone while its siblings remain", async () => {
-    // Nothing else caught this: the canonical tree is untouched, so
-    // `skills.integrity` sees a healthy spec — and it only runs under `full`.
+    // Nothing else caught this: the canonical tree is untouched.
     // The assistant simply cannot load that skill.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
@@ -454,8 +449,7 @@ describe("a wrapper deleted from a populated surface is reported", () => {
 describe("a skill wrapper is only good if it can be loaded", () => {
   it("reports a wrapper whose directory has lost its SKILL.md", async () => {
     // The link resolves — `references/` and `templates/` are still there — so
-    // this rule saw nothing, and `skills.integrity`, which would, runs under
-    // `full` alone. A narrow profile passed a skill the assistant cannot load.
+    // this rule saw nothing. A profile passed a skill the assistant cannot load.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -559,49 +553,12 @@ describe("an initialised project is recognised without any wrapper left", () => 
     });
   });
 
-  it("accepts either record on its own", async () => {
-    // Two records, and a run that writes one without the other still ran init.
-    for (const which of ["lock", "provenance"] as const) {
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, ["qfai-atdd"], []);
-        await wireAll(root, ["qfai-atdd"], []);
-        await seedInitRecord(root, which);
-        for (const dir of INTEGRATION_SURFACE_DIRS) {
-          await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
-        }
-
-        const found = await finding(root);
-        expect(found?.message).toContain("integration surface missing");
-      });
-    }
-  });
-
-  it("reads past a record path that is not a regular file", async () => {
-    // A directory at one record path must not decide the answer for the other:
-    // an `EISDIR` propagated out of the probe rejected the whole `Promise.all`
-    // and lost the finding the valid record beside it would have produced.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-atdd"], []);
-      await wireAll(root, ["qfai-atdd"], []);
-      for (const dir of INTEGRATION_SURFACE_DIRS) {
-        await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
-      }
-      await mkdir(path.join(root, ".qfai", "assistant", ".assets.lock.json"), { recursive: true });
-      await seedInitRecord(root, "provenance");
-
-      const found = await finding(root);
-      expect(found?.message).toContain("integration surface missing");
-    });
-  });
-
   it("does not read a directory at a record path as the record", async () => {
     // The control for the case above: with nothing but the directory, the
     // probe has no evidence and the tree reads as never initialised.
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
-      await mkdir(path.join(root, ".qfai", "assistant", ".assets.lock.json"), { recursive: true });
+      await mkdir(path.join(root, ...INIT_RECORD), { recursive: true });
 
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
     });
@@ -708,12 +665,8 @@ describe("a project's own entry is not proof init ran", () => {
 
   it("does not accept a symlink at a record path as init's own", async () => {
     // The probe answers about this tree. A link points somewhere else, and
-    // `stat` would report the target rather than the entry — the same posture
-    // `QFAI-ASSETS-008` takes when it refuses to follow a symlinked lock.
-    for (const rel of [
-      [".qfai", "assistant", ".assets.lock.json"],
-      [".qfai", "install-provenance.json"],
-    ]) {
+    // `stat` would report the target rather than the entry.
+    for (const rel of [INIT_RECORD, [".qfai", "assistant", "rule", "drift-protocol.md"]]) {
       await withProject(async (root) => {
         if (!(await canCreateSymlink(root))) return;
         await seedCanonical(root, ["qfai-atdd"], []);
@@ -994,8 +947,7 @@ describe("the canonical itself has to be in the project", () => {
   it("reports a canonical that is a symlink to an outside document", async () => {
     // Both sides of the resolved-path comparison follow it to the same
     // external path, so they agree — while the assistant loads instructions
-    // this project does not own. `skills.integrity` would say so, but it runs
-    // under `full` alone.
+    // this project does not own.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, [], ["qa-gatekeeper"]);
@@ -1242,7 +1194,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
     // passing, the assistant loading nothing.
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
-      await seedInitRecord(root, "lock");
+      await seedInitRecord(root);
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
       }
@@ -1707,12 +1659,8 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
       }
-      await mkdir(path.join(root, ".qfai"), { recursive: true });
-      await writeFile(
-        path.join(root, ".qfai", "install-provenance.json"),
-        "x".repeat(64 * 1024),
-        "utf-8",
-      );
+      await mkdir(path.join(root, ...INIT_RECORD.slice(0, -1)), { recursive: true });
+      await writeFile(path.join(root, ...INIT_RECORD), "x".repeat(64 * 1024), "utf-8");
 
       const found = await finding(root);
       expect(found?.message).toContain("integration surface missing");
@@ -1862,7 +1810,7 @@ describe("a canonical redirected outside the project", () => {
 describe("a nested SKILL.md is in the project too", () => {
   it("reports a SKILL.md that is a symlink to an outside document", async () => {
     // The directory is the project fixed, the document is not: `stat` and
-    // `access` both succeed, and `skills.integrity` runs under `full` alone.
+    // `access` both succeed.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);

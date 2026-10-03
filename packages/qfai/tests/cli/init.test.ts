@@ -492,7 +492,7 @@ describe("qfai init", () => {
       const existingConstitution = path.join(root, ".qfai", "assistant", "rule", "constitution.md");
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");

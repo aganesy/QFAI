@@ -121,10 +121,8 @@ async function copyFiles(
       //
       // `shouldWrite` answered a question about a moment that has passed. A second process — another
       // `qfai init`, or the adopter's own editor — can create the file between that check and this
-      // copy, and a plain `copyFile` then OVERWRITES it. Worse than the lost bytes: the path lands
-      // in `copied`, so `recordInstalledWorkflows` stamps the packaged digest as QFAI's own, doctor
-      // reports no drift on a file QFAI never wrote, and the retired-workflow prune considers it
-      // QFAI's to delete. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
+      // copy, and a plain `copyFile` then OVERWRITES it, and the path lands in `copied` as if
+      // this call had created it. `COPYFILE_EXCL` makes the create the decision, and an `EEXIST` means the
       // adopter won the race — which is the same outcome `shouldWrite` intended for a file that was
       // already there.
       if (!options.force) {

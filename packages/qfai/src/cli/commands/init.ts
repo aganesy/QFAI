@@ -1,7 +1,7 @@
 import path from "node:path";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import type { BigIntStats, Dirent, Stats } from "node:fs";
+import type { Dirent, Stats } from "node:fs";
 import {
   lstat,
   mkdir,
@@ -21,19 +21,12 @@ import type { FileHandle, symlink } from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
-import { copyTemplatePaths, copyTemplateTree } from "../../core/fs/templateCopy.js";
 import {
-  ADOPTER_OWNED_ASSETS,
-  ASSISTANT_ASSETS_LOCK_BASENAME,
-  ASSISTANT_STAGING_PREFIX,
-  GOVERNED_ASSISTANT_LAYERS,
-  aliasesShippedGovernedAsset,
-  buildShippedAssistantHashes,
-  hasRealGovernedAssistantParents,
-  hashAssistantAssetFile,
-  readAssistantAssetsLock,
-  writeAssistantAssetsLock,
-} from "../../core/assistantAssetProvenance.js";
+  collectTemplateFiles,
+  copyTemplatePaths,
+  copyTemplateTree,
+} from "../../core/fs/templateCopy.js";
+import { findLeftovers, leftoverLines } from "../../core/leftovers.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
@@ -59,7 +52,6 @@ import {
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
   extractManagedRulesSection,
-  keepSummariesOfKeptMasters,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
   refreshSupersededRuleBullets,
@@ -77,39 +69,17 @@ import {
   joinLegacyAssistantSteering,
   legacyAssistantSteeringSunsetLabel,
 } from "../../core/paths/assistantPaths.js";
-import type { RuleMasterPlan } from "../../core/ruleMasterUpdates.js";
-import {
-  deletedRuleMasters,
-  keptDeletedRuleMastersNote,
-  keptRuleMasterNote,
-  planRuleMasterUpdates,
-  readRuleLock,
-  RULE_LOCK_BASENAME,
-  UNEDITED_RULE_MASTER,
-  writeRuleLock,
-} from "../../core/ruleMasterUpdates.js";
 import {
   type PendingCitations,
   readPendingCitations,
   writePendingCitations,
 } from "../../core/pendingRuleCitations.js";
-import { resolveToolVersion } from "../../core/version.js";
 import {
   RETIRED_WORKFLOW_NAMES,
   SHIPPED_WORKFLOW_NAMES,
 } from "../../shared/shippedWorkflowNames.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
-import {
-  createWorkflowProvenanceEntry,
-  readInstallProvenance,
-  updateInstallProvenance,
-  type InstallProvenanceRecord,
-  type WorkflowProvenanceEntry,
-} from "../../shared/provenance.js";
-import {
-  refuseUnsafeEntryPointRewrite,
-  replaceEntryPointFile,
-} from "../../core/init/entryPointFile.js";
+import { refuseUnsafeEntryPointRewrite } from "../../core/init/entryPointFile.js";
 import {
   SIDECAR_RE,
   claimSidecar,
@@ -129,7 +99,6 @@ import {
   safeLstat,
 } from "../../core/init/fsGuards.js";
 import type { PinnedFileRead, UnsafeComponent } from "../../core/init/fsGuards.js";
-import { replaceGovernedAsset } from "../../core/init/governedWrite.js";
 import {
   CODEX_HOOKS_TRUST_NOTE,
   keptHookGroupNote,
@@ -153,7 +122,7 @@ import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
 const execAsync = promisify(execCb);
 
 /**
- * Shipped skill, step and agent files are the assistant assets refreshed by `--force`.
+ * Shipped skill, step, agent and rule files are the assistant assets `--force` overwrites.
  * Steps are copied like skills and never linked into a host's skill directory: a host
  * would offer each one as a skill of its own.
  */
@@ -161,15 +130,8 @@ const STANDARD_ASSET_PATHS: readonly string[] = [
   "assistant/skill",
   "assistant/step",
   "assistant/agent",
+  "assistant/rule",
 ];
-
-/** Older receipts can name adopter-owned catalog files needed by story migration. */
-const LEGACY_ADOPTER_OWNED_CATALOG_ASSETS: ReadonlySet<string> = new Set([
-  "catalog/product.md",
-  "catalog/manifest.md",
-  "catalog/tech.md",
-  "catalog/structure.md",
-]);
 
 const STORY_SEED_PATHS = [
   "decisions.md",
@@ -255,13 +217,6 @@ export type InitOptions = {
    * instead of printing several hundred paths.
    */
   verbose?: boolean;
-  /**
-   * Overrides the running tool version.
-   *
-   * It reaches the install-provenance record. Tests set it so an assertion can name a version
-   * rather than whatever the shipped `package.json` happens to carry.
-   */
-  toolVersionOverride?: string;
 };
 
 type InitSymlinkRuntime = {
@@ -320,7 +275,6 @@ export async function runInit(
   options: InitOptions,
   symlinkRuntime: InitSymlinkRuntime = {},
 ): Promise<void> {
-  const toolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
   const assetsRoot = getInitAssetsDir();
   const rootAssets = path.join(assetsRoot, "root");
   const qfaiAssets = path.join(assetsRoot, ".qfai");
@@ -341,14 +295,14 @@ export async function runInit(
 
   if (options.force) {
     info(
-      "NOTE: --force regenerates .qfai/assistant/skill/**, assistant/step/**, assistant/agent/** and the symlink assets (.agents/.claude/.github/.codex), and removes legacy wrappers. It also regenerates qfai-provided .github/copilot-instructions.md and .github/instructions/**. assistant/rule/** is refreshed only where the file still matches its .assets.lock.json record; diverged files are left for manual merge. Project specs, contracts and routing overrides in qfai.config.yaml are preserved.",
+      "NOTE: --force overwrites .qfai/assistant/skill/**, step/**, agent/** and rule/**, the rule masters under .agents/rules/, the symlink assets (.agents/.claude/.github/.codex), and the qfai-provided .github/copilot-instructions.md and .github/instructions/**, and removes legacy wrappers. Local edits to those files are lost. Project specs, contracts, rule overlays, skill.local/, qfai.config.yaml, DESIGN.md, AGENTS.md and CLAUDE.md are preserved.",
     );
   }
 
   if (!options.dryRun) {
     await requireSymlinkCreation(symlinkRuntime);
-    await preflightGovernedCreation(assistantAssets, rootAssets, destRoot, options.force);
   }
+  await requireReadableShippedAssets(assistantAssets);
 
   // Relocate known legacy files before shipped assets fill their destinations.
   // The subsequent copy skips edited files, preserving the relocated content.
@@ -356,176 +310,64 @@ export async function runInit(
     ? await runUpgradeAssistantTree(destRoot, options.dryRun)
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
-  // Snapshot the shipped-workflow provenance state BEFORE the copy: the
-  // record decision keys off the pre-run state (an existing entry is never
-  // restamped — a declined name keeps its entry as-is), not off what the
-  // copy ends up writing.
-  const workflowPreInit = await captureShippedWorkflowPreInitState(destRoot);
-
-  // Declined names are excluded from the copy set BEFORE the copy runs:
-  // the file is absent on disk, so the create-only predicate ("write when
-  // absent") is exactly what would recreate it. Only pre-copy exclusion
-  // holds the declined row of the state table.
-  const workflowCopySet = resolveWorkflowCopySet(
-    SHIPPED_WORKFLOW_NAMES,
-    workflowPreInit.record,
-    workflowPreInit.presentOnDisk,
-  );
-  // …and every shipped name is excluded outright when the directory they would land in is
-  // not one this tree owns. `copyFile` — `COPYFILE_EXCL` included —
-  // follows a symlinked PARENT, so an adopter whose `.github` or `.github/workflows` points
-  // at a directory outside the repository had the workflows written there. The copy then
-  // reported those paths as written, the lexical comparison below counted them as in-repo
-  // (it resolves `..` and `.`, never a link), and provenance recorded QFAI as the owner of a
-  // file outside the tree — after which doctor's drift check and the retired prune both
-  // pointed at it too.
-  //
-  // Refused rather than followed, and refused for the workflows only: the rest of `init` is
-  // unaffected by what `.github` is, and failing the whole command over it would be a larger
-  // change to an adopter's tree than declining to write two files.
-  const workflowAncestorsBefore = await workflowAncestorIdentity(destRoot);
-  const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
+  // A shipped workflow is written only where no file of that name exists, and
+  // never through a `.github` or `.github/workflows` that is a symlink: `copyFile`
+  // follows a linked parent, so the write would land wherever it points.
+  const workflowsDirIsOwn = await workflowAncestorsAreRealDirectories(destRoot);
   if (!workflowsDirIsOwn) {
     error(
       "Skipped writing the shipped workflows: .github or .github/workflows is a symlink, and its target can point outside this repository. Replace it with a real directory and re-run.",
     );
   }
-  // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
-  //
-  // Copied with the rest of the root and recorded after it, the workflows would already be on disk
-  // when a permission, I/O or disk error anywhere else in that copy — `DESIGN.md`,
-  // `qfai.config.yaml`, any of it — throws out of `copyTemplateTree` before the record runs. An
-  // unrecorded shipped workflow reads as `adopter-owned` on every later run: never recorded again,
-  // invisible to doctor's drift detection, and outside the retired prune. The comment below the
-  // record says nothing unrelated may run in between, and the rest of that copy is unrelated.
-  //
-  // Rolling back on failure is the wrong alternative here, for the reason the swap branch gives:
-  // this command does not delete what it cannot verify it owns.
-  const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
-    .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
-    .map((name) => path.join(".github", "workflows", name));
-
-  // The workflow directory is CREATED here, before the copy, so its identity is one this run
-  // established rather than one it found afterwards.
-  //
-  // When a component did not exist before the copy there was nothing to
-  // compare it against, so the reading taken AFTER the copy became its identity — and on a first
-  // `init` that reading proves nothing about which directory the copy actually wrote into. A
-  // concurrent process that moved the freshly created `.github/workflows` aside and put another
-  // real directory at the name had that substitute settled as the identity, and provenance
-  // recorded workflows that are not where the record says they are. The next run reads those
-  // names as `declined` and never writes them again.
-  //
-  // `copyTemplatePaths` would create it either way; doing it here means the identity below is
-  // read from a directory this process made, with no window in which the question is open.
-  // `mkdir` is recursive and therefore silent on an existing directory, so this is not a claim
-  // that we created it — the identity read that follows is what settles that, and it uses
-  // `lstat`, which refuses a symlink swapped in between the two calls.
-  if (workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0) {
-    await mkdir(path.join(destRoot, ".github", "workflows"), { recursive: true });
-  }
-  const workflowAncestorsPinned =
-    workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0
-      ? await workflowAncestorIdentity(destRoot)
-      : workflowAncestorsBefore;
-
-  const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths, {
-    force: false,
-    dryRun: options.dryRun,
-    conflictPolicy: "skip",
-  });
-
-  // The ancestors are still the directories that were inspected. The
-  // check above ran once and the copy performs many asynchronous operations, so a concurrent
-  // swap of `.github` or `.github/workflows` for a link had the shipped workflow created outside
-  // the repository, and the later re-check stopped the provenance record without unwriting
-  // anything.
-  //
-  // REPORTED and unrecorded, not deleted. A rollback would have to remove those files THROUGH
-  // the parent that was just found untrustworthy — following the link this command refused to
-  // follow, into a directory whose other contents are not ours. This repository already ruled on
-  // that once, when the retired-name prune was found enumerating a linked workflows directory:
-  // the run that declines to write through a link must not delete through it either.
-  //
-  // So the operator is told, precisely, and nothing records the write. Leaving the entries out
-  // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
-  // rather than as ours to overwrite.
-  // Only a run that actually tried to copy can have been swapped out from under one.
-  //
-  // A regression the previous round introduced: on a fresh clone
-  // where both shipped workflows are `declined` and `.github` does not exist, nothing is
-  // copied and no directory is created — but the pre-copy reading is `[null, null]`, not
-  // `undefined`. Making an absent component a refusal then turned that ordinary no-op into a
-  // reported swap, and the operator was told their workflows may have been written outside the
-  // repository when nothing had been written at all.
-  //
-  // The refusal is right and stays; what was wrong is asking the question when there is no copy
-  // to ask it about.
-  const attemptedWorkflowCopy = workflowCopyPaths.length > 0;
-  const settled =
-    !attemptedWorkflowCopy || workflowAncestorsPinned === undefined || options.dryRun
-      ? undefined
-      : await settleWorkflowAncestors(destRoot, workflowAncestorsPinned);
-  const workflowsSwapped =
-    attemptedWorkflowCopy &&
-    workflowAncestorsBefore !== undefined &&
-    !options.dryRun &&
-    settled === undefined;
-  if (workflowsSwapped) {
-    error(
-      ".github or .github/workflows was swapped for another directory while the copy was running. The shipped workflows that were written may have landed outside this repository, so they are not recorded in provenance (following the swapped-in target to delete them would break the very policy of not following links). Check that `.github/workflows` is a real directory and that no unexpected files were created, then re-run.",
-    );
-    workflowResult.copied = [];
-  }
-
-  // Record provenance for the shipped workflow files this copy actually wrote (no-op on
-  // dry-run and when nothing new was written). Nothing runs between the copy and the record.
-  await recordInstalledWorkflows(
-    destRoot,
+  const workflowResult = await copyTemplatePaths(
     rootAssets,
-    workflowPreInit,
-    workflowResult.copied,
-    toolVersion,
-    options.dryRun,
-    settled,
+    destRoot,
+    workflowsDirIsOwn
+      ? [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name))
+      : [],
+    { force: false, dryRun: options.dryRun, conflictPolicy: "skip" },
   );
 
-  // root/ and .qfai/ are create-only (existing files are skipped).
-  // Only STANDARD_ASSET_PATHS are overwritten by --force.
-  //
-  // That create-only behaviour comes solely from the `force: false` literal
-  // below; nothing protects individual files by name. An adopter-authored
-  // DESIGN.md, a qfai.config.yaml tuned by `qfai-configure`, and the shipped
-  // workflow handled by the equally create-only workflow copy above all
-  // survive for this one reason. Lifting the literal to `options.force`
-  // would therefore mean a --force run overwrites adopter-owned files. That
-  // is why the shipped-workflow ownership contract calls the same literal
-  // load-bearing and forbids lifting it with a source-level oracle, and the
-  // other files in the root tree ride on that one rule as well.
-  //
-  // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
-  // it writes were written above, and the ones it declined must not arrive by another route.
-  // A master the record says an earlier run wrote, and the project has since
-  // deleted, is not copied again. Asked before the copy, because once the file
-  // is back the deletion is indistinguishable from a rule shipped for the first
-  // time — which is how every upgrade undid the removal.
-  const removedMasters = await deletedRuleMasters(
-    path.join(rootAssets, AGENTS_RULES_DIR_REL),
-    path.join(destRoot, AGENTS_RULES_DIR_REL),
-  );
-  reportRemovedRuleMasters(removedMasters);
+  // root/ is create-only (existing files are skipped), and that comes solely from
+  // the `force: false` literal below: an adopter-authored DESIGN.md, a
+  // qfai.config.yaml tuned by `qfai-configure`, AGENTS.md and CLAUDE.md survive
+  // `--force` for this one reason. The shipped workflows were copied above, and
+  // the rule masters are copied next, where `--force` reaches them.
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     exclude: [
       ...[...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
-      ...removedMasters.map((name) => path.join(AGENTS_RULES_DIR_REL, name)),
+      AGENTS_RULES_DIR_REL,
     ],
   });
-  // …and the summary counts them together, as one copy, which is what an operator sees.
-  rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
-  rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
+  // The rule masters are create-only on a plain run, and `--force` overwrites
+  // them. The masters this run created are the ones an entry point cannot cite yet.
+  const rulesCreated = await copyTemplatePaths(rootAssets, destRoot, [AGENTS_RULES_DIR_REL], {
+    force: false,
+    dryRun: options.dryRun,
+    conflictPolicy: "skip",
+  });
+  const rulesForced = options.force
+    ? await copyTemplatePaths(
+        rootAssets,
+        destRoot,
+        rulesCreated.skipped.map((dest) => path.relative(destRoot, dest)),
+        { force: true, dryRun: options.dryRun },
+      )
+    : { copied: [] as string[], skipped: [] as string[] };
+  rootResult.copied = [
+    ...workflowResult.copied,
+    ...rootResult.copied,
+    ...rulesCreated.copied,
+    ...rulesForced.copied,
+  ];
+  rootResult.skipped = [
+    ...workflowResult.skipped,
+    ...rootResult.skipped,
+    ...(options.force ? [] : rulesCreated.skipped),
+  ];
 
   // The config template ships `testFileGlobs: []`, which leaves the SC traceability lane and
   // the stub scan behind `QFAI-TEST-001` pointed at nothing. Aim them at the files this
@@ -538,40 +380,17 @@ export async function runInit(
   if (!options.dryRun && rootResult.copied.includes(configPath)) {
     await aimTestFileGlobsAtRepository(destRoot, configPath);
   }
-  // The entry-point repair runs right after the create-only root copy and the
-  // rule-master update pass. The files it repairs are exactly the ones that
-  // copy skipped because the project already had them, and the signal it reads
-  // — which masters this run wrote — is available only in the run that wrote
-  // them. A step between the two that failed would leave the master on disk and
-  // its citation unwritten, with the next run seeing a master it did not write.
-  //
-  // The update pass is the one step allowed in between, because a summary may
-  // only move to the release's wording where its master did, and a planned
-  // replacement can still end with the adopter's master kept. The citation
-  // repair reads this run's own copy report, so a master replaced here — already
-  // on disk before the run — is not one it is looking for.
-  //
-  // SIMPLIFIED: the window is the update pass wide rather than closed.
-  // Lift when: init records per-master provenance, which the rule-master upgrade
-  // path needs for its own reasons.
-  const newlyWritten = newlyWrittenRuleMasters(rootResult.copied, destRoot);
-  const ruleMasterResult = await updateUneditedRuleMasters(rootAssets, destRoot, options.dryRun);
-  const installedMasters: ReadonlySet<string> = new Set([
-    ...newlyWritten,
-    ...ruleMasterResult.installed,
-  ]);
+  // The entry-point repair reads which masters this run created, which is
+  // available only in the run that created them.
+  const newlyWritten = newlyWrittenRuleMasters(rulesCreated.copied, destRoot);
   const entryPointRulesResult = await ensureAgentEntryPointRules(
     rootAssets,
     destRoot,
     options.dryRun,
     options.force,
     newlyWritten,
-    installedMasters,
+    await shippedRuleMasters(rootAssets),
   );
-  const minimumMaster = path.join(destRoot, AGENTS_RULES_DIR_REL, "minimal-implementation.md");
-  const plannedSafetyFloor =
-    options.dryRun &&
-    (rootResult.copied.includes(minimumMaster) || ruleMasterResult.copied.includes(minimumMaster));
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -583,9 +402,6 @@ export async function runInit(
       "assistant/manifest",
       "assistant/catalog",
       "assistant/process",
-      ...GOVERNED_ASSISTANT_LAYERS.map((layer) =>
-        path.relative(destQfai, joinAssistantLayer(destRoot, layer)),
-      ),
     ],
   });
   const storyTreeResult = oldSpecLayout
@@ -596,19 +412,10 @@ export async function runInit(
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-  const differingSkills = options.force
-    ? 0
-    : await countDifferingSkills(qfaiAssets, destRoot, skillsResult.skipped);
   // The copy above is create-only and this release ships no README to copy, so
   // the one an earlier release left behind is removed here rather than
   // overwritten.
   const markerRemoved = await removeAssistantMarker(destRoot, options.dryRun);
-  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
-    force: options.force,
-    dryRun: options.dryRun,
-    rootAssets,
-    plannedSafetyFloor,
-  });
 
   // git config core.symlinks true (a precondition for creating symlinks).
   // This is the only change outside the working tree, so report it right
@@ -625,7 +432,6 @@ export async function runInit(
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
-    installedRuleMasters: installedMasters,
     ...symlinkRuntime,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
@@ -650,76 +456,7 @@ export async function runInit(
     ? await archiveRetiredMigrationSkill(destRoot, options.dryRun)
     : [];
 
-  // Retired shipped workflows: retired-name-set membership AND recorded
-  // QFAI ownership, both. The adopter's `.github/workflows/` directory is
-  // adopter-authored; the `qfai-` filename prefix is a reservation notice,
-  // never a deletion selector, so a prefix predicate is forbidden here
-  // (shipped-workflows contract) — an adopter-created `qfai-*.yml` must stay
-  // untouched. Name membership alone is not the ownership test either: an
-  // adopter who authored a file under a name QFAI later retires has no
-  // provenance entry, and the acceptance criteria require provenance to be
-  // consulted before every overwrite and every prune.
-  // The SAME boundary the copy is held to, and for a worse reason.
-  // `workflowsDirIsOwn` excluded the copy and nothing else, so a `.github/workflows` that is a
-  // link to a shared directory or another repository was still ENUMERATED here — and a
-  // retired workflow on the far side whose bytes match a recorded digest was quarantined and
-  // deleted. The run that refused to write through the link would delete through it.
-  //
-  // Empty rather than skipped-with-a-message: the message is already emitted where the copy
-  // is excluded, and one refusal reported once is what an operator needs.
-  const removedRetiredWorkflows: string[] = [];
-  // A detected swap stops the prune as well as the record.
-  // `workflowsDirIsOwn` was computed BEFORE the copy and stayed `true`, so the retired-name
-  // prune went on to enumerate the swapped directory — and a retired workflow over there whose
-  // bytes match a recorded digest was quarantined and deleted. That is the exact operation the
-  // reporting-instead-of-deleting decision above exists to avoid, reached by another route: a
-  // run that declines to write through a swapped parent must not delete through it either.
-  const prunableRetiredNames =
-    workflowsDirIsOwn && !workflowsSwapped
-      ? await resolvePrunableRetiredWorkflows(destRoot, workflowPreInit.record)
-      : new Map<string, string>();
-  await pruneMatchingEntries(
-    path.join(destRoot, ".github", "workflows"),
-    (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),
-    removedRetiredWorkflows,
-    options.dryRun,
-    // Re-asked here, against the file as it is now. `prunableRetiredNames` was computed before
-    // the copy above ran, and between the two the adopter — or a concurrent run — can put
-    // their own content under that name. The name would still match; the bytes would not.
-    // The primitive asks it a second time after moving the entry aside,
-    // which is why the digest is looked up by the entry's own NAME rather than by the basename
-    // of the path being read — after the move those are different strings.
-    async (target, name) => (await digestWorkflowFile(target)) === prunableRetiredNames.get(name),
-    // The entry goes with the file, in the same success unit. A pruned workflow whose provenance
-    // entry survives is read by the NEXT run as a name QFAI installed and the adopter deleted —
-    // the `declined` row — so the copy skips it forever. Retiring a workflow would silently
-    // poison the name against whatever ships under it later.
-    //
-    // This ran AFTER the delete, as a separate step. A read-only `.qfai`, a
-    // full disk or a lock it could not take then left the file gone and the entry standing —
-    // which is exactly the poisoned name the paragraph above is about, reached by the code meant
-    // to prevent it. Running it while the files are still in quarantine means a failure here puts
-    // them back.
-    //
-    // Under the record lock and against the record on disk, not against the pre-init snapshot:
-    // the copy between them has already written entries of its own.
-    async (prunedPaths) => {
-      const prunedNames = new Set(prunedPaths.map((target) => path.basename(target)));
-      await updateInstallProvenance(destRoot, (current) => {
-        const workflows = Object.fromEntries(
-          Object.entries(current.workflows).filter(([name]) => !prunedNames.has(name)),
-        );
-        return { ...current, workflows };
-      });
-    },
-  );
-
-  const removed = [
-    ...removedLegacySkills,
-    ...wrappersResult.removed,
-    ...removedRetiredWorkflows,
-    ...governedResult.removed,
-  ];
+  const removed = [...removedLegacySkills, ...wrappersResult.removed];
 
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
@@ -735,45 +472,30 @@ export async function runInit(
     info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
-  // The generic `.qfai/` copy is create-only, so every governed file that
-  // already existed is in its `skipped` list before the governed sync runs.
-  // Whatever the governed sync then reports on is the authoritative outcome
-  // for that path — refreshed, left forked, retired — so the generic verdict
-  // is dropped rather than printed beside it, which showed one path twice and
-  // listed a file `--force` had just updated as "skipped".
-  const governedPaths = new Set([
-    ...governedResult.copied,
-    ...governedResult.skipped,
-    ...governedResult.removed,
-  ]);
   report(
     [
       ...rootResult.copied,
-      ...withoutPaths(qfaiResult.copied, governedPaths),
+      ...qfaiResult.copied,
       ...storyTreeResult.copied,
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...entryPointRulesResult.copied,
-      ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
       ...codexHooksResult.copied,
       ...upgradeResult.copied,
-      ...governedResult.copied,
     ],
     [
       ...rootResult.skipped,
-      ...withoutPaths(qfaiResult.skipped, governedPaths),
+      ...qfaiResult.skipped,
       ...storyTreeResult.skipped,
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
       ...entryPointRulesResult.skipped,
-      ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
       ...codexHooksResult.skipped,
       ...upgradeResult.skipped,
-      ...governedResult.skipped,
     ],
     [...removed, ...upgradeResult.removed, ...markerRemoved],
     options.dryRun,
@@ -802,13 +524,15 @@ export async function runInit(
 
   for (const note of [
     ...upgradeResult.preservedNotes,
-    ...differingSkillsNote(differingSkills),
     ...retiredSkillNotes,
+    ...(workflowsDirIsOwn ? await retiredWorkflowLines(destRoot) : []),
+    ...leftoverLines(
+      await findLeftovers(
+        destRoot,
+        resolvePath(destRoot, (await loadConfig(destRoot)).config, "discussionDir"),
+      ),
+    ),
   ]) {
-    info(note);
-  }
-
-  for (const note of governedResult.manualMergeNotes) {
     info(note);
   }
 
@@ -822,6 +546,63 @@ export async function runInit(
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot);
   }
+}
+
+/**
+ * Stops the run before any copy when the shipped assistant assets cannot be read,
+ * so a damaged install never leaves a project half initialised.
+ */
+async function requireReadableShippedAssets(assistantAssets: string): Promise<void> {
+  try {
+    for (const relative of STANDARD_ASSET_PATHS) {
+      await collectTemplateFiles(path.join(assistantAssets, path.relative("assistant", relative)));
+    }
+  } catch (cause: unknown) {
+    throw new Error(
+      `qfai init cannot read the shipped assistant assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; nothing was copied.`,
+      { cause },
+    );
+  }
+}
+
+/** Each shipped rule master, spelled as a citation spells it. */
+async function shippedRuleMasters(rootAssets: string): Promise<ReadonlySet<string>> {
+  const names = await readdir(path.join(rootAssets, AGENTS_RULES_DIR_REL));
+  return new Set(names.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`));
+}
+
+/**
+ * Whether every existing component of `<destRoot>/.github/workflows` is a real directory.
+ *
+ * A component that is not there yet passes: the copy creates it. One that is a symlink, or
+ * not a directory at all, fails, because a write through it lands wherever it points.
+ */
+async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
+  let current = destRoot;
+  for (const segment of [".github", "workflows"]) {
+    current = path.join(current, segment);
+    const inspected = await lstat(current).catch(() => undefined);
+    if (inspected === undefined) return true;
+    if (inspected.isSymbolicLink() || !inspected.isDirectory()) return false;
+  }
+  return true;
+}
+
+/**
+ * The workflows an earlier release shipped that are still on disk. Init keeps no record of what
+ * it wrote, so it cannot tell its own file from the adopter's, and removes none of them.
+ */
+async function retiredWorkflowLines(destRoot: string): Promise<string[]> {
+  const present: string[] = [];
+  for (const name of [...RETIRED_WORKFLOW_NAMES].sort()) {
+    const relative = `.github/workflows/${name}`;
+    if (await pathExists(path.join(destRoot, ".github", "workflows", name))) present.push(relative);
+  }
+  if (present.length === 0) return [];
+  return [
+    "Formerly shipped workflows, kept; delete them if you do not use them:",
+    ...present.map((relative) => `  ${relative}`),
+  ];
 }
 
 /**
@@ -846,429 +627,6 @@ function configuredWorkflowMode(document: unknown): unknown {
     ? workflow.mode
     : workflow;
 }
-
-// ---------------------------------------------------------------------------
-// Governed assistant assets: provenance record + upgrade path
-// ---------------------------------------------------------------------------
-
-/**
- * How many shipped skills a plain run left alone because the project's copy
- * differs from the template. Line endings are ignored, so a CRLF checkout of an
- * unedited skill is not counted.
- */
-async function countDifferingSkills(
-  qfaiAssets: string,
-  destRoot: string,
-  skipped: readonly string[],
-): Promise<number> {
-  const destQfai = path.join(destRoot, ".qfai");
-  const skillsDir = path.join(destRoot, ...ASSISTANT_DIR.split("/"), "skill");
-  const differing = new Set<string>();
-  for (const dest of skipped) {
-    const relative = path.relative(skillsDir, dest);
-    const skill = relative.split(path.sep)[0] ?? "";
-    if (relative.startsWith("..") || skill === "" || differing.has(skill)) continue;
-    const source = path.join(qfaiAssets, path.relative(destQfai, dest));
-    const shipped = await hashAssistantAssetFile(source, { allowSymlink: true });
-    if ((await hashAssistantAssetFile(dest)) !== shipped) differing.add(skill);
-  }
-  return differing.size;
-}
-
-function differingSkillsNote(count: number): string[] {
-  if (count === 0) return [];
-  return count === 1
-    ? [
-        "  1 shipped skill differs from this release and was left as it is. `qfai init --force` updates it: it replaces it with the shipped version, overwriting local edits.",
-      ]
-    : [
-        `  ${String(count)} shipped skills differ from this release and were left as they are. \`qfai init --force\` updates them: it replaces them with the shipped versions, overwriting local edits.`,
-      ];
-}
-
-function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
-  return paths.filter((candidate) => !excluded.has(candidate));
-}
-
-/** Reject unsupported exclusive creation before copying or migrating any assets. */
-async function preflightGovernedCreation(
-  assistantAssets: string,
-  rootAssets: string,
-  destRoot: string,
-  force: boolean,
-): Promise<void> {
-  let shipped: Record<string, string>;
-  try {
-    shipped = await buildShippedAssistantHashes(assistantAssets);
-  } catch (cause: unknown) {
-    throw new Error(
-      `qfai init cannot verify shipped governed assets in ${JSON.stringify(assistantAssets)}. Reinstall QFAI or restore its complete readable package assets, then rerun; no package assets were copied or migrated.`,
-      { cause },
-    );
-  }
-  const isContained = makeGovernedContainmentGuard(destRoot);
-  const probed = new Set<string>();
-  for (const relative of Object.keys(shipped)) {
-    if (!(await isContained(relative))) continue;
-    const dest = path.join(destRoot, ...ASSISTANT_DIR.split("/"), ...relative.split("/"));
-    if (
-      relative === "rule/constitution.md" &&
-      !(await canPlanConstitutionCreation(rootAssets, destRoot))
-    ) {
-      continue;
-    }
-    try {
-      await lstat(dest);
-      if (!force || (await hashAssistantAssetFile(dest)) !== null) continue;
-    } catch (cause: unknown) {
-      if (!isEnoent(cause)) {
-        if (!force) continue;
-        throw new Error(
-          `qfai init cannot inspect ${JSON.stringify(dest)} for a force repair. Restore access and rerun; no package assets were copied or migrated.`,
-          { cause },
-        );
-      }
-    }
-    let directory = path.dirname(dest);
-    for (;;) {
-      try {
-        await stat(directory);
-        break;
-      } catch (cause: unknown) {
-        if (!isEnoent(cause) || directory === path.dirname(directory)) throw cause;
-        directory = path.dirname(directory);
-      }
-    }
-    if (probed.has(directory)) continue;
-    await probeExclusiveLink(directory);
-    probed.add(directory);
-  }
-}
-
-async function canPlanConstitutionCreation(rootAssets: string, destRoot: string): Promise<boolean> {
-  if (await canSyncConstitution(rootAssets, destRoot, false)) return true;
-  const name = "minimal-implementation.md";
-  const relative = path.join(AGENTS_RULES_DIR_REL, name);
-  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
-    return false;
-  }
-  try {
-    await lstat(path.join(destRoot, relative));
-  } catch (cause: unknown) {
-    if (isEnoent(cause)) {
-      return (
-        (await hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true })) !==
-        null
-      );
-    }
-    return false;
-  }
-  try {
-    const plans = await planRuleMasterUpdates(
-      path.join(rootAssets, AGENTS_RULES_DIR_REL),
-      path.join(destRoot, AGENTS_RULES_DIR_REL),
-    );
-    return plans.some((plan) => plan.name === name && plan.verdict === "update");
-  } catch {
-    return false;
-  }
-}
-
-async function probeExclusiveLink(directory: string): Promise<void> {
-  const source = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
-  const dest = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
-  let ownsSource = false;
-  let ownsDest = false;
-  let identity: BigIntStats | undefined;
-  const probeFailures: unknown[] = [];
-  try {
-    const handle = await open(source, "wx");
-    ownsSource = true;
-    try {
-      identity = await handle.stat({ bigint: true });
-    } catch (statCause: unknown) {
-      try {
-        await handle.close();
-      } catch (closeCause: unknown) {
-        throw new AggregateError(
-          [statCause, closeCause],
-          "Creation probe inspection and close failed.",
-          { cause: closeCause },
-        );
-      }
-      throw statCause;
-    }
-    await handle.close();
-    await link(source, dest);
-    ownsDest = true;
-  } catch (cause: unknown) {
-    probeFailures.push(
-      new Error(
-        `qfai init cannot prepare creation probes in ${JSON.stringify(directory)}. Restore write access and ensure the filesystem supports hard links, then rerun; no package assets were copied or migrated.`,
-        { cause },
-      ),
-    );
-  }
-  const cleanupFailures: Error[] = [];
-  const protectedEntries: Error[] = [];
-  for (const file of [ownsDest ? dest : null, ownsSource ? source : null]) {
-    if (file === null) continue;
-    try {
-      const current = await lstat(file, { bigint: true });
-      if (
-        identity === undefined ||
-        !current.isFile() ||
-        current.dev !== identity.dev ||
-        current.ino !== identity.ino
-      ) {
-        protectedEntries.push(new Error(JSON.stringify(file)));
-        continue;
-      }
-    } catch (cause: unknown) {
-      if (isEnoent(cause)) continue;
-      protectedEntries.push(new Error(JSON.stringify(file), { cause }));
-      continue;
-    }
-    try {
-      await rm(file, { force: true });
-    } catch (cause: unknown) {
-      cleanupFailures.push(new Error(JSON.stringify(file), { cause }));
-    }
-  }
-  if (protectedEntries.length > 0) {
-    const cleanupNote =
-      cleanupFailures.length === 0
-        ? ""
-        : ` Other probe cleanup failed at ${cleanupFailures.map((failure) => failure.message).join(", ")}; remove only verified, unchanged probe files before retrying.`;
-    throw new AggregateError(
-      [...probeFailures, ...protectedEntries, ...cleanupFailures],
-      `qfai init could not verify creation probe ownership at ${protectedEntries.map((entry) => entry.message).join(", ")}. Do not delete these occupied paths. Restore access and inspect ownership before rerunning; no package assets were copied or migrated.${cleanupNote}`,
-    );
-  }
-  if (cleanupFailures.length > 0) {
-    throw new AggregateError(
-      [...probeFailures, ...cleanupFailures],
-      `qfai init could not remove creation probes: ${cleanupFailures.map((failure) => failure.message).join(", ")}. Restore access, remove only these probe files, then rerun; no package assets were copied or migrated.`,
-    );
-  }
-  if (probeFailures.length > 0) throw probeFailures[0];
-}
-
-type GovernedAssetsResult = {
-  copied: string[];
-  skipped: string[];
-  removed: string[];
-  manualMergeNotes: string[];
-};
-
-/**
- * Records what qfai wrote under `rule/`, and — under `--force` — refreshes
- * files that still match the recorded hash.
- *
- * Shipped rules were create-only in every mode, so a correction to qfai's
- * own normative rules reached new projects and nobody else, and a project that
- * edited one had no way to say so. The record makes both states nameable:
- * `qfai validate` can now separate a stale copy from a local fork, and this
- * function refreshes only the former. A fork is never overwritten — it is
- * reported for a human merge, because the content it holds is the project's,
- * not the template's.
- *
- * A file the release no longer ships is retired by the same rule, in
- * `retireWithdrawnGovernedAssets`.
- */
-async function syncGovernedAssistantAssets(
-  assistantAssets: string,
-  destRoot: string,
-  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
-): Promise<GovernedAssetsResult> {
-  // The assistant-tree segments come from `assistantPaths.ts`, the one source
-  // of those paths, in init and in validate alike, so a future
-  // move of `ASSISTANT_DIR` cannot leave the provenance record, the refresh and
-  // the retire pass operating on a tree the validators no longer read.
-  const destAssistant = path.join(destRoot, ...ASSISTANT_DIR.split("/"));
-  const copied: string[] = [];
-  const skipped: string[] = [];
-  const removed: string[] = [];
-  const manualMergeNotes: string[] = [];
-
-  let shipped: Record<string, string>;
-  try {
-    shipped = await buildShippedAssistantHashes(assistantAssets);
-  } catch {
-    // Fail closed. An unreadable or partially extracted install yields a
-    // shipped set that is short of files it really ships, and every governed
-    // file the lock names but the set omits is what `--force` retires — so a
-    // truncated package would have deleted the rules it could not read. The
-    // sync is abandoned whole: nothing refreshed, nothing removed, and the
-    // existing record left exactly as it was.
-    manualMergeNotes.push(
-      "NOTE: qfai's shipped assistant rules could not be read, so they were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
-    );
-    return { copied, skipped, removed, manualMergeNotes };
-  }
-
-  const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
-  const recorded: Record<string, string> = {};
-  const isContained = makeGovernedContainmentGuard(destRoot);
-
-  for (const [relative, shippedHash] of Object.entries(shipped)) {
-    const source = path.join(assistantAssets, ...relative.split("/"));
-    const dest = path.join(destAssistant, ...relative.split("/"));
-    if (!(await isContained(relative))) {
-      skipped.push(dest);
-      manualMergeNotes.push(escapedGovernedPathNote(dest));
-      continue;
-    }
-    const currentHash = await hashAssistantAssetFile(dest);
-    const previousHash = previous[relative];
-    if (
-      relative === "rule/constitution.md" &&
-      !(await canSyncConstitution(options.rootAssets, destRoot, options.plannedSafetyFloor))
-    ) {
-      skipped.push(dest);
-      if (previousHash !== undefined) recorded[relative] = previousHash;
-      const recovery =
-        currentHash !== null
-          ? "A manual merge of the safety master and existing constitution is needed; keep adopter edits protected."
-          : (await pathExists(dest).catch(() => true))
-            ? "The constitution path is occupied or unreadable. Restore access to any existing constitution, or remove or relocate the non-file occupant while protecting adopter content. A manual merge of existing policy is needed. Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`."
-            : "Keep master edits by manually installing and reconciling the constitution. To install automatically, back up customizations, restore the exact shipped master, then rerun `qfai init`.";
-      manualMergeNotes.push(
-        `NOTE: ${formatReportPath(dest)} was not installed or refreshed: .agents/rules/minimal-implementation.md could not be verified as the shipped master for the safety floor. ${recovery}`,
-      );
-      continue;
-    }
-
-    if (currentHash === shippedHash) {
-      skipped.push(dest);
-      recorded[relative] = shippedHash;
-      continue;
-    }
-
-    if (currentHash === null) {
-      await restoreUnreadableGovernedAsset(
-        destRoot,
-        source,
-        dest,
-        shippedHash,
-        previousHash,
-        options,
-        {
-          copied,
-          skipped,
-          recorded,
-          manualMergeNotes,
-          relative,
-        },
-      );
-      continue;
-    }
-
-    // A file matching the record but not the release is one qfai wrote and a
-    // later release moved on from, so `--force` refreshing it loses nothing —
-    // except on the four documents the project fills in and owns. There the
-    // record holds what the PROJECT wrote once the lock has been rewritten, and
-    // the same comparison then says "refreshable" about content that only
-    // exists here. Declined rather than merged: this command does not overwrite
-    // what it did not write.
-    const adopterOwned = ADOPTER_OWNED_ASSETS.has(relative);
-    const refreshable =
-      options.force && !adopterOwned && previousHash !== undefined && currentHash === previousHash;
-    if (refreshable) {
-      // `currentHash` was read above; the refresh is only legitimate while the
-      // file still holds it. Passing it down makes the replacement decline a
-      // target that changed under the run instead of discarding the new
-      // content.
-      const outcome = options.dryRun
-        ? "replaced"
-        : await replaceGovernedAsset(source, dest, currentHash);
-      if (outcome === "target-changed") {
-        skipped.push(dest);
-        recorded[relative] = previousHash;
-        manualMergeNotes.push(
-          `NOTE: ${dest} was rewritten by another process while it was being updated, so it was left alone (run \`qfai init --force\` again).`,
-        );
-        continue;
-      }
-      copied.push(dest);
-      recorded[relative] = shippedHash;
-      continue;
-    }
-
-    skipped.push(dest);
-    recorded[relative] = previousHash ?? shippedHash;
-    if (options.force) {
-      manualMergeNotes.push(
-        adopterOwned
-          ? `NOTE: ${dest} is yours to maintain, so it was left as it is. Compare it against the installed release yourself if a newer template is wanted.`
-          : `NOTE: ${dest} has diverged from the shipped content, so it was not updated (a manual merge is needed).`,
-      );
-    }
-  }
-
-  await retireWithdrawnGovernedAssets(
-    destAssistant,
-    shipped,
-    previous,
-    recorded,
-    options,
-    isContained,
-    { removed, skipped, manualMergeNotes },
-  );
-
-  // The record itself is a governed write: an assistant root that is a symlink
-  // out of the project would take the lock — and every later decision made from
-  // it — with it.
-  if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
-    await mkdir(destAssistant, { recursive: true });
-    await writeAssistantAssetsLock(destAssistant, { files: recorded });
-  }
-
-  return { copied, skipped, removed, manualMergeNotes };
-}
-
-/**
- * Answers whether a governed relative path sits inside the project's own
- * assistant tree.
- *
- * `rename` and `rm` act on the entry they are given, which makes the *final*
- * component safe on its own — but not the directories above it. A checkout that
- * left `constitution/` (or the assistant root itself) as a symlink to somewhere
- * outside the repository pointed every governed write and every `--force`
- * retire into that directory instead.
- *
- * The walk starts at the **project** root and the path handed to it carries the
- * assistant segments. Starting at the assistant root left `.qfai` and
- * `assistant` themselves unchecked, and `lstat` declines to resolve only the
- * last component it is given — so a `.qfai` symlinked out of the repository
- * made `lstat(.qfai/assistant)` report the external directory as real, and the
- * guard waved through every write and retire inside it.
- *
- * **Nothing is cached.** The first version answered once per containing
- * directory, which made the guard's answer as old as the run: a layer swapped
- * for a link after the first file in it was cleared took every later hash,
- * restore, retire and staging rename with it — and the restore of a missing
- * file writes with no expected hash to stop it. Re-asking is four `lstat`s
- * against a governed tree of a few dozen files, which is not a cost worth an
- * answer that can be minutes stale. It does not make the check atomic with the
- * write that follows it — no API here can — but the window is now the two
- * syscalls either side of it rather than the length of the sync.
- *
- * @internal Exported for direct unit-testing — not part of the package's
- * public surface.
- */
-export function makeGovernedContainmentGuard(
-  destRoot: string,
-): (relative: string) => Promise<boolean> {
-  return (relative: string) =>
-    hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
-}
-
-function escapedGovernedPathNote(dest: string): string {
-  return `NOTE: a parent of ${dest} is not a real directory (a symlink or junction may point outside the project), so this normative file was excluded from both the sync and the retirement pass.`;
-}
-
-export { replaceGovernedAsset };
 
 // ---------------------------------------------------------------------------
 // Assistant-tree marker retirement
@@ -1389,108 +747,6 @@ async function removeAssistantMarker(destRoot: string, dryRun: boolean): Promise
 const PRESERVED_BODY_HEADING = "## The README that was here before qfai init";
 
 /**
- * Handles a governed path that holds no readable regular file.
- *
- * Recording the shipped hash here was a false claim: nothing had been written,
- * so the next `validate` compared the project against a record of a file that
- * was never there. Worse, when the path is *occupied* — by a directory, a
- * FIFO, a dangling symlink — the create-only copy upstream skips it as
- * existing and this branch wrote nothing either, so `QFAI-ASSETS-007` kept
- * firing and no `init`, `--force` included, could clear it.
- *
- * Absent is restored. Occupied is only replaced under `--force`, which is the
- * flag that already means "regenerate what qfai owns"; without it the occupant
- * is reported and left alone, because removing something a project deliberately
- * put there is not a decision `qfai init` gets to make silently.
- */
-async function restoreUnreadableGovernedAsset(
-  destRoot: string,
-  source: string,
-  dest: string,
-  shippedHash: string,
-  previousHash: string | undefined,
-  options: { force: boolean; dryRun: boolean },
-  out: {
-    copied: string[];
-    skipped: string[];
-    recorded: Record<string, string>;
-    manualMergeNotes: string[];
-    relative: string;
-  },
-): Promise<void> {
-  // An `lstat` that fails for anything but ENOENT (a permission fault on the
-  // parent, say) reads as occupied: what could not be inspected must not be
-  // clobbered.
-  const occupied = await pathExists(dest).catch(() => true);
-  if (occupied && options.force && !options.dryRun) {
-    // Recheck the displaced occupant before discarding it. A concurrent
-    // readable regular file belongs to the adopter even under --force.
-    const outcome = await displaceUnreadableGovernedAsset(dest);
-    if (outcome !== "displaced") {
-      // This readable regular file is not the occupant the repair may replace.
-      out.skipped.push(dest);
-      if (previousHash !== undefined) {
-        out.recorded[out.relative] = previousHash;
-      }
-      out.manualMergeNotes.push(
-        typeof outcome === "object"
-          ? `NOTE: ${dest} was replaced by a regular file just before the repair, so the repair was rolled back; the original content could not be restored and is parked at ${outcome.orphaned}.`
-          : `NOTE: ${dest} was replaced by a regular file just before the repair, so it was left as it is (run \`qfai init --force\` again).`,
-      );
-      return;
-    }
-  }
-
-  if (occupied && !options.force) {
-    out.skipped.push(dest);
-    if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
-    return;
-  }
-
-  if (!options.dryRun) {
-    let concurrent: boolean;
-    try {
-      const outcome = await replaceGovernedAsset(source, dest, undefined, "create-only");
-      concurrent =
-        outcome === "target-changed" || (await hashAssistantAssetFile(dest)) !== shippedHash;
-    } catch (error: unknown) {
-      if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") {
-        throw error;
-      }
-      concurrent = true;
-    }
-    if (concurrent) {
-      out.skipped.push(dest);
-      const contained = await hasRealGovernedAssistantParents(
-        destRoot,
-        `${ASSISTANT_DIR}/${out.relative}`,
-      );
-      if (contained && (await hashAssistantAssetFile(dest)) === shippedHash) {
-        out.recorded[out.relative] = shippedHash;
-        return;
-      }
-      if (previousHash !== undefined) out.recorded[out.relative] = previousHash;
-      out.manualMergeNotes.push(
-        `NOTE: ${formatReportPath(dest)} was created during initialization and left unchanged; keep adopter edits protected.`,
-      );
-      return;
-    }
-  }
-  out.copied.push(dest);
-  out.recorded[out.relative] = shippedHash;
-  if (occupied) {
-    // Tense follows the run: under `--dry-run` nothing was removed and nothing
-    // was written, and an operator who reads only the preview must not come
-    // away believing the occupied path has already been repaired.
-    out.manualMergeNotes.push(
-      options.dryRun
-        ? `NOTE: ${dest} is occupied by something other than a regular file (a directory, a special file, a broken symlink), so it will be replaced with the shipped file (not done: --dry-run).`
-        : `NOTE: ${dest} was occupied by something other than a regular file (a directory, a special file, a broken symlink), so it was replaced with the shipped file.`,
-    );
-  }
-}
-
-/**
  * The bytes at `filePath`, or `null` when it is not a bounded regular file.
  *
  * Bytes, not text: what comes back is spliced into the replacement verbatim.
@@ -1505,232 +761,6 @@ async function readExistingReadme(filePath: string): Promise<PinnedFileRead | nu
       return null;
     }
     throw err;
-  }
-}
-
-/**
- * Removes the governed files a new release withdrew, under `--force`, when the
- * project still holds exactly what qfai wrote there.
- *
- * The refresh loop walks the *current* shipped set, so it never visits the old
- * path of a file deleted or renamed upstream, and only its lock entry goes.
- * Left there, an untouched retired rule reads as `QFAI-ASSETS-006` — a file the
- * project added — from the next `validate` on, no `qfai init --force` run clears
- * it, and a rule qfai repealed stays in the tree being cited.
- *
- * A retired file whose content was edited is *not* removed: it stops being
- * qfai's the moment the project changed it, and deleting it would throw away
- * work. It keeps its recorded hash so a later `--force`, after the edit is
- * reverted, can still recognise and retire it.
- *
- * Exported for the same reason the other governed-write helpers are: the state
- * that matters here is a path the release has stopped shipping, and a test
- * cannot reach it through `runInit` while the release still ships everything
- * this list names.
- */
-export async function retireWithdrawnGovernedAssets(
-  destAssistant: string,
-  shipped: Record<string, string>,
-  previous: Record<string, string>,
-  recorded: Record<string, string>,
-  options: { force: boolean; dryRun: boolean },
-  isContained: (relative: string) => Promise<boolean>,
-  out: { removed: string[]; skipped: string[]; manualMergeNotes: string[] },
-): Promise<void> {
-  for (const [relative, previousHash] of Object.entries(previous)) {
-    if (relative in shipped) {
-      continue;
-    }
-    if (aliasesShippedGovernedAsset(relative, shipped)) {
-      // A case variant of a path the release still ships. On a case-insensitive
-      // filesystem it names that very file, so retiring it would delete a rule
-      // qfai ships. The entry is dropped from the record instead of acted on.
-      continue;
-    }
-    const dest = path.join(destAssistant, ...relative.split("/"));
-    if (!(await isContained(relative))) {
-      out.skipped.push(dest);
-      out.manualMergeNotes.push(escapedGovernedPathNote(dest));
-      continue;
-    }
-    if (ADOPTER_OWNED_ASSETS.has(relative) || LEGACY_ADOPTER_OWNED_CATALOG_ASSETS.has(relative)) {
-      // A release that stops shipping one of these still does not own what the
-      // project wrote in it. Retirement decides by hash, so a lock holding the
-      // adopted content would make the project's own document read as an
-      // untouched copy of ours and be deleted. Kept and named instead; moving
-      // the content is the project's call, not this command's.
-      recorded[relative] = previousHash;
-      out.skipped.push(dest);
-      if (options.force) {
-        out.manualMergeNotes.push(
-          `NOTE: ${dest} is no longer shipped by this release, and its content is yours, so it was left in place. Move what you need out of it and delete it by hand.`,
-        );
-      }
-      continue;
-    }
-    const currentHash = await hashAssistantAssetFile(dest);
-    if (currentHash === null) {
-      // Already gone (or never a readable regular file): nothing to retire,
-      // and nothing left worth recording.
-      continue;
-    }
-    if (currentHash !== previousHash) {
-      recorded[relative] = previousHash;
-      out.skipped.push(dest);
-      if (options.force) {
-        out.manualMergeNotes.push(
-          `NOTE: ${dest} is no longer shipped by this release, but its content has been edited, so it was not removed (delete it by hand if you do not need it).`,
-        );
-      }
-      continue;
-    }
-    if (!options.force) {
-      // Keep the record so a later `--force` can still identify the file as
-      // qfai's own withdrawn copy rather than a project addition.
-      recorded[relative] = previousHash;
-      continue;
-    }
-    if (options.dryRun) {
-      out.removed.push(dest);
-      continue;
-    }
-    const outcome = await retireVerifiedGovernedAsset(dest, previousHash);
-    if (outcome === "removed") {
-      out.removed.push(dest);
-      continue;
-    }
-    // The pathname stopped holding the content that was checked. Whatever is
-    // there now is not qfai's withdrawn copy, so it keeps its record and its
-    // place, exactly as an edited retired file does.
-    recorded[relative] = previousHash;
-    out.skipped.push(dest);
-    out.manualMergeNotes.push(
-      outcome === "changed"
-        ? `NOTE: ${dest} was replaced by another process just before the removal, so it was not removed.`
-        : `NOTE: ${dest} was replaced by another process just before the removal, so the removal was rolled back; the original content could not be restored and is parked at ${quarantineLabel(outcome)}.`,
-    );
-  }
-}
-
-/**
- * Removes a withdrawn governed file, and only the exact file that was checked.
- *
- * `rm` acts on a pathname, not on the inode the hash was taken from. A process
- * that replaced the path with a new project-owned file between the two lost
- * that file to a deletion justified by somebody else's bytes. So the entry is
- * moved aside first — `rename` within the directory carries whatever inode is
- * at the path at that instant — and the hash is taken from the moved file,
- * whose name nothing else knows. What is deleted is then necessarily what was
- * inspected.
- *
- * When the moved file turns out not to be the withdrawn copy it is put back,
- * and put back only if the pathname is still free: `link` fails with `EEXIST`
- * rather than replacing whatever arrived there, so the restore cannot destroy
- * the very file this precaution exists to protect. Where hard links are not
- * available the restore falls back to `rename` guarded by a presence check.
- */
-/**
- * Moves a non-regular occupant off a governed path and destroys it, and only
- * it.
- *
- * Same shape as {@link retireVerifiedGovernedAsset} and for the same reason:
- * the decision to remove was taken from a probe, and `rm` acts on the pathname
- * rather than on what the probe saw. The entry is renamed aside — atomic within
- * the directory — and then inspected. A readable regular file is put back and
- * the caller told to leave it alone; anything else is what this branch exists
- * to clear, and is deleted where nothing else can reach it.
- *
- * `link` restores only into a free pathname (`EEXIST` otherwise), so the
- * restore cannot overwrite whatever arrived in the meantime.
- */
-export type GovernedDisplaceOutcome = "displaced" | "regular-file" | { orphaned: string };
-
-/**
- * @internal Exported for direct unit-testing — not part of the package's
- * public surface.
- */
-export async function displaceUnreadableGovernedAsset(
-  dest: string,
-): Promise<GovernedDisplaceOutcome> {
-  const directory = path.dirname(dest);
-  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
-  try {
-    await rename(dest, quarantine);
-  } catch (error: unknown) {
-    if (isEnoent(error)) {
-      // Already gone: nothing occupies the path, which is what this call was
-      // asked to arrange.
-      return "displaced";
-    }
-    throw error;
-  }
-  if ((await hashAssistantAssetFile(quarantine)) === null) {
-    await rm(quarantine, { force: true, recursive: true });
-    return "displaced";
-  }
-  try {
-    await link(quarantine, dest);
-    await rm(quarantine, { force: true });
-    return "regular-file";
-  } catch {
-    if (!(await pathExists(dest).catch(() => true))) {
-      try {
-        await rename(quarantine, dest);
-        return "regular-file";
-      } catch {
-        return { orphaned: quarantine };
-      }
-    }
-    return { orphaned: quarantine };
-  }
-}
-
-export type GovernedRetireOutcome = "removed" | "changed" | { orphaned: string };
-
-function quarantineLabel(outcome: GovernedRetireOutcome): string {
-  return typeof outcome === "object" ? outcome.orphaned : "";
-}
-
-/**
- * @internal Exported for the regression test that pins the `changed` branch —
- * not part of the package's public surface. Like the refresh above it is only
- * reachable through a race. The test enters it by naming a hash the file does
- * not hold; an implementation that deleted the pathname rather than the inode
- * it checked destroys the file and fails.
- */
-export async function retireVerifiedGovernedAsset(
-  dest: string,
-  expectedHash: string,
-): Promise<GovernedRetireOutcome> {
-  const directory = path.dirname(dest);
-  const quarantine = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
-  try {
-    await rename(dest, quarantine);
-  } catch (error: unknown) {
-    if (isEnoent(error)) {
-      // Already gone: the deletion this call was going to make has happened.
-      return "removed";
-    }
-    throw error;
-  }
-  if ((await hashAssistantAssetFile(quarantine)) === expectedHash) {
-    await rm(quarantine, { force: true });
-    return "removed";
-  }
-  try {
-    await link(quarantine, dest);
-    await rm(quarantine, { force: true });
-    return "changed";
-  } catch {
-    if (!(await pathExists(dest).catch(() => true))) {
-      try {
-        await rename(quarantine, dest);
-        return "changed";
-      } catch {
-        return { orphaned: quarantine };
-      }
-    }
-    return { orphaned: quarantine };
   }
 }
 
@@ -1984,122 +1014,6 @@ const AGENTS_RULES_DIR_REL = path.join(".agents", "rules");
 /** The same directory as a citation spells it: with `/` on every platform. */
 const AGENTS_RULES_DIR_CITATION = ".agents/rules";
 
-/** The constitution cannot demote obligations an older or edited floor still omits. */
-async function canSyncConstitution(
-  rootAssets: string,
-  destRoot: string,
-  plannedSafetyFloor: boolean,
-): Promise<boolean> {
-  const relative = path.join(AGENTS_RULES_DIR_REL, "minimal-implementation.md");
-  if (!(await hasRealGovernedAssistantParents(destRoot, relative.split(path.sep).join("/")))) {
-    return false;
-  }
-  if (plannedSafetyFloor) return true;
-  const [shipped, installed] = await Promise.all([
-    hashAssistantAssetFile(path.join(rootAssets, relative), { allowSymlink: true }),
-    hashAssistantAssetFile(path.join(destRoot, relative)),
-  ]);
-  return shipped !== null && shipped === installed;
-}
-
-/**
- * Brings each shipped rule master the project has not edited up to this
- * release's text.
- *
- * The root copy above is create-only, so a master whose wording changed in a
- * release never reaches a project that ran `init` before it. That is the right
- * default for a file the project owns and the wrong one for a rule, which is
- * QFAI's: the projects it fails to reach are exactly the ones running an agent
- * against the superseded text.
- *
- * What decides is the record of what `init` last wrote, not a guess from the
- * file. Bytes matching that record are untouched and may be replaced; anything
- * else is the adopter's and is reported instead of overwritten, because nothing
- * in the file tells an edit from an older release.
- *
- * The write is `replaceGovernedAsset`, for the reasons that helper exists: a
- * master left as a symlink is replaced rather than followed, a failure leaves
- * the previous rule in place, and the hash is re-read immediately before the
- * rename so a file that moved while this was deciding is reported rather than
- * discarded.
- */
-async function updateUneditedRuleMasters(
-  rootAssets: string,
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[]; installed: ReadonlySet<string> }> {
-  const shippedRulesDir = path.join(rootAssets, AGENTS_RULES_DIR_REL);
-  const projectRulesDir = path.join(destRoot, AGENTS_RULES_DIR_REL);
-  const copied: string[] = [];
-  const skipped: string[] = [];
-  // The masters whose file carries the release's text once this pass is done,
-  // spelled with `/` as a citation is. A summary moves only for these.
-  const installed = new Set<string>();
-
-  let plans: readonly RuleMasterPlan[];
-  try {
-    plans = await planRuleMasterUpdates(shippedRulesDir, projectRulesDir);
-  } catch (error: unknown) {
-    // A tree this run cannot read is one it must not rewrite. Say so and leave
-    // every master where it is: the copy above already put the missing ones
-    // there, and nothing here is required for the run to be correct. With no
-    // way to tell which masters are the release's, none is reported installed,
-    // which withholds every summary refresh rather than guessing one.
-    info(`  NOTE: rule masters were not checked for updates (${describeError(error)})`);
-    return { copied, skipped, installed };
-  }
-
-  const recorded: Record<string, string> = {};
-  for (const plan of plans) {
-    const target = path.join(projectRulesDir, plan.name);
-    if (plan.verdict === "keep") {
-      skipped.push(target);
-      info(`  ${keptRuleMasterNote(formatReportPath(target))}`);
-      // Its hash is not recorded. Recording it would make the next release read
-      // the adopter's text as this run's write and replace it.
-      continue;
-    }
-    if (plan.verdict === "removed") {
-      // Not `installed`: a master that is not there has no summary to refresh
-      // and no bullet to add. Its record entry is left as it stands, which is
-      // what keeps the removal durable across the next run.
-      skipped.push(target);
-      continue;
-    }
-    if (plan.verdict !== "update") {
-      recorded[plan.name] = plan.shippedHash;
-      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
-      continue;
-    }
-    if (dryRun) {
-      copied.push(target);
-      installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
-      info(`  would update: ${formatReportPath(target)} (${UNEDITED_RULE_MASTER})`);
-      continue;
-    }
-    const outcome = await replaceGovernedAsset(
-      path.join(shippedRulesDir, plan.name),
-      target,
-      plan.currentHash ?? undefined,
-    );
-    if (outcome === "target-changed") {
-      skipped.push(target);
-      info(`  kept: ${formatReportPath(target)} (changed while this run was deciding)`);
-      continue;
-    }
-    copied.push(target);
-    recorded[plan.name] = plan.shippedHash;
-    installed.add(`${AGENTS_RULES_DIR_CITATION}/${plan.name}`);
-  }
-
-  if (!dryRun && plans.length > 0) {
-    // Written whatever happened above, because a record missing a master is the
-    // state that keeps it unreplaceable for ever.
-    await writeRuleLock(projectRulesDir, { ...(await readRuleLock(projectRulesDir)), ...recorded });
-  }
-  return { copied, skipped, installed };
-}
-
 async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
@@ -2110,8 +1024,6 @@ async function ensureAgentEntryPointRules(
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
-
-  if (!dryRun) await reclaimEntryPointStaging(destRoot);
 
   // A master an earlier run wrote and could not cite is owed alongside the ones
   // this run wrote. A master the project has since removed is owed nothing.
@@ -2194,9 +1106,8 @@ async function ensureAgentEntryPointRules(
       // The section is already there. A master this run wrote is one the file
       // cannot have cited, and so is one an earlier run recorded as owed, so its
       // bullet is added. A bullet a release wrote and the project never edited
-      // takes the template's wording, as an unedited master takes the release's
-      // text. Everything else is left as the project has it, including a bullet
-      // it deleted or reworded.
+      // takes the template's wording. Everything else is left as the project
+      // has it, including a bullet it deleted or reworded.
       const refreshed = refreshSupersededRuleBullets(existing, section, installed);
       reportWithheldSummaries(target, refreshed.withheld);
       // The review directive goes in beside the citations; the project's own
@@ -2264,12 +1175,7 @@ async function ensureAgentEntryPointRules(
       if (dryRun) {
         info(`  would update: ${formatReportPath(target)} (agent instructions)`);
       } else {
-        const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
-        if (wrote !== null) {
-          error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-          skipped.push(target);
-          continue;
-        }
+        await writeFile(target, merged, "utf-8");
         pending[name] = [];
         info(`  updated: ${formatReportPath(target)} (agent instructions; existing content kept)`);
       }
@@ -2300,19 +1206,13 @@ async function ensureAgentEntryPointRules(
         : existing.endsWith(end)
           ? end
           : `${end}${end}`;
-    const wrote = await replaceEntryPointFile(
+    await writeFile(
       target,
       hasReviewPolicy
         ? addReviewPointer(`${existing}${separator}${section}${end}`, template)
         : `${existing}${separator}${section}${end}`,
-      destRoot,
-      existing,
+      "utf-8",
     );
-    if (wrote !== null) {
-      error(`  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}`);
-      skipped.push(target);
-      continue;
-    }
     pending[name] = [];
     info(
       `  updated: ${formatReportPath(target)} (appended .agents/rules section; existing content kept)`,
@@ -2347,23 +1247,6 @@ const COPILOT_INSTRUCTIONS_ENTRY = ".github/copilot-instructions.md";
  * bullet in it, a superseded one is replaced where it stands, and the same
  * refusals apply as to the two entry points.
  */
-/**
- * Names the rules this run left deleted, and how to take one back.
- *
- * Silence would read as "every shipped rule is installed", which is the state
- * the exclusion exists because the run is not in. The way back is the record
- * itself rather than a flag: the entry is what says the run wrote the file, so
- * removing it puts the master in the same position as one shipped today, and a
- * second way to say that is a second thing to keep in step.
- */
-function reportRemovedRuleMasters(removed: readonly string[]): void {
-  if (removed.length === 0) return;
-  const named = removed.map((name) => `${AGENTS_RULES_DIR_CITATION}/${name}`);
-  info(
-    `  ${keptDeletedRuleMastersNote(named, `${AGENTS_RULES_DIR_CITATION}/${RULE_LOCK_BASENAME}`)}`,
-  );
-}
-
 /**
  * Names the masters whose summary this run left as it stands, with why.
  *
@@ -2563,13 +1446,7 @@ async function writeRuleListUpdate(
     info(`  would update: ${formatReportPath(target)} (${update.planned})`);
     return "planned";
   }
-  const wrote = await replaceEntryPointFile(target, merged, destRoot, existing);
-  if (wrote !== null) {
-    error(
-      `  WARNING: ${formatReportPath(target)} was left unchanged. ${wrote}${pendingNote(update.pending)}`,
-    );
-    return "refused";
-  }
+  await writeFile(target, merged, "utf-8");
   info(`  updated: ${formatReportPath(target)} (${update.done}; nothing else changed)`);
   return "written";
 }
@@ -2590,53 +1467,6 @@ function quoteList(paths: readonly string[]): string {
 function pendingNote(masters: readonly string[]): string {
   if (masters.length === 0) return "";
   return ` The citations of ${quoteList(masters)} are kept, and a later run adds them once the file can be rewritten.`;
-}
-/**
- * The name shape `replaceEntryPointFile` stages under.
- *
- * The prefix, the identifiers `randomUUID` writes — version 4, variant `8` to
- * `b` — and the suffix. A looser pattern matches names the writer could never
- * have produced, and this loop deletes what it matches.
- */
-const ENTRY_POINT_STAGING =
-  /^\.qfai-entry-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.tmp$/;
-
-/** How long a staging file must have sat still before a run reclaims it. */
-const ENTRY_POINT_STAGING_STALE_MS = 60 * 60 * 1000;
-
-/**
- * Removes staging files an interrupted run left beside an entry point.
- *
- * The writer below stages next to its target so the rename is atomic, and
- * clears the staging file when the write itself fails. A process killed between
- * the write and the rename never reaches that, and what it leaves behind is a
- * full copy of the project's instructions sitting untracked in the repository
- * root.
- *
- * Two things bound what it removes. The name has to be one the writer could
- * have produced, and the file has to have sat still long enough that no run is
- * using it: a second init started a moment ago stages under the same shape, and
- * deleting its file makes its rename fail and loses the citation it was
- * writing. A file that will not delete is not worth stopping an init over.
- */
-async function reclaimEntryPointStaging(destRoot: string): Promise<void> {
-  for (const dir of [destRoot, path.join(destRoot, ".github")]) {
-    // The rewrite refuses a linked path component and so does this. A linked
-    // `.github` would have the loop reading and deleting inside whatever it
-    // points at, which is a directory this project does not own.
-    if ((await firstLinkedComponent(dir, destRoot)) !== null) continue;
-    const entries = await readdir(dir).catch(() => []);
-    for (const entry of entries) {
-      if (!ENTRY_POINT_STAGING.test(entry)) continue;
-      const staging = path.join(dir, entry);
-      const written = await lstat(staging).catch(() => null);
-      if (written === null || !written.isFile()) continue;
-      if (Date.now() - written.mtimeMs < ENTRY_POINT_STAGING_STALE_MS) continue;
-      await rm(staging, { force: true }).catch(() => {
-        // Left for the next run to try again; it is not this run's to report.
-      });
-    }
-  }
 }
 
 /**
@@ -3159,14 +1989,8 @@ async function syncIntegrationWrappers(
   } else {
     copied.push(copilotDest);
     if (!options.dryRun) {
-      const existingCopilot = copilotExists ? await readTextFileIfPresent(copilotDest) : null;
-      const generated = buildCopilotInstructions();
-      const contents =
-        existingCopilot === null || options.installedRuleMasters === undefined
-          ? generated
-          : keepSummariesOfKeptMasters(generated, existingCopilot, options.installedRuleMasters);
       await mkdir(path.dirname(copilotDest), { recursive: true });
-      await writeFile(copilotDest, contents, "utf-8");
+      await writeFile(copilotDest, buildCopilotInstructions(), "utf-8");
     }
   }
 
@@ -4285,26 +3109,18 @@ async function classifyInitWrittenSkillWrapper(
 /**
  * Removes the wrapper entries QFAI itself installed and no longer ships.
  *
- * ONE ownership rule, stated where the retired-workflow prune states it: a name
- * selects candidates, and never authorises a delete. The `qfai-` prefix is a
- * reservation notice, so a prefix predicate is forbidden here too — an adopter's
+ * A name selects candidates, and never authorises a delete. The `qfai-` prefix is
+ * a reservation notice, so a prefix predicate is forbidden here — an adopter's
  * own `.claude/commands/qfai-release.md`, `.claude/skills/qfai-deploy/` or
- * `.github/prompts/qfai-ship.prompt.md` must survive `--force`, and each of those
- * was being deleted by one.
+ * `.github/prompts/qfai-ship.prompt.md` must survive `--force`.
  *
- * What differs between the two prunes is only the EVIDENCE, because the surfaces
- * carry different receipts. A shipped workflow has a provenance entry, so its
- * evidence is the recorded digest. These wrappers predate that record and have no
- * entry, so the evidence is in the file: every generation QFAI shipped delegates
- * to the canonical doc of the same stem on a line of its own, and a file without
- * that line is the adopter's whatever its name. Both prunes ask their question
- * through {@link pruneMatchingEntries}, and therefore ask it twice — once against
- * the name, once against the object after it has been moved aside.
+ * The evidence is in the file: every generation QFAI shipped delegates to the
+ * canonical doc of the same stem on a line of its own, and a file without that
+ * line is the adopter's whatever its name. The question is asked through
+ * {@link pruneMatchingEntries}, and therefore twice — once against the name,
+ * once against the object after it has been moved aside.
  *
- * The two prunes stay in separate directories on purpose. `.github/workflows/` is
- * adopter CI: nothing here enumerates it, and the shipped workflows it holds are
- * created rather than overwritten, so `--force` never rewrites a lane an adopter
- * is running.
+ * `.github/workflows/` is adopter CI: nothing here enumerates it.
  */
 async function pruneStaleQfaiWrappers(
   destRoot: string,
@@ -4316,8 +3132,7 @@ async function pruneStaleQfaiWrappers(
   const removed: string[] = [];
 
   // 1. Remove the .claude/commands/*.md wrappers qfai itself once wrote.
-  // Name in `predicate`, ownership in `confirm` — the same split the retired-workflow
-  // prune uses, and for the same reason: `predicate` only ever sees the `readdir`
+  // Name in `predicate`, ownership in `confirm`: `predicate` only ever sees the `readdir`
   // snapshot, so a test that reads the file belongs where it is asked again after the
   // entry has been moved aside. A project file that takes the name between the snapshot
   // and the delete carries no delegation line, so the second question refuses it.
@@ -4664,411 +3479,26 @@ async function removeIfEmpty(dir: string): Promise<void> {
 export { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES };
 
 /**
- * Pure copy-set construction for the shipped workflow names: a name is in
- * the copy set unless its pre-run state is declined (record entry present
- * AND file absent on disk — the adopter deliberately removed it, and the
- * file is never recreated). Absent (never-installed) names stay in, and
- * adopter-owned names (present on disk without an entry) stay in as well:
- * their on-disk protection is the create-only skip, not this exclusion.
- */
-export function resolveWorkflowCopySet(
-  shippedNames: ReadonlySet<string>,
-  record: InstallProvenanceRecord,
-  presentOnDisk: ReadonlySet<string>,
-): Set<string> {
-  const copySet = new Set<string>();
-  for (const name of shippedNames) {
-    const declined = record.workflows[name] !== undefined && !presentOnDisk.has(name);
-    if (!declined) {
-      copySet.add(name);
-    }
-  }
-  return copySet;
-}
-
-/**
- * Pre-copy snapshot of the shipped-workflow provenance state: the record
- * as it stood before this run, the shipped names that were absent (no
- * record entry AND no file on disk), and the shipped names present on
- * disk. This single snapshot feeds BOTH decisions — the copy-set
- * exclusion (declined names are dropped before the copy) and the record
- * write (only pre-run-absent names may gain an entry afterwards; a name
- * with an existing entry keeps it untouched, and an adopter-authored
- * file stays unrecorded because the create-only copy skips it).
- */
-type ShippedWorkflowPreInitState = {
-  record: InstallProvenanceRecord;
-  absentNames: string[];
-  presentOnDisk: Set<string>;
-};
-
-/**
- * The path components between the adopter's root and the shipped workflows, outermost first.
- */
-const WORKFLOW_DIR_SEGMENTS: readonly string[] = [".github", "workflows"];
-
-/**
- * Whether every existing component of `<destRoot>/.github/workflows` is a real directory.
- *
- * A component that is not there yet passes: the copy creates it, and a directory this run
- * created is not a link to somewhere else. A component that IS there and is a symlink — or is
- * not a directory at all — fails, because every write through it lands wherever it points,
- * and `path.resolve` cannot tell that from a write into the tree.
- *
- * `lstat`, so the link itself is inspected rather than its target.
- */
-async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
-  return (await workflowAncestorIdentity(destRoot)) !== undefined;
-}
-
-/**
- * Is this copy destination a file written into the shipped workflows directory?
- *
- * `copyTemplateTree` reports ABSOLUTE destinations, so the question is asked of paths rather
- * than of leading path segments. The first version did the
- * latter: it split `/tmp/repo/.github/workflows/qfai-tests.yml` and took the first two segments
- * — `/tmp` — so the filter that was supposed to drop every written workflow after a detected
- * directory swap dropped none of them, and `recordInstalledWorkflows` recorded provenance for a
- * file that is not where the record says it is. The next run reads that name as `declined` and
- * never writes it again, so the swap costs the adopter the workflow permanently.
- *
- * A predicate rather than an inline lambda so a test can hand it absolute paths, which is what
- * the defect was made of; a source-level reading of the lambda would have accepted the broken
- * one just as readily.
- *
- * @param destination absolute path a copy wrote
- * @param destRoot the project root the copy targeted
- * @returns whether the destination is directly inside `<destRoot>/.github/workflows`
- */
-export function isWorkflowDestination(destination: string, destRoot: string): boolean {
-  const workflowsDir = path.resolve(path.join(destRoot, ".github", "workflows"));
-  return path.resolve(path.dirname(destination)) === workflowsDir;
-}
-/**
- * The identity of each ancestor of the shipped workflows directory, or `undefined` if any of
- * them is not a real directory this command may write through.
- *
- * The ancestor CHECK ran once, before a copy that performs many
- * asynchronous filesystem operations, and nothing held the answer still afterwards. A
- * concurrent process that swaps `.github` or `.github/workflows` for a link between the check
- * and a write has the shipped workflow created outside the repository — `COPYFILE_EXCL`
- * refuses an existing destination and follows a linked PARENT without complaint. The
- * re-check further down stops the provenance record; it does not unwrite the file.
- *
- * So the identity is captured here and compared after the copy. Node has no `openat`, so what
- * this buys is what the artifact writers document: a swap becomes a detected swap with the
- * files it produced removed, rather than a silent write into somebody else's tree.
- *
- * An ABSENT ancestor is `null` rather than a failure: `init` creates the directory it is
- * about to fill, and absence before the copy is the ordinary first-run state. What must not
- * change is a directory that existed into a different one.
- */
-export async function workflowAncestorIdentity(
-  destRoot: string,
-): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
-  const identities: Array<{ dev: number; ino: number } | null> = [];
-  let current = destRoot;
-  for (const segment of WORKFLOW_DIR_SEGMENTS) {
-    current = path.join(current, segment);
-    const inspected = await lstat(current).catch(() => undefined);
-    if (inspected === undefined) {
-      identities.push(null);
-      continue;
-    }
-    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
-      return undefined;
-    }
-    identities.push({ dev: inspected.dev, ino: inspected.ino });
-  }
-  return identities;
-}
-
-/**
- * Whether every ancestor that EXISTED before the copy is still the same directory.
- *
- * One that was absent and has since been created is the copy's own work. One that changed
- * identity is the swap this comparison exists to catch.
- */
-export async function settleWorkflowAncestors(
-  destRoot: string,
-  before: Array<{ dev: number; ino: number } | null>,
-): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
-  const after = await workflowAncestorIdentity(destRoot);
-  if (after === undefined) return undefined;
-  const settled: Array<{ dev: number; ino: number } | null> = [];
-  for (const [index, identity] of before.entries()) {
-    const observed = after[index] ?? null;
-    if (identity === null) {
-      // A component with no identity to compare against is a REFUSAL, not an observation.
-      //
-      // made this branch stop returning `true`. Settling on the post-copy
-      // reading was not enough either: that reading says
-      // nothing about WHICH directory the copy wrote into, so a substitute put there by another
-      // process was pinned just as readily as the real one.
-      //
-      // The caller creates the workflow directory before the copy and reads its identity from
-      // the directory it made, so on every path that writes a workflow there is nothing absent
-      // here to begin with. Reaching this branch means a component vanished between that read
-      // and this one, which is exactly the event the comparison exists to catch.
-      return undefined;
-    }
-    if (observed === null || observed.dev !== identity.dev || observed.ino !== identity.ino) {
-      return undefined;
-    }
-    settled.push(identity);
-  }
-  return settled;
-}
-
-/**
- * Are the workflow directory's ancestors still the ones this run settled on?
- *
- * Asked again at the moment of RECORDING, because that is the moment the claim is made. An
- * entry is a claim of ownership over a file at a path, and it outlives the run: recording
- * nothing is recoverable, recording a file that is not there is not.
- *
- * Exact equality, `null` included. A component that was absent when the identity settled and
- * exists now was created by something other than this copy, which is the same event as a swap.
- *
- * @param destRoot the project root
- * @param expected the identity settled after the copy
- * @returns whether every component is still exactly what it was
- */
-async function workflowAncestorsMatch(
-  destRoot: string,
-  expected: Array<{ dev: number; ino: number } | null>,
-): Promise<boolean> {
-  const now = await workflowAncestorIdentity(destRoot);
-  if (now === undefined) return false;
-  return expected.every((identity, index) => {
-    const observed = now[index] ?? null;
-    if (identity === null || observed === null) return identity === observed;
-    return observed.dev === identity.dev && observed.ino === identity.ino;
-  });
-}
-
-async function captureShippedWorkflowPreInitState(
-  destRoot: string,
-): Promise<ShippedWorkflowPreInitState> {
-  const record = await readInstallProvenance(destRoot);
-  const absentNames: string[] = [];
-  const presentOnDisk = new Set<string>();
-  for (const name of SHIPPED_WORKFLOW_NAMES) {
-    const onDisk = await exists(path.join(destRoot, ".github", "workflows", name));
-    if (onDisk) {
-      presentOnDisk.add(name);
-    }
-    if (record.workflows[name] === undefined && !onDisk) {
-      absentNames.push(name);
-    }
-  }
-  return { record, absentNames, presentOnDisk };
-}
-
-/**
- * The retired names this run may remove: the file on disk carries a
- * provenance entry AND still holds exactly the bytes QFAI recorded writing.
- *
- * Both conjuncts protect an adopter file from a name-set membership test:
- * no entry means the adopter authored the file themselves (the
- * `adopter-owned` row, never pruned), and a digest that no longer matches
- * means they edited what QFAI wrote (the `modified` row, never pruned).
- * A name that fails either test is left on disk untouched — a stale file is
- * recoverable, a deleted one is not.
- *
- * The recorded digest is returned with each name, not just the name: the prune re-asks the
- * content question against it immediately before deleting, because a decision made here and
- * acted on later is a decision about a file that may since have been replaced.
- */
-async function resolvePrunableRetiredWorkflows(
-  destRoot: string,
-  record: InstallProvenanceRecord,
-): Promise<Map<string, string>> {
-  const prunable = new Map<string, string>();
-  for (const name of RETIRED_WORKFLOW_NAMES) {
-    const entry = record.workflows[name];
-    if (entry === undefined) {
-      continue;
-    }
-    // Bounded, regular-file-only, one descriptor. This path is adopter-controlled, and an
-    // unbounded read of it hands a FIFO, a device or a multi-gigabyte file the ability to hang
-    // `qfai init` or exhaust its memory — on a file the command was only deciding whether to
-    // delete. Every refusal leaves the name un-pruned.
-    const workflowPath = path.join(destRoot, ".github", "workflows", name);
-    if ((await digestWorkflowFile(workflowPath)) === entry.sha256) {
-      prunable.set(name, entry.sha256);
-    }
-  }
-  return prunable;
-}
-
-/**
- * Read ceiling for one workflow file in an adopter tree. A shipped workflow is a few kilobytes;
- * anything past this is not one, and reading it is the exhaustion the bounded reader stops.
- */
-const MAX_WORKFLOW_BYTES = 1_048_576;
-
-/** The sha256 of a workflow file, or `undefined` for anything the bounded reader refuses. */
-async function digestWorkflowFile(filePath: string): Promise<string | undefined> {
-  const bytes = await readBoundedRegularFile(filePath, MAX_WORKFLOW_BYTES);
-  return bytes === undefined ? undefined : createHash("sha256").update(bytes).digest("hex");
-}
-
-/**
- * Records provenance entries for the shipped workflow files this run
- * actually wrote: a name qualifies only when its pre-run state was absent
- * AND the copy primitive reported writing it, and each entry's sha256
- * digests the bytes just written. The record file is untouched when nothing
- * new was written (idempotent re-runs, declined names) and on --dry-run.
- *
- * `copiedPaths` is the copy primitive's own `copied` list, and it is the
- * ONLY evidence of a write accepted here. Reading the destination back is
- * not evidence: a create-only copy skips a path that appeared between the
- * pre-run snapshot and the copy (another process, or a dangling symlink the
- * snapshot saw as absent and whose target a later copy filled in), and the
- * read-back would then claim QFAI wrote a file it never touched — which
- * makes doctor report drift on an adopter-owned file forever.
- */
-async function recordInstalledWorkflows(
-  destRoot: string,
-  sourceRoot: string,
-  preInit: ShippedWorkflowPreInitState,
-  copiedPaths: readonly string[],
-  toolVersion: string,
-  dryRun: boolean,
-  settled: Array<{ dev: number; ino: number } | null> | undefined,
-): Promise<void> {
-  if (dryRun) {
-    return;
-  }
-  if (settled === undefined) {
-    return; // the copy did not settle on an identity, so there is nothing to claim ownership of
-  }
-  // The identity this run settled on, not merely `a real directory`.
-  // The check below asks whether the ancestors are real directories, which every swapped-in
-  // real directory also satisfies.
-  if (!(await workflowAncestorsMatch(destRoot, settled))) {
-    return;
-  }
-  // Asked again, here, and not only before the copy. The check that
-  // refuses a linked parent runs before `copyTemplateTree`, and a link created between the
-  // two would still have the copy report paths that resolve lexically into the tree. An entry
-  // is a claim of OWNERSHIP, and it is the claim that outlives the run — recording nothing is
-  // recoverable, recording a file outside the repository is not.
-  if (!(await workflowAncestorsAreRealDirectories(destRoot))) {
-    return;
-  }
-  const workflowsDir = path.join(destRoot, ".github", "workflows");
-  const copiedNames = new Set(
-    copiedPaths
-      .filter((copied) => path.dirname(path.resolve(copied)) === path.resolve(workflowsDir))
-      .map((copied) => path.basename(copied)),
-  );
-  const installedAt = new Date().toISOString();
-  const added: Record<string, WorkflowProvenanceEntry> = {};
-  for (const name of preInit.absentNames) {
-    if (!copiedNames.has(name)) {
-      continue; // the copy skipped it: a skipped file produces no entry
-    }
-    // Digested from the SOURCE the copy read, not from the destination re-read. The copy is
-    // byte-for-byte, so the two agree at the instant of the write — and only then. Re-reading
-    // the destination records whatever the file holds NOW, which is a different question: an
-    // adopter or a concurrent process that rewrites the file between the copy and the read
-    // gets their own content stamped as the bytes QFAI installed. Drift detection would then
-    // be permanently blind to that edit, and the prune above would consider the file QFAI's to
-    // delete.
-    const sourceBytes = await readBoundedRegularFile(
-      path.join(sourceRoot, ".github", "workflows", name),
-      MAX_WORKFLOW_BYTES,
-    );
-    if (sourceBytes === undefined) {
-      continue; // no source bytes to attest to, so no entry
-    }
-    added[name] = createWorkflowProvenanceEntry(sourceBytes, toolVersion, installedAt);
-  }
-  const addedNames = Object.keys(added);
-  if (addedNames.length === 0) {
-    return;
-  }
-  try {
-    // Merged onto the record as it is on disk, under the lock — never onto `preInit.record`.
-    // That snapshot was taken before the copy, and in a tree where a second `qfai init` is
-    // running (a monorepo bootstrap, a CI matrix sharing a checkout, two terminals) writing it
-    // back deletes every entry the other run recorded in between. Those files stay on disk with
-    // no entry, which the next run reads as `adopter-owned`: never recorded again, and invisible
-    // to drift detection from then on.
-    await updateInstallProvenance(destRoot, (current) => ({
-      ...current,
-      workflows: { ...current.workflows, ...added },
-    }));
-  } catch (error) {
-    // The file and its provenance entry land TOGETHER or neither lands. The
-    // record write can still fail after the copy succeeded — `.qfai` is a
-    // regular file, the directory is read-only, the disk is full — and a
-    // workflow left on disk with no entry is read on the next run as
-    // `adopter-owned`: the create-only copy skips it, nothing ever records it,
-    // and doctor's drift check and the declined state are both lost for that
-    // name permanently. Removing what this run created returns the tree to
-    // `absent`, the one state a re-run repairs.
-    //
-    // Only the names in `added` are removed, and every one of them was absent
-    // before this run AND reported written by the copy primitive, so nothing
-    // here can delete a file the adopter owned. Removal failures are swallowed:
-    // the original error is the one worth reporting, and a stale file is a
-    // smaller loss than a masked cause.
-    //
-    // Through `pruneMatchingEntries` and not a direct `rm`: the shipped-workflows
-    // contract keeps ONE removal primitive for QFAI-owned entries in an adopter
-    // tree, and a second call site is the parallel implementation it forbids.
-    // And only while they still hold the bytes this run wrote. `addedNames` is a name set, and
-    // the failing record write is exactly the moment another process may have replaced one of
-    // those files — rolling back on the name alone would delete their content to undo our own
-    // write. The digest is the one this run attested to, so a file that no longer matches it is
-    // not this run's to remove.
-    const rolledBack: string[] = [];
-    await pruneMatchingEntries(
-      workflowsDir,
-      (entry) => entry.isFile() && addedNames.includes(entry.name),
-      rolledBack,
-      false,
-      async (target, name) => (await digestWorkflowFile(target)) === added[name]?.sha256,
-    ).catch(() => undefined);
-    throw error;
-  }
-}
-
-/**
  * The only removal primitive for QFAI-owned entries in an adopter tree:
  * removes the direct entries of `dir` that match `predicate`, appending
- * each removed path to `removed`. Exported for reuse — the
- * shipped-workflows contract forbids parallel removal implementations.
+ * each removed path to `removed`.
  *
  * `confirm` is the ownership question, and it is asked TWICE: once against the path as the
  * snapshot named it, and once against the object after it has been moved aside. `predicate`
  * can only ever see the `readdir` snapshot, so a name selects candidates and never authorises
- * a delete: every caller here decides ownership by CONTENT. What counts as the content differs
- * by surface — a shipped workflow still holds the bytes QFAI recorded writing, and a legacy
- * command or prompt wrapper, which predates that record, still carries the delegation line
- * every generation of it was shipped with — but the shape of the question does not. A caller
- * with no content test passes `undefined` and gets the snapshot behaviour. `confirm` receives
+ * a delete: every caller here decides ownership by CONTENT, the delegation line every
+ * generation of a legacy command or prompt wrapper was shipped with. A caller with no content
+ * test passes `undefined` and gets the snapshot behaviour. `confirm` receives
  * the path to READ and, separately, the entry's original name, because after the move the two
  * differ and a caller resolving its evidence by basename would be resolving it against the
  * quarantine name.
  *
  * Why the move at all: checking a pathname, re-checking it and then
  * deleting it are three operations on a NAME, and between any two of them the adopter can put
- * their own file there: the digest that was verified and the bytes that are deleted are then
+ * their own file there: the content that was verified and the bytes that are deleted are then
  * different objects, and the deleted one is theirs. Renaming the entry to a name nothing else
  * holds collapses the three into one object — everything after the rename acts on what was
  * moved, whatever later takes the vacated name.
- *
- * `commit` is what makes the removal a UNIT with whatever else has to happen for it. Deleting
- * the files and removing their provenance entries as two separate steps would let a
- * read-only `.qfai`, a full disk, or a lock it could not take interrupt between them —
- * leaving files gone and entries standing, which the next run reads as names the adopter
- * deliberately removed, and never installs again. It runs while the entries are still in
- * quarantine, so a failure puts them back rather than leaving the tree half-changed. It is
- * called only when there is something to commit, and never on a dry run.
  *
  * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
  * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing
@@ -5081,7 +3511,6 @@ export async function pruneMatchingEntries(
   removed: string[],
   dryRun: boolean,
   confirm?: (target: string, name: string) => Promise<boolean>,
-  commit?: (removedPaths: readonly string[]) => Promise<void>,
 ): Promise<void> {
   if (!(await exists(dir))) {
     return;
@@ -5131,9 +3560,6 @@ export async function pruneMatchingEntries(
       }
       held.push(moved);
       pruned.push(target);
-    }
-    if (commit !== undefined && !dryRun && pruned.length > 0) {
-      await commit(pruned);
     }
   } catch (error) {
     for (const moved of held) {

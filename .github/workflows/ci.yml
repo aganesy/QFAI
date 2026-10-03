@@ -609,8 +609,8 @@ jobs:
         run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 4a. Windows parity ───────────────────────────────────────────
-  # Init and upgrade must behave on Windows as on Linux: CRLF checkouts, paths
-  # with spaces and the provenance lock. This job runs the package's
+  # Init and upgrade must behave on Windows as on Linux: CRLF checkouts and paths
+  # with spaces. This job runs the package's
   # `test:windows-parity` list on a Windows runner, the list a developer runs
   # locally. It builds the package itself, because the integration suites spawn
   # the built CLI and `dist/` has to be made here.

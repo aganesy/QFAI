@@ -113,7 +113,7 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     ".qfai/report/validate.json",
   ];
   /** Records under `.qfai/` that stay in version control. */
-  const tracked = [".qfai/install-provenance.json", ".qfai/assistant/.assets.lock.json"];
+  const tracked = [".qfai/assistant/rule/drift-protocol.md"];
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {
     try {

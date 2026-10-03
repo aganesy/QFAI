@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../src/shared/text.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import { extractionFor } from "../helpers/workflowExtraction.js";
 

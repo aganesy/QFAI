@@ -103,5 +103,5 @@ copy of a locked file before deciding its lock is wrong.
 
 - Downstream stages do not patch protected upstream artifacts before an in-force Change request: decision row authorizes the path. The drift profile compares the branch against baseBranch and reports QFAI-DRIFT-001 for an unapproved protected change. The SDD owner may create the request row itself without a prior row.
 - Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach. A former row may change Status; new content is appended as a new row.
-- Vendored assistant rules are changed in the package and synchronized into projects. A local edit that diverges from its provenance record is reported by the assistant asset gate.
+- Vendored assistant rules are changed in the package and synchronized into projects by `qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When approval is unavailable, keep the affected items stopped and report the decision needed. Continue unrelated work.

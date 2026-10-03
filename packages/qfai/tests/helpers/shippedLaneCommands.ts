@@ -1268,11 +1268,9 @@ export function fileDigest(raw: Buffer): string {
  * `INIT_MUST_NOT_SHIP` states. This paragraph named four of the eight for a round after the list grew —
  * two copies of one fact, and the one nobody was looking at was wrong.
  *
- * **The justification is false of two files in those trees**, and each is covered below for that
- * reason. `.qfai/install-provenance.json` is not an agent instruction, does not change when a skill
- * does, and gates whether init DELETES an adopter's workflow; `ALLOWED_PROVENANCE_SHAPE` pins its
- * shape. `.claude/settings.json` does not change when a skill does either, and its contents are a
- * program an adopter's agent runs — `ALLOWED_INIT_CONTENT` pins its bytes. Neither can appear in the
+ * **The justification is false of one file in those trees**, and it is covered below for that
+ * reason. `.claude/settings.json` does not change when a skill does, and its contents are a
+ * program an adopter's agent runs — `ALLOWED_INIT_CONTENT` pins its bytes. It cannot appear in the
  * path set: that set is compared against the files OUTSIDE these trees, so naming a file inside one
  * of them claims a path the walk never offers.
  */
@@ -1401,12 +1399,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the
-  // four that keep the assistant tree and the install-provenance record
+  // two that keep the assistant tree
   // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "b7773796163f4f2fa0c9179eb8f4d54ebfdd35a9faf7d7b187b552b5925a919d"],
+  [".gitignore", "76c6c855ae5c4bf4d04a8d3ed34018b26d17d1b3a02ca68d60d1e514028ffc2f"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1869,37 +1867,6 @@ export function initSourceShipsAsData(relativePath: string): boolean {
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
   );
 }
-
-/**
- * The one file inside an instruction tree that is pinned anyway, by SHAPE.
- *
- * The exclusion above justifies itself on the trees being agent instructions "that change whenever a
- * skill does, and what matters about them is narrower than their contents". `.qfai/install-provenance.json`
- * is none of that. Another session added it while round 19 was in flight, and it is the record `doctor`
- * reads to detect drift and `resolvePrunableRetiredWorkflows` reads to decide whether to **delete an
- * adopter's workflow file** — so its contents are exactly what matters about it, and a file that gates
- * a delete had no pin at all because of where it happens to sit.
- *
- * Its bytes cannot be pinned: it carries a timestamp, the installed version, and a digest per workflow.
- * So the pin is the shape — which keys may appear at each level, and what each value must look like. A
- * key nobody enumerated is a channel nobody reviewed, which is the same rule the workflow shape pins
- * make one directory over.
- */
-export const ALLOWED_PROVENANCE_SHAPE: {
-  readonly path: string;
-  readonly topLevelKeys: ReadonlySet<string>;
-  readonly entryKeys: ReadonlySet<string>;
-  readonly entryValues: ReadonlyMap<string, RegExp>;
-} = {
-  path: ".qfai/install-provenance.json",
-  topLevelKeys: new Set(["workflows"]),
-  entryKeys: new Set(["sha256", "installedByVersion", "installedAt"]),
-  entryValues: new Map([
-    ["sha256", /^[0-9a-f]{64}$/],
-    ["installedByVersion", /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/],
-    ["installedAt", /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/],
-  ]),
-};
 
 /** The eight trees excluded from the PATH pin, and excluded from nothing else — the kind rule reads them. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [

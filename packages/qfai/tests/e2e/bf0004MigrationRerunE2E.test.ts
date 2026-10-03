@@ -66,7 +66,6 @@ const TRUST_CODEX_HOOKS =
 const ALREADY_DONE =
   "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
 const REMINDERS = ".agents/rules/reminders.json";
-const RULE_LOCK = ".agents/rules/.qfai-rules.lock.json";
 const SHIPPED_REMINDERS = path.join(PACKAGE_ROOT, "assets/init/root", REMINDERS);
 const EARLIER_CODEX_HOOKS = path.join(
   PACKAGE_ROOT,
@@ -194,12 +193,6 @@ function record(value: unknown): Record<string, unknown> {
   }
   return Object.fromEntries(Object.entries(value));
 }
-
-/** The hash a run records for a rule master: SHA-256 of the text with LF line endings. */
-function lfHash(text: string): string {
-  return createHash("sha256").update(text.replace(/\r\n/g, "\n"), "utf8").digest("hex");
-}
-
 /** The free-text entry hook a hook file of `root` declares. */
 async function freeTextHook(root: string, file: string): Promise<Record<string, unknown>> {
   const hooks = record(record(JSON.parse(await readFile(path.join(root, file), "utf8"))).hooks);
@@ -305,8 +298,8 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
   it("runs again on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
     const root = await cloneProject(journey.root);
     // What a person settles from the first run's reports, then what 2.0.0
-    // left: no Claude Code settings, its own Codex hook file, and a recorded
-    // reminder text without the free-text entry.
+    // left: no Claude Code settings, its own Codex hook file, and a reminder
+    // text without the free-text entry.
     await rm(path.join(root, ".qfai/spec/spec-0002"), { recursive: true });
     const test = "tests/integration/order.test.ts";
     await reannotate(root, test, "CON-API-0001", "API-0001");
@@ -319,9 +312,6 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     const { "free-text-entry": freeText, ...older } = messages;
     const olderText = `${JSON.stringify(older, null, 2)}\n`;
     await writeFile(path.join(root, REMINDERS), olderText);
-    const lock = record(JSON.parse(await readFile(path.join(root, RULE_LOCK), "utf8")));
-    const recorded = { ...lock, "reminders.json": lfHash(olderText) };
-    await writeFile(path.join(root, RULE_LOCK), `${JSON.stringify(recorded, null, 2)}\n`);
 
     for (const pass of [1, 2]) {
       const before = await snapshot(root);
@@ -344,12 +334,12 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         if (number === 11) {
           expect(section(real.stdout, "Reminder hooks").join("\n")).not.toContain("edited here");
           expect(section(real.stdout, "Operations").map((line) => line.split(": ")[0])).toEqual(
-            pass === 1 ? [...HOOK_FILES, REMINDERS, RULE_LOCK] : [],
+            pass === 1 ? [...HOOK_FILES, REMINDERS] : [],
           );
         }
       }
       expect(changedPaths(before, await snapshot(root)), `pass ${pass}`).toEqual(
-        pass === 1 ? [RULE_LOCK, REMINDERS, ...HOOK_FILES] : [],
+        pass === 1 ? [REMINDERS, ...HOOK_FILES] : [],
       );
     }
     for (const file of HOOK_FILES) {
