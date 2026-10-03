@@ -60,5 +60,4 @@ prototype. It is neutral with respect to AI behavior.
 ## Brand identity
 
 Root `DESIGN.md` is read-only for the loop. To change brand identity, edit
-`DESIGN.md` and start a new lineage through `prototyping-recover`: iterations
-built against the old tokens are not reviewed against the new ones.
+`DESIGN.md`; the next iteration is built and reviewed against the new tokens.

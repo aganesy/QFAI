@@ -69,9 +69,8 @@ runs.
 
 ## Procedure
 
-Run these for iteration `NN`, starting at `00`. When `.qfai/prototype/`
-already holds iterations from an earlier run, run `prototyping-recover` first:
-it asks before anything is replaced.
+Run these for iteration `NN`: the next index after the iterations already
+under `.qfai/prototype/`, or `00` when there are none.
 
 1. **Generator** (product-experience-architect). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
@@ -120,7 +119,7 @@ How the session ends decides the route:
 - **A change** — the user asks for something this lineage can take — runs the
   next iteration, carrying their answer as the pivot.
 - **A different design** — a direction this lineage does not implement — runs
-  `prototyping-recover`.
+  the next iteration as a pivot, carrying their answer.
 - **Closed** — `proceed` or `done` without an answer to this question — records
   every other open decision as a labelled assumption and asks this question
   again. It is what the loop exists to answer, so a closure cannot assume it.
@@ -161,5 +160,4 @@ this step reaches: whether a reviewed prototype is done.
 ## Gate
 
 The step passes when the user confirmed the prototype. Every other ending
-leaves the step open: the next iteration runs, `prototyping-recover` runs, or
-the run stops.
+leaves the step open: the next iteration runs, or the run stops.

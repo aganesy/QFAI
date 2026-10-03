@@ -70,7 +70,7 @@ Before anything is generated from `DESIGN.md`:
 3. On any of these, stop and fix `DESIGN.md` through § Author and validate.
 
 Once a prototyping loop has started, `DESIGN.md` is read-only for it. To change
-it, edit it and start a new lineage through `prototyping-recover`.
+it, edit it; the next iteration is built from it.
 
 ## Passes when
 

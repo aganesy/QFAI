@@ -124,12 +124,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain("Every file the loop writes stays under `.qfai/prototype/`");
     expect(skill).toContain("No `qfai` command reads or writes that directory.");
 
-    for (const step of [
-      "prototyping-grill",
-      "prototyping-loop",
-      "prototyping-recover",
-      "prototyping-handoff",
-    ]) {
+    for (const step of ["prototyping-grill", "prototyping-loop", "prototyping-handoff"]) {
       const writes = section(await read(tree, `step/${step}/STEP.md`), "Writes");
       for (const target of writes.matchAll(/`(\.qfai\/[^`]+)`/g)) {
         expect(target[1], `${step} writes outside the prototype folder`).toMatch(

@@ -12,14 +12,7 @@ roles:
     devops-ci-engineer,
     product-surface-reviewer,
   ]
-steps:
-  [
-    prototyping-grill,
-    prototyping-preflight,
-    prototyping-loop,
-    prototyping-recover,
-    prototyping-handoff,
-  ]
+steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
 requires: [common-review-cycle]
 mode: execution-focused
 ---
@@ -69,11 +62,7 @@ When unsure, read inputs in this order:
 | `prototyping-grill`     | Always, first: fixes the scope and settles by talking what the prototype is for      |
 | `prototyping-preflight` | Always: checks the UI contracts, root `DESIGN.md` and the Playwright environment     |
 | `prototyping-loop`      | Always: build, review, and put each reviewed prototype to the user until they accept |
-| `prototyping-recover`   | On demand only, when the user's answer needs a new lineage                           |
 | `prototyping-handoff`   | Only after the user confirmed the prototype: copy it and write the handoff           |
-
-`prototyping-recover` is skipped unless the user's answer asks for a design the
-current lineage does not implement. When it runs, return to `prototyping-loop`.
 
 A step's gate that ends the run ends the invocation: zero UI-bearing contracts
 at preflight, an escalated decision before the first iteration, or a stop or a
@@ -88,8 +77,8 @@ Select roles by `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 Questions to the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
-This skill's own are whether a reviewed prototype is done, a new lineage that
-replaces earlier iterations, and a missing brand intent.
+This skill's own are whether a reviewed prototype is done and a missing brand
+intent.
 
 ### Reviewer Gate
 
@@ -116,8 +105,6 @@ out. Under a no-question mode, list them in the report instead.
 - ask-user:
   - whether a reviewed prototype is done — this skill's own operation, because
     look and feel are the user's judgement
-  - a new lineage that replaces earlier iterations — a destructive operation,
-    and one a design answer does not consent to
 
 project_memory:
 

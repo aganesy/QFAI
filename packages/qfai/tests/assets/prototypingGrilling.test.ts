@@ -21,7 +21,6 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
 const GRILL = "assistant/step/prototyping-grill/STEP.md";
 const LOOP = "assistant/step/prototyping-loop/STEP.md";
-const RECOVER = "assistant/step/prototyping-recover/STEP.md";
 const RULE = ".agents/rules/grilling.md";
 const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
 const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
@@ -128,7 +127,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     );
     expectPhrase(
       skill,
-      "**A different design** — a direction this lineage does not implement — runs `prototyping-recover`.",
+      "**A different design** — a direction this lineage does not implement — runs the next iteration as a pivot, carrying their answer.",
     );
     // A `stop` is not a rejection: it ends the run.
     expectPhrase(skill, "**Stopped** — the user said `stop` — ends the run there");
@@ -305,25 +304,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "The right column is not this gate's subject");
   });
 
-  it("asks before a new lineage replaces the earlier iterations", async () => {
-    // A new lineage overwrites `iter-00/` and replaces every later iteration,
-    // and a destructive operation is approved on what its confirmation says.
-    const skill = await read(RECOVER);
-    expectPhrase(skill, "**Ask before starting over.**");
-    expectPhrase(
-      skill,
-      "A new lineage overwrites `iter-00/` and replaces every later iteration and its reviews, and removes `final/`, so no handoff of the old lineage is left for `/qfai-implement` to read.",
-    );
-    // A run that finds iterations an earlier run left goes through the same
-    // approval rather than overwriting them.
+  it("starts each session from the iterations already on disk", async () => {
+    // QFAI builds no recovery path for an interrupted session: the loop reads
+    // what `.qfai/prototype/` holds and continues after it.
     expectPhrase(
       await read(LOOP),
-      "When `.qfai/prototype/` already holds iterations from an earlier run, run `prototyping-recover` first: it asks before anything is replaced.",
+      "Run these for iteration `NN`: the next index after the iterations already under `.qfai/prototype/`, or `00` when there are none.",
     );
-    // And a refusal has an outcome of its own, so the orchestrator is not left
-    // with no next step but the operation the user just refused.
-    expectPhrase(skill, "**A declined restart ends the run and deletes nothing.**");
-    expectPhrase(skill, "leave `.qfai/prototype/` as it stands, and stop");
   });
 
   it("tells the delegated roles an escalated row is not a constraint", async () => {

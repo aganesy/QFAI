@@ -73,8 +73,8 @@ prototype.
 Within a run the only way past a finding is to change the HTML: use a
 token already declared in `DESIGN.md`, or drop the literal. Do **not**
 edit `DESIGN.md` to widen the allowlist mid-loop. A genuine brand change
-is a separate decision: the user edits `DESIGN.md`, and the loop starts a
-new lineage through `prototyping-recover`.
+is a separate decision: the user edits `DESIGN.md`, and the next iteration
+is built against it.
 
 ### 1. color literal ban
 
