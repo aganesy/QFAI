@@ -98,6 +98,8 @@ its evidence on the revision submitted for review.
   The test hash, source revision and command must agree with the RED/GREEN
   evidence. A later source or shared-fixture change requires the affected
   observation to be refreshed.
+- Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
+  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
 Use `skill/qfai-implement/references/red-admissibility.md`,
 `skill/qfai-implement/references/red-not-observable.md`, and
