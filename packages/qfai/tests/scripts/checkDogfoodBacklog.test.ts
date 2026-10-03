@@ -11,6 +11,7 @@
  * that ran `validate` would assert against whatever the repository currently
  * carries, so it would pass for a lane that had been turned off entirely.
  */
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -100,6 +101,35 @@ describe("errorsForFile", () => {
     );
 
     expect(findings).toEqual([{ code: "E-NEW", message: "new problem" }]);
+  });
+});
+
+describe("repinSteps", () => {
+  // The backlog file is a pinned guard input. A message naming only `--pin`
+  // leaves its digest stale, and the lint lane fails on it after the re-pin.
+  async function loadRepinSteps(): Promise<(profile: string) => string> {
+    const url = pathToFileURL(path.join(repoRoot, "scripts", "check-dogfood-backlog.mjs")).href;
+    const guard = (await import(url)) as { repinSteps: (profile: string) => string };
+    return guard.repinSteps;
+  }
+
+  it("names the backlog re-pin, then the guard bytes, then the verification bodies", async () => {
+    const repinSteps = await loadRepinSteps();
+
+    expect(repinSteps("tdd").split("\n")).toEqual([
+      "  node scripts/check-dogfood-backlog.mjs --profile tdd --pin",
+      "  node scripts/pin-guard-bytes.mjs",
+      "  node scripts/pin-verification-bodies.mjs",
+    ]);
+  });
+
+  it("names only scripts that exist", async () => {
+    const repinSteps = await loadRepinSteps();
+
+    for (const step of repinSteps("tdd").split("\n")) {
+      const script = step.trim().split(" ")[1] ?? "";
+      expect(existsSync(path.join(repoRoot, script)), script).toBe(true);
+    }
   });
 });
 
