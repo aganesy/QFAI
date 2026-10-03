@@ -159,7 +159,7 @@ it("A request no intent was read from is investigated, and finishing it changes 
     closure: closure?.outcome,
   }).toEqual({
     route: ["investigate-question", null],
-    stages: ["investigate", "answer", "close"],
+    stages: ["answer"],
     state: "completed",
     unmet: [],
     closure: "answered",

@@ -42,6 +42,7 @@ Feature: Deliver a clear new feature from one request
     When the run proceeds through its plan
     Then `qfai-run` fetches and submits every work order itself
     And the operator types no stage name after the first prompt
+    And a session that ends before `finish` stops the run with `decision` and says so
 
   # AC-0001-0185-06
   Scenario: finish decides the final gates itself

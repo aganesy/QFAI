@@ -22,6 +22,11 @@
  * reaches it no longer — and a project that installed an earlier set is exactly
  * the one an upgrade is for.
  *
+ * The template's `permissions.allow` entries are merged the same way: the ones
+ * the project lacks are appended after its own, and nothing else under
+ * `permissions` is touched. Claude Code accepts no wildcard for a skill name,
+ * so the template lists each shipped skill.
+ *
  * The groups carry no message text. Each runs a fixed reader over
  * `.agents/rules/reminders.json`, which `qfai init` refreshes wherever the
  * project has not edited it, so a changed message reaches an existing project
@@ -64,6 +69,11 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  * the moment a question forms, and that moment is unpredictable. A session-start
  * reminder is gone by the time the context is compacted, which is exactly when a
  * long session starts skipping it.
+ *
+ * Its program reads the prompt out of the hook's input and stays silent when a
+ * line of it opens with a task-notification or wake-up wrapper. Those turns are
+ * automated rather than typed, and no question to the user forms on them. Any
+ * other input, including none, prints the reminder.
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
@@ -72,18 +82,30 @@ export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminde
  * to `qfai-run`.
  *
  * The host picks a skill from the request's wording, and may pick another one
- * or none. The line at the top of `AGENTS.md` and `CLAUDE.md` is read once and
- * fades as a session grows; this restates it with each message.
+ * or none. The hook is the one place the rule is stated, and it states it with
+ * each message so that it does not fade as a session grows.
  */
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
 /**
+ * Identity of the group that says, on every turn, that qfai is not installed in
+ * this checkout.
+ *
+ * `npx qfai` walks up from the project, so a fresh clone or a nested worktree
+ * with no install of its own resolves the copy a parent directory holds, which
+ * may be an older version, or fetches one. The group's program looks for this
+ * checkout's own launcher, up to its git root and no further, and prints the
+ * remedy only where there is none.
+ */
+export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
+
+/**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
- * It is the one entry whose program decides whether to print: it reads the
- * command out of the hook's own input and stays silent unless the command
- * mentions the forge. The matcher alone would fire on every compound command,
- * which is the reason the writing rule's hook stays off the shell entirely.
+ * Its program decides whether to print: it reads the command out of the hook's
+ * own input and stays silent unless the command mentions the forge. The matcher
+ * alone would fire on every compound command, which is the reason the writing
+ * rule's hook stays off the shell entirely.
  */
 export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
 
@@ -107,8 +129,9 @@ export type ClaudeSettings = Record<string, unknown>;
  * Every hook group an earlier template shipped, as the SHA-256 of
  * `JSON.stringify(group)` read from that template.
  *
- * Those groups carried their message inline, so a project that installed one
- * keeps that release's text for good unless the merge replaces it. A group that
+ * Most of those groups carried their message inline; others ran a program that
+ * has since changed. A project that installed one keeps that release's version
+ * for good unless the merge replaces it. A group that
  * hashes to one of these is text a release wrote and nobody changed, so it takes
  * the template's group of the same identity; any other content under that
  * identity is the project's. A project can skip releases, so every spelling that
@@ -132,6 +155,10 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+  // grilling design artifact, and documentation clarity after a write or edit,
+  // before both skipped the run's own records
+  "3d67d2654ce6fbe4cd060a55598ecd5b0198f06c7b13b8b75ea3462e0fc122ac",
+  "871cd5dc08d66d273b1ce1be9325da13b53999269b5cd72831d5cf8d501c2b72",
   // Codex: every group of the file whose Windows line ran only under `cmd.exe`
   "dba38a95f6008a2371c7a19f965d9e5c5cfedff81b956b9fdc9a5ae60378f0f6",
   "143a27e53eb0cace36d4079b931a48c5e057a44e8aa0c11064f018aa7bd74128",
@@ -141,20 +168,27 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "981058fa84e7c20eb9a72815aa6d132cbd8dbfbbe7e2a99db24a209e0b034723",
   "15d21b0c00535c6f8241a4fbefb670c9d01bbdf15e9b18337d5fc76ed09b8879",
   "b537eee9778a7273ddaffb33513e9202394894ef8e0eecdf7a961d85b8cb7a5c",
+  // minimal implementation after a write or edit, before it skipped the run's own records
+  "cd1490ce2ef9062619617277eb4d684d6b1d934f9b1ed2df2751660d6c72e650",
+  // structured question: the program that read no input, before it skipped automated turns
+  "ace5deb2efa50f5c8dcdfbb595c94073a50a064e7cae46e27a49a1217dbabd0c",
 ]);
 
 export type HookMergeResult =
   /**
-   * The project file gained or refreshed groups. `events` names the hook events
-   * touched, and `edited` the groups left alone because the project changed them.
+   * The project file gained or refreshed groups or permission entries. `events`
+   * names the hook events touched, `permissionsAdded` says whether entries were
+   * appended to `permissions.allow`, and `edited` names the groups left alone
+   * because the project changed them.
    */
   | {
       readonly outcome: "merged";
       readonly settings: ClaudeSettings;
       readonly events: readonly string[];
+      readonly permissionsAdded: boolean;
       readonly edited: readonly string[];
     }
-  /** The project already carries every group the template declares. */
+  /** The project already carries every group and entry the template declares. */
   | { readonly outcome: "already-present"; readonly edited: readonly string[] }
   /** Nothing was changed; `reason` says what could not be read. */
   | { readonly outcome: "unreadable"; readonly reason: string };
@@ -332,11 +366,41 @@ export function mergeDocumentationClarityHooks(
     }
   }
 
-  if (events.length === 0) {
+  const allowed = addAllowedEntries(merged, shippedAllowEntries(templateText));
+  if (typeof allowed === "string") return { outcome: "unreadable", reason: allowed };
+
+  if (events.length === 0 && !allowed) {
     return { outcome: "already-present", edited };
   }
   merged.hooks = mergedHooks;
-  return { outcome: "merged", settings: merged, events, edited };
+  return { outcome: "merged", settings: merged, events, permissionsAdded: allowed, edited };
+}
+
+/** The `permissions.allow` strings the template declares, none when it declares no list. */
+function shippedAllowEntries(templateText: string): readonly string[] {
+  const permissions = parseSettings(templateText)?.permissions;
+  const allow = isRecord(permissions) ? permissions.allow : undefined;
+  return isUnknownArray(allow) ? allow.filter((entry) => typeof entry === "string") : [];
+}
+
+/**
+ * Appends the shipped entries the project lacks to `merged.permissions.allow`.
+ *
+ * The project's own entries keep their order and every other key of
+ * `permissions` is left as it is. Returns whether anything was added, or the
+ * reason the project's value cannot be read, which refuses the whole file the
+ * way an unreadable `hooks` value does.
+ */
+function addAllowedEntries(merged: ClaudeSettings, shipped: readonly string[]): boolean | string {
+  if (shipped.length === 0) return false;
+  const permissions = merged.permissions === undefined ? {} : merged.permissions;
+  if (!isRecord(permissions)) return "`permissions` in the project settings file is not an object";
+  const allow = permissions.allow === undefined ? [] : permissions.allow;
+  if (!isUnknownArray(allow)) return "`permissions.allow` is not an array";
+  const missing = shipped.filter((entry) => !allow.includes(entry));
+  if (missing.length === 0) return false;
+  merged.permissions = { ...permissions, allow: [...allow, ...missing] };
+  return true;
 }
 
 /** The template's groups for one event by identity, or `null` when one has no marker. */

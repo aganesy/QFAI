@@ -82,6 +82,11 @@ export function noReference(value: string): boolean {
   return value.trim() === "" || value.trim() === "—" || value.trim() === "-";
 }
 
+/** Whether an old `Contract-Refs` cell is the literal `-` that lets a rule bind no contract. */
+export function isDashReference(value: string): boolean {
+  return value.trim() === "-";
+}
+
 export function storyExampleFile(context: MigrationContext, mappedId: string): string {
   const match = /^EX-(\d{4})-(\d{4})-\d{2}$/.exec(mappedId);
   if (!match) throw new MigrationInputError(`Invalid mapped example ID: ${mappedId}`);

@@ -90,6 +90,23 @@ describe("story-tree layout dispatch", () => {
     expect(result.issues[0]?.file).toBe(path.join(root, ".qfai", "specs"));
   });
 
+  // QFAI:EX-0001-0051-01
+  it("lists the old files of the configured root and of the former default root together", async () => {
+    for (const dir of [
+      path.join(root, specs, "spec-0001"),
+      path.join(root, ".qfai", "specs", "spec-0002"),
+    ]) {
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, "01_Spec.md"), "# Spec\n", "utf8");
+    }
+
+    const result = await validateProject(root, configured(), { profile: "full" });
+
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.message).toContain("spec-0001");
+    expect(result.issues[0]?.message).toContain("spec-0002");
+  });
+
   // QFAI:AC-0001-0051-06
   // QFAI:EX-0001-0051-07
   it("reports a constraint row whose ID is not its place in its section", async () => {

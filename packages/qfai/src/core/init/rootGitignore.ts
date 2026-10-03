@@ -17,12 +17,14 @@ import path from "node:path";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import {
+  ARTICLE_XI_TMP_SAMPLE_PATH,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
   QFAI_RUN_STATE_IGNORE,
   RETIRED_LINE_SUCCESSORS,
+  effectivelyIgnores,
   negationsOutrankLaterIgnores,
 } from "../gitignore.js";
 import { info } from "../logger.js";
@@ -104,7 +106,17 @@ export async function ensureRootGitignoreEntries(
     ? removeManagedBlock(existing)
     : { stripped: existing, blockAt: -1 };
 
-  const placement = placeManagedBlock(stripped, rebuildManagedBlock(managedBlock), blockAt);
+  const omitted =
+    managedBlock.length === 0 ? linesTheProjectAlreadyHas(gitignoreLines(stripped)) : [];
+  const placement = placeManagedBlock(
+    stripped,
+    rebuildManagedBlock(managedBlock, omitted),
+    blockAt,
+  );
+  const omittedNote =
+    omitted.length > 0
+      ? `  left out of the QFAI entries: ${omitted.join(", ")} (already ignored by the project's own lines)`
+      : undefined;
 
   if (dryRun) {
     report(
@@ -112,6 +124,7 @@ export async function ensureRootGitignoreEntries(
         ? `  would update: .gitignore (rebuild QFAI entries in place)`
         : `  would update: .gitignore (append QFAI entries)`,
     );
+    if (omittedNote !== undefined) report(omittedNote);
     return { copied: [gitignorePath], skipped: [], ...staging };
   }
 
@@ -121,6 +134,7 @@ export async function ensureRootGitignoreEntries(
       ? "  updated: .gitignore (rebuilt QFAI entries in place)"
       : "  updated: .gitignore (appended QFAI entries)",
   );
+  if (omittedNote !== undefined) report(omittedNote);
   // Only the fallback can demote a project negation, and only against a project
   // ignore line that re-ignores a governance record. Naming the loser is the
   // least that move owes an operator: the file the negation re-included
@@ -431,6 +445,21 @@ function demotedProjectNegations(before: string, after: string): string[] {
 }
 
 /**
+ * The Article XI `/tmp/` line, when the project's own lines outside the block
+ * already ignore the repository-root staging area.
+ *
+ * Two owners of one line leave the next edit ambiguous: which one is removed?
+ * The question is what git does with the staging area, so a project's
+ * unanchored `tmp/` counts and a later `!/tmp/` does not. A line with leading
+ * whitespace is a different pattern in git, so it never counts. Every other
+ * line of the block stays, because the contract names them as the block's.
+ */
+function linesTheProjectAlreadyHas(projectLines: readonly string[]): string[] {
+  const significant = projectLines.filter((line) => !/^\s/.test(line));
+  return effectivelyIgnores(significant, ARTICLE_XI_TMP_SAMPLE_PATH) ? ["/tmp/"] : [];
+}
+
+/**
  * The managed block to write, preserving whatever ignore lines the project's
  * existing block already had.
  *
@@ -444,11 +473,14 @@ function demotedProjectNegations(before: string, after: string): string[] {
  *
  * So an existing block keeps its own ignore lines and only gains the governance
  * negations it is missing (appended last, because git applies the last matching
- * pattern). A project with no managed block still gets the full canonical one.
+ * pattern). A project with no managed block gets the canonical one, less the
+ * lines named in `omit`.
  */
-function rebuildManagedBlock(existingBlock: string): string {
+function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): string {
   if (existingBlock.length === 0) {
-    return QFAI_GITIGNORE_BLOCK;
+    return QFAI_GITIGNORE_BLOCK.split("\n")
+      .filter((line) => !omit.includes(line))
+      .join("\n");
   }
   const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
   const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
