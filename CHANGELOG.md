@@ -34,6 +34,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each gain one check for these. Test coverage for every source change is still
   required.
 
+- **The research-first protocol governs quotation and name lookups** (#2245).
+  - A `best_practices` or `anti_patterns` description is written in the
+    analyst's own words. A phrase kept from the source is put in ordinary
+    quotation marks. One worked example shows the source, the entry and why it
+    is correct.
+  - Where a query centers on a name, the name is searched as written, even
+    when it is recognized. What the search found is recorded in the summary's
+    `sources` like any other source, so a verified name can be told from one
+    answered from memory.
+  - The `web-research` skill points to both rules in the protocol.
+
 - **Assistant instructions state obligations without capitalised emphasis**
   (#2240). Phrases read by validators, gates or tests remain; other obligations
   use plain wording. A phrase allowlist guards the shipped assistant tree and
@@ -128,6 +139,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   progress-report and completion-report sections and points to that article.
 
 ### Fixed
+
+- **`qfai workflow` keeps each stage result it records under the run's
+  `results/`** (#2348). Complete JSON is stored before its journal event.
+  New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
+  case-distinct IDs and Windows device names keep separate receipts.
+  Earlier recorded paths remain readable. The tracked `summary.json` lists
+  each accepted result's digest before the stage's report-copy digests.
 
 - **Journal directory read errors retain their original cause** (#2841).
   Missing directories still identify a legacy run. Busy or denied reads reach
