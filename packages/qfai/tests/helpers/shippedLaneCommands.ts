@@ -1526,7 +1526,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
   // one message key, no shell and no network. Events, matchers and markers are unchanged; the
   // previous group is listed as superseded so the merge refreshes it.
-  [".claude/settings.json", "d3c9b6f5b4d4adde281fe0c36dec12dc1673eb8f07d06c4c854a0ce5ffa2897c"],
+  //
+  // Re-pinned when the write-time reminders stopped skipping `.qfai/run/`, which nothing writes
+  // now: the three groups read only the message file again, and their skipping spellings are
+  // listed as superseded.
+  [".claude/settings.json", "85902b08198a2c919dc4a6e5d28ffa4ad9301c319a25804efcc7859f00a8afa5"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
