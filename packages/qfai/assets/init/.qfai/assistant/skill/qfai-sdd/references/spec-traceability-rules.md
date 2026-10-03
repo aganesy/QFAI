@@ -2,6 +2,18 @@
 
 The story tree makes business intent concrete before a rule is attached to an enforcing contract. The required chain is BF → US → AC → EX ← BR. A policy, index, or decision row cites an ID; it does not declare a second copy of the item.
 
+## Contents
+
+- Layout and ownership
+- Document shapes
+- Architecture
+- Identifier scopes
+- Edge rules
+- Contract forms and index
+- Test-layer handoff
+- Decision provenance and drift
+- Gate
+
 ## Layout and ownership
 
 - <paths.specsDir>/01_policy/ owns objective, initiative, principles, constraints, and glossary.
@@ -109,13 +121,9 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 Triage, change requests, retired stories, and rejected options are rows of decisions.md. Open questions are rows of open-questions.md. Both tables have ID, Content, Approach, Status, and only Status changes after append. The change request's Content begins Change request: and names its allowed paths or IDs. A rejected option remains REJECTED unless a later decision explicitly reopens it.
 
-<<<<<<< HEAD
-Use .qfai/assistant/rule/change-classification.md for Primary and Tags and the requirements decomposition reference for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
-=======
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 
-Use .qfai/assistant/rule/change-classification.md for Primary and Tags and references/requirements-decomposition.md for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
->>>>>>> origin/main
+Use .qfai/assistant/rule/change-classification.md for Primary and Tags and the requirements decomposition reference for turning source requirements into concrete outcomes. Apply .qfai/assistant/rule/drift-protocol.md before accepting a direction that conflicts with a previous decision. Do not silently promote discussion material into a governing spec.
 
 ## Gate
 

@@ -4,8 +4,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-## [2.0.2] - 2026-10-03
-
 ### Added
 
 - **AI-readable Markdown has a shipped size and reference rule** (#2246).
@@ -13,6 +11,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Skill sections load conditionally, entries name each reference directly, and
   long references list their contents. `qfai doctor` uses the 500-line ceiling
   for Markdown and keeps YAML at 800 lines.
+
+## [2.0.2] - 2026-10-03
+
+### Added
 
 - **A rule that classifies an action by how hard it is to undo** (#2232).
   `action-reversibility.md` sorts an action into four classes before it runs:

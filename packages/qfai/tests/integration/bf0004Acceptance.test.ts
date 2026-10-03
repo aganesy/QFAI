@@ -2636,7 +2636,14 @@ describe("BF-0004 acceptance criteria", () => {
       ),
       "utf8",
     );
-    const prose = guide.replace(/\s+/g, " ");
+    const placement = await readFile(
+      path.join(
+        packageRoot,
+        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/story-tree-placement.md",
+      ),
+      "utf8",
+    );
+    const prose = `${guide}\n${placement}`.replace(/\s+/g, " ");
     const sentences = prose.split(/(?<=[.!?]) (?=[A-Z`*|-])/);
     const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
       sentences.some((sentence) =>
@@ -2699,7 +2706,14 @@ describe("BF-0004 acceptance criteria", () => {
       ),
       "utf8",
     );
-    const sentences = sentencesOf(guide);
+    const placement = await readFile(
+      path.join(
+        packageRoot,
+        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/story-tree-placement.md",
+      ),
+      "utf8",
+    );
+    const sentences = sentencesOf(`${guide}\n${placement}`);
     const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
       sentences.some((sentence) =>
         parts.every((part) =>

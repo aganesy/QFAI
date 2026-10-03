@@ -26,8 +26,12 @@ for every user question. With `--auto`, they MUST ask nothing and record
 explicit assumptions in the migration report.
 
 Read `references/migration-guide.md` before changing the project; it holds each
-step, what it writes and what it leaves for a person. Run this
-skill from the project root, where `qfai.config.yaml` and a locally installed
+step, what it writes and what it leaves for a person. Read
+`references/story-tree-placement.md` before planning a 1.x migration or running
+steps 1 to 7, and when resolving placement, configuration or contract items in
+their reports. It holds the plan format and the rules for placing old content.
+An already migrated project that only updates the entry does not need it.
+Run this skill from the project root, where `qfai.config.yaml` and a locally installed
 `qfai` package are available. The twelve scripts use the installed package.
 They do not add a `qfai` subcommand or make network calls.
 
@@ -84,8 +88,8 @@ keep authors separate from reviewers.
    each old business rule's destination contract. Name that contract by its
    current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
    contracts directory: step 3 gives every contract a new ID and file name,
-   and later steps find it from that path. Use the format in the guide. The plan
-   may be written before step 1, from the old contract paths.
+   and later steps find it from that path. Use the format in the placement
+   reference. The plan may be written before step 1, from the old contract paths.
 2. Before step 1, have the person copy `.qfai/`, git-ignored files included:
    step 1 is the first write. Run steps 1 to 3 in order. A dry run of a step
    refuses until the earlier steps ran, so each step's dry run follows the real
@@ -116,8 +120,8 @@ keep authors separate from reviewers.
 5. Resolve every reported item with the person responsible for the content.
    Preserve any item the scripts could not place. Before step 4 writes
    `id-map.json`, settle an example that cites several criteria and a rule that
-   binds no contract through the plan keys the guide names. After it, do not
-   change `plan.yaml` to move a mapped item. Place remaining content in the new
+   binds no contract through the plan keys the placement reference names. After
+   it, do not change `plan.yaml` to move a mapped item. Place remaining content in the new
    tree through `/qfai-sdd`, and finish each listed item as the guide's
    "Resolve the reports" section says.
 6. After step 10, run steps 11 and 12 in order, each with `--dry-run` followed

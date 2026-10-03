@@ -52,6 +52,11 @@ states.
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
   states.
 
+Read `references/spec-traceability-rules.md` before creating or reviewing a
+story, contract or architecture. It defines the tree, identifier scopes,
+reference direction and layer dependencies. Skip it when the task only
+records a triage result and changes none of those artifacts.
+
 ## Steps
 
 Run the steps in this order, as
