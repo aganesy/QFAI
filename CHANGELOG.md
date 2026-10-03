@@ -62,14 +62,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The migration guide gives the 2.x location of each of the thirteen paths, and
   `SKILL.md` has the AI reword each listed line with the person who wrote the
   file. Fixes #2726.
-- **Each `qfai-migration-v1-to-v2` step keeps the report of every run.** A run
-  writes `.qfai/evidence/migration-spec-to-story/report/dry-run/step-NN-NNN.md`
-  or `.../report/run/step-NN-NNN.md`: what it printed on standard output, then
-  on standard error, then a last line `Exit code: N`. `NNN` counts the step's
-  files and is never reused. A refusal (exit 2) keeps its report too, once the
-  arguments are valid and `qfai.config.yaml` is found. Git does not track the
-  directory, and no step reads it. The skill's `SKILL.md` and migration guide
-  now say to read the reports from there.
+- **`qfai-migration-v1-to-v2` keeps no archive and writes nothing under
+  `.qfai/evidence/`.** A 1.x file with no destination is deleted and listed
+  under `## Operations`, an untracked file and an uncommitted edit included;
+  only what git history holds can be recovered, and the skill says so before
+  the first real run. Step 11 replaces a customised shipped skill or step. The
+  plan, the ID map and the contract map are under `tmp/qfai-migration/`, and
+  each step prints its report and writes it to no file. Step 10 only resets the
+  managed `.gitignore` block.
 - **`plan.yaml` can settle what step 4 leaves behind.** An optional `examples`
   list places an old example under one criterion its test-case rows name, and
   its test cases then reach the ID map, so step 8 rewrites their annotations. A
@@ -270,11 +270,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Step 3 writes no `routing:` override for an unmodified 1.x manifest entry
-  (#2714).** An `agent-routing.yml` entry equal to an entry a 1.x release
-  shipped is no longer copied into `qfai.config.yaml`, where it hid the roles
-  the 2.x skills declare. Each entry step 3 does write is listed under
-  `## For a person` with a warning to that effect.
+- **Step 3 lists every `routing:` override it writes (#2714).** An
+  `agent-routing.yml` entry copied into `qfai.config.yaml` hides the roles the
+  2.x skills declare. Step 3 keeps every entry that differs from the installed
+  default, including an unmodified entry an earlier 1.x release shipped, and
+  lists each under `## For a person` with a warning to that effect, so a person
+  removes the ones nobody customised.
 - **Step 8 keeps a test-case annotation in an E2E file and lists it (#2720).**
   It rewrote the annotation to an example annotation, which `QFAI-STORY-007`
   rejects there. The item names the file, line, annotation and example, and the

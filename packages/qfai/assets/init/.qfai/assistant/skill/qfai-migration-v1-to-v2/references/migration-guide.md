@@ -7,12 +7,15 @@ the 2.x validation and authoring workflow.
 
 ## Prepare
 
-1. Save the current project state in version control. Inspect custom
-   `paths.specsDir` and `paths.contractsDir` in `qfai.config.yaml`; the scripts
-   honor configured paths and may write there even when outside `.qfai/`.
-   Copy `.qfai/` with its git-ignored files (discussion packs, reports, review
-   packs and evidence) to a place outside the repository before step 1, because
-   version control does not hold them.
+1. Commit the current project state. The migration deletes every 1.x file
+   that has no destination, an untracked file and an uncommitted edit included,
+   and replaces every shipped skill the project customised. Only what git
+   history holds can be recovered, so commit or copy anything you need first.
+   Copy `.qfai/` with its git-ignored files to a place outside the repository
+   before step 1, because version control does not hold them.
+   Inspect custom `paths.specsDir` and `paths.contractsDir` in
+   `qfai.config.yaml`; the scripts honor configured paths and may write there
+   even when outside `.qfai/`.
 2. Install a QFAI 2.x release as a local project dependency with the project's
    package manager. A copy available only through `npx` is insufficient.
    Each checkout and each git worktree needs its own install before `npx qfai` resolves 2.x.
@@ -28,17 +31,9 @@ the 2.x validation and authoring workflow.
 Do not run `npx qfai init --force` to migrate. It can write beyond the migration
 scripts' allowed paths and replace local edits.
 
-The first `npx qfai init` records the workflows it installs in
-`.qfai/install-provenance.json`, so delete a shipped workflow the project does
-not want after that run and commit the record, and later `npx qfai init` runs
-leave it deleted. A workflow already in the 1.x tree has no record, because
-`init` records only the files it writes. To keep such a workflow deleted, delete
-it before that run, let `init` write it and record it, then delete it again and
-commit the record.
-
 ## Place stories and rules
 
-The AI writes `.qfai/evidence/migration-spec-to-story/plan.yaml` before running
+The AI writes `tmp/qfai-migration/plan.yaml` before running
 step 4. `plan.yaml` may be written before step 1, because only steps 4 and 7
 read it and a contract is named by the path it has in the contracts directory
 before step 3, which is also a key of `contract-map.json` once step 3 has run.
@@ -102,7 +97,7 @@ none of the citing test cases names, a rule with none or more than one of
 `contract`, `binds` and `retire`, or a contract path that is outside the four
 contract directories or names no contract stops step 4 before writing. Check
 the step-4 dry run before accepting its numbering. Step 4 writes
-`.qfai/evidence/migration-spec-to-story/id-map.json` once, and later steps use
+`tmp/qfai-migration/id-map.json` once, and later steps use
 that map. Write the `examples` entries and the rule marks before step 4: once
 the map exists, an `examples` entry and a mark on a rule the map holds are
 refused. A mark on a rule step 4 left unplaced is still accepted while a spec
@@ -161,7 +156,7 @@ the file to match:
   line.
 - `contracts.md` becomes one index table listing every contract. The old
   index's other sections are reported for a person.
-- `.qfai/evidence/migration-spec-to-story/contract-map.json` records each old
+- `tmp/qfai-migration/contract-map.json` records each old
   path and old ID with the new ones, and step 4 copies it into the ID map.
 - Step 7 writes the new IDs into rule statements, and step 8 changes a
   `QFAI:CON-API-0001` test annotation to `QFAI:API-0002`.
@@ -174,10 +169,9 @@ into the new tree:
 | A Markdown file under `api/`, `db/` or `ui/` | Those directories hold OpenAPI YAML or JSON, SQL and UI YAML contracts                                  |
 | Any file under `design/`                     | The directory no longer exists: the brand belongs in the root `DESIGN.md`, a screen in a `ui/` contract |
 
-Step 3 moves each one to
-`.qfai/evidence/migration-spec-to-story/retired/contract/` under its old path,
-`design/` as one directory, and lists each file under `## For a person` with
-its archived copy. Rewrite what the file states in the form its row names.
+Step 3 deletes each one, `design/` as one directory, and lists each file under
+`## For a person`. Rewrite what the file stated, from git history, in the form
+its row names.
 
 The old `design/prototype-handoff.yaml` is now
 `.qfai/prototype/final/handoff.json`, which `/qfai-prototyping` writes when
@@ -238,8 +232,9 @@ Content that does not fit that shape is listed under `## For a person`, and the
 step exits 3:
 
 - Step 3 leaves it out of the policy file, `tech.md` or CLI contract, and names the source
-  file, its archived copy and, where one fits, the template section that takes
-  the content once a person rewrites it.
+  file and, where one fits, the template section that takes the content once a
+  person rewrites it. The source file is deleted, so the content is read from
+  git history.
 - Step 3 also leaves as it is a policy file or `tech.md` that already exists
   and differs from what it would write.
 - A constraint row keeps only its ID, Constraint and Rationale. Step 3 lists
@@ -254,8 +249,8 @@ step exits 3:
   exception paths.
 
 The steps do not write these into the new tree. Each stays in its old spec-pack
-file, which stays in the pack while any of its content is unplaced and then
-moves to `.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`:
+file, which stays in the pack while any of its content is unplaced and is then
+deleted, kept in git history only:
 
 - a spec pack's scope and source provenance;
 - a story block's `Parent`, `Source` and `Flow` fields;
@@ -271,7 +266,7 @@ section by section:
 | An entrypoint with a smoke or skeleton command                                                                                             | A `- Skeleton:` line in `tech.md`'s Standard commands |
 | A layer row of an `## Architecture` or `## Architecture constraints` table of Layer, Responsibility and Depends on columns, naming no path | The `## Architecture` table of `tech.md`              |
 | The `ui_paths:` globs of `## UI surface paths`                                                                                             | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
-| Anything else                                                                                                                              | `## For a person`, with the archived copy             |
+| Anything else                                                                                                                              | `## For a person`                                     |
 
 Step 3 writes the moved layers in the shape of the Architecture section: a
 `flowchart TD` with a node per layer and an edge per dependency, then the table
@@ -289,8 +284,7 @@ and a `## Business rules` table, and nothing else.
 - Where the old contract has none, the section holds the template's placeholder,
   and the contract is listed for a person to write it.
 - The text before the first section, lines such as `Status:` or `Rule refs:`,
-  and every other section are left out. Each is listed with the old file and
-  its copy under `.qfai/evidence/migration-spec-to-story/retired/contract/`.
+  and every other section are left out. Each is listed with the old file.
 
 Step 7 then writes the contract's rules into that table. A rule whose statement
 names another rule is written and listed for a person, because a CLI contract's
@@ -304,27 +298,23 @@ the earlier steps ran, so run the steps one after another, each dry run before
 its real run. Step 1 is the first write and the point of no return for the
 layout. Step 3 is the point of no return for the contract names.
 
-Every run keeps its report in a file under
-`.qfai/evidence/migration-spec-to-story/report/`: `dry-run/step-NN-NNN.md` for a
-dry run and `run/step-NN-NNN.md` for a real run. `NN` is the step number and
-`NNN` counts the step's files in that directory from `001`. The file holds what
-the run printed on standard output, then on standard error, and ends with the
-line `Exit code: N`. Read every report from that directory. No step reads them.
+Each step prints its report and writes it to no file. Read the report of every
+run, and its exit code.
 
-| Step | Script                       | Purpose                                                                                                 |
-| ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1    | `01-rename-directories.mjs`  | Move old owned directories entry by entry; move a colliding entry into the migration `legacy/` archive. |
-| 2    | `02-merge-tables.mjs`        | Merge decisions, questions, triage and change records.                                                  |
-| 3    | `03-move-catalog.mjs`        | Move policy and assistant content, number and rename the contracts, and keep project overrides.         |
-| 4    | `04-renumber-ids.mjs`        | Write the flow and story tree, archive old plans and test lists, and write the ID map.                  |
-| 5    | `05-cases-to-examples.mjs`   | Turn old cases with no example into examples.                                                           |
-| 6    | `06-derive-ac-refs.mjs`      | Give each example one criterion reference where the cases establish it.                                 |
-| 7    | `07-rules-to-contracts.mjs`  | Put rules into the contracts named by the plan.                                                         |
-| 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                           |
-| 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
-| 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git: the managed block, its re-include lines and the git index.           |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, `.gitignore` lines and hooks.                    |
-| 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project; list 1.x paths in it.  |
+| Step | Script                       | Purpose                                                                                             |
+| ---- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1    | `01-rename-directories.mjs`  | Move old owned directories entry by entry; delete an entry whose destination exists.                |
+| 2    | `02-merge-tables.mjs`        | Merge decisions, questions, triage and change records.                                              |
+| 3    | `03-move-catalog.mjs`        | Move policy and assistant content, number and rename the contracts, and keep project overrides.     |
+| 4    | `04-renumber-ids.mjs`        | Write the flow and story tree, delete old plans and test lists, and write the ID map.               |
+| 5    | `05-cases-to-examples.mjs`   | Turn old cases with no example into examples.                                                       |
+| 6    | `06-derive-ac-refs.mjs`      | Give each example one criterion reference where the cases establish it.                             |
+| 7    | `07-rules-to-contracts.mjs`  | Put rules into the contracts named by the plan, and delete each spec pack once all of it is placed. |
+| 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                       |
+| 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                 |
+| 10   | `10-update-gitignore.mjs`    | Reset the managed `.gitignore` block.                                                               |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host skill links, `.gitignore` lines and hooks.                |
+| 12   | `12-check-entry.mjs`         | Check, without writing, what a shipped plan needs of the project; list 1.x paths in it.             |
 
 Run a row from the project root in this form:
 
@@ -338,13 +328,13 @@ script. Keep it with the twelve numbered scripts.
 
 The same steps serve two runs:
 
-| Project                                    | What the steps do                                                                                                                                     |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks                                |
-| Migrated already by an earlier 2.x release | Steps 1 to 10 each change nothing and add a line saying the migration is already done; step 11 adds only what that release lacked, the hooks among it |
+| Project                                    | What the steps do                                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks   |
+| Migrated already by an earlier 2.x release | Steps 1 to 10 each find no 1.x layout and change nothing; step 11 adds only what that release lacked, the hooks among it |
 
 Steps 1 to 10 each print one line before their report, in a dry run and a real
-run, and the report file keeps it. The line says what the step found:
+run. The line says what the step found:
 
 | First line                                                      | What it means                                                                               |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -353,8 +343,8 @@ run, and the report file keeps it. The line says what the step found:
 | `already migrated (id-map.json present)`                        | An earlier run migrated the project and no step has anything left to do.                    |
 
 The traces are an ID map, a source of step 1's renames, a spec pack or
-`_policies/` directory in the specs directory, staging the step has to clear and
-a retired key in `qfai.config.yaml`. `<specsDir>` is the specs directory the
+`_policies/` directory in the specs directory, and a retired key in
+`qfai.config.yaml`. `<specsDir>` is the specs directory the
 configuration names and `<value>` is the configured `paths.specsDir`, each
 written from the project root with `/` and never as an absolute path.
 
@@ -372,7 +362,7 @@ After upgrading a project the second row describes:
 2. Run step 11 of the installed skill, `--dry-run` first:
    `node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/11-install-entry.mjs`.
    The script runs the upgraded package, so it brings every shipped skill,
-   this one included, to this release and archives a copy the project edited.
+   this one included, to this release and replaces a copy the project edited.
 3. Run the skill again from the start. Report that only the files step 11
    listed changed.
 
@@ -381,47 +371,38 @@ After upgrading a project the second row describes:
 The dry run lists the operations the real run would perform. No step makes a
 network call. The scripts write only these targets:
 
-| Target                                                                                                                                                      | Steps                                |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `.qfai/` and configured spec and contract paths outside it                                                                                                  | 1–7                                  |
-| `qfai.config.yaml`                                                                                                                                          | 1, 3                                 |
-| `QFAI:` annotation lines in test files                                                                                                                      | 8                                    |
-| `.claude/skills`, `.agents/skills`, `.codex/skills`, `.github/skills`, `.claude/agents`, `.github/agents`                                                   | 9; 11 for the four skill directories |
-| Managed block of `.gitignore`                                                                                                                               | 10, 11                               |
-| A `.gitignore` line outside the managed block that re-includes `.qfai/evidence/`, removed                                                                   | 10                                   |
-| `.qfai/evidence/.gitignore`, deleted                                                                                                                        | 10                                   |
-| Git index entries under `.qfai/evidence/`, removed; the files stay on disk                                                                                  | 10                                   |
-| Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
-| `.claude/settings.json` and `.codex/hooks.json`, only to add the reminder hooks                                                                             | 11                                   |
-| `.agents/rules/reminders.json` and its entry in `.agents/rules/.qfai-rules.lock.json`, with a staging file beside it                                        | 11                                   |
-| A report file of each run, under `.qfai/evidence/migration-spec-to-story/report/`                                                                           | 1–12                                 |
-| Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10, 11                          |
+| Target                                                                                                    | Steps                                |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `.qfai/` and configured spec and contract paths outside it                                                | 1–7                                  |
+| `qfai.config.yaml`                                                                                        | 1, 3                                 |
+| `QFAI:` annotation lines in test files                                                                    | 8                                    |
+| `.claude/skills`, `.agents/skills`, `.codex/skills`, `.github/skills`, `.claude/agents`, `.github/agents` | 9; 11 for the four skill directories |
+| Managed block of `.gitignore`                                                                             | 10, 11                               |
+| `tmp/qfai-migration/contract-map.json` and `tmp/qfai-migration/id-map.json`                               | 3, 4                                 |
+| Shipped skill and step directories under `.qfai/assistant/skill/` and `.qfai/assistant/step/`             | 11                                   |
+| `.claude/settings.json` and `.codex/hooks.json`, only to add the reminder hooks                           | 11                                   |
+| `.agents/rules/reminders.json`                                                                            | 11                                   |
 
-The scripts verify ownership before clearing staging left by an interrupted
-run. If a marker is incomplete or the staged bytes changed, they preserve it
-for a person to inspect.
-
-Step 12 writes only its report file.
+No step writes under `.qfai/evidence/`. Step 12 writes nothing.
 
 Every report contains `## Operations`, after the first line of steps 1 to 10.
 Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
-`## Annotations kept`; step 10 contains `## Git index`; step 11 contains
-`## Reminder hooks`; step 12 contains `## Files scanned`. Empty sections say
+`## Annotations kept`; step 11 contains `## Reminder hooks`; step 12 contains
+`## Files scanned`. Empty sections say
 `none`. Exit 0 means the step is
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
-completed step is safe to run again and changes no file but its report file.
+completed step is safe to run again and changes no file.
 When every one of steps 1 to 10 prints
 `no 1.x layout found under <specsDir> (paths.specsDir=<value>)` first on a
 project already using the story tree, report that there is nothing to migrate
 in the directory that line names and ask the person to check that the specs
 live there. Run steps 11 and 12 all the same.
 
-Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
-is archived under `retired/_policies/` and none of its sections was copied to
-`principle.md`. Current triage operations and ID allocation are in the shipped
+Immediately after step 3, confirm the old `_policies/11_Slice-Policy.md` is
+deleted and none of its sections was copied to `principle.md`. Current triage operations and ID allocation are in the shipped
 `qfai-sdd/references/sdd-triage.md`. Read `objective.md`, `initiative.md`, `principle.md`
 and `tech.md`. Remove facts repeated in different words. The
 scripts remove byte-identical repeats; a person must judge paraphrases. Quality
@@ -431,9 +412,8 @@ step 3 writes in its template's shape. Replace each `<...>` placeholder the old
 
 ## Resolve the reports
 
-Keep all files moved to `.qfai/evidence/migration-spec-to-story/legacy/` or
-`retired/` until their content is accounted for. Nothing is silently discarded.
-Resolve each `## For a person` row using its file path and reason. Common cases
+Every deletion is listed under `## Operations`, and every item a step could not
+settle under `## For a person`. Resolve each `## For a person` row using its file path and reason. Common cases
 include a story without a flow, a rule without an enforcing contract, an example
 without exactly one criterion, an unresolved annotation, an applicable
 non-functional requirement, a catalog overlay without a matching rule, and
@@ -444,14 +424,12 @@ under `## Cases to examples` or `## For a person`; check that none is missing.
 Finish each kind of item that a step leaves as follows:
 
 - **A step 5 item.** Place the case in the story tree through `/qfai-sdd`, then
-  remove its row from `retired/<spec-id>/06_Test-Cases.md`, which lies under
-  `.qfai/evidence/migration-spec-to-story/`. Step 5 stops listing it.
+  remove its row from the pack's `06_Test-Cases.md`. Step 5 stops listing it.
 - **A leftover pack file.** A story, rule or example that a step could not place
-  keeps its old file in the spec directory. Place the item in the story tree
-  through `/qfai-sdd` and leave the pack file untouched; delete the pack file
-  once nothing in it is unplaced, because the archived original stays under
-  `retired/<spec-id>/`. Steps 4 and 7 refuse a pack file that was edited, so do
-  not remove single rows from it.
+  keeps its old file in the spec directory, and step 7 deletes the pack only once
+  all of it is placed. Place the item in the story tree through `/qfai-sdd`, and
+  delete the pack's files once nothing in them is unplaced; git history keeps
+  them.
 - **An example that cites several criteria, or a rule with no contract.** Settle
   it before step 4 with an `examples` entry, or a rule mark, in `plan.yaml`. After
   step 4, place it through `/qfai-sdd` as above; a rule mark is the exception
@@ -466,7 +444,7 @@ Finish each kind of item that a step leaves as follows:
   `02_Acceptance-Criteria.md` for it. Where a story with no criterion shared
   one with another story, write its criterion through `/qfai-sdd`.
 - **An unfinished test of the old ledger.** A `todo`, `blocked` or `red` row of
-  the old ledger leaves with the archived ledger, and no step reads it. Its
+  the old ledger is deleted with the ledger, and no step reads it. Its
   example has no test, and `npx qfai validate` lists it as `QFAI-STORY-006`.
   The same holds for a criterion that lost its integration or API annotation
   when step 8 rewrote the old annotations to the example level. Finish each
@@ -507,29 +485,15 @@ old user-story annotation to a business-flow annotation only in an E2E test.
 Unresolved annotations and old deferral markers stay in place and are
 reported. Step 9 changes only the host integration links.
 
-Step 10 keeps `.qfai/evidence/` out of git:
-
-- it makes the managed `.gitignore` block equal the installed package's block;
-- it removes every `.gitignore` line that re-includes `.qfai/evidence` or a
-  path under it, and lists each one under `## Operations`. `!.qfai/`,
-  `!.qfai/install-provenance.json` and the `!.qfai/assistant` lines stay;
-- it deletes `.qfai/evidence/.gitignore`, and reports that path for a person
-  when it is not a regular file;
-- it removes every git index entry under `.qfai/evidence/`, as
-  `git rm -r --cached .qfai/evidence` would. The files stay on disk and nothing
-  is committed: commit the staged removals with the rest of the migration.
-
-`## Git index` says how many paths left the index, or why none did: the
-project is not a git repository, or its index tracks nothing there.
+Step 10 makes the managed `.gitignore` block equal the installed package's
+block, and leaves every line outside it as it is.
 
 ## Install and check the free-text entry
 
-Step 11 makes each skill directory the package ships equal to the installed
-package's copy. A copy the project changed is first moved whole to
-`.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/`; nothing is
-deleted. Where that archive already holds a different copy, both stay as they
-are and the pair is reported for a person: keep the copy you need, delete the
-other, and run step 11 again. A skill the package does not ship and
+Step 11 makes each skill and step directory the package ships equal to the
+installed package's copy. A copy the project changed is replaced, an untracked
+file and an uncommitted edit included, and the replacement is listed under
+`## Operations`. A skill the package does not ship and
 `.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
 host skill link and the `.qfai/run/` line of the managed `.gitignore` block. A
 path it cannot write is reported with the reason. It leaves `AGENTS.md` and
@@ -548,27 +512,25 @@ When it writes `.codex/hooks.json`, `## Reminder hooks` says that Codex runs
 those hooks only after you review and trust them with `/hooks`.
 
 The hooks print their text from `.agents/rules/reminders.json`. Step 11 brings
-that file to this release the way `npx qfai init` brings a rule master, through
-its entry in `.agents/rules/.qfai-rules.lock.json`: a copy nobody edited is
-replaced, a missing one is written, and an edited one is kept and named under
+that file to this release as `npx qfai init --force` brings a rule master: it is
+replaced with the shipped text, or written where it is missing, and named under
 `## Reminder hooks`. Run the step rather than editing these files by hand.
 
-Step 12 makes the checks `npx qfai workflow start` makes on the project,
-without starting a run, checks what step 11 installs, and lists the project
-files that still name a 1.x path. Each failed check is reported by name:
+Step 12 makes the checks a shipped plan needs of the project, checks what step
+11 installs, and lists the project files that still name a 1.x path. Each failed
+check is reported by name:
 
-| Check                 | Fails when                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------ |
-| `contract-undeclared` | A step a built-in plan runs is not installed under `.qfai/assistant/step/`                       |
-| `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
-| `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
-| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`, or a line re-includes `.qfai/evidence/`       |
-| `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
-| `evidence-tracked`    | Git tracks a path under `.qfai/evidence/`                                                        |
-| `old-path`            | A line of a tracked project file names a 1.x path                                                |
+| Check              | Fails when                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `plan-invalid`     | A step a built-in plan runs is not installed under `.qfai/assistant/step/`                       |
+| `reviewer-missing` | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
+| `invalid-mode`     | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
+| `gitignore`        | The managed `.gitignore` block differs from the one the installed package writes                 |
+| `qfai-run-link`    | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
+| `old-path`         | A line of a tracked project file names a 1.x path                                                |
 
-Run step 11 again for what it installs, and step 10 again for an evidence
-re-include line or a tracked evidence path. A routing override belongs to the
+Run step 11 again for what it installs, and step 10 again for a `gitignore`
+item. A routing override belongs to the
 project, so its owner decides whether to restore the reviewer. Rerun step 12
 until it exits 0.
 
@@ -588,25 +550,23 @@ binary file or a file git does not track. A skill kept in
 `.qfai/assistant/skill.local/` lies under `.qfai/`, so check it by hand against
 this table:
 
-| 1.x path                                                    | Where its content is now                                                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.qfai/specs`                                               | `.qfai/spec`                                                                                                                                                                                                                                                                                                                                                                                    |
-| `.qfai/contracts`                                           | `.qfai/spec/03_contract`                                                                                                                                                                                                                                                                                                                                                                        |
-| `.qfai/prototypes`                                          | `.qfai/prototype`                                                                                                                                                                                                                                                                                                                                                                               |
-| `.qfai/assistant/skills` and `.qfai/assistant/skills.local` | `.qfai/assistant/skill` and `.qfai/assistant/skill.local`                                                                                                                                                                                                                                                                                                                                       |
-| `.qfai/assistant/agents`                                    | `.qfai/assistant/agent`                                                                                                                                                                                                                                                                                                                                                                         |
-| `.qfai/assistant/prompts`                                   | `.qfai/assistant/prompt`                                                                                                                                                                                                                                                                                                                                                                        |
-| `.qfai/evidence/decisions`                                  | `.qfai/evidence/decision`                                                                                                                                                                                                                                                                                                                                                                       |
-| `.qfai/report/specs-coverage`                               | `.qfai/report/spec-coverage`                                                                                                                                                                                                                                                                                                                                                                    |
-| `_policies/`                                                | `.qfai/spec/01_policy/`: `01_Objective.md` is `objective.md`, `02_Initiative.md` is `initiative.md`, `06_Glossary.md` is `glossary.md` and `07_Constraints.md` is `constraint.md`; `.qfai/spec/03_contract/contracts.md` (`05_Contracts.md`); `.qfai/spec/02_business-flow/` (`04_Business-Flow.md`); `03_Capabilities.md` stays in `.qfai/evidence/migration-spec-to-story/retired/_policies/` |
-| `spec-NNNN`                                                 | The `business-flow-NNNN/` and `user-story-NNNN-NNNN/` directories of `.qfai/spec/02_business-flow/`; `.qfai/evidence/migration-spec-to-story/id-map.json` pairs each old ID with its new one                                                                                                                                                                                                    |
-| `01_Spec.md`                                                | The copy kept under `.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`                                                                                                                                                                                                                                                                                                                 |
-| `assistant/steering`                                        | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                                                             |
-| `assistant/instructions`                                    | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                                                             |
+| 1.x path                                                    | Where its content is now                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.qfai/specs`                                               | `.qfai/spec`                                                                                                                                                                                                                                                                                                                                        |
+| `.qfai/contracts`                                           | `.qfai/spec/03_contract`                                                                                                                                                                                                                                                                                                                            |
+| `.qfai/prototypes`                                          | `.qfai/prototype`                                                                                                                                                                                                                                                                                                                                   |
+| `.qfai/assistant/skills` and `.qfai/assistant/skills.local` | `.qfai/assistant/skill` and `.qfai/assistant/skill.local`                                                                                                                                                                                                                                                                                           |
+| `.qfai/assistant/agents`                                    | `.qfai/assistant/agent`                                                                                                                                                                                                                                                                                                                             |
+| `.qfai/assistant/prompts`                                   | `.qfai/assistant/prompt`                                                                                                                                                                                                                                                                                                                            |
+| `.qfai/evidence/decisions`                                  | Not moved: 2.x keeps no decision records under `.qfai/evidence/`                                                                                                                                                                                                                                                                                    |
+| `.qfai/report/specs-coverage`                               | `.qfai/report/spec-coverage`                                                                                                                                                                                                                                                                                                                        |
+| `_policies/`                                                | `.qfai/spec/01_policy/`: `01_Objective.md` is `objective.md`, `02_Initiative.md` is `initiative.md`, `06_Glossary.md` is `glossary.md` and `07_Constraints.md` is `constraint.md`; `.qfai/spec/03_contract/contracts.md` (`05_Contracts.md`); `.qfai/spec/02_business-flow/` (`04_Business-Flow.md`); `03_Capabilities.md` kept in git history only |
+| `spec-NNNN`                                                 | The `business-flow-NNNN/` and `user-story-NNNN-NNNN/` directories of `.qfai/spec/02_business-flow/`; `tmp/qfai-migration/id-map.json` pairs each old ID with its new one                                                                                                                                                                            |
+| `01_Spec.md`                                                | Kept in git history only                                                                                                                                                                                                                                                                                                                            |
+| `assistant/steering`                                        | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                 |
+| `assistant/instructions`                                    | `.qfai/assistant/rule/` for a rule; `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/tech.md` for a project fact                                                                                                                                                                                                                                 |
 
 A person rewords each listed line so that it no longer names the old path.
-The `retired/` copies exist only in this working copy, so a line that points at
-one of them points at a file nobody else has.
 
 After step 12, run `npx qfai validate` from the local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve every
 layout and chain error. Its test-obligation findings identify any business
@@ -618,19 +578,15 @@ intentionally absent.
 Then send the project's first free-text change request to the `qfai-run`
 skill. The prompt-time hook step 11 installed points agents there.
 
-The plan, the ID map and the `legacy/` and `retired/` archives under
-`.qfai/evidence/migration-spec-to-story/` exist only in this working copy,
-like everything else under `.qfai/evidence/`. Keep a copy elsewhere if anyone
-needs them beyond it.
+The plan and the ID map are under `tmp/qfai-migration/`, which git ignores, and
+can be deleted once the migration is done. What the migration deleted survives
+only where git history held it.
 
 ## Former migration memos
 
 QFAI 2.0.0 has no `.qfai/assistant/process/` directory, and `npx qfai init` writes
-no migration memo. Step 3 moves the memos a 1.x release wrote to
-`.qfai/assistant/process/migrations/` into
-`.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`.
-Nothing reads them after that. Keep them as a record, or delete them once the
-migration is committed.
+no migration memo. Step 3 deletes the memos a 1.x release wrote to
+`.qfai/assistant/process/migrations/`; git history keeps them.
 
 The upgrade notes for each release are in the QFAI changelog, under that
 release's heading. The memos announced deprecation windows, and every one of

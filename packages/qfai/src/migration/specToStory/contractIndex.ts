@@ -10,7 +10,6 @@ export type ContractIndexInput = {
   /** The old `_policies/05_Contracts.md`. */
   source: string;
   sourcePath: string;
-  archive: string;
   /** Repository-relative path of the new `contracts.md`. */
   target: string;
   /** Repository-relative `paths.contractsDir`. */
@@ -124,8 +123,7 @@ export function renderContractIndex(input: ContractIndexInput): {
     .filter((line) => !/^#\s/.test(line))
     .join("\n")
     .trim();
-  const hand = (what: string) =>
-    `${input.target}: rewrite ${what} by hand (kept at ${input.archive})`;
+  const hand = (what: string) => `${input.target}: rewrite ${what} by hand`;
   if (preamble !== "")
     forAPerson.push(hand(`the text before the first section of ${input.sourcePath}`));
   const rows: OldRow[] = [];

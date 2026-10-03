@@ -8,7 +8,6 @@ import {
   readdir,
   readlink,
   realpath,
-  rename,
   rm,
   stat,
 } from "node:fs/promises";
@@ -18,7 +17,6 @@ import { collectTemplateFiles, copyTemplatePaths } from "../../core/fs/templateC
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
   collectCanonicalSkillIds,
-  SKILL_ARCHIVE_DIR,
   SKILL_INTEGRATION_DIRS,
 } from "../../core/init/integrationDirs.js";
 import { createSkillLink } from "../../core/init/managedLink.js";
@@ -104,9 +102,6 @@ export async function shippedSkillIds(): Promise<string[]> {
 /** The two assistant layers step 11 installs: the skills, and the steps they run. */
 type Layer = "skill" | "step";
 
-/** Where a step directory that was replaced is kept whole, beside the skill archive. */
-export const STEP_ARCHIVE_DIR = path.join(path.dirname(SKILL_ARCHIVE_DIR), "step");
-
 /** Each step the package ships: a directory under `assistant/step/` holding a `STEP.md`. */
 export async function shippedStepIds(): Promise<string[]> {
   const dir = path.join(packageQfaiAssets(), "assistant", "step");
@@ -124,10 +119,6 @@ export async function shippedStepIds(): Promise<string[]> {
 
 function layerDir(context: MigrationContext, layer: Layer, id: string): string {
   return path.join(context.root, ".qfai", "assistant", layer, id);
-}
-
-function archiveDir(context: MigrationContext, layer: Layer, id: string): string {
-  return path.join(context.root, layer === "skill" ? SKILL_ARCHIVE_DIR : STEP_ARCHIVE_DIR, id);
 }
 
 function projectPath(context: MigrationContext, absolute: string): string {
@@ -225,29 +216,19 @@ function installOperation(
   };
 }
 
-function archiveOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
-  const source = layerDir(context, layer, id);
-  const archive = archiveDir(context, layer, id);
+function removeOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
+  const dir = layerDir(context, layer, id);
   return {
     kind: "delegate",
-    target: projectPath(context, source),
-    targets: [projectPath(context, source), projectPath(context, archive)],
-    description: "archive the project's copy",
-    apply: async () => {
-      await mkdir(path.dirname(archive), { recursive: true });
-      // SIMPLIFIED: a rename, so the skill tree and the archive share a volume.
-      // Lift when: a project keeps `.qfai/evidence/` on another volume, which
-      // fails here with EXDEV and changes nothing.
-      await rename(source, archive);
-    },
+    target: projectPath(context, dir),
+    description: "delete the project's copy",
+    apply: () => rm(dir, { recursive: true }),
   };
 }
 
 /**
  * What bringing one shipped skill or step up to the package's copy takes. A
- * copy that differs is archived whole first. Where the archive already exists,
- * the directory is either the remainder of an interrupted install, which is
- * finished, or a second project copy, which is left for a person.
+ * copy that differs is deleted whole, then installed from the package.
  */
 async function planLayerEntry(
   context: MigrationContext,
@@ -255,25 +236,11 @@ async function planLayerEntry(
   id: string,
   plan: StepPlan,
 ): Promise<void> {
-  const dir = layerDir(context, layer, id);
-  const archive = archiveDir(context, layer, id);
   const shipped = await packageFiles(layer, id);
-  const current = await treeFiles(dir);
+  const current = await treeFiles(layerDir(context, layer, id));
   if (current !== null && (await sameTree(current, shipped))) return;
-  const archived = await treeFiles(archive);
-  if (current !== null && archived !== null && !(await containedIn(current, shipped))) {
-    const reason = (await sameTree(current, archived))
-      ? `the archive already holds this copy; delete the ${layer} directory and run step 11 again`
-      : "the archive already holds a different copy; keep the one you need, delete the other and run step 11 again";
-    plan.forAPerson?.push(
-      `${projectPath(context, dir)} and ${projectPath(context, archive)}: ${reason}`,
-    );
-    return;
-  }
-  const resume = current !== null && archived !== null;
-  if (current !== null && !resume) plan.operations.push(archiveOperation(context, layer, id));
-  const files = [...shipped.keys()].filter((file) => !resume || !current.has(file)).sort();
-  const install = installOperation(context, layer, id, files);
+  if (current !== null) plan.operations.push(removeOperation(context, layer, id));
+  const install = installOperation(context, layer, id, [...shipped.keys()].sort());
   if (install !== null) plan.operations.push(install);
 }
 
@@ -428,16 +395,7 @@ async function planReminderText(context: MigrationContext, plan: StepPlan): Prom
 
 export const step11: MigrationStep = {
   number: 11,
-  writeSet: [
-    "skills",
-    "skill-archive",
-    "steps",
-    "step-archive",
-    "skill-links",
-    "gitignore",
-    "gitignore-staging",
-    "reminder-hooks",
-  ],
+  writeSet: ["skills", "steps", "skill-links", "gitignore", "reminder-hooks"],
   sections: ["Reminder hooks", "For a person"],
   async plan(context) {
     const plan: StepPlan = { operations: [], forAPerson: [], reminderHooks: [] };
