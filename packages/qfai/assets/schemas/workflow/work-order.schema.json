@@ -188,7 +188,7 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "enum": ["review:heavy", "gate:user", "gate:release"]
+        "enum": ["gate:user", "gate:release"]
       }
     },
     "target": {

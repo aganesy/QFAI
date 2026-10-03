@@ -10,7 +10,6 @@ import { changedSinceStart } from "../../core/workflow/boundary.js";
 import { flowOfRun } from "../../core/workflow/issue.js";
 import {
   completionFacts,
-  heavyReviewerRolesOf,
   identityOf,
   planFacts,
   policyNowOf,
@@ -135,29 +134,20 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     ...(snapshot.outstandingWorkOrder?.inputs ?? []).map((each) => each.path),
     ...(reproduction ? [reproduction] : []),
   ];
-  const [
-    story,
-    reviewerRoles,
-    heavyReviewerRoles,
-    changedRealPaths,
-    fileDigests,
-    receiptValidity,
-    plans,
-  ] = await Promise.all([
-    storyFactsOf(root, config, flowOfRun(snapshot), snapshot.diagnosis),
-    reviewerRolesOf(config),
-    heavyReviewerRolesOf(config),
-    accepting ? realPathsOf(root, input.result) : undefined,
-    fileDigestsOf(root, named),
-    input.operation === "resume" || input.operation === "next"
-      ? receiptValidityOf(root, snapshot)
-      : undefined,
-    accepting ? planFacts() : undefined,
-  ]);
+  const [story, reviewerRoles, changedRealPaths, fileDigests, receiptValidity, plans] =
+    await Promise.all([
+      storyFactsOf(root, config, flowOfRun(snapshot), snapshot.diagnosis),
+      reviewerRolesOf(config),
+      accepting ? realPathsOf(root, input.result) : undefined,
+      fileDigestsOf(root, named),
+      input.operation === "resume" || input.operation === "next"
+        ? receiptValidityOf(root, snapshot)
+        : undefined,
+      accepting ? planFacts() : undefined,
+    ]);
   return {
     ...story,
     reviewerRoles,
-    heavyReviewerRoles,
     fileDigests,
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),

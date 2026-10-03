@@ -216,7 +216,7 @@
         "required": ["modifier", "reason"],
         "properties": {
           "modifier": {
-            "enum": ["review:heavy", "gate:user", "gate:release"]
+            "enum": ["gate:user", "gate:release"]
           },
           "reason": {
             "type": "string",

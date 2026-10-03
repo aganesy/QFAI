@@ -65,7 +65,6 @@ export async function runFacts(extra: Facts = {}): Promise<NonNullable<Facts>> {
   return {
     plans: await planFacts(),
     flows: [FLOW],
-    heavyReviewerRoles: HEAVY_REVIEWERS,
     receiptValidity: { [ROUTING_RECEIPT]: "valid" },
     now: "2026-09-28T00:00:00.000Z",
     ...extra,

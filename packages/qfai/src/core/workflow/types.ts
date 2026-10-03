@@ -749,12 +749,9 @@ export interface WorkflowFacts {
       route: string;
       stages: PlanStages;
       family?: string;
-      defaultModifiers?: string[];
       branchPoints?: PlanBranchPoint[];
     }
   >;
-  // The always-required reviewers of the `heavy` review profile, which `review:heavy` adds.
-  heavyReviewerRoles?: string[];
   // Each `decisions.md` row and whether it is in force.
   decisionRows?: { rowId: string; inForce: boolean }[];
   // The business flows the story tree declares.

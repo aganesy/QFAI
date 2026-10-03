@@ -2,11 +2,11 @@
 // order and takes the route of the first that holds, so the same extraction always gives the
 // same route. Within a rule, the clauses are tried in order too.
 
-import type { Artifact, RoutingReading } from "./extraction.js";
+import type { RoutingReading } from "./extraction.js";
 import type { WorkflowRoute } from "./routes.js";
 
-// A reading as the rules read it: its own facts and the artifacts every reading shares.
-export type RuleInput = RoutingReading & { artifacts: readonly Artifact[] };
+// A reading as the rules read it.
+export type RuleInput = RoutingReading;
 
 interface Clause {
   holds: (input: RuleInput) => boolean;

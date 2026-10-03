@@ -3,28 +3,8 @@
 
 import { decideRoute, reachedFirst, type RouteChoice } from "./decisionRules.js";
 import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
-import {
-  defaultModifiersOf,
-  entriesOf,
-  extractionModifiers,
-  withModifiers,
-  type WorkflowModifier,
-  type WorkflowModifierEntry,
-} from "./modifiers.js";
-import type {
-  WorkflowFacts,
-  WorkflowPlan,
-  WorkflowQuestion,
-  WorkflowRouteCandidate,
-} from "./types.js";
-
-type Plans = NonNullable<WorkflowFacts["plans"]>;
-
-// A route's default modifiers, as its plan declares them.
-export function defaultsIn(plans: Plans | undefined) {
-  return (route: string): WorkflowModifier[] =>
-    defaultModifiersOf(plans?.[route]?.defaultModifiers);
-}
+import { entriesOf, extractionModifiers, type WorkflowModifierEntry } from "./modifiers.js";
+import type { WorkflowPlan, WorkflowQuestion, WorkflowRouteCandidate } from "./types.js";
 
 export interface RoutingOutcome {
   // The distinct routes of every reading, in the order the decision rules reach them.
@@ -46,42 +26,20 @@ function readingsOf(extraction: WorkflowExtraction): RoutingReading[] {
 function choicesOf(extraction: WorkflowExtraction): RouteChoice[] {
   const choices: RouteChoice[] = [];
   for (const reading of readingsOf(extraction)) {
-    const choice = decideRoute({ ...reading, artifacts: extraction.artifacts });
+    const choice = decideRoute(reading);
     if (!choices.some((each) => each.route === choice.route)) choices.push(choice);
   }
   return choices;
 }
 
-function gatesDiffer(candidates: RouteChoice[], defaultsOf: (route: string) => string[]) {
-  const gates = (choice: RouteChoice) =>
-    defaultsOf(choice.route)
-      .filter((modifier) => modifier.startsWith("gate:"))
-      .sort()
-      .join(",");
-  return new Set(candidates.map(gates)).size > 1;
-}
-
 // The route and modifiers routing gives an extraction. A low-confidence request with two or
-// more candidate routes, or a medium one whose candidates differ in their gates, is asked about;
-// any other takes the main reading's route. The run carries the modifiers of every candidate, so
-// it is never lighter than any of them, whichever is taken.
-export function routingOutcome(
-  extraction: WorkflowExtraction,
-  defaultsOf: (route: string) => WorkflowModifier[],
-): RoutingOutcome {
+// more candidate routes is asked about; any other takes the main reading's route.
+export function routingOutcome(extraction: WorkflowExtraction): RoutingOutcome {
   const candidates = choicesOf(extraction);
-  const [main, ...others] = candidates;
+  const [main] = candidates;
   if (!main) throw new Error("A reading always reaches a route.");
-  const differ = gatesDiffer(candidates, defaultsOf);
-  const ask = candidates.length > 1 && (extraction.confidence === "low" || differ);
-  const own = entriesOf(
-    [...extractionModifiers(extraction), ...(differ ? (["gate:user"] as const) : [])],
-    "extraction",
-  );
-  const modifiers = withModifiers(
-    withModifiers(own, entriesOf(defaultsOf(main.route), ask ? "candidate" : "default")),
-    others.flatMap((each) => entriesOf(defaultsOf(each.route), "candidate")),
-  );
+  const ask = candidates.length > 1 && extraction.confidence === "low";
+  const modifiers = entriesOf(extractionModifiers(extraction), "extraction");
   if (ask) {
     return { candidates: [...candidates].sort(reachedFirst), recommended: main.route, modifiers };
   }
@@ -89,17 +47,12 @@ export function routingOutcome(
 }
 
 // The route and modifiers routing gives a re-route: the destination the branch point fixed, which
-// the decision rules do not choose again, with the extraction's modifiers and the destination's
-// defaults.
+// the decision rules do not choose again, with the extraction's modifiers.
 export function reroutedOutcome(
   extraction: WorkflowExtraction,
   taken: RouteChoice,
-  defaultsOf: (route: string) => WorkflowModifier[],
 ): RoutingOutcome {
-  const modifiers = withModifiers(
-    entriesOf(extractionModifiers(extraction), "extraction"),
-    entriesOf(defaultsOf(taken.route), "default"),
-  );
+  const modifiers = entriesOf(extractionModifiers(extraction), "extraction");
   return { candidates: [taken], taken, modifiers };
 }
 

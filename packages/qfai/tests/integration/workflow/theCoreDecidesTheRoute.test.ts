@@ -101,7 +101,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
   let decided = 0;
   for (const intent of INTENTS) {
     for (const reading of readingsOf(intent, 3)) {
-      const choice = decideRoute({ ...reading, artifacts: ["code"] });
+      const choice = decideRoute(reading);
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
       const released =
@@ -114,7 +114,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
       }
     }
   }
-  const bareRelease = decideRoute({ ...extraction({ intent: "release" }), artifacts: ["release"] });
+  const bareRelease = decideRoute(extraction({ intent: "release" }));
 
   expect({
     decided: decided > 100_000,
@@ -157,10 +157,7 @@ it("A request no intent was read from is answered, and finishing it changes no f
 // QFAI:EX-0001-0211-36
 it("Two fix-defect requests take the same stages and steps", async () => {
   const planned = async (risks: "data-loss"[]) => {
-    const { route } = decideRoute({
-      ...extraction({ intent: "defect", risks }),
-      artifacts: ["code"],
-    });
+    const { route } = decideRoute(extraction({ intent: "defect", risks }));
     const load = await loadPackagePlan(route);
     if (!load.ok) throw new Error(`The ${route} plan does not load.`);
     return load.plan.stages.map((stage) => [stage.id, stage.steps.map((step) => step.name)]);

@@ -69,8 +69,7 @@ function destinationOf(
   if (routes === "decision-table") {
     const reading = branch?.extraction;
     if (!reading) return { reason: "schema", subject: "branch.extraction" };
-    const artifacts = snapshot.extraction?.artifacts ?? [];
-    const choice = decideRoute({ ...reading, artifacts });
+    const choice = decideRoute(reading);
     return { route: choice.route, rule: choice.rule };
   }
   const named = branch?.route ?? (routes.length === 1 ? routes[0] : undefined);

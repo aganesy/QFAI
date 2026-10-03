@@ -4,7 +4,7 @@
 import { refusedWith } from "./common.js";
 import { createQuestion } from "./issue.js";
 import type { RouteChoice } from "./decisionRules.js";
-import { carries, entriesOf } from "./modifiers.js";
+import { carries } from "./modifiers.js";
 import { parseQuestionInput } from "./parse.js";
 import {
   admittedScope,
@@ -16,7 +16,6 @@ import {
 import { reusedStepOf } from "./reroute.js";
 import {
   candidateQuestion,
-  defaultsIn,
   planQuestion,
   reroutedOutcome,
   routingOutcome,
@@ -152,8 +151,7 @@ function candidateRouting(routed: Routed, outcome: RoutingOutcome): WorkflowDeci
     if (!checked) return routingNotReady(run);
     const plan = { ...checked, writeScope: admittedScope(proposal, checked.stages, facts) };
     const flowId = flowToBind(proposal, plan.stages, facts).flowId;
-    const defaults = entriesOf(defaultsIn(facts.plans)(choice.route), "default");
-    candidates.push({ ...choice, plan, modifiers: defaults, ...(flowId ? { flowId } : {}) });
+    candidates.push({ ...choice, plan, modifiers: [], ...(flowId ? { flowId } : {}) });
   }
   const familyOf = (route: string) => facts.plans?.[route]?.family;
   const questions = routingQuestions(routed, (id) =>
@@ -206,14 +204,12 @@ function blockedRouting(run: WorkflowRun, result: WorkflowResult): WorkflowDecis
 function outcomeOf(
   snapshot: WorkflowSnapshot,
   proposal: WorkflowProposal,
-  facts: WorkflowFacts,
 ): RoutingOutcome | undefined {
   const pending = snapshot.pendingReroute;
-  const defaults = defaultsIn(facts.plans);
-  if (!pending) return routingOutcome(proposal.extraction, defaults);
+  if (!pending) return routingOutcome(proposal.extraction);
   if (!isWorkflowRoute(pending.route)) return undefined;
   const taken = { route: pending.route, rule: pending.rule ?? null, clause: 0 };
-  return reroutedOutcome(proposal.extraction, taken, defaults);
+  return reroutedOutcome(proposal.extraction, taken);
 }
 
 // `accept` of the routing work order's result: a blocked result blocks the run; otherwise the
@@ -229,7 +225,7 @@ export function acceptRouting(
   if (result.outcome !== "accepted" || !proposal || routingShapeIsBroken(proposal)) {
     return routingNotReady(run);
   }
-  const outcome = outcomeOf(snapshot, proposal, facts);
+  const outcome = outcomeOf(snapshot, proposal);
   if (!outcome) return routingNotReady(run);
   const routes = outcome.taken
     ? [outcome.taken.route]

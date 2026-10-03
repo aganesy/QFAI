@@ -38,11 +38,6 @@ export function extractionModifiers(extraction: WorkflowExtraction): WorkflowMod
   ];
 }
 
-// The modifiers a route's plan declares by default, read from the plan.
-export function defaultModifiersOf(defaults: readonly string[] | undefined): WorkflowModifier[] {
-  return (defaults ?? []).filter(isModifier);
-}
-
 // The entries with each modifier added that they do not hold yet. Nothing is ever removed.
 export function withModifiers(
   entries: readonly WorkflowModifierEntry[] | undefined,
