@@ -3,7 +3,7 @@ name: prototyping-recover
 owner: qfai-prototyping
 purpose: "Recover a prototyping loop that stopped on drift from the cycle-0 record, a license failure, an exhausted budget or a retired UI contract."
 requires: []
-roles: [orchestrator, product-experience-architect, devops-ci-engineer, completion-reviewer]
+roles: [orchestrator, product-experience-architect, devops-ci-engineer]
 routing-profile: default
 ---
 

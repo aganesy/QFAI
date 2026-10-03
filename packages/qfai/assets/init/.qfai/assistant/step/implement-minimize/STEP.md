@@ -7,7 +7,6 @@ roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - completion-reviewer
 routing-profile: default
 ---
 
@@ -16,6 +15,12 @@ routing-profile: default
 A crash came with the input that causes it: a file, a request, a program, a
 sequence of calls. This step reduces that input until nothing more can be
 removed.
+
+## Passes when
+
+Read first: the reproduction the report gives. The step passes when it is
+already one command or one input with nothing left to remove. The pass names
+that reproduction.
 
 ## Reads
 

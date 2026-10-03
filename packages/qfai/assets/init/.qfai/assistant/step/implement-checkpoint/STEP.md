@@ -8,7 +8,6 @@ roles:
   - qa-strategist
   - qa-gatekeeper
   - implementation-reviewer
-  - completion-reviewer
 routing-profile: runtime-heavy
 ---
 

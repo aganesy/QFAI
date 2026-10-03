@@ -16,7 +16,6 @@ roles:
   - devops-ci-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
   - product-surface-reviewer
 routing-profile: implementation-heavy
 ---
@@ -27,6 +26,12 @@ Work within one `BF-NNNN` flow. An EX is the unit of implementation review;
 the BF is the unit of scoped completion. Inside a workflow run, a work order
 whose `target` binds a flow supplies the flow, and no question asks which flow.
 Otherwise the invocation's BF argument names it.
+
+## Passes when
+
+Read first: a fresh validate result for the flow. The step passes when it
+reports no owed example, so no example needs a Red, Green and Refactor cycle.
+The pass names the validate run.
 
 ## Reads
 
@@ -165,14 +170,12 @@ the smallest useful seam and a falsifiable assertion.
 The qa-gatekeeper checks the observed RED and GREEN evidence of each example
 as it is taken: RED before any production code for the example exists, GREEN
 before Refactor. It is blocking there, because neither observation can be made
-later. The implementation-reviewer checks code and tests; the
-completion-reviewer checks
-obligation, commands, and evidence independently. Route UI-affecting work to
+later. The implementation-reviewer checks code and tests. Route UI-affecting work to
 the product-surface-reviewer under
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`, and review
 rendered HTML or screenshots at desktop and mobile sizes against `DESIGN.md`
 and the UI contracts; source code alone does not prove the user-visible
-result. Those three review once, at the end of the stage, as
+result. They review once, at the end of the stage, as
 [Stage review](#stage-review) states. Use
 `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md` for
 affected suite selection. A reviewer
@@ -213,8 +216,7 @@ freshness and round fields.
 
 The stage is reviewed once, after its last step, through `common-review-cycle`,
 over every example the stage implemented. The reviewers are the union of the
-stage's steps' reviewers: the implementation-reviewer, the completion-reviewer,
-the qa-gatekeeper for the recorded RED and GREEN evidence, and the
+stage's steps' reviewers: the implementation-reviewer, the qa-gatekeeper for the recorded RED and GREEN evidence, and the
 product-surface-reviewer where an example is UI-affecting.
 
 The stage's review pack identifies the BF, every EX the stage implemented, the

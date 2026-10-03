@@ -56,7 +56,7 @@ contracts and evidence only.
 Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
 
 - First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.
-- Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).
+- Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).
 - Do not prepend non-routed roles before the first required delegation attempt.
 
 ```text

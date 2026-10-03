@@ -102,7 +102,6 @@ describe("wrapper parity across all three platforms", () => {
         "Record command, selector, failure, test hash",
         "qa-gatekeeper checks the observed RED and GREEN evidence",
         "implementation-reviewer checks code and tests",
-        "completion-reviewer checks",
         "RED, GREEN and Refactor result",
         "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
         "required user consent",

@@ -3,7 +3,7 @@ name: discussion-uiux
 owner: qfai-discussion
 purpose: "Write the screen-level sidecars of a UI-bearing discussion pack."
 requires: []
-roles: [product-experience-architect, completion-reviewer, product-surface-reviewer]
+roles: [product-experience-architect, product-surface-reviewer]
 routing-profile: ui-bearing
 ---
 

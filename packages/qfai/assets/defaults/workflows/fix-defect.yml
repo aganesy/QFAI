@@ -3,42 +3,41 @@ family: fix
 stages:
   - id: diagnose
     kind: diagnose
-    steps: [implement-diagnose]
+    steps:
+      - { step: implement-bisect, passThrough: true }
+      - { step: implement-minimize, passThrough: true }
+      - implement-diagnose
   - id: spec
     kind: sdd_append
     steps:
       - { step: sdd-story, passThrough: true }
       - sdd-gate
     after: [diagnose]
-  - id: acceptance
-    kind: acceptance
-    steps:
-      - atdd-scaffold
-      - { step: atdd-credentials, passThrough: true }
-      - { step: atdd-author, passThrough: true }
-    after: [spec]
+    review: spec
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
-    after: [acceptance]
+    steps: [implement-scaffold, implement-tdd]
+    after: [spec]
+    review: code
   - id: verify
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
       - verify-qfai-gate
       - verify-repo-gate
     after: [implement]
-defaultModifiers: []
 decisionPoints: []
 branchPoints:
+  - step: implement-bisect
+    outcomes:
+      - { outcome: revert, routes: [revert-culprit] }
   - step: implement-diagnose
     outcomes:
       - { outcome: as-specified, routes: [answer-question] }
       - { outcome: not-ours, routes: [close-no-change] }
       - { outcome: duplicate, routes: [close-duplicate] }
       - { outcome: needs-info, routes: [request-info] }
-      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: expectation-differs, routes: [decide-design] }
       - { outcome: defective-test, routes: [repair-test] }
       - { outcome: regression, routes: [fix-red-main] }
       - { outcome: surface-conflict, routes: [repair-consistency] }

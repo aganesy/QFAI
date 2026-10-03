@@ -3,14 +3,7 @@ name: prototyping-handoff
 owner: qfai-prototyping
 purpose: "Publish the accepted prototype, record the handoff, and certify the loop."
 requires: []
-roles:
-  [
-    orchestrator,
-    product-experience-architect,
-    devops-ci-engineer,
-    completion-reviewer,
-    product-surface-reviewer,
-  ]
+roles: [orchestrator, product-experience-architect, devops-ci-engineer, product-surface-reviewer]
 routing-profile: ui-bearing
 ---
 

@@ -3,8 +3,7 @@ name: verify-repo-gate
 owner: qfai-verify
 purpose: "Run the repository's quality gates, repair failures until every gate in scope passes, and write the verify evidence and verdict."
 requires: [common-gate-run, common-evidence-record, common-grilling-record]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
+roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
 routing-profile: runtime-heavy
 ---
 

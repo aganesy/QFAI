@@ -18,16 +18,10 @@ them; it is the procedure that applies them.
 
 ## Reads
 
-- **The reviewer set.** Invoked by name: the union of the reviewers the profiles
-  of the steps that ran require, as
-  `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`
-  states, resolved through `.qfai/assistant/rule/agent-selection.md`, plus each
-  conditional reviewer whose condition holds. In a run: the work order's
-  `requiredReviewerRoles`, as issued.
-- **Under `review:heavy`.** When the work order's `modifiers` hold it, its
-  `requiredReviewerRoles` also hold the reviewers of the `heavy` review
-  profile, and every one of them is blocking; drop none. The stage evidence
-  lists every decision the stage adopted, for the completion report.
+- **The reviewer set.** The specification review: `requirements-reviewer`,
+  joined by `architecture-reviewer` when a contract changed. The code review of
+  the whole diff: `implementation-reviewer`. On a flow a UI contract with
+  screens serves, `product-surface-reviewer` joins either review.
 - **The review target.** Every path and ID the stage wrote or changed, and the
   source it was written from.
 - **The stage's gate result**, fresh on the revision the reviewers will read.
@@ -100,9 +94,7 @@ fields and the value its `version` takes are
    - Then rerun that reviewer, and any reviewer whose scope the fix changed.
    - Each new cycle gets a new pack.
 5. **Complete** only when every routed blocking reviewer returns `PASS` on the
-   same final revision. A pending response is not `PASS`. The round budget and
-   its escalation are
-   `.qfai/assistant/rule/review-convergence.md#round-budget-must`.
+   same final revision. A pending response is not `PASS`.
 
 ## summary.json
 

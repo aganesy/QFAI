@@ -3,7 +3,7 @@ name: verify-external
 owner: qfai-verify
 purpose: "Ask the reporter, a device or a production-like environment to confirm the fix, and record the answer."
 requires: [common-evidence-record]
-roles: [orchestrator, qa-strategist, completion-reviewer]
+roles: [orchestrator, qa-strategist]
 routing-profile: default
 ---
 

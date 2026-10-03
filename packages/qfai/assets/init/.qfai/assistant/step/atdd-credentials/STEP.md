@@ -3,7 +3,7 @@ name: atdd-credentials
 owner: qfai-atdd
 purpose: "Set up per-worker sign-in reuse for acceptance tests that need an authenticated actor."
 requires: [common-evidence-record]
-roles: [acceptance-test-engineer, devops-ci-engineer, completion-reviewer]
+roles: [acceptance-test-engineer, devops-ci-engineer]
 routing-profile: default
 ---
 

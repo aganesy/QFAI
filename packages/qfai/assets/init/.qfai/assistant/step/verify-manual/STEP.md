@@ -3,7 +3,7 @@ name: verify-manual
 owner: qfai-verify
 purpose: "Follow a written test plan on each environment it names, record each check's result, and record each defect found as a follow-up request."
 requires: [common-evidence-record]
-roles: [orchestrator, qa-strategist, devops-ci-engineer, completion-reviewer]
+roles: [orchestrator, qa-strategist, devops-ci-engineer]
 routing-profile: default
 ---
 

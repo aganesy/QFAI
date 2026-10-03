@@ -3,14 +3,7 @@ name: prototyping-loop
 owner: qfai-prototyping
 purpose: "Generate, review and transcribe one prototype lineage per UI contract and screen until it converges, then put it to the user."
 requires: [common-grilling-record]
-roles:
-  [
-    orchestrator,
-    product-experience-architect,
-    product-surface-reviewer,
-    devops-ci-engineer,
-    completion-reviewer,
-  ]
+roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
 routing-profile: ui-bearing
 ---
 

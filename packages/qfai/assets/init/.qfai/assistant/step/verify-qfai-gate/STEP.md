@@ -3,8 +3,7 @@ name: verify-qfai-gate
 owner: qfai-verify
 purpose: "Run the QFAI validation of the run's scope and record what it finds."
 requires: [common-gate-run, common-evidence-record, common-grilling-record]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
+roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
 routing-profile: runtime-heavy
 ---
 

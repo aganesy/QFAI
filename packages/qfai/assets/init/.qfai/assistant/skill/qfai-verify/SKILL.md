@@ -12,7 +12,6 @@ roles:
     devops-ci-engineer,
     doc-steward,
     qa-gatekeeper,
-    completion-reviewer,
     implementation-reviewer,
   ]
 steps:
@@ -79,16 +78,8 @@ this file adds nothing to it.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran: `completion-reviewer`, with
-`qa-gatekeeper` when a gate step or `verify-repeat-run` ran, and
-`implementation-reviewer` when the fix loop changed code. Each step's `## Gate` section says what its reviewers check.
-
-- Gate execution (`devops-ci-engineer`) and completion approval
-  (`completion-reviewer`) are separate agents. Completion is approved by a
-  reviewer who did not run the gates.
-- `qa-gatekeeper` confirms gate coverage before approval.
-- Do not hand off until all routed blocking reviewers return `PASS`.
+The verify stage runs the gates and holds no review: an exit code decides each
+gate, and each step's `## Gate` section says what passes it.
 
 ## Completion
 

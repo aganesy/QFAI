@@ -3,7 +3,7 @@ name: triage-decompose
 owner: qfai-triage
 purpose: "Split a request into child requests, each with its goal and the children it depends on, for triage-close to record as follow-ups."
 requires: []
-roles: [requirements-analyst, delivery-planner, completion-reviewer, requirements-reviewer]
+roles: [requirements-analyst, delivery-planner, requirements-reviewer]
 routing-profile: requirements-heavy
 ---
 

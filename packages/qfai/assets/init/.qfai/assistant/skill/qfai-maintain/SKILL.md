@@ -4,7 +4,7 @@ title: QFAI Maintain (Non-normative edits)
 description: "Use when invoked by name or handed a QFAI work order. Use it for a change to wording, a typo, a code comment or document prose that is meant to change no behaviour."
 argument-hint: "<the text or comment to change>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
-roles: [orchestrator, doc-steward, completion-reviewer]
+roles: [orchestrator, doc-steward]
 steps: [maintain-edit]
 requires: [common-review-cycle]
 mode: execution-focused

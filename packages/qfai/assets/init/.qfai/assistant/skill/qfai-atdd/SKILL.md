@@ -11,7 +11,6 @@ roles:
     qa-strategist,
     acceptance-test-engineer,
     devops-ci-engineer,
-    completion-reviewer,
     delivery-planner,
     qa-gatekeeper,
     implementation-reviewer,

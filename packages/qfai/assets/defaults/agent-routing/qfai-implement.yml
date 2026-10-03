@@ -13,12 +13,6 @@ routing:
         parallel_groups: []
         blocking_agents: [test-design-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   # `parallel_groups` describes ROLE FAN-OUT within a phase, not item
@@ -85,10 +79,10 @@ routing:
       # joins exactly when one of them is UI-affecting.
       - id: review
         iteration: per-invocation
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -103,10 +97,10 @@ routing:
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -119,10 +113,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -137,10 +131,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -153,10 +147,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -169,12 +163,6 @@ routing:
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   - step: implement-revert
@@ -186,10 +174,10 @@ routing:
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -202,12 +190,6 @@ routing:
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   - step: implement-stress-harness
@@ -219,10 +201,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -236,10 +218,10 @@ routing:
         blocking_agents: [test-design-analyst]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -253,10 +235,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -270,10 +252,10 @@ routing:
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -286,10 +268,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -302,10 +284,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -318,10 +300,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, qa-gatekeeper]
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [implementation-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
@@ -334,10 +316,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -350,10 +332,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
 
@@ -366,9 +348,9 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy

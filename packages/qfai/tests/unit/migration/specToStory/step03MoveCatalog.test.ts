@@ -1132,12 +1132,12 @@ describe("migration catalog move", () => {
     const legacy = await legacyRoutingEntries();
     const defaults = await defaultRoutingEntries();
     expect(legacy).toHaveLength(7);
-    // Premise: only the qfai-configure entry equals an installed default. A change to the
-    // installed defaults or to the 1.x set that breaks this needs the expectation revisited.
+    // Premise: no 1.x entry equals an installed default, so each is recognised as a 1.x entry
+    // rather than as a copy of the current one. A change to either set needs this revisited.
     const equalToDefault = legacy.filter((entry) =>
       defaults.some((candidate) => isDeepStrictEqual(candidate, entry)),
     );
-    expect(equalToDefault.map((entry) => entry.skill)).toEqual(["qfai-configure"]);
+    expect(equalToDefault.map((entry) => entry.skill)).toEqual([]);
     await putManifests(context, legacy);
     const result = await run(context);
     const config = await readConfig(context.root);

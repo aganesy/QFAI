@@ -11,12 +11,12 @@ roles:
     orchestrator,
     delivery-planner,
     requirements-analyst,
-    completion-reviewer,
     solution-architect,
     product-experience-architect,
     test-design-analyst,
     qa-strategist,
     architecture-reviewer,
+    requirements-reviewer,
     product-surface-reviewer,
     qa-gatekeeper,
   ]

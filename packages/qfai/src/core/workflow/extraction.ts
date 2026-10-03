@@ -76,6 +76,7 @@ export const SIGNALS = [
   "backport",
   "release-notes",
   "test-plan",
+  "acceptance-bodies",
 ] as const;
 
 export const RISKS = [

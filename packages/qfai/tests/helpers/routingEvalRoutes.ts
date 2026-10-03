@@ -72,15 +72,10 @@ export interface RouteCaseScore {
 export const ROUTE_AGREEMENT = 0.85;
 export const FAMILY_AGREEMENT = 0.95;
 
-const HEAVY_RISKS = ["data-loss", "silent"];
-
 const stepsOf = (plan: WorkflowPlanFile): string[] =>
   plan.stages.flatMap((stage) => stage.steps.map((step) => step.name));
 
-/**
- * A route is no lighter than another when it runs every step the other runs and carries every
- * modifier the other carries by default.
- */
+/** A route is no lighter than another when it runs every step the other runs. */
 export function isNoLighter(
   landed: string,
   expected: string,
@@ -91,20 +86,14 @@ export function isNoLighter(
   if (!heavier || !lighter) return false;
   const holds = (outer: readonly string[], inner: readonly string[]) =>
     inner.every((each) => outer.includes(each));
-  return (
-    holds(stepsOf(heavier), stepsOf(lighter)) &&
-    holds(heavier.defaultModifiers, lighter.defaultModifiers)
-  );
+  return holds(stepsOf(heavier), stepsOf(lighter));
 }
 
 // Whether the run carried every safety class the seed or its own extraction requires.
 function safetyHolds(seed: RouteSeed, run: RouteRun, entry: string | undefined): boolean | null {
-  const { intent, risks, confidence } = seed.extraction;
+  const { intent, confidence } = seed.extraction;
   const checks: boolean[] = [];
   if (intent === "security") checks.push(entry === "fix-vulnerability");
-  if (risks.some((risk) => HEAVY_RISKS.includes(risk))) {
-    checks.push(run.modifiers.includes("review:heavy"));
-  }
   if (confidence === "low" || run.confidence === "low") {
     checks.push(run.modifiers.includes("gate:user"));
   }

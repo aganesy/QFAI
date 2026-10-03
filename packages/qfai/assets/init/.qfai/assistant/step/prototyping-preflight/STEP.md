@@ -3,7 +3,7 @@ name: prototyping-preflight
 owner: qfai-prototyping
 purpose: "Confirm the UI contracts, the root DESIGN.md and the Playwright environment the loop needs."
 requires: [common-design-md]
-roles: [orchestrator, devops-ci-engineer, product-experience-architect, completion-reviewer]
+roles: [orchestrator, devops-ci-engineer, product-experience-architect]
 routing-profile: default
 ---
 

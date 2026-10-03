@@ -73,7 +73,7 @@ describe("routing keyed by step", () => {
       ...names(phase.mandatory_agents),
       ...names(phase.blocking_agents),
     ]);
-    for (const agent of new Set([...bound, "completion-reviewer", "architecture-reviewer"])) {
+    for (const agent of new Set([...bound, "architecture-reviewer"])) {
       expect(roles, agent).toContain(agent);
     }
 
@@ -108,7 +108,7 @@ describe("routing keyed by step", () => {
   // QFAI:EX-0001-0161-08
   it("reports a step whose roles or routing-profile drift from its entry", async () => {
     const missingRole = await agentFindings((text) =>
-      text.replace(/^\s*architecture-reviewer,?\s*$/m, ""),
+      text.replace(", architecture-reviewer]", "]"),
     );
     expect(
       missingRole.filter(

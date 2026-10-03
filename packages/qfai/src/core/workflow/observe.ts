@@ -168,7 +168,6 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
       {
         route: plan.route,
         family: plan.family,
-        defaultModifiers: plan.defaultModifiers,
         branchPoints: plan.branchPoints,
         stages: plan.stages.map((stage) => ({
           stageInstanceId: stage.id,

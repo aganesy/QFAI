@@ -15,7 +15,6 @@ roles:
     devops-ci-engineer,
     implementation-reviewer,
     qa-gatekeeper,
-    completion-reviewer,
     product-surface-reviewer,
     doc-steward,
   ]

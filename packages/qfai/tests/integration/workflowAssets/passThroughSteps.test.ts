@@ -6,15 +6,11 @@
  * workflow core's, not this module's.
  */
 import { describe, expect, it } from "vitest";
-import { parse } from "yaml";
 
-import { defaultConfig } from "../../../src/core/config.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
   defaultRoutingEntries,
   flat,
   frontMatterOf,
-  readDefault,
   readShipped,
   sectionOf,
 } from "../../helpers/shippedAssistant.js";
@@ -26,10 +22,15 @@ const PASS_THROUGH = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "atdd-credentials",
-  "atdd-author",
+  "discussion-pack",
   "discussion-uiux",
-  "atdd-test-fix",
+  "triage-investigate",
+  "implement-bisect",
+  "implement-minimize",
+  "implement-scaffold",
+  "implement-tdd",
+  "implement-credentials",
+  "implement-sweep",
   "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
@@ -111,14 +112,12 @@ describe("the verify steps a route adds", () => {
       "verify-release-notes": "default",
     };
     const routing = await defaultRoutingEntries();
-    const effective = await readEffectiveRouting(defaultConfig);
     for (const [step, profile] of Object.entries(profiles)) {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
       expect(front.owner, step).toBe("qfai-verify");
       expect(front["routing-profile"], step).toBe(profile);
       const entry = routing.filter(isRecord).find((each) => each.step === step);
       expect(entry?.review_profile, step).toBe(profile);
-      expect(stepReview(effective, step).alwaysRequired, step).toContain("completion-reviewer");
     }
   });
 
@@ -144,30 +143,10 @@ describe("what the routes ask of sdd-triage and the review cycle", () => {
     expect(inert).toMatch(/report `branch: \{ outcome: retire \}`/);
     const settled = flat(sectionOf(text, "## Settled mode"));
     expect(settled).toMatch(/`mode: settled`/);
-    expect(settled).toMatch(/report `branch: \{ outcome: outside-record, route \}`/);
+    expect(settled).toMatch(/report `branch: \{ outcome: outside-record \}`/);
     const point = flat(sectionOf(text, "## At a decision point"));
     expect(point).toMatch(/`adopted` as `\{ step, decision, reason \}`/);
     expect(point).toMatch(/return `awaiting_input` and change nothing/i);
     expect(point).toMatch(/raises `gate:user` through `raise`/i);
-  });
-
-  it("adds the heavy profile's reviewers, all blocking, under review:heavy", async () => {
-    const file: unknown = parse(await readDefault("review-profiles.yml"));
-    const profiles = isRecord(file) && isRecord(file.profiles) ? file.profiles : {};
-    const heavy = isRecord(profiles.heavy) ? profiles.heavy : {};
-    expect(heavy.always_required).toEqual([
-      "completion-reviewer",
-      "architecture-reviewer",
-      "requirements-reviewer",
-      "implementation-reviewer",
-    ]);
-    const routing = await defaultRoutingEntries();
-    expect(routing.filter(isRecord).filter((entry) => entry.review_profile === "heavy")).toEqual(
-      [],
-    );
-    const cycle = flat(await readShipped("step/common-review-cycle/STEP.md"));
-    expect(cycle).toMatch(
-      /also hold the reviewers of the `heavy` review profile, and every one of them is blocking/i,
-    );
   });
 });

@@ -16,7 +16,6 @@ const requiredPhrases = [
   "Record command, selector, failure, test hash",
   "qa-gatekeeper checks the observed RED and GREEN evidence",
   "implementation-reviewer checks code and tests",
-  "completion-reviewer checks",
   "RED, GREEN and Refactor result",
   "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
   "required user consent",
@@ -53,7 +52,7 @@ function checkForbiddenPhrases(content: string): string[] {
 }
 
 describe("implementation contract phrase guardrails", () => {
-  it("SKILL.md contains all 8 required phrases", async () => {
+  it("SKILL.md contains all 7 required phrases", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
     const missing = checkRequiredPhrases(content);
     expect(missing, `Missing required phrases in SKILL.md: ${missing.join(", ")}`).toEqual([]);

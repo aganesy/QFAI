@@ -3,7 +3,7 @@ name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
 requires: [common-steering-refresh, common-grilling-record]
-roles: [delivery-planner, requirements-analyst, completion-reviewer]
+roles: [delivery-planner, requirements-analyst]
 routing-profile: default
 ---
 
@@ -123,9 +123,8 @@ approved: the one the work order's `settled` field or the request cites.
 - Triage each requirement strictly within the record.
 - An instruction that asks for more than the record settles — a new flow, a
   changed criterion, a behaviour the record never mentions — stops the step.
-  Write nothing, and report `branch: { outcome: outside-record, route }`, with
-  `route` `decide-acceptance` when whether to accept a behaviour is open and
-  `decide-design` when how to build it is.
+  Write nothing, and report `branch: { outcome: outside-record }`, which moves
+  the work to `decide-design`.
 - A citation that resolves to no in-force row stops the step: put the missing
   record to the operator as a question, and write nothing.
 

@@ -8,7 +8,6 @@ roles:
   - frontend-engineer
   - backend-engineer
   - devops-ci-engineer
-  - completion-reviewer
   - qa-gatekeeper
   - implementation-reviewer
 routing-profile: runtime-heavy

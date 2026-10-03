@@ -8,7 +8,6 @@ roles:
   - frontend-engineer
   - backend-engineer
   - devops-ci-engineer
-  - completion-reviewer
 routing-profile: default
 ---
 

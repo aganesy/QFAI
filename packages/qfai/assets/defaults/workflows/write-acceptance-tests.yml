@@ -1,13 +1,11 @@
-route: repair-test
+route: write-acceptance-tests
 family: upkeep
 stages:
-  - id: diagnose
-    kind: diagnose
-    steps: [implement-diagnose]
-  - id: fix
-    kind: test_fix
-    steps: [implement-test-fix]
-    after: [diagnose]
+  - id: implement
+    kind: implement
+    steps:
+      - { step: implement-credentials, passThrough: true }
+      - implement-acceptance
     review: code
   - id: verify
     kind: verify
@@ -15,6 +13,6 @@ stages:
       - { step: verify-change-note, passThrough: true }
       - verify-qfai-gate
       - verify-repo-gate
-    after: [fix]
+    after: [implement]
 decisionPoints: []
 branchPoints: []

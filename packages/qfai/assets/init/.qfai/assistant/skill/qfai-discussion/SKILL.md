@@ -9,7 +9,6 @@ roles:
     orchestrator,
     delivery-planner,
     discovery-analyst,
-    completion-reviewer,
     requirements-analyst,
     solution-architect,
     product-experience-architect,
@@ -91,8 +90,7 @@ the whole classified surface set — `primary_surface` **and** every
 
 After the last step, run one review of the pack under work with
 `.qfai/assistant/step/common-review-cycle/STEP.md`. The reviewers are the union
-of the reviewers of the steps that ran: `completion-reviewer` and
-`requirements-reviewer` always, `product-surface-reviewer` when
+of the reviewers of the steps that ran: `requirements-reviewer` always, `product-surface-reviewer` when
 `discussion-uiux` ran, and `architecture-reviewer` when the pack records an
 architecture-affecting decision. Roles are selected under
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.

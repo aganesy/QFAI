@@ -467,7 +467,7 @@ describe("assets guardrails", () => {
       "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
     );
     expect(configure).toContain(
-      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
+      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).",
     );
     expect(configure).toContain(
       "Do not prepend non-routed roles before the first required delegation attempt.",
@@ -478,7 +478,7 @@ describe("assets guardrails", () => {
       "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
     );
     expect(verify).toContain(
-      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
+      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).",
     );
     expect(verify).toContain(
       "Do not prepend non-routed roles before the first required delegation attempt.",

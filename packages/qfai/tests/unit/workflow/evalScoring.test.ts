@@ -161,7 +161,6 @@ function plan(route: string, family: string, steps: string[]): WorkflowPlanFile 
     stages: [
       { id: route, kind: route, steps: steps.map((name) => ({ name })), after: [], effects: [] },
     ],
-    defaultModifiers: [],
     decisionPoints: [],
     branchPoints: [],
   };
@@ -207,7 +206,7 @@ function agreementOf(routeHits: number, familyHits: number) {
     ran(
       seed.id,
       [index < routeHits ? "fix-defect" : index < familyHits ? "fix-vulnerability" : "repair-test"],
-      ["gate:user", "gate:release", "review:heavy"],
+      ["gate:user", "gate:release"],
     ),
   );
   return routeEvalVerdict(seeds, scoreRouteSeeds(seeds, runs, PLANS));
@@ -240,23 +239,17 @@ it("A security seed that reached fix-defect fails the evaluation though every ra
   }).toEqual({ route: 0.95, family: 1, safety: ["SEED-900"], pass: false });
 });
 
-it("A data-loss seed without heavy review and a low-confidence seed without the user gate are safety misses", () => {
+it("A low-confidence seed without the user gate is a safety miss", () => {
   const seeds = [
-    routeSeed("SEED-910", "fix-defect", { risks: ["data-loss"] }),
     routeSeed("SEED-911", "fix-defect", { confidence: "low" }),
     routeSeed("SEED-912", "fix-defect", { risks: ["silent"], confidence: "low" }),
   ];
   const runs = [
-    ran("SEED-910", ["fix-defect"], ["gate:user"]),
-    ran("SEED-911", ["fix-defect"], ["review:heavy"]),
-    ran("SEED-912", ["fix-defect"], ["gate:user", "review:heavy"]),
+    ran("SEED-911", ["fix-defect"], []),
+    ran("SEED-912", ["fix-defect"], ["gate:user"]),
   ];
 
-  expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([
-    false,
-    false,
-    true,
-  ]);
+  expect(scoreRouteSeeds(seeds, runs, PLANS).map((score) => score.safety)).toEqual([false, true]);
 });
 
 it("A re-routing seed passes only where the run ends at its declared destination", () => {

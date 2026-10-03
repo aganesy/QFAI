@@ -9,7 +9,6 @@ roles:
     requirements-analyst,
     solution-architect,
     devops-ci-engineer,
-    completion-reviewer,
     architecture-reviewer,
   ]
 routing-profile: architecture-heavy

@@ -3,7 +3,7 @@ name: discussion-research
 owner: qfai-discussion
 purpose: "Open the run's stage evidence and record the research the interview reads."
 requires: [common-evidence-record, common-steering-refresh]
-roles: [delivery-planner, discovery-analyst, completion-reviewer]
+roles: [delivery-planner, discovery-analyst]
 routing-profile: default
 ---
 

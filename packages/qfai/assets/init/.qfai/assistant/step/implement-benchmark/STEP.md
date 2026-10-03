@@ -6,7 +6,6 @@ requires: [common-steering-refresh, common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist
-  - completion-reviewer
   - qa-gatekeeper
   - implementation-reviewer
 routing-profile: runtime-heavy

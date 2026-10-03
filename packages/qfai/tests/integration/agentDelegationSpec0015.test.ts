@@ -161,10 +161,7 @@ describe("routing defaults are package data", () => {
     ]);
     expect(migration?.phases[0]?.blocking_agents).toEqual(["solution-architect"]);
     expect(migration?.phases[1]?.mandatory_agents).toEqual(["devops-ci-engineer"]);
-    expect(migration?.phases[2]?.blocking_agents).toEqual([
-      "completion-reviewer",
-      "architecture-reviewer",
-    ]);
+    expect(migration?.phases[2]?.blocking_agents).toEqual(["architecture-reviewer"]);
     expect(migration?.review_profile).toBe("architecture-heavy");
   });
 });

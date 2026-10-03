@@ -13,8 +13,8 @@
  *     naming the workflow contract, or one whose Approach does not name the route and record who
  *     approved it and when;
  *   - a plan file with no row, a row with no plan file, or a plan that states something its row
- *     does not: its family, its stages and their steps, its default modifiers, or its decision,
- *     release or branch points;
+ *     does not: its family, its stages, their steps and reviews, or its decision, release or
+ *     branch points;
  *   - against the base of the change, a route row added or changed that does not cite a change
  *     request this change appended, or a route row removed with no appended change request naming
  *     the route.
@@ -40,19 +40,6 @@ export const CONTRACT = ".qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md";
 export const DECISIONS = ".qfai/spec/decisions.md";
 export const PLANS_DIR = "packages/qfai/assets/defaults/workflows";
 
-const P = (name) => ({ name, passThrough: true });
-
-/** The four blocks the route rows name by one word. */
-const MACROS = {
-  VERIFY: {
-    id: "verify",
-    steps: [P("verify-change-note"), "verify-context", "verify-qfai-gate", "verify-repo-gate"],
-  },
-  IMPL: { id: "implement", steps: ["implement-tdd", "implement-checkpoint"] },
-  ACC: { id: "acceptance", steps: ["atdd-scaffold", P("atdd-credentials"), P("atdd-author")] },
-  APPEND: { id: "spec", steps: [P("sdd-story"), "sdd-gate"] },
-};
-
 /** The cells of one Markdown table row, a `\|` inside a cell kept as a pipe. */
 function cellsOf(line) {
   const cells = line
@@ -73,6 +60,20 @@ function listAfter(statement, label) {
   return match ? ticked(match[1]) : undefined;
 }
 
+// The release point a row states: a step, `the end`, which a plan writes `end`, or none.
+function releasePointOf(statement) {
+  const stated = /Release point: ([^.]*)\./.exec(statement)?.[1];
+  if (stated === undefined || stated === "none") return undefined;
+  return stated === "the end" ? "end" : ticked(stated)[0];
+}
+
+// The branch points a row states, in order: the names it lists that its plan runs as a step.
+// The other names are the outcomes and the routes they lead to.
+function branchStepsOf(statement, plan) {
+  const steps = new Set(plan?.match(/[a-z-]+(?=\(|°| →|\])/g) ?? []);
+  return listAfter(statement, "Branch points")?.filter((name) => steps.has(name));
+}
+
 /** Each route row of the contract, by route. */
 export function routeRowsOf(contractText) {
   const routes = new Map();
@@ -81,15 +82,15 @@ export function routeRowsOf(contractText) {
     const [id, statement = ""] = cellsOf(line);
     const route = /^Route `([a-z-]+)` — family `([a-z]+)`/.exec(statement);
     if (!route) continue;
+    const plan = /Plan: `([^`]*)`/.exec(statement)?.[1];
     routes.set(route[1], {
       id,
       statement,
       family: route[2],
-      plan: /Plan: `([^`]*)`/.exec(statement)?.[1],
-      defaultModifiers: listAfter(statement, "Default modifiers"),
+      plan,
       decisionPoints: listAfter(statement, "Decision points"),
-      releasePoint: listAfter(statement, "Release point")?.[0],
-      branchPoints: listAfter(statement, "Branch points"),
+      releasePoint: releasePointOf(statement),
+      branchPoints: branchStepsOf(statement, plan),
       approvedBy: /Approved by (DEC-\d{4})\b/.exec(statement)?.[1],
     });
   }
@@ -145,13 +146,10 @@ function stepText(entry) {
   return `${name}${step.mode ? `(${step.mode})` : ""}${step.passThrough ? "°" : ""}`;
 }
 
+// A stage as a row states it: `id[steps]`, then `{spec}` or `{code}` for the review after it.
 function stageText(stage) {
-  const steps = (stage.steps ?? []).map(stepText);
-  const macro = Object.entries(MACROS).find(
-    ([, block]) => block.id === stage.id && block.steps.map(stepText).join() === steps.join(),
-  );
-  if (macro) return macro[0];
-  return `${stage.id}[${steps.join(" → ")}${stage.review === "none" ? "; no review" : ""}]`;
+  const steps = (stage.steps ?? []).map(stepText).join(" → ");
+  return `${stage.id}[${steps}]${stage.review ? `{${stage.review}}` : ""}`;
 }
 
 /** A plan file as its route row states it. */
@@ -160,21 +158,13 @@ export function planStatement(planText) {
   return {
     family: plan.family,
     plan: (plan.stages ?? []).map(stageText).join(" ▸ "),
-    defaultModifiers: plan.defaultModifiers ?? [],
     decisionPoints: plan.decisionPoints ?? [],
     releasePoint: plan.releasePoint,
     branchPoints: (plan.branchPoints ?? []).map((point) => point.step),
   };
 }
 
-const COMPARED = [
-  "family",
-  "plan",
-  "defaultModifiers",
-  "decisionPoints",
-  "releasePoint",
-  "branchPoints",
-];
+const COMPARED = ["family", "plan", "decisionPoints", "releasePoint", "branchPoints"];
 
 /** Each plan with no row, row with no plan, and field a plan and its row state differently. */
 export function planFaults(contractText, plans) {

@@ -235,43 +235,6 @@ it("An answer-question run whose answer shows the documentation lacks the option
   });
 });
 
-// QFAI:AC-0001-0214-07
-// QFAI:EX-0001-0214-09
-it("A question's one work order runs every step of its route and names no reviewer", async () => {
-  const HEAVY = ["completion-reviewer", "architecture-reviewer", "requirements-reviewer"];
-  const facts: Facts = {
-    reviewerRoles: {
-      "triage-answer": ["completion-reviewer"],
-      "triage-close": ["completion-reviewer"],
-    },
-    heavyReviewerRoles: [...HEAVY, "implementation-reviewer"],
-  };
-  const order = async (route: string, modifiers: Snapshot["modifiers"] = []) => {
-    const snapshot = { ...(await readyOn(route, 0)), modifiers };
-    const decision = decide(snapshot, { operation: "next" }, facts);
-    return decision.verdict.workOrder;
-  };
-  const heavy: Snapshot["modifiers"] = [{ modifier: "review:heavy", source: "extraction" }];
-
-  const answer = await order("answer-question");
-  const investigate = await order("investigate-question");
-  const heavyAnswer = await order("answer-question", heavy);
-
-  expect({
-    answer: answer?.steps?.map((step) => step.name),
-    investigate: investigate?.steps?.map((step) => step.name),
-    answerReviewers: answer?.requiredReviewerRoles,
-    investigateReviewers: investigate?.requiredReviewerRoles,
-    heavyReviewers: heavyAnswer?.requiredReviewerRoles,
-  }).toEqual({
-    answer: ["triage-answer", "triage-close"],
-    investigate: ["triage-investigate", "triage-answer", "triage-close"],
-    answerReviewers: undefined,
-    investigateReviewers: undefined,
-    heavyReviewers: [...HEAVY, "implementation-reviewer"],
-  });
-});
-
 // QFAI:EX-0001-0214-01
 it("finish on an answer-question run that ran no verify stage", async () => {
   const snapshot: Snapshot = {

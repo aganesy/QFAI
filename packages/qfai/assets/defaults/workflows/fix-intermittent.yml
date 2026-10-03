@@ -14,10 +14,12 @@ stages:
       - { step: sdd-story, passThrough: true }
       - sdd-gate
     after: [diagnose]
+    review: spec
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
+    steps: [implement-scaffold, implement-tdd]
     after: [spec]
+    review: code
   - id: soak
     kind: verify
     steps: [verify-repeat-run]
@@ -26,11 +28,9 @@ stages:
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
       - verify-qfai-gate
       - verify-repo-gate
     after: [soak]
-defaultModifiers: []
 decisionPoints: []
 branchPoints:
   - step: implement-diagnose
@@ -39,7 +39,7 @@ branchPoints:
       - { outcome: not-ours, routes: [close-no-change] }
       - { outcome: duplicate, routes: [close-duplicate] }
       - { outcome: needs-info, routes: [request-info] }
-      - { outcome: expectation-differs, routes: [decide-acceptance] }
+      - { outcome: expectation-differs, routes: [decide-design] }
       - { outcome: defective-test, routes: [repair-test] }
       - { outcome: regression, routes: [fix-red-main] }
       - { outcome: surface-conflict, routes: [repair-consistency] }

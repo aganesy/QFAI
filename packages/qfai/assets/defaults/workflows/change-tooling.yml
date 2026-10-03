@@ -8,14 +8,13 @@ stages:
     kind: implement
     steps: [implement-tooling]
     after: [diagnose]
+    review: code
   - id: verify
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
       - verify-qfai-gate
       - verify-repo-gate
     after: [edit]
-defaultModifiers: []
 decisionPoints: []
 branchPoints: []

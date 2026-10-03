@@ -11,9 +11,9 @@ stages:
   - id: fix
     kind: test_fix
     steps:
-      - { step: atdd-test-fix, passThrough: true }
       - { step: implement-test-fix, passThrough: true }
     after: [diagnose]
+    review: code
   - id: reenable
     kind: verify
     steps: [verify-repeat-run]
@@ -22,11 +22,9 @@ stages:
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
       - verify-qfai-gate
       - verify-repo-gate
     after: [reenable]
-defaultModifiers: []
 decisionPoints: []
 branchPoints:
   - step: implement-diagnose

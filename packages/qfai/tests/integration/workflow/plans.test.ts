@@ -126,7 +126,7 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
   return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
 
-const VERIFY = ["verify-change-note°", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-change-note°", "verify-qfai-gate", "verify-repo-gate"];
 
 it("The shipped add-feature and prototype-feature plans", async () => {
   const kinds = async (route: string) =>
@@ -137,8 +137,8 @@ it("The shipped add-feature and prototype-feature plans", async () => {
     prototypeFeature: await kinds("prototype-feature"),
     verify: shape(await planOf("add-feature")).at(-1),
   }).toEqual({
-    addFeature: ["sdd", "acceptance", "implement", "maintenance", "verify"],
-    prototypeFeature: ["sdd", "prototype", "acceptance", "implement", "maintenance", "verify"],
+    addFeature: ["sdd", "implement", "maintenance", "verify"],
+    prototypeFeature: ["sdd", "prototype", "implement", "maintenance", "verify"],
     verify: ["verify", VERIFY],
   });
 });
@@ -172,7 +172,7 @@ it("The plan of every change route the package ships", async () => {
     count: changeRoutes.length,
     reach: [...new Set(changeRoutes.map((plan) => JSON.stringify(verifyReach(plan))))],
   }).toEqual({
-    count: 26,
+    count: 23,
     reach: [JSON.stringify({ reached: true, blocks: [["verify", VERIFY]] })],
   });
 });
@@ -190,7 +190,7 @@ it("The plans the package ships name no grill stage", async () => {
     ],
   }).toEqual({
     grill: [],
-    discussion: ["decide-acceptance", "decide-design", "decompose-epic"],
+    discussion: ["decide-design", "decompose-epic"],
   });
 });
 
@@ -252,8 +252,8 @@ const loadRefusals: [string, (text: string) => string][] = [
     "no-verify-path",
     (text) =>
       text.replace(
-        "defaultModifiers",
-        "  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [edit]\ndefaultModifiers",
+        "decisionPoints",
+        "  - id: tidy\n    kind: maintenance\n    steps: [maintain-edit]\n    after: [edit]\ndecisionPoints",
       ),
   ],
 ];
@@ -309,14 +309,14 @@ for (const [title, to] of retiredNames) {
 it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
   expect({
     guess: await refusalsOf("fix-defect", (text) =>
-      text.replace("steps: [implement-tdd, implement-checkpoint]", "steps: [implement-guess]"),
+      text.replace("steps: [implement-scaffold, implement-tdd]", "steps: [implement-guess]"),
     ),
     fixAsImplement: await refusalsOf("repair-test", (text) =>
       text.replace("kind: test_fix", "kind: implement"),
     ),
     mixed: await refusalsOf("fix-defect", (text) =>
       text.replace(
-        "steps: [implement-tdd, implement-checkpoint]",
+        "steps: [implement-scaffold, implement-tdd]",
         "steps: [implement-tdd, sdd-story]",
       ),
     ),
@@ -328,15 +328,18 @@ it("A plan naming implement-guess, a test fix under an implement kind, and a mix
 });
 
 // QFAI:EX-0001-0218-02
-it("A plan marking implement-tdd pass-through, and one marking atdd-author", async () => {
-  const marked = "steps: [{ step: implement-tdd, passThrough: true }, implement-checkpoint]";
+it("A plan marking implement-regression-fix pass-through, and one marking implement-credentials", async () => {
+  const marked = "steps: [{ step: implement-regression-fix, passThrough: true }]";
 
   expect({
-    tdd: await refusalsOf("fix-defect", (text) =>
-      text.replace("steps: [implement-tdd, implement-checkpoint]", marked),
+    regression: await refusalsOf("fix-red-main", (text) =>
+      text.replace("steps: [implement-regression-fix]", marked),
     ),
-    author: await refusalsOf("fix-defect", (text) => text),
-  }).toEqual({ tdd: [{ reason: "pass-through", subject: "implement-tdd" }], author: [] });
+    credentials: await refusalsOf("write-acceptance-tests", (text) => text),
+  }).toEqual({
+    regression: [{ reason: "pass-through", subject: "implement-regression-fix" }],
+    credentials: [],
+  });
 });
 
 // QFAI:EX-0001-0192-10
@@ -344,11 +347,11 @@ it("a pass-through mark on a step off the pass-through list", async () => {
   expect(
     await refusalsOf("edit-text", (text) =>
       text.replace(
-        "      - verify-context\n",
-        "      - { step: verify-context, passThrough: true }\n",
+        "      - verify-qfai-gate\n",
+        "      - { step: verify-qfai-gate, passThrough: true }\n",
       ),
     ),
-  ).toEqual([{ reason: "pass-through", subject: "verify-context" }]);
+  ).toEqual([{ reason: "pass-through", subject: "verify-qfai-gate" }]);
 });
 
 const SPLIT_VERIFY = [
@@ -356,11 +359,11 @@ const SPLIT_VERIFY = [
   "    kind: verify",
   "    steps:",
   "      - { step: verify-change-note, passThrough: true }",
-  "      - verify-context",
+  "      - verify-qfai-gate",
   "    after: [implement]",
   "  - id: gate",
   "    kind: verify",
-  "    steps: [verify-qfai-gate, verify-repo-gate]",
+  "    steps: [verify-repo-gate]",
   "    after: [verify]",
   "",
 ].join("\n");
@@ -373,7 +376,7 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
   expect({
     split: await refusalsOf("fix-defect", splitVerify),
     answer: await refusalsOf("answer-question", (text) =>
-      text.replace("steps: [triage-answer, triage-close]", "steps: [triage-answer]"),
+      text.replace("      - triage-close\n", ""),
     ),
   }).toEqual({
     split: [{ reason: "terminal", subject: "gate" }],
@@ -383,19 +386,17 @@ it("A split verify block, and an answer-question whose last stage answers", asyn
 
 // QFAI:AC-0001-0218-06
 // QFAI:EX-0001-0218-08
-it("A review marker kept, one with another value, and one on a stage that is not a triage stage", async () => {
+it("A code review after the edit stage, a review of another value, and one on a triage stage", async () => {
   expect({
-    kept: await refusalsOf("answer-question", (text) => text),
-    other: await refusalsOf("answer-question", (text) =>
-      text.replace("review: none", "review: all"),
-    ),
-    elsewhere: await refusalsOf("edit-text", (text) =>
-      text.replace(EDIT_STEPS, `${EDIT_STEPS}\n    review: none`),
+    kept: await refusalsOf("edit-text", (text) => text),
+    other: await refusalsOf("edit-text", (text) => text.replace("review: code", "review: all")),
+    triage: await refusalsOf("answer-question", (text) =>
+      text.replace("      - triage-close\n", "      - triage-close\n    review: spec\n"),
     ),
   }).toEqual({
     kept: [],
-    other: [{ reason: "shape", subject: "answer" }],
-    elsewhere: [{ reason: "shape", subject: "edit" }],
+    other: [{ reason: "shape", subject: "edit" }],
+    triage: [{ reason: "shape", subject: "answer" }],
   });
 });
 
@@ -434,21 +435,19 @@ it("A stage carrying when: always, and a step entry carrying when: proposed", as
 });
 
 // QFAI:EX-0001-0218-07
-it("A mode on the wrong step, and a modifier outside the three", async () => {
+it("A mode on the wrong step, and a plan holding default modifiers", async () => {
   expect({
-    readOnlyTriage: await refusalsOf("apply-settled-spec", (text) =>
+    readOnlyTriage: await refusalsOf("apply-settled", (text) =>
       text.replace("mode: settled", "mode: read-only"),
     ),
     settledDiagnose: await refusalsOf("retriage-bundle", (text) =>
       text.replace("mode: read-only", "mode: settled"),
     ),
-    legal: await refusalsOf("edit-text", (text) =>
-      text.replace("defaultModifiers: []", "defaultModifiers: [gate:legal]"),
-    ),
+    modifiers: await refusalsOf("edit-text", (text) => `${text}defaultModifiers: []\n`),
   }).toEqual({
     readOnlyTriage: [{ reason: "mode", subject: "sdd-triage" }],
     settledDiagnose: [{ reason: "mode", subject: "implement-diagnose" }],
-    legal: [{ reason: "out-of-vocabulary", subject: "gate:legal" }],
+    modifiers: [{ reason: "unknown-key", subject: "defaultModifiers" }],
   });
 });
 

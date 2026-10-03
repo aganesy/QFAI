@@ -76,7 +76,6 @@ describe("qfai-triage as a stage skill", () => {
       expect(stepReview(effective, name).profile, name).toBe(expected);
     }
     expect(stepReview(effective, "triage-decompose").alwaysRequired.sort()).toEqual([
-      "completion-reviewer",
       "requirements-reviewer",
     ]);
   });

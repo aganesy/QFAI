@@ -14,19 +14,11 @@ import {
   SIGNALS,
   type RoutingReading,
 } from "../../../src/core/workflow/extraction.js";
-import { planFacts } from "../../../src/core/workflow/observe.js";
 import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { defaultsIn } from "../../../src/core/workflow/routeDecision.js";
+import { loadPackagePlan } from "../../../src/core/workflow/plans.js";
 import { isWorkflowRoute } from "../../../src/core/workflow/routes.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
-import {
-  FLOW,
-  HEAVY_REVIEWERS,
-  driveStages,
-  proposalWith,
-  quietCompletion,
-  routedBy,
-} from "./decisionRuns.js";
+import { driveStages, proposalWith, quietCompletion, routedBy } from "./decisionRuns.js";
 
 // QFAI:EX-0001-0211-01
 it("A routing result carrying facts, and no route, is routed by the rule that holds", async () => {
@@ -103,14 +95,13 @@ const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
-it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", async () => {
-  const defaultsOf = defaultsIn(await planFacts());
+it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", () => {
   const unrouted: string[] = [];
   const outside: string[] = [];
   let decided = 0;
   for (const intent of INTENTS) {
     for (const reading of readingsOf(intent, 3)) {
-      const choice = decideRoute({ ...reading, artifacts: ["code"] }, defaultsOf);
+      const choice = decideRoute({ ...reading, artifacts: ["code"] });
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
       const released =
@@ -118,15 +109,12 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
         !reading.signals.some((signal) => RELEASE_SIGNALS.includes(signal)) &&
         !reading.qualifiers.includes("distribution-incident");
       if (choice.rule === null && !released) unrouted.push(JSON.stringify(reading));
-      if (choice.rule === null && choice.route !== "investigate-question") {
+      if (choice.rule === null && choice.route !== "answer-question") {
         outside.push(choice.route);
       }
     }
   }
-  const bareRelease = decideRoute(
-    { ...extraction({ intent: "release" }), artifacts: ["release"] },
-    defaultsOf,
-  );
+  const bareRelease = decideRoute({ ...extraction({ intent: "release" }), artifacts: ["release"] });
 
   expect({
     decided: decided > 100_000,
@@ -137,12 +125,12 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
     decided: true,
     outside: [],
     unrouted: [],
-    bareRelease: ["investigate-question", null],
+    bareRelease: ["answer-question", null],
   });
 });
 
 // QFAI:EX-0001-0211-34
-it("A request no intent was read from is investigated, and finishing it changes no file", async () => {
+it("A request no intent was read from is answered, and finishing it changes no file", async () => {
   const { run, decision } = await routedBy(
     { intent: null },
     { affectedFlowIds: [], proposedWriteScope: [] },
@@ -158,7 +146,7 @@ it("A request no intent was read from is investigated, and finishing it changes 
     unmet: finished.verdict.unmet,
     closure: closure?.outcome,
   }).toEqual({
-    route: ["investigate-question", null],
+    route: ["answer-question", null],
     stages: ["answer"],
     state: "completed",
     unmet: [],
@@ -167,32 +155,23 @@ it("A request no intent was read from is investigated, and finishing it changes 
 });
 
 // QFAI:EX-0001-0211-36
-it("Two fix-defect requests issue the same stages and steps; only their reviewers differ", async () => {
-  const drive = async (risks: ("data-loss" | "silent")[]) => {
-    const { run } = await routedBy({ intent: "defect", risks }, { affectedFlowIds: [FLOW] });
-    const { issued } = await driveStages(run);
-    return issued;
+it("Two fix-defect requests take the same stages and steps", async () => {
+  const planned = async (risks: "data-loss"[]) => {
+    const { route } = decideRoute({
+      ...extraction({ intent: "defect", risks }),
+      artifacts: ["code"],
+    });
+    const load = await loadPackagePlan(route);
+    if (!load.ok) throw new Error(`The ${route} plan does not load.`);
+    return load.plan.stages.map((stage) => [stage.id, stage.steps.map((step) => step.name)]);
   };
-  const [risky, plain] = [await drive(["data-loss"]), await drive([])];
-  const steps = (issued: typeof risky) =>
-    issued.map((workOrder) => [
-      workOrder.stageInstanceId,
-      (workOrder.steps ?? []).map((step) => step.name),
-    ]);
+  const [risky, plain] = [await planned(["data-loss"]), await planned([])];
 
   expect({
-    same: JSON.stringify(steps(risky)) === JSON.stringify(steps(plain)),
-    stages: risky.map((workOrder) => workOrder.stageInstanceId),
-    riskyReviewers: risky.every((workOrder) =>
-      HEAVY_REVIEWERS.every((role) => (workOrder.requiredReviewerRoles ?? []).includes(role)),
-    ),
-    plainReviewers: plain.map((workOrder) => workOrder.requiredReviewerRoles),
-    modifiers: [risky[0]?.modifiers, plain[0]?.modifiers],
+    same: JSON.stringify(risky) === JSON.stringify(plain),
+    stages: risky.map(([id]) => id),
   }).toEqual({
     same: true,
-    stages: ["diagnose", "spec", "acceptance", "implement", "verify"],
-    riskyReviewers: true,
-    plainReviewers: [undefined, undefined, undefined, undefined, undefined],
-    modifiers: [["review:heavy"], undefined],
+    stages: ["diagnose", "spec", "implement", "verify"],
   });
 });

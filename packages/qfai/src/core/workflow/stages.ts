@@ -6,10 +6,10 @@ type Plan = NonNullable<WorkflowSnapshot["plan"]>;
 type PlanStage = PlanStages[number];
 
 // The stage kinds that work on a flow whatever steps they run.
-const FLOW_KINDS = ["sdd", "sdd_append", "prototype", "acceptance"];
+const FLOW_KINDS = ["sdd", "sdd_append", "prototype"];
 
 // The steps that change the product's code against a flow's examples.
-const FLOW_STEPS = ["implement-tdd", "implement-regression-fix"];
+const FLOW_STEPS = ["implement-tdd", "implement-regression-fix", "implement-acceptance"];
 
 function stepNames(stage: PlanStage): string[] {
   return (stage.steps ?? []).map((step) => step.name);

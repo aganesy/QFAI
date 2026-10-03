@@ -9,7 +9,6 @@ roles:
     requirements-analyst,
     solution-architect,
     product-experience-architect,
-    completion-reviewer,
     requirements-reviewer,
   ]
 routing-profile: requirements-heavy

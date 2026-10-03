@@ -43,13 +43,10 @@ function readingsOf(extraction: WorkflowExtraction): RoutingReading[] {
 }
 
 // The main reading's route first, then each other reading's that differs.
-function choicesOf(
-  extraction: WorkflowExtraction,
-  defaultsOf: (route: string) => readonly string[],
-): RouteChoice[] {
+function choicesOf(extraction: WorkflowExtraction): RouteChoice[] {
   const choices: RouteChoice[] = [];
   for (const reading of readingsOf(extraction)) {
-    const choice = decideRoute({ ...reading, artifacts: extraction.artifacts }, defaultsOf);
+    const choice = decideRoute({ ...reading, artifacts: extraction.artifacts });
     if (!choices.some((each) => each.route === choice.route)) choices.push(choice);
   }
   return choices;
@@ -72,7 +69,7 @@ export function routingOutcome(
   extraction: WorkflowExtraction,
   defaultsOf: (route: string) => WorkflowModifier[],
 ): RoutingOutcome {
-  const candidates = choicesOf(extraction, defaultsOf);
+  const candidates = choicesOf(extraction);
   const [main, ...others] = candidates;
   if (!main) throw new Error("A reading always reaches a route.");
   const differ = gatesDiffer(candidates, defaultsOf);

@@ -7,7 +7,6 @@ import { createHash } from "node:crypto";
 import { everyStageResult } from "./common.js";
 import { decideRoute } from "./decisionRules.js";
 import type { PlanBranchPoint } from "./planFormat.js";
-import { defaultsIn } from "./routeDecision.js";
 import { stepNamesOf } from "./steps.js";
 import type {
   InputRefusal,
@@ -65,14 +64,13 @@ function destinationOf(
   routes: string[] | "decision-table",
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
-  facts: WorkflowFacts,
 ): { route: string; rule?: number | null } | InputRefusal {
   const branch = result.branch;
   if (routes === "decision-table") {
     const reading = branch?.extraction;
     if (!reading) return { reason: "schema", subject: "branch.extraction" };
     const artifacts = snapshot.extraction?.artifacts ?? [];
-    const choice = decideRoute({ ...reading, artifacts }, defaultsIn(facts.plans));
+    const choice = decideRoute({ ...reading, artifacts });
     return { route: choice.route, rule: choice.rule };
   }
   const named = branch?.route ?? (routes.length === 1 ? routes[0] : undefined);
@@ -95,7 +93,7 @@ export function resolveBranch(
   const pair = point.outcomes.find((each) => each.outcome === outcome);
   // A diagnosis verdict the point does not pair with a destination continues the route.
   if (!pair) return result.branch ? { refusal: UNDECLARED } : {};
-  const destination = destinationOf(pair.routes, snapshot, result, facts);
+  const destination = destinationOf(pair.routes, snapshot, result);
   if ("reason" in destination) return { refusal: destination };
   return { reroute: { ...destination, fromStep: point.step, outcome } };
 }

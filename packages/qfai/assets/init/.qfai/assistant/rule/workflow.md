@@ -49,8 +49,8 @@ facts `qfai-run` reads out of the request, and the route fixes the plan.
 - A pass-through step still runs. When it can show it has nothing to write, it
   records a pass with the evidence it read. A pass whose work remains is
   refused.
-- A modifier, `review:heavy`, `gate:user` or `gate:release`, raises the review or
-  stops the run at a decision point its route declares. It never changes the
+- A modifier, `gate:user` or `gate:release`, stops the run at a decision point
+  its route declares. It never changes the
   steps, and a run never drops one.
 - A stage that finds work no step of its route does, does none of it. At a
   branch point its route declares, it reports the outcome that moves the run to
