@@ -65,6 +65,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
 
+### Fixed
+
+- Host-capability refusals at workflow start state the reason and the next
+  action in one sentence while preserving the refusal fields (#2839).
+
 ## [2.0.2] - 2026-10-03
 
 ### Added
