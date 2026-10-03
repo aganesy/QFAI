@@ -144,6 +144,14 @@ it("An operation only a person can run, and a distribution incident, are handed 
   ).toEqual(["hand-off-operation", "hand-off-operation"]);
 });
 
+// QFAI:EX-0001-0211-38
+it("A release no release signal routes is handed off by rule 14", async () => {
+  expect(await decided({ intent: "release", artifacts: ["release"] })).toEqual([
+    "hand-off-operation",
+    14,
+  ]);
+});
+
 // QFAI:EX-0001-0211-18
 it("A settled design applies, unless a later rule gives a route with default modifiers", async () => {
   expect([

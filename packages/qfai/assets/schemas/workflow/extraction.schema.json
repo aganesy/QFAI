@@ -5,16 +5,7 @@
   "description": "The facts `npx qfai workflow plan --in` reads out of a request, each from a closed vocabulary. It names no route, stage or step. Alternatives are required at low confidence, allowed at medium and refused at high.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "intent",
-    "entryFlags",
-    "qualifiers",
-    "signals",
-    "risks",
-    "gate",
-    "artifacts",
-    "confidence"
-  ],
+  "required": ["intent", "entryFlags", "qualifiers", "signals", "risks", "artifacts", "confidence"],
   "properties": {
     "intent": {
       "description": "What the request asks for, or null when it cannot be read.",
@@ -88,8 +79,7 @@
           "check-misses",
           "mechanism-inert",
           "removal-requested",
-          "visual-open",
-          "contradicts-record"
+          "visual-open"
         ]
       }
     },
@@ -113,9 +103,6 @@
       "items": {
         "enum": ["security", "data-loss", "silent", "breaking", "upgrade", "performance"]
       }
-    },
-    "gate": {
-      "enum": ["none", "decide", "approve", "external"]
     },
     "artifacts": {
       "type": "array",
@@ -263,8 +250,7 @@
               "check-misses",
               "mechanism-inert",
               "removal-requested",
-              "visual-open",
-              "contradicts-record"
+              "visual-open"
             ]
           }
         },

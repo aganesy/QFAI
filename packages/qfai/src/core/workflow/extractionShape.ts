@@ -7,7 +7,6 @@ import {
   ARTIFACTS,
   CONFIDENCES,
   ENTRY_FLAGS,
-  GATES,
   INTENTS,
   QUALIFIERS,
   RISKS,
@@ -47,7 +46,6 @@ const EXTRACTION: Shape = {
   fields: {
     ...READING_FIELDS,
     risks: list(oneOf(...RISKS)),
-    gate: oneOf(...GATES),
     artifacts: list(oneOf(...ARTIFACTS)),
     confidence: oneOf(...CONFIDENCES),
     alternatives: list({
@@ -56,7 +54,7 @@ const EXTRACTION: Shape = {
       required: Object.keys(READING_FIELDS),
     }),
   },
-  required: [...Object.keys(READING_FIELDS), "risks", "gate", "artifacts", "confidence"],
+  required: [...Object.keys(READING_FIELDS), "risks", "artifacts", "confidence"],
   holds: (value) => alternativesFit(value.confidence, value.alternatives),
   holdsField: "alternatives",
 };

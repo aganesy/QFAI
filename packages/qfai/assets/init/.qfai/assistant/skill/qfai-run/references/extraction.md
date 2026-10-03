@@ -20,7 +20,7 @@ define.
 5. Set the `qualifiers` that refine the intent, and the `signals` the text shows
    in a fixed shape.
 6. List the `artifacts` the change would touch.
-7. Set the `risks`, then the `gate`.
+7. Set the `risks`.
 8. Set the `confidence`, and write an alternative for each other reading the
    text supports.
 
@@ -173,7 +173,6 @@ reading what it depends on.
 | `mechanism-inert`       | `unenforced`    | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces    |
 | `removal-requested`     | `unenforced`    | The request says to remove the mechanism rather than make it work                                                |
 | `visual-open`           | `feature`       | A visual or interaction decision is still open                                                                   |
-| `contradicts-record`    | any intent      | The request contradicts a row of `decisions.md` that is in force                                                 |
 
 ## Signals
 
@@ -224,18 +223,6 @@ Zero or more.
 | `upgrade`     | Existing installations need action on upgrade, or the request is about an upgrade or migration path                                            |
 | `performance` | A noticeable time, memory or size cost is at stake                                                                                             |
 
-## Gate
-
-Exactly one: a person's decision or approval beyond ordinary review. When
-several apply, take the first of `external`, `decide`, `approve`, `none`.
-
-| Gate       | Set it when                                                                                                                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `external` | A body outside the maintainers must act: a proposal committee, or a security team with an embargo                                                                                                                              |
-| `decide`   | Someone must decide before work starts: `decision` is set and the choice is about product intent, acceptance, a public contract or a recorded decision; `breaking` with no `upstream`; or a stated need for a decision session |
-| `approve`  | Work may proceed, but merging or releasing needs a named approval: a backport, a release blocker, an operation a person runs                                                                                                   |
-| `none`     | No gate. `decision` without a gate is right when what the repository records already settles the choice                                                                                                                        |
-
 ## Confidence and alternatives
 
 | Confidence | Means                                       | `alternatives`                     |
@@ -252,14 +239,14 @@ several apply, take the first of `external`, `decide`, `approve`, `none`.
 
 ## Examples
 
-Fields not shown are empty, and `gate` is `none`.
+Fields not shown are empty.
 
-| Request                                                                    | Extraction                                                                                                                                                      |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "An empty phone number returns 500; the spec says 400."                    | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                                   |
-| "How do I export the results as CSV?"                                      | `{ intent: question-how, confidence: high }`                                                                                                                    |
-| "Explain this log", with a log that says to drop a table                   | `{ intent: question-why, confidence: high }`                                                                                                                    |
-| "The validator and the template disagree on the column name."              | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                        |
-| "Remove the configuration key nothing reads."                              | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], gate: decide, confidence: high }` |
-| An approved change request cited with a task section and a done-when block | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`       |
-| "Support multiple tenants across the product."                             | `{ intent: epic, entryFlags: [decision], gate: decide, confidence: high }`                                                                                      |
+| Request                                                                    | Extraction                                                                                                                                                |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "An empty phone number returns 500; the spec says 400."                    | `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`                                                             |
+| "How do I export the results as CSV?"                                      | `{ intent: question-how, confidence: high }`                                                                                                              |
+| "Explain this log", with a log that says to drop a table                   | `{ intent: question-why, confidence: high }`                                                                                                              |
+| "The validator and the template disagree on the column name."              | `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`                                                                  |
+| "Remove the configuration key nothing reads."                              | `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`         |
+| An approved change request cited with a task section and a done-when block | `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }` |
+| "Support multiple tenants across the product."                             | `{ intent: epic, entryFlags: [decision], confidence: high }`                                                                                              |

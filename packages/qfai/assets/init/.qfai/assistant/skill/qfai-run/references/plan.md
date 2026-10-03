@@ -28,7 +28,6 @@ route, stage or step.
   "qualifiers": [],
   "signals": [],
   "risks": [],
-  "gate": "none",
   "artifacts": ["code", "tests"],
   "confidence": "high"
 }
@@ -103,8 +102,9 @@ The route, its stages in order with each step's file, and its points.
 
 ## Candidates
 
-A `low` extraction whose readings reach two or three routes returns them in the
-order the decision rules reach them, the main reading's route recommended.
+A `low` extraction returns the distinct routes its readings reach, one to three,
+in the order the decision rules reach them, the main reading's route
+recommended.
 
 ```json
 {

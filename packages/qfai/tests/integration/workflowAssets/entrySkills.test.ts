@@ -145,7 +145,6 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "mechanism-inert",
     "removal-requested",
     "visual-open",
-    "contradicts-record",
   ],
   signals: [
     "approved-record-task",
@@ -158,7 +157,6 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "test-plan",
   ],
   risks: ["security", "data-loss", "silent", "breaking", "upgrade", "performance"],
-  gate: ["none", "decide", "approve", "external"],
   artifacts: [
     "code",
     "tests",
@@ -183,7 +181,6 @@ const EXTRACTION_SECTIONS: Record<string, string> = {
   qualifiers: "## Qualifiers",
   signals: "## Signals",
   risks: "## Risks",
-  gate: "## Gate",
   artifacts: "## Artifacts",
   confidence: "## Confidence and alternatives",
 };

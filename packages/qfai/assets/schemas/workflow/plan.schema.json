@@ -179,7 +179,7 @@
       }
     },
     "candidates": {
-      "description": "The distinct routes of a low-confidence extraction's readings, in the order the decision rules reach them.",
+      "description": "The distinct routes of a low-confidence extraction's readings, one to three, in the order the decision rules reach them.",
       "type": "object",
       "additionalProperties": false,
       "required": ["ok", "candidates"],
@@ -189,7 +189,7 @@
         },
         "candidates": {
           "type": "array",
-          "minItems": 2,
+          "minItems": 1,
           "maxItems": 3,
           "items": {
             "type": "object",

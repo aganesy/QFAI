@@ -5,7 +5,7 @@
 // QFAI:AC-0001-0222-05
 // QFAI:AC-0001-0210-05
 
-import { rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -253,4 +253,47 @@ it("An --in file that cannot be read is an io-error, JSON that does not parse an
     [2, false, "invalid-input", "broken.json"],
     [2, false, "invalid-input", "--sideways"],
   ]);
+});
+
+// QFAI:EX-0001-0222-13
+it("An --in path that is a directory is an io-error, and nothing is written", async () => {
+  const root = await minimalProject();
+  await mkdir(path.join(root, "tmp", "request.json"), { recursive: true });
+  const before = await listTree(root);
+  const planned = workflow(root, ["plan", "--in", "tmp/request.json"]);
+
+  expect({
+    status: planned.status,
+    ok: field(planned.json, "ok"),
+    reasons: reasonsOf(planned.json),
+    unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
+  }).toEqual({
+    status: 1,
+    ok: false,
+    reasons: [{ reason: "io-error", subject: "tmp/request.json" }],
+    unchanged: true,
+  });
+});
+
+// QFAI:EX-0001-0222-14
+it("A low-confidence extraction whose readings reach one route returns that route as the one candidate", async () => {
+  const { root, file } = await withRequest(
+    extraction({
+      intent: "question-how",
+      confidence: "low",
+      alternatives: [
+        { intent: "question-help", entryFlags: [], qualifiers: ["docs-answerable"], signals: [] },
+      ],
+    }),
+  );
+  const planned = workflow(root, ["plan", "--in", file]);
+  const candidates = field(planned.json, "candidates");
+
+  expect({
+    status: planned.status,
+    candidates: Array.isArray(candidates)
+      ? candidates.map((each) => [field(each, "route"), field(each, "recommended")])
+      : candidates,
+    stages: field(planned.json, "stages"),
+  }).toEqual({ status: 0, candidates: [["answer-question", true]], stages: undefined });
 });

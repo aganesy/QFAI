@@ -29,7 +29,7 @@ Independent questions go in one round; a dependent one waits for its answer.
 
 | Question               | How it is put                                                                                                                                                   |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The candidate question | One single-select option per candidate, two or three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
+| The candidate question | One single-select option per candidate, one to three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
 | A critical decision    | The finding in at most two sentences, naming the specification, contract or recorded decision it touches, each option with its effect, and a recommendation     |
 | A release approval     | What would be released, the options to approve it or not, and that approving pushes, merges, tags and publishes nothing                                         |
 | A third branch move    | The destination in plain words, the options to move there or `stop`                                                                                             |

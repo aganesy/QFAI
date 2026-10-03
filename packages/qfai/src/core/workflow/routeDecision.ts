@@ -37,7 +37,8 @@ function choicesOf(
 }
 
 // A `low` extraction is read with its alternatives and returns its distinct routes as
-// candidates; any other takes the main reading's route.
+// candidates, one when every reading reaches the same route; any other takes the main reading's
+// route.
 export function routingOutcome(
   extraction: WorkflowExtraction,
   defaultsOf: (route: WorkflowRoute) => readonly string[],
@@ -48,6 +49,6 @@ export function routingOutcome(
       : [extraction];
   const [main, ...others] = choicesOf(readings, extraction, defaultsOf);
   if (!main) throw new Error("A reading always reaches a route.");
-  if (others.length === 0) return { taken: main };
+  if (extraction.confidence !== "low") return { taken: main };
   return { candidates: [main, ...others].sort(reachedFirst), recommended: main.route };
 }

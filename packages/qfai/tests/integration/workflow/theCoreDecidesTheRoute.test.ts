@@ -84,12 +84,10 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
   return readings;
 }
 
-const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
-
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
-it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", async () => {
+it("Every extraction with an intent reaches exactly one catalog route by a rule", async () => {
   const defaultsOf = await routeDefaults();
   const unrouted: string[] = [];
   const outside: string[] = [];
@@ -99,12 +97,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
       const choice = decideRoute({ ...reading, artifacts: ["code"] }, defaultsOf);
       decided += 1;
       if (!isWorkflowRoute(choice.route)) outside.push(choice.route);
-      const released =
-        reading.intent === "release" &&
-        !reading.signals.some((signal) => RELEASE_SIGNALS.includes(signal)) &&
-        !reading.qualifiers.includes("distribution-incident");
-      if (choice.rule === null && !released) unrouted.push(JSON.stringify(reading));
-      if (choice.rule === null && choice.route !== "answer-question") outside.push(choice.route);
+      if (choice.rule === null) unrouted.push(JSON.stringify(reading));
     }
   }
   const bareRelease = decideRoute(
@@ -121,7 +114,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
     decided: true,
     outside: [],
     unrouted: [],
-    bareRelease: ["answer-question", null],
+    bareRelease: ["hand-off-operation", 14],
   });
 });
 
