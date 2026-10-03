@@ -29,7 +29,7 @@ Feature: Route a request through a fixed decision table
   Scenario: An unreadable request changes nothing
     Given an extraction with no intent
     When the core decides the route
-    Then the run takes the route that investigates and answers
+    Then `plan` returns the route that investigates and answers
     And no tracked file changes
 
   # AC-0001-0211-05

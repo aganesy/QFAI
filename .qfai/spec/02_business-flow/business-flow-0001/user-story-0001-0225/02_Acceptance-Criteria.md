@@ -9,13 +9,13 @@ Feature: Review a change twice: the specification before the code, and the code 
     Given a change route whose specification stage changes a story-tree or contract file
     When the route runs
     Then after that stage `requirements-reviewer` reviews the specification change, joined by `architecture-reviewer` when a contract changed
-    And after the last stage before verify `implementation-reviewer` reviews the whole diff
+    And after the stage running `verify-change-note`, the last before the gates, `implementation-reviewer` reviews the whole diff
 
   # AC-0001-0225-02
   Scenario: A change that leaves the specification alone gets one review
     Given a change route that changes no story-tree or contract file
     When the route runs
-    Then `implementation-reviewer` reviews the whole diff once, after the last stage before verify
+    Then `implementation-reviewer` reviews the whole diff once, after the stage running `verify-change-note`, the last before the gates
 
   # AC-0001-0225-03
   Scenario: The gates alone verify
