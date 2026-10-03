@@ -3230,7 +3230,7 @@ describe("qfai init", () => {
 
   it("removes an assistant README that carries the init marker", async () => {
     // That README described how the integration-surface rule decided whether
-    // init had run. The rule reads two records now, so the file is a
+    // init had run. The rule reads another file now, so the file is a
     // description of behaviour the tool no longer has, sitting in the tree the
     // assistant loads its instructions from.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));

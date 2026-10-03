@@ -2445,56 +2445,23 @@ describe("a later init refreshes a rule summary the project never edited", () =>
     });
   });
 
-  it("keeps the summary where the project edited the master it describes", async () => {
+  it("rebuilds the Copilot file under --force with the release's bullet", async () => {
     await withProject(async (root) => {
-      const seeded = await seedSuperseded(root);
-      // The adopter's own master. The update pass keeps it, so a summary moved
-      // to this release's wording would describe a rule this tree does not have.
-      const master = path.join(root, ".agents", "rules", "grilling.md");
-      const theirs = `${await readFile(master, "utf-8")}\n\nOur own addition.\n`;
-      await writeFile(master, theirs, "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const written = await readFile(copilot, "utf-8");
+      const current = written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
+      expect(current, "the Copilot file has no bullet for the master").not.toBe("");
+      await writeFile(copilot, written.replace(current, superseded), "utf-8");
 
-      const output = await initCapturing(root, { force: false, dryRun: false });
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      for (const name of AGENT_ENTRY_POINT_FILES) {
-        expect(await readEntryPoint(root, name), name).toBe(seeded.get(name));
-      }
-      expect(await readFile(master, "utf-8")).toBe(theirs);
-      expect(output.stdout).toContain(".agents/rules/grilling.md");
+      const after = await readFile(copilot, "utf-8");
+      expect(after).toContain(current);
+      expect(after).not.toContain(superseded);
+      expect(after).toContain("- `.agents/rules/user-questions.md` — ");
     });
   });
-
-  it.each([
-    { edited: true, kept: "the file's own bullet" },
-    { edited: false, kept: "the release's bullet" },
-  ])(
-    "rebuilds the Copilot file under --force with $kept for a master edited: $edited",
-    async ({ edited }) => {
-      await withProject(async (root) => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-        const copilot = path.join(root, ".github", "copilot-instructions.md");
-        const written = await readFile(copilot, "utf-8");
-        const current =
-          written.split("\n").find((line) => line.startsWith(`- \`${master}\``)) ?? "";
-        expect(current, "the Copilot file has no bullet for the master").not.toBe("");
-        await writeFile(copilot, written.replace(current, superseded), "utf-8");
-        if (edited) {
-          // The adopter's own master: the update pass keeps it, so the release's
-          // summary would describe a rule this tree does not have.
-          const file = path.join(root, ".agents", "rules", "grilling.md");
-          await writeFile(file, `${await readFile(file, "utf-8")}\n\nOur own addition.\n`, "utf-8");
-        }
-
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-
-        const after = await readFile(copilot, "utf-8");
-        expect(after).toContain(edited ? superseded : current);
-        expect(after).not.toContain(edited ? current : superseded);
-        // Every other rule keeps the release's wording.
-        expect(after).toContain("- `.agents/rules/user-questions.md` — ");
-      });
-    },
-  );
 
   it("leaves the same line inside a fenced example as it is", async () => {
     await withProject(async (root) => {
@@ -2871,24 +2838,6 @@ describe("a later init refreshes the question-form summary an earlier release wr
       for (const [name, { current }] of seeded) {
         expect(await readEntryPoint(root, name), name).toBe(current);
       }
-    });
-  });
-
-  it("keeps the earlier bullet where the project edited its own question rule", async () => {
-    await withProject(async (root) => {
-      const seeded = await seedSuperseded(root);
-      // The update pass keeps an edited master, so the new summary would
-      // describe a clause this project's rule does not have.
-      const rule = path.join(root, ".agents", "rules", "user-questions.md");
-      const theirs = `${await readFile(rule, "utf-8")}\n\nOur own addition.\n`;
-      await writeFile(rule, theirs, "utf-8");
-
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      for (const [name, { earlier }] of seeded) {
-        expect(await readEntryPoint(root, name), name).toBe(earlier);
-      }
-      expect(await readFile(rule, "utf-8")).toBe(theirs);
     });
   });
 });

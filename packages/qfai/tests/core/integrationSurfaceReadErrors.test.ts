@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** A file `qfai init` writes, which marks that it ran. */
 async function seedInitRecord(root: string): Promise<void> {
-  const target = path.join(root, ".qfai", "assistant", "rule", "drift-protocol.md");
+  const target = path.join(root, ".qfai", "waivers.yml");
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, "{}\n", "utf-8");
 }

@@ -76,18 +76,14 @@ const OPEN_READ_FLAGS =
     : constants.O_RDONLY;
 
 /**
- * Files `qfai init` writes inside `.qfai/`, used as proof it ran.
+ * The file `qfai init` writes inside `.qfai/`, used as proof it ran.
  *
- * Either one is enough. Both carry a name no project writes for its own
- * reasons, so the path is the evidence, and nothing has to be read to confirm
- * it. Both sit inside `.qfai/` rather than in the integration directories, so
- * they outlive every wrapper and the directories that held them, and the first
- * outlives the assistant tree as well.
+ * It carries a name no project writes for its own reasons, so the path is the
+ * evidence, and nothing has to be read to confirm it. It sits inside `.qfai/`
+ * rather than in the integration directories or the assistant tree, so it
+ * outlives every wrapper and the directories that held them.
  */
-const INIT_MARKERS: readonly (readonly string[])[] = [
-  [".qfai", "waivers.yml"],
-  [".qfai", "assistant", "rule", "drift-protocol.md"],
-];
+const INIT_MARKERS: readonly (readonly string[])[] = [[".qfai", "waivers.yml"]];
 
 type Broken = {
   /** Repo-relative wrapper path, POSIX-separated so messages match across platforms. */

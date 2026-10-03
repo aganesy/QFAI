@@ -666,7 +666,7 @@ describe("a project's own entry is not proof init ran", () => {
   it("does not accept a symlink at a record path as init's own", async () => {
     // The probe answers about this tree. A link points somewhere else, and
     // `stat` would report the target rather than the entry.
-    for (const rel of [INIT_RECORD, [".qfai", "assistant", "rule", "drift-protocol.md"]]) {
+    for (const rel of [INIT_RECORD]) {
       await withProject(async (root) => {
         if (!(await canCreateSymlink(root))) return;
         await seedCanonical(root, ["qfai-atdd"], []);

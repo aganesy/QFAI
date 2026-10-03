@@ -665,7 +665,7 @@ function hasInitMarkerSignature(body: string): boolean {
  * wrote.
  *
  * That README documented how `qfai validate` decided whether init had run, and
- * `validators/integrationSurface.ts#INIT_MARKERS` now reads two records
+ * `validators/integrationSurface.ts#INIT_MARKERS` now reads `.qfai/waivers.yml`
  * instead. Left in place it would describe behaviour the tool no longer has,
  * in the tree the assistant loads its instructions from. Everything else it
  * said is in `constitution/drift-protocol.md`, in more detail.

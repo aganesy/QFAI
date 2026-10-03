@@ -563,6 +563,7 @@ describe("profile wiring", () => {
         // The document the roster names, replaced by a directory.
         ".qfai/assistant/agent/completion-reviewer.md/.keep": "",
         // Enough of a surface that init counts as having run here.
+        ".qfai/waivers.yml": "waivers: []\n",
         ".qfai/assistant/rule/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
         ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
