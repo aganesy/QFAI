@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shared rule records what a stage costs and which lever changes it**
+  (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
+  and its levels, and runs every agent at the host's default until a
+  measurement chooses another level for a role. It records two costs: a high
+  level on a long deliverable such as spec authoring, contract normalization
+  or a full review pack, and whole-file rewrites for small changes. The work
+  order template gains an advisory `Time budget: none | <seconds>` and an
+  elapsed line the agent ends every message with. Neither is a cap.
+
 - **Context summaries preserve requests, decisions, open work and stage state**
   (#2243), including question and review budgets. User wording stays close to
   verbatim.
