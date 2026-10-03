@@ -40,6 +40,10 @@ specialization_tags:
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence. The qa-gatekeeper owns observation verdicts; this role independently checks code and test quality.
+- Check for code written only to pass a test: no value hard-coded to the test's
+  inputs and no branch written only for the test, and a wrong test or infeasible
+  task raised as a Change Request, not worked around
+  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
 

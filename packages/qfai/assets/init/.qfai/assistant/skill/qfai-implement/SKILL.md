@@ -107,7 +107,11 @@ this file adds nothing to it.
 ### Reviewer Gate
 
 After the last step, run one review through `common-review-cycle` with the
-union of the reviewers of the steps that ran. The review also checks that the
+union of the reviewers of the steps that ran. The review also checks for code
+written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
+(`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
+
+The review also checks that the
 change adds test files sized like their neighbours, commits no scratch checks,
 follows § 4 on unrequested fixes, including its exception for a necessary fix
 and reporting requirement, and states any assumption it built on
