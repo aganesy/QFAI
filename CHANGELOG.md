@@ -15,6 +15,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   order template gains an advisory `Time budget: none | <seconds>` and an
   elapsed line the agent ends every message with. Neither is a cap.
 
+### Changed
+
+- **The artifact-reuse and tuning-scope tests fail on the cases they reject**
+  (#2217).
+  - The artifact-reuse test counted the step that calls `ci:build-verify` as
+    one pack-lifecycle build. It now resolves that script through the root
+    `package.json` and counts the two helpers that pack, so dropping either
+    one changes the count.
+  - The tuning-scope test compared each project with the shared knob, so an
+    edit to the knob moved every project at once and nothing failed. It now
+    compares with the declared value, and reads the projects with the tuning
+    overrides cleared.
+  - The run identifiers that justify a tuning move now count only in the last
+    `DEC-` row of `.qfai/spec/decisions.md` that names the project and every
+    setting it moved. Before, any row naming the project counted, so an
+    earlier change's greens could justify a later one.
+
+- **The reporting contract covers what an agent says while it works**
+  (#2237). `.qfai/assistant/rule/communication.md` now has the agent say in
+  one sentence what it is about to do before its first tool call, and give an
+  update only when something important is found or the direction changes. The
+  final report leads with the outcome. An earlier statement is corrected
+  plainly when the error would change the user's code, conclusions or
+  decisions; a slip that changes none of those is fixed without comment. This
+  repository's `.instruction/00_universal/communication.md` drops its own
+  progress-report and completion-report sections and points to that article.
+
 ## [2.0.2] - 2026-10-03
 
 ### Added
