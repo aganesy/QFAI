@@ -1394,10 +1394,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // asks for, and a project reads them in the language and the spelling its
   // neighbours in the same seeded tree use.
   //
-  // Derived by running the command into a temp root and hashing what it wrote.
-  // The comment block is the whole delta: the rule lines are byte-identical to
-  // the ones `c428b147…` covered.
-  [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
+  // This digest covers the seed's raw UTF-8/LF bytes, including both union rules.
+  // `qfai init` copies those bytes only when the destination does not exist.
+  [".gitattributes", "495f9358f92c82ebebea3f5c9d6f391f6cea6b540749593fc47339c62340dbaf"],
   // The shipped `.gitignore` IS the generated managed block, so every line of it
   // moves this digest by construction. The block ignores `.qfai/evidence/` whole
   // and re-includes nothing under it; its only negations are `!.qfai/` and the

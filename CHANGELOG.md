@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The seeded `.gitattributes` uses Git union merging for the two registers**
+  (#2265). A new file sets `merge=union` on `decisions.md` and
+  `open-questions.md` to keep both branches' appended lines. Validation still
+  reports duplicate IDs. Existing `.gitattributes` files remain unchanged.
+
 - **Mutation recipes remain in example tests.** `qfai doctor` reports a
   warning when a recipe names a missing source file or original text (#2419).
   The check reads recipes and source text; it runs no mutations or tests.
