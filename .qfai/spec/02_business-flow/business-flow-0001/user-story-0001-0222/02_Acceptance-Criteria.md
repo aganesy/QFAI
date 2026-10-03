@@ -43,4 +43,11 @@ Feature: Plan a request's route with one command
     When the session handles them
     Then it puts one single-select question, each option saying in plain words what that route will do, and plans the chosen route with `--route`
     And under a no-question mode it takes the first candidate and the final report lists the choice as an assumption
+
+  # AC-0001-0222-07
+  Scenario: An input file that cannot be read is an I/O error
+    Given `--in` names a file that cannot be read
+    When the command runs
+    Then it exits 1 with one JSON document holding `ok: false` and the reason `io-error`
+    And it writes nothing
 ```
