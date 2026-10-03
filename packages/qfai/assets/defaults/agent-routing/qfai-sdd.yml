@@ -13,12 +13,6 @@ routing:
         parallel_groups: []
         blocking_agents: [delivery-planner]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   - step: sdd-flow
@@ -28,12 +22,6 @@ routing:
         conditional_agents: [product-experience-architect]
         parallel_groups: []
         blocking_agents: [solution-architect]
-        rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: default
 
@@ -48,12 +36,6 @@ routing:
         parallel_groups: []
         blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   - step: sdd-contract
@@ -65,10 +47,10 @@ routing:
         blocking_agents: [solution-architect]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, architecture-reviewer]
+        mandatory_agents: [architecture-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, architecture-reviewer]
+        blocking_agents: [architecture-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: architecture-heavy
 
@@ -82,20 +64,15 @@ routing:
         parallel_groups: []
         blocking_agents: [solution-architect]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
+  # The specification review follows this step: `requirements-reviewer` reads the change.
   - step: sdd-gate
     phases:
       - id: review
-        mandatory_agents: [completion-reviewer]
+        mandatory_agents: [requirements-reviewer]
         conditional_agents: [qa-gatekeeper]
         parallel_groups: []
-        blocking_agents: [completion-reviewer]
+        blocking_agents: [requirements-reviewer]
         rerun_policy: changed-scope-dependents
-    review_profile: default
+    review_profile: requirements-heavy

@@ -13,7 +13,6 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/shared/text.js";
 import { claimProblems } from "../helpers/readmeClaim.js";
 import {
   evalRecordProblems,
@@ -63,12 +62,11 @@ async function passingRecord(host: string, version: string) {
   const record = {
     host,
     version,
-    seedDigest: hashAssistantAssetText(seedText),
     safetyList,
     verdict: releaseVerdict(cases, safetyList),
     cases,
   };
-  return { record, problems: evalRecordProblems(record, seedText) };
+  return { record, problems: evalRecordProblems(record) };
 }
 
 // Both READMEs as the temp tree holds them, keyed by their path.

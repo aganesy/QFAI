@@ -2,11 +2,11 @@
 // order and takes the route of the first that holds, so the same extraction always gives the
 // same route. Within a rule, the clauses are tried in order too.
 
-import type { Artifact, RoutingReading } from "./extraction.js";
+import type { RoutingReading } from "./extraction.js";
 import type { WorkflowRoute } from "./routes.js";
 
-// A reading as the rules read it: its own facts and the artifacts every reading shares.
-export type RuleInput = RoutingReading & { artifacts: readonly Artifact[] };
+// A reading as the rules read it.
+export type RuleInput = RoutingReading;
 
 interface Clause {
   holds: (input: RuleInput) => boolean;
@@ -16,8 +16,6 @@ interface Clause {
 interface DecisionRule {
   rule: number;
   clauses: Clause[];
-  // Rule 15 gives way to a later rule whose route carries a default modifier.
-  yieldsToGatedRoute?: true;
 }
 
 // The route a request that no rule holds for takes, and one whose intent could not be read.
@@ -40,12 +38,6 @@ const qualified = (input: RuleInput, name: string) =>
 const signalled = (input: RuleInput, ...names: string[]) =>
   input.signals.some((each) => names.includes(each));
 
-// A change whose every artifact is a specification or a contract settles in the spec alone.
-const settled = (input: RuleInput): WorkflowRoute =>
-  input.artifacts.every((each) => each === "spec" || each === "contract")
-    ? "apply-settled-spec"
-    : "apply-settled-build";
-
 const envWithoutRepro = (input: RuleInput) => flag(input, "env") && !flag(input, "repro");
 
 const rule = (number: number, ...clauses: Clause[]): DecisionRule => ({ rule: number, clauses });
@@ -55,7 +47,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(1, clause(is("security"), "fix-vulnerability")),
   rule(
     2,
-    clause((input) => signalled(input, "approved-record-task"), settled),
+    clause((input) => signalled(input, "approved-record-task"), "apply-settled"),
   ),
   rule(
     3,
@@ -73,6 +65,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     clause((input) => signalled(input, "backport"), "backport-fix"),
     clause((input) => signalled(input, "release-notes"), "draft-release-notes"),
     clause((input) => signalled(input, "test-plan"), "verify-manually"),
+    clause((input) => signalled(input, "acceptance-bodies"), "write-acceptance-tests"),
   ),
   rule(6, clause(is("no-work", "question-hosted"), "close-no-change")),
   rule(
@@ -91,7 +84,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       "answer-question",
     ),
   ),
-  rule(9, clause(is("question-why", "question-help"), "investigate-question")),
+  rule(9, clause(is("question-why", "question-help"), "answer-question")),
   rule(
     10,
     clause((input) => flag(input, "vague"), "request-info"),
@@ -113,17 +106,14 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       "hand-off-operation",
     ),
   ),
-  {
-    ...rule(
-      15,
-      clause(
-        (input) =>
-          is("order")(input) || (flag(input, "upstream") && qualified(input, "settled-design")),
-        settled,
-      ),
+  rule(
+    15,
+    clause(
+      (input) =>
+        is("order")(input) || (flag(input, "upstream") && qualified(input, "settled-design")),
+      "apply-settled",
     ),
-    yieldsToGatedRoute: true,
-  },
+  ),
   rule(
     16,
     clause(is("flaky-test"), "quarantine-flaky"),
@@ -137,7 +127,10 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   ),
   rule(
     18,
-    clause((input) => is("unenforced")(input) && qualified(input, "check-misses"), "sweep-guard"),
+    clause(
+      (input) => is("unenforced")(input) && qualified(input, "check-misses"),
+      "repair-consistency",
+    ),
   ),
   rule(
     19,
@@ -150,7 +143,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(21, clause(is("stale-record"), "restate-records")),
   rule(
     22,
-    clause((input) => is("defect-regression")(input) && !envWithoutRepro(input), "fix-regression"),
+    clause((input) => is("defect-regression")(input) && !envWithoutRepro(input), "fix-defect"),
   ),
   rule(
     23,
@@ -162,7 +155,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     clause((input) => is("defect-crash")(input) && flag(input, "bot"), "cluster-reports"),
     clause(
       (input) => is("defect-crash")(input) && flag(input, "trace") && !flag(input, "cause"),
-      "fix-crash",
+      "fix-defect",
     ),
     clause((input) => is("defect-crash")(input) && flag(input, "intermittent"), "fix-intermittent"),
   ),
@@ -184,7 +177,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     28,
     clause(
       (input) => is("feature", "behaviour-change")(input) && flag(input, "decision"),
-      "decide-acceptance",
+      "decide-design",
     ),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
@@ -193,9 +186,9 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(29, clause(is("refactor"), "refactor-code"), clause(is("docs"), "edit-text")),
 ];
 
-// The first rule from `from` on that holds, with the clause that held.
-function firstHolding(input: RuleInput, from: number): RouteChoice | undefined {
-  for (const entry of DECISION_RULES.slice(from)) {
+// The first rule that holds, with the clause that held.
+function firstHolding(input: RuleInput): RouteChoice | undefined {
+  for (const entry of DECISION_RULES) {
     const index = entry.clauses.findIndex((each) => each.holds(input));
     const held = entry.clauses[index];
     if (!held) continue;
@@ -206,20 +199,11 @@ function firstHolding(input: RuleInput, from: number): RouteChoice | undefined {
 }
 
 // The route the decision rules give a reading. A reading with no intent, or one no rule holds
-// for, takes the fallback route, which changes nothing. `defaultsOf` names the default modifiers
-// of a route, which rule 15 gives way to.
-export function decideRoute(
-  input: RuleInput,
-  defaultsOf: (route: WorkflowRoute) => readonly string[],
-): RouteChoice {
+// for, takes the fallback route, which changes nothing.
+export function decideRoute(input: RuleInput): RouteChoice {
   const fallback = { route: FALLBACK_ROUTE, rule: null, clause: 0 };
   if (input.intent === null) return fallback;
-  const choice = firstHolding(input, 0);
-  if (!choice) return fallback;
-  const position = DECISION_RULES.findIndex((entry) => entry.rule === choice.rule);
-  if (!DECISION_RULES[position]?.yieldsToGatedRoute) return choice;
-  const later = firstHolding(input, position + 1);
-  return later && defaultsOf(later.route).length > 0 ? later : choice;
+  return firstHolding(input) ?? fallback;
 }
 
 // Which of two choices the rules reach first: by rule number, then by clause within the rule.

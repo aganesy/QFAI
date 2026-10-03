@@ -12,7 +12,7 @@ schema_version: "1.0"
 # `.qfai/assistant/step/<name>/STEP.md`; a `- skill: <name>` entry routes a
 # skill that is not split into steps. A parent skill that runs steps has no
 # entry of its own: each of its steps carries its agents and its review
-# profile, and a run reviews the union of the steps it ran.
+# profile, and the parent runs the one review it names after its last step.
 #
 # Contract with each entry's `roles:` frontmatter — the step's `STEP.md` or
 # the skill's `SKILL.md` (validated by `QFAI-AGENT-015` .. `QFAI-AGENT-019`):
@@ -59,9 +59,14 @@ schema_version: "1.0"
 #
 # `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
 #
-# - `failed-agents-only`        re-run only the agents that did not return PASS
-# - `changed-scope-dependents`  re-run every agent whose inputs the change
-#                               touched, including ones that passed
+# - `failed-agents-only`        when a step runs again, as a Change Request's
+#                               owner rerun does, re-run only the agents whose
+#                               work failed
+# - `changed-scope-dependents`  when a step runs again, re-run every agent whose
+#                               inputs the change touched
+#
+# Neither re-runs a review: a stage is reviewed once, and its findings are
+# fixed or answered (`.qfai/assistant/rule/review-convergence.md`).
 #
 # A key that is defined nowhere and read by nothing hides its own typos, which is
 # why the vocabulary is validated. `.qfai/assistant/rule/drift-protocol.md`

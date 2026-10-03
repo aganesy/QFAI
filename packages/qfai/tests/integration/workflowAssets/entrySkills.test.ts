@@ -39,7 +39,6 @@ const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 const PROFILES = [
   "architecture-heavy",
   "default",
-  "heavy",
   "implementation-heavy",
   "requirements-heavy",
   "runtime-heavy",
@@ -155,6 +154,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "backport",
     "release-notes",
     "test-plan",
+    "acceptance-bodies",
   ],
   risks: ["security", "data-loss", "silent", "breaking", "upgrade", "performance"],
   artifacts: [
@@ -267,7 +267,7 @@ describe("qfai-run", () => {
         }
       }
     }
-    expect(routes.length).toBeGreaterThan(0);
+    expect(routes.length).toBe(34);
     expect(naming).toEqual([]);
   });
 
@@ -497,7 +497,7 @@ describe("the entry skills' routing entries", () => {
   // QFAI:EX-0001-0161-06
   // QFAI:AC-0001-0185-05
   // QFAI:EX-0001-0185-16
-  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and an independent reviewer", async () => {
+  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author the route's code review reads", async () => {
     const run = await routingEntry("qfai-run");
     expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
     const runPhases = phasesOf(run);
@@ -508,15 +508,11 @@ describe("the entry skills' routing entries", () => {
     const maintain = await routingEntry("maintain-edit", "step");
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
-    const authors = maintainPhases
-      .filter((phase) => !strings(phase.mandatory_agents).includes("completion-reviewer"))
-      .flatMap(phaseAgents);
+    const authors = maintainPhases.filter((phase) => phase.id !== "review").flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
-    const reviewing = maintainPhases.filter((phase) =>
-      strings(phase.blocking_agents).includes("completion-reviewer"),
-    );
-    expect(reviewing.length, "qfai-maintain has a blocking reviewer phase").toBeGreaterThan(0);
-    expect(authors, "the reviewer is not an author").not.toContain("completion-reviewer");
+    expect(authors, "the code review is not an author's").not.toContain("implementation-reviewer");
+    const reviewing = maintainPhases.filter((phase) => phase.id === "review").flatMap(phaseAgents);
+    expect([...new Set(reviewing)], "the code review").toEqual(["implementation-reviewer"]);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 

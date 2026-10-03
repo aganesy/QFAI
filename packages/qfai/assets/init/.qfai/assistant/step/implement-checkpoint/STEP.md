@@ -8,7 +8,6 @@ roles:
   - qa-strategist
   - qa-gatekeeper
   - implementation-reviewer
-  - completion-reviewer
 routing-profile: runtime-heavy
 ---
 
@@ -39,7 +38,7 @@ or at once when none was owed.
 5. Report each command, exit code and output in the stage report.
 
 The stage review runs after this step, once, over every example the stage
-implemented. The completion reviewer checks the integrated BF and its evidence
+implemented. The code review checks the integrated BF and its evidence
 there, and the gate below is read after that review.
 
 ## Completion gate

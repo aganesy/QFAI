@@ -3,8 +3,8 @@ name: sdd-gate
 owner: qfai-sdd
 purpose: "Validate each affected business flow on its own and report its result."
 requires: [common-gate-run]
-roles: [completion-reviewer, qa-gatekeeper]
-routing-profile: default
+roles: [requirements-reviewer, qa-gatekeeper]
+routing-profile: requirements-heavy
 ---
 
 # sdd-gate
@@ -60,7 +60,7 @@ time, on the snapshot that passed validation:
 - Reviewers check the BF → US → AC → EX ← BR edges, negative and boundary
   outcomes, contract realization, DB execution proof, decision and OQ state, and
   validation freshness.
-- `completion-reviewer` is the terminal blocking reviewer. Route
+- `requirements-reviewer` reviews the specification change. Route
   `architecture-reviewer` when a contract changed, `product-surface-reviewer`
   for a UI-bearing flow, and `qa-gatekeeper` when the gate evidence is in doubt.
 - The stage report lists, per flow, the findings, repairs, rerun commands and

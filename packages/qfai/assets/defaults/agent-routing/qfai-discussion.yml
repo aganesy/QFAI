@@ -18,12 +18,6 @@ routing:
         parallel_groups: []
         blocking_agents: [discovery-analyst]
         rerun_policy: changed-scope-dependents
-      - id: review
-        mandatory_agents: [completion-reviewer]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [completion-reviewer]
-        rerun_policy: changed-scope-dependents
     review_profile: default
 
   # `product-experience-architect` joins for the design-DNA intake, which
@@ -37,10 +31,10 @@ routing:
         blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
+        mandatory_agents: [requirements-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
+        blocking_agents: [requirements-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 
@@ -53,10 +47,10 @@ routing:
         blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
+        mandatory_agents: [requirements-reviewer]
         conditional_agents: [architecture-reviewer]
         parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
+        blocking_agents: [requirements-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 
@@ -69,10 +63,10 @@ routing:
         blocking_agents: [requirements-analyst]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, requirements-reviewer]
+        mandatory_agents: [requirements-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, requirements-reviewer]
+        blocking_agents: [requirements-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: requirements-heavy
 
@@ -85,9 +79,9 @@ routing:
         blocking_agents: [product-experience-architect]
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [completion-reviewer, product-surface-reviewer]
+        mandatory_agents: [product-surface-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [completion-reviewer, product-surface-reviewer]
+        blocking_agents: [product-surface-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: ui-bearing

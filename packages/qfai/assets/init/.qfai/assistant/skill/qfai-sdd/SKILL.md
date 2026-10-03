@@ -11,12 +11,12 @@ roles:
     orchestrator,
     delivery-planner,
     requirements-analyst,
-    completion-reviewer,
     solution-architect,
     product-experience-architect,
     test-design-analyst,
     qa-strategist,
     architecture-reviewer,
+    requirements-reviewer,
     product-surface-reviewer,
     qa-gatekeeper,
   ]
@@ -76,15 +76,16 @@ reviewers.
 ## Review
 
 After the last step, run one review with `common-review-cycle`, one affected
-business flow at a time. The reviewers are the union of the reviewers of the
-steps that ran, including `product-surface-reviewer` for a UI-bearing flow.
+business flow at a time: the specification review, by `requirements-reviewer`,
+joined by `architecture-reviewer` when a contract changed and by
+`product-surface-reviewer` for a UI-bearing flow.
 What they check is the `## Review` section of `sdd-gate`. Roles are selected
 under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ## Completion
 
-A flow is complete when its `sdd-gate` passed and every blocking reviewer
-returned PASS. When a step needs user input or cannot proceed, record the
+A flow is complete when its `sdd-gate` passed and every finding of the
+specification review is fixed or answered. When a step needs user input or cannot proceed, record the
 question as a row of `open-questions.md` and report what the stage waits on.
 
 Report the source selected, BF and US IDs touched, decision and OQ IDs, contract

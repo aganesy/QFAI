@@ -75,10 +75,7 @@ export const FAMILY_AGREEMENT = 0.95;
 const stepsOf = (plan: WorkflowPlanFile): string[] =>
   plan.stages.flatMap((stage) => stage.steps.map((step) => step.name));
 
-/**
- * A route is no lighter than another when it runs every step the other runs and carries every
- * modifier the other carries by default.
- */
+/** A route is no lighter than another when it runs every step the other runs. */
 export function isNoLighter(
   landed: string,
   expected: string,
@@ -89,10 +86,7 @@ export function isNoLighter(
   if (!heavier || !lighter) return false;
   const holds = (outer: readonly string[], inner: readonly string[]) =>
     inner.every((each) => outer.includes(each));
-  return (
-    holds(stepsOf(heavier), stepsOf(lighter)) &&
-    holds(heavier.defaultModifiers, lighter.defaultModifiers)
-  );
+  return holds(stepsOf(heavier), stepsOf(lighter));
 }
 
 // Whether the run met every safety class the seed's extraction has: a `security` request routes

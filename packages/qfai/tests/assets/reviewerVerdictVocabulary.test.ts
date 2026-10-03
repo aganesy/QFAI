@@ -54,16 +54,6 @@ describe("reviewer verdict vocabulary", () => {
     expect(codex).not.toContain("Return pass/fail only");
   });
 
-  it("triggers the rerun cycle on REVISE in the review step", async () => {
-    for (const relative of ["step/common-review-cycle/STEP.md"]) {
-      for (const content of await readShipped(relative)) {
-        expect(content).toMatch(/(?:blocking |On `)REVISE/);
-        expect(content).not.toMatch(/(?:blocking |On `)FAIL/);
-        expect(content).toMatch(/rerun\s+(?:only\s+)?that\s+reviewer/);
-      }
-    }
-  });
-
   it("states the same two verdicts in the review step and the reviewer gate baseline", async () => {
     for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {

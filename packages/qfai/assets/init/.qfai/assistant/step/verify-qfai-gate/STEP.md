@@ -3,8 +3,7 @@ name: verify-qfai-gate
 owner: qfai-verify
 purpose: "Run the QFAI validation of the run's scope and record what it finds."
 requires: [common-gate-run, common-grilling-record]
-roles:
-  [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
+roles: [orchestrator, devops-ci-engineer, qa-gatekeeper, implementation-reviewer]
 routing-profile: runtime-heavy
 ---
 
@@ -16,7 +15,9 @@ signals; this one decides. It records failures and repairs none of them:
 
 ## Reads
 
-- The scope `verify-context` declared.
+- The scope: `full` in a route, whose verify stage runs only the gates, and
+  the scope `verify-context` declared when `qfai-verify` is invoked by name. The
+  scopes and their profiles are the `## Scope` table of `verify-context`.
 - `.qfai/report/validate.json`. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
 - `.qfai/waivers.yml`, where the project has one.

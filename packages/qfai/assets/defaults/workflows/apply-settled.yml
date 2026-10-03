@@ -1,27 +1,20 @@
-route: repair-consistency
-family: consistency
+route: apply-settled
+family: change
 stages:
-  - id: diagnose
-    kind: diagnose
-    steps: [implement-diagnose]
-  - id: sdd
+  - id: spec
     kind: sdd
     steps:
-      - sdd-triage
-      - { step: sdd-flow, passThrough: true }
+      - { step: sdd-triage, mode: settled }
       - { step: sdd-story, passThrough: true }
       - { step: sdd-contract, passThrough: true }
-      - { step: sdd-cycle, passThrough: true }
       - sdd-gate
-    after: [diagnose]
     review: spec
   - id: implement
     kind: implement
     steps:
-      - implement-scaffold
-      - implement-tdd
-      - { step: implement-sweep, passThrough: true }
-    after: [sdd]
+      - { step: implement-scaffold, passThrough: true }
+      - { step: implement-tdd, passThrough: true }
+    after: [spec]
   - id: note
     kind: verify
     steps:
@@ -32,8 +25,8 @@ stages:
     kind: verify
     steps: [verify-qfai-gate, verify-repo-gate]
     after: [note]
-decisionPoints: [sdd-triage, implement-sweep]
+decisionPoints: [sdd-triage]
 branchPoints:
   - step: sdd-triage
     outcomes:
-      - { outcome: retire, routes: [retire-mechanism] }
+      - { outcome: outside-record, routes: [decide-design] }

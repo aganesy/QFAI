@@ -3,7 +3,7 @@ name: verify-advisory
 owner: qfai-verify
 purpose: "Prepare the security advisory, the CVE request and the coordinated disclosure for a fixed vulnerability, without publishing any of them."
 requires: []
-roles: [orchestrator, doc-steward, completion-reviewer]
+roles: [orchestrator, doc-steward]
 routing-profile: default
 ---
 
@@ -44,5 +44,5 @@ vulnerability before the disclosure date.
 
 - The draft carries every part listed under Writes.
 - Nothing was published, requested or sent.
-- The completion reviewer checked the draft against the intake record and the
+- The code review checked the draft against the intake record and the
   fix.

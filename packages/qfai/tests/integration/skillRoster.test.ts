@@ -25,7 +25,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
       "backend-engineer",
       "qa-gatekeeper",
       "implementation-reviewer",
-      "completion-reviewer",
       "product-surface-reviewer",
     ];
 
@@ -39,7 +38,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
 
     expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(content).toContain("implementation-reviewer checks code and tests");
-    expect(content).toMatch(/completion-reviewer checks\s+obligation, commands/);
     expect(content).toContain("Route UI-affecting work to");
   });
 
@@ -49,7 +47,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toContain("Work one EX at a time by default");
     expect(content).toContain("Parallel work requires disjoint");
     expect(content).toContain("required user consent");
-    expect(content).toContain("Each required reviewer must pass the same final revision");
+    expect(content).toContain("Each reviewer reads the same final revision");
   });
 
   it("defines the example handoff and review sequence", async () => {

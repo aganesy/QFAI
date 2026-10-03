@@ -11,7 +11,6 @@ roles:
   - backend-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
 routing-profile: implementation-heavy
 ---
 
@@ -20,6 +19,14 @@ routing-profile: implementation-heavy
 A check missed cases, or a needed check was absent. `implement-tdd` has just
 widened it or added it. This step runs it over everything it now covers and
 deals with what it finds.
+
+## Passes when
+
+Read first: the diff of the implement stage. The step passes when that diff
+adds or widens no check, such as a repair that only reconciles two declared
+surfaces, or when the widened check's result over the whole tree reports no
+new hit. The pass names which of the two holds, and the check command and its
+result where there is one.
 
 ## Reads
 

@@ -1,7 +1,7 @@
 ---
 name: common-review-cycle
 owner: common
-purpose: "Run a review the route or the parent skill calls for: dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and report the result."
+purpose: "Run a review the route or the parent skill calls for: dispatch the independent reviewers once, fix or answer every finding, and report the result."
 requires: []
 roles: []
 ---
@@ -22,23 +22,21 @@ them; it is the procedure that applies them.
 
 ## Reads
 
-- **The reviewer set.** Invoked by name: the union of the reviewers the profiles
-  of the steps that ran require, as
-  `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`
-  states, resolved through `.qfai/assistant/rule/agent-selection.md`, plus each
-  conditional reviewer whose condition holds. In a plan: the review the
-  plan names after the stage, `spec` or `code`, with the reviewers
-  `qfai-run` names for it.
-- **Under `review:heavy`.** When the work order's `modifiers` hold it, its
-  `requiredReviewerRoles` also hold the reviewers of the `heavy` review
-  profile, and every one of them is blocking; drop none. The stage report
-  lists every decision the stage adopted.
-- **The review target.** Every path and ID the stage wrote or changed, and the
-  source it was written from.
+- **The reviewer set.** In a route, the specification review:
+  `requirements-reviewer`, joined by `architecture-reviewer` when a contract
+  changed; the code review of the whole diff: `implementation-reviewer`. On a
+  flow a UI contract with screens serves, `product-surface-reviewer` joins
+  either review. A parent skill invoked by name uses the reviewers its own
+  `## Review` section names, such as `qfai-discussion`'s.
+- **The review target.** The specification review: every path and ID the
+  stage it follows wrote or changed, and the source it was written from. The
+  code review: the route's whole diff against the revision the route started
+  from, so the code and tests earlier stages wrote are read with the change note.
 - **The stage's gate result**, fresh on the revision the reviewers will read.
 - **The stage's grilling record** (`common-grilling-record`), where the stage
   held a session.
-- **The previous cycle's answered demands**, when this is not the first cycle.
+- **Answers an earlier stage recorded**, when an earlier stage's review already
+  answered findings on the same artifact.
 
 ## Cycle
 
@@ -48,8 +46,8 @@ them; it is the procedure that applies them.
    `run_log:` line must name the newest `run-*/` directory. No shell
    redirection is needed.
 2. **Build the request.** Name the scope, the target files and the review
-   focus. Carry prior answers and newly answered demands into the next cycle's
-   request before dispatching reviewers, under
+   focus. Put the answers an earlier stage recorded on the same artifact into
+   this review's request before dispatching reviewers, under
    `.qfai/assistant/rule/review-convergence.md#answered-demands-must`. Where
    the stage holds a grilling record, include it: the reviewer rules on it and
    should not have to look for it.
@@ -58,27 +56,26 @@ them; it is the procedure that applies them.
    decision in the reviewed artifact is not its independent reviewer; inside a
    run, `actorHistory` says who that is. Require every field of the shared
    reviewer response template.
-4. **On a blocking REVISE**, fix the finding in its owning source with the
-   smallest edit that resolves it, and leave unaffected content alone. An
+4. **Address every finding** once: fix it in its owning source with the
+   smallest edit that resolves it, or record a reasoned answer beside it. An
    upstream finding is not repaired here: stop under
-   `.qfai/assistant/rule/drift-protocol.md`. Then rerun the gate.
-   - Then rerun that reviewer, and any reviewer whose scope the fix changed.
-5. **Complete** only when every routed blocking reviewer returns `PASS` on the
-   same final revision. A reviewer returns `PASS` or `REVISE`; there is no third
-   verdict. A pending response is not `PASS`. The round budget and
-   its escalation are
-   `.qfai/assistant/rule/review-convergence.md#round-budget-must`.
+   `.qfai/assistant/rule/drift-protocol.md`. Rerun the gate after the fixes.
+   No reviewer is rerun.
+5. **Complete** once every reviewer has responded and every finding is fixed or
+   answered. A reviewer returns `PASS` or `REVISE`; there is no third verdict. A finding the author cannot fix goes in the stage's final report;
+   a critical decision goes to the user
+   (`.qfai/assistant/rule/review-convergence.md#one-review-must`).
 
 ## Rounds of tested results
 
-Where the stage records test observations, a blocking finding opens a new round
-for the affected test.
+Where the stage records test observations, the fix of a blocking finding
+records the affected test again; no second review follows.
 
 - Keep the earlier observation and the response that rejected it. Append the
   changed test, revision, command, result and review response.
 - Never relabel an old result as current.
-- After changing a test or its fixture, verify its oracle again before asking
-  for review.
+- After changing a test or its fixture, verify its oracle again before
+  recording the fix.
 - Where a production change alone answered the finding, rerun the selected test
   and the relevant suite, keep the original RED subject and report the new
   result.
@@ -90,6 +87,7 @@ for the affected test.
 
 ## Gate
 
-Every routed blocking reviewer returned `PASS` on the final revision, and the
-stage report names each verdict. Anything short of
-that is reported with the open findings, not as a pass.
+Every routed reviewer responded once, every finding is fixed or answered, and
+the stage report names each verdict and each answer. A finding the author
+cannot fix is in the stage's final report, and a critical decision has gone to
+the user.

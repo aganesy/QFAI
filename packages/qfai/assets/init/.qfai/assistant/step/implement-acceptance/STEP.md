@@ -7,7 +7,6 @@ roles:
   - acceptance-test-engineer
   - devops-ci-engineer
   - qa-gatekeeper
-  - completion-reviewer
   - implementation-reviewer
 routing-profile: runtime-heavy
 ---

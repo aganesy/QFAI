@@ -9,7 +9,7 @@ import {
   type PlanRefusal,
   type WorkflowPlanFile,
 } from "./plans.js";
-import { routeDefaults, routingOutcome } from "./routeDecision.js";
+import { routingOutcome } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
 import { stepPath } from "./steps.js";
 
@@ -75,13 +75,6 @@ export function refusal(message: string, reasons: PlanReasonEntry[]): PlanDocume
   return { ok: false, message, reasons };
 }
 
-// Where nothing after the release point may run without the user's approval. A plan that names
-// no release point and carries `gate:release` releases at its end.
-function releasePointOf(plan: WorkflowPlanFile): string | null {
-  if (plan.releasePoint !== undefined) return plan.releasePoint;
-  return plan.defaultModifiers.includes("gate:release") ? "end" : null;
-}
-
 export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocument {
   return {
     ok: true,
@@ -100,7 +93,8 @@ export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocum
       })),
     })),
     decisionPoints: plan.decisionPoints,
-    releasePoint: releasePointOf(plan),
+    // Where nothing after it may run without the user's approval: a step, `end`, or none.
+    releasePoint: plan.releasePoint ?? null,
     branchPoints: plan.branchPoints,
   };
 }
@@ -156,9 +150,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
       subjects.map((subject) => ({ reason: "schema", subject })),
     );
   }
-  const { defaultsOf, refusals } = await routeDefaults();
-  const outcome = routingOutcome(extraction, defaultsOf);
-  if (refusals.length > 0) return planInvalid(refusals);
+  const outcome = routingOutcome(extraction);
   if ("candidates" in outcome) return candidatesOf(root, outcome.candidates, outcome.recommended);
   const load = await loaded(root, outcome.taken.route);
   return load.ok ? planned(load.plan, outcome.taken.rule) : load.document;

@@ -18,23 +18,19 @@ describe("answered review demands are carried into the next existing request", (
         "MUST NOT be re-raised under another wording",
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",
-        "Carry prior answers forward",
-        "before dispatching reviewers",
+        "they never start a second review in the same stage",
+        "`review_request.md` carries those answers",
         "a new defect or evidence that an answer no longer applies",
-        "the authoritative reviewer accepts the fix or a reasoned decline",
-        "or the user adjudicates it",
-        "A producer's reply alone does not close a demand",
-        "An unresolved blocking demand remains REVISE when repeated",
       ]) {
         expect(text.includes(clause), clause).toBe(true);
       }
-      expect(text).toContain("Severity overrides lateness");
+      expect(text).toContain("A critical decision in it still goes to the user");
     });
 
     it(`${tree}: the review step carries answers before reviewer dispatch`, async () => {
       const text = await read(tree, "assistant/step/common-review-cycle/STEP.md");
       expect(text).toContain("review-convergence.md#answered-demands-must");
-      expect(text).toContain("Carry prior answers and newly answered demands");
+      expect(text).toContain("Put the answers an earlier stage recorded on the same artifact");
       expect(text).toContain("request before dispatching reviewers");
     });
   }

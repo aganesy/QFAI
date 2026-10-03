@@ -1,14 +1,16 @@
-route: edit-text
-family: change
+route: write-acceptance-tests
+family: upkeep
 stages:
-  - id: edit
-    kind: maintenance
-    steps: [maintain-edit]
+  - id: implement
+    kind: implement
+    steps:
+      - { step: implement-credentials, passThrough: true }
+      - implement-acceptance
   - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-    after: [edit]
+    after: [implement]
     review: code
   - id: verify
     kind: verify

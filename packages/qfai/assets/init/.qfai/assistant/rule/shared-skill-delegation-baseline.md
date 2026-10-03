@@ -127,11 +127,11 @@ Every skill and step inherits this gate. Its own reviewer gate names only the
 checks specific to its artifacts; the Drift Protocol, test-layer and
 signals-not-gates bullets below, and the `PASS` / `REVISE` vocabulary, are not
 restated. A skill with no check of its own carries no reviewer gate section. A
-stage that runs several steps is reviewed once, after its last step, with the
-union of their reviewers
+stage that runs several steps is reviewed once, after its last step, by the one
+review its parent names
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
 
-- Final completion gate must be delegated to an independent reviewer.
+- Final completion gate must be delegated to an independent reviewer, except where the skill runs no review: `qfai-triage` invoked by name, and a `qfai-verify` run that wrote nothing.
 - Each reviewer records an explicit PASS or REVISE for the reviewed revision.
 - The one exception: a work order that names no required reviewer is reviewed
   by none, and the two bullets above then have nothing to apply to.
@@ -187,38 +187,19 @@ A disposition with nothing behind it cannot be told from a fabricated one, so it
 
 The field asks about the artifact **as it now stands**. A recommendation the artifact no longer carries, and one the user has since settled, are both outside it: the first is not under review, and the second is the user's decision by the first row above. Read as a history of everything ever recommended, the field would disqualify a reviewer over something nobody is being asked to judge.
 
-**Review rounds are one series, whatever instance serves them.** The budget is two rounds per reviewer per artifact, and a host may answer round 2 with a fresh sub-agent under a new `Agent instance`. The work order and the response both carry a `Review series` value — the reviewed artifact, the role, and a replacement ordinal that starts at 1 and rises each time the review is handed to a
-non-participating reviewer — and the budget is counted per series. A reset instance serving round 2 keeps the series it was issued; a replacement reviewer is issued the next ordinal and starts at round 1, because it is continuing nobody's review.
-
-**The two are told apart by a record, not by the instance.** Both arrive as a fresh `Agent instance` on the same artifact, role and evidence, so nothing observable at dispatch separates them. What separates them is why the handoff happened: a replacement is issued **only** where the previous response in the series declared a conflict — a non-`none` `Authored/edited under review` — or
-where the orchestrator records an equivalent disqualification in the Work Orders Summary. Absent that record the dispatch is a reset and keeps the series, whatever instance serves it. So an orchestrator cannot mint budget by calling a reset a replacement: the ordinal only moves behind a declared conflict somebody wrote down. Counting per instance would restart the budget every round, so
-it could never be exhausted and the escalation exit that opens when it is would never open; counting a replacement against its predecessor's series would exhaust it a round early.
-
-**The ordinal is bounded, or the budget is not.** A fresh series starts a fresh two rounds, so an orchestrator that replaced the reviewer after every round 1 would reset the budget for ever and the escalation could never arrive. At most **two series per artifact per role**: ordinal 2 is the last one that opens, and a further conflict escalates to the user with the conflict named instead
-of opening a third. This is the cap `.qfai/assistant/rule/review-convergence.md` puts on the post-escalation verification review, applied to the other way a gate can be made unbounded.
-
-**A special round is not a new series of the artifact it follows.** The one permitted verification review is scoped to a named fix on the same artifact, so a conflict discovered inside it is handed to a non-participating reviewer **within the same series**, which finishes the round it was opened for. Opening a new series there would do one of two wrong things: reopen a general two-round
-budget the escalation has already spent, or leave the verification unfinished because its replacement is serving a round 1 that has no remit.
-
-The corrective review is the other case and takes the opposite answer, because `.qfai/assistant/rule/review-convergence.md` makes it a **separate artifact** with a remit of its own. Its series names that artifact, at ordinal 1, and is terminal: one round, no second, and no replacement ordinal after it. Sharing the originating artifact's series would have let a corrective review
-inherit a spent budget and would have made the two artifacts' rounds indistinguishable in the record.
-
-The ordinal rises on a handoff that opens a general series on the same artifact, and on nothing else.
-
 - Reviewers must verify Drift Protocol enforcement
   (`.qfai/assistant/rule/drift-protocol.md`).
 - Reviewers must verify test-layer policy enforcement when relevant
   (`.qfai/assistant/rule/test-layers.md`).
 - Test volume ratios, floors and planning estimates are signals, not gates,
   unless the skill explicitly says so.
-- Do not declare DONE until all routed blocking reviewers return `PASS`.
-- Any in-scope blocking finding from an invoked reviewer prevents DONE until resolved;
-  `blocking_agents` requires a reviewer's PASS only when that reviewer is routed.
+- Do not declare DONE until every finding of its one review is fixed or answered, as `.qfai/assistant/rule/review-convergence.md` sets out.
+- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
-### Round budget and convergence (MUST)
+### Review convergence (MUST)
 
-Both live in `.qfai/assistant/rule/review-convergence.md`: the two-round budget, the escalation exits and their severity floor, the one-shot corrective review, and the convergence rules that decide which findings are still in budget. They moved there because this file reached the shipped-asset line ceiling; the rules are unchanged by the move.
+A stage is reviewed once, and the author fixes or answers every finding with no re-review: `.qfai/assistant/rule/review-convergence.md`.
 
 ### Reviewer remit (in scope per stage)
 
@@ -296,7 +277,7 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 - First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
 - If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
-- Record the reuse in the Work Orders Summary (`Task title` prefixed `re-review (sequential reuse)`).
+- Record the reuse in the Work Orders Summary (`Task title` prefixed `review (sequential reuse)`).
 - If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`, and DONE stays blocked.
 - Never record a waived or self-performed review as `PASS`.
 
@@ -313,7 +294,7 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 ```text
 Task title: <short>
 Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only; the budget is counted per series
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
@@ -333,8 +314,7 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 ```text
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
-Round: 1 | 2 | 2b
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # the budget is counted per series, not per instance
+Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
@@ -348,8 +328,6 @@ Advisory / Change Request proposals:
 Evidence checked:
 - <refs>
 ```
-
-`Round` is required — the round budget in `.qfai/assistant/rule/review-convergence.md` is counted from it. `2b` is the post-escalation verification review of a user-named fix.
 
 - `Reviewed revision` is required: the commit the reviewer read, or `working-tree` when the tree it read has uncommitted changes. The reviewer names the integrated tree actually inspected. If it changes during review, report the stale verdict and review the new revision.
 - `Reviewer role`, `Reviewed artifact`, `Review series`, `Authored/edited under review` and `Recommended and unadjudicated` are REQUIRED. A response omitting any of them is not a valid review verdict and MUST NOT satisfy a completion gate — re-request it rather than reading a bare `Result:` line out of it, which is how a doer's self-assessment gets counted as a reviewer's ruling.

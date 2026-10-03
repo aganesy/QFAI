@@ -14,7 +14,8 @@ flowchart TD
   Need[Project need] --> Discuss[Discuss scope and open decisions]
   Request[Free-text change request] --> Route[Plan the route and announce it]
   Route -->|Plan with a specification stage| SDD
-  Route -->|Plan with no specification stage| Implement
+  Route -->|Change route with no specification stage| Implement
+  Route -->|draft-release-notes| Notes[Draft the release notes and ask for the release approval]
   Route -->|Plan ending at triage-close| Close[Answer, close or hand over the request]
   Discuss --> SDD[Author flows, stories, criteria and contracts]
   SDD --> Validate[Validate current story tree]

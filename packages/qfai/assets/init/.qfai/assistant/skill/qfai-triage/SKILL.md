@@ -14,7 +14,6 @@ roles:
     frontend-engineer,
     backend-engineer,
     devops-ci-engineer,
-    completion-reviewer,
     requirements-reviewer,
   ]
 steps:
@@ -27,7 +26,7 @@ steps:
   - triage-security-intake
   - triage-handoff
   - triage-close
-requires: [common-review-cycle]
+requires: []
 mode: execution-focused
 ---
 
@@ -81,9 +80,8 @@ this file adds nothing to it.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran. Each step's `## Gate` section
-says what its reviewers check.
+Invoked by name, the skill runs no review: its steps change no tracked file.
+Each step's `## Gate` section says what passes it.
 
 ### Reviewer Gate
 

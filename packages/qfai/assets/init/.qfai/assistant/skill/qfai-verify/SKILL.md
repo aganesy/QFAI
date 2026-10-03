@@ -12,7 +12,6 @@ roles:
     devops-ci-engineer,
     doc-steward,
     qa-gatekeeper,
-    completion-reviewer,
     implementation-reviewer,
   ]
 steps:
@@ -79,21 +78,17 @@ this file adds nothing to it.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran: `completion-reviewer`, with
-`qa-gatekeeper` when a gate step or `verify-repeat-run` ran, and
-`implementation-reviewer` when the fix loop changed code. Each step's `## Gate` section says what its reviewers check.
-
-- Gate execution (`devops-ci-engineer`) and completion approval
-  (`completion-reviewer`) are separate agents. Completion is approved by a
-  reviewer who did not run the gates.
-- `qa-gatekeeper` confirms gate coverage before approval.
-- Do not hand off until all routed blocking reviewers return `PASS`.
+A run that wrote no tracked file holds no review: an exit code decides each
+gate, and each step's `## Gate` section says what passes it. A run that wrote a
+tracked file — a change note, an advisory draft, release notes, or a fix the
+fix loop of `verify-repo-gate` made — ends with the code review of what it
+wrote, by `implementation-reviewer`.
 
 ## Completion
 
-The invocation completes on the gate of the last step that ran and a PASS of
-the review above.
+The invocation completes on the gate of the last step that ran. Where
+the run wrote a tracked file, every finding of the code review above is fixed
+or answered.
 
 When declaring DONE, include:
 

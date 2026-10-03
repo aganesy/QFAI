@@ -98,13 +98,13 @@ async function scored(id: string) {
   return found && { userPrompt: found.userPrompt, repoFacts: found.repoFacts, ...found.expected };
 }
 
-it("A seed where no story covers the behaviour and the operator states the result allows add-feature and decide-acceptance, not fix-defect", async () => {
+it("A seed where no story covers the behaviour and the operator states the result allows add-feature and decide-design, not fix-defect", async () => {
   const uncovered = (await routingSeeds()).filter(
     (each) => each.repoFacts.storyMissing === true && "userExpectedStatus" in each.repoFacts,
   );
 
   expect(uncovered.map((each) => each.expected.allowedRoutes)).toEqual([
-    ["add-feature", "decide-acceptance"],
+    ["add-feature", "decide-design"],
   ]);
 });
 
@@ -121,7 +121,7 @@ it("An untrusted log and a quoted request route to a question that changes nothi
   const seeds = await routingSeeds();
   const untrusted = seeds.find((each) => "untrustedLog" in each.repoFacts);
   const quoted = seeds.find((each) => each.repoFacts.quotedRequestOnly === true);
-  const answering = ["answer-question", "investigate-question"];
+  const answering = ["answer-question"];
 
   expect(
     [untrusted, quoted].map(
@@ -235,7 +235,7 @@ it("ROUTE-014", async () => {
   ).toEqual([
     "Add a feature that lets each customer register up to five notification addresses, with no duplicates and the existing data kept.",
     true,
-    ["routing_create_question", "sdd", "acceptance", "implement", "verify"],
+    ["routing_create_question", "sdd", "implement", "verify"],
     false,
   ]);
 });
@@ -313,7 +313,7 @@ it("ROUTE-049", async () => {
 
   expect(found && [found.userPrompt, found.must]).toEqual([
     "Fix the bug this API test found.",
-    ["sdd_append", "acceptance"],
+    ["sdd_append", "implement"],
   ]);
 });
 
@@ -635,16 +635,16 @@ it("Each boundary pair puts one seed on each side, and a landing no lighter than
     malformed: pairs
       .filter(([side, pair]) => pair.length !== 2 || new Set(side.split("|")).size !== 2)
       .map(([side]) => side),
-    toRegression: landings("fix-defect|fix-regression", "fix-regression"),
-    toDefect: landings("fix-defect|fix-regression", "fix-defect"),
-    toSweep: landings("repair-consistency|sweep-guard", "sweep-guard"),
-    toRepair: landings("repair-consistency|sweep-guard", "repair-consistency"),
+    toRedMain: landings("fix-defect|fix-red-main", "fix-red-main"),
+    toDefect: landings("fix-defect|fix-red-main", "fix-defect"),
+    toDesign: landings("add-feature|decide-design", "decide-design"),
+    toFeature: landings("add-feature|decide-design", "add-feature"),
   }).toEqual({
     malformed: [],
-    toRegression: [false, true],
+    toRedMain: [false, true],
     toDefect: [true, false],
-    toSweep: [true, true],
-    toRepair: [true, false],
+    toDesign: [false, true],
+    toFeature: [true, false],
   });
 });
 
@@ -671,7 +671,7 @@ it("Every re-routing seed names an outcome its route's branch point declares, an
 
   expect({
     undeclared: seeds.filter((seed) => !declared(seed)).map((seed) => seed.id),
-    revert: named("fix-regression", "implement-bisect", "revert", "revert-culprit"),
+    revert: named("fix-defect", "implement-bisect", "revert", "revert-culprit"),
     defectiveTest: named("fix-defect", "implement-diagnose", "defective-test", "repair-test"),
   }).toEqual({ undeclared: [], revert: true, defectiveTest: true });
 });
