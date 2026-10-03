@@ -84,7 +84,7 @@ Read each test on four questions. Three are already judged elsewhere; apply
 them there, not twice.
 
 | Question                                                          | Where it is judged                                                                          |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Does it cover the behaviour that matters, not just the lines run? | The coverage gate above                                                                     |
 | Are the recurring gaps covered: kept failures and boundary cases? | The coverage gate above                                                                     |
 | Would it fail on a concrete regression?                           | `skill/qfai-implement/references/oracle-strength.md` and the RED and GREEN observation gate |
@@ -122,6 +122,8 @@ its evidence on the revision submitted for review.
   The test hash, source revision and command must agree with the RED/GREEN
   evidence. A later source or shared-fixture change requires the affected
   observation to be refreshed.
+- Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
+  (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
 Use `skill/qfai-implement/references/red-admissibility.md`,
 `skill/qfai-implement/references/red-not-observable.md`, and
