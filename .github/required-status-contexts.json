@@ -109,9 +109,7 @@
         "a dependency condition."
       ],
       "dependencyMatrices": {
-        "test": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
-        },
+        "test": { "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"] },
         "node-floor": {
           "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
         }
@@ -181,9 +179,7 @@
         "change a reviewer reads."
       ],
       "installLifecycle": {
-        "package.json": {
-          "preinstall": "node ./scripts/check-not-a-dependency.mjs"
-        },
+        "package.json": { "preinstall": "node ./scripts/check-not-a-dependency.mjs" },
         "packages/qfai/package.json": {}
       },
       "installLifecycleNote": [
