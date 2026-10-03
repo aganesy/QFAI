@@ -45,7 +45,7 @@ Every file the loop writes stays under `.qfai/prototype/`: the session record,
 each iteration and its reviews, and the handoff. No `qfai` command writes
 there. The one file a command reads is the handoff record
 `.qfai/prototype/final/handoff.json`, which
-`qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.
+`npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.
 
 ## Inputs Priority
 

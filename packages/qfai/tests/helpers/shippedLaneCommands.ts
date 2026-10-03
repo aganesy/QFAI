@@ -1603,7 +1603,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `Component catalogue` row of the Stack table in `tech.md` as the place that
   // says which registry is primary. The whole delta is those two comment lines:
   // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
-  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
+  //
+  // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
+  // keeps no calibration pack. Restoring the two lines `calibration:` and
+  // `packPath: .qfai/evidence/calibration.yaml` reproduces `1fea21e9…` byte for byte.
+  ["qfai.config.yaml", "f466de8c5deff1a407bd9cc600a7e60bedb0c8bc41402c1d2e8609e16d89f482"],
 ]);
 
 /**

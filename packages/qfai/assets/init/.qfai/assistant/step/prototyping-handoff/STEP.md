@@ -40,7 +40,7 @@ Runs only after the user confirmed the prototype in `prototyping-loop`.
 
 ## Gate
 
-The step passes when both files exist. Only `qfai validate --profile
+The step passes when both files exist. Only `npx qfai validate --profile
 saas-package` checks the handoff record; nothing certifies the prototype.
 
 The completion report names:

@@ -71,7 +71,7 @@ them consistently with each other
 (`.qfai/assistant/rule/ui-procurement.md`).
 
 `/qfai-implement` and the reviewers read it as a CLI-HANDOFF record in the
-same checkout. `qfai validate --profile saas-package` requires it to be present
+same checkout. `npx qfai validate --profile saas-package` requires it to be present
 and to conform, and reports `D-SAAS-PACKAGE-HANDOFF-SCHEMA` naming the file
 otherwise; no other command reads it.
 
