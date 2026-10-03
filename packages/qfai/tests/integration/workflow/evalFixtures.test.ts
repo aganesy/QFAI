@@ -100,7 +100,10 @@ function isFault(value: unknown): value is Fault {
 
 // A fixture that is not there reads as empty, so every case fails at its assertion.
 async function fixtureText(name: string): Promise<string> {
-  return readFile(path.join(FIXTURES, name), "utf8").catch(() => "");
+  return readFile(path.join(FIXTURES, name), "utf8").catch((error: unknown) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "";
+    throw error;
+  });
 }
 
 it("An existing fixture returns its text", async () => {
