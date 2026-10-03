@@ -454,7 +454,7 @@ Notes.
 1. `npx qfai init`
 2. Open your AI coding agent in the repository and describe the change in your own words.
    If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
-3. Answer the questions the run puts to you. Say `continue` to resume after an interruption, or `stop` to cancel.
+3. Answer the questions the work puts to you, or say `stop` to end it.
 4. Keep each completed review under `.qfai/review/review-<timestamp>/`.
 5. Run `npx qfai validate` then `npx qfai report`.
 

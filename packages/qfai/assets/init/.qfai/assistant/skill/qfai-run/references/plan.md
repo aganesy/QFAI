@@ -5,11 +5,11 @@ are exact: an unknown key is refused.
 
 ## Calls
 
-| Call                                     | When                                                         |
-| ---------------------------------------- | ------------------------------------------------------------ |
-| `npx qfai workflow plan --in <file>`     | A request, with its extraction in a JSON file                |
-| `npx qfai workflow plan --in -`          | The same, with the extraction on standard input              |
-| `npx qfai workflow plan --route <route>` | The candidate chosen, a branch destination, or a new session |
+| Call                                     | When                                            |
+| ---------------------------------------- | ----------------------------------------------- |
+| `npx qfai workflow plan --in <file>`     | A request, with its extraction in a JSON file   |
+| `npx qfai workflow plan --in -`          | The same, with the extraction on standard input |
+| `npx qfai workflow plan --route <route>` | The candidate chosen, or a branch destination   |
 
 - Each call prints one JSON document and writes no file.
 - Exit 0 is a plan or candidates, 2 a refused input, and 1 a plan the package

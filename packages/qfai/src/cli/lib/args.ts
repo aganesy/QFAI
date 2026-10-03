@@ -1088,6 +1088,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
+        } else if (command === "workflow" && arg !== undefined) {
+          // `workflow plan` takes no positional, so a stray token is refused rather than ignored.
+          options.unknownFlags.push(arg);
+          markInvalid(`qfai workflow: unexpected argument: ${arg}`);
         }
         break;
     }

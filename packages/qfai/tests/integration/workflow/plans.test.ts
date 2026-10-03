@@ -193,6 +193,11 @@ const loadRefusals: [string, (text: string) => string][] = [
   ["out-of-vocabulary", (text) => text.replace("kind: verify", "kind: verification")],
   ["kind-mismatch", (text) => text.replace(EDIT_STEPS, "steps: [sdd-story]")],
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
+  [
+    "after-order",
+    (text) =>
+      text.replace(EDIT_STAGE, "").replace("defaultModifiers", `${EDIT_STAGE}defaultModifiers`),
+  ],
   ["cycle", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [verify]\n`)],
   ["unreachable", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [edit]\n`)],
   [

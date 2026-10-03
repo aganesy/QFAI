@@ -67,7 +67,9 @@ describe("a step that may pass with evidence", () => {
       ),
     );
     expect(baseline).toMatch(/always runs/i);
-    expect(baseline).toMatch(/`passes` as `\{ step, reason, evidenceRef \}`/);
+    expect(baseline).toMatch(
+      /writes nothing and states why; the stage's review reads that statement/i,
+    );
     expect(baseline).toMatch(/a pass is not a skip/i);
   });
 

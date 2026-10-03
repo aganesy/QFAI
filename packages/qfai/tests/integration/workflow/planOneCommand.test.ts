@@ -237,6 +237,17 @@ it("An option given without its value is refused, naming the option", async () =
   ]);
 });
 
+// QFAI:EX-0001-0222-08
+it("A stray token after plan is refused, naming it", async () => {
+  const root = await minimalProject();
+  const refused = workflow(root, ["plan", "typo", "--route", "add-feature"]);
+
+  expect([refused.status, field(refused.json, "reasons")]).toEqual([
+    2,
+    [{ reason: "invalid-input", subject: "typo" }],
+  ]);
+});
+
 it("Help prints the operation as text", async () => {
   const root = await minimalProject();
   const help = workflow(root, ["--help"]);

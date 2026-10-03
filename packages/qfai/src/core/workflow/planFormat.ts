@@ -55,6 +55,7 @@ export type PlanRefusalReason =
   | "pass-through"
   | "seam"
   | "after-missing"
+  | "after-order"
   | "cycle"
   | "unreachable"
   | "point"
@@ -333,8 +334,10 @@ function reachedFrom(stages: PlanStage[], from: PlanStage[]): Set<string> {
 
 function graphRefusals(stages: PlanStage[], refuse: Refuse) {
   const ids = new Set(stages.map((stage) => stage.id));
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     if (stage.after.some((id) => !ids.has(id))) refuse("after-missing", stage.id);
+    const earlier = new Set(stages.slice(0, index).map((each) => each.id));
+    if (stage.after.some((id) => ids.has(id) && !earlier.has(id))) refuse("after-order", stage.id);
   }
   for (const stage of stages) {
     if (reachedFrom(stages, followersOf(stages, stage.id)).has(stage.id)) refuse("cycle", stage.id);

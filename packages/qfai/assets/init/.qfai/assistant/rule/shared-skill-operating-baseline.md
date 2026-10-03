@@ -288,7 +288,7 @@ Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 
 A step is one part of a parent skill's procedure, kept at
 `.qfai/assistant/step/<name>/STEP.md`. No host lists a step as a skill; a step
-runs only from its parent or from a work order.
+runs only from its parent or from the plan `qfai-run` follows.
 
 - **A step's `requires` names only `common-*` steps**, and a `common-*` step
   requires nothing. The deepest chain is parent, step, common step.
@@ -317,38 +317,31 @@ runs only from its parent or from a work order.
 A step skipped on a condition that later turns out to hold is run in its place
 in the order, before the review.
 
-### A work order's steps
+### A plan's steps
 
-A workflow sub-agent handed a QFAI work order runs the steps the work order
-names, in its `steps:` list, and no other.
+`qfai-run` runs the steps of the plan `npx qfai workflow plan` returned, stage by
+stage, and no other.
 
 1. Run the entry check in the `step` state.
-2. For each listed step, in order: read the `STEP.md` at its `path` and no
-   other, run it, and pass its gate. A step the parent lists and the work order
-   does not is not run. Where the work needs an unlisted step, return the
-   replan outcome rather than run it. A step that reports a `branch` ends the
-   work order there: the steps after it do not run, and the result carries the
-   `branch` and no `closure`.
-3. Take what the work order's `settled` field records as settled, and ask none
-   of it again.
-4. Run one review through `common-review-cycle` at the end, with the work
-   order's `requiredReviewerRoles`, and none when it names none. The run
-   computed that set; do not recompute it or drop a role from it.
-5. Return the stage result the work order asks for. A finding another owner
-   must repair is a debt naming that owner, not an edit made here.
+2. For each step of the stage, in order: read the `STEP.md` at its `path` and
+   no other, run it, and pass its gate. A step the parent lists and the plan
+   does not is not run. Where the work needs a step no stage of the route runs,
+   stop and name the stage skill to invoke by name. A step that reports an
+   outcome its branch point pairs with a route ends the route there: the steps
+   after it do not run, and the work moves to that route's plan.
+3. After a stage whose `review` is `spec` or `code`, run that review through
+   `common-review-cycle`. A stage with no `review` has none.
+4. A finding another owner must repair is reported with that owner, not an
+   edit made here.
 
 ### A pass-through step
 
-A step the work order marks `passThrough` always runs. It first reads what its
+A step the plan marks `passThrough` always runs. It first reads what its
 `## Passes when` section names. When that shows it has nothing to write, it
-writes nothing, keeps what it read in a git-ignored record, and returns a pass
-in the result's `passes` as `{ step, reason, evidenceRef }`: `reason` names the
-fact that leaves nothing to write, and `evidenceRef` names the record.
+writes nothing and states why; the stage's review reads that statement.
 
-- A pass is not a skip. The step stays in the result, and the stage's reviewers
-  judge its reason.
-- `accept` refuses a pass on a step the work order does not mark, and a pass
-  while the step's obligation remains.
+- A pass is not a skip. The step stays in the work, and the review judges its
+  reason.
 - Invoked by name, a step with a `## Passes when` section passes the same way,
   and the report names the pass and its reason.
 
