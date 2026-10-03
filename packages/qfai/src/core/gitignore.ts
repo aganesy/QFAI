@@ -38,9 +38,8 @@ export const QFAI_STATE_SCRATCH_SUFFIX = ".qfai-state.tmp";
 export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
 
 /**
- * The run state `qfai workflow` keeps under `.qfai/run/`: the journal, the lock and each run's
- * snapshot. It is per-checkout and rebuilt from the journal, so it never belongs in a commit, and
- * init adds it to an existing block that lacks it.
+ * `.qfai/run/` is a leftover path: `qfai workflow` no longer writes it, but a project may still
+ * hold one. It stays in the managed ignore block so a leftover never lands in a commit.
  */
 export const QFAI_RUN_STATE_IGNORE = ".qfai/run/";
 

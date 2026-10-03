@@ -26,8 +26,9 @@ them; it is the procedure that applies them.
   of the steps that ran require, as
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`
   states, resolved through `.qfai/assistant/rule/agent-selection.md`, plus each
-  conditional reviewer whose condition holds. In a run: the work order's
-  `requiredReviewerRoles`, as issued.
+  conditional reviewer whose condition holds. In a plan: the review the
+  plan names after the stage, `spec` or `code`, with the reviewers
+  `qfai-run` names for it.
 - **Under `review:heavy`.** When the work order's `modifiers` hold it, its
   `requiredReviewerRoles` also hold the reviewers of the `heavy` review
   profile, and every one of them is blocking; drop none. The stage report
