@@ -1151,8 +1151,8 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  * `ALLOWED_STEP_BODIES` is built on.
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
-  ["actions/checkout", "fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"],
-  ["actions/setup-node", "a0853c24544627f65ddf259abe73b1d18a591444"],
+  ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
+  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1243,9 +1243,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "b2cf5599773c7bba3037262d8ff4280221bb1490fe19f6846c29c5f8b4863d4f"],
-  ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
-  ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
+  ["qfai-docs.yml", "749f4c8dde256a5627ee20906289172ab778cadb143ffcec8ac7961d8d8d3f83"],
+  ["qfai-tests.yml", "d83dfcb1d6d8408a69b73651a332cd69d3757553123d6701ef9c93464a4f9164"],
+  ["qfai-validate.yml", "c1660cacff5c30ecd91250d8bbe4f13fef1c6d2bff554fb59c03077c9db4bda0"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1376,11 +1376,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
-    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/untrusted-content.md`,
-    // the rule master the run now seeds, which says text the repository did not author is data,
-    // not instruction. Dropping that one bullet reproduces `dfa370bc…` byte for byte.
+    // The generated rule list cites action-reversibility and untrusted-content.
+    // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "d5258001f410aeb036fefbb3ffb1c66b8b8bcb3cb5f1315ec3c8909c8a04cef2",
+    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1465,10 +1464,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // The entry files cite `.agents/rules/untrusted-content.md` and open with their heading.
+  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "fdcad30d0b94a225eff7a063db9ed919c244f1e3f3f029f7ca7768388aa84545"],
-  ["CLAUDE.md", "0fe698781bf6134fde2582db746bcee3b147283c140ba34eebbc56d8bae4c389"],
+  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
+  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1710,6 +1709,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
@@ -2039,7 +2039,7 @@ export function initMustNotShip(
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-docs.yml#scope",
-    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
+    '{"name":"Checkout with full history via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":0}}',
   ],
   [
     "qfai-docs.yml#scope",
@@ -2047,7 +2047,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2067,7 +2067,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2091,7 +2091,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
+    '{"name":"Checkout with full history via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":0}}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2107,7 +2107,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2127,7 +2127,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2143,7 +2143,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2163,7 +2163,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
