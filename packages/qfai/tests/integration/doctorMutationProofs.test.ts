@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import type * as FsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,10 +11,30 @@ import { checkMutationProofs } from "../../src/core/doctor/mutationProofs.js";
 import type * as StoryReader from "../../src/core/validators/storyTreeObligations.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-const scan = vi.hoisted((): { fault: Error | undefined; truncated: boolean } => ({
-  fault: undefined,
-  truncated: false,
-}));
+const scan = vi.hoisted(
+  (): {
+    fault: Error | undefined;
+    truncated: boolean;
+    targetFault: Error | undefined;
+    targetPath: string | undefined;
+  } => ({
+    fault: undefined,
+    truncated: false,
+    targetFault: undefined,
+    targetPath: undefined,
+  }),
+);
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return {
+    ...actual,
+    readFile: async (...args: Parameters<typeof actual.readFile>) => {
+      if (args[0] === scan.targetPath && scan.targetFault) throw scan.targetFault;
+      return actual.readFile(...args);
+    },
+  };
+});
 
 vi.mock("../../src/core/validators/storyTreeObligations.js", async (importOriginal) => {
   const actual = await importOriginal<typeof StoryReader>();
@@ -32,7 +53,39 @@ const roots: string[] = [];
 afterEach(async () => {
   scan.fault = undefined;
   scan.truncated = false;
+  scan.targetFault = undefined;
+  scan.targetPath = undefined;
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
+});
+
+describe("mutation-proof target file boundary", () => {
+  it.each(["ENOTDIR", "EISDIR"])(
+    "warns when %s means the source is no longer a file",
+    async (code) => {
+      const root = await project(WITH_PROOF);
+      const { config } = await loadConfig(root);
+      scan.targetPath = path.join(root, "src", "total.ts");
+      scan.targetFault = Object.assign(new Error("proof target is no longer a source file"), {
+        code,
+        path: scan.targetPath,
+      });
+      const check = await checkMutationProofs(root, config);
+      expect(check).toMatchObject({
+        id: "tests.mutationProofs",
+        severity: "warning",
+        details: {
+          stale: [
+            {
+              test: "tests/unit/total.test.ts",
+              line: 4,
+              target: "src/total.ts",
+              original: "a + b",
+            },
+          ],
+        },
+      });
+    },
+  );
 });
 
 const CONFIG = [

@@ -2,13 +2,15 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { readStoryTests } from "../validators/storyTreeObligations.js";
 
 /**
  * A mutation proof written under an example's annotation:
  * `// Mutation: <path> \`<original>\` -> \`<substitute>\` fails <assertion>`.
  */
-const PROOF_LINE = /^\s*(?:\/\/|#|\*)\s*Mutation:\s*(\S+)\s+`([^`]+)`\s*->\s*`([^`]*)`\s+fails\s+(.+)$/;
+const PROOF_LINE =
+  /^\s*(?:\/\/|#|\*)\s*Mutation:\s*(\S+)\s+`([^`]+)`\s*->\s*`([^`]*)`\s+fails\s+(.+)$/;
 
 export type MutationProofsCheck = {
   id: "tests.mutationProofs";
@@ -47,13 +49,11 @@ export async function checkMutationProofs(
   root: string,
   config: QfaiConfig,
 ): Promise<MutationProofsCheck | null> {
-  let read: Awaited<ReturnType<typeof readStoryTests>>;
-  try {
-    read = await readStoryTests(root, config);
-  } catch {
-    // An unusable test glob is the configuration check's to report; with no
-    // test files to read there is no proof to check.
-    return null;
+  const read = await readStoryTests(root, config);
+  if (read.truncated) {
+    throw new Error(
+      `Mutation proof scan is incomplete: selected test files exceed the ${DEFAULT_GLOB_FILE_LIMIT} file limit.`,
+    );
   }
   const tests = read.files.filter((file) => file.selectedForExample);
   const proofs = tests.flatMap((file) =>
