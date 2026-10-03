@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          e0e39ed7ca255363eb79bd1041366540bbd4935de9118f3473202def4314b1f1  .github/pinned-bytes.txt
+          b389e0429e06be2c9794944054b39d1db9a3e1c2803aeeacf126fc179c2c77db  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -777,6 +777,15 @@ jobs:
           fi
           echo "shape findings at ${artifact}; lane exit ${status} (the lint job is what fails on drift)"
 
+      # SHIPPED-CI: not-applicable
+      # Because: these root reports measure this repository's temporary pin migration.
+      - name: Collect exact root finding reports
+        if: github.event_name == 'pull_request'
+        env:
+          QFAI_MEASUREMENT_MAIN: 57a62d0173113a07d79b9a611d46eb7f6e5c6d72
+          QFAI_MEASUREMENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-dogfood-reports.mjs
+
       - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
         run: |
@@ -870,6 +879,15 @@ jobs:
             tmp/pack/sandbox/out/.qfai/report/report.md
             tmp/pack/sandbox/out/.qfai/report/run-*/
             tmp/pack/sandbox/out/.qfai/report/specs-coverage/spec-*.md
+
+      - name: Upload exact root finding reports
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dogfood-finding-reports
+          retention-days: 7
+          if-no-files-found: error
+          path: tmp/dogfood-finding-reports/
 
   # ── 6. Aggregate gate (for branch protection) ────────────────────
   ci-pass:

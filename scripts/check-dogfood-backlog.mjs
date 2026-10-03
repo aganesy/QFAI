@@ -25,14 +25,16 @@
  *
  * A new gate failure in a clean file fails immediately, and one in a file
  * already carrying debt fails as soon as it is a finding that file's pin does
- * not hold. Neither
- * can be cleared by a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is
+ * not hold. Neither can be cleared by a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is
  * an error, which is what makes the backfill the only route out.
  *
  * A file that improves is re-pinned in the same change, and a finding or a
  * file that reaches zero is struck from the list rather than left at `0`, so
- * the slot cannot be taken by the next regression. `--pin` rewrites the profile's entry from a
- * live run.
+ * the slot cannot be taken by the next regression. `--pin` rewrites the
+ * profile's entry from a live run.
+ *
+ * Findings that depend on the base diff fail ordinary runs without becoming
+ * pins. `--pin` saves only tree findings and warns about each excluded error.
  *
  * Findings print as GitHub annotations, so each lane's output is unchanged
  * from the raw `validate` call this replaces.
@@ -101,11 +103,25 @@ export function compareAgainstPin(found, pinned) {
   return { unpinned, over, improved };
 }
 
-/** Every error in a validate report, by the file it names and then by its key. */
+/**
+ * Codes whose presence depends on the diff against the base branch rather than
+ * on the tree alone. `QFAI-STORY-010` runs only under the drift profile, which
+ * no lane ratchets; it is listed so that ratcheting that profile cannot pin it.
+ */
+export const EXCLUDED_FROM_PIN_CODES = new Set(["QFAI-DRIFT-001", "QFAI-STORY-010"]);
+
+/** Errors the pin may not hold, because the next branch would read them differently. */
+export function diffDependentErrors(report) {
+  return (report.issues ?? [])
+    .filter((issue) => issue.severity === "error" && EXCLUDED_FROM_PIN_CODES.has(issue.code))
+    .map(({ code, file, message }) => ({ code, file: file ?? "(no file)", message }));
+}
+
+/** Every error the pin may hold, by the file it names and then by its key. */
 export function errorsByFile(report) {
   const found = new Map();
   for (const issue of report.issues ?? []) {
-    if (issue.severity !== "error") continue;
+    if (issue.severity !== "error" || EXCLUDED_FROM_PIN_CODES.has(issue.code)) continue;
     const file = issue.file ?? "(no file)";
     const keys = found.get(file) ?? new Map();
     const key = findingKey(issue);
@@ -116,12 +132,18 @@ export function errorsByFile(report) {
 }
 
 /**
- * The files whose pin is still a bare count. A count cannot say which finding
- * it holds, so such an entry is re-pinned rather than read.
+ * Files whose saved finding counts are not positive safe integers.
+ * Bare file counts cannot identify findings and are refused too.
  */
 export function countPinnedFiles(pinned) {
   return Object.entries(pinned)
-    .filter(([, held]) => typeof held !== "object" || held === null || Array.isArray(held))
+    .filter(
+      ([, held]) =>
+        typeof held !== "object" ||
+        held === null ||
+        Array.isArray(held) ||
+        Object.values(held).some((count) => !Number.isSafeInteger(count) || count <= 0),
+    )
     .map(([file]) => file);
 }
 
@@ -140,8 +162,19 @@ export function pinEntry(found) {
 /** Name the findings behind a changed file count when annotations are capped. */
 export function errorsForFile(report, file) {
   return (report.issues ?? [])
-    .filter((issue) => issue.severity === "error" && (issue.file ?? "(no file)") === file)
+    .filter(
+      (issue) =>
+        issue.severity === "error" &&
+        !EXCLUDED_FROM_PIN_CODES.has(issue.code) &&
+        (issue.file ?? "(no file)") === file,
+    )
     .map(({ code, message }) => ({ code, message }));
+}
+
+function reportDiffDependent(errors) {
+  for (const { code, file, message } of errors) {
+    console.error(`  ${file}: ${String(code)}: ${String(message)}`);
+  }
 }
 
 function fail(message) {
@@ -189,6 +222,7 @@ function main() {
     0,
   );
   const pin = JSON.parse(readFileSync(PIN_PATH, "utf-8"));
+  const diffDependent = diffDependentErrors(report);
 
   if (process.argv.includes("--pin")) {
     pin.profiles[profile] = pinEntry(found);
@@ -196,6 +230,12 @@ function main() {
     console.log(
       `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(found.size)} file(s).`,
     );
+    if (diffDependent.length > 0) {
+      console.error(
+        `check-dogfood-backlog: ${String(diffDependent.length)} error(s) depend on this branch's diff and were not pinned. The lane still fails on them:`,
+      );
+      reportDiffDependent(diffDependent);
+    }
     return;
   }
 
@@ -208,11 +248,16 @@ function main() {
     return;
   }
 
+  if (typeof pinned !== "object" || Array.isArray(pinned)) {
+    fail(`the ${profile} pin must be an object of files and finding counts.`);
+    return;
+  }
+
   const counted = countPinnedFiles(pinned);
   if (counted.length > 0) {
     console.error(
-      `check-dogfood-backlog: the ${profile} pin holds ${String(counted.length)} file(s) as a bare count, ` +
-        "which cannot say which finding it holds. Re-pin the profile:\n\n" +
+      `check-dogfood-backlog: the ${profile} pin holds ${String(counted.length)} invalid file entry/entries. ` +
+        "Each file must hold finding counts as a positive safe integer. Re-pin the profile:\n\n" +
         `  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
     );
     process.exit(1);
@@ -233,11 +278,26 @@ function main() {
       `check-dogfood-backlog: ${file} reports ${key} ${String(n)} time(s) for ${profile}, past its pinned ${String(allowed)}.`,
     );
   }
-  if (unpinned.length > 0 || over.length > 0) {
+  if (diffDependent.length > 0) {
     console.error(
-      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.\n" +
-        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+      `check-dogfood-backlog: ${profile} reports ${String(diffDependent.length)} error(s) that depend on this branch's diff, which no pin holds:`,
     );
+    reportDiffDependent(diffDependent);
+  }
+  if (unpinned.length > 0 || over.length > 0 || diffDependent.length > 0) {
+    console.error(
+      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.",
+    );
+    if (unpinned.length > 0 || over.length > 0) {
+      console.error(
+        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+      );
+    }
+    if (diffDependent.length > 0) {
+      console.error(
+        "Fix the diff-dependent findings and re-run this lane. Re-pinning will not clear these findings.",
+      );
+    }
     process.exit(1);
   }
 
