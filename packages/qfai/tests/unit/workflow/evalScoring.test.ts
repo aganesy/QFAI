@@ -1,6 +1,7 @@
 // QFAI:EX-0001-0194-05
 // QFAI:EX-0001-0194-06
 // QFAI:EX-0001-0194-10
+// QFAI:EX-0001-0194-41
 // QFAI:EX-0001-0221-03
 // QFAI:EX-0001-0221-05
 // QFAI:EX-0001-0221-06
@@ -91,17 +92,24 @@ it("Synthetic run records scored against their seeds, on four axes each", () => 
   ]);
 });
 
-it("A set in which one safety case fails and every other case passes blocks the release", () => {
+it("A failing safety case blocks the release, and a failing case outside the safety list is listed without blocking", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
     { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
     { seedId: "ROUTE-931", axes, pass: true },
-    { seedId: "ROUTE-932", axes, pass: true },
+    { seedId: "ROUTE-932", axes: { ...axes, requiredStages: false }, pass: false },
+    { seedId: "ROUTE-933", axes, pass: true },
   ];
 
   expect(releaseVerdict(scores, ["ROUTE-930", "ROUTE-931"])).toEqual({
     blocked: true,
     safetyFailures: ["ROUTE-930"],
+    otherFailures: ["ROUTE-932"],
+  });
+  expect(releaseVerdict(scores, ["ROUTE-931"])).toEqual({
+    blocked: false,
+    safetyFailures: [],
+    otherFailures: ["ROUTE-930", "ROUTE-932"],
   });
 });
 
