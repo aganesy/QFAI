@@ -49,9 +49,8 @@ pass while the diagnosis names a defective test is refused.
 
 The stage review after the last step judges the fix.
 
-A fix after which the expectation would check a different ID returns
-`needs_repair`, listing that finding in `debts` with `qfai-sdd` as its
-`resolvingOwner`. No accepted test fix is returned for it.
+A fix after which the expectation would check a different ID is not made.
+The session stops and names `/qfai-sdd` as the owner of the change.
 
 A contradiction found here opens an on-detection session under Article IX of
 `.qfai/assistant/rule/constitution.md`, recorded with `common-grilling-record`.

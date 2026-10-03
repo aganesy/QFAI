@@ -158,10 +158,10 @@ describe("qfai-implement in a workflow run", () => {
 
   // QFAI:AC-0001-0203-02
   // QFAI:EX-0001-0203-02
-  it("returns a test fix that changes what is checked as needs_repair for qfai-sdd", async () => {
+  it("makes no test fix that changes what is checked, and names qfai-sdd", async () => {
     const text = await step(TEST_FIX);
-    expect(text).toMatch(/would check a different ID returns `needs_repair`/i);
-    expect(text).toMatch(/with `qfai-sdd` as its `resolvingOwner`/i);
+    expect(text).toMatch(/would check a different ID is not made/i);
+    expect(text).toMatch(/The session stops and names `\/qfai-sdd` as the owner of the change/);
   });
 
   // QFAI:AC-0001-0203-03

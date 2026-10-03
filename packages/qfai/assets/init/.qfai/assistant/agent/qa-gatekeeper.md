@@ -67,8 +67,9 @@ Read `rule/test-layers.md` and current flow-scoped validation findings.
 The BF obligation belongs in E2E with `QFAI:BF-NNNN`. Every AC belongs in
 integration or API with `QFAI:AC-NNNN-NNNN-NN`. Every EX belongs in another
 test layer with `QFAI:EX-NNNN-NNNN-NN`. A test must contain an executed,
-observable assertion. An annotation or scaffold alone does not discharge an
-obligation. A DONE `Test exception:` decision can resolve one only when it
+observable assertion. An annotation alone does not discharge an obligation,
+except an acceptance test `npx qfai atdd scaffold` wrote, which passes empty
+until `implement-acceptance` writes its assertions. A DONE `Test exception:` decision can resolve one only when it
 names the item.
 
 Once the acceptance tests exist, read the annotated tests themselves. Check the normal,
