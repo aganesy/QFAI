@@ -11,7 +11,6 @@ import { flat, readShipped, rowOf, sectionOf } from "../../helpers/shippedAssist
 const OPERATING = "rule/shared-skill-operating-baseline.md";
 const TDD = "step/implement-tdd/STEP.md";
 const DIAGNOSE = "step/implement-diagnose/STEP.md";
-const SEAM = "step/implement-seam/STEP.md";
 const REGRESSION_FIX = "step/implement-regression-fix/STEP.md";
 const TEST_FIX = "step/implement-test-fix/STEP.md";
 const ACCEPTANCE = "step/implement-acceptance/STEP.md";

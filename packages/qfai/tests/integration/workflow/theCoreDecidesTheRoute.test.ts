@@ -40,7 +40,11 @@ it("An extraction that names no route is routed by the rule that holds", async (
 // QFAI:AC-0001-0211-02
 // QFAI:EX-0001-0211-04
 it("An extraction two rules could read is routed by the lower-numbered one", async () => {
-  const security = { intent: "security", entryFlags: ["repro"], risks: ["security"] } as const;
+  const security: Partial<WorkflowExtraction> = {
+    intent: "security",
+    entryFlags: ["repro"],
+    risks: ["security"],
+  };
   const plain = await planned(security);
   const signalled = await planned({ ...security, signals: ["approved-record-task"] });
 

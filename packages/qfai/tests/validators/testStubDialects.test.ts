@@ -146,9 +146,7 @@ describe("every supported stack's stub construct is detected", () => {
     await withTests({ "tests/test_ac_0001_0001_01.py": legacy }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
       const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
-      expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([
-        [PLACEHOLDER, 2],
-      ]);
+      expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([[PLACEHOLDER, 2]]);
     });
   });
 
