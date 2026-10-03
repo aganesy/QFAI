@@ -49,19 +49,11 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
     lines.push(`[${check.severity}] ${check.id}: ${check.message}`);
   }
   // 2-group split. Errors that block the active profile go in the first
-  // group; warnings + info are advisory drift. The `skills.integrity` finding
-  // is always routed into the advisory group regardless of its message
-  // wording (routed by `id`, not by severity, so the rule is robust against a
-  // future emission that accidentally re-elevates severity).
-  const errorGroup = data.checks.filter(
-    (check) => check.severity === "error" && check.id !== "skills.integrity",
-  );
+  // group; warnings + info are advisory drift.
+  const errorGroup = data.checks.filter((check) => check.severity === "error");
   const advisoryGroup = data.checks.filter(
-    (check) =>
-      (check.severity === "warning" || check.severity === "info") &&
-      check.id !== "skills.integrity",
+    (check) => check.severity === "warning" || check.severity === "info",
   );
-  const skillsAdvisory = data.checks.filter((check) => check.id === "skills.integrity");
   lines.push("");
   lines.push("== errors blocking the active profile ==");
   if (errorGroup.length === 0) {
@@ -77,11 +69,10 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
   }
   lines.push("");
   lines.push("== warnings advisory of drift ==");
-  const combinedAdvisory = [...advisoryGroup, ...skillsAdvisory];
-  if (combinedAdvisory.length === 0) {
+  if (advisoryGroup.length === 0) {
     lines.push("[ok] (no findings in this bucket)");
   } else {
-    for (const check of combinedAdvisory) {
+    for (const check of advisoryGroup) {
       lines.push(`[${check.severity}] ${check.id}: ${check.message}`);
     }
   }

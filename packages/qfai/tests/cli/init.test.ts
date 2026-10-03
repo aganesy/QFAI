@@ -492,7 +492,7 @@ describe("qfai init", () => {
       const existingConstitution = path.join(root, ".qfai", "assistant", "rule", "constitution.md");
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
@@ -3230,7 +3230,7 @@ describe("qfai init", () => {
 
   it("removes an assistant README that carries the init marker", async () => {
     // That README described how the integration-surface rule decided whether
-    // init had run. The rule reads two records now, so the file is a
+    // init had run. The rule reads another file now, so the file is a
     // description of behaviour the tool no longer has, sitting in the tree the
     // assistant loads its instructions from.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));

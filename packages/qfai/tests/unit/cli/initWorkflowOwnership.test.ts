@@ -1,16 +1,10 @@
 /**
- * The six ways `qfai init` decided a file in the adopter's tree was QFAI's to delete or to attest to,
- * and was wrong by the time it acted.
- *
- * They are one family. Every one of them establishes ownership at one moment — a name in a set, a
- * record read before the copy, a digest computed pages earlier — and then acts on it at another. The
- * gap is where the adopter, or a second `qfai init` in the same tree, gets their content deleted or
- * stamped as QFAI's. Two of them (`[20]`, `[03]`) end the same way the provenance family did: a file
- * on disk with no entry, or an entry with no file, and a name that is never installed again.
+ * The ways `qfai init` could decide a file in the adopter's tree was QFAI's to delete, and be
+ * wrong by the time it acted: ownership established at one moment and acted on at another.
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -19,11 +13,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { pruneMatchingEntries } from "../../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../../src/core/fs/templateCopy.js";
 import { readBoundedRegularFile } from "../../../src/shared/boundedRead.js";
-import {
-  readInstallProvenance,
-  updateInstallProvenance,
-  writeInstallProvenance,
-} from "../../../src/shared/provenance.js";
 
 const dirs: string[] = [];
 
@@ -121,95 +110,6 @@ describe("the object that was verified is the object that is deleted", () => {
       "the file deleted must be the one whose bytes were verified, not whatever holds the name",
     ).toBe("the adopter's own workflow\n");
     expect(removed, "and nothing QFAI owned was found to remove").toEqual([]);
-  });
-});
-
-// ── [34] ────────────────────────────────────────────
-describe("the removal and the record change are one success unit", () => {
-  it("puts the file back when the work that had to go with the removal fails", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-    const judgedDigest = sha("installed-by-qfai\n");
-
-    // What fails here stands for the provenance write: a read-only `.qfai`, a full disk, a lock
-    // the run could not take. The file being gone and its entry standing is the poisoned name
-    // the prune exists to avoid — reached by the code meant to avoid it.
-    const removed: string[] = [];
-    await expect(
-      pruneMatchingEntries(
-        dir,
-        (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-        removed,
-        false,
-        async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
-        () => Promise.reject(new Error("the record write failed")),
-      ),
-      "the failure must reach the caller rather than be swallowed",
-    ).rejects.toThrow(/record write failed/);
-
-    expect(
-      await readFile(target, "utf-8"),
-      "a removal whose record change failed must leave the file where it was",
-    ).toBe("installed-by-qfai\n");
-    expect(removed, "and must not report a removal it rolled back").toEqual([]);
-  });
-
-  it("deletes and reports when the work succeeds, so the unit is a unit and not a refusal", async () => {
-    const dir = await tempRoot();
-    const target = path.join(dir, "qfai-retired.yml");
-    await writeFile(target, "installed-by-qfai\n", "utf-8");
-    const judgedDigest = sha("installed-by-qfai\n");
-
-    const removed: string[] = [];
-    const committed: string[] = [];
-    await pruneMatchingEntries(
-      dir,
-      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-      removed,
-      false,
-      async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
-      (paths) => {
-        // The record change runs while the file is still recoverable, and is told which names
-        // it is accounting for.
-        committed.push(...paths);
-        return Promise.resolve();
-      },
-    );
-
-    expect(removed).toEqual([target]);
-    expect(committed, "the commit must be handed the paths it is committing").toEqual([target]);
-    await expect(stat(target)).rejects.toThrow();
-  });
-
-  it("leaves no quarantine file behind on either path", async () => {
-    // The move is an implementation detail and must stay one: a `.qfai-prune-*` file surviving
-    // in `.github/workflows/` would be a new artifact in the adopter's tree, which is the sort
-    // of thing this whole family is about not doing.
-    for (const outcome of ["commit", "rollback"] as const) {
-      const dir = await tempRoot();
-      const target = path.join(dir, "qfai-retired.yml");
-      await writeFile(target, "installed-by-qfai\n", "utf-8");
-      const judgedDigest = sha("installed-by-qfai\n");
-      const removed: string[] = [];
-      const run = pruneMatchingEntries(
-        dir,
-        (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
-        removed,
-        false,
-        async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
-        () => (outcome === "rollback" ? Promise.reject(new Error("no")) : Promise.resolve()),
-      );
-      if (outcome === "rollback") {
-        await expect(run).rejects.toThrow();
-      } else {
-        await run;
-      }
-      expect(
-        (await readdir(dir)).filter((name) => name.includes("qfai-prune-")),
-        `a quarantine file survived the ${outcome} path`,
-      ).toEqual([]);
-    }
   });
 });
 
@@ -390,130 +290,5 @@ describe("a workflow path in the adopter tree is read bounded and regular-only",
       return;
     }
     expect(await readBoundedRegularFile(link, 4096)).toBeUndefined();
-  });
-});
-
-// ── [20] ─────────────────────────────────────────────────────────────────────
-describe("pruning a retired workflow removes its provenance entry too", () => {
-  it("leaves no entry behind that a later run would read as declined", async () => {
-    const root = await tempRoot();
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeInstallProvenance(root, {
-      workflows: {
-        "qfai-retired.yml": {
-          sha256: sha("a"),
-          installedByVersion: "1.0.0",
-          installedAt: "2026-01-02T03:04:05.000Z",
-        },
-        "qfai-tests.yml": {
-          sha256: sha("b"),
-          installedByVersion: "1.0.0",
-          installedAt: "2026-01-02T03:04:05.000Z",
-        },
-      },
-    });
-
-    await updateInstallProvenance(root, (current) => ({
-      ...current,
-      workflows: Object.fromEntries(
-        Object.entries(current.workflows).filter(([name]) => name !== "qfai-retired.yml"),
-      ),
-    }));
-
-    expect(
-      Object.keys((await readInstallProvenance(root)).workflows),
-      "an entry surviving its file reads as `declined`, and the name is never installed again",
-    ).toEqual(["qfai-tests.yml"]);
-  });
-});
-
-// ── [03] ─────────────────────────────────────────────────────────────────────
-describe("two writers do not overwrite each other's entries", () => {
-  it("merges onto the record on disk rather than onto a snapshot", async () => {
-    const root = await tempRoot();
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeInstallProvenance(root, { workflows: {} });
-
-    const entry = (tag: string) => ({
-      sha256: sha(tag),
-      installedByVersion: "1.0.0",
-      installedAt: "2026-01-02T03:04:05.000Z",
-    });
-
-    // Both writers hold the SAME pre-run snapshot — the empty record — which is exactly the
-    // situation two `qfai init` runs in one tree are in. Under the old code the second write was
-    // built on that snapshot and the first run's entry was gone.
-    await Promise.all([
-      updateInstallProvenance(root, (current) => ({
-        ...current,
-        workflows: { ...current.workflows, "qfai-tests.yml": entry("tests") },
-      })),
-      updateInstallProvenance(root, (current) => ({
-        ...current,
-        workflows: { ...current.workflows, "qfai-validate.yml": entry("validate") },
-      })),
-    ]);
-
-    expect(
-      Object.keys((await readInstallProvenance(root)).workflows).sort(),
-      "both writers' entries must survive; a lost one leaves its file unrecordable forever",
-    ).toEqual(["qfai-tests.yml", "qfai-validate.yml"]);
-  });
-
-  it("releases the lock when the mutator throws, so the next writer is not wedged", async () => {
-    const root = await tempRoot();
-    await mkdir(path.join(root, ".qfai"), { recursive: true });
-    await writeInstallProvenance(root, { workflows: {} });
-
-    await expect(
-      updateInstallProvenance(root, () => {
-        throw new Error("mutator failed");
-      }),
-    ).rejects.toThrow(/mutator failed/);
-
-    // The half that matters: a lock leaked here would make every later `qfai init` in this tree
-    // wait out the staleness ceiling before it could write anything.
-    await updateInstallProvenance(root, (current) => ({
-      ...current,
-      workflows: {
-        ...current.workflows,
-        "qfai-tests.yml": {
-          sha256: sha("tests"),
-          installedByVersion: "1.0.0",
-          installedAt: "2026-01-02T03:04:05.000Z",
-        },
-      },
-    }));
-    expect(Object.keys((await readInstallProvenance(root)).workflows)).toEqual(["qfai-tests.yml"]);
-  });
-});
-
-// ── [07] ─────────────────────────────────────────────────────────────────────
-describe("the recorded digest is of the bytes the copy wrote", () => {
-  it("does not adopt content that replaced the file after the copy", async () => {
-    const root = await tempRoot();
-    const sourceRoot = path.join(root, "assets");
-    await mkdir(path.join(sourceRoot, ".github", "workflows"), { recursive: true });
-    const sourcePath = path.join(sourceRoot, ".github", "workflows", "qfai-tests.yml");
-    await writeFile(sourcePath, "name: shipped\n", "utf-8");
-
-    const destPath = path.join(root, ".github", "workflows", "qfai-tests.yml");
-    await mkdir(path.dirname(destPath), { recursive: true });
-    await writeFile(destPath, "name: shipped\n", "utf-8");
-    // The window: something rewrites the destination between the copy and the digest.
-    await writeFile(destPath, "name: whatever the adopter put here\n", "utf-8");
-
-    const sourceBytes = await readBoundedRegularFile(sourcePath, 1_048_576);
-    expect(sourceBytes).not.toBeUndefined();
-    const recorded = createHash("sha256")
-      .update(sourceBytes ?? Buffer.alloc(0))
-      .digest("hex");
-
-    expect(recorded, "the entry must attest to what QFAI shipped").toBe(sha("name: shipped\n"));
-    expect(
-      recorded,
-      "recording the re-read would stamp the adopter's content as QFAI's, and drift detection " +
-        "would be blind to that edit forever",
-    ).not.toBe(sha("name: whatever the adopter put here\n"));
   });
 });

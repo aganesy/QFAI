@@ -36,7 +36,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
 import { snapshotOf, writeSnapshot } from "../../../src/core/workflow/fold.js";
 import { readJournal } from "../../../src/core/workflow/persistence.js";

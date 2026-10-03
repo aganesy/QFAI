@@ -553,21 +553,6 @@ describe("issue report metadata", () => {
     expect(expected).not.toContain("htmlMock");
   });
 
-  it("states the skills-integrity expected state without naming a configured path", () => {
-    // `paths.skillsDir` is settable, so an expected state that spelled the
-    // default tree would contradict the finding's own `target:` line on any
-    // project that moved it.
-    const expected = resolveIssueExpected({
-      code: "QFAI-SKILLS-001",
-      severity: "error",
-      category: "change",
-      message: "Standard asset 'tools/skills/**' has been modified (changes: 1).",
-      rule: "skills.integrity",
-    });
-    expect(expected).not.toBe(UNCATALOGUED_EXPECTED);
-    expect(expected).not.toContain(".qfai/");
-  });
-
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
     const base = { severity: "error", category: "canonical", message: "Unknown key" } as const;
     expect(

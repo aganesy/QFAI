@@ -6,7 +6,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../../src/shared/text.js";
 import {
   commitAll,
   featureRunAt,

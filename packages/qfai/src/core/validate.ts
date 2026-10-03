@@ -38,7 +38,6 @@ import { validateDesignDirectionProposal } from "./validators/designDirectionPro
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
-import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
@@ -222,11 +221,11 @@ function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boo
  */
 function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
   switch (profile) {
-    // `validateSkillsIntegrity` and `validateAssistantAssets` walk the
+    // `validateAssistantAssets` walks the
     // **skills** directory the configuration names — the same one `sdd` walks,
     // and nothing wider. Returning its parent matched a sibling's damage too:
-    // a regular file at `.qfai/assistant/agent` stopped `full` on a tree those
-    // validators never open, while `validateAgentDefinition` turns a missing
+    // a regular file at `.qfai/assistant/agent` stopped `full` on a tree that
+    // validator never opens, while `validateAgentDefinition` turns a missing
     // agent into an ordinary finding rather than an exception. The extra
     // profiles here differ in what else they run, not in how far into the
     // assistant tree they reach.
@@ -552,7 +551,6 @@ async function runStoryProfileValidators(
       return dedupeStubFindings(
         dedupeStoryFindings([
           ...(await validateRepositoryHygiene(root, config)),
-          ...(await validateSkillsIntegrity(root, config)),
           ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config)),

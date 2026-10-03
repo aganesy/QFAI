@@ -1,7 +1,7 @@
 import { lstat, readFile, readlink } from "node:fs/promises";
 import path from "node:path";
 
-import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../shared/text.js";
 import { isEnoent } from "../fs/errno.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import { isRunChange } from "./common.js";
