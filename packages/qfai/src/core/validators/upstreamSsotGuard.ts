@@ -8,7 +8,7 @@ import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
-import { countsForExample, readStoryTests } from "./storyTreeObligations.js";
+import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
 
 /** Story-tree protected files and append-only register rows. */
@@ -26,8 +26,8 @@ export async function validateStoryTreeDrift(
   const contracts = normalizeRepoPath(
     path.relative(root, path.resolve(root, config.paths.contractsDir)),
   ).replace(/\/$/, "");
-  const decisions = `${specs}/decisions.md`;
-  const questions = `${specs}/open-questions.md`;
+  const decisions = path.posix.join(specs, "decisions.md");
+  const questions = path.posix.join(specs, "open-questions.md");
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
   if (baseDecisions === null) return [];
 
@@ -82,8 +82,9 @@ export async function validateStoryTreeDrift(
   const decisionDiff = diffRecordTables(baseDecisions, currentDecisions, "decisions");
   for (const file of changed) {
     const protectedPath =
-      file.startsWith(`${specs}/01_policy/`) ||
-      file.startsWith(`${specs}/02_business-flow/`) ||
+      file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
+      file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+      contracts === "" ||
       file.startsWith(`${contracts}/`) ||
       file === decisions ||
       file === questions;
@@ -123,7 +124,10 @@ async function examplesWithoutTestChange(
 ): Promise<Issue[]> {
   const rewritten: { id: string; file: string }[] = [];
   for (const file of changed) {
-    if (!file.startsWith(`${specs}/02_business-flow/`) || !file.endsWith("/03_Example.md")) {
+    if (
+      !file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
+      !file.endsWith("/03_Example.md")
+    ) {
       continue;
     }
     const base = exampleRows(readFileAtBase(root, baseBranch, file) ?? "");
@@ -139,24 +143,13 @@ async function examplesWithoutTestChange(
     scan = await readStoryTests(root, config);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan failed: ${reason}`,
-        "error",
-        root,
-        "storyTree.testScan",
-      ),
-    ];
+    return [storyTestScanIssue(root, `Story-tree test scan failed: ${reason}`)];
   }
   if (scan.truncated) {
     return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; example-change coverage is incomplete`,
-        "error",
+      storyTestScanIssue(
         root,
-        "storyTree.testScan",
+        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; example-change coverage is incomplete`,
       ),
     ];
   }

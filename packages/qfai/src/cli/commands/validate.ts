@@ -440,8 +440,8 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-007",
     "QFAI-STORY-008",
     "QFAI-STORY-009",
-    "QFAI-SCAN-002",
   ],
+  "story-test-scan": ["QFAI-SCAN-002"],
   sdd: [
     "QFAI-AUTOPILOT-*",
     "W-ASSISTANT-LAYOUT",
@@ -559,9 +559,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
+  atdd: ["story-test-obligations", "story-test-scan", "atdd-scaffold", "test-stubs"],
   tdd: [
     "story-test-obligations",
+    "story-test-scan",
     "test-stubs",
     "drift",
     "contracts",
@@ -569,7 +570,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "contract-parse",
   ],
   "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
-  drift: ["drift"],
+  drift: ["drift", "story-test-scan"],
 };
 
 function isKnownProfile(profile: string): profile is ValidationProfile {
