@@ -57,7 +57,7 @@ Select agents by artifact and phase.
 
 - Implementers (`frontend-engineer`, `backend-engineer`) apply the viewpoints in `.github/instructions/principles.instructions.md` and `.instruction/00_universal/development-principles-checklist.md` as decision criteria during implementation.
 - Designers (`solution-architect`, `product-experience-architect`) apply the same principles as design criteria for structure, contracts and UX direction.
-- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) apply `.github/instructions/code-review.instructions.md` and `.github/instructions/principles.instructions.md` as review viewpoints, and name the principle and the reason for the improvement when raising a finding.
+- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) apply `.github/instructions/principles.instructions.md` and the code-review files beside it — `code-review.instructions.md`, `code-review-checklist.instructions.md`, `code-review-typescript.instructions.md` and `code-review-public-api.instructions.md` — as review viewpoints, and name the principle and the reason for the improvement when raising a finding.
 
 ## When in Doubt
 
