@@ -1,14 +1,14 @@
 # Review Convergence
 
 How a review round ends, and what may follow it. Referenced from
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#round-budget-and-convergence-must`,
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#round-budget-and-convergence`,
 which owns the delegation rules these sit beside.
 
 ## Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
   round 2 reviews the fixes. **The budget is spent the moment round 2 returns
-  `REVISE`**: the orchestrator MUST NOT start a third review, and MUST stop and
+  `REVISE`**: the orchestrator starts no third review. It MUST stop and
   escalate to the user with the open findings, the fixes already applied, and a
   recommendation. The decision point is round 2's verdict, never a prediction
   about a review that must not run.
@@ -98,7 +98,7 @@ which owns the delegation rules these sit beside.
       reference material, so a corrective review neither repairs one nor treats
       one as the upstream to fix.
 
-- The round number MUST be recorded on each reviewer response
+- Record the round number on each reviewer response
   (`Round:` in the shared response template).
 
 ## Convergence (MUST)
@@ -168,7 +168,7 @@ and the baseline's `none` path is the right one for it.
 
 This section is the one place an obligation-traced finding is `advisory`, and
 both provenance contracts name it:
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance-must`
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance`
 and `.qfai/assistant/rule/drift-protocol.md#provenance-and-routing`. There
 the trace class bounds which findings may block, and the declared severity settles
 whether one does, so an item carried under this section is not also a defect
