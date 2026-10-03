@@ -51,6 +51,16 @@ async function readTree(root: string): Promise<Map<string, string>> {
   return tree;
 }
 
+function atxHeading(line: string): { level: number; title: string } | undefined {
+  const match = /^ {0,3}(#{1,6})[ \t]+(.+)$/.exec(line);
+  const marker = match?.[1];
+  const content = match?.[2];
+  if (marker === undefined || content === undefined) return undefined;
+  const title = content.replace(/[ \t]+#+[ \t]*$/, "").trim();
+  if (title === "") return undefined;
+  return { level: marker.length, title };
+}
+
 /**
  * The `##` headings outside fenced blocks, in order.
  *
@@ -61,7 +71,6 @@ function levelTwoHeadings(markdown: string): string[] {
   const headings: string[] = [];
   let fence: string | undefined;
   for (const line of markdown.split(/\r?\n/)) {
-    const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
     if (fence !== undefined) {
       const closing = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line)?.[1];
       if (closing !== undefined && closing[0] === fence[0] && closing.length >= fence.length) {
@@ -69,12 +78,14 @@ function levelTwoHeadings(markdown: string): string[] {
       }
       continue;
     }
-    if (marker !== undefined) {
-      fence = marker;
+    const marker = /^ {0,3}(?:(`{3,})[^`]*$|(~{3,}))/.exec(line);
+    const opening = marker?.[1] ?? marker?.[2];
+    if (opening !== undefined) {
+      fence = opening;
       continue;
     }
-    const heading = /^## (.+?)\s*$/.exec(line);
-    if (heading?.[1] !== undefined) headings.push(heading[1]);
+    const heading = atxHeading(line);
+    if (heading?.level === 2) headings.push(heading.title);
   }
   return headings;
 }
@@ -82,11 +93,14 @@ function levelTwoHeadings(markdown: string): string[] {
 /** The bullet items directly under `## Contents`, up to the next heading. */
 function contentsItems(markdown: string): string[] {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => /^## Contents\s*$/.test(line));
+  const start = lines.findIndex((line) => {
+    const heading = atxHeading(line);
+    return heading?.level === 2 && heading.title === "Contents";
+  });
   if (start < 0) return [];
   const items: string[] = [];
   for (const line of lines.slice(start + 1)) {
-    if (/^#{1,6} /.test(line)) break;
+    if (atxHeading(line) !== undefined) break;
     const item = /^- (.+?)\s*$/.exec(line);
     if (item?.[1] !== undefined) items.push(item[1]);
   }
