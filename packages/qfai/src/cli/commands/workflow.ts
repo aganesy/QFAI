@@ -37,8 +37,10 @@ import {
   listRuns,
   readJournal,
   releaseLock,
+  resultFileOf,
   RUNS_DIR,
   writeRecord,
+  writeResultFile,
 } from "../../core/workflow/persistence.js";
 import type { JournalRead, JournalRecord } from "../../core/workflow/persistence.js";
 import { reportedRoute } from "../../core/workflow/routes.js";
@@ -476,18 +478,30 @@ async function persistDecision(
   const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
   if (!Array.isArray(copies)) return copies;
   const dependencies = await acceptedDependencies(options.root, snapshot, read.input, decision);
+  const result = referencedResult(read.input, decision);
   const records = recordsOf(
     decision,
     { operation: options.operation, before: snapshot.run },
     journalExtrasOf(snapshot, read.input, decision, {
       reports: copies.map(({ path: file, digest }) => ({ path: file, digest })),
       dependencies,
+      ...(result ? { resultDigest: result.digest } : {}),
     }),
     replayKey(read.input, decision, read.digest),
   );
+  const unwrittenResult = result ? await writeResultFile(loaded.runDir, result) : undefined;
+  if (unwrittenResult) return unwrittenResult;
   const unwritten = await writeReportCopies(loaded.runDir, copies);
   if (unwritten) return unwritten;
   return publish(loaded, records, decision.verdict);
+}
+
+// The submitted stage result, when an event of the decision references it.
+function referencedResult(input: WorkflowInput, decision: WorkflowDecision) {
+  const result = input.result && resultFileOf(input.result);
+  return result && decision.events.some((event) => event.resultRef === result.path)
+    ? result
+    : undefined;
 }
 
 async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Promise<number> {
