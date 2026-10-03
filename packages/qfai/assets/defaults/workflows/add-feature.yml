@@ -21,13 +21,15 @@ stages:
     steps:
       - { step: maintain-edit, passThrough: true }
     after: [implement]
-    review: code
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [docs]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

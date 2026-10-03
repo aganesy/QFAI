@@ -317,9 +317,11 @@ runs only from its parent or from a work order.
 3. For each step: read that step's `STEP.md` and no other, run it, and pass its
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
-4. After the last step, run one review through `common-review-cycle`. The
-   reviewers are the union of the reviewers the profiles of the steps that ran
-   require, with each conditional reviewer whose condition holds.
+4. After the last step, run the one review the parent names, through
+   `common-review-cycle`: the specification review for `qfai-sdd` and
+   `qfai-discussion`, the code review for a parent that changed code, tests or
+   a change note, and none for `qfai-triage` or for a `qfai-verify` run that
+   wrote nothing.
 5. Complete as the parent's completion section says, reporting what each step
    produced.
 

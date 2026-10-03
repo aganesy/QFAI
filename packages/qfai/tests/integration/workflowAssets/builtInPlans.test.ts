@@ -10,7 +10,7 @@ import { parse } from "yaml";
 
 import { PLAN_ROUTES, planStageSteps, readDefault } from "../../helpers/shippedAssistant.js";
 
-const VERIFY = ["verify-change-note", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
 
 /** The stage kinds, and the steps a stage of each kind may run. */
 const VOCABULARY: Record<string, string[]> = {
@@ -63,6 +63,7 @@ const VOCABULARY: Record<string, string[]> = {
     "implement-oracle-parity",
   ],
   verify: [
+    "verify-change-note",
     ...VERIFY,
     "verify-context",
     "verify-repeat-run",
@@ -200,10 +201,11 @@ describe("the built-in plans", () => {
     }
   });
 
-  it("makes the edit-text plan a maintenance stage, then verify", async () => {
+  it("makes the edit-text plan a maintenance stage, then the change note, then verify", async () => {
     const { stages } = await plan("edit-text");
     expect(stages.map((stage) => [stage.kind, names(stage)])).toEqual([
       ["maintenance", ["maintain-edit"]],
+      ["verify", ["verify-change-note"]],
       ["verify", VERIFY],
     ]);
   });
@@ -212,12 +214,19 @@ describe("the built-in plans", () => {
   // QFAI:EX-0001-0185-13
   it("orders the add-feature and prototype-feature plans", async () => {
     const kinds = async (route: string) => (await plan(route)).stages.map((stage) => stage.kind);
-    expect(await kinds("add-feature")).toEqual(["sdd", "implement", "maintenance", "verify"]);
+    expect(await kinds("add-feature")).toEqual([
+      "sdd",
+      "implement",
+      "maintenance",
+      "verify",
+      "verify",
+    ]);
     expect(await kinds("prototype-feature")).toEqual([
       "sdd",
       "prototype",
       "implement",
       "maintenance",
+      "verify",
       "verify",
     ]);
     expect(names((await plan("prototype-feature")).stages.at(-1))).toEqual(VERIFY);
@@ -232,6 +241,7 @@ describe("the built-in plans", () => {
       ["sdd_append", ["diagnose"]],
       ["implement", ["spec"]],
       ["verify", ["implement"]],
+      ["verify", ["note"]],
     ]);
     expect(stages[1]?.steps).toEqual([
       { name: "sdd-story", passThrough: true },

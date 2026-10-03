@@ -95,7 +95,7 @@ const RELEASE_SIGNALS = ["backport", "release-notes", "test-plan"];
 // QFAI:EX-0001-0211-33
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
-it("Every extraction reaches exactly one catalog route, and only an unsignalled release reaches none", () => {
+it("Every extraction reaches exactly one catalog route by a rule, an unsignalled release by rule 14", () => {
   const unrouted: string[] = [];
   const outside: string[] = [];
   let decided = 0;
@@ -125,7 +125,7 @@ it("Every extraction reaches exactly one catalog route, and only an unsignalled 
     decided: true,
     outside: [],
     unrouted: [],
-    bareRelease: ["answer-question", null],
+    bareRelease: ["hand-off-operation", 14],
   });
 });
 
@@ -169,6 +169,6 @@ it("Two fix-defect requests take the same stages and steps", async () => {
     stages: risky.map(([id]) => id),
   }).toEqual({
     same: true,
-    stages: ["diagnose", "spec", "implement", "verify"],
+    stages: ["diagnose", "spec", "implement", "note", "verify"],
   });
 });

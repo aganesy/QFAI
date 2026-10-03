@@ -102,9 +102,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(
     14,
     clause(
-      (input) =>
-        (is("order")(input) && qualified(input, "human-run")) ||
-        (is("release")(input) && qualified(input, "distribution-incident")),
+      (input) => (is("order")(input) && qualified(input, "human-run")) || is("release")(input),
       "hand-off-operation",
     ),
   ),

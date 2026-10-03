@@ -38,9 +38,9 @@ it("A route that changes the specification reviews it and the diff; edit-text on
     fixDefect: reviews(await planOf("fix-defect")),
     editText: reviews(await planOf("edit-text")),
   }).toEqual({
-    addFeature: ["sdd:spec", "docs:code"],
-    fixDefect: ["spec:spec", "implement:code"],
-    editText: ["edit:code"],
+    addFeature: ["sdd:spec", "note:code"],
+    fixDefect: ["spec:spec", "note:code"],
+    editText: ["note:code"],
   });
 });
 
@@ -49,7 +49,11 @@ it("The verify stage of every change route, and every route ending at triage-clo
   const plans = await loadBuiltInPlans();
   const reviewed = plans.flatMap((plan) =>
     plan.stages
-      .filter((stage) => stage.review && (stage.kind === "verify" || stage.kind === "triage"))
+      .filter(
+        (stage) =>
+          stage.review &&
+          (stage.kind === "triage" || stage.steps.some((step) => step.name === "verify-repo-gate")),
+      )
       .map((stage) => `${plan.route}:${stage.id}`),
   );
   const closing = plans.filter((plan) =>
@@ -93,9 +97,10 @@ it("write-acceptance-tests writes the test bodies, runs the gates and reviews th
   expect({ stages, reviews: reviews(plan) }).toEqual({
     stages: [
       ["implement", ["implement-credentials°", "implement-acceptance"]],
-      ["verify", ["verify-change-note°", "verify-qfai-gate", "verify-repo-gate"]],
+      ["note", ["verify-change-note°"]],
+      ["verify", ["verify-qfai-gate", "verify-repo-gate"]],
     ],
-    reviews: ["implement:code"],
+    reviews: ["note:code"],
   });
 });
 

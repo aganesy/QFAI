@@ -19,18 +19,20 @@ stages:
     kind: implement
     steps: [implement-scaffold, implement-tdd]
     after: [spec]
-    review: code
   - id: compare
     kind: diagnose
     steps: [implement-benchmark]
     after: [implement]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [compare]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: [implement-diagnose]
 branchPoints:
   - step: implement-diagnose

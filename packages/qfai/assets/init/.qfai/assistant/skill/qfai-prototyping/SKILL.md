@@ -75,8 +75,9 @@ missing brand intent.
 
 ### Reviewer Gate
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers of the steps that ran. The reviewers judge the rendered
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer` and `product-surface-reviewer`. The
+reviewers judge the rendered
 screenshot and HTML of each iteration, never the code alone. Their findings are
 signals, not gates, unless certify, validate or verify fails.
 

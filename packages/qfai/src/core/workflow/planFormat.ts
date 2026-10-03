@@ -45,6 +45,7 @@ export type PlanRefusalReason =
   | "pass-through"
   | "seam"
   | "after-missing"
+  | "after-order"
   | "cycle"
   | "unreachable"
   | "point"
@@ -75,7 +76,7 @@ const MODES: Record<string, string> = { settled: "sdd-triage", "read-only": "imp
 
 const SDD_APPEND = ["sdd-story", "sdd-gate"];
 
-const VERIFY_BLOCK = ["verify-change-note", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
 
 // Each stage kind, with the steps a stage of that kind may run.
 const KINDS: Record<string, string[]> = {
@@ -118,6 +119,7 @@ const KINDS: Record<string, string[]> = {
   regression_fix: ["implement-regression-fix"],
   maintenance: ["maintain-edit"],
   verify: [
+    "verify-change-note",
     ...VERIFY_BLOCK,
     "verify-context",
     "verify-repeat-run",
@@ -319,8 +321,10 @@ function reachedFrom(stages: PlanStage[], from: PlanStage[]): Set<string> {
 
 function graphRefusals(stages: PlanStage[], refuse: Refuse) {
   const ids = new Set(stages.map((stage) => stage.id));
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     if (stage.after.some((id) => !ids.has(id))) refuse("after-missing", stage.id);
+    const later = stages.slice(index + 1).filter((each) => stage.after.includes(each.id));
+    for (const each of later) refuse("after-order", `${stage.id}:${each.id}`);
   }
   for (const stage of stages) {
     if (reachedFrom(stages, followersOf(stages, stage.id)).has(stage.id)) refuse("cycle", stage.id);

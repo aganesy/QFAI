@@ -13,18 +13,20 @@ stages:
     steps:
       - { step: implement-test-fix, passThrough: true }
     after: [diagnose]
-    review: code
   - id: reenable
     kind: verify
     steps: [verify-repeat-run]
     after: [fix]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [reenable]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: []
 branchPoints:
   - step: implement-diagnose

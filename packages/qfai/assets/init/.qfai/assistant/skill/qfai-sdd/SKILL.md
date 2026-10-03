@@ -76,8 +76,9 @@ reviewers.
 ## Review
 
 After the last step, run one review with `common-review-cycle`, one affected
-business flow at a time. The reviewers are the union of the reviewers of the
-steps that ran, including `product-surface-reviewer` for a UI-bearing flow.
+business flow at a time: the specification review, by `requirements-reviewer`,
+joined by `architecture-reviewer` when a contract changed and by
+`product-surface-reviewer` for a UI-bearing flow.
 What they check is the `## Review` section of `sdd-gate`. Roles are selected
 under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 

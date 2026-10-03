@@ -39,8 +39,8 @@ run it, then the next. No step is skipped.
 
 ## Review
 
-After the last step, run one review through `common-review-cycle`, with the
-union of the reviewers the steps' profiles require. The reviewer rules on the
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer`. The reviewer rules on the
 diff and on the no-behaviour-change judgement, and never reviews an edit it
 made. A REVISE sends the finding back to the step's author.
 

@@ -8,7 +8,7 @@ Feature: Claim a host as supported only with evidence
   Scenario: The routing seeds are tracked as rewritten
     Given the tracked routing-seed fixture
     When a pull request is checked
-    Then the fixture holds 64 routing cases as rewritten
+    Then the fixture holds its routing cases as rewritten
 
   # AC-0001-0194-02
   Scenario: The routing eval is a manual release gate scored case by case

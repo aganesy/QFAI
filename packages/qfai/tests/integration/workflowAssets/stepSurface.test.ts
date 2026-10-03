@@ -35,7 +35,7 @@ const VERIFY_STEPS = [
 ];
 
 /** The verify block every change route runs. */
-const VERIFY_BLOCK = ["verify-change-note", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
 
 /** Every step each plan kind runs, across the built-in plans, in first-seen order. */
 async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
@@ -264,10 +264,13 @@ describe("a parent skill invoked by name", () => {
     const byName = flat(sectionOf(baseline, "### A parent skill invoked by name"));
     expect(byName).toMatch(/take the steps from the parent's `steps:` list, in that order/i);
     expect(byName).toMatch(/read that step's `STEP\.md` and no other, run it/i);
-    expect(byName).toMatch(/after the last step, run one review through `common-review-cycle`/i);
     expect(byName).toMatch(
-      /the union of the reviewers the profiles of the steps that ran require/i,
+      /after the last step, run the one review the parent names, through `common-review-cycle`/i,
     );
+    expect(byName).toMatch(
+      /the specification review for `qfai-sdd` and `qfai-discussion`, the code review for a parent that changed code, tests or a change note, and none for `qfai-triage` or for a `qfai-verify` run that wrote nothing/i,
+    );
+    expect(byName).not.toMatch(/union of the reviewers/i);
   });
 
   // QFAI:EX-0001-0195-10
@@ -288,7 +291,9 @@ describe("a parent skill invoked by name", () => {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
       expect(front["routing-profile"], step).toBe("runtime-heavy");
     }
-    expect(flat(sectionOf(skill, "## Review"))).toMatch(/runs the gates and holds no review/);
+    expect(flat(sectionOf(skill, "## Review"))).toMatch(
+      /a run that wrote nothing holds no review/i,
+    );
   });
 
   // QFAI:EX-0001-0195-11

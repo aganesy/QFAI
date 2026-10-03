@@ -79,6 +79,11 @@ it("The release signals route to the backport, the release notes and the manual 
   ).toEqual(["backport-fix", "draft-release-notes", "verify-manually"]);
 });
 
+// QFAI:EX-0001-0211-38
+it("A release with no release signal is handed off, since the user runs a release", async () => {
+  expect(await decided({ intent: "release" })).toEqual(["hand-off-operation", 14]);
+});
+
 // QFAI:EX-0001-0211-37
 it("A request for the bodies of the empty acceptance tests writes them", async () => {
   expect(

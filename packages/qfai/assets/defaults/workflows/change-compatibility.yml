@@ -9,13 +9,15 @@ stages:
     kind: implement
     steps: [implement-scaffold, implement-tdd]
     after: [sdd]
-    review: code
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [implement]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

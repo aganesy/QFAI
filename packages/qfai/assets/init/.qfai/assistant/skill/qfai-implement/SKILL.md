@@ -105,8 +105,8 @@ this file adds nothing to it.
 
 ### Reviewer Gate
 
-After the last step, run one review through `common-review-cycle` with the
-union of the reviewers of the steps that ran. The review also checks for code
+After the last step, run one review through `common-review-cycle`: the code
+review, by `implementation-reviewer`. The review also checks for code
 written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
 (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 

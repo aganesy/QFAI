@@ -78,8 +78,10 @@ this file adds nothing to it.
 
 ## Review
 
-The verify stage runs the gates and holds no review: an exit code decides each
-gate, and each step's `## Gate` section says what passes it.
+A run that wrote nothing holds no review: an exit code decides each gate, and
+each step's `## Gate` section says what passes it. A run whose
+`verify-change-note` wrote a change note ends with the code review of that
+note, by `implementation-reviewer`.
 
 ## Completion
 
