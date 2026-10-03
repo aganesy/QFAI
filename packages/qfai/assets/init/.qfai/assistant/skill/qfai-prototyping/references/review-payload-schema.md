@@ -4,9 +4,11 @@ SSOT for the per-UI-contract / per-screen review payload. The
 product-surface-reviewer sub-agent writes it, and the user reads what it
 finds before confirming the prototype.
 
-The schema is **closed**: any key not listed below is rejected, and a
-rejected payload is a hard failure, not a warning. A near-miss (extra
-key, misspelled field, legacy flat key) fails the whole file.
+The schema is **closed**: any key not listed below is rejected. The
+reviewer checks each payload against it before writing it, and a payload
+that does not conform is written again before the prototype is put to the
+user. A near-miss (extra key, misspelled field, legacy flat key) fails the
+whole file.
 
 ## Path
 

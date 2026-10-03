@@ -246,7 +246,7 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     );
     expect(skill).toMatch(/Generation and review use two distinct sub-agent\s+identities\./);
     expect(skill).toMatch(/There is\s+no fixed capture identity/);
-    expect(skill).toContain("Operates Playwright live");
+    expect(skill).toMatch(/operates\s+Playwright live/);
   });
 
   it("requires the reviewer to score four ordinal axes while retaining six per-screen Feel fields", async () => {

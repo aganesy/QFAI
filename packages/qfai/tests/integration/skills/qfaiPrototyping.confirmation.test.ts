@@ -259,6 +259,23 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  it("stops on a screen ID that cannot be a file name", async () => {
+    const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain(
+      "Confirm every declared screen ID matches `[A-Za-z0-9._-]+`. The loop builds file names from it, so an ID holding `/`, `\\` or `..` stops the run, naming the contract and the ID.",
+    );
+  });
+
+  it("serves the iteration it reviews and checks each payload before writing it", async () => {
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    expect(loop).toContain(
+      "**Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the URL preflight checked, and hands that URL to the reviewer.",
+    );
+    expect(loop).toContain(
+      "Each payload is checked against the closed schema before it is written, and one that does not conform is written again.",
+    );
+  });
+
   // QFAI:AC-0001-0114-01
   it("admits only a UI contract that declares a full ID and screens", async () => {
     const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));

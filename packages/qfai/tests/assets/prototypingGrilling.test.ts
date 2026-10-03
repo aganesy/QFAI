@@ -312,7 +312,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "**Ask before starting over.**");
     expectPhrase(
       skill,
-      "A new lineage overwrites `iter-00/` and replaces every later iteration and its reviews.",
+      "A new lineage overwrites `iter-00/` and replaces every later iteration and its reviews, and removes `final/`, so no handoff of the old lineage is left for `/qfai-implement` to read.",
+    );
+    // A run that finds iterations an earlier run left goes through the same
+    // approval rather than overwriting them.
+    expectPhrase(
+      await read(LOOP),
+      "When `.qfai/prototype/` already holds iterations from an earlier run, run `prototyping-recover` first: it asks before anything is replaced.",
     );
     // And a refusal has an outcome of its own, so the orchestrator is not left
     // with no next step but the operation the user just refused.

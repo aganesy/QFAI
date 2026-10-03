@@ -10,8 +10,9 @@ routing-profile: default
 # prototyping-recover
 
 Runs on demand, when the user's answer in `prototyping-loop` asks for a design
-the current lineage does not implement, or when the user edits root `DESIGN.md`
-and wants the loop to start again from it. Return to `prototyping-loop`
+the current lineage does not implement, when the user edits root `DESIGN.md`
+and wants the loop to start again from it, or when a run starts over
+iterations an earlier run left. Return to `prototyping-loop`
 afterwards.
 
 ## Reads
@@ -27,13 +28,15 @@ afterwards.
 ## Procedure
 
 1. **Ask before starting over.** A new lineage overwrites `iter-00/` and
-   replaces every later iteration and its reviews. Name what it replaces, and
-   offer to copy the current iterations aside first.
+   replaces every later iteration and its reviews, and removes `final/`, so
+   no handoff of the old lineage is left for `/qfai-implement` to read. Name
+   what it replaces, and offer to copy it aside first.
 2. **A declined restart ends the run and deletes nothing.** Report the rejected
    prototype and the direction the user gave, leave `.qfai/prototype/` as it
    stands, and stop. Their answer is still recorded under `## Session`.
-3. On approval, remove the old iterations, then return to `prototyping-loop` at
-   iteration `00`, carrying the user's answer as the pivot.
+3. On approval, remove the old iterations and `final/`, then return to
+   `prototyping-loop` at iteration `00`, carrying the user's answer as the
+   pivot.
 
 Under a no-question mode the restart cannot be approved: write it to
 `## Escalated` in `.qfai/prototype/grilling.md` and stop.

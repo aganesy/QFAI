@@ -31,7 +31,7 @@ Nothing. The CLI checks are read-only.
   `npx qfai doctor --profile prototyping` to surface the resolved set. With
   zero UI-bearing contracts the run ends here, writes nothing, and says that no
   UI-bearing UI contract was resolved.
-- Confirm `<contractsDir>/ui/*.yaml` exists.
+- Confirm `<contractsDir>/ui/` holds a `*.yaml` or `*.yml` contract.
 - Run `common-design-md` § Check before building
   (`.qfai/assistant/step/common-design-md/STEP.md#check-before-building`). It
   stops on a missing, unparseable or sample `DESIGN.md`. Run only that section:
@@ -39,9 +39,12 @@ Nothing. The CLI checks are read-only.
 
 ### Step 2-B — Verify environment preconditions
 
-- Confirm the reviewer can open each declared screen: a dev server or a static
-  file server at the URL passed to
+- Confirm a dev server or a static file server can serve
+  `.qfai/prototype/` at the URL passed to
   `npx qfai doctor --profile prototyping --target-url <url>`.
+- Confirm every declared screen ID matches `[A-Za-z0-9._-]+`. The loop builds
+  file names from it, so an ID holding `/`, `\` or `..` stops the run, naming
+  the contract and the ID.
 - Canonical launcher: `npx --no-install playwright`, or
   `node_modules/.bin/playwright` when PATH reachability is uncertain. A bare
   `npx playwright` can install a package mid-run.
@@ -57,5 +60,11 @@ for a failing doctor check.
 
 The step passes when `npx qfai doctor --profile prototyping --target-url <url>`
 reports no error, with at least one UI-bearing contract resolved and a launcher
-that does not install anything. With zero UI-bearing contracts the run ends
-here, and the later steps do not run.
+that does not install anything. Two doctor errors do not stop it, and each is
+reported:
+
+- a refused `prototyping.primaryUiContract` when the request names the primary
+  contract, which wins over the configured value;
+- inside a workflow run, a finding about a UI contract that does not serve the
+  bound flow. With zero UI-bearing contracts the run ends
+  here, and the later steps do not run.

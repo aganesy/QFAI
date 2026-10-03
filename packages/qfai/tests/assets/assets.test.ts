@@ -483,7 +483,7 @@ describe("assets guardrails", () => {
   it("keeps every file the prototyping loop writes under .qfai/prototype", async () => {
     const content = await readPrototypingProcedure();
 
-    expect(content).toContain("<contractsDir>/ui/*.yaml");
+    expect(content).toContain("<contractsDir>/ui/");
     expect(content).toContain("DESIGN.md");
     expect(content).toContain(".qfai/prototype/iter-NN/index.html");
     expect(content).toContain(".qfai/prototype/final/handoff.json");
@@ -1300,7 +1300,7 @@ describe("assets guardrails", () => {
     const npmReadme = await readFile(npmReadmePath, "utf-8");
 
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
-    expect(normalizedNpm).toMatch(/until the user confirms thes+prototype/);
+    expect(normalizedNpm).toMatch(/until the user confirms the\s+prototype/);
     expect(normalizedNpm).toContain(".qfai/prototype/");
   });
 

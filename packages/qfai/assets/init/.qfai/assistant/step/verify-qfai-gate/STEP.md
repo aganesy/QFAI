@@ -35,8 +35,7 @@ signals; this one decides. It records failures and repairs none of them:
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
 3. Run the static policy checks (below).
-4. For a prototyping-scoped run, check the loop evidence (below).
-5. Record each result as `common-evidence-record` says.
+4. Record each result as `common-evidence-record` says.
 
 ## What this gate is
 
@@ -82,5 +81,4 @@ The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
 - `error=0` for a pass, or the failing findings are recorded for the fix loop;
-- the static policy checks and, for a prototyping scope, the loop evidence
-  are recorded.
+- the static policy checks are recorded.

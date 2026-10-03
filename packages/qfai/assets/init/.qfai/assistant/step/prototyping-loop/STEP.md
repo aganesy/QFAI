@@ -61,26 +61,35 @@ owner is separate from this identity rule.
 | Build                                         | devops-ci-engineer, backend-engineer |
 
 Record `targetIterations`, `evaluationAxesSource`, `delegationMap` and
-`plannedAt` in `.qfai/prototype/progress.md` before the first review. Report an
+`plannedAt` in `.qfai/prototype/progress.md` before the first review.
+`targetIterations` is an estimate of the iterations before the user confirms;
+the loop does not stop at it. Report an
 assignment that gives generation and review to one identity before either
 runs.
 
 ## Procedure
 
-Run these for iteration `NN`, starting at `00`.
+Run these for iteration `NN`, starting at `00`. When `.qfai/prototype/`
+already holds iterations from an earlier run, run `prototyping-recover` first:
+it asks before anything is replaced.
 
 1. **Generator** (product-experience-architect). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
    and, from the second iteration on, the latest reviews and the user's last
    answer. Writes `.qfai/prototype/iter-NN/index.html`.
-2. **Reviewer** (product-surface-reviewer). Operates Playwright live and writes
+2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the
+   URL preflight checked, and hands that URL to the reviewer.
+3. **Reviewer** (product-surface-reviewer). Opens that URL, operates
+   Playwright live and writes
    `iter-NN/<ui-contract-id>/<screen>.review.json` for each UI contract and
    screen pair, and the per-iteration summary `iter-NN/review.json` aggregated
    from them, per the reviewer prompt: the four ordinal UX axes, a critique of
    at most 500 words, `blockingFindings`, `layoutAntiPatternsDetected[]`,
-   `designMdViolations[]` and `pivotDirective`.
-3. **Orchestrator.** Appends one line for the iteration to `progress.md`.
-4. **The user.** Put the prototype to the user, as below.
+   `designMdViolations[]` and `pivotDirective`. Each payload is checked
+   against the closed schema before it is written, and one that does not
+   conform is written again.
+4. **Orchestrator.** Appends one line for the iteration to `progress.md`.
+5. **The user.** Put the prototype to the user, as below.
 
 ### Putting the prototype to the user
 
