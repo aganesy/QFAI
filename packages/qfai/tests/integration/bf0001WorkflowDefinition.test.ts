@@ -79,10 +79,10 @@ describe("BF-0001 workflow definition", () => {
   });
 
   // QFAI:EX-0001-0001-02
-  it("hands a fifteen-file discussion pack with REQ and NFR seeds to SDD", async () => {
+  it("hands a nine-file discussion pack with REQ and NFR seeds to SDD", async () => {
     const discussion = await readDiscussionSkill(assistant);
     const sdd = await readSdd();
-    expect(discussion).toContain("unified 15-file discussion pack");
+    expect(discussion).toContain("nine-file discussion pack");
     expect(discussion).toContain("Capture scope, REQ, NFR");
     expect(sdd).toContain("Read the pack, its completed reviews");
   });

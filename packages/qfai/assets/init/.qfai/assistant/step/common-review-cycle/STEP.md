@@ -66,9 +66,8 @@ no packs only warns, so the cycle would pass `--fail-on error` unreviewed.
 | `R01_<reviewer>.md`, … | One reviewer response each, in the shared reviewer response template                                    |
 | `summary.json`         | The cycle's result, written when the cycle completes                                                    |
 
-Start from the templates under
-`.qfai/assistant/skill/qfai-discussion/templates/review/` and replace the
-producer, scope, target and review focus with this stage's. The `summary.json`
+Write the producer, scope, target and review focus of this stage into
+`review_request.md`. The `summary.json`
 fields and the value its `version` takes are
 `.qfai/assistant/skill/qfai-implement/references/review-artifact-layout.md`.
 
