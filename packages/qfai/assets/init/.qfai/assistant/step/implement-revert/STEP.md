@@ -2,13 +2,12 @@
 name: implement-revert
 owner: qfai-implement
 purpose: "Undo the change a bisection named as the cause of a failure, and confirm the failure is gone and nothing else broke."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - frontend-engineer
   - backend-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
 routing-profile: implementation-heavy
 ---
 
@@ -41,7 +40,7 @@ in the next stages.
 
 - The files the revert changes, listed in `changedFiles`. Nothing else.
 - Where a flow is bound, a record of the culprit, the revert and each command
-  with its result, written with `common-evidence-record`.
+  with its result, in the stage report.
 
 ## Gate
 

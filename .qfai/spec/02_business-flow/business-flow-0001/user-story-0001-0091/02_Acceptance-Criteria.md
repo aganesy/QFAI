@@ -8,7 +8,7 @@ Feature: TDD Micro-Cycle Execution
   Scenario: TDD Cycle Completeness
     Given an EX that no test annotates on the story tree
     When `/qfai-implement` takes that EX
-    Then it runs Red, Green and Refactor with evidence at each phase
+    Then it runs Red, Green and Refactor observing the result of each phase
     And the test it writes carries `QFAI:EX-NNNN-NNNN-NN`
     And no ledger status is written
 

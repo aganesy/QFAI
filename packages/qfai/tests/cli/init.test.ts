@@ -58,7 +58,6 @@ const REQUIRED_SKILLS = [
   "qfai-configure",
   "qfai-discussion",
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
@@ -492,7 +491,7 @@ describe("qfai init", () => {
       const existingConstitution = path.join(root, ".qfai", "assistant", "rule", "constitution.md");
       await writeFile(existingConstitution, "custom constitution\n", "utf-8");
 
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
@@ -980,6 +979,78 @@ describe("qfai init", () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the qfai-atdd link init installed and keeps a project's own qfai-atdd link", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // What an earlier release left: the canonical skill and init's link to it.
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "# qfai-atdd\n", "utf-8");
+      const installed = path.join(root, ".claude", "skills", "qfai-atdd");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skill", "qfai-atdd"),
+        installed,
+        "dir",
+      );
+
+      // A link of the same name the project points at a skill of its own.
+      const own = path.join(root, "project-skills", "qfai-atdd");
+      await mkdir(own, { recursive: true });
+      await writeFile(path.join(own, "SKILL.md"), "project skill\n", "utf-8");
+      const projectLink = path.join(root, ".agents", "skills", "qfai-atdd");
+      await symlink(path.join("..", "..", "project-skills", "qfai-atdd"), projectLink, "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(installed)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectSymlink(projectLink);
+      expect(await readFile(path.join(projectLink, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("moves the retired qfai-atdd skill to skill.local and lists its retired steps on --force", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // What an earlier release left in the canonical tree, the skill edited.
+      const assistant = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistant, "skill", "qfai-atdd"), { recursive: true });
+      await writeFile(
+        path.join(assistant, "skill", "qfai-atdd", "SKILL.md"),
+        "# edited\n",
+        "utf-8",
+      );
+      const step = path.join(assistant, "step", "atdd-author");
+      await mkdir(step, { recursive: true });
+      const stepBody = "---\nname: atdd-author\n---\n";
+      await writeFile(path.join(step, "STEP.md"), stepBody, "utf-8");
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: true, dryRun: false, yes: true }),
+      );
+
+      await expect(lstat(path.join(assistant, "skill", "qfai-atdd"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      expect(
+        await readFile(path.join(assistant, "skill.local", "qfai-atdd", "SKILL.md"), "utf-8"),
+      ).toBe("# edited\n");
+      // No local step tree exists, so the step stays where it is and is listed.
+      expect(await readFile(path.join(step, "STEP.md"), "utf-8")).toBe(stepBody);
+      expect(output).toContain(
+        ".qfai/assistant/step/atdd-author is a step this release no longer ships",
+      );
+      expect(existsSync(path.join(root, ".qfai", "evidence"))).toBe(false);
     } finally {
       await removeTempTree(root);
     }
@@ -2862,7 +2933,7 @@ describe("qfai init", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       // A project that tracks its whole audit trail deletes `.qfai/evidence/*`.
-      // QFAI-REVIEW-008 says that is fine; re-init must not undo it.
+      // That is the project's choice; re-init must not undo it.
       const tracked = [
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
@@ -3126,7 +3197,7 @@ describe("qfai init", () => {
 
       expect(skippedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
       expect(removedBullets.filter((bullet) => bullet.includes("\\"))).toEqual([]);
-      expect(skippedBullets).toContain(".qfai/assistant/skill/qfai-atdd/SKILL.md");
+      expect(skippedBullets).toContain(".qfai/assistant/skill/qfai-implement/SKILL.md");
       expect(removedBullets).toContain(".qfai/assistant/skill/qfai-discussion/10_workflow.md");
     } finally {
       await removeTempTree(root);
@@ -3230,7 +3301,7 @@ describe("qfai init", () => {
 
   it("removes an assistant README that carries the init marker", async () => {
     // That README described how the integration-surface rule decided whether
-    // init had run. The rule reads two records now, so the file is a
+    // init had run. The rule reads another file now, so the file is a
     // description of behaviour the tool no longer has, sitting in the tree the
     // assistant loads its instructions from.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));

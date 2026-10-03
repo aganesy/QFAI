@@ -73,13 +73,13 @@ describe("routing keyed by step", () => {
       ...names(phase.mandatory_agents),
       ...names(phase.blocking_agents),
     ]);
-    for (const agent of new Set([...bound, "completion-reviewer", "architecture-reviewer"])) {
+    for (const agent of new Set([...bound, "architecture-reviewer"])) {
       expect(roles, agent).toContain(agent);
     }
 
-    const evidenceRecord = frontMatterOf(await readShipped("step/common-evidence-record/STEP.md"));
-    expect(evidenceRecord["routing-profile"]).toBeUndefined();
-    expect(entries.some((candidate) => candidate.step === "common-evidence-record")).toBe(false);
+    const gateRun = frontMatterOf(await readShipped("step/common-gate-run/STEP.md"));
+    expect(gateRun["routing-profile"]).toBeUndefined();
+    expect(entries.some((candidate) => candidate.step === "common-gate-run")).toBe(false);
     expect(entries.some((candidate) => candidate.skill === "qfai-sdd")).toBe(false);
 
     expect(await agentFindings()).toEqual([]);
@@ -108,7 +108,7 @@ describe("routing keyed by step", () => {
   // QFAI:EX-0001-0161-08
   it("reports a step whose roles or routing-profile drift from its entry", async () => {
     const missingRole = await agentFindings((text) =>
-      text.replace(/^\s*architecture-reviewer,?\s*$/m, ""),
+      text.replace(", architecture-reviewer]", "]"),
     );
     expect(
       missingRole.filter(

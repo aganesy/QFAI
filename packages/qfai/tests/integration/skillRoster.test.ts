@@ -25,7 +25,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
       "backend-engineer",
       "qa-gatekeeper",
       "implementation-reviewer",
-      "completion-reviewer",
       "product-surface-reviewer",
     ];
 
@@ -39,7 +38,6 @@ describe("sub-agent roster completeness and handoff contracts", () => {
 
     expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(content).toContain("implementation-reviewer checks code and tests");
-    expect(content).toMatch(/completion-reviewer checks\s+obligation, commands/);
     expect(content).toContain("Route UI-affecting work to");
   });
 
@@ -49,7 +47,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toContain("Work one EX at a time by default");
     expect(content).toContain("Parallel work requires disjoint");
     expect(content).toContain("required user consent");
-    expect(content).toContain("Each required reviewer must pass the same final revision");
+    expect(content).toContain("Each reviewer reads the same final revision");
   });
 
   it("defines the example handoff and review sequence", async () => {
@@ -59,29 +57,9 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toContain("Record command, selector, failure, test hash, and");
     expect(content).toContain("Run the same selector and record");
     expect(content).toContain(
-      "The stage's review pack identifies the BF, every EX the stage implemented, the",
+      "The review request identifies the BF, every EX the stage implemented, the",
     );
     expect(content).toContain("references/ui-affecting.md");
-  });
-});
-
-// QFAI:EX-0001-0092-01
-describe("qa-gatekeeper is sole observation authority", () => {
-  let content: string | undefined;
-
-  it("routes RED and GREEN evidence to the qa-gatekeeper", async () => {
-    content = await readImplementFlowSteps(implementAssistantDir);
-
-    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
-  });
-
-  it("routes RED/GREEN confirmation through qa-gatekeeper instead of the implementation agent", async () => {
-    content ??= await readImplementFlowSteps(implementAssistantDir);
-
-    expect(content).toContain("The author does not certify their own result");
-    expect(content).not.toMatch(
-      /implementation agent[\s\S]*?confirms its own RED\/GREEN observation/i,
-    );
   });
 });
 

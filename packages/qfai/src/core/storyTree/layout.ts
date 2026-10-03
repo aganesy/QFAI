@@ -103,7 +103,7 @@ export function oldLayoutMessage(layoutRoot: string, files: readonly string[]): 
   return [
     `Old spec-pack layout at ${layoutRoot}. These files remain under its spec-*/ and _policies/ directories:`,
     ...files,
-    "Run /qfai-migration-v1-to-v2 and place what it lists through /qfai-sdd; delete a file only once the migration has archived it under .qfai/evidence/migration-spec-to-story/retired/.",
+    "Run /qfai-migration-v1-to-v2 and place what it lists through /qfai-sdd.",
   ].join("\n");
 }
 

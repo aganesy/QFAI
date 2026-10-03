@@ -49,7 +49,7 @@ async function fixture(): Promise<MigrationContext> {
   const root = context.root;
   await put(
     root,
-    ".qfai/evidence/migration-spec-to-story/id-map.json",
+    "tmp/qfai-migration/id-map.json",
     serializeIdMap({
       version: 1,
       ids: {
@@ -117,7 +117,7 @@ function capture() {
 }
 
 const packDir = `.qfai/spec/${spec}`;
-const planFile = ".qfai/evidence/migration-spec-to-story/plan.yaml";
+const planFile = "tmp/qfai-migration/plan.yaml";
 const twoStoryFlows =
   "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0002\n";
 const examplesEntry = "examples:\n  - id: EX-0001-0002\n    criterion: AC-0001-0002\n";
@@ -180,14 +180,10 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "# Cases\n\n## TC-0001-0001: Submit order\n\n- AC-Refs: AC-0001-0001\n- EX-Ref: —\n- Verify that submission creates an order.\n",
     );
-    await put(
-      context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
-      "# Examples\n",
-    );
+    await put(context.root, `.qfai/spec/${spec}/05_Examples.md`, "# Examples\n");
     const report = capture();
     expect(await executePlannedStep(step05, context, false, report.io)).toBe(0);
     expect(report.output.join("")).toContain(
@@ -203,12 +199,12 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "# Cases\n\n## TC-0001-0001: Several examples\n\n- AC-Refs: AC-0001-0001\n- EX-Ref: EX-0001-0001, EX-0001-0002\n- Verify both results.\n",
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n| EX-0001-0002 | BR-0001-0001 | Second | Pass |\n",
     );
     const c = capture();
@@ -227,15 +223,15 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "# Test Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | — | Submit order | Order accepted |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0001 | Existing EX | Accepted |\n| TC-0001-0003 | — | — | Missing AC | Review |\n| TC-0001-0004 | AC-0001-0001, AC-0001-0002 | — | Two ACs | Review |\n| TC-0001-0006 | AC-0001-0001 | EX-0001-9999 | Dangling EX | Review |\n",
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
     );
-    const twoCriteria = `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md: TC-0001-0004: several criteria`;
+    const twoCriteria = `.qfai/spec/${spec}/06_Test-Cases.md: TC-0001-0004: several criteria`;
     const before = await snapshot(context.root);
     const dry = capture();
     expect(await executePlannedStep(step05, context, true, dry.io)).toBe(3);
@@ -253,13 +249,7 @@ describe("migration steps 5 to 8", () => {
     expect(examples).not.toContain("Missing AC");
     expect(examples).not.toContain("Two ACs");
     expect(
-      await readFile(
-        path.join(
-          context.root,
-          `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
-        ),
-        "utf8",
-      ),
+      await readFile(path.join(context.root, `.qfai/spec/${spec}/06_Test-Cases.md`), "utf8"),
     ).toContain("TC-0001-0003 | — | — | Missing AC | Review");
     const repeated = await step05.plan(context);
     expect(repeated.operations).toEqual([]);
@@ -272,7 +262,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | — | When the order is submitted | Then the order is accepted |\n| TC-0001-0006 | AC-0001-0001 | — | Given a cart When it is submitted | Accepted |\n",
     );
     const c = capture();
@@ -297,7 +287,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -314,7 +304,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | — | First | Accepted |\n| TC-0001-0002 | AC-0001-0001 | — | Second | Accepted |\n| TC-0001-0003 | AC-0001-0001 | — | Third | Accepted |\n| TC-0001-0004 | — | — | Missing | Review |\n| TC-0001-0005 | AC-0001-0001, AC-0001-0002 | — | Ambiguous | Review |\n",
     );
     const report = capture();
@@ -337,7 +327,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0001 | one | yes |\n| TC-0001-0005 | AC-0001-0001 | EX-0001-0001 | two | yes |\n",
     );
     expect(await executePlannedStep(step06, context, false, capture().io)).toBe(0);
@@ -377,7 +367,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0002\nrules: []\n",
     );
     for (const step of [step04, step05, step06]) {
@@ -408,13 +398,13 @@ describe("migration steps 5 to 8", () => {
     const examples = await readFile(examplePath, "utf8");
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0003 | — | Unmapped criterion | Review |\n",
     );
     const report = capture();
     expect(await executePlannedStep(step05, context, false, report.io)).toBe(3);
     expect(reportSection(report.output.join(""), "For a person")).toBe(
-      `- .qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md: TC-0001-0001: missing ID mapping`,
+      `- .qfai/spec/${spec}/06_Test-Cases.md: TC-0001-0001: missing ID mapping`,
     );
     expect(reportSection(report.output.join(""), "Operations")).toBe("none");
     expect(await readFile(examplePath, "utf8")).toBe(examples);
@@ -425,7 +415,7 @@ describe("migration steps 5 to 8", () => {
     const examplePath = path.join(context.specsDir, story);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      `.qfai/spec/${spec}/06_Test-Cases.md`,
       "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0001 | one | yes |\n",
     );
     const manual =
@@ -443,7 +433,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     await put(
@@ -453,7 +443,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -477,11 +467,11 @@ describe("migration steps 5 to 8", () => {
     expect(c.output.join("")).toContain("no contract placement in plan");
   });
 
-  it("moves a heading rule to its contract and archives the original section", async () => {
+  it("moves a heading rule to its contract and deletes its source", async () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const source =
@@ -489,7 +479,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "# Examples\n\n## EX-0001-0001: Valid order\n\n- BR-Ref: BR-0001-0001\n- Given an order\n- When submitted\n- Then accepted\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -497,17 +487,9 @@ describe("migration steps 5 to 8", () => {
     const contract = await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8");
     expect(contract).toContain("BR-0002-0001");
     expect(contract).toContain("The total MUST be nonnegative.");
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired",
-          spec,
-          "04_Business-Rules.md",
-        ),
-        "utf8",
-      ),
-    ).toBe(source);
+    await expect(
+      readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   const existingRuleFormats = [
@@ -537,7 +519,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
@@ -547,7 +529,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       `flows: []\nrules:\n  - id: BR-0001-0001\n    contract: ${contract}\n`,
     );
     const source =
@@ -555,7 +537,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
     );
     await put(context.root, `.qfai/spec/03_contract/${contract}`, content);
@@ -565,7 +547,7 @@ describe("migration steps 5 to 8", () => {
   for (const format of existingRuleFormats) {
     it(`preserves an identical existing rule in ${format.contract} during migration`, async () => {
       const original = format.render("An order total is never negative.", ["EX-0001-0001-01"]);
-      const { context, source } = await existingRuleFixture(format.contract, original);
+      const { context } = await existingRuleFixture(format.contract, original);
       expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
       expect(await readFile(path.join(context.contractsDir, format.contract), "utf8")).toBe(
         original,
@@ -573,17 +555,6 @@ describe("migration steps 5 to 8", () => {
       await expect(
         readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
       ).rejects.toMatchObject({ code: "ENOENT" });
-      expect(
-        await readFile(
-          path.join(
-            context.root,
-            ".qfai/evidence/migration-spec-to-story/retired",
-            spec,
-            "04_Business-Rules.md",
-          ),
-          "utf8",
-        ),
-      ).toBe(source);
     });
 
     for (const difference of ["statement", "examples"] as const) {
@@ -602,16 +573,6 @@ describe("migration steps 5 to 8", () => {
         expect(
           await readFile(path.join(context.specsDir, spec, "04_Business-Rules.md"), "utf8"),
         ).toBe(source);
-        await expect(
-          readFile(
-            path.join(
-              context.root,
-              ".qfai/evidence/migration-spec-to-story/retired",
-              spec,
-              "04_Business-Rules.md",
-            ),
-          ),
-        ).rejects.toMatchObject({ code: "ENOENT" });
       });
     }
   }
@@ -621,7 +582,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -637,7 +598,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: db/orders.sql\n  - id: BR-0001-0002\n    contract: cli/orders.md\n",
     );
     await put(
@@ -647,7 +608,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001, BR-0001-0002 | Input | Output |\n",
     );
     await put(
@@ -669,17 +630,6 @@ describe("migration steps 5 to 8", () => {
     await expect(
       readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired",
-          spec,
-          "04_Business-Rules.md",
-        ),
-        "utf8",
-      ),
-    ).toContain("SQL rule.");
   });
 
   it("writes a mapped rule and both citing examples to a SQL contract", async () => {
@@ -688,7 +638,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -704,7 +654,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: db/orders.sql\n",
     );
     await put(
@@ -714,7 +664,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n| EX-0001-0002 | BR-0001-0001 | Second | Pass |\n",
     );
     await put(
@@ -733,7 +683,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
@@ -743,7 +693,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/missing.yaml\n",
     );
     const rule =
@@ -751,7 +701,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, rule);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n",
     );
     const result = capture();
@@ -769,7 +719,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -788,7 +738,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: api/later.yaml\n",
     );
     const source =
@@ -796,7 +746,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n| EX-0001-0002 | BR-0001-0002 | Second | Pass |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -804,42 +754,19 @@ describe("migration steps 5 to 8", () => {
     expect(await executePlannedStep(step07, context, false, first.io)).toBe(3);
     expect(first.output.join("")).toContain("contract api/later.yaml does not exist");
     const current = path.join(context.specsDir, spec, "04_Business-Rules.md");
-    const archive = path.join(
-      context.root,
-      ".qfai/evidence/migration-spec-to-story/retired",
-      spec,
-      "04_Business-Rules.md",
-    );
-    expect(await readFile(archive, "utf8")).toBe(source);
     expect(await readFile(current, "utf8")).not.toContain("BR-0001-0001");
     await put(context.root, ".qfai/spec/03_contract/api/later.yaml", "openapi: 3.0.0\n");
-    return { context, source, current, archive };
+    return { context, current };
   }
 
-  it("refuses to remove a partly moved rule source that was edited after the first run", async () => {
-    const { context, current } = await partialRuleRun();
-    const edited = `${await readFile(current, "utf8")}\nKeep BR-0001-0002 under review.\n`;
-    await writeFile(current, edited);
-    const rerun = capture();
-    expect(await executePlannedStep(step07, context, false, rerun.io)).toBe(2);
-    expect(rerun.error.join("")).toContain(
-      `.qfai/spec/${spec}/04_Business-Rules.md differs from its archived original minus the rules already moved`,
-    );
-    expect(await readFile(current, "utf8")).toBe(edited);
-    expect(await readFile(path.join(context.contractsDir, "api/later.yaml"), "utf8")).toBe(
-      "openapi: 3.0.0\n",
-    );
-  });
-
   it("completes a partly moved rule source on a clean rerun", async () => {
-    const { context, source, current, archive } = await partialRuleRun();
+    const { context, current } = await partialRuleRun();
     const rerun = capture();
     expect(await executePlannedStep(step07, context, false, rerun.io)).toBe(0);
     expect(rerun.output.join("")).toContain(
-      `.qfai/spec/${spec}/04_Business-Rules.md: archive complete; remove migrated rule source`,
+      `.qfai/spec/${spec}/04_Business-Rules.md: delete: every rule moved`,
     );
     await expect(readFile(current)).rejects.toMatchObject({ code: "ENOENT" });
-    expect(await readFile(archive, "utf8")).toBe(source);
     expect(
       parseYaml(await readFile(path.join(context.contractsDir, "api/later.yaml"), "utf8")),
     ).toMatchObject({
@@ -865,7 +792,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: { [spec]: { "BR-0001-0001": "BR-0002-0001" } },
@@ -875,7 +802,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const rule =
@@ -939,7 +866,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
@@ -949,7 +876,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     await put(
@@ -959,13 +886,8 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
-      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Placed | Pass |\n| EX-0001-0002 | BR-0001-0001 | Kept | Review |\n",
-    );
-    await put(
-      context.root,
       `.qfai/spec/${spec}/05_Examples.md`,
-      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0002 | BR-0001-0001 | Kept | Review |\n",
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Placed | Pass |\n| EX-0001-0002 | BR-0001-0001 | Kept | Review |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
@@ -988,7 +910,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const source =
@@ -1008,7 +930,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -1027,7 +949,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: db/orders.sql\n",
     );
     await put(
@@ -1042,7 +964,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Accepted |\n| EX-0001-0002 | BR-0001-0002 | Second | Stored |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -1074,7 +996,7 @@ describe("migration steps 5 to 8", () => {
     );
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -1087,7 +1009,7 @@ describe("migration steps 5 to 8", () => {
         rule.id === "BR-0001-9999" ? "  - id: BR-0001-0001\n    contract: api/orders.yaml\n" : "";
       await put(
         context.root,
-        ".qfai/evidence/migration-spec-to-story/plan.yaml",
+        "tmp/qfai-migration/plan.yaml",
         `flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n${preservedRule}  - id: ${rule.id}\n    contract: ${rule.contract}\n`,
       );
       const c = capture();
@@ -1185,26 +1107,12 @@ describe("migration steps 5 to 8", () => {
     expect(operations).toContain("BR-0001-0002");
     expect(operations).toContain("superseded by another rule");
     expect(reportSection(output, "For a person")).toBe("none");
-    const map = await readFile(
-      path.join(context.root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
-      "utf8",
-    );
+    const map = await readFile(path.join(context.root, "tmp/qfai-migration/id-map.json"), "utf8");
     expect(map).not.toContain("BR-0001-0001");
     expect(map).not.toContain("BR-0001-0002");
     await expect(
       readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    const archive = await readFile(
-      path.join(
-        context.root,
-        ".qfai/evidence/migration-spec-to-story/retired",
-        spec,
-        "04_Business-Rules.md",
-      ),
-      "utf8",
-    );
-    expect(archive).toContain("BR-0001-0001");
-    expect(archive).toContain("BR-0001-0002");
     expect(
       await readFile(path.join(context.contractsDir, "api/api-0001-orders.yaml"), "utf8"),
     ).toBe("openapi: 3.0.0\n");
@@ -1216,7 +1124,7 @@ describe("migration steps 5 to 8", () => {
     const context = await fixture();
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "tmp/qfai-migration/plan.yaml",
       "flows:\n  - title: Checkout\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
     );
     const source =
@@ -1224,7 +1132,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
     await put(
       context.root,
-      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      `.qfai/spec/${spec}/05_Examples.md`,
       "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | Input | Output |\n",
     );
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
@@ -1259,17 +1167,6 @@ describe("migration steps 5 to 8", () => {
     expect(reportSection(report.output.join(""), "For a person")).toContain(
       `.qfai/spec/${spec}/04_Business-Rules.md: BR-0001-0002: no contract placement in plan`,
     );
-    expect(
-      await readFile(
-        path.join(
-          context.root,
-          ".qfai/evidence/migration-spec-to-story/retired",
-          spec,
-          "04_Business-Rules.md",
-        ),
-        "utf8",
-      ),
-    ).toBe(source);
   });
 
   it("rewrites the annotation of a test case whose example the plan's entry placed", async () => {
@@ -1317,7 +1214,7 @@ async function ruleProject(source: string): Promise<MigrationContext> {
   const context = await fixture();
   await put(
     context.root,
-    ".qfai/evidence/migration-spec-to-story/id-map.json",
+    "tmp/qfai-migration/id-map.json",
     serializeIdMap({
       version: 1,
       ids: {
@@ -1339,7 +1236,7 @@ async function ruleProject(source: string): Promise<MigrationContext> {
   await put(context.root, `${packDir}/04_Business-Rules.md`, source);
   await put(
     context.root,
-    `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+    `.qfai/spec/${spec}/05_Examples.md`,
     "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001, BR-0001-0002 | Input | Output |\n",
   );
   await put(

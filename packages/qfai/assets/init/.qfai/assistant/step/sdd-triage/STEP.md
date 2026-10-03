@@ -2,8 +2,8 @@
 name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
-requires: [common-steering-refresh, common-grilling-record]
-roles: [delivery-planner, requirements-analyst, completion-reviewer]
+requires: [common-steering-refresh]
+roles: [delivery-planner, requirements-analyst]
 routing-profile: default
 ---
 
@@ -30,10 +30,9 @@ With no argument, triage all incoming requirements and edit the flows they
 affect. Do not assume that every existing flow needs a rewrite. A BF argument
 limits the requested work to that flow and its shared dependencies.
 
-Inside a workflow run, the work order's `target` sets the scope instead. A work
-order with no `target` is refused. It never runs the no-argument batch. A `flow`
-target scopes the stage to that business flow, and its gate runs with
-`--flow BF-NNNN` for it.
+Inside a plan `qfai-run` follows, the business flow the request names, or the
+one the session settles from the request, sets the scope. It never runs the
+no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 
 ## Stage 0: source and preflight
 
@@ -44,12 +43,12 @@ target scopes the stage to that business flow, and its gate runs with
    Stage 0 snapshot.
 3. Read the pack, its completed reviews, explicit user requirements, and the
    existing story tree. A discussion pack is provenance and design input, not a
-   normative SSOT. Record a discrepancy in an SDD-owned row or evidence; do not
+   normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
    edit the pack to clear this stage.
 4. Stop if no usable source exists or a product decision cannot be inferred
-   safely. An imported tree without a discussion pack uses the import-lite
-   evidence route in
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
+   safely. An imported tree without a discussion pack takes its source as
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`
+   says.
 
 ## Stage 1: triage and records
 
@@ -59,18 +58,20 @@ descendants when it still represents the requirement. Create a flow or story
 only when the existing tree cannot represent it. Trace impact through BF → US →
 AC → EX and every enforcing contract.
 
-Record triage, change requests, retired stories, and rejected options as rows of
-`<paths.specsDir>/decisions.md`; record unresolved questions in
-`<paths.specsDir>/open-questions.md`. Every row has exactly
+Record in `<paths.specsDir>/decisions.md` only what the user approved: each
+change request, and each critical decision the user made. Record unresolved
+questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
-Status. A triage Content names the operation, affected BF or US, and its source
-as `discussion-<id>#REQ-NNNN` when that source exists. A change request Content
-begins `Change request:` and names the affected repository-relative paths. Do not write a
-second decision-record directory or a retired story file.
+Status. A change request Content begins `Change request:` and names the
+affected repository-relative paths; its Approach names the operation, the affected BF or US,
+its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
+approved it, when, and the option chosen. A decision the agent took appends no
+row, and a declined change appends none. Do not write a second decision-record
+directory or a retired story file.
 
-An approval-required row begins at TODO, moves to WIP on approval, or REJECTED
-if declined. `--auto` asks no questions and never supplies its own approval;
-stop before the dependent write and report pending approvals.
+Put each approval-required operation to the user before anything depends on
+it. `--auto` asks no questions and never supplies its own approval; stop
+before the dependent write and report pending approvals.
 
 ### UI-bearing flows
 
@@ -93,8 +94,8 @@ what was built — decide which one owns the truth before any later step writes.
      states;
    - between two surfaces of one rank, the one a policy row, a contract or a
      decision names as the source.
-2. Record the owner, and the entry of that order that made it the owner, in the
-   triage row's Approach.
+2. Record the owner, and the entry of that order that made it the owner, with
+   the triage decision.
 3. The surface that does not own the truth is the one that changes. Where that
    is code, tests or shipped prose, `implement-tdd` aligns it, and this stage
    changes no story-tree file for it.
@@ -123,9 +124,8 @@ approved: the one the work order's `settled` field or the request cites.
 - Triage each requirement strictly within the record.
 - An instruction that asks for more than the record settles — a new flow, a
   changed criterion, a behaviour the record never mentions — stops the step.
-  Write nothing, and report `branch: { outcome: outside-record, route }`, with
-  `route` `decide-acceptance` when whether to accept a behaviour is open and
-  `decide-design` when how to build it is.
+  Write nothing, and report `branch: { outcome: outside-record }`, which moves
+  the work to `decide-design`.
 - A citation that resolves to no in-force row stops the step: put the missing
   record to the operator as a question, and write nothing.
 
@@ -145,7 +145,7 @@ reaches — the owner, wire or retire, how to repair — is taken here:
   on product intent nothing written states. The result also raises `gate:user`
   through `raise`, as `{ modifier, reason }`, for the rest of the run.
 
-Invoked by name, record each such decision in the flow evidence with whether
+Invoked by name, record each such decision in the SDD report with whether
 this step took it or the operator answered it.
 
 ## ID allocation
@@ -161,21 +161,16 @@ rule over the tree, not a new command.
 ## Pre-draft grilling
 
 Before this step's first mutation, run the checkpoint for `Triage and records`
-in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` and
-record it with `common-grilling-record`. Each later design-writing step runs its
-own checkpoint the same way.
+in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. Put
+each critical decision it holds to the user, and list each decision it adopted
+in the final report. Each later design-writing step runs its own checkpoint the
+same way.
 
-## Inside a workflow run
+## A change to the story tree
 
-Stage 1 approvals, and the rule that a story-tree or contract file changes only
-on the operator's answer given in this run, follow
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#inside-a-workflow-run`.
-Every later step of the stage writes under that rule.
-
-Under `--auto` inside a run, an approval-required row with no satisfying
-`human_decision` stops Stage 1: the row never reaches WIP, nothing that depends
-on it is written, and the stage reports the row with its operation and target.
-`--auto` approves nothing.
+A story-tree or contract file changes only on the user's approval, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+sets out. Every later step of the stage writes under that rule.
 
 ## Gate
 

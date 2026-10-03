@@ -10,7 +10,7 @@ import { parse } from "yaml";
 
 import { PLAN_ROUTES, planStageSteps, readDefault } from "../../helpers/shippedAssistant.js";
 
-const VERIFY = ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const VERIFY = ["verify-qfai-gate", "verify-repo-gate"];
 
 /** The stage kinds, and the steps a stage of each kind may run. */
 const VOCABULARY: Record<string, string[]> = {
@@ -28,7 +28,7 @@ const VOCABULARY: Record<string, string[]> = {
   maintenance: ["maintain-edit"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
   sdd_append: ["sdd-story", "sdd-gate"],
-  test_fix: ["atdd-test-fix", "implement-test-fix"],
+  test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   sdd: [
     "sdd-triage",
@@ -45,8 +45,10 @@ const VOCABULARY: Record<string, string[]> = {
     "prototyping-loop",
     "prototyping-handoff",
   ],
-  acceptance: ["atdd-scaffold", "atdd-credentials", "atdd-author"],
   implement: [
+    "implement-scaffold",
+    "implement-credentials",
+    "implement-acceptance",
     "implement-tdd",
     "implement-checkpoint",
     "implement-refactor",
@@ -61,7 +63,9 @@ const VOCABULARY: Record<string, string[]> = {
     "implement-oracle-parity",
   ],
   verify: [
+    "verify-change-note",
     ...VERIFY,
+    "verify-context",
     "verify-repeat-run",
     "verify-advisory",
     "verify-external",
@@ -84,24 +88,21 @@ const PASS_THROUGH = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "atdd-credentials",
-  "atdd-author",
+  "discussion-pack",
   "discussion-uiux",
-  "atdd-test-fix",
+  "triage-investigate",
+  "implement-bisect",
+  "implement-minimize",
+  "implement-scaffold",
+  "implement-tdd",
+  "implement-credentials",
+  "implement-sweep",
   "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
 ];
 
-const PLAN_KEYS = [
-  "route",
-  "family",
-  "stages",
-  "defaultModifiers",
-  "decisionPoints",
-  "releasePoint",
-  "branchPoints",
-];
+const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
 
 const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 
@@ -109,7 +110,7 @@ const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
  * The order the delivery contract fixes for the skills a plan's steps belong to. A triage stage
  * may open a route and closes one, so it holds no place in this order.
  */
-const OWNER_ORDER = ["qfai-discussion", "qfai-sdd", "qfai-prototyping", "qfai-atdd", "qfai-verify"];
+const OWNER_ORDER = ["qfai-discussion", "qfai-sdd", "qfai-prototyping", "qfai-verify"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -200,46 +201,49 @@ describe("the built-in plans", () => {
     }
   });
 
-  it("makes the edit-text plan a maintenance stage, then verify", async () => {
+  it("makes the edit-text plan a maintenance stage, then the change note, then verify", async () => {
     const { stages } = await plan("edit-text");
     expect(stages.map((stage) => [stage.kind, names(stage)])).toEqual([
       ["maintenance", ["maintain-edit"]],
+      ["verify", ["verify-change-note"]],
       ["verify", VERIFY],
     ]);
   });
 
-  // QFAI:AC-0001-0185-05
-  // QFAI:EX-0001-0185-13
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-15
+  // QFAI:EX-0001-0220-16
   it("orders the add-feature and prototype-feature plans", async () => {
     const kinds = async (route: string) => (await plan(route)).stages.map((stage) => stage.kind);
     expect(await kinds("add-feature")).toEqual([
       "sdd",
-      "acceptance",
       "implement",
       "maintenance",
+      "verify",
       "verify",
     ]);
     expect(await kinds("prototype-feature")).toEqual([
       "sdd",
       "prototype",
-      "acceptance",
       "implement",
       "maintenance",
+      "verify",
       "verify",
     ]);
     expect(names((await plan("prototype-feature")).stages.at(-1))).toEqual(VERIFY);
   });
 
   // QFAI:AC-0001-0186-01
-  // QFAI:EX-0001-0186-13
-  it("holds the fix-defect plan's append, acceptance and implement stages after the diagnosis", async () => {
+  // QFAI:AC-0001-0220-05
+  // QFAI:EX-0001-0220-22
+  it("holds the fix-defect plan's append and implement stages after the diagnosis", async () => {
     const { raw, stages } = await plan("fix-defect");
     expect(stages.map((stage) => [stage.kind, stage.after])).toEqual([
       ["diagnose", []],
       ["sdd_append", ["diagnose"]],
-      ["acceptance", ["spec"]],
-      ["implement", ["acceptance"]],
+      ["implement", ["spec"]],
       ["verify", ["implement"]],
+      ["verify", ["note"]],
     ]);
     expect(stages[1]?.steps).toEqual([
       { name: "sdd-story", passThrough: true },
@@ -249,7 +253,8 @@ describe("the built-in plans", () => {
     expect(raw).not.toMatch(/\bwhen:/);
   });
 
-  // QFAI:EX-0001-0185-14
+  // QFAI:AC-0001-0218-03
+  // QFAI:EX-0001-0218-03
   it("ends every change route in the verify block that every stage reaches", async () => {
     let changeRoutes = 0;
     for (const route of PLAN_ROUTES) {
@@ -271,7 +276,7 @@ describe("the built-in plans", () => {
           .sort(),
       );
     }
-    expect(changeRoutes).toBe(26);
+    expect(changeRoutes).toBe(23);
   });
 
   // QFAI:AC-0001-0003-02
@@ -304,13 +309,13 @@ describe("the built-in plans", () => {
 
   // QFAI:AC-0001-0188-05
   // QFAI:EX-0001-0188-08
-  it("names no qfai-grill, and holds a discussion only in the three decide plans", async () => {
+  it("names no qfai-grill, and holds a discussion only in the two decide plans", async () => {
     const discussing: string[] = [];
     for (const route of PLAN_ROUTES) {
       const { stages } = await plan(route);
       expect(stages.flatMap(names).map(ownerOf), route).not.toContain("qfai-grill");
       if (stages.some((stage) => stage.kind === "discussion")) discussing.push(route);
     }
-    expect(discussing).toEqual(["decide-acceptance", "decide-design", "decompose-epic"]);
+    expect(discussing).toEqual(["decide-design", "decompose-epic"]);
   });
 });

@@ -101,7 +101,7 @@ The test obligation is determined by the ID and the test's layer:
 `.qfai/assistant/rule/test-layers.md` defines the layer directories. Test
 selection uses `validation.traceability.testFileGlobs`. A missing BF, AC, or EX
 test is an uncovered obligation, even if tests in another layer mention it.
-Resolve a valid exception through a row in `.qfai/spec/decisions.md`; do not
+Resolve a valid exception through a `.qfai/spec/decisions.md` row the user approved; do not
 invent a test annotation to suppress a finding.
 
 When practical, cite the BF, US, AC and EX IDs, and the contract and BR IDs
@@ -136,9 +136,7 @@ Default policy:
 - An **approval** — a question asked because a document requires a recorded
   human decision before the work may proceed — does **not** spend budget.
   Approvals are unbounded by construction: SDD triage requires an `Approved By`
-  on every approval-required row and puts no cap on rows, and the reviewer-gate
-  escalation exit requires a user decision per escalation
-  (`.qfai/assistant/rule/shared-skill-delegation-baseline.md#round-budget-and-convergence`). Counting them would
+  on every approval-required row and puts no cap on rows. Counting them would
   make this article impossible to satisfy in the stage that asks the most.
 - Classify **each question, not the prompt**. A prompt that carries both spends
   one unit per clarification it contains; only its approval questions are exempt.
@@ -189,9 +187,7 @@ Default policy:
 
 - **Approval questions are exempt.** A question whose subject is a user decision
   the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
-  destructive-operation confirmation, an escalation under
-  `.qfai/assistant/rule/shared-skill-delegation-baseline.md#round-budget-and-convergence`
-  — is a decision, not a clarification. Such questions are unbounded and must
+  destructive-operation confirmation — is a decision, not a clarification. Such questions are unbounded and must
   still be asked after the budget is exhausted. Skipping a mandatory approval to
   stay under the budget violates this article; it is not compliance with it.
 - **The next-action question is exempt.** The question that ends a turn leaving

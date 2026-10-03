@@ -152,8 +152,8 @@ describe("stepReview", () => {
     const effective = await readEffectiveRouting(defaultConfig);
     expect(stepReview(effective, "sdd-contract")).toEqual({
       profile: "architecture-heavy",
-      alwaysRequired: ["completion-reviewer", "architecture-reviewer"],
-      requiredAgents: ["solution-architect", "completion-reviewer", "architecture-reviewer"],
+      alwaysRequired: ["architecture-reviewer"],
+      requiredAgents: ["solution-architect", "architecture-reviewer"],
     });
   });
 
@@ -176,7 +176,7 @@ describe("stepReview", () => {
     });
     expect(stepReview(effective, "sdd-contract")).toEqual({
       profile: "default",
-      alwaysRequired: ["completion-reviewer"],
+      alwaysRequired: [],
       requiredAgents: ["completion-reviewer"],
     });
     expect(stepReview(effective, "no-such-step")).toEqual({

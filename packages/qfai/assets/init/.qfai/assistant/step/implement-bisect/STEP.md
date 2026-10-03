@@ -7,7 +7,6 @@ roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - completion-reviewer
 routing-profile: default
 ---
 
@@ -15,6 +14,12 @@ routing-profile: default
 
 A behaviour worked at one revision and fails at a later one. This step finds
 the first change at which it fails.
+
+## Passes when
+
+Read first: the report. The step passes when the report names no revision
+where the behaviour worked and no release before it shows the behaviour
+working. The pass names the revisions tried.
 
 ## Reads
 
@@ -51,9 +56,8 @@ fix it forward.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the command, both ends, each
-  revision tested with its result, and the culprit. It is git-ignored and is
-  named in `artifactRefs`.
+- The stage report holds the command, both ends, each
+  revision tested with its result, and the culprit.
 
 ## Gate
 

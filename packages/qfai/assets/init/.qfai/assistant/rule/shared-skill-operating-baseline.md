@@ -46,8 +46,7 @@ one roster file.
 The ceiling applies to **every** shipped assistant prose asset, including
 rules and cards. A rule at the ceiling moves topic detail to
 `rule/references/<topic>.md`; a skill uses its own `references/` directory.
-The tree that owns the file owns its detail. A shared example is
-`rule/audited-evidence-hash.md`.
+The tree that owns the file owns its detail.
 
 For a prose asset, raising the ceiling or claiming an exemption is not the remedy. An exemption claims no split is possible, and a Markdown file whose tree has a `references/` home available cannot make that claim.
 
@@ -74,7 +73,7 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 
 This section binds every skill and every step as written. A skill or step does
 not restate it: it names only the questions of its own, and with `--auto` it
-asks nothing and records explicit assumptions in its stage evidence.
+asks nothing and records explicit assumptions in its stage report.
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available. **No question is exempt** — a confirmation and a yes-or-no take the same path as anything else, because an exception is what an agent reaches for when it would rather not ask. The form a question takes is owned by `.agents/rules/user-questions.md`; this section is where it binds a skill.
 - Availability is judged for **this question in this invocation**. A tool the mode withholds, or one that cannot carry the answer's shape, is unavailable for that question and takes the fallback below. A mode that permits no question at all — `--auto` — is read before this: nothing is asked, so there is no question whose availability to judge, and the fallback is not its route.
@@ -264,21 +263,12 @@ A skill that a built-in workflow plan names runs this check first, before
 Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 `active`.
 
-A QFAI work order is the one `npx qfai workflow` issues to a stage. It is not a
-delegation work order.
-
-| State     | Mode              | When                                                 | What the skill does                                                                                                                          |
-| --------- | ----------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pass-on` | `active`          | Neither invoked by name nor handed a QFAI work order | Edit nothing. Pass the request to `qfai-run` in the same turn. Show the operator at most one line, and no explanation of modes or stages     |
-| `by-name` | `active`          | Invoked by name                                      | Run standalone and end at this stage. Start no other stage. A request to take the work to the end becomes a whole run: pass it to `qfai-run` |
-| `worker`  | `active`          | Handed a QFAI work order that matches an issued one  | Check the run, stage and work-order IDs, then do only that work. Say nothing to the operator                                                 |
-| `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the harness                                                                                          |
-| `off`     | `off` or `shadow` | Always                                               | No entry check. Behave as when invoked by name                                                                                               |
-
-A work order matches an issued one when its run, stage-instance and work-order
-IDs equal those of the outstanding work order that
-`npx qfai workflow status --run <runId>` reports. `status` only reads, so the
-check changes nothing in the run.
+| State     | Mode              | When                                               | What the skill does                                                                                                                          |
+| --------- | ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pass-on` | `active`          | Neither invoked by name nor run by `qfai-run`      | Edit nothing. Pass the request to `qfai-run` in the same turn. Show the operator at most one line, and no explanation of modes or stages     |
+| `by-name` | `active`          | Invoked by name                                    | Run standalone and end at this stage. Start no other stage. A request to take the work to the end becomes a whole run: pass it to `qfai-run` |
+| `step`    | `active`          | Run by `qfai-run` as a step of the plan it follows | Do only that step's work                                                                                                                     |
+| `off`     | `off` or `shadow` | Always                                             | No entry check. Behave as when invoked by name                                                                                               |
 
 ### What authorizes a run's work
 
@@ -297,7 +287,7 @@ check changes nothing in the run.
 
 A step is one part of a parent skill's procedure, kept at
 `.qfai/assistant/step/<name>/STEP.md`. No host lists a step as a skill; a step
-runs only from its parent or from a work order.
+runs only from its parent or from the plan `qfai-run` follows.
 
 - **A step's `requires` names only `common-*` steps**, and a `common-*` step
   requires nothing. The deepest chain is parent, step, common step.
@@ -317,47 +307,42 @@ runs only from its parent or from a work order.
 3. For each step: read that step's `STEP.md` and no other, run it, and pass its
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
-4. After the last step, run one review through `common-review-cycle`. The
-   reviewers are the union of the reviewers the profiles of the steps that ran
-   require, with each conditional reviewer whose condition holds.
+4. After the last step, run the one review the parent names, through
+   `common-review-cycle`: the specification review for `qfai-sdd` and
+   `qfai-discussion`, the code review for a parent that changed code, tests or
+   a change note, and none for `qfai-triage` or for a `qfai-verify` run that
+   wrote nothing.
 5. Complete as the parent's completion section says, reporting what each step
    produced.
 
 A step skipped on a condition that later turns out to hold is run in its place
 in the order, before the review.
 
-### A work order's steps
+### A plan's steps
 
-A workflow sub-agent handed a QFAI work order runs the steps the work order
-names, in its `steps:` list, and no other.
+`qfai-run` runs the steps of the plan `npx qfai workflow plan` returned, stage by
+stage, and no other.
 
-1. Run the entry check in the `worker` state.
-2. For each listed step, in order: read the `STEP.md` at its `path` and no
-   other, run it, and pass its gate. A step the parent lists and the work order
-   does not is not run. Where the work needs an unlisted step, return the
-   replan outcome rather than run it. A step that reports a `branch` ends the
-   work order there: the steps after it do not run, and the result carries the
-   `branch` and no `closure`.
-3. Take what the work order's `settled` field records as settled, and ask none
-   of it again.
-4. Run one review through `common-review-cycle` at the end, with the work
-   order's `requiredReviewerRoles`, and none when it names none. The run
-   computed that set; do not recompute it or drop a role from it.
-5. Return the stage result the work order asks for. A finding another owner
-   must repair is a debt naming that owner, not an edit made here.
+1. Run the entry check in the `step` state.
+2. For each step of the stage, in order: read the `STEP.md` at its `path` and
+   no other, run it, and pass its gate. A step the parent lists and the plan
+   does not is not run. Where the work needs a step no stage of the route runs,
+   stop and name the stage skill to invoke by name. A step that reports an
+   outcome its branch point pairs with a route ends the route there: the steps
+   after it do not run, and the work moves to that route's plan.
+3. After a stage whose `review` is `spec` or `code`, run that review through
+   `common-review-cycle`. A stage with no `review` has none.
+4. A finding another owner must repair is reported with that owner, not an
+   edit made here.
 
 ### A pass-through step
 
-A step the work order marks `passThrough` always runs. It first reads what its
+A step the plan marks `passThrough` always runs. It first reads what its
 `## Passes when` section names. When that shows it has nothing to write, it
-writes nothing, keeps what it read in a git-ignored record, and returns a pass
-in the result's `passes` as `{ step, reason, evidenceRef }`: `reason` names the
-fact that leaves nothing to write, and `evidenceRef` names the record.
+writes nothing and states why; the stage's review reads that statement.
 
-- A pass is not a skip. The step stays in the result, and the stage's reviewers
-  judge its reason.
-- `accept` refuses a pass on a step the work order does not mark, and a pass
-  while the step's obligation remains.
+- A pass is not a skip. The step stays in the work, and the review judges its
+  reason.
 - Invoked by name, a step with a `## Passes when` section passes the same way,
   and the report names the pass and its reason.
 
@@ -381,13 +366,13 @@ can resolve stops at preflight.
 ## Rejected Option Guard (Mandatory)
 
 - Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Status `REJECTED`.
-- To reconsider it, ask for explicit approval and append a new `DEC-NNNN` row. Its Content begins `Change request:` and names the authorized repository-relative paths, the rejected row's full `DEC-NNNN` ID, and the option being reopened. Its Approach states the changed evidence, intended story or contract change, and approval source. Leave the rejected row intact.
-- The new row stays `TODO` while approval is pending, becomes `WIP` after approval, and becomes `DONE` only after the owning SDD rerun and dependent checks. A PR description or completion report alone does not reopen the option.
+- To reconsider it, ask the user. Only on approval append a new `DEC-NNNN` row. Its Content begins `Change request:` and names the authorized repository-relative paths, the rejected row's full `DEC-NNNN` ID, and the option being reopened. Its Approach states the changed evidence, the intended story or contract change, and who approved it, when, and the option chosen. Leave the rejected row intact.
+- The new row starts at `WIP` and becomes `DONE` only after the owning SDD rerun and dependent checks. A PR description or completion report alone does not reopen the option.
 - The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `npx qfai validate` checks the four-column decision-table shape, status vocabulary, and append-only cells; it does not infer that two differently worded options are the same.
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail. A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once, as `.qfai/assistant/rule/review-convergence.md` sets out.
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
@@ -399,7 +384,6 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `.qfai/assistant/rule/review-convergence.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 
@@ -441,14 +425,14 @@ Every summary that replaces earlier context keeps these six:
 
 It also keeps the stage state. None of it can be recovered from the code, and a summary that keeps the six and drops it still misleads the next window.
 
-| Stage state                                                                                 | What goes wrong when it is dropped                                                                                   |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| The execution ledger and the row in progress                                                | Finished rows are worked again, or a row in `red` is taken for untouched                                             |
-| Every open question, with its ID and status                                                 | A question stays open with nobody tracking it, or is answered twice                                                  |
-| The clarification budget spent in this invocation, and the questions it was spent on        | The next window asks what the user already answered, or asks past the cap                                            |
-| Every assumption recorded under `--auto` or after the budget ran out, with its label        | A labelled assumption is read back as a decision someone took                                                        |
-| Each reviewer verdict, the round it came in, and the rounds spent per reviewer and artifact | A spent budget restarts, and a third round opens (`.qfai/assistant/rule/review-convergence.md#round-budget-must`)    |
-| A grilling session's decision tree, its current frontier, and the answers already settled   | An answered question is asked again, or a question is put before the one it depends on (`.agents/rules/grilling.md`) |
+| Stage state                                                                               | What goes wrong when it is dropped                                                                                   |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| The execution ledger and the row in progress                                              | Finished rows are worked again, or a row in `red` is taken for untouched                                             |
+| Every open question, with its ID and status                                               | A question stays open with nobody tracking it, or is answered twice                                                  |
+| The clarification budget spent in this invocation, and the questions it was spent on      | The next window asks what the user already answered, or asks past the cap                                            |
+| Every assumption recorded under `--auto` or after the budget ran out, with its label      | A labelled assumption is read back as a decision someone took                                                        |
+| Whether the stage's review has run, and each finding's fix or answer                      | The review runs a second time, or an answered finding is raised again (`.qfai/assistant/rule/review-convergence.md`) |
+| A grilling session's decision tree, its current frontier, and the answers already settled | An answered question is asked again, or a question is put before the one it depends on (`.agents/rules/grilling.md`) |
 
 Keep what the user said close to their own words. Your own reasoning may be condensed to what it concluded, as long as nothing listed above is dropped. Be complete on these items even when that makes the summary longer.
 

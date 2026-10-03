@@ -2,18 +2,15 @@ import { expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { planFacts } from "../../../src/core/workflow/observe.js";
-import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { defaultsIn } from "../../../src/core/workflow/routeDecision.js";
+import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 
 type Facts = Partial<WorkflowExtraction>;
 
-// The route and rule the decision rules give an extraction, over the package's own plans.
+// The route and rule the decision rules give an extraction.
 async function decided(facts: Facts) {
-  const read = extraction(facts);
-  const choice = decideRoute(read, defaultsIn(await planFacts()));
-  return [choice.route, choice.rule];
+  const choice = decideRoute(extraction(facts));
+  return Promise.resolve([choice.route, choice.rule]);
 }
 
 async function routes(...each: Facts[]) {
@@ -37,7 +34,7 @@ it("A security claim routes to the vulnerability fix before every other rule", a
 });
 
 // QFAI:EX-0001-0211-05
-it("An approved record with a task settles in the spec or in the build by its artifacts", async () => {
+it("An approved record with a task applies the settled design, whatever its artifacts", async () => {
   const cited = {
     intent: "stale-record" as const,
     entryFlags: ["upstream" as const],
@@ -48,7 +45,7 @@ it("An approved record with a task settles in the spec or in the build by its ar
       { ...cited, artifacts: ["spec", "contract"] },
       { ...cited, artifacts: ["spec", "code", "tests"] },
     ),
-  ).toEqual(["apply-settled-spec", "apply-settled-build"]);
+  ).toEqual(["apply-settled", "apply-settled"]);
 });
 
 // QFAI:EX-0001-0211-06
@@ -82,6 +79,22 @@ it("The release signals route to the backport, the release notes and the manual 
   ).toEqual(["backport-fix", "draft-release-notes", "verify-manually"]);
 });
 
+// QFAI:EX-0001-0211-38
+it("A release with no release signal is handed off, since the user runs a release", async () => {
+  expect(await decided({ intent: "release" })).toEqual(["hand-off-operation", 14]);
+});
+
+// QFAI:EX-0001-0211-37
+it("A request for the bodies of the empty acceptance tests writes them", async () => {
+  expect(
+    await decided({
+      intent: "follow-up",
+      signals: ["acceptance-bodies"],
+      artifacts: ["tests"],
+    }),
+  ).toEqual(["write-acceptance-tests", 5]);
+});
+
 // QFAI:EX-0001-0211-09
 it("No work, and a hosted-service problem, close with no change", async () => {
   expect(await routes({ intent: "no-work" }, { intent: "question-hosted" })).toEqual([
@@ -102,7 +115,7 @@ it("A stale premise and a known duplicate close as duplicates", async () => {
 
 // QFAI:EX-0001-0211-11
 // QFAI:EX-0001-0211-12
-it("Questions are answered or investigated", async () => {
+it("Every question is answered", async () => {
   expect(
     await routes(
       { intent: "question-how" },
@@ -110,7 +123,7 @@ it("Questions are answered or investigated", async () => {
       { intent: "question-why" },
       { intent: "question-help" },
     ),
-  ).toEqual(["answer-question", "answer-question", "investigate-question", "investigate-question"]);
+  ).toEqual(["answer-question", "answer-question", "answer-question", "answer-question"]);
 });
 
 // QFAI:EX-0001-0211-13
@@ -145,8 +158,16 @@ it("An operation only a person can run, and a distribution incident, are handed 
   ).toEqual(["hand-off-operation", "hand-off-operation"]);
 });
 
+// QFAI:EX-0001-0211-38
+it("A release no release signal routes is handed off by rule 14", async () => {
+  expect(await decided({ intent: "release", artifacts: ["release"] })).toEqual([
+    "hand-off-operation",
+    14,
+  ]);
+});
+
 // QFAI:EX-0001-0211-18
-it("A settled design applies, unless a later rule gives a route with default modifiers", async () => {
+it("A settled design applies, whatever a later rule would give", async () => {
   expect([
     await decided({
       intent: "feature",
@@ -161,9 +182,9 @@ it("A settled design applies, unless a later rule gives a route with default mod
     }),
     await decided({ intent: "order", artifacts: ["spec"] }),
   ]).toEqual([
-    ["apply-settled-build", 15],
-    ["change-compatibility", 28],
-    ["apply-settled-spec", 15],
+    ["apply-settled", 15],
+    ["apply-settled", 15],
+    ["apply-settled", 15],
   ]);
 });
 
@@ -202,7 +223,7 @@ it("Consistency: a missing check, a removal, the other disagreements and stale r
       { intent: "stale-record" },
     ),
   ).toEqual([
-    "sweep-guard",
+    "repair-consistency",
     "retire-mechanism",
     "repair-consistency",
     "repair-consistency",
@@ -220,7 +241,7 @@ it("Regressions, conformance and performance", async () => {
     await decided({ intent: "defect-conformance" }),
     await decided({ intent: "performance", entryFlags: ["measured"] }),
   ]).toEqual([
-    ["fix-regression", 22],
+    ["fix-defect", 22],
     ["fix-env-bound", 25],
     ["fix-conformance", 23],
     ["improve-performance", 23],
@@ -236,7 +257,7 @@ it("Crashes cluster, minimize, fall through to the defect fix, or stress", async
     await decided({ intent: "defect-crash", entryFlags: ["intermittent"] }),
   ]).toEqual([
     ["cluster-reports", 24],
-    ["fix-crash", 24],
+    ["fix-defect", 24],
     ["fix-defect", 27],
     ["fix-intermittent", 24],
   ]);
@@ -273,8 +294,8 @@ it("Features and behaviour changes decide, change compatibility, prototype or ad
       { intent: "feature" },
     ),
   ).toEqual([
-    "decide-acceptance",
-    "decide-acceptance",
+    "decide-design",
+    "decide-design",
     "change-compatibility",
     "change-compatibility",
     "prototype-feature",
@@ -290,53 +311,29 @@ it("A refactor and a documentation change", async () => {
   ]);
 });
 
-type Result = Record<string, unknown>;
-
-function routingResult(extractionFields: Record<string, unknown>, proposalFields: object = {}) {
-  const result: Result = {
-    resultId: "route-1",
-    workOrderId: "work-order-route-1",
-    stageInstanceId: "route",
-    attempt: 1,
-    expectedSequence: 3,
-    outcome: "accepted",
-    testObservation: "not_applicable",
-    actor: { agentInstance: "router-1" },
-    proposal: {
-      requestKind: "routed",
-      extraction: { ...extraction(), ...extractionFields },
-      goal: "Serve the request.",
-      expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
-      observedRefs: [],
-      affectedFlowIds: [],
-      riskSignals: [],
-      unresolvedQuestions: [],
-      newStories: [],
-      proposedWriteScope: [],
-      protectedTargets: [],
-      rationale: "The facts read out of the request.",
-      ...proposalFields,
-    },
-  };
-  return stageResultRefusals(result).map((refusal) => `${refusal.reason}:${refusal.subject}`);
+// The fields of an extraction that `plan` refuses.
+function refused(fields: Record<string, unknown>) {
+  return extractionFaults({ ...extraction(), ...fields }).map((subject) => `schema:${subject}`);
 }
 
 // QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused as a shape, naming the field", () => {
   const reading = { intent: "feature", entryFlags: [], qualifiers: [], signals: [] };
   expect({
-    intent: routingResult({ intent: "bug" }),
-    flag: routingResult({ entryFlags: ["urgent"] }),
-    confidence: routingResult({ confidence: 0.9 }),
-    alternativesAtHigh: routingResult({ alternatives: [reading] }),
-    lowWithout: routingResult({ confidence: "low" }),
-    lowWith: routingResult({ confidence: "low", alternatives: [reading] }),
+    intent: refused({ intent: "bug" }),
+    flag: refused({ entryFlags: ["urgent"] }),
+    confidence: refused({ confidence: 0.9 }),
+    alternativesAtHigh: refused({ alternatives: [reading] }),
+    lowWithout: refused({ confidence: "low" }),
+    lowWith: refused({ confidence: "low", alternatives: [reading] }),
+    unknownBeside: refused({ confidence: "low", route: "add-feature" }),
   }).toEqual({
-    intent: ["schema:proposal.extraction.intent"],
-    flag: ["schema:proposal.extraction.entryFlags[0]"],
-    confidence: ["schema:proposal.extraction.confidence"],
-    alternativesAtHigh: ["schema:proposal.extraction.alternatives"],
-    lowWithout: ["schema:proposal.extraction.alternatives"],
+    intent: ["schema:intent"],
+    flag: ["schema:entryFlags[0]"],
+    confidence: ["schema:confidence"],
+    alternativesAtHigh: ["schema:alternatives"],
+    lowWithout: ["schema:alternatives"],
     lowWith: [],
+    unknownBeside: ["schema:alternatives", "schema:route"],
   });
 });

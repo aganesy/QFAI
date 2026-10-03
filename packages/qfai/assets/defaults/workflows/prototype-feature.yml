@@ -11,34 +11,29 @@ stages:
       - common-design-md
       - { step: sdd-cycle, passThrough: true }
       - sdd-gate
+    review: spec
   - id: prototype
     kind: prototype
     steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
     after: [sdd]
-  - id: acceptance
-    kind: acceptance
-    steps:
-      - atdd-scaffold
-      - { step: atdd-credentials, passThrough: true }
-      - { step: atdd-author, passThrough: true }
-    after: [prototype]
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
-    after: [acceptance]
+    steps: [implement-scaffold, implement-tdd]
+    after: [prototype]
   - id: docs
     kind: maintenance
     steps:
       - { step: maintain-edit, passThrough: true }
     after: [implement]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [docs]
-defaultModifiers: [gate:user]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: [sdd-triage, prototyping-loop]
 branchPoints: []

@@ -2,7 +2,7 @@
 
 QFAI standardizes work into a fixed pipeline:
 
-## SDD → ATDD → Implementation → Verification
+## SDD → Implementation → Verification
 
 This file defines the canonical stages and delegation expectations.
 
@@ -31,30 +31,36 @@ These values are restated from `.qfai/assistant/rule/change-classification.md` (
 Do not proceed without a declared Change Type.
 
 The workflow routes are orthogonal to the Change Type. A route of
-`npx qfai workflow`, such as `fix-defect`, `add-feature` or `edit-text`, says
-which stages run; the Change Type says what kind of change it is. Neither
-selects the other, and a run declares both: a `fix-defect` run may declare
-`Behavior`, and an `add-feature` run `Structural`. No route maps to a Change
-Type.
+`npx qfai workflow plan`, such as `fix-defect`, `add-feature` or `edit-text`,
+says which stages run; the Change Type says what kind of change it is. Neither
+selects the other, and a change declares both: a `fix-defect` change may
+declare `Behavior`, and an `add-feature` change `Structural`. No route maps to
+a Change Type.
 
 ---
 
 ## Workflow routes
 
-A run of `npx qfai workflow` follows one route. The CLI chooses it from the
-facts `qfai-run` reads out of the request, and the route fixes the plan.
+A change request follows one route. `npx qfai workflow plan` chooses it from
+the facts `qfai-run` reads out of the request, returns the route's plan and
+writes nothing; the session runs the plan.
 
 - A stage runs every step its plan names, in plan order. Nothing a request says
   adds, drops or reorders a step.
 - A pass-through step still runs. When it can show it has nothing to write, it
-  records a pass with the evidence it read. A pass whose work remains is
-  refused.
-- A modifier, `review:heavy`, `gate:user` or `gate:release`, raises the review or
-  stops the run at a decision point its route declares. It never changes the
-  steps, and a run never drops one.
+  writes nothing and states why, and the route's review reads that statement.
+- At a decision point the plan names, each critical decision goes to the user
+  before anything that depends on it changes. A decision is critical when it
+  contradicts a specification, a contract or a recorded decision, cannot be
+  taken back, or rests on product intent nothing written states. Every other
+  decision is taken and reported.
+- At the release point the plan names, the user approves the release before
+  anything after it runs. The approval authorizes no push, merge, tag or
+  publication.
 - A stage that finds work no step of its route does, does none of it. At a
-  branch point its route declares, it reports the outcome that moves the run to
-  another route. Anywhere else it returns the finding as a debt.
+  branch point its plan declares, it reports the outcome that moves the work to
+  another route. Anywhere else the work stops and names the stage skill to
+  invoke.
 - A request that ends without a change to the project runs a route owned by
   `qfai-triage`.
 
@@ -82,9 +88,8 @@ facts `qfai-run` reads out of the request, and the route fixes the plan.
 2. Requirements: discussion pack in `.qfai/discussion/`
 3. Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts
 4. Prototyping (optional): contract-aligned implementation skeleton
-5. Acceptance tests (ATDD): BF E2E and AC integration or API tests from the story tree and contracts
-6. Implementation: `/qfai-implement` implements one EX at a time through Red, Green, Refactor
-7. Verify: run quality gates and provide evidence
+5. Implementation: `/qfai-implement` writes the BF E2E test and the AC integration tests with empty bodies, then implements one EX at a time through Red, Green, Refactor; the acceptance test bodies are written once the system's shape has settled
+6. Verify: run quality gates and provide evidence
 
 Stage 3 (`/qfai-sdd`) target policy:
 
@@ -96,8 +101,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 Prototyping stage policy:
 
 - `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the Change Request exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
-- Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --profile prototyping --fail-on error` pass. The profile is explicit on purpose: an omitted `--profile` defaults to `full`, which runs the ATDD traceability rules (`QFAI-ATDD-111/112/113`) at severity `error` — obligations of stage 5, which has not run yet at stage 4.
-- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
+- Prototyping completes when the user confirms the prototype. No command or check certifies it. The one file a `qfai` command reads under `.qfai/prototype/` is `final/handoff.json`, which `npx qfai validate --profile saas-package` checks.
 - Coverage gaps (missing BF or AC obligations, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:
@@ -140,7 +144,7 @@ from the skills and baselines that cite it.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify`):
+At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-implement`, `qfai-verify`):
 
 1. Check the current story-tree steering files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`

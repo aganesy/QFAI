@@ -176,7 +176,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     // directory, so "unknown skill / check --profile" would be a
     // misdiagnosis, and `--fail-on error` must not trip on it.
     const root = await newTempDir("noskillsroot");
-    const finding = await runAndFind(root, "qfai-atdd");
+    const finding = await runAndFind(root, "qfai-implement");
     expect(finding.severity).toBe("warning");
     expect(finding.message).not.toMatch(/unknown skill/u);
     expect(finding.message).toMatch(/skills root/u);

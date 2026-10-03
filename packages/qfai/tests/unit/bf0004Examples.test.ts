@@ -12,7 +12,6 @@ import { parseRecordTable } from "../../src/core/storyTree/tables.js";
 import { validateProject } from "../../src/core/validate.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { expectSentence } from "../helpers/shippedSentences.js";
 import {
   executePlannedStep,
@@ -69,8 +68,7 @@ async function treeHash(root: string): Promise<string> {
     )) {
       const target = path.join(directory, entry.name);
       const relative = path.relative(root, target).replaceAll(path.sep, "/");
-      if (isMigrationReportPath(relative)) continue;
-      if (!isMigrationReportAncestor(relative)) hash.update(relative);
+      hash.update(relative);
       if (entry.isDirectory()) await visit(target);
       else hash.update(await readFile(target));
     }
@@ -110,7 +108,7 @@ async function run(step: MigrationStep, context: MigrationContext, dryRun = fals
   return { code, output: captured.output, error: captured.error };
 }
 
-const FINISH_TOKENS = ["/qfai-migration-v1-to-v2", "/qfai-sdd", "retired/"] as const;
+const FINISH_TOKENS = ["/qfai-migration-v1-to-v2", "/qfai-sdd"] as const;
 
 function messageLines(message: string): string[] {
   return message
@@ -163,10 +161,9 @@ describe("BF-0004 migration examples", () => {
     );
     expect(links).toContain("await repairIntegrationWrappers(");
     expect(ignore).toContain(
-      'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../core/init/rootGitignore.js"',
+      'import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js"',
     );
-    expect(ignore).toContain("await ensureRootGitignoreEntries(root, false");
-    expect(ignore).toContain("await replaceRootGitignore(root, file,");
+    expect(ignore).toContain("await ensureRootGitignoreEntries(context.root, false");
     expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });
@@ -280,15 +277,11 @@ describe("BF-0004 migration examples", () => {
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
     await put(context.root, ".qfai/spec/spec-0001/06_Test-Cases.md", "# Cases\n");
-    await put(
-      context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
-      '{"version":1,"ids":',
-    );
+    await put(context.root, "tmp/qfai-migration/id-map.json", '{"version":1,"ids":');
     const before = await treeHash(context.root);
     const result = capture();
     expect(await runStep(5, [], { cwd: context.root, ...result.io })).toBe(2);
-    expect(result.error).toContain(".qfai/evidence/migration-spec-to-story/id-map.json");
+    expect(result.error).toContain("tmp/qfai-migration/id-map.json");
     expect(await treeHash(context.root)).toBe(before);
   });
 
@@ -323,7 +316,7 @@ describe("BF-0004 migration examples", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: { "spec-0001": {} },
@@ -337,7 +330,7 @@ describe("BF-0004 migration examples", () => {
     expect(result.output).toContain("## Operations\nnone");
   });
 
-  it("archives pack decisions and questions after writing their new rows", async () => {
+  it("deletes pack decisions and questions after writing their new rows", async () => {
     // QFAI:EX-0004-0003-19
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
@@ -355,18 +348,6 @@ describe("BF-0004 migration examples", () => {
       parseRecordTable(await read(context.root, ".qfai/spec/open-questions.md"), "open-questions")
         .rows,
     ).toHaveLength(1);
-    expect(
-      await read(
-        context.root,
-        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/07_Decisions.md",
-      ),
-    ).toBe(decisions);
-    expect(
-      await read(
-        context.root,
-        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/08_Open-questions.md",
-      ),
-    ).toBe(questions);
     await expect(read(context.root, ".qfai/spec/spec-0001/07_Decisions.md")).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -425,7 +406,7 @@ describe("BF-0004 migration examples", () => {
     expect(await readFile(target)).toEqual(original);
   });
 
-  it("preserves a current skill while archiving its colliding plural predecessor", async () => {
+  it("preserves a current skill while deleting its colliding plural predecessor", async () => {
     // QFAI:EX-0004-0004-04
     const context = await fixture();
     await put(context.root, ".qfai/assistant/skill/qfai-sdd/SKILL.md", "current");
@@ -435,13 +416,9 @@ describe("BF-0004 migration examples", () => {
     expect(result.code).toBe(0);
     expect(await read(context.root, ".qfai/assistant/skill/qfai-sdd/SKILL.md")).toBe("current");
     expect(await read(context.root, ".qfai/assistant/skill/team-review/SKILL.md")).toBe("team");
-    expect(
-      await read(
-        context.root,
-        ".qfai/evidence/migration-spec-to-story/legacy/skills/qfai-sdd/SKILL.md",
-      ),
-    ).toBe("old");
-    expect(result.output).toContain("legacy/skills/qfai-sdd");
+    expect(result.output).toContain(
+      ".qfai/assistant/skills/qfai-sdd: delete: the destination exists",
+    );
     await expect(readdir(path.join(context.root, ".qfai/assistant/skills"))).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -635,7 +612,7 @@ describe("BF-0004 migration examples", () => {
     );
     await put(
       context.root,
-      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
         ids: {
@@ -741,7 +718,7 @@ describe("BF-0004 migration examples", () => {
     expect(await treeHash(context.root)).toBe(noMapBefore);
   });
 
-  it("ships the plan, dry-run, report directory, deduplication and validation procedure in order", async () => {
+  it("ships the plan, dry-run, printed report, deduplication and validation procedure in order", async () => {
     // QFAI:EX-0004-0012-01
     const skill = await readFile(
       path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
@@ -750,7 +727,7 @@ describe("BF-0004 migration examples", () => {
     const markers = [
       "plan.yaml",
       "run `--dry-run` first",
-      "read every report from `.qfai/evidence/migration-spec-to-story/report/`",
+      "Read the report each step prints",
       "Remove facts duplicated in different words",
       "Run steps 4 to 10 in order, each with `--dry-run` followed by the real run",
       "After step 10, run steps 11 and 12",
@@ -761,7 +738,7 @@ describe("BF-0004 migration examples", () => {
     expect(markers.filter((_, index) => (positions[index] ?? -1) < 0)).toEqual([]);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(prose).toMatch(
-      /already has the story tree and no migration ID map, run steps 1 to 10\. When every one of them prints `no 1\.x layout found under <specsDir> \(paths\.specsDir=<value>\)` first, then `none` under every section but step 10's `## Git index`, and exits 0, report that there is nothing to migrate in the directory that line names and ask the person to check that the specs live there/,
+      /already has the story tree and no migration ID map, run steps 1 to 10\. When every one of them prints `no 1\.x layout found under <specsDir> \(paths\.specsDir=<value>\)` first, then `none` under every section, and exits 0, report that there is nothing to migrate in the directory that line names and ask the person to check that the specs live there/,
     );
   });
 
@@ -775,7 +752,7 @@ describe("BF-0004 migration examples", () => {
         "Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks",
       );
       expect(prose, file).toContain("an earlier 2.x release");
-      expect(prose, file).toContain("the migration is already done");
+      expect(prose, file).toContain("find no 1.x layout and change nothing");
       expect(prose, file).toMatch(/step 11 adds only what that release lacked[^.]*hooks/i);
     }
   });
@@ -826,13 +803,7 @@ describe("BF-0004 migration examples", () => {
       expect(report.output).toContain("## Operations\nnone");
       expect(report.output.trimEnd().split("\n").at(-1)?.startsWith("Summary")).toBe(step === 10);
       expect(report.output).not.toContain("## For a person\n-");
-      if (step === 10) {
-        expect(report.output).toContain(
-          "## Git index\n- the project is not a git repository, so the index is unchanged\n",
-        );
-      } else {
-        expect(report.output).not.toContain("## Git index");
-      }
+      expect(report.output).not.toContain("## Git index");
       expect(await treeHash(context.root)).toBe(before);
     }
   });

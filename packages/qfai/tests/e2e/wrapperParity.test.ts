@@ -44,7 +44,7 @@ const implementSkillPath = path.join(
  *
  * Three of four cases within 1.7 s of the ceiling, the closest by **372 ms**,
  * with the full suite still to add. It had not failed yet; it had run out of
- * margin, which is the state `skillsIntegrity.test.ts` was in before it started
+ * margin, which is the state another suite was in before it started
  * failing at the same distance.
  */
 describe("wrapper parity across all three platforms", () => {
@@ -102,7 +102,6 @@ describe("wrapper parity across all three platforms", () => {
         "Record command, selector, failure, test hash",
         "qa-gatekeeper checks the observed RED and GREEN evidence",
         "implementation-reviewer checks code and tests",
-        "completion-reviewer checks",
         "RED, GREEN and Refactor result",
         "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
         "required user consent",

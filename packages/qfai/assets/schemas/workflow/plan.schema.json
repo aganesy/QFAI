@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:plan",
+  "title": "Route plan",
+  "description": "The one JSON document `npx qfai workflow plan` prints: a route's plan, the candidate routes of a low-confidence extraction, or a refusal.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/plan"
+    },
+    {
+      "$ref": "#/$defs/candidates"
+    },
+    {
+      "$ref": "#/$defs/refusal"
+    }
+  ],
+  "$defs": {
+    "plan": {
+      "description": "The plan of the route the extraction or `--route` gives.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok",
+        "route",
+        "family",
+        "stages",
+        "decisionPoints",
+        "releasePoint",
+        "branchPoints"
+      ],
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "enum": ["close", "decide", "consistency", "change", "fix", "upkeep", "release"]
+        },
+        "rule": {
+          "description": "The decision rule that chose the route, or null when none held. Absent when `--route` named the route.",
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stages": {
+          "description": "The stages in plan order.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/stage"
+          }
+        },
+        "decisionPoints": {
+          "description": "The steps that put each critical decision they reach to the user before they change what depends on it.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "releasePoint": {
+          "description": "The step before which the user approves the release, `end` for after the last stage, or null when the route releases nothing.",
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "branchPoints": {
+          "description": "The steps at which the work may move to another route, each outcome with its destinations.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/branchPoint"
+          }
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "steps"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review": {
+          "description": "The review that follows the stage.",
+          "enum": ["spec", "code"]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "mode", "passThrough"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "description": "The step's entry file, relative to the project root.",
+          "type": "string",
+          "pattern": "^\\.qfai/assistant/step/[a-z0-9-]+/STEP\\.md$"
+        },
+        "mode": {
+          "enum": ["settled", "read-only", null]
+        },
+        "passThrough": {
+          "type": "boolean"
+        }
+      }
+    },
+    "branchPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step", "outcomes"],
+      "properties": {
+        "step": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["outcome", "routes"],
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "routes": {
+                "description": "The destination routes, or `decision-table` for the route the decision rules give the step's new extraction.",
+                "oneOf": [
+                  {
+                    "const": "decision-table"
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "candidates": {
+      "description": "The distinct routes of a low-confidence extraction's readings, one to three, in the order the decision rules reach them.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "candidates"],
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["route", "family", "rule", "summary", "recommended"],
+            "properties": {
+              "route": {
+                "type": "string",
+                "minLength": 1
+              },
+              "family": {
+                "enum": ["close", "decide", "consistency", "change", "fix", "upkeep", "release"]
+              },
+              "rule": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "summary": {
+                "description": "What the route does, in one sentence.",
+                "type": "string",
+                "minLength": 1
+              },
+              "recommended": {
+                "description": "True for the main reading's route.",
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "message", "reasons"],
+      "properties": {
+        "ok": {
+          "const": false
+        },
+        "message": {
+          "description": "What happened and what to do next, in one sentence.",
+          "type": "string",
+          "minLength": 1
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reason", "subject"],
+            "properties": {
+              "reason": {
+                "enum": ["invalid-input", "schema", "unknown-route", "plan-invalid", "io-error"]
+              },
+              "subject": {
+                "description": "The operation, flag, file, field, route or step the reason is about.",
+                "type": "string",
+                "minLength": 1
+              },
+              "file": {
+                "description": "For `plan-invalid`: the plan file that does not load.",
+                "type": "string",
+                "minLength": 1
+              },
+              "cause": {
+                "description": "For `plan-invalid`: why the plan does not load.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

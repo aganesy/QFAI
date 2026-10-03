@@ -35,19 +35,16 @@ baseline overlap, the baseline governs.
 
 ### Orchestrator Protocol
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results.
-- Orchestrator must not draft the primary research artifact first or self-approve completion.
+- The orchestrator may write the research artifact itself, or give independent searches to sub-agents that run in parallel.
+- It never approves its own work.
 
 ### Capability Probe
 
-1. Attempt the first required delegation at stage start.
-2. Treat that real delegation attempt as the capability check.
-3. If the delegation fails, stop the stage immediately and report remediation.
+- No additional overrides.
 
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 
@@ -182,7 +179,7 @@ Every pipeline execution produces a session log with **6 mandatory fields**:
 | `sources`    | List of fetched URLs with status codes  |
 | `citations`  | Final citation entries                  |
 
-Session logs are stored under `.qfai/evidence/web-research/`.
+The session log is part of the research report, not a file of its own.
 
 ## 5. Evaluation Metrics
 
@@ -310,7 +307,7 @@ evaluation. Each golden task is scored against 4 metrics:
 - **Freshness** — recency of cited sources.
 - **Security hygiene** — sanitization pass rate.
 
-Golden task results are stored under `.qfai/evidence/web-research/golden/`.
+Golden task results are reported with the evaluation run.
 
 ## Completion Contract (Shared)
 
@@ -333,7 +330,7 @@ Create lightweight evidence that records:
 
 - [ ] Hard Constraints were followed.
 - [ ] Session-log requirements were satisfied.
-- [ ] Reviewer Gate returned PASS.
+- [ ] Every Reviewer Gate finding is fixed or answered.
 - [ ] Evidence was recorded.
 
 ## Completion Checklist
@@ -350,4 +347,4 @@ Create lightweight evidence that records:
 - Need more evidence:
   Action: rerun the pipeline with refined query, allowlist, or `--max-depth` settings.
 - Reviewer returned REVISE:
-  Action: address the cited gaps, then rerun the reviewer gate before reuse.
+  Action: fix or answer each cited gap and record it before reuse; no second review runs.

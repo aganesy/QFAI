@@ -6,7 +6,6 @@
  *   - QFAI-CFG-LINK-001: prototyping.primaryUiContract names no UI contract
  *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning), or, for
  *     the shipped default srcDir and testsDir that do not exist yet, info
- *   - QFAI-CFG-LINK-003: prototyping.calibration.packPath points to a missing dir
  *
  * Catches dangling IDs in config that would otherwise go undetected.
  */
@@ -36,15 +35,6 @@ async function isAbsent(absolutePath: string): Promise<boolean> {
     return false;
   } catch (err: unknown) {
     return isEnoent(err);
-  }
-}
-
-async function pathExists(absolutePath: string): Promise<boolean> {
-  try {
-    await stat(absolutePath);
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -135,34 +125,6 @@ export async function validateConfigReferenceIntegrity(
           absentNote === undefined
             ? `Point paths.${key} at an existing directory, or create the directory it names.`
             : undefined,
-        ),
-      );
-    }
-  }
-
-  // ─── QFAI-CFG-LINK-003: calibration.packPath existence ───────────────────
-  // packPath may be either a YAML file (legacy: pack as single file) or a
-  // directory (new: pack as directory tree). Accept either; reject only
-  // when neither resolves on disk.
-  const packPath = config.prototyping?.calibration?.packPath;
-  if (packPath !== undefined) {
-    const defaultPackPath = defaultConfig.prototyping?.calibration?.packPath;
-    if (packPath === defaultPackPath) {
-      return issues;
-    }
-    const absolutePackPath = path.resolve(root, packPath);
-    const exists = await pathExists(absolutePackPath);
-    if (!exists) {
-      issues.push(
-        issue(
-          "QFAI-CFG-LINK-003",
-          `qfai.config.yaml: prototyping.calibration.packPath="${packPath}" but the path does not exist on disk.`,
-          "error",
-          "qfai.config.yaml",
-          "config.prototyping.calibration.packPath.reality",
-          undefined,
-          "canonical",
-          "Point prototyping.calibration.packPath at an existing calibration pack (a YAML file or a directory).",
         ),
       );
     }
