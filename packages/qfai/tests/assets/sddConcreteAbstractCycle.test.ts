@@ -209,7 +209,9 @@ describe("how an adopted finding changes the tree", () => {
   it("applies a change the in-force change request describes, with no new row", async () => {
     const covered = rowOf(await applying(), "existed when the invocation started");
     expect(covered).toMatch(/Changed directly only under an in-force `Change request:` row/i);
-    expect(covered).toMatch(/\(WIP or DONE\) whose approved change covers this change/i);
+    expect(covered).toMatch(
+      /\(WIP, or DONE on this branch\) whose approved change covers this change/i,
+    );
   });
 });
 
