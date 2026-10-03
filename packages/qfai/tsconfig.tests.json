@@ -114,6 +114,7 @@
     "tests/assets/skillInvocationDeclaration.test.ts",
     "tests/assets/skillReferenceReachability.test.ts",
     "tests/assets/skillUserQuestionsSection.test.ts",
+    "tests/assets/stageCost.test.ts",
     "tests/assets/stopReasonSpecAlignment.test.ts",
     "tests/assets/structuredQuestionHook.test.ts",
     "tests/assets/tddIdAllocation.test.ts",
