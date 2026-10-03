@@ -15,7 +15,6 @@ export type StoryTestFile = {
   file: string;
   content: string;
   kind: AtddTestKind | null;
-  /** Matched by `testFileGlobs`: only such a file credits a BF, AC or EX obligation. */
   selectedForExample: boolean;
 };
 
@@ -66,7 +65,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.selectedForExample && file.kind === "e2e") covered.BF.add(id);
+      if (file.kind === "e2e") covered.BF.add(id);
     }
     for (const id of annotations.AC) {
       if (!known.AC.has(id)) {
@@ -93,9 +92,7 @@ export function validateStoryTreeObligationsModel(
           ),
         );
       }
-      if (file.selectedForExample && (file.kind === "integration" || file.kind === "api")) {
-        covered.AC.add(id);
-      }
+      if (file.kind === "integration" || file.kind === "api") covered.AC.add(id);
     }
     for (const id of annotations.EX) {
       if (!known.EX.has(id)) {

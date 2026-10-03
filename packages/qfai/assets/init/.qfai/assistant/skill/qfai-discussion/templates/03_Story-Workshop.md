@@ -81,7 +81,7 @@ Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Pr
      Include only when it materially clarifies a behavior obligation that prose cannot.
      Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
      The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`).
-     Links MUST be anchor-form (`<a href="#name">`) — never same-origin absolute
+     Links must be anchor-form (`<a href="#name">`) — never same-origin absolute
      paths (`/orders/`), which a static mock cannot serve and which the validator rejects. -->
 
 ```html

@@ -63,10 +63,13 @@ describe("an annotation in a file the test globs do not select", () => {
   });
 
   // QFAI:EX-0001-0056-12
-  it("leaves the AC owed until a selected integration test carries it", async () => {
-    const carrier = await missing({ "tests/integration/coverage.md": mark(criterion) });
-    const selected = await missing({ "tests/integration/criterion.test.ts": testOf(criterion) });
-    expect(carrier).toContain(criterion);
-    expect(selected).not.toContain(criterion);
-  });
+  it.each(["integration", "api"])(
+    "leaves the AC owed until a selected %s test carries it",
+    async (layer) => {
+      const carrier = await missing({ [`tests/${layer}/coverage.md`]: mark(criterion) });
+      const selected = await missing({ [`tests/${layer}/criterion.test.ts`]: testOf(criterion) });
+      expect(carrier).toContain(criterion);
+      expect(selected).not.toContain(criterion);
+    },
+  );
 });
