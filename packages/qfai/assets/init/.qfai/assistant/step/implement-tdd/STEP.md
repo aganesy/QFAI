@@ -175,8 +175,8 @@ result. They review once, at the end of the stage, as
 [Stage review](#stage-review) states. Use
 `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md` for
 affected suite selection. A reviewer
-REVISE follows `.qfai/assistant/rule/review-convergence.md`; repair and
-re-review the current revision. The author does not certify their own result.
+REVISE follows `.qfai/assistant/rule/review-convergence.md`: fix or answer each
+finding and record the disposition, with no re-review. The author does not certify their own result.
 
 ## Align the other surfaces
 

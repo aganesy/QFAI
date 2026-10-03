@@ -26,7 +26,7 @@ steps:
   - triage-security-intake
   - triage-handoff
   - triage-close
-requires: [common-review-cycle]
+requires: []
 mode: execution-focused
 ---
 

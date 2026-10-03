@@ -50,7 +50,6 @@ describe("qfai-triage as a stage skill", () => {
     expect(description).not.toMatch(/[<>]/);
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");
-    expect(front.requires).toContain("common-review-cycle");
 
     const stepRoles: string[] = [];
     for (const name of steps) {

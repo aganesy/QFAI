@@ -131,7 +131,7 @@ stage that runs several steps is reviewed once, after its last step, by the one
 review its parent names
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
 
-- Final completion gate must be delegated to an independent reviewer.
+- Final completion gate must be delegated to an independent reviewer, except where the skill runs no review: `qfai-triage` invoked by name, and a `qfai-verify` run that wrote nothing.
 - Each reviewer records an explicit PASS or REVISE for the reviewed revision.
 - The one exception: a work order that names no required reviewer is reviewed
   by none, and the two bullets above then have nothing to apply to.

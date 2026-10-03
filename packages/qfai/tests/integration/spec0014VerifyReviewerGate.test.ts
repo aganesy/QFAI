@@ -123,7 +123,7 @@ describe("TC-0014-0009: verify holds completion behind a reviewer PASS", () => {
     it(`${copy}: a REVISE finding blocks DONE until it is fixed or answered`, async () => {
       const baseline = await readFile(path.join(root, BASELINE_REL), "utf-8");
       expect(section(baseline, "## Reviewer Gate Baseline")).toContain(
-        "- Final completion gate must be delegated to an independent reviewer.",
+        "- Final completion gate must be delegated to an independent reviewer, except where the skill runs no review",
       );
       expect(baseline).toContain(
         "- Do not declare DONE until every finding of its one review is fixed or answered",

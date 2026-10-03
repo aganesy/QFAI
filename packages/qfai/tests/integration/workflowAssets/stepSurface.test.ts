@@ -259,7 +259,7 @@ describe("a parent skill invoked by name", () => {
     );
     for (const skill of PLAN_STEP_OWNERS) {
       const front = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`));
-      expect(front.requires, skill).toContain("common-review-cycle");
+      if (skill !== "qfai-triage") expect(front.requires, skill).toContain("common-review-cycle");
     }
     const byName = flat(sectionOf(baseline, "### A parent skill invoked by name"));
     expect(byName).toMatch(/take the steps from the parent's `steps:` list, in that order/i);
