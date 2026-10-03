@@ -21,6 +21,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The research-first protocol governs quotation and name lookups** (#2245).
+  - A `best_practices` or `anti_patterns` description is written in the
+    analyst's own words. A phrase kept from the source is put in ordinary
+    quotation marks. One worked example shows the source, the entry and why it
+    is correct.
+  - Where a query centers on a name, the name is searched as written, even
+    when it is recognized. What the search found is recorded in the summary's
+    `sources` like any other source, so a verified name can be told from one
+    answered from memory.
+  - The `web-research` skill points to both rules in the protocol.
+
 - **Assistant instructions state obligations without capitalised emphasis**
   (#2240). Phrases read by validators, gates or tests remain; other obligations
   use plain wording. A phrase allowlist guards the shipped assistant tree and
@@ -115,6 +126,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   progress-report and completion-report sections and points to that article.
 
 ### Fixed
+
+- **Journal directory read errors retain their original cause** (#2841).
+  Missing directories still identify a legacy run. Busy or denied reads reach
+  the workflow's I/O refusal; other errors propagate.
+  An initial busy or denied read is attempted once and reports no run metadata.
+  Later failures retain metadata verified by a successful journal read.
 
 - **Journal test reads preserve filesystem errors** (#2846).
   Required artifact reads keep their original error instead of replacing it
