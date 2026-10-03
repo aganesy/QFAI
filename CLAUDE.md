@@ -93,17 +93,17 @@ Quality-First AI (QFAI) — a verification framework and CLI for specification-d
   `.claude/rules/documentation-clarity.md` (master:
   `.agents/rules/documentation-clarity.md`). The hooks in `.claude/settings.json`
   restate it before a GitHub post and after a Markdown edit.
-- Version discipline: branch name pins `packages/qfai/package.json#version`.
-  On a pinned branch (`feature/vX.Y.Z`) the pin acts as the user's release
-  authorization — sync `package.json`, rename `## [Unreleased]` to
-  `## [X.Y.Z] - YYYY-MM-DD`, re-insert an empty `## [Unreleased]`, and commit
-  `chore(release): qfai X.Y.Z` before the PR merges. On an unpinned branch all
-  of those edits require explicit instruction. Tag / publish / force-push /
-  amend / AI-merge always require explicit instruction. See
-  `.claude/rules/version-discipline.md` (master:
-  `.agents/rules/version-discipline.md`) for full details, and
-  `.agents/rules/version-discipline.local.md` for the pin convention this
-  repository has adopted.
+- Version discipline: a release is cut by dispatching Prepare release with the
+  version the user named, and merging its `release/vX.Y.Z` pull request pushes
+  the tag, so never bump the manifest or tag by hand on that path (see
+  `.agents/rules/version-discipline.local.md` and `RELEASE.md`). On the manual
+  path a pinned branch (`feature/vX.Y.Z`) is the user's release authorization —
+  sync `package.json`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`,
+  re-insert an empty `## [Unreleased]`, and commit `chore(release): qfai X.Y.Z`
+  before the PR merges. On an unpinned branch all of those edits require
+  explicit instruction. Tag / publish / force-push / amend / AI-merge always
+  require explicit instruction. See `.claude/rules/version-discipline.md`
+  (master: `.agents/rules/version-discipline.md`) for full details.
 
 ## Code Review
 
