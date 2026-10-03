@@ -29,6 +29,7 @@ A deferred question stays in `11_OQ-Register.md` as a row with
 | Field                 | Holds                                              |
 | --------------------- | -------------------------------------------------- |
 | `Rationale`           | Why it is deferred                                 |
+| `Resolution`          | What is decided now, and why the rest waits        |
 | `Next-Decision-Point` | When, and by what signal, the question is reopened |
 | `Owner`               | Who reopens it                                     |
 | `Due`                 | The latest date it is looked at again              |
@@ -53,7 +54,7 @@ nothing they do not.
 | A decision the session did not settle       | `11_OQ-Register.md`, `Disposition: open`                                                                 |
 | A decision the user closed the questions on | `01_Context.md`, under `## Inputs`, as an assumption labelled one. No register row                       |
 | An open question answered later             | The register row moved to `Disposition: resolved`, with the answer in `Resolution`                       |
-| A question deliberately put off             | The register row moved to `Disposition: deferred`, with its `Next-Decision-Point`                        |
+| A question deliberately put off             | The register row moved to `Disposition: deferred`, with its `Resolution` and `Next-Decision-Point`       |
 | A question that turned out not to be one    | The register row moved to `Disposition: rejected`, with the reason in `Resolution`                       |
 | A question that turns out to be live again  | The register row moved back to `Disposition: open`                                                       |
 

@@ -152,9 +152,9 @@ describe("runSddPreflight", () => {
         "11_OQ-Register.md": [
           "# 11 OQ Register",
           "",
-          "| OQ-ID   | Question                   | Disposition | Gate       | Rationale                          | Next-Decision-Point |",
-          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- | ------------------- |",
-          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred | TBD |",
+          "| OQ-ID   | Question                   | Disposition | Gate       | Rationale                          | Resolution | Next-Decision-Point |",
+          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- | ---------- | ------------------- |",
+          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred | Ship unversioned contracts for now | TBD |",
           "",
           "Note: an OQ marked deferred names when and by what signal it is reopened.",
         ].join("\n"),
@@ -163,7 +163,9 @@ describe("runSddPreflight", () => {
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("ready");
-      expect(result.packGaps.some((item) => item.includes("no point at which"))).toBe(true);
+      expect(
+        result.packGaps.some((item) => item.includes("lack a Resolution or a Next-Decision-Point")),
+      ).toBe(true);
       expect(result.packGaps.some((item) => item.includes("OQ-0007"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });

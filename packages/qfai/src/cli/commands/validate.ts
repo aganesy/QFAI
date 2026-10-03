@@ -1207,7 +1207,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
   "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
   "QFAI-DPACK-007":
-    "Every deferred OQ in `11_OQ-Register.md` names, in `Next-Decision-Point`, when and by what signal it is reopened.",
+    "Every deferred OQ row in `11_OQ-Register.md` records its `Resolution` and a `Next-Decision-Point` naming when and by what signal it is reopened.",
   "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-DPACK-009":
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",

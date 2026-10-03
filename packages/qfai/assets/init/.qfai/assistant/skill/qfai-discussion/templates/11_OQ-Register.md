@@ -4,9 +4,9 @@
 
 ## OQ Table
 
-| OQ-ID   | Title | Gate       | Disposition | Owner | Rationale | Options                              | Recommendation | Resolution | Next-Decision-Point                        | Due        | Evidence         |
-| ------- | ----- | ---------- | ----------- | ----- | --------- | ------------------------------------ | -------------- | ---------- | ------------------------------------------ | ---------- | ---------------- |
-| OQ-0001 | TBD   | discussion | deferred    | user  | TBD       | Option A / Option B (recommended: A) | Option A       | —          | <when, and by what signal, it is reopened> | YYYY-MM-DD | Conversation log |
+| OQ-ID   | Title | Gate       | Disposition | Owner | Rationale | Options                              | Recommendation | Resolution                                    | Next-Decision-Point                        | Due        | Evidence         |
+| ------- | ----- | ---------- | ----------- | ----- | --------- | ------------------------------------ | -------------- | --------------------------------------------- | ------------------------------------------ | ---------- | ---------------- |
+| OQ-0001 | TBD   | discussion | deferred    | user  | TBD       | Option A / Option B (recommended: A) | Option A       | <what is decided now, and why the rest waits> | <when, and by what signal, it is reopened> | YYYY-MM-DD | Conversation log |
 
 ## Rules
 
@@ -15,12 +15,13 @@
 - Before discussion completion, `Disposition: open` must be zero.
 - The table holds each question's current state. A disposition change edits
   the row; it adds no second row.
-- `Resolution` states the answer taken for `resolved`, and why the question
-  is not one for `rejected`. It is `—` while the question is `open` or
-  `deferred`.
+- `Resolution` states the answer taken for `resolved`, what is decided now and
+  why the rest waits for `deferred`, and why the question is not one for
+  `rejected`. It is `—` while the question is `open`.
 - For `deferred` and `rejected`, `Rationale` is mandatory.
 - For `deferred`, `Next-Decision-Point` names when, and by what signal, the
-  question is reopened. A deferred row without one blocks completion.
+  question is reopened. A deferred row without its `Resolution` or its
+  `Next-Decision-Point` blocks completion.
 - `Options` must include at least two alternatives and one recommended option —
   for a question that offers a choice.
 - `Recommendation` must explicitly state the recommended option, where one is

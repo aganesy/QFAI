@@ -137,18 +137,18 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  if (readiness.deferredWithoutReopenPoint.length > 0) {
+  if (readiness.incompleteDeferredOqIds.length > 0) {
     const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(
       issue(
         "QFAI-DPACK-007",
-        `Deferred OQs in 11_OQ-Register.md name no point at which they are reopened: ${readiness.deferredWithoutReopenPoint.join(", ")}`,
+        `Deferred OQs in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
         "error",
         oqPath,
-        "discussionPack.deferredReopenPoint",
-        readiness.deferredWithoutReopenPoint,
+        "discussionPack.deferredDetails",
+        readiness.incompleteDeferredOqIds,
         "change",
-        "Write in `Next-Decision-Point` when, and by what signal, each deferred OQ is reopened.",
+        "For each deferred OQ, write in `Resolution` what is decided now, and in `Next-Decision-Point` when and by what signal it is reopened.",
       ),
     );
   }

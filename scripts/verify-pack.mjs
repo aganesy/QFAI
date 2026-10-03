@@ -572,7 +572,7 @@ const seededDiscussionPackFiles = {
     "",
     "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Resolution | Next-Decision-Point      | Due        | Evidence         |",
     "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ---------- | ------------------------ | ---------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | —          | before release candidate | 2026-06-01 | Conversation log |",
+    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | keep the minimal seed for now | before release candidate | 2026-06-01 | Conversation log |",
     "",
   ],
 };

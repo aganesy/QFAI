@@ -73,7 +73,7 @@ export type DiscussionPackReadiness = {
   missingSideArtifacts: RequiredDiscussionPackSideArtifact[];
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
-  deferredWithoutReopenPoint: string[];
+  incompleteDeferredOqIds: string[];
   prototypingRequired: boolean;
 };
 
@@ -130,7 +130,7 @@ export async function inspectLatestDiscussionPack(
       missingSideArtifacts: [],
       incompleteFiles: [],
       blockingOqIds: [],
-      deferredWithoutReopenPoint: [],
+      incompleteDeferredOqIds: [],
       prototypingRequired: false,
     };
   }
@@ -139,7 +139,7 @@ export async function inspectLatestDiscussionPack(
   const missingSideArtifacts: RequiredDiscussionPackSideArtifact[] = [];
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
-  let deferredWithoutReopenPoint: string[] = [];
+  let incompleteDeferredOqIds: string[] = [];
   await readValidatedClassification(latestPackDir);
   const prototypingRequired = false;
 
@@ -155,7 +155,7 @@ export async function inspectLatestDiscussionPack(
     }
     if (fileName === "11_OQ-Register.md") {
       blockingOqIds = extractBlockingOqIds(content);
-      deferredWithoutReopenPoint = extractDeferredWithoutReopenPoint(content);
+      incompleteDeferredOqIds = extractIncompleteDeferredOqIds(content);
     }
   }
 
@@ -169,7 +169,7 @@ export async function inspectLatestDiscussionPack(
     missingSideArtifacts,
     incompleteFiles,
     blockingOqIds,
-    deferredWithoutReopenPoint,
+    incompleteDeferredOqIds,
     prototypingRequired,
   };
 }
@@ -414,7 +414,12 @@ function extractBlockingOqIds(text: string): string[] {
   return blocking;
 }
 
-type OqTableRow = { id: string; disposition: string; nextDecisionPoint: string };
+type OqTableRow = {
+  id: string;
+  disposition: string;
+  resolution: string;
+  nextDecisionPoint: string;
+};
 
 function extractOqTableRows(text: string): OqTableRow[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -424,6 +429,7 @@ function extractOqTableRows(text: string): OqTableRow[] {
   let headerIndex = -1;
   let oqIdCol = -1;
   let dispositionCol = -1;
+  let resolutionCol = -1;
   let nextDecisionPointCol = -1;
 
   for (let i = 0; i < lines.length - 1; i++) {
@@ -434,6 +440,7 @@ function extractOqTableRows(text: string): OqTableRow[] {
 
     oqIdCol = normalizedCells.findIndex((c) => c === "oq-id" || c === "oqid");
     dispositionCol = normalizedCells.findIndex((c) => c === "disposition");
+    resolutionCol = normalizedCells.findIndex((c) => c === "resolution");
     nextDecisionPointCol = normalizedCells.findIndex((c) => c === "next-decision-point");
 
     if (oqIdCol >= 0 && dispositionCol >= 0) {
@@ -461,6 +468,7 @@ function extractOqTableRows(text: string): OqTableRow[] {
       results.push({
         id: oqMatch[1].toUpperCase(),
         disposition: dispositionRaw.trim().toLowerCase(),
+        resolution: resolutionCol >= 0 ? (cells[resolutionCol] ?? "") : "",
         nextDecisionPoint: nextDecisionPointCol >= 0 ? (cells[nextDecisionPointCol] ?? "") : "",
       });
     }
@@ -470,18 +478,19 @@ function extractOqTableRows(text: string): OqTableRow[] {
 }
 
 /**
- * The deferred questions whose `Next-Decision-Point` does not say when, and by
- * what signal, they are reopened: the column is absent, or the cell is empty, a
- * dash or a placeholder.
+ * The deferred questions whose row lacks its `Resolution` or a
+ * `Next-Decision-Point` saying when, and by what signal, it is reopened: the
+ * column is absent, or the cell is empty, a dash or a placeholder.
  */
-function extractDeferredWithoutReopenPoint(oqRegisterText: string): string[] {
+function extractIncompleteDeferredOqIds(oqRegisterText: string): string[] {
   return extractOqTableRows(oqRegisterText)
     .filter((row) => row.disposition === "deferred")
-    .filter(
-      (row) =>
-        !/[\p{L}\p{N}]/u.test(row.nextDecisionPoint) || isPlaceholderLine(row.nextDecisionPoint),
-    )
+    .filter((row) => !hasContent(row.resolution) || !hasContent(row.nextDecisionPoint))
     .map((row) => row.id);
+}
+
+function hasContent(cell: string): boolean {
+  return /[\p{L}\p{N}]/u.test(cell) && !isPlaceholderLine(cell);
 }
 
 function parseTableCells(line: string): string[] {

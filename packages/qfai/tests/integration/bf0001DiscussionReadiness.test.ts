@@ -12,13 +12,19 @@ import { validateDiscussionPackReadiness } from "../../src/core/validators/discu
 const filler =
   "This discussion record contains a concrete project observation and enough body text to pass the minimum-content readiness check.\n";
 
-function oqRegister(disposition: string, nextDecisionPoint: string): string {
+const DEFERRED_RESOLUTION = "Launch on the existing route; the second route waits for usage data.";
+
+function oqRegister(
+  disposition: string,
+  nextDecisionPoint: string,
+  resolution = DEFERRED_RESOLUTION,
+): string {
   return [
     "# OQ Register",
     "",
-    "| OQ-ID | Question | Disposition | Gate | Rationale | Next-Decision-Point |",
-    "| --- | --- | --- | --- | --- | --- |",
-    `| OQ-0001 | Which launch route? | ${disposition} | discussion | The owner weighed both routes. | ${nextDecisionPoint} |`,
+    "| OQ-ID | Question | Disposition | Gate | Rationale | Resolution | Next-Decision-Point |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    `| OQ-0001 | Which launch route? | ${disposition} | discussion | The owner weighed both routes. | ${resolution} | ${nextDecisionPoint} |`,
     "",
     filler,
   ].join("\n");
@@ -44,6 +50,7 @@ function namesOq(findings: Issue[], code: string): boolean {
   return findings.some((finding) => finding.code === code && finding.refs?.includes("OQ-0001"));
 }
 
+// QFAI:AC-0001-0013-01
 // QFAI:EX-0001-0013-01
 it("accepts a complete nine-file pack", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
@@ -66,6 +73,7 @@ it("accepts a complete nine-file pack", async () => {
   }
 });
 
+// QFAI:AC-0001-0014-01
 // QFAI:EX-0001-0014-01
 // QFAI:EX-0001-0014-02
 // QFAI:EX-0001-0014-03
@@ -99,22 +107,36 @@ it("blocks an open question and a deferred one that names no reopening point", a
 
 // QFAI:EX-0001-0014-02
 it.each([
-  ["a dash", oqRegister("deferred", "-")],
-  ["an em dash", oqRegister("deferred", "—")],
-  ["an empty cell", oqRegister("deferred", "")],
+  ["a dash as its reopening point", oqRegister("deferred", "-")],
+  ["an em dash as its reopening point", oqRegister("deferred", "—")],
+  ["an empty reopening point", oqRegister("deferred", "")],
   [
     "no Next-Decision-Point column",
     [
       "# OQ Register",
       "",
-      "| OQ-ID | Question | Disposition | Gate | Rationale |",
-      "| --- | --- | --- | --- | --- |",
-      "| OQ-0001 | Which launch route? | deferred | discussion | The owner weighed both routes. |",
+      "| OQ-ID | Question | Disposition | Gate | Rationale | Resolution |",
+      "| --- | --- | --- | --- | --- | --- |",
+      `| OQ-0001 | Which launch route? | deferred | discussion | The owner weighed both routes. | ${DEFERRED_RESOLUTION} |`,
       "",
       filler,
     ].join("\n"),
   ],
-])("blocks a deferred question whose reopening point is %s", async (_label, register) => {
+  ["a dash as its Resolution", oqRegister("deferred", "After launch", "—")],
+  ["a placeholder Resolution", oqRegister("deferred", "After launch", "TBD")],
+  [
+    "no Resolution column",
+    [
+      "# OQ Register",
+      "",
+      "| OQ-ID | Question | Disposition | Gate | Rationale | Next-Decision-Point |",
+      "| --- | --- | --- | --- | --- | --- |",
+      "| OQ-0001 | Which launch route? | deferred | discussion | The owner weighed both routes. | After launch |",
+      "",
+      filler,
+    ].join("\n"),
+  ],
+])("blocks a deferred question with %s", async (_label, register) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
     const pack = await writeCompletePack(root);
