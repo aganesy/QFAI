@@ -492,6 +492,7 @@
     "tests/integration/workflow/finishCompletionPersistence.test.ts",
     "tests/integration/workflow/finishObservesValidateItself.test.ts",
     "tests/integration/workflow/journal.test.ts",
+    "tests/integration/workflow/journalReadFaults.test.ts",
     "tests/integration/workflow/mode.test.ts",
     "tests/integration/workflow/notCommittingMeansWorkingTree.test.ts",
     "tests/integration/workflow/offAndShadowCreateNoRun.test.ts",

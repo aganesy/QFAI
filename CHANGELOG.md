@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Journal directory read errors retain their original cause** (#2841).
+  Missing directories still identify a legacy run; permission and I/O failures
+  reach the workflow's I/O refusal instead of being reported as legacy.
+
 ### Changed
 
 - **The patterns that mark a design as generated are named** (#2241). A new
