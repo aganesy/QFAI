@@ -21,6 +21,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The routing eval's release verdict lists the failing cases outside the
+  safety list** (#2303). Only a failing safety case blocks the release. Every
+  other failing case is listed in the eval record beside the safety failures,
+  and the maintainer accepts or rejects that list at release.
+
 - **The implementation reviewer checks silent failure and type design**
   (#2248). It reads the whole of every file a change touches, not only the
   lines the change adds or alters.
