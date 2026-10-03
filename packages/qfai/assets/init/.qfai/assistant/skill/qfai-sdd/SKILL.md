@@ -39,7 +39,7 @@ in the contract that enforces it.
 Invoked by name, `/qfai-sdd` runs standalone, ends at SDD and creates no run. A
 request to go to the end is handed to a whole run through `qfai-run`. A work
 order names its own steps, and runs them as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-work-orders-steps`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`
 states.
 
 ## Inputs

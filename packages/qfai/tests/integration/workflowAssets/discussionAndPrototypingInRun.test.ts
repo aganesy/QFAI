@@ -35,12 +35,12 @@ describe("qfai-discussion in a workflow run", () => {
   it("runs the entry check before its steps, and a work order only the steps it names", async () => {
     const skill = flat(await readShipped("skill/qfai-discussion/SKILL.md"));
     expect(skill).toContain("shared-skill-operating-baseline.md#a-parent-skill-invoked-by-name");
-    expect(skill).toContain("shared-skill-operating-baseline.md#a-work-orders-steps");
+    expect(skill).toContain("shared-skill-operating-baseline.md#a-plans-steps");
     const byName = await section(OPERATING, "### A parent skill invoked by name");
     expect(byName).toContain("Run the [entry check](#workflow-run-entry-check-mandatory)");
     const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
     expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
-    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
+    expect(rowOf(entry, "| `step`")).toMatch(/Do only that step.s work/);
   });
 });
 

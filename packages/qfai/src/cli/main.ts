@@ -6,7 +6,7 @@ import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
-import { refuse, runWorkflow, WORKFLOW_HELP } from "./commands/workflow.js";
+import { emitPlanDocument, runWorkflowPlan, WORKFLOW_HELP } from "./commands/workflow.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
 import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
@@ -291,26 +291,40 @@ async function workflowEntry(
   invalidReason: string | undefined,
   options: ParsedArgs["options"],
 ): Promise<number> {
-  if (invalid || (!options.help && !options.workflowAction)) {
-    error(invalidReason ?? "qfai workflow: name one of the seven operations.");
-    const subjects = options.unknownFlags.length > 0 ? options.unknownFlags : ["operation"];
-    return refuse(null, {
-      code: "invalid-input",
-      message:
-        "The command line names no operation or flag the workflow command takes. Run it with --help.",
-      reasons: subjects.map((subject) => ({ reason: "schema", subject })),
-    });
-  }
-  if (options.help || !options.workflowAction) {
+  if (!invalid && options.help) {
     info(WORKFLOW_HELP);
     return EXIT_CODES.ok;
   }
-  return runWorkflow({
+  const subjects = workflowRefusalSubjects(invalid, options);
+  if (subjects.length > 0) {
+    error(invalidReason ?? "qfai workflow plan: give exactly one of --in and --route.");
+    return emitPlanDocument({
+      ok: false,
+      message:
+        "The command line is not `workflow plan` with exactly one of --in and --route. Run it with --help.",
+      reasons: subjects.map((subject) => ({ reason: "invalid-input", subject })),
+    });
+  }
+  return runWorkflowPlan({
     root: await resolveRoot(options, true),
-    operation: options.workflowAction,
-    ...(options.workflowRun ? { runId: options.workflowRun } : {}),
-    ...(options.workflowIn ? { inPath: options.workflowIn } : {}),
+    ...(options.workflowIn !== undefined ? { inPath: options.workflowIn } : {}),
+    ...(options.workflowRoute !== undefined ? { route: options.workflowRoute } : {}),
   });
+}
+
+// What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
+// or not exactly one of `--in` and `--route`.
+function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"]): string[] {
+  if (options.workflowUnknownOperation !== undefined) return [options.workflowUnknownOperation];
+  if (options.unknownFlags.length > 0) return options.unknownFlags;
+  if (!options.workflowAction) return ["operation"];
+  if (invalid) return [options.invalidOption ?? "arguments"];
+  const given = [
+    ...(options.workflowIn !== undefined ? ["--in"] : []),
+    ...(options.workflowRoute !== undefined ? ["--route"] : []),
+  ];
+  if (given.length === 1) return [];
+  return given.length === 0 ? ["--in"] : given;
 }
 
 function usage(): string {
@@ -329,7 +343,7 @@ Commands:
   sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
+  workflow plan                Print the route plan for a request extraction (--in <path|->) or a route (--route <route>)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
