@@ -27,9 +27,8 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.q
 | `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) | same as `atdd`                                                     |
 
 There is no `implement` value: the enum is closed at these three, and a run after
-`/qfai-implement` is recorded as `full`. (`reviewerGate.ts` still recognises a
-legacy `implement` string so an old file is not silently treated as
-prototyping-scoped, but nothing accepts it as a verdict — do not write it.)
+`/qfai-implement` is recorded as `full`. Nothing accepts a legacy `implement`
+value as a verdict — do not write it.
 
 Minimal conforming example for the prototyping gate:
 
