@@ -1,14 +1,14 @@
 /**
  * `/qfai-prototyping` single-spec public surface (spec-0012 Phase 3).
  *
- * Asserts that SKILL.md + every file under references/ contains zero
+ * Asserts that SKILL.md, its steps and every file under references/ contain zero
  * references to `resolveSurfaceUnion`. The helper remains exported
  * from `core/prototyping/specResolution.ts` for validators /
  * `show-spec` consumers, but the public skill surface must speak the
  * single-spec language without naming the multi-spec internal helper.
  */
 
-// QFAI:SPEC-0012:TC-0012-0447
+// QFAI:EX-0001-0134-01
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -17,8 +17,17 @@ import { describe, expect, it } from "vitest";
 
 const SKILL_ROOT = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping",
 );
+
+const STEP_ROOT = path.resolve(process.cwd(), "assets/init/.qfai/assistant/step");
+
+async function listStepFiles(): Promise<string[]> {
+  const entries = await readdir(STEP_ROOT);
+  return entries
+    .filter((name) => name.startsWith("prototyping-"))
+    .map((name) => path.join(STEP_ROOT, name, "STEP.md"));
+}
 
 async function listReferenceFiles(): Promise<string[]> {
   const refDir = path.join(SKILL_ROOT, "references");
@@ -30,6 +39,18 @@ describe("/qfai-prototyping public surface — single-spec alignment", () => {
   it("SKILL.md contains zero references to resolveSurfaceUnion", async () => {
     const content = await readFile(path.join(SKILL_ROOT, "SKILL.md"), "utf-8");
     expect(content.includes("resolveSurfaceUnion")).toBe(false);
+  });
+
+  it("every prototyping step contains zero references to resolveSurfaceUnion", async () => {
+    const files = await listStepFiles();
+    expect(files.length).toBeGreaterThan(0);
+    const hits: string[] = [];
+    for (const file of files) {
+      if ((await readFile(file, "utf-8")).includes("resolveSurfaceUnion")) {
+        hits.push(path.relative(STEP_ROOT, file));
+      }
+    }
+    expect(hits).toEqual([]);
   });
 
   it("every references/*.md contains zero references to resolveSurfaceUnion", async () => {

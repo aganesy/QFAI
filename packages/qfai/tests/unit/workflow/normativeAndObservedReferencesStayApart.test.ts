@@ -1,14 +1,15 @@
-// QFAI:SPEC-0018:TC-0018-0015
+// QFAI:EX-0001-0185-09
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { parseRouteReferences } from "../../../src/core/workflow/parse.js";
+import { extractionFor } from "../../helpers/workflowExtraction.js";
 
-it("TC-0018-0015 (TDD-0025): Decide accept of a routing result with normative references, observed references and a new", () => {
+it("Decide accept of a routing result with normative references, observed references and a new", () => {
   const expectedBehaviorRefs = [
     { kind: "request", ref: "request" },
-    { kind: "spec-id", ref: "spec-0007" },
+    { kind: "flow-id", ref: "BF-0007" },
   ];
   const observedRefs = [
     { kind: "path", ref: "src/notify/email.ts" },
@@ -36,34 +37,34 @@ it("TC-0018-0015 (TDD-0025): Decide accept of a routing result with normative re
             expectedSequence: 2,
             outcome: "accepted",
             proposal: {
-              requestKind: "change",
-              candidateRoute: "feature",
+              requestKind: "routed",
+              extraction: extractionFor("add-feature"),
               goal: "Let each customer register a notification email.",
               expectedBehaviorRefs: parsed.expectedBehaviorRefs,
               observedRefs: parsed.observedRefs,
-              affectedSpecIds: ["spec-0007"],
-              newCapabilities: [
+              affectedFlowIds: ["BF-0007"],
+              newStories: [
                 {
                   goal: "Customer notification email registration",
                   covers: ["One notification email per customer"],
                   excludes: ["Notification delivery"],
                   evidence: ["No spec names notification emails"],
+                  flowId: "BF-0001",
                 },
               ],
               proposedWriteScope: ["src/notify/**"],
-              requiredStages: ["sdd", "verify"],
             },
           },
         },
         {
           pathExistence: { "src/notify/email.ts": true, "tests/notify/email.test.ts": true },
-          specs: { "spec-0007": { lifecycle: "active" } },
+          flows: ["BF-0007"],
           plans: {
-            feature: {
-              route: "feature",
+            "add-feature": {
+              route: "add-feature",
               stages: [
-                { stageInstanceId: "sdd", stageKind: "sdd", when: "always" },
-                { stageInstanceId: "verify", stageKind: "verify", when: "always" },
+                { stageInstanceId: "sdd", stageKind: "sdd" },
+                { stageInstanceId: "verify", stageKind: "verify" },
               ],
             },
           },

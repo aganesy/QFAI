@@ -6,13 +6,14 @@ import { WOULD_UNTRACK_REASON } from "../../core/doctor/archiveVisibility.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
-import { ensureRootGitignoreEntries, repairIntegrationWrappers } from "./init.js";
+import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
+import { repairIntegrationWrappers } from "../../core/init/wrapperRepair.js";
 import type { FailOn, QfaiConfig } from "../../core/config.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import type { Issue } from "../../core/types.js";
 import { isCiEnvironment } from "../../core/phasePolicy.js";
 import { resolveFailOn } from "../lib/failOn.js";
-import { info } from "../lib/logger.js";
+import { info } from "../../core/logger.js";
 
 export type DoctorCommandOptions = {
   root: string;
@@ -20,8 +21,8 @@ export type DoctorCommandOptions = {
   format: "text" | "json";
   outPath?: string;
   /**
-   * 明示された `--fail-on` の値。未指定なら `validation.failOn`
-   * (同梱既定値 `error`) が使われる。`never` は明示的なオプトアウト。
+   * The explicit `--fail-on` value. When absent, `validation.failOn` (whose
+   * shipped default is `error`) is used. `never` is an explicit opt-out.
    */
   failOn?: FailOn;
   profile?: DoctorProfile;
@@ -81,7 +82,7 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
     }
   }
   lines.push("");
-  lines.push("== advisory findings (drift, non-blocking by default) ==");
+  lines.push("== warnings advisory of drift ==");
   const combinedAdvisory = [...advisoryGroup, ...skillsAdvisory];
   if (combinedAdvisory.length === 0) {
     lines.push("[ok] (no findings in this bucket)");
@@ -204,12 +205,12 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const resolvedRoot = options.rootExplicit
     ? options.root
     : (await findConfigRoot(options.root)).root;
-  // doctor の失敗条件は validate と同じ設定キー (`validation.failOn`) で
-  // 決まる。フラグ由来の値しか見なかった頃は、`== errors blocking the
-  // active profile ==` に `[error]` を並べたうえで exit 0 を返しており、
-  // 契約 (errors バケットが空でなければ exit 1) にも validate にも
-  // 反しない読み方が存在しなかった。`--clean` 分岐の TTL 参照も
-  // この 1 回のロードを共有する。
+  // doctor's failure condition is set by the same config key as validate
+  // (`validation.failOn`). Reading only the flag value made doctor list
+  // `[error]` under `== errors blocking the active profile ==` and still exit
+  // 0, which agrees with neither the contract (exit 1 unless the errors bucket
+  // is empty) nor validate. The TTL lookup in the `--clean` branch shares this
+  // single load.
   const { config, issues: configIssues } = await loadConfig(resolvedRoot);
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
@@ -224,7 +225,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // `process.env["CI"] === "true"` missed the `GITHUB_ACTIONS` arm and read
     // `CI=1` as "local", so a lane that exports only `GITHUB_ACTIONS=true`
     // kept remediating: `npm install`, root `.gitignore` rewrite, review-pack
-    // archival and config-fill all ran on CI checkouts that AC-0006-0018 puts
+    // archival and config-fill all ran on CI checkouts where remediation is
     // off limits. `isCiEnvironment` is the repo's SSOT for that detection
     // (`core/phasePolicy.ts`); reuse it so the two CI gates cannot drift apart.
     const isCi = isCiEnvironment();
@@ -276,7 +277,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       );
     }
     if (summary.disabledInCi) {
-      // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
+      // Autoremediation is disabled in CI; no diagnostic
       // build needed for the CI off path. Output-channel routing
       // mirrors the main return path below: under `--format json`,
       // side-effect lines go to stderr so the stdout channel remains

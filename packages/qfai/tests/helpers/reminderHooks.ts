@@ -23,7 +23,8 @@ export const PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}";
  * The hook input every call supplies unless the caller names another.
  *
  * A `Bash` call naming the forge's CLI, because one entry prints only for such a
- * command and the rest ignore their input altogether. One payload therefore
+ * command. The prompt reminder prints for any input that carries no automated
+ * wake-up, and the rest ignore their input altogether. One payload therefore
  * reaches every entry's message.
  */
 export const DEFAULT_HOOK_INPUT = JSON.stringify({
