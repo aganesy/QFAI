@@ -57,14 +57,14 @@ Feature: Unified SDD Workflow
   Scenario: Each Finding Is Decided Once, By The Right Party
     Given the findings a cycle raised,
     When they are decided,
-    Then one griller for the cycle, which is neither the finder nor an author of an item a finding targets, puts them to the authors of the targeted items for at most two rounds and then adopts its own recommendation on each finding that is not critical, keeping any dissent beside it.
-    And a finding that rests on product intent that no BR, no AC, the request nor the discussion states goes to the user, and a proposed EX that no existing BR, AC or the request implies is rejected.
+    Then the session agent, which holds the cycle, decides each finding that is not critical itself.
+    And a finding that rests on product intent that no BR, no AC, the request nor the discussion states goes to the user, and a proposed EX that no existing BR, AC or the request implies is dropped, with no EX appended and no row written.
 
   # AC-0001-0147-10
   Scenario: Adopted Findings Change The Tree By The Existing Routes
     Given a finding the cycle adopted,
     When its change is applied,
-    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US keeps its triage approval however recently the item was written.
+    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
     And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
 
   # AC-0001-0147-12
@@ -76,11 +76,11 @@ Feature: Unified SDD Workflow
 
   # AC-0001-0147-13
   Scenario: A Decided Finding Is Not Raised Again
-    Given a finding that was rejected or is already decided,
-    When a later cycle, or a later invocation, looks for findings,
-    Then each rejected finding has one `decisions.md` row at REJECTED naming its kind, its target IDs and its case by the input that distinguishes it, with the reason in Approach.
-    And the finder raises no finding that has the kind and target IDs of a finding already decided in this invocation or of a REJECTED row and a case equal to, including or included in that finding's case, and no finding that the proposed change of a `Change request:` row at TODO or REJECTED already answers.
-    And matching never goes by wording, and an appended reopening decision lifts the REJECTED row.
+    Given a finding the session already decided, or a change the user declined,
+    When a later cycle of the session looks for findings,
+    Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that the proposed change of a change request the user declined already answers.
+    And a decided or dropped finding appends no row; only a finding still undecided when the session ends becomes an `open-questions.md` row.
+    And matching never goes by wording, and an appended reopening decision lifts a REJECTED row.
 
   # AC-0001-0147-15
   Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write

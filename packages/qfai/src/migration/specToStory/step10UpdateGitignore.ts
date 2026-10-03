@@ -13,7 +13,7 @@ import type {
 } from "./harness.js";
 
 const EVIDENCE_IGNORE = ".qfai/evidence/.gitignore";
-const BLOCK_UPDATE = "maintain the managed QFAI block and its staging";
+const BLOCK_UPDATE = "maintain the managed QFAI block";
 
 type PartialPlan = { operations: MigrationOperation[]; forAPerson: string[] };
 
@@ -37,21 +37,16 @@ async function gitignorePlan(root: string, rebuildBlock: boolean): Promise<Parti
   const existing = await readGitignore(file);
   const removed = (existing ?? "").split("\n").filter(reincludesEvidence);
   const preview = await ensureRootGitignoreEntries(root, true, () => {});
-  const maintain = rebuildBlock || preview.staging.length > 0;
-  const rebuild = maintain && preview.copied.length > 0;
+  const rebuild = rebuildBlock && preview.copied.length > 0;
   const targets: string[] = [];
   const report: string[] = [];
   if (rebuild || removed.length > 0) targets.push(".gitignore");
   if (rebuild) report.push(`.gitignore: ${BLOCK_UPDATE}`);
   for (const line of removed) report.push(`.gitignore: remove \`${line.trimEnd()}\``);
-  for (const stage of maintain ? preview.staging : []) {
-    targets.push(stage, `${stage}.owner`);
-    report.push(`${stage}: ${BLOCK_UPDATE}`, `${stage}.owner: ${BLOCK_UPDATE}`);
-  }
   const first = targets[0];
-  if (first === undefined) return { operations: [], forAPerson: preview.stagingConflicts };
+  if (first === undefined) return { operations: [], forAPerson: [] };
   return {
-    forAPerson: preview.stagingConflicts,
+    forAPerson: [],
     operations: [
       {
         kind: "delegate",
@@ -63,9 +58,9 @@ async function gitignorePlan(root: string, rebuildBlock: boolean): Promise<Parti
           if (removed.length > 0) {
             const current = await readFile(file, "utf8");
             const kept = current.split("\n").filter((line) => !reincludesEvidence(line));
-            await replaceRootGitignore(root, file, kept.join("\n"), current, true);
+            await replaceRootGitignore(file, kept.join("\n"));
           }
-          if (maintain) await ensureRootGitignoreEntries(root, false, () => {});
+          if (rebuildBlock) await ensureRootGitignoreEntries(root, false, () => {});
         },
       },
     ],
@@ -105,8 +100,7 @@ function gitIndexPlan(root: string): GitIndexPlan {
 /**
  * Keeps `.qfai/evidence/` local: its re-include lines, its nested ignore file
  * and its git index entries go. `rebuildBlock` is false on a tree already on
- * the story layout, which keeps its managed block unless staging needs
- * reclaiming.
+ * the story layout, which keeps its managed block.
  */
 export async function planStep10(
   context: MigrationContext,
