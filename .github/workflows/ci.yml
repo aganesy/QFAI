@@ -33,7 +33,7 @@ jobs:
       full: ${{ steps.classify.outputs.full }}
       reason: ${{ steps.classify.outputs.reason }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history: the diff is against the base commit, and a shallow clone is
           # one of the two failures BR-0015-0008 requires to fail open with an
@@ -279,7 +279,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          5f282a93d98e09399298413f8bb2768c619a16db44dfae16869ca34989761e6e  .github/pinned-bytes.txt
+          e0e39ed7ca255363eb79bd1041366540bbd4935de9118f3473202def4314b1f1  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -396,7 +396,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -415,7 +415,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -434,7 +434,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -479,7 +479,7 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Keep the tested commit and its parent available to every slice.
           fetch-depth: 2
@@ -573,7 +573,7 @@ jobs:
         # Because: the shipped test lanes use adopter test layers, not this repository's suites.
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Keep the tested merge commit and its parents available to every slice.
           fetch-depth: 2
@@ -626,9 +626,13 @@ jobs:
     permissions:
       contents: read
     runs-on: windows-latest
-    timeout-minutes: 30
+    # Twice the slowest of twenty measured runs (582 s), rounded up to the next
+    # five minutes. The runs are recorded in DEC-1010 of .qfai/spec/decisions.md.
+    # SHIPPED-CI: not-applicable
+    # Because: the shipped set has no Windows job, so there is no ceiling there for this measurement to set.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The suites read their temp root through `os.tmpdir()`, so pointing TEMP
@@ -664,7 +668,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The four-step toolchain preamble, defined once in
@@ -678,7 +682,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # The dogfooding lanes below run `QFAI-TDDLIST-009`, which asks
@@ -849,7 +853,7 @@ jobs:
         # upload is most useful when the job FAILED, and worth nothing when nobody
         # waited for the result. `always()` spends runner minutes on both.
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qfai-report
           # Seven days, not the action's default of ninety. These are diagnostic

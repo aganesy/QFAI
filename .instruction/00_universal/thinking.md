@@ -37,12 +37,9 @@ Defines the thinking steps that apply universally. Do not proceed superficially;
 - Define measurable completion conditions (for example, screen elements, API responses and test perspectives).
 - If you cannot reach 95% confidence, prioritize confirmation.
 
-## Pre-Work Organization Template
+## What the stage records
 
-```
-1. Purpose and completion criteria
-2. Existing structure, patterns and constraints
-3. Expected impact (functionality, performance, security)
-4. Comparison of options and reason for the recommendation
-5. Unclear points and items to confirm
-```
+`qfai-sdd`, which owns `.qfai/spec/decisions.md`, records a decision as one row
+there. Every other stage records it in its own evidence file. Both use the
+Approach form stated at the top of
+`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
