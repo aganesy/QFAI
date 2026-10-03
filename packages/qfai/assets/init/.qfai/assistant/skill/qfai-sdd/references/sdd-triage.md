@@ -32,8 +32,8 @@ decisions the agent took.
 
 A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
 
-A change request is a decision row whose Content begins Change request: and names the paths or IDs
-it changes. Its Approach names the operation and target BF or US, the source as
+A change request is a decision row whose Content begins Change request: and names the
+repository-relative paths it changes; an ID there authorizes nothing. Its Approach names the operation and target BF or US, the source as
 discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
 the intended files and rationale with the change classification Primary and Tags, and who approved
 it, when, and the option chosen. The row starts at WIP and moves to DONE once every change it names

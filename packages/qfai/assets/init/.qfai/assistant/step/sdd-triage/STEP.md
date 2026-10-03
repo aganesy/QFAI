@@ -63,7 +63,7 @@ change request, and each critical decision the user made. Record unresolved
 questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
 Status. A change request Content begins `Change request:` and names the
-affected paths or IDs; its Approach names the operation, the affected BF or US,
+affected repository-relative paths; its Approach names the operation, the affected BF or US,
 its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
 approved it, when, and the option chosen. A decision the agent took appends no
 row, and a declined change appends none. Do not write a second decision-record

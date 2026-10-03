@@ -234,6 +234,12 @@ its code. Several commands, findings and files go with that.
   re-routes by the decision rules. This replaces the earlier multi-stage
   question routes and their reviews. Fixes #2730.
 
+- **A DONE change request authorises only the branch that applies it**
+  (#2251). A WIP row authorises as before, and a DONE row authorises
+  only where the base lacks it or holds it at WIP. A later edit to the same path
+  needs a row of its own. The shipped instructions name repository-relative
+  paths; an ID in the row authorises nothing.
+
 - **The `sdd` dogfooding lane is a clean gate.** CI validates this repository
   with `--profile sdd --fail-on error`, so every error fails the build.
   The comments name the test obligations still tracked by the other lanes

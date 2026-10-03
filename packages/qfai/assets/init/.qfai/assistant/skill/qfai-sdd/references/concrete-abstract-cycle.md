@@ -61,7 +61,7 @@ The age of the target decides the route.
 | Target                                              | Route                                                                                                                                       |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no approval, and each EX re-cites the criterion it exercises |
-| An item that existed when the invocation started    | Changed directly only under an in-force `Change request:` row (WIP or DONE) whose approved change covers this change                        |
+| An item that existed when the invocation started    | Changed directly only under an in-force `Change request:` row (WIP, or DONE on this branch) whose approved change covers this change        |
 | The same item, with no row that covers the change   | The change is put to the user, and the item stays unchanged until the user approves it                                                      |
 | Creating, splitting, merging or retiring a BF or US | Put to the user, even when this invocation wrote the item                                                                                   |
 
