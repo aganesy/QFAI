@@ -245,9 +245,11 @@ function main() {
 try {
   main();
 } catch (error) {
-  manifest.failure = String(error);
+  const snapshot = manifest.snapshots.find((item) => item.pendingReport !== undefined);
+  const location = snapshot ? `${snapshot.label}/${snapshot.pendingReport.profile}: ` : "";
+  manifest.failure = location + String(error);
   mkdirSync(output, { recursive: true });
   saveManifest();
-  console.error("Root report collection failed: " + String(error));
+  console.error("Root report collection failed: " + manifest.failure);
   process.exitCode = 1;
 }

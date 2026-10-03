@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          dd7fd3adc31393290ef7eb0cb52e586794da70eb1f844bdaf94cdc478582e7b9  .github/pinned-bytes.txt
+          9696940ab74dc28724c2f40a64c593b4962e5fac39ad6e84edc12b6ae85aaea0  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -782,7 +782,7 @@ jobs:
       - name: Collect exact root finding reports
         if: github.event_name == 'pull_request'
         env:
-          QFAI_MEASUREMENT_MAIN: 95981a16ed0b3a06afa713ef2deed184866d3c5c
+          QFAI_MEASUREMENT_MAIN: 6a421cd12d27f5d41134b31ce8e4c28b9a4bd646
           QFAI_MEASUREMENT_HEAD: ${{ github.event.pull_request.head.sha }}
         run: node scripts/collect-dogfood-reports.mjs
 

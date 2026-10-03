@@ -210,8 +210,8 @@ function runValidate(profile) {
     stdio: ["ignore", "inherit", "inherit"],
   });
   if (result.error) fail(`could not run validate: ${result.error.message}`);
-  // `--fail-on never` still exits non-zero when the run could not complete,
-  // which is a different failure from a finding and is not ratcheted.
+  // A process-level failure exits nonzero. An incomplete validation can write
+  // QFAI-SCAN-002 and exit zero under `--fail-on never`.
   if (result.status !== 0) fail(`validate exited ${String(result.status)} before reporting.`);
 }
 
