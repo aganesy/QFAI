@@ -36,6 +36,7 @@ import { readStoryTreeModel } from "./storyTree/tree.js";
 import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import type { Issue } from "./types.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
@@ -262,13 +263,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // the `qfai doctor` contract says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
+    // The text formatter prints only `message`, so the issues the loader
+    // returned are listed there, one line, `; `-joined.
+    const listed = issues.map((issue) => renderIssueForMessage(issue.message)).join("; ");
     addCheck(checks, {
       id: "config.load",
       severity: configHasError ? "error" : "warning",
       title: "Config load",
       message: configHasError
-        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
-        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed: ${listed}`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed): ${listed}`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
@@ -981,38 +985,90 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Whether one code point is a C0, DEL or C1 control character.
+ * Whether one code point must not reach a single-line message: a C0, DEL or C1
+ * control character, a Unicode line or paragraph separator, or a bidirectional
+ * control.
  *
  * Read as code points rather than matched with the equivalent character-class
  * regular expression: that pattern needs an `eslint-disable no-control-regex`,
  * and the universal quality rule forbids adding a suppression without the
- * user’s explicit permission. `reviewerJustification.ts` refuses control
- * characters the same way, for the same reason.
+ * user’s explicit permission.
  */
 function isControlCodePoint(code: number): boolean {
-  return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  return (
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    LINE_SEPARATORS.has(code) ||
+    BIDIRECTIONAL_CONTROLS.has(code)
+  );
+}
+
+/** The longest one loader issue may run in the `config.load` message; `details.issues` keeps it whole. */
+const MAX_LISTED_ISSUE_LENGTH = 500;
+
+const CUT_MARKER = " ... ";
+
+/** Takes whole tokens from the front of `tokens` while they fit in `budget` characters. */
+function takeWithin(tokens: ReadonlyArray<string>, budget: number): string[] {
+  const taken: string[] = [];
+  let used = 0;
+  for (const token of tokens) {
+    if (used + token.length > budget) {
+      break;
+    }
+    taken.push(token);
+    used += token.length;
+  }
+  return taken;
 }
 
 /**
- * Makes one path safe to splice into a single-line finding message.
+ * Renders one loader issue for the `config.load` message: without a YAML parse
+ * error's source excerpt, escaped, and at most `MAX_LISTED_ISSUE_LENGTH`
+ * characters as displayed. Several loader messages quote the rejected value, so a
+ * very large value is cut. The middle goes, so the start of the message and the
+ * diagnosis at its end both stay, and no escape sequence is split.
+ */
+function renderIssueForMessage(message: string): string {
+  const tokens = Array.from(withoutYamlExcerpt(message), escapeCharacter);
+  if (tokens.reduce((total, token) => total + token.length, 0) <= MAX_LISTED_ISSUE_LENGTH) {
+    return tokens.join("");
+  }
+  const kept = MAX_LISTED_ISSUE_LENGTH - CUT_MARKER.length;
+  const head = takeWithin(tokens, Math.ceil(kept / 2));
+  const tail = takeWithin(tokens.slice().reverse(), Math.floor(kept / 2)).reverse();
+  return `${head.join("")}${CUT_MARKER}${tail.join("")}`;
+}
+
+/**
+ * A YAML parse error ends with an excerpt of the offending source after a blank
+ * line, and that excerpt can hold any value the file holds. This keeps the cause
+ * and its position and drops the excerpt; any other issue is returned whole.
+ */
+function withoutYamlExcerpt(message: string): string {
+  return message.replace(/^([^\r\n]* at line \d+, column \d+:)\r?\n\r?\n[\s\S]*$/, "$1");
+}
+
+/**
+ * Makes any display string — a path, a filename or a loader message — safe to
+ * splice into a single-line finding message.
  *
  * A filename may legally contain a newline or an ANSI escape on POSIX, and
- * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
- * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
- * lines — into the very output whose one-finding-per-line shape downstream
- * severity greps rely on. `details` keeps the raw path; only what is rendered
- * is escaped.
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, such a string
+ * could inject extra lines — including counterfeit `[ok]` / `[error]` lines —
+ * into the very output whose one-finding-per-line shape downstream severity
+ * greps rely on. `details` keeps the raw value; only what is rendered is
+ * escaped.
  */
+function escapeCharacter(character: string): string {
+  const code = character.codePointAt(0);
+  return code !== undefined && isControlCodePoint(code)
+    ? `\\${code > 0xff ? "u" : "x"}${code.toString(16).padStart(code > 0xff ? 4 : 2, "0")}`
+    : character;
+}
+
 function escapeForMessage(value: string): string {
-  let escaped = "";
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    escaped +=
-      code !== undefined && isControlCodePoint(code)
-        ? `\\x${code.toString(16).padStart(2, "0")}`
-        : character;
-  }
-  return escaped;
+  return Array.from(value, escapeCharacter).join("");
 }
 
 function formatMessagePaths(paths: ReadonlyArray<string>): string {
