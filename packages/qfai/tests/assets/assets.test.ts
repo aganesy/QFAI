@@ -295,19 +295,19 @@ describe("assets guardrails", () => {
     );
     const baseline = await readFile(baselinePath, "utf-8");
     const requiredHardStopPayload = [
-      "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
-      "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
+      "No delegation attempt is required at the start of a stage.",
+      "When it does, the real delegation attempt is the capability check.",
       // Delegation failure splits into unavailable vs saturated, so the
       // response is class-dependent; the invariant that survives is that a
-      // failure is never answered by simulating roles or self-executing.
+      // failure is never answered by simulating a role.
       "If the delegation fails, classify the failure first",
-      "Never simulate roles and never continue with self-execution",
+      "Never simulate a role.",
       "Delegation failure:",
       "Attempted role:",
       "Attempted task:",
-      "Why stopped: QFAI requires real sub-agent delegation in this environment.",
+      "Why stopped: this review needs a reviewer that did not author the work.",
       "User action needed:",
-      "Retry condition: rerun after the required delegation succeeds",
+      "Retry condition: rerun after the review delegation succeeds",
     ];
 
     for (const phrase of requiredHardStopPayload) {
@@ -464,24 +464,12 @@ describe("assets guardrails", () => {
       "Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.",
     );
     expect(configure).toContain(
-      "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
-    );
-    expect(configure).toContain(
-      "Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
-    );
-    expect(configure).toContain(
-      "Do not prepend non-routed roles before the first required delegation attempt.",
+      "Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`completion-reviewer`, `qa-gatekeeper`).",
     );
 
     expect(verify).toContain("Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.");
     expect(verify).toContain(
-      "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
-    );
-    expect(verify).toContain(
-      "Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
-    );
-    expect(verify).toContain(
-      "Do not prepend non-routed roles before the first required delegation attempt.",
+      "Routed phases, in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, `completion-reviewer`, optional `implementation-reviewer` when code fixes are in scope).",
     );
   });
 

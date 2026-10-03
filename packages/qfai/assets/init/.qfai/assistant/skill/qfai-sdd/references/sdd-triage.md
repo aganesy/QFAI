@@ -25,78 +25,45 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change. Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
-A triage decision's Content names the operation, target BF or US, and discussion source as discussion-<id>#REQ-NNNN when
-there is one. For other sources, name the actual source path or user requirement. Approach states the intended files and
-rationale, including the change classification Primary and Tags. Status begins TODO if approval is needed, moves to WIP
-when approved, and becomes REJECTED if declined. Complete applied decisions move to DONE. Do not treat a TODO row as
-authorization.
+decisions.md records only what the user approved: each change request, and each critical decision
+the user made. A row is appended once the user has approved what it records. A decision the agent
+took, an approval-free change and a finding it dropped append no row; the final report lists the
+decisions the agent took.
 
-A change request is a decision row whose Content begins Change request: and names the paths or IDs it may change. A rejected option is a decision row with Status REJECTED. Record a retired story in a decision row, not a separate retired-story file. Open questions use OQ-NNNN rows; DEFERRED needs a specific future decision point.
+A change request is a decision row whose Content begins Change request: and names the paths or IDs
+it changes. Its Approach names the operation and target BF or US, the source as
+discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
+the intended files and rationale with the change classification Primary and Tags, and who approved
+it, when, and the option chosen. The row starts at WIP and moves to DONE once every change it names
+is written. A declined change appends no row. Retiring a story removes its directory under the
+change request that names it, with no separate retired-story file.
 
-An unanswered critical product decision opens its Content with Unadjudicated: and stays TODO or WIP until decided. A justified test exception opens a decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason in Approach. It takes effect only at DONE; it never exempts descendant items.
+An existing row at REJECTED is a rejected option. Open questions use OQ-NNNN rows; DEFERRED needs a
+specific future decision point. An unanswered critical product decision is an open-questions.md row
+whose Content opens Unadjudicated:, at TODO until decided. A justified test exception opens a
+decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason
+in Approach. It takes effect only at DONE; it never exempts descendant items.
 
 ## Approval and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, leave approval-required rows at TODO, stop before their dependent writes, and report every pending row with its operation and target. Approval-free changes may proceed only if they do not depend on a pending row.
+Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, append no row, stop before the dependent writes, and report every pending operation with its target. Approval-free changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
 
-## Inside a workflow run
-
-Under a QFAI work order, Stage 1 asks the operator nothing itself. The approval
-pass changes by operation.
-
-- **CREATE.** Stage 1 checks the `human_decision` the work order's
-  `authorizationRefs` cite for its `new_story` slot, instead of asking. The
-  check passes only when the record exists, answers this slot and this
-  operation, and is not stale. An approval is stale when the scope digest it was
-  given under changes, when the approved story text changes, or when a replan
-  widens the scope. The clock alone never makes it stale.
-- **A passing CREATE.** The attempt that writes the stage's change appends the
-  triage row at TODO. Its Approach cites the record as
-  `<runId>/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and
-  the label of each chosen option exactly as the record holds them. The row is
-  then raised to WIP.
-- **A missing, mismatched or stale CREATE approval.** Stage 1 appends no triage
-  row and asks the operator nothing. The stage returns `awaiting_input` naming
-  the row and the reason.
-- **DELETE, SPLIT, MERGE, SUPERSEDE and UPDATE:REMOVE.** A routing-time CREATE
-  approval approves none of them. Stage 1 opens the row's approval question as
-  a `decision` question of its stage result, with outcome `awaiting_input`, and
-  appends no row. The attempt that receives the answer through
-  `authorizationRefs` appends the row at TODO, cites that `human_decision` the
-  same way, and raises it to WIP.
-- **An approval-free row**, such as an UPDATE:APPEND, cites no answer.
-
-The table keeps exactly its four columns. The citation lives in Approach.
-
 ### A change to the story tree
 
-A story-tree or contract file changes only on the operator's answer, given in
-this run:
+A story-tree or contract file changes only on the user's approval:
 
-1. The first attempt asks once and changes nothing. It opens one `decision`
-   question naming the files it would change and the proposed change, and
-   returns `awaiting_input`. The concrete-abstract cycle may add questions for
-   its findings beside it.
-2. The attempt that holds the answer, received through `authorizationRefs`,
-   makes the change. It appends one `decisions.md` row at WIP whose Content
+1. Show the user the files the stage would change and the proposed change, and
+   change nothing until the user answers.
+2. On approval, write the change and append one `decisions.md` row whose Content
    opens `Change request:` and names every story-tree and contract file it
-   changed, and `decisions.md` when it appended any other row. The row's
-   Approach cites that answer as `<runId>/<authorizationId>` and writes its
-   `answeredBy`, its `recordedAt` and the label of each chosen option exactly
-   as the run's authorization record holds them.
-3. The same attempt moves the row to DONE once every change the row names is
-   written. The row stays at WIP only while changes it names remain for a later
-   attempt of this stage, which moves it to DONE once it writes them.
-4. A row that cites only the run's `request_scope` is refused. Leaving the row
-   at TODO does not avoid the refusal.
+   changed, and `decisions.md` when it appended any other row. Its Approach
+   records who approved it, when, and the label of the option chosen.
+3. Move the row to DONE once every change it names is written.
 
 A row present before the stage started keeps its ID, Content and Approach.
 Only a row this stage appended changes its Status.
-
-Upstream drift found outside the run's checked scope gets no `Change request:`
-row here. The stage returns `blocked`, with each finding listed in `debts`.
 
 ## ID allocation
 

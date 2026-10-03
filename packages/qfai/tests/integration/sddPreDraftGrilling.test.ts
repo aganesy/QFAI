@@ -34,6 +34,13 @@ describe("qfai-sdd pre-draft grilling", () => {
         expect(text, step).toContain("references/sdd-pre-draft-grilling.md");
       }
       expect(gate).toContain("A skipped checkpoint fails the gate");
+      expect(loop).toContain("It asks the user each critical decision the frontier holds.");
+      expect(loop).toContain(
+        "final report lists each decision a checkpoint adopted, with its reason",
+      );
+      expect(gate).toContain(
+        "The final report lists each decision a checkpoint adopted, with its reason.",
+      );
     });
   }
 });

@@ -35,19 +35,16 @@ baseline overlap, the baseline governs.
 
 ### Orchestrator Protocol (MUST)
 
-- Orchestrator may only create work orders, delegate tasks, integrate outputs, and present results.
-- Orchestrator MUST NOT draft the primary research artifact first or self-approve completion.
+- The orchestrator may write the research artifact itself, or give independent searches to sub-agents that run in parallel.
+- It never approves its own work.
 
 ### Capability Probe (MUST)
 
-1. Attempt the first required delegation at stage start.
-2. Treat that real delegation attempt as the capability check.
-3. If the delegation fails, stop the stage immediately and report remediation.
+- No additional overrides.
 
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
 
 ## Work Orders Summary
 
