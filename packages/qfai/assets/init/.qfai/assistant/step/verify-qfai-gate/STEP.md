@@ -45,7 +45,9 @@ satisfy it, and no waiver or environment makes it satisfy it. That is not a
 ban on narrow profiles in CI: `qfai-discussion` and `qfai-atdd` each use one as
 their own stage gate, those runs are legitimate under `CI=true`, and
 `QFAI-VALIDATE-017` (`warning`) marks them as not full-scan rather than
-blocking them. The prototyping profile runs only locally.
+blocking them. The prototyping profile is the prototyping stage's own gate:
+CI runs its checks inside the full scan, and no CI lane runs the profile on
+its own.
 
 ## Findings
 

@@ -100,10 +100,10 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  * no workflow-level default — is what the rule actually guards, and it is untouched.
  *
  * Four, and the fourth is `release.yml::gate`, on the same "legitimately needs it" clause.
- * The gate runs `pnpm ci:gate`, which runs `scripts/check-prompt-scanner-pair.mjs`, which
- * takes a three-dot diff between `origin/main` and `HEAD`. At the default depth of 1 the
- * tag being published and the branch share no reachable merge base, so the script exits 2
- * and the workflow's own stated use — re-running a failed publish for an older tag — could
+ * The gate runs `pnpm ci:gate`, whose diff-based lanes take a three-dot diff between
+ * `origin/main` and `HEAD`. At the default depth of 1 the tag being published and the
+ * branch share no reachable merge base, so such a lane fails and the workflow's own
+ * stated use — re-running a failed publish for an older tag — could
  * never clear this job. The need is structural, not incidental.
  *
  * Five, and the fifth is `ci.yml::build`, on the same clause. It runs the dogfooding

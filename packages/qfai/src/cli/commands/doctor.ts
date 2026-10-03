@@ -344,7 +344,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // The cwd-based resolution used to scatter a CI job's evidence: the
     // report went into the project while the doctor artifact went to the
     // runner's working directory, silently, because the "wrote <abs>" line
-    // still looks like success. `prototyping preflight` shares this slot.
+    // still looks like success.
     const outAbs = path.isAbsolute(options.outPath)
       ? options.outPath
       : path.resolve(resolvedRoot, options.outPath);

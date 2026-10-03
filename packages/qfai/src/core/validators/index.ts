@@ -43,9 +43,8 @@ export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
-  validatePrototypingDesignContractReadiness,
+  validateDesignContractReadiness,
   validateRootDesignMdParse,
-  validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {

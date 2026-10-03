@@ -13,10 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { writeDiscussionCurrentId } from "../../../src/core/state.js";
-import {
-  validatePrototypingDesignContractReadiness,
-  validateSddDesignContractReadiness,
-} from "../../../src/core/validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "../../../src/core/validators/designContractReadiness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const tempDirs: string[] = [];
@@ -85,13 +82,13 @@ async function seedDesignMd(root: string): Promise<void> {
   await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");
 }
 
-describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
+describe("validateDesignContractReadiness (TC-3.8.x)", () => {
   // QFAI:EX-0001-0042-14
   it("TC-3.8.1: an authored root DESIGN.md passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedDesignMd(root);
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 
@@ -99,7 +96,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
   it("TC-3.8.2: missing root DESIGN.md → DCON-030", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     const codes = issues.map((i) => i.code);
     expect(codes).toContain("QFAI-DCON-030");
     const dcon030 = issues.find((i) => i.code === "QFAI-DCON-030");
@@ -113,7 +110,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await seedUiBearingProject(root);
     // Author a malformed DESIGN.md (missing front-matter delimiter).
     await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-DCON-033"]);
     expect(issues[0]?.severity).toBe("error");
   });
@@ -145,7 +142,7 @@ const SHIPPED_DESIGN_MD_SAMPLE = path.join(
   "DESIGN.md.sample",
 );
 
-describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-034)", () => {
+describe("validateDesignContractReadiness — unreplaced sample (QFAI-DCON-034)", () => {
   async function readShippedSample(): Promise<string> {
     return readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8");
   }
@@ -153,7 +150,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
   it("reports DCON-034 before any UI contract exists (fresh init)", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
     expect(dcon034).toHaveLength(1);
     expect(dcon034[0]?.file).toBe("DESIGN.md");
@@ -170,7 +167,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
     expect(dcon034).toHaveLength(1);
     expect(dcon034[0]?.severity).toBe("error");
@@ -187,7 +184,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
       "utf-8",
     );
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
     expect(dcon034).toHaveLength(1);
     expect(dcon034[0]?.severity).toBe("warning");
@@ -203,7 +200,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
       "utf-8",
     );
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("warning");
   });
 
@@ -214,20 +211,20 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
       "",
     );
     await writeFile(path.join(root, "DESIGN.md"), legacy, "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
   });
 
   it("stays silent for an authored DESIGN.md with no UI contracts", async () => {
     const root = await newTempDir();
     await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 
   it("stays silent when root DESIGN.md is absent and no UI contracts exist", async () => {
     const root = await newTempDir();
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 
@@ -235,7 +232,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
-    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
   });
 });
@@ -271,7 +268,7 @@ describe("story-tree visual design readiness", () => {
   it("a cli-only discussion without UI contracts requires no root DESIGN.md", async () => {
     const root = await newTempDir();
     await seedDiscussionPack(root, "cli");
-    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+    const codes = (await validateDesignContractReadiness(root, defaultConfig)).map(
       (issue) => issue.code,
     );
     expect(codes).not.toContain("QFAI-DCON-030");
@@ -284,7 +281,7 @@ describe("story-tree visual design readiness", () => {
       path.join(root, "DESIGN.md"),
       await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8"),
     );
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues.map((issue) => [issue.code, issue.severity])).toEqual([
       ["QFAI-DCON-034", "warning"],
     ]);
@@ -294,7 +291,7 @@ describe("story-tree visual design readiness", () => {
     const root = await newTempDir();
     await seedDiscussionPack(root, "cli");
     await seedUiBearingProject(root);
-    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+    const codes = (await validateDesignContractReadiness(root, defaultConfig)).map(
       (issue) => issue.code,
     );
     expect(codes).toContain("QFAI-DCON-030");
@@ -303,7 +300,7 @@ describe("story-tree visual design readiness", () => {
   it("a web discussion alone does not invent a UI contract", async () => {
     const root = await newTempDir();
     await seedDiscussionPack(root, "web");
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 
@@ -316,7 +313,7 @@ describe("story-tree visual design readiness", () => {
       "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       "utf-8",
     );
-    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const issues = await validateDesignContractReadiness(root, defaultConfig);
     expect(issues).toEqual([]);
   });
 });

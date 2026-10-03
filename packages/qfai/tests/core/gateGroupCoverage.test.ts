@@ -343,8 +343,8 @@ function sourceFiles(root: string): string[] {
  *
  * Shape-matched rather than string-matched. A plain search for the quoted code
  * reports 139 codes in two or more modules, and almost every one of them is a
- * LIST rather than an emit — `core/prototyping/mode.ts` names the codes its
- * relaxation applies to, which raises nothing. Only three forms build a
+ * LIST rather than an emit — a module that names codes it applies to raises
+ * nothing. Only three forms build a
  * finding: the code as the first argument to `issue(` / `pushIssue(` on the
  * same line or the next, and a `code:` property. Matching those brings 139
  * down to 4, and the four are all real.

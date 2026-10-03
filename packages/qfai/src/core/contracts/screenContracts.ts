@@ -168,8 +168,7 @@ function screenIdsOf(parsed: unknown): string[] {
 
 /**
  * The spec a UI contract file belongs to by its name, or `null` for a file
- * read project-wide: the names `qfai prototyping certify` resolves one spec's
- * screens from, `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
+ * read project-wide: `spec-0001.yaml`, `0001.yaml`, `ui-0001.yaml`,
  * `ui-0001-<part>.yaml` and anything under `spec-0001/`.
  */
 function specScopeOf(pathInUiDir: string): string | null {

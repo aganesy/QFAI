@@ -12,7 +12,9 @@ locked by root `DESIGN.md`: check the prototype against every category
 `designMdViolations[]`.
 
 Score each axis `weak`, `acceptable`, `strong`, or `exceptional` from the live
-review. Explain observable defects and corrective actions in prose. A favorable
+review. The scale carries no ordinal index, and any other value is not a score:
+a summary carrying one is rejected and written again before the prototype is
+put to the user. Explain observable defects and corrective actions in prose. A favorable
 score never hides a blocking finding. Do not use numeric AC-pass or
 transition-pass percentages as a substitute for the qualitative review.
 
@@ -238,7 +240,11 @@ the ordinal score in `proseCritique`.
   scannable?
 - **navigationFlow** — screen-to-screen traversal, back/return paths,
   current-location indication, deep-link consistency. Can the user
-  always tell where they are and how to retreat?
+  always tell where they are and how to retreat? Menu reachability is part
+  of this axis, not a fifth one: exercise every primary menu entry the UI
+  contract declares at least once in your Playwright session, and record what
+  each entry reached in `menuReachabilityFeel`. An unreachable entry is
+  critique there, not a blocking finding.
 - **usability** — task-completion efficiency, coverage of loading /
   empty / error / success states, Fitts's law, confirmation
   friction, accessibility (focus order, semantic structure, contrast

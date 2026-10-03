@@ -34,7 +34,7 @@ import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
-import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -64,7 +64,6 @@ import {
   validateRepositoryHygiene,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
@@ -512,7 +511,7 @@ async function runStoryProfileValidators(
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
-    ...(await validateSddDesignContractReadiness(root, config)),
+    ...(await validateDesignContractReadiness(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
@@ -670,7 +669,7 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    ...(await validatePrototypingDesignContractReadiness(root, config)),
+    ...(await validateDesignContractReadiness(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
   ];
 }

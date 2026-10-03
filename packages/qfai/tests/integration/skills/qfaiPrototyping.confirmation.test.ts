@@ -13,11 +13,18 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { EXIT_CODES } from "../../src/cli/lib/exitCodes.js";
-import { run } from "../../src/cli/main.js";
-import { loadConfig, readRejectedPrimaryUiContract } from "../../src/core/config.js";
+import { EXIT_CODES } from "../../../src/cli/lib/exitCodes.js";
+import { run } from "../../../src/cli/main.js";
+import { loadConfig, readRejectedPrimaryUiContract } from "../../../src/core/config.js";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+);
 const TREES = ["packages/qfai/assets/init/.qfai/assistant", ".qfai/assistant"];
 
 const read = (tree: string, relative: string): Promise<string> =>
@@ -61,6 +68,7 @@ async function withConfig<T>(body: string, task: (root: string) => Promise<T>): 
 }
 
 describe.each(TREES)("%s", (tree) => {
+  // QFAI:AC-0001-0228-01
   // QFAI:EX-0001-0228-01
   it("hands off on the user's confirmation, with no command or check certifying it", async () => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
@@ -79,6 +87,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(`${skill} ${loop} ${handoff}`).not.toMatch(/certificate|qfai prototyping/);
   });
 
+  // QFAI:AC-0001-0228-02
   // QFAI:EX-0001-0228-02
   it("runs another iteration on a change and keeps the handoff waiting", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
@@ -94,6 +103,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(handoff).toContain("Runs only after the user confirmed the prototype");
   });
 
+  // QFAI:AC-0001-0228-01
   // QFAI:EX-0001-0228-03
   it("completes with a blocking finding still open and names it in the report", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
@@ -107,6 +117,7 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0228-03
   // QFAI:EX-0001-0228-04
   it("keeps every file the loop writes under .qfai/prototype", async () => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
@@ -128,6 +139,7 @@ describe.each(TREES)("%s", (tree) => {
     }
   });
 
+  // QFAI:AC-0001-0138-01
   // QFAI:EX-0001-0138-01
   it("lets the request win over the configured pin and normalises neither", async () => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
@@ -137,6 +149,7 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0138-01
   // QFAI:EX-0001-0138-02
   it("stops on a refused configured pin instead of picking another contract", async () => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
@@ -145,6 +158,7 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0114-03
   // QFAI:EX-0001-0114-02
   it("writes nothing and says so when no UI-bearing contract resolves", async () => {
     const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
@@ -153,6 +167,7 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0097-01
   // QFAI:EX-0001-0097-01
   it("names an owner for implementation, review scoring and build, with no fixed capture identity", async () => {
     const table = section(
@@ -166,6 +181,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(flat(table)).toContain("There is no fixed capture identity");
   });
 
+  // QFAI:AC-0001-0097-02
   // QFAI:EX-0001-0097-02
   it("reports one identity assigned to both generation and review before either runs", async () => {
     const table = flat(
@@ -177,6 +193,7 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0099-01
   // QFAI:EX-0001-0099-01
   // QFAI:EX-0001-0099-02
   it("records the execution plan before the first review", async () => {
@@ -188,6 +205,8 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0102-01
+  // QFAI:AC-0001-0103-01
   // QFAI:EX-0001-0102-01
   // QFAI:EX-0001-0103-01
   it("gives the reviewer its mandatory inputs and every DESIGN.md category to check", async () => {
@@ -200,9 +219,84 @@ describe.each(TREES)("%s", (tree) => {
       "check the prototype against every category `DESIGN.md` declares, and name each mismatch in a finding or in `designMdViolations[]`.",
     );
   });
+
+  // QFAI:AC-0001-0105-03
+  // QFAI:EX-0001-0105-01
+  it("scores on a closed four-value scale and rejects any other value", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(prompt).toContain(
+      "Score each axis `weak`, `acceptable`, `strong`, or `exceptional` from the live review. The scale carries no ordinal index, and any other value is not a score: a summary carrying one is rejected and written again before the prototype is put to the user.",
+    );
+    for (const axis of [
+      "informationArchitecture",
+      "navigationFlow",
+      "usability",
+      "functionality",
+    ]) {
+      expect(prompt).toContain(`${axis}: "weak" | "acceptable" | "strong" | "exceptional";`);
+    }
+  });
+
+  // QFAI:AC-0001-0107-01
+  // QFAI:EX-0001-0107-01
+  it("puts the four axes on the summary only, with no weighted score deciding completion", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    const schema = flat(
+      await read(tree, "skill/qfai-prototyping/references/review-payload-schema.md"),
+    );
+    expect(prompt).toContain("The four scores belong to the per-iteration summary");
+    expect(prompt).toContain("Do not use numeric AC-pass or transition-pass percentages");
+    expect(schema).toContain("It carries no rating");
+    expect(schema).not.toMatch(/informationArchitecture|navigationFlow/);
+  });
+
+  // QFAI:AC-0001-0114-02
+  // QFAI:EX-0001-0114-03
+  it("covers every UI-bearing contract in one invocation without asking for a primary", async () => {
+    const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
+    expect(grill).toContain(
+      "One invocation covers all of them: it does not ask which contract is primary, and reads no spec-level marker.",
+    );
+  });
+
+  // QFAI:AC-0001-0114-01
+  it("admits only a UI contract that declares a full ID and screens", async () => {
+    const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
+    expect(grill).toContain(
+      "a YAML file under `<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty `screens[]`. Only those contracts enter the prototyping scope.",
+    );
+  });
+
+  // QFAI:AC-0001-0105-02
+  it("derives the pivot directive from the open count of the latest reviews", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(prompt).toContain(
+      "Let `open(r)` be the total length of `r.blockingFindings` plus `r.layoutAntiPatternsDetected`.",
+    );
+    expect(prompt).toContain(
+      "`open(latest) > 0` AND `open(latest) >= open(prior)` AND `open(prior) >= open(prior2)` → `pivot`.",
+    );
+    expect(prompt).toContain(
+      "Else if a prior review exists AND `open(latest) < open(prior)` → `continue`.",
+    );
+    expect(prompt).toContain("- Else → `refine`.");
+  });
+
+  // QFAI:AC-0001-0116-03
+  // QFAI:EX-0001-0116-04
+  it("exercises every primary menu entry and keeps an unreachable one as critique", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(prompt).toContain("Menu reachability is part of this axis, not a fifth one");
+    expect(prompt).toContain(
+      "exercise every primary menu entry the UI contract declares at least once in your Playwright session, and record what each entry reached in `menuReachabilityFeel`.",
+    );
+    expect(prompt).toContain("An unreachable entry is critique there, not a blocking finding.");
+  });
 });
 
 describe("the qfai command", () => {
+  // QFAI:AC-0001-0228-01
+  // QFAI:AC-0001-0228-03
   // QFAI:EX-0001-0228-01
   // QFAI:EX-0001-0228-04
   it("has no prototyping command group", async () => {
@@ -211,6 +305,7 @@ describe("the qfai command", () => {
     }
   });
 
+  // QFAI:AC-0001-0138-01
   // QFAI:EX-0001-0138-01
   it("accepts only a full UI-NNNN pin and keeps it unchanged", async () => {
     for (const value of ["0001", "UI-1"]) {
@@ -229,6 +324,7 @@ describe("the qfai command", () => {
     });
   });
 
+  // QFAI:AC-0001-0138-01
   // QFAI:EX-0001-0138-02
   it("names the key and the value of a refused configured pin", async () => {
     await withConfig("prototyping:\n  primaryUiContract: CON-UI-0002\n", async (root) => {

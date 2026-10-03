@@ -64,6 +64,7 @@ async function uiContract(
 }
 
 describe("UI contract prototyping scope", () => {
+  // QFAI:EX-0001-0114-03
   it("uses declared UI IDs with screens across nested yaml and yml files", async () => {
     const root = await fixtureRoot();
     await uiContract(root, "nested/checkout.yml", "UI-0042", "[{id: checkout}]");
@@ -97,6 +98,7 @@ describe("UI contract prototyping scope", () => {
     expect(await resolvePrimaryPrototypingSpec(root, config("UI-9999"))).toBeUndefined();
   });
 
+  // QFAI:EX-0001-0114-01
   it("does not infer UI-bearing from a spec marker or file name", async () => {
     const root = await fixtureRoot();
     const spec = path.join(root, ".qfai/spec/spec-0001/01_Spec.md");

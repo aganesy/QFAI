@@ -10,13 +10,6 @@ import { issue } from "./utils.js";
 // Root DESIGN.md is the brand SSOT for UI-bearing projects.
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
-export async function validateSddDesignContractReadiness(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
-  return validateDesignContractReadiness(root, config);
-}
-
 /**
  * Whether the root DESIGN.md parses — and nothing else.
  *
@@ -49,13 +42,6 @@ export async function validateRootDesignMdParse(root: string): Promise<Issue[]> 
   return "error" in parsed ? [rootDesignMdParseIssue(parsed.error.message)] : [];
 }
 
-export async function validatePrototypingDesignContractReadiness(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
-  return validateDesignContractReadiness(root, config);
-}
-
 /**
  * The `QFAI-DCON-033` finding, built in one place.
  *
@@ -81,7 +67,15 @@ function rootDesignMdParseIssue(detail: string): Issue {
   );
 }
 
-async function validateDesignContractReadiness(root: string, config: QfaiConfig): Promise<Issue[]> {
+/**
+ * Root `DESIGN.md` readiness, the same check for the sdd and prototyping
+ * profiles: the unreplaced sample, and for a UI-bearing project the file's
+ * presence and parse.
+ */
+export async function validateDesignContractReadiness(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
   const uiBearing = (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
 
   // The unreplaced-sample gate runs first. Every other check runs only for a
