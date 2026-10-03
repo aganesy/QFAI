@@ -323,7 +323,7 @@ describe("assets guardrails", () => {
       "shared-skill-delegation-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
-    const start = baseline.indexOf("### Orchestrator Protocol (MUST)");
+    const start = baseline.indexOf("### Orchestrator Protocol");
     const end = baseline.indexOf("### Capability Probe (MUST)");
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);

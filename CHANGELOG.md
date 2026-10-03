@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shared rule records what a stage costs and which lever changes it**
+  (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
+  and its levels, and runs every agent at the host's default until a
+  measurement chooses another level for a role. It records two costs: a high
+  level on a long deliverable such as spec authoring, contract normalization
+  or a full review pack, and whole-file rewrites for small changes. The work
+  order template gains an advisory `Time budget: none | <seconds>` and an
+  elapsed line the agent ends every message with. Neither is a cap.
+
 - **Context summaries preserve requests, decisions, open work and stage state**
   (#2243), including question and review budgets. User wording stays close to
   verbatim.
@@ -23,6 +32,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   parallelization policy's technical conditions hold. It still does not do the
   delegated work, author the primary artifact or review, and an ordering the
   parallelization policy makes mandatory still holds.
+
+- **Assistant instructions state obligations without capitalised emphasis**
+  (#2240). Phrases read by validators, gates or tests remain; other obligations
+  use plain wording. A phrase allowlist guards the shipped assistant tree and
+  root rules, and the writing standard calls for direct statements.
+
+- **The Windows parity CI job's timeout is set from measured runs** (#2311).
+  Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
+  now 20, twice the slowest run rounded up to five minutes, down from an
+  unmeasured 30. The per-suite file and test counts and timings are recorded
+  in DEC-1010 of `.qfai/spec/decisions.md`. This affects this repository's CI
+  only.
 
 - **The routing eval's release verdict lists the failing cases outside the
   safety list** (#2303). Only a failing safety case blocks the release. Every
@@ -104,6 +125,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   decisions; a slip that changes none of those is fixed without comment. This
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
+
+### Fixed
+
+- **Journal directory read errors retain their original cause** (#2841).
+  Missing directories still identify a legacy run. Busy or denied reads reach
+  the workflow's I/O refusal; other errors propagate.
+  An initial busy or denied read is attempted once and reports no run metadata.
+  Later failures retain metadata verified by a successful journal read.
+
+- **Journal test reads preserve filesystem errors** (#2846).
+  Required artifact reads keep their original error instead of replacing it
+  with an empty result; rebuilt-snapshot checks still clean up after failure.
+
+- Host-capability refusals at workflow start state the reason and the next
+  action in one sentence while preserving the refusal fields (#2839).
 
 ## [2.0.2] - 2026-10-03
 
