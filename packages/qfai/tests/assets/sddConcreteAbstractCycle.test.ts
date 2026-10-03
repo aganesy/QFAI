@@ -242,6 +242,11 @@ describe("how many cycles run", () => {
       /would go to the user becomes that row in the cycle that raised it/i,
     );
     expectSentence(text, "the gate", /per-flow gate reports that row as `QFAI-SPACK-102`/i);
+    expectSentence(
+      text,
+      "the protected row is authorized when decided",
+      /change request the user approves when the finding is decided names `open-questions\.md`/i,
+    );
   });
 
   // QFAI:EX-0001-0147-34

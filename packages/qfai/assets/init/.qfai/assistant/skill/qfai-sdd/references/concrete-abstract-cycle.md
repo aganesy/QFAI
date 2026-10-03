@@ -94,6 +94,11 @@ is decided.
 Under `--auto` nothing is asked. A finding that would go to the user becomes
 that row in the cycle that raised it.
 
+The row changes `open-questions.md`, which the drift gate protects. The change
+request the user approves when the finding is decided names
+`open-questions.md`, and that row is what authorizes the change. Until then the
+per-flow gate holds the flow, so no later stage builds on it.
+
 No other record is written. A finding the session decided, and one it dropped,
 append no row.
 
