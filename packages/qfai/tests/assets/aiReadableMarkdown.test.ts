@@ -231,6 +231,31 @@ describe("the guard's own readers", () => {
     expect(levelTwoHeadings(text)).toEqual([]);
   });
 
+  it("does not open a fence inside indented code", () => {
+    const text = ["# T", "## Contents", "- A", "    ~~~", "", "## A"].join("\n");
+    expect(levelTwoHeadings(text)).toEqual(["Contents", "A"]);
+  });
+
+  it("rejects backticks in a backtick fence's info string", () => {
+    expect(levelTwoHeadings(["```x`y", "## A"].join("\n"))).toEqual(["A"]);
+    expect(levelTwoHeadings(["~~~x`y", "## Not a heading", "~~~"].join("\n"))).toEqual([]);
+  });
+
+  it.each(["  ## A", "##\tA", "## A ##", "## A\t##"])(
+    "normalizes %s as an H2 and a Contents boundary",
+    (heading) => {
+      const text = ["## Contents", "- A", heading, "- B"].join("\n");
+      expect(levelTwoHeadings(text)).toEqual(["Contents", "A"]);
+      expect(contentsItems(text)).toEqual(["A"]);
+    },
+  );
+
+  it("normalizes the Contents title and keeps a literal trailing hash", () => {
+    const text = ["## Contents ##", "- A#", "## A#"].join("\n");
+    expect(levelTwoHeadings(text)).toEqual(["Contents", "A#"]);
+    expect(contentsItems(text)).toEqual(["A#"]);
+  });
+
   it("finds a hop by every path form a reference can use", () => {
     const tree = new Map([
       ["skill/alpha/SKILL.md", "Read `references/one.md`."],
