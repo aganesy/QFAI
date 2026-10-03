@@ -1553,6 +1553,48 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("the reporting contract covers what an agent says while it works", () => {
+  // The final report's shape alone leaves the running commentary and the
+  // handling of an earlier mistake to each agent's defaults.
+  it.each([
+    ".qfai/assistant/rule/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/communication.md",
+  ])("%s states cadence, correction and outcome-first", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/^Lead with the outcome\./m);
+    expect(text).toMatch(/^## While the work runs$/m);
+    expect(text).toMatch(
+      /^- Before\s+the\s+first\s+tool\s+call,\s+say\s+in\s+one\s+sentence\s+what\s+is\s+about\s+to\s+happen\.$/m,
+    );
+    expect(text).toMatch(
+      /^- Give\s+a\s+brief\s+update\s+when\s+something\s+important\s+is\s+found\s+or\s+the\s+direction\s+changes\.\s+Stay\s+quiet\s+otherwise\.$/m,
+    );
+    expect(text).toMatch(/^## Correcting an earlier statement$/m);
+    expect(text).toMatch(
+      /^- Correct\s+an\s+earlier\s+statement\s+when\s+the\s+error\s+would\s+change\s+the\s+user's\s+code,\s+conclusions\s+or\s+decisions\.\s+State\s+the\s+correction\s+plainly\s+and\s+continue\.$/m,
+    );
+    expect(text).toMatch(/Fix a slip that changes none of those without mentioning it/);
+  });
+
+  // The .instruction tree states no rule of its own. A second set of report
+  // sections there is a copy that drifts from the article.
+  it(".instruction/00_universal/communication.md points at the article for reports", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/communication.md"),
+      "utf-8",
+    );
+    const section = text.split(/^## Progress and completion reports\r?\n/m)[1];
+    expect(section, "no pointer section for reports").toBeDefined();
+    expect(section).toContain(".qfai/assistant/rule/communication.md");
+    // The pointer is the last section and carries no list of its own.
+    expect(section).not.toMatch(/^## /m);
+    expect(section).not.toMatch(/^- /m);
+    // Four sections: principles, when to stop and ask, the question pointer,
+    // and the report pointer. A restored report section adds a fifth.
+    expect(text.match(/^## /gm)).toHaveLength(4);
+  });
+});
+
 describe("this repository's pull-request description", () => {
   it("keeps the operative adoption bar in the existing policy and template", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");

@@ -19,6 +19,65 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each gain one check for these. Test coverage for every source change is still
   required.
 
+- **The patterns that mark a design as generated are named** (#2241). A new
+  `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
+  color and typography to copy, flow and untouched library defaults. Each one
+  is a sentence a reviewer can check a screen against. It also pairs each
+  banned default with the substitute a model falls back to, such as cream and
+  terracotta after the purple gradient.
+  - The brand catalog, the review bundle and the UIX comparison review point
+    at that file. The review bundle's "AI slop" item is replaced by one that
+    fails on a named pattern the recorded brand direction does not ask for. The
+    comparison review no longer cites a pattern list that did not exist.
+  - All eight archetypes were checked against the list. None of them now
+    prescribes a listed pattern, such as `Tech`'s all-caps labels, `Organic`'s
+    terracotta or `Elegant`'s wide letter-spacing.
+  - Each archetype names two or three candidate typeface families, and the
+    catalog adds candidates for Japanese, Chinese and Cyrillic text. No
+    candidate is a default family or one of the families models fall back to.
+
+- **The delegation baseline names the host limits above the declared shape**
+  (#2239). Dispatch limits are read by the agent that dispatches, so nothing in
+  QFAI bounded a run that spawned more workers, nested delegation deeper or kept
+  spending past what it declared. A new section in
+  `rule/shared-skill-delegation-baseline.md` lists the controls a host provides
+  for nesting depth, concurrent sub-agents and spend, with their defaults: Claude
+  Code 2.1.217 or later, Codex, the GitHub Copilot CLI and the VS Code Local harness.
+  Where no equivalent was confirmed, it says so. QFAI sets none of them, and the
+  section states that such a limit sits above the declared shape, never at it.
+  The implementation skill's parallelization policy points to it.
+
+- **The reviewer gate is not self-verification.** The independent-reviewer
+  definition now says why guidance against using sub-agents to verify your own
+  work does not reach the reviewer gate: an independent reviewer authored none
+  of what it reviews, and its verdict is recorded and pinned to a hash of the
+  reviewed state. The author cannot accept its own output.
+
+- **The artifact-reuse and tuning-scope tests fail on the cases they reject**
+  (#2217).
+  - The artifact-reuse test counted the step that calls `ci:build-verify` as
+    one pack-lifecycle build. It now resolves that script through the root
+    `package.json` and counts the two helpers that pack, so dropping either
+    one changes the count.
+  - The tuning-scope test compared each project with the shared knob, so an
+    edit to the knob moved every project at once and nothing failed. It now
+    compares with the declared value, and reads the projects with the tuning
+    overrides cleared.
+  - The run identifiers that justify a tuning move now count only in the last
+    `DEC-` row of `.qfai/spec/decisions.md` that names the project and every
+    setting it moved. Before, any row naming the project counted, so an
+    earlier change's greens could justify a later one.
+
+- **The reporting contract covers what an agent says while it works**
+  (#2237). `.qfai/assistant/rule/communication.md` now has the agent say in
+  one sentence what it is about to do before its first tool call, and give an
+  update only when something important is found or the direction changes. The
+  final report leads with the outcome. An earlier statement is corrected
+  plainly when the error would change the user's code, conclusions or
+  decisions; a slip that changes none of those is fixed without comment. This
+  repository's `.instruction/00_universal/communication.md` drops its own
+  progress-report and completion-report sections and points to that article.
+
 ## [2.0.2] - 2026-10-03
 
 ### Added
