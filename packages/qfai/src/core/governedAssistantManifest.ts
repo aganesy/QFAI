@@ -24,6 +24,7 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "rule/review-convergence.md",
   "rule/shared-skill-delegation-baseline.md",
   "rule/shared-skill-operating-baseline.md",
+  "rule/stage-cost.md",
   "rule/test-layers.md",
   "rule/thinking.md",
   "rule/ui-definition-protocol.md",
