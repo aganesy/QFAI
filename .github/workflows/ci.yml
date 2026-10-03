@@ -782,7 +782,7 @@ jobs:
       - name: Collect exact root finding reports
         if: github.event_name == 'pull_request'
         env:
-          QFAI_MEASUREMENT_MAIN: 6a421cd12d27f5d41134b31ce8e4c28b9a4bd646
+          QFAI_MEASUREMENT_MAIN: 53ddbf700d663d64eddfc1e07a7f303839218ae7
           QFAI_MEASUREMENT_HEAD: ${{ github.event.pull_request.head.sha }}
         run: node scripts/collect-dogfood-reports.mjs
 
