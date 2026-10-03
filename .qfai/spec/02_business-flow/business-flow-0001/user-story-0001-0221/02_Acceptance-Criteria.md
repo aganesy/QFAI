@@ -35,5 +35,5 @@ Feature: Judge the router against labelled requests before a release
   Scenario: Every re-routing seed reaches its declared destination
     Given a seed that gives a branch point's outcome
     When it is scored
-    Then the run reaches the destination the branch point declares
+    Then the session reaches the destination the branch point declares
 ```

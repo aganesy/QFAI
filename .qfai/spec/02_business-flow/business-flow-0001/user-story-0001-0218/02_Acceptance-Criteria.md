@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Refuse a route catalog a run cannot use
+Feature: Refuse a route catalog a session cannot use
   # AC-0001-0218-01
   Scenario: A plan names only installed steps, in stages of one kind
     Given a plan

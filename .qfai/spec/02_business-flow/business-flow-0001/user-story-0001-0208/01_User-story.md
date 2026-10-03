@@ -7,4 +7,3 @@ As an operator who asked for a feature once, I want `/qfai-verify` to run the fi
 ## Non-goals
 
 - Repairing a story, a contract, a test or production code.
-- Changing the path, fields or values of `verify.json`.

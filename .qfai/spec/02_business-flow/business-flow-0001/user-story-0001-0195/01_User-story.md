@@ -6,7 +6,7 @@ As an operator, I want a stage skill that the host picks for a free-text request
 
 ## Non-goals
 
-- The entry skill `qfai-run` and the workflow control core.
+- The entry skill `qfai-run` and `npx qfai workflow plan`.
 - What `qfai init` installs.
 - What each step does.
 - How a skill that owns steps runs them when invoked by name.

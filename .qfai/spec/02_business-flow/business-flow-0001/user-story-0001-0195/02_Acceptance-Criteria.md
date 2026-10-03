@@ -18,7 +18,7 @@ Feature: A stage skill picked up by free text hands over
     Given a stage skill invoked by name
     When it runs
     Then it runs standalone and ends at that stage, starting no other stage
-    And a request to take the work to the end becomes a whole run
+    And a request to take the work to the end is handed to `qfai-run`, which plans the whole route
 
   # AC-0001-0195-04
   Scenario: Each stage-skill description opens with its trigger condition
