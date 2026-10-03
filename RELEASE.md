@@ -41,10 +41,13 @@ matches the current version.
 
 ## Branch and PR
 
-- Branch naming: `feature/vX.Y.Z`
+- Branch naming: on the automated path Prepare release creates `release/vX.Y.Z`.
+  On the manual path, use `feature/vX.Y.Z`
 - Run CI locally before creating the PR (the commands are in the next section)
 - Review completion criteria: the DoD is met and every additional finding is resolved
-- A permission holder merges and tags the PR
+- A permission holder merges the PR. On the automated path, Tag release commit
+  pushes the tag. It does not tag a merge from `feature/vX.Y.Z`, so on the manual
+  path a permission holder pushes the tag by hand (step 4 of the manual procedure)
 
 ## Automated path (recommended)
 
@@ -140,7 +143,11 @@ Note: run the commands below from the repository root unless stated otherwise.
 
    After the dry-run, return to the repository root (Unix/Linux: `cd ../../`, PowerShell: `Set-Location ..\\..`). Run the remaining steps from the repository root.
 
-4. Create the tag
+4. Create the tag (manual path only)
+
+   On the automated path, Tag release commit pushes the tag when the
+   `release/vX.Y.Z` PR merges. A hand tag there races it, so skip this step.
+   On the manual path, push it only on the user's explicit instruction.
 
    ```sh
    git tag vX.Y.Z
