@@ -55,7 +55,6 @@ both outlive an exhausted budget.
   - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`
-  - `.qfai/assistant/skill/qfai-prototyping/references/evidence-requirements.md`
 
 ## Inputs Priority (Preflight)
 

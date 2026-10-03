@@ -30,7 +30,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { validateSddDesignContractReadiness } from "../../src/core/validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "../../src/core/validators/designContractReadiness.js";
 import { loadConfig } from "../../src/core/config.js";
 
 const roots: string[] = [];
@@ -59,7 +59,7 @@ describe("qfai init and root DESIGN.md", () => {
     const root = await freshInit();
     const { config } = await loadConfig(root);
 
-    const findings = await validateSddDesignContractReadiness(root, config);
+    const findings = await validateDesignContractReadiness(root, config);
 
     expect(findings.filter((f) => f.code === "QFAI-DCON-034")).toEqual([]);
   });

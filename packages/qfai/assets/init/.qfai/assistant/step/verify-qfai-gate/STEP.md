@@ -36,8 +36,7 @@ signals; this one decides. It records failures and repairs none of them:
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
 3. Run the static policy checks (below).
-4. For a prototyping-scoped run, check the loop evidence (below).
-5. Report each result in the stage report.
+4. Report each result in the stage report.
 
 ## What this gate is
 
@@ -46,8 +45,9 @@ satisfy it, and no waiver or environment makes it satisfy it. That is not a
 ban on narrow profiles in CI: `qfai-discussion` and `implement-scaffold` each
 use one as their own gate, those runs are legitimate under `CI=true`, and
 `QFAI-VALIDATE-017` (`warning`) marks them as not full-scan rather than
-blocking them. The prototyping profile runs only locally, before `certify`: it
-reads loop outputs that are never committed.
+blocking them. The prototyping profile is the prototyping stage's own gate:
+CI runs its checks inside the full scan, and no CI lane runs the profile on
+its own.
 
 ## Findings
 
@@ -76,25 +76,10 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 - The reviewer agent cards include the drift-protocol and test-layer review
   viewpoints.
 
-## Prototyping evidence
-
-For a prototyping-scoped run:
-
-- every declared screen has a screenshot, the HTML and a `review.json` under
-  `.qfai/evidence/prototyping/iter-NN/`;
-- the final iteration recorded in
-  `.qfai/evidence/prototyping/prototyping.json#iterations[]` has its
-  screenshot and HTML on disk.
-
-The completion certificate is not an input here. `npx qfai prototyping certify`
-runs after verify and reads its passing verdict. Checking the certificate's
-digests is `certify --check`'s job, during handoff or after a brand asset edit.
-
 ## Gate
 
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
 - `error=0` for a pass, or the failing findings are recorded for the fix loop;
-- the static policy checks and, for a prototyping scope, the loop evidence
-  are recorded.
+- the static policy checks are recorded.

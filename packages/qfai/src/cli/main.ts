@@ -3,12 +3,6 @@ import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
-import { runPrototypingIterate } from "./commands/prototypingIterate.js";
-import {
-  runPrototypingCertify,
-  runPrototypingShowUiContract,
-} from "./commands/prototypingCertify.js";
-import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
@@ -54,7 +48,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "sdd",
   "atdd",
   "discussion",
-  "prototyping",
   "workflow",
 ]);
 
@@ -277,88 +270,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
-    case "prototyping":
-      {
-        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
-        if (options.prototypingAction === "certify") {
-          const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runPrototypingCertify({
-            root: resolvedRoot,
-            check: Boolean(options.prototypingCheckOnly),
-            ...(options.prototypingScope !== undefined ? { scope: options.prototypingScope } : {}),
-            ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
-          });
-          return;
-        }
-        if (options.prototypingAction === "rescope") {
-          const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runPrototypingRescope({
-            root: resolvedRoot,
-            remove: options.rescopeRemove,
-            reason: options.rescopeReason ?? "",
-            dryRun: options.dryRun,
-          });
-          return;
-        }
-        if (options.prototypingAction === "show-ui-contract") {
-          const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runPrototypingShowUiContract({ root: resolvedRoot });
-          return;
-        }
-        if (options.prototypingAction === "preflight") {
-          const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runDoctor({
-            root: resolvedRoot,
-            rootExplicit: true,
-            format: options.doctorFormat,
-            ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            // Pass `never` through as doctor's explicit opt-out.
-            ...(options.failOn ? { failOn: options.failOn } : {}),
-            profile: "prototyping",
-            ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
-          });
-          return;
-        }
-
-        // iterate: single-thread evolution loop driver.
-        //
-        // --check-convergence bypasses the cycle-required guard because
-        // the read-only peek path defaults to cycle 9 (the final cycle
-        // per the peek-mode hint convention) when --cycle is omitted.
-        if (options.prototypingCycle === undefined && !options.prototypingCheckConvergence) {
-          error("qfai prototyping iterate: --cycle <number> is required.");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        const resolvedRoot = await resolveRoot(options);
-        process.exitCode = await runPrototypingIterate({
-          root: resolvedRoot,
-          // When --check-convergence is set without --cycle, default to
-          // cycle 9 (the final cycle of the loop, matching the peek-mode
-          // hint string in `CYCLE_OUT_OF_RANGE_PEEK_HINT`).
-          cycle: options.prototypingCycle ?? 9,
-          ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
-          ...(options.force ? { force: true } : {}),
-          ...(options.dryRun ? { dryRun: true } : {}),
-          ...(options.prototypingLicensePatch
-            ? { licensePatch: options.prototypingLicensePatch }
-            : {}),
-          ...(options.prototypingPrimaryUiContract
-            ? { primaryUiContract: options.prototypingPrimaryUiContract }
-            : {}),
-          ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
-          ...(options.prototypingCapture ? { capture: true } : {}),
-          ...(options.prototypingAutoServe ? { autoServe: true } : {}),
-          ...(options.prototypingEmitSkeletons ? { emitSkeletons: true } : {}),
-          ...(options.prototypingSkeletonMode !== undefined
-            ? { skeletonMode: options.prototypingSkeletonMode }
-            : {}),
-          ...(options.prototypingMode !== undefined ? { mode: options.prototypingMode } : {}),
-        });
-      }
-      return;
-
     case "workflow":
       process.exitCode = await workflowEntry(false, undefined, options);
       return;
@@ -433,15 +344,6 @@ Commands:
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow plan                Print the route plan for a request extraction (--in <path|->) or a route (--route <route>)
-  prototyping preflight        Diagnose prototyping preconditions (spec/UI contracts/DESIGN.md/roles/browser/targetUrl)
-  prototyping iterate          Commit one cycle of the single-thread evolution loop
-  prototyping certify [--check]         Generate / verify completion-certificate.json
-                                        [--scope <saas-package|full>] issue a scope-limited certificate
-                                        [--upgrade-scope full] promote a scope-limited certificate to full DONE
-  prototyping show-ui-contract          Print the frozen UI contract scope
-  prototyping rescope --remove <id> --reason <delta-id>
-                                        Drop a retired surface from frozenSurfaceUnion
-                                        (the loop stays on its current cycle; a surface still being resolved is refused)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
@@ -455,46 +357,29 @@ Options:
                   so your own command / prompt / skill files survive; a symlink has no content of
                   its own, so one you published under a retired QFAI skill name is deleted (its
                   target .qfai/assistant/skill/<id>/ stays, so you can re-link it).
-  --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
-                  to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
-                  refused with exit 2). A cycle 0 that resets the loop, with or without it,
-                  also moves the aggregate screenshots/ and html/ to aggregate.backup-<ISO>
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
                               (legacy .qfai/assistant/{instructions,steering}/ -> rule/ skill/ agent/ prompt/)
-  --dry-run       init / doctor / prototyping iterate|rescope: show what would change without writing anything
+  --dry-run       init / doctor: show what would change without writing anything
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
-  --remove <surface-id>        prototyping rescope: surface id to drop (repeatable)
-  --reason <delta-id>          prototyping rescope: the delta / decision id that retired it (required)
-  --format <text|json>         doctor / prototyping preflight / discussion list: output format
+  --format <text|json>         doctor / discussion list: output format
   --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
                                 drift runs the drift guard alone: the same gate tdd carries, without the completion obligations
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
-  --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
+  --fail-on <error|warning|never>  doctor: failure threshold (defaults to validation.failOn; the shipped default is error)
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
-  --out <path>                  report/doctor/prototyping preflight: output path (a relative path is resolved against --root)
+  --out <path>                  report/doctor: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL
-  --target-url <url>            prototyping preflight/iterate: URL under evaluation
-  --cycle <number>              prototyping iterate: cycle index (0..9)
-  --check-convergence           prototyping iterate: peek at a converged loop state without re-running it (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
-  --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; Playwright is imported dynamically)
-  --auto-serve                  prototyping iterate: opt-in in-process local HTTP server (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE is a refusal)
-  --license-patch <file>        prototyping iterate: apply an add-only license allowlist patch on any cycle (not cycle 0 only; appended to the audit ledger and replayed on later cycles. sourceHosts are not replayed)
-  --primary-ui-contract <UI-NNNN> prototyping iterate: pick the primary UI contract when several apply
-  --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
-  --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
-  --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)
-  --scope <saas-package|full>   prototyping certify: issue a scope-limited certificate (saas-package lists the skipped gates in notes[])
-  --upgrade-scope full          prototyping certify: promote a scope-limited certificate to full DONE (re-evaluates the validate --profile saas-package signal)
+  --target-url <url>            doctor --profile prototyping: URL under evaluation
   --clean                       doctor: delete validate run logs (outDir/run-*) past their TTL (the newest N are always kept; combinable with --dry-run)
   --autoremediate               doctor: run install + clean together
   --assume <text>               sdd preflight: record a carried-over open question / assumption in the summary (repeatable)

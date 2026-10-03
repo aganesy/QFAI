@@ -452,19 +452,4 @@ describe("validate rule codes are owned by exactly one module", () => {
       "these codes were published and then retired with their validator; taking a number back makes one public code mean two different checks across versions — pick an unused number instead",
     ).toEqual([]);
   });
-
-  it("the screen-id casing check and specsCovered linkage no longer share a code", async () => {
-    const casing = await readFile(
-      path.join(coreRoot, "validators", "prototypingEvidence.ts"),
-      "utf-8",
-    );
-    const linkage = await readFile(
-      path.join(coreRoot, "validators", "prototyping", "specIdLinkage.ts"),
-      "utf-8",
-    );
-
-    expect(casing).toContain('"QFAI-PROT-010"');
-    expect(linkage).toContain('"QFAI-PROT-008"');
-    expect(linkage).not.toContain('"QFAI-PROT-010"');
-  });
 });

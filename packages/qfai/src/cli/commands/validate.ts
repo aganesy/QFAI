@@ -356,13 +356,6 @@ export function scopedReportPath(
  * `.qfai/output/foo-<profile>.json` — keeps backward compatibility with
  * non-default configurations.
  *
- * Exported so the certify-side `--upgrade-scope full` reader can derive
- * the same canonical signal path from the loaded config rather than
- * hardcoding a literal — otherwise an operator override of
- * `output.validateJsonPath` in `qfai.config.yaml` redirects the writer
- * but not the reader, and `--upgrade-scope full` refuses to upgrade
- * even when the saas-package gates are actually passing under the
- * custom location.
  */
 export function profileSuffixedReportPath(configured: string, profile: string): string {
   const dir = path.posix.dirname(configured.replace(/\\/g, "/"));
@@ -450,7 +443,7 @@ export const GATE_GROUP_FAMILIES = {
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
   ],
-  "reviewer-gate-sdd": ["R-PROMPT-SCANNER-DRIFT", "R-AUTOPILOT-POLICY-*"],
+  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
   "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
   contracts: [
     "QFAI-CONTRACT-000",
@@ -472,12 +465,8 @@ export const GATE_GROUP_FAMILIES = {
   "contract-parse": ["QFAI-CONTRACT-021"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   prototyping: [
-    "QFAI-PROT-*",
-    "QFAI-CRIT-*",
-    "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
     "QFAI-FLOW-001",
@@ -519,7 +508,6 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "contract-parse",
   "reviewer-gate-shared",
   "design-contract-readiness",
-  "design-contract-readiness-prototyping",
   "root-design-md-parse",
   "research-summary",
   "canonical-uix",
@@ -1160,8 +1148,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
-  "QFAI-PROT-011":
-    "Every spec named in `prototyping.json#frozenSurfaceUnion` still resolves as UI-bearing, so the open loop describes screens that exist; a retired surface is either restored or the loop is reset deliberately from cycle 0.",
   "QFAI-SCAN-002":
     "`validate` runs to completion, so its output is a verdict; a run that could not finish reports that as a finding rather than as a bare stderr line with no counts, no run-log and no validate.json.",
   "QFAI-TOOL-002":
@@ -1217,27 +1203,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-311":
-    "executionPlan.delegationMap is present but is not an object, or one of its entries assigns a category to a role outside the SKILL.md Delegation Scope Table.",
-  "QFAI-PROT-335":
-    ".qfai/evidence/prototyping/completion-certificate.json is required when prototyping completion is claimed (run `qfai prototyping certify` after all gates pass).",
-  "QFAI-PROT-336":
-    ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
-  "QFAI-CFG-LINK-003":
-    "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
-  "QFAI-UIE-001":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
-  "QFAI-UIE-002":
-    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
-  "QFAI-UIE-003":
-    "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
-  "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",
-  "QFAI-DCON-013":
-    "prototyping.json#handoff must carry `finalArtifact` and `implementationNotes`, each as a non-empty string — the first the path of the final prototype, the second the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
   "QFAI-DCON-033":
@@ -1256,8 +1225,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A step's or skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
-  "QFAI-PROT-337":
-    "prototyping.mode=exploration downgraded one or more declared-error gates to warning; the notice names the source file and the affected codes.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so a project meeting one of them for the first
   // time has a backlog to work through rather than a single edit.

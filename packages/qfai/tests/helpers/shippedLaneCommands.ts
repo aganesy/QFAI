@@ -1609,7 +1609,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // Re-pinned for the removal of the `atdd` block and its `scaffoldEscalateCycles` key, which
   // nothing reads any more. Restoring the block reproduces `1fea21e9…` byte for byte.
-  ["qfai.config.yaml", "c1f4c390e39091db076203f135787ce9860f9462939f519675d7a884a1f62662"],
+  //
+  // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
+  // keeps no calibration pack. Restoring the two lines `calibration:` and
+  // `packPath: .qfai/evidence/calibration.yaml` reproduces `c1f4c390…` byte for byte.
+  ["qfai.config.yaml", "e9129574dd758cb14b57a20b310b7e5836e6de417b2af86292ba5887d2241ac8"],
 ]);
 
 /**

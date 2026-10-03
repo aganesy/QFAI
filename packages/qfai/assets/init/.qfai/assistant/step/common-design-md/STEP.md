@@ -10,9 +10,8 @@ routing-profile: ui-bearing
 # common-design-md
 
 Root `DESIGN.md` at `<consuming-project-root>/DESIGN.md` is the brand SSOT.
-Everything downstream treats its tokens as exact: the prototyping loop records
-its sha256 at cycle 0 and refuses a later change, and `certify` re-scans every
-captured literal against them.
+Everything downstream treats its tokens as exact: the prototyping reviewer
+checks every literal of every iteration against them.
 
 ## When it applies
 
@@ -61,8 +60,8 @@ in `DESIGN.md`
 
 Before anything is generated from `DESIGN.md`:
 
-1. Run `npx qfai prototyping preflight --target-url <url>`, the alias of
-   `npx qfai doctor --profile prototyping`. It reports whether root `DESIGN.md`
+1. Run `npx qfai doctor --profile prototyping --target-url <url>`. It reports
+   whether root `DESIGN.md`
    exists, is not the unreplaced sample, and parses, and refuses while a UI
    contract screen has no primary task.
 2. `npx qfai validate` reports the same file: `QFAI-DCON-030` when it is
@@ -70,8 +69,8 @@ Before anything is generated from `DESIGN.md`:
    is still the unreplaced sample.
 3. On any of these, stop and fix `DESIGN.md` through § Author and validate.
 
-Once a prototyping loop has started, `DESIGN.md` stays as cycle 0 recorded it.
-To change it, edit it and start the loop again from cycle 0.
+Once a prototyping loop has started, `DESIGN.md` is read-only for it. To change
+it, edit it; the next iteration is built from it.
 
 ## Passes when
 
