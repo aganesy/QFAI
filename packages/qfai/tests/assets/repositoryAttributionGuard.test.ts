@@ -115,7 +115,7 @@ describe("repository attribution matcher", () => {
 
   describe("leaves legitimate prose alone", () => {
     it("for the bare phrase", () => {
-      // qfai-atdd / qfai-configure / qfai-verify all say this correctly.
+      // qfai-configure and qfai-verify both say this correctly.
       expect(matchRepositoryAttribution("run the relevant test suite for this repository")).toBe(
         null,
       );

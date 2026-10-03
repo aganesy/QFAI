@@ -142,18 +142,6 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
-  // QFAI:AC-0001-0197-02
-  // QFAI:EX-0001-0197-02
-  it("runs only qfai-atdd's own steps in the acceptance stages", async () => {
-    const owned = await skillSteps("qfai-atdd");
-    expect(owned).toEqual(["atdd-scaffold", "atdd-credentials", "atdd-author", "atdd-test-fix"]);
-    const acceptance = await kindSteps(["acceptance"]);
-    expect(acceptance.names.filter((step) => !owned.includes(step))).toEqual([]);
-    for (const route of ["repair-test", "quarantine-flaky"]) {
-      expect((await stageNames(route, "test_fix")).flat(), route).toContain("atdd-test-fix");
-    }
-  });
-
   // QFAI:AC-0001-0200-02
   // QFAI:EX-0001-0200-02
   it("runs only qfai-implement's own steps, and never the seam step, in the plans", async () => {
@@ -179,6 +167,9 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-dep-bump",
         "implement-tooling",
         "implement-backport",
+        "implement-scaffold",
+        "implement-credentials",
+        "implement-acceptance",
       ].sort(),
     );
     const implement = await kindSteps(["diagnose", "implement", "regression_fix"]);
