@@ -16,7 +16,7 @@ Feature: Repair a bug the stories already describe without uncovering an example
   Scenario: A regression caught by an existing test is fixed against its covered example
     Given diagnosis returns the regression verdict for an example a test annotates
     When the plan continues
-    Then the run re-routes to the route whose `regression_fix` stage fixes it, then a full verify
+    Then the session re-routes to the route whose `regression_fix` stage fixes it, then a full verify
     And the example stays annotated
     And the fix is accepted only with the same test's GREEN re-run and an independent review
 
