@@ -132,6 +132,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow` keeps each stage result it records under the run's
+  `results/`** (#2348). Complete JSON is stored before its journal event.
+  New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
+  case-distinct IDs and Windows device names keep separate receipts.
+  Earlier recorded paths remain readable. The tracked `summary.json` lists
+  each accepted result's digest before the stage's report-copy digests.
+
 - **Journal directory read errors retain their original cause** (#2841).
   Missing directories still identify a legacy run. Busy or denied reads reach
   the workflow's I/O refusal; other errors propagate.
