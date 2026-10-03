@@ -100,7 +100,7 @@ out. Under a no-question mode, list them in the report instead.
 
 ## Next
 
-- `/qfai-atdd` / `/qfai-implement` / `/qfai-verify`
+- `/qfai-implement` / `/qfai-verify`
 
 ## Default Autopilot Policy
 

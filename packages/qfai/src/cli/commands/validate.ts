@@ -479,7 +479,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CFG-LINK-*",
   ],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
-  "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -531,7 +530,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "package-self-governance",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
+  atdd: ["story-test-obligations", "test-stubs"],
   tdd: [
     "story-test-obligations",
     "test-stubs",

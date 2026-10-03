@@ -77,7 +77,6 @@ function headingLevel(line: string): number {
  */
 export const PLAN_STEP_OWNERS = [
   "qfai-sdd",
-  "qfai-atdd",
   "qfai-implement",
   "qfai-verify",
   "qfai-discussion",

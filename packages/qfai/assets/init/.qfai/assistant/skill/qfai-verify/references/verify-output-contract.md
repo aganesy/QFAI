@@ -19,11 +19,11 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.q
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
-| `scope`       | Written by                                                                          | validate profile                                |
-| ------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `prototyping` | a run checking the prototyping profile alone                                        | `npx qfai validate --profile prototyping`       |
-| `atdd`        | after `/qfai-atdd`, checking ATDD obligations only                                  | `npx qfai validate --profile atdd`              |
-| `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) |
+| `scope`       | Written by                                                          | validate profile                                |
+| ------------- | ------------------------------------------------------------------- | ----------------------------------------------- |
+| `prototyping` | a run checking the prototyping profile alone                        | `npx qfai validate --profile prototyping`       |
+| `atdd`        | checking acceptance-test obligations only                           | `npx qfai validate --profile atdd`              |
+| `full`        | any whole-repository run, including the one after `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) |
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`.

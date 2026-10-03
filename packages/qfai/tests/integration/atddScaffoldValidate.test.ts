@@ -5,13 +5,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
-import { defaultConfig } from "../../src/core/config.js";
-import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
+import { validateProject } from "../../src/core/validate.js";
 
 const roots: string[] = [];
 const flowId = "BF-0008";
 const storyId = "US-0008-0007";
 const acId = "AC-0008-0007-01";
+const acTest = path.join("tests", "integration", storyId, `${acId}.test.ts`);
 
 async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-scaffold-e2e-"));
@@ -25,45 +25,62 @@ async function project(): Promise<string> {
     path.join(story, "02_Acceptance-Criteria.md"),
     `# Acceptance Criteria\n\n\`\`\`gherkin\n# ${acId}\nScenario: completes checkout\n  Given a cart\n\`\`\`\n`,
   );
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["validation:", "  traceability:", "    testFileGlobs:", "      - tests/**/*.test.ts", ""].join(
+      "\n",
+    ),
+  );
   return root;
+}
+
+/** The codes `qfai validate --profile atdd` raises against the AC test. */
+async function findingsOnAcTest(root: string): Promise<string[]> {
+  const result = await validateProject(root, undefined, { profile: "atdd" });
+  const file = acTest.split(path.sep).join("/");
+  return result.issues
+    .filter((issue) => issue.file?.split(path.sep).join("/").endsWith(file))
+    .map((issue) => issue.code);
 }
 
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-describe("ATDD scaffold story-tree end to end", () => {
+describe("ATDD scaffold output under validate", () => {
   it("emits the AC and BF test homes and annotations", async () => {
     const root = await project();
     expect(await runAtddScaffold({ root, storyId, write: () => {}, writeErr: () => {} })).toBe(0);
     expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
-    expect(
-      await readFile(path.join(root, "tests", "integration", storyId, `${acId}.test.ts`), "utf8"),
-    ).toContain(`QFAI:${acId}`);
+    expect(await readFile(path.join(root, acTest), "utf8")).toContain(`QFAI:${acId}`);
     expect(await readFile(path.join(root, "tests", "e2e", `${flowId}.test.ts`), "utf8")).toContain(
       `QFAI:${flowId}`,
     );
-    expect(
-      (await validateScaffoldPlaceholder(root, defaultConfig))
-        .map((finding) => finding.refs)
-        .flat(),
-    ).toEqual(expect.arrayContaining([acId, flowId]));
   });
 
-  it("preserves edited assertions and escalates only the remaining placeholder", async () => {
+  // QFAI:AC-0001-0073-05
+  // QFAI:EX-0001-0073-02
+  it("raises no finding for an empty scaffolded test, however often validate runs", async () => {
     const root = await project();
     await runAtddScaffold({ root, storyId, write: () => {}, writeErr: () => {} });
-    await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} });
-    const acFile = path.join(root, "tests", "integration", storyId, `${acId}.test.ts`);
-    const completed = `// QFAI:${acId}\nit("checks", () => { expect(true).toBe(true); });\n`;
-    await writeFile(acFile, completed);
+
+    for (let run = 0; run < 3; run += 1) {
+      expect(await findingsOnAcTest(root)).toEqual([]);
+    }
+  });
+
+  // QFAI:AC-0001-0073-05
+  // QFAI:EX-0001-0073-07
+  it("reports a scaffolded test changed to skip, then to todo", async () => {
+    const root = await project();
     await runAtddScaffold({ root, storyId, write: () => {}, writeErr: () => {} });
-    expect(await readFile(acFile, "utf8")).toBe(completed);
-    expect((await validateScaffoldPlaceholder(root, defaultConfig))[0]?.severity).toBe("warning");
-    expect((await validateScaffoldPlaceholder(root, defaultConfig))[0]?.severity).toBe("warning");
-    const final = await validateScaffoldPlaceholder(root, defaultConfig);
-    expect(final).toHaveLength(1);
-    expect(final[0]?.severity).toBe("error");
-    expect(final[0]?.refs).toEqual([flowId]);
+    const file = path.join(root, acTest);
+    const scaffolded = await readFile(file, "utf8");
+
+    await writeFile(file, scaffolded.replace(/\bit\(/, "it.skip("));
+    expect(await findingsOnAcTest(root)).toEqual(["QFAI-TEST-003"]);
+
+    await writeFile(file, scaffolded.replace(/\bit\((".*?"), \(\) => \{\}\);/, "it.todo($1);"));
+    expect(await findingsOnAcTest(root)).toEqual(["QFAI-TEST-001"]);
   });
 });

@@ -228,7 +228,7 @@
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10",
         "scripts/check-workflow-hygiene.mjs": "30c02b4b0d2e51034b2ae14e5ecab5f6ced528466bb8f74a23017463f9dd94ac",
-        "scripts/dogfood-backlog.json": "e29b5cd28fa80fc5f19f055b58a59bd79c8f87d5009d1036eebc2282d5e27b91",
+        "scripts/dogfood-backlog.json": "3fa3a28b22d83188504c4fd57c34252614d48e56eb896c737d4b3f12e152d028",
         "scripts/fresh-init-findings.json": "a25a8096a268e9d6abca3f0fe25f97411e214a329604451196489397a13009a1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
@@ -249,7 +249,7 @@
         "scripts/smoke-qfai-cli.mjs": "7c223309c1791d97caf516d3218a845ca64e62dfe3fb1bb67e37470da688d4c2",
         "scripts/story-ids.mjs": "7f559938d7b49a7b075c5abce28c364d22948d9a84e59fdf2e22ab464b3b96c4",
         "scripts/sync-init-to-root.mjs": "f053272f5a47c1e08fd53112255b52366b4da3bd62718c1ca57d30f7787d3af3",
-        "scripts/verify-pack.mjs": "e5822c2a7fd4f4e2a195207c30770afc3a693575123e3cd2a6974b23da67b455"
+        "scripts/verify-pack.mjs": "9aaf45a87a8825da759fdc2e014d85dc6081a43221f641d0aaf6e6afdf47f21b"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -397,9 +397,9 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "6dd5f3649e62f505",
+        "Verify the toolchain action before running it": "ea65a0d6b6b1b080",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "6dd4ecd629d303f5",
+        "Run build & pack verification": "c9eb0cba6fcc16d2",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "789e930d0d948215",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "5efd5b99feb24ee6",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4ee4a3dec81d6bdd",

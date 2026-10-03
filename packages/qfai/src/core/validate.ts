@@ -41,10 +41,6 @@ import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import {
-  scaffoldPlaceholderReportedFilter,
-  validateScaffoldPlaceholder,
-} from "./validators/scaffoldPlaceholder.js";
-import {
   detectPlatform,
   validateAgentDefinition,
   validateDesignToken,
@@ -157,7 +153,6 @@ export async function validateProject(
     timingsSink,
     options.platform,
     storyModel,
-    flowScope,
   );
   const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
@@ -411,7 +406,6 @@ async function runProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
   storyModel?: StoryTreeModel,
-  flowScope?: FlowScope,
 ): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
@@ -476,15 +470,7 @@ async function runProfileValidators(
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     if (!storyModel) return [];
-    return runStoryProfileValidators(
-      root,
-      config,
-      profile,
-      storyModel,
-      timings,
-      platformOption,
-      flowScope,
-    );
+    return runStoryProfileValidators(root, config, profile, storyModel, timings, platformOption);
   }
 }
 
@@ -495,7 +481,6 @@ async function runStoryProfileValidators(
   model: StoryTreeModel,
   timings: TimingsSink,
   platformOption?: string,
-  flowScope?: FlowScope,
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
@@ -512,11 +497,7 @@ async function runStoryProfileValidators(
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
-    ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
-    ...(await validateTestTodoStubs(root, config, {
-      ...acceptanceStubScan(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    })),
+    ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
   ];
   const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "tdd", model)),

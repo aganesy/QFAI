@@ -218,12 +218,7 @@ describe("assets guardrails", () => {
 
     expect(canonical.length).toBeGreaterThan(0);
 
-    const delegated = new Set([
-      "qfai-atdd",
-      "qfai-implement",
-      "qfai-migration-v1-to-v2",
-      "qfai-sdd",
-    ]);
+    const delegated = new Set(["qfai-implement", "qfai-migration-v1-to-v2", "qfai-sdd"]);
     const missing = (
       await Promise.all(
         canonical
@@ -1851,7 +1846,6 @@ describe("assets guardrails", () => {
     for (const relativePath of [
       "assistant/rule/shared-skill-delegation-baseline.md",
       "assistant/rule/shared-skill-operating-baseline.md",
-      "assistant/skill/qfai-atdd/SKILL.md",
       "assistant/skill/qfai-discussion/SKILL.md",
       "assistant/skill/qfai-sdd/SKILL.md",
     ]) {
@@ -1863,17 +1857,13 @@ describe("assets guardrails", () => {
     }
     const issues = await validateSkillDocReferences(templateRoot, defaultConfig);
     expect(issues.filter((entry) => entry.rule === "skillDocReferences.projectMemory")).toEqual([]);
-    const atdd = await readFile(
-      path.join(templateQfaiDir, "assistant/skill/qfai-atdd/SKILL.md"),
+    const implement = await readFile(
+      path.join(templateQfaiDir, "assistant/skill/qfai-implement/SKILL.md"),
       "utf-8",
     );
-    const atddMemory = atdd.split(/^project_memory:\s*$/m)[1] ?? "";
-    expect(atddMemory).toContain("BF maps to E2E; AC maps to integration or API");
-    expect(atddMemory).toContain("EX tests belong to implement");
-    expect(atddMemory).toContain(
-      "Placeholders and unasserted annotations discharge no obligation.",
-    );
-    expect(atddMemory).not.toMatch(/TC-|TDD-ID|test-list\.md/);
+    const implementMemory = implement.split(/^project_memory:\s*$/m)[1] ?? "";
+    expect(implementMemory).toContain("BF maps to E2E; AC maps to integration or API");
+    expect(implementMemory).not.toMatch(/TC-|TDD-ID|test-list\.md/);
     const sdd = await readFile(
       path.join(templateQfaiDir, "assistant/skill/qfai-sdd/SKILL.md"),
       "utf-8",

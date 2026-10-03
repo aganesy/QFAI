@@ -66,26 +66,29 @@ Read `rule/test-layers.md` and current flow-scoped validation findings.
 The BF obligation belongs in E2E with `QFAI:BF-NNNN`. Every AC belongs in
 integration or API with `QFAI:AC-NNNN-NNNN-NN`. Every EX belongs in another
 test layer with `QFAI:EX-NNNN-NNNN-NN`. A test must contain an executed,
-observable assertion. An annotation or scaffold alone does not discharge an
-obligation. A DONE `Test exception:` decision can resolve one only when it
+observable assertion. An annotation alone does not discharge an obligation.
+An acceptance test with an empty body raises no finding, whoever wrote it,
+until `implement-acceptance` writes its assertions; it is not proof before
+then. A DONE `Test exception:` decision can resolve one only when it
 names the item.
 
-From ATDD onward, read the annotated tests themselves. Check the normal,
+Once the acceptance tests exist, read the annotated tests themselves. Check the normal,
 failure, boundary, special, state-transition and combinatorial cases the
 active story and contract make meaningful. Return REVISE for an unexplained
 required gap or weak oracle; report a gap owned by another stage with that
 owner. During SDD, assess the requirement links without demanding tests that
-the ATDD stage has not written.
+implementation has not written.
 
 ## RED and GREEN observation gate
 
-For each ATDD acceptance test or implementation EX under review, inspect
+For each acceptance test or implementation EX under review, inspect
 its evidence on the revision submitted for review.
 
 - An ordinary RED must show the selected test command, selector and observed
   assertion failure before the production change. A missing dependency,
   load error, fixture failure or unrelated assertion is not RED.
-- When behavior already exists, require a controlled falsifiability check:
+- When behavior already exists, as it does for every acceptance test body
+  `implement-acceptance` writes, require a controlled falsifiability check:
   identify the production predicate the test should detect, change it
   temporarily, observe the selected assertion fail, restore it, and observe
   GREEN again. A syntax error, deleted export or throw without the relevant
@@ -100,9 +103,8 @@ its evidence on the revision submitted for review.
 - Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
-Use `skill/qfai-implement/references/red-admissibility.md`,
-`skill/qfai-implement/references/red-not-observable.md`, and
-`skill/qfai-atdd/references/red-provenance.md` for the three evidence
+Use `skill/qfai-implement/references/red-admissibility.md` and
+`skill/qfai-implement/references/red-not-observable.md` for the evidence
 forms. A verdict covers only the observed round. It does not approve
 scope or the whole flow.
 
@@ -110,7 +112,7 @@ scope or the whole flow.
 
 - Read the current BF's test selectors, command results and reviewer
   verdicts, and check that each names the revision under review.
-- An ATDD gate uses
+- An acceptance-test gate uses
   `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses
   `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`.

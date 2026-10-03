@@ -121,6 +121,31 @@ describe("every supported stack's stub construct is detected", () => {
     });
   });
 
+  it("reports a Python placeholder an earlier scaffold wrote", async () => {
+    // That release raised `NotImplementedError` instead of skipping, so no
+    // dialect pattern sees it; the marker line it left is what does.
+    const legacy = [
+      "# QFAI:AC-0001-0001-01",
+      "# QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+      "",
+      "import unittest",
+      "",
+      "",
+      "class Test_AC_0001_0001_01(unittest.TestCase):",
+      "    def test_ac_0001_0001_01(self) -> None:",
+      "        # TODO: implement assertion for AC-0001-0001-01",
+      '        raise NotImplementedError("pending — scaffold placeholder")',
+      "",
+    ].join("\n");
+    await withTests({ "tests/test_ac_0001_0001_01.py": legacy }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
+      expect(stubs.map((i) => [i.refs?.[0], i.loc?.line])).toEqual([
+        ["QFAI-SCAFFOLD-PLACEHOLDER", 2],
+      ]);
+    });
+  });
+
   it("stays silent on a real test with no stub", async () => {
     await withTests(
       {
@@ -644,85 +669,6 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own rule", () => {
       const stubs = issues.filter((i) => i.code === "QFAI-TEST-003");
       expect(stubs).toHaveLength(3);
       expect(stubs.map((i) => i.loc?.line)).toEqual([3, 4, 5]);
-    });
-  });
-
-  // `qfai atdd scaffold` writes its skeletons as `it.skip`, and
-  // `D-SCAFFOLD-PLACEHOLDER` owns an unfilled scaffold with a ladder of its
-  // own: a warning for `atdd.scaffoldEscalateCycles` validate runs, then an
-  // error. Reporting the same block here too would fail `--fail-on error` on
-  // the scaffold's own output before a line of it was written, and would
-  // overrule that ladder from outside.
-  // What `qfai atdd scaffold` writes: the sentinel AND a per-TC TODO line.
-  // The validator that owns an unfilled skeleton requires both, so a fixture
-  // carrying only the sentinel is a file it passes over — and this gate
-  // standing aside for that would leave the skipped case reported by neither.
-  const SCAFFOLDED = [
-    'import { describe, it } from "vitest";',
-    "",
-    "// TODO: implement assertion for TC-0001-0001",
-    `it${SKIP}("pending — scaffold placeholder", () => {`,
-    "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
-    "});",
-    "",
-  ].join("\n");
-
-  it("leaves an unfilled scaffold to the rule that owns it", async () => {
-    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
-
-      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
-    });
-  });
-
-  // Only a run that has that rule can leave the skeleton to it. A caller that
-  // does not say the rule reads the file, as `--profile tdd` cannot, keeps it.
-  it("reports an unfilled scaffold when no rule in the run owns it", async () => {
-    await withTests({ "tests/a.test.ts": SCAFFOLDED }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
-
-      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
-    });
-  });
-
-  // The marker is the scaffold's own line, so authoring the block removes it.
-  // A `.skip` left behind after that is a hand-written one.
-  it("reports the skip once the scaffold's own marker is gone", async () => {
-    const authored = [
-      'import { describe, it } from "vitest";',
-      "",
-      `it${SKIP}("parked by hand", () => {`,
-      "  expect(1).toBe(1);",
-      "});",
-      "",
-    ].join("\n");
-
-    await withTests({ "tests/a.test.ts": authored }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG);
-
-      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toHaveLength(1);
-    });
-  });
-
-  // The exemption is for the skip form only. The scaffold writes no `.todo`,
-  // so one in a scaffold file was put there by hand and is still the stub rule.
-  it("still reports a todo stub inside a scaffold file", async () => {
-    const mixed = [
-      'import { describe, it } from "vitest";',
-      "",
-      "// TODO: implement assertion for TC-0001-0001",
-      `it${SKIP}("pending — scaffold placeholder", () => {`,
-      "  // QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
-      "});",
-      'it.todo("added by hand");',
-      "",
-    ].join("\n");
-
-    await withTests({ "tests/a.test.ts": mixed }, async (root) => {
-      const issues = await validateTestTodoStubs(root, CONFIG, { placeholderReported: () => true });
-
-      expect(issues.filter((i) => i.code === "QFAI-TEST-003")).toEqual([]);
-      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
     });
   });
 

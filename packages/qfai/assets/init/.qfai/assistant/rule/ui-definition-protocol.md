@@ -6,7 +6,7 @@ How a downstream skill reads a UI definition, and what it may not read.
 
 `/qfai-sdd` alone reads the discussion sidecar artifacts (`discussion-*/uiux/`) and normalizes them into the specs and contracts that downstream execution runs against.
 
-`/qfai-prototyping`, `/qfai-atdd` and `/qfai-verify` do not read a discussion pack. They read the UI and UX definition from the story tree, contracts and evidence.
+`/qfai-prototyping`, `/qfai-implement` and `/qfai-verify` do not read a discussion pack. They read the UI and UX definition from the story tree, contracts and evidence.
 
 ## Reading Order
 

@@ -1530,7 +1530,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned when the write-time reminders stopped skipping `.qfai/run/`, which nothing writes
   // now: the three groups read only the message file again, and their skipping spellings are
   // listed as superseded.
-  [".claude/settings.json", "85902b08198a2c919dc4a6e5d28ffa4ad9301c319a25804efcc7859f00a8afa5"],
+  //
+  // Re-pinned for the removal of the `Skill(qfai-atdd)` permission, the skill no longer shipping.
+  // The whole delta is that one line; restoring it reproduces `85902b08…` byte for byte.
+  [".claude/settings.json", "673f14b22b81192995608e7384e49791b254d0edc5b7a4dc2ccb49297f65d77e"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1604,10 +1607,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // says which registry is primary. The whole delta is those two comment lines:
   // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
   //
+  // Re-pinned for the removal of the `atdd` block and its `scaffoldEscalateCycles` key, which
+  // nothing reads any more. Restoring the block reproduces `1fea21e9…` byte for byte.
+  //
   // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
   // keeps no calibration pack. Restoring the two lines `calibration:` and
-  // `packPath: .qfai/evidence/calibration.yaml` reproduces `1fea21e9…` byte for byte.
-  ["qfai.config.yaml", "f466de8c5deff1a407bd9cc600a7e60bedb0c8bc41402c1d2e8609e16d89f482"],
+  // `packPath: .qfai/evidence/calibration.yaml` reproduces `c1f4c390…` byte for byte.
+  ["qfai.config.yaml", "e9129574dd758cb14b57a20b310b7e5836e6de417b2af86292ba5887d2241ac8"],
 ]);
 
 /**
