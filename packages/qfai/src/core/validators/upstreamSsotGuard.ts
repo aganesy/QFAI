@@ -29,10 +29,14 @@ export async function validateStoryTreeDrift(
 
   const currentDecisions = await readSafePath(path.join(root, decisions));
   const rows = parseRecordTable(currentDecisions, "decisions").rows;
+  const baseStatus = new Map(
+    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row.status]),
+  );
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
+    if (!authorisesThisBranch(row.status, baseStatus.get(row.id))) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
   const issues: Issue[] = [];
@@ -98,6 +102,11 @@ export async function validateStoryTreeDrift(
     );
   }
   return issues;
+}
+
+/** A DONE request applies only while newly appended or advanced from base WIP. */
+function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
+  return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
 }
 
 function withoutChangeRequestRows(content: string): string {

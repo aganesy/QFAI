@@ -80,7 +80,7 @@ The age of the target decides the route.
 | Target                                              | Route                                                                                                                                         |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no triage row, and each EX re-cites the criterion it exercises |
-| An item that existed when the invocation started    | Changed only under an in-force `Change request:` row (WIP or DONE) whose approved change covers this change                                   |
+| An item that existed when the invocation started    | Changed only under an in-force `Change request:` row (WIP, or DONE on this branch) whose approved change covers this change                   |
 | The same item, with no row that covers the change   | Append a `Change request:` row at TODO and leave the item unchanged until the user approves it                                                |
 | Removing an item that existed at the start          | Also a triage row naming UPDATE:REMOVE at TODO                                                                                                |
 | Creating, splitting, merging or retiring a BF or US | Keeps its triage approval, even when this invocation wrote the item                                                                           |
