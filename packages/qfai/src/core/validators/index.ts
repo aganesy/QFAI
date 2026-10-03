@@ -21,15 +21,7 @@ export {
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
-export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
-export {
-  validateDelegationMapIssues,
-  validatePrototypingDelegationMap,
-} from "./prototyping/delegationMap.js";
-export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
-export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
-export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
@@ -45,20 +37,13 @@ export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateSkillRoles } from "./skillRoles.js";
 export { validateStepTree } from "./stepTree.js";
-export { validateRenderCritique } from "./renderCritique.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatterns.js";
 export {
-  FROZEN_SURFACE_UNREACHABLE_CODE,
-  validateFrozenSurfaceReachability,
-} from "./frozenSurfaceReachability.js";
-export {
-  validatePrototypingDesignContractReadiness,
+  validateDesignContractReadiness,
   validateRootDesignMdParse,
-  validateSddDesignContractReadiness,
 } from "./designContractReadiness.js";
-export { validateUiEvidenceArtifacts } from "./uiEvidenceArtifacts.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export {
   validateThreeLayerModel,
@@ -78,7 +63,7 @@ export {
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
-export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
+export { detectMockHrefDrift } from "./reviewerGate.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
 export {
@@ -103,7 +88,3 @@ export { STALE_REFERENCES, validateStaleReferences } from "./staleReferences.js"
 export type { StaleReferenceEntry } from "./staleReferences.js";
 export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 export type { HandoffWriterPair } from "./handoffSchemaPairs.js";
-export {
-  detectExplorationCertifyAttempt,
-  resolveCertifyAcceptedIterationIndex,
-} from "./prototyping/explorationCertify.js";

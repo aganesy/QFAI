@@ -281,11 +281,6 @@ describe("cli usage errors", () => {
         argv: ["discussion"],
         expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
       },
-      {
-        argv: ["prototyping", "bogusaction"],
-        expected:
-          'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
-      },
     ];
     for (const { argv, expected } of cases) {
       const { stderr } = await captureRun(argv);

@@ -5,7 +5,7 @@ Review exploration artifacts as comparison inputs, not a fixed option-comparison
 ## Comparison Quality
 
 - Exploration must start from multiple divergent directions
-- Comparison criteria must reflect the four canonical UX axes (information architecture / navigation flow / usability / functionality), fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
+- Comparison criteria must reflect the four canonical UX axes (information architecture / navigation flow / usability / functionality), fixed in the prototyping reviewer prompt
 - Rejected or superseded directions must have explicit rationale
 - The latest iter is always accepted (no best-of-history; no winner ownership).
 

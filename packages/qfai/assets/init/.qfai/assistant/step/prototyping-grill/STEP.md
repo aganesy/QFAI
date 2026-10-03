@@ -17,17 +17,20 @@ settles, by talking, the questions that do not need a prototype to answer.
 - `.qfai/assistant/skill/qfai-grilling/SKILL.md` and `.agents/rules/grilling.md`.
 - The specs in the story tree, the UI contracts in scope (see [Scope](#scope))
   and root `DESIGN.md`.
-- `.qfai/evidence/prototyping/grilling.md`, where an earlier run left one.
+- `.qfai/prototype/grilling.md`, where an earlier run left one.
 
 ## Writes
 
-- `.qfai/evidence/prototyping/grilling.md`, before C0 of `prototyping-loop`.
+- `.qfai/prototype/grilling.md`, before the first iteration of
+  `prototyping-loop`.
 
 ## Scope
 
 The loop covers every UI-bearing UI contract: a YAML file under
 `<contractsDir>/ui/` declaring a full `UI-NNNN` ID and a non-empty
-`screens[]`. Only those contracts enter the prototyping scope.
+`screens[]`. Only those contracts enter the prototyping scope. One invocation
+covers all of them: it does not ask which contract is primary, and reads no
+spec-level marker.
 
 Inside an `npx qfai workflow` run the work order narrows that set:
 
@@ -58,7 +61,8 @@ scope grows to fill the uncertainty.
 The questions around it can be settled by talking, and are grilled before the
 loop starts, through the `qfai-grilling` skill. **Read
 `.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting either session**
-— this one and the one `prototyping-loop` resumes after convergence. It is the
+— this one and the one `prototyping-loop` resumes each time it puts a
+reviewed prototype to the user. It is the
 single implementation, and it carries what this step does not restate: the
 preconditions a session is entered under, what it takes as input, what a
 no-question mode does to it, and how it ends. A host that loads skill bodies
@@ -71,10 +75,10 @@ name alone improvises an interview that reads exactly like the method.
 | What would count as better          | Which layout carries the task                               |
 | What is out of bounds               | Which of two shapes reads faster                            |
 
-Running the loop on the left column wastes cycles: the loop answers by building,
+Running the loop on the left column wastes iterations: the loop answers by building,
 and building is the expensive way to learn something a sentence would have
 settled. Grilling the right column is the error the rule master names, and it
-costs a session rather than a cycle.
+costs a session rather than an iteration.
 
 **The prototype makes a decision answerable; it does not take it.** Put the
 result in front of the user and ask the question again against it. An agent that
@@ -112,13 +116,13 @@ and name it.
 ## The record
 
 **The session's answers are written down, and the loop reads them.** They go to
-`.qfai/evidence/prototyping/grilling.md`, under `## Session` for the decisions
+`.qfai/prototype/grilling.md`, under `## Session` for the decisions
 — an adopted one names the agent that recommended it and why it was taken —
 and `## Escalated` for a critical decision the user has yet to settle. The
 generator and the reviewer both take that file as an input — named in
 `prototyping-loop`'s `## Evaluator Inputs (Mandatory)` and in the generator's
 contract set — because a decision the loop cannot read is one it will
-contradict on the next cycle, and the user will be asked to re-settle what they
+contradict on the next iteration, and the user will be asked to re-settle what they
 already settled.
 
 Run `common-grilling-record` with this file as the evidence path. It sets the
@@ -140,7 +144,7 @@ usually one — so it is written rather than assumed from a missing key. A
 generator or reviewer reads the rows matching its own lineage plus the `global`
 ones, and nothing else.
 
-**The file is written before C0, empty session or not.** Where the frozen
+**The file is written before the first iteration, empty session or not.** Where the frozen
 inputs answered everything, it carries the heading and `none` under it, which
 is a different statement from a file that is not there — a required input a
 delegated role cannot find is an error it has to guess its way past, and
@@ -149,22 +153,23 @@ guessing is what the record exists to stop.
 **It is a decision record, not a regenerable log.** A run log is reproducible by
 rerunning its stage; these answers are not reproducible by re-running anything,
 and every later generator and reviewer is required to read them. Keep the file
-in place until the loop is certified. Like everything under `.qfai/evidence/`,
-it stays local and is never committed.
+in place until the handoff. Like everything under `.qfai/prototype/`, no `qfai`
+command reads it.
 
 ## Gate
 
-**A left-column decision still under `## Escalated` stops the run before C0.**
+**A left-column decision still under `## Escalated` stops the run before the
+first iteration.**
 Under a no-question mode the session cannot ask, so whichever of what the
 prototype is for, what would count as better and what is out of bounds
-`DESIGN.md` leaves open is recorded open, and nobody answers it. Starting C0
-there spends the whole cycle budget building against nothing: the generator has
+`DESIGN.md` leaves open is recorded open, and nobody answers it. Starting the loop
+there builds against nothing: the generator has
 no constraint to satisfy, and the reviewer prompt says in its own words that
 without the record it grades every prototype against the same generic bar.
-Report the open rows and stop, the way the acceptance session in
-`prototyping-loop` stops on the choice it cannot put. The right column is not
+Report the open rows and stop, the way `prototyping-loop` stops on the
+confirmation it cannot ask for. The right column is not
 this gate's subject — those are what the loop exists to make answerable, and
 they are open by design until the user has something to react to.
 
-Otherwise the step passes when `.qfai/evidence/prototyping/grilling.md` exists
+Otherwise the step passes when `.qfai/prototype/grilling.md` exists
 with both sections and every row carries a `Scope`.

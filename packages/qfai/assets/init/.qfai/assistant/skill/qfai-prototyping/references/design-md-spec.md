@@ -4,9 +4,8 @@
 source of truth for brand identity. `/qfai-sdd`'s `common-design-md` step authors it when
 the project has none, and validates it.
 
-`/qfai-prototyping` reads it as read-only context. The compliance gate
-rejects iter HTML that introduces colors, fonts, radii, or shadows
-outside this file.
+`/qfai-prototyping` reads it as read-only context. Its reviewer reports
+every color, font, radius or shadow an iteration uses outside this file.
 
 A reference copy is shipped in this skill at
 `templates/DESIGN.md.sample`.
@@ -89,9 +88,8 @@ before this field existed is not wrong — it just does not say. A file
 `/qfai-sdd`'s `common-design-md` step writes names its theme and takes the token
 values from that theme rather than composing them.
 
-Everything downstream treats these numbers as exact. The prototyping
-loop hashes them, `certify` re-scans them, and every literal in every capture is
-checked against them. Without this field there was nothing underneath
+Everything downstream treats these numbers as exact: every literal in
+every prototype is checked against them. Without this field there was nothing underneath
 the exactness.
 
 ## `accessibility` allowed keys
@@ -101,10 +99,9 @@ list is CLOSED: any other key fails the whole-file parse with
 `QFAI-DCON-033`, and the message names the allowed set.
 
 An unknown key is rejected rather than ignored because a dropped
-directive would still hash into the sha256 the prototyping loop records
-while the parsed tokens the iterate and certify stages read would not
-carry it — the document and its recorded hash would agree, and neither
-would match what was authored.
+directive would stay in the file while the parsed tokens every reader
+uses would not carry it, so what is read would not match what was
+authored.
 
 A new accessibility obligation does not go here. Put it in the
 `# Brand Philosophy` body, or in a screen contract's
@@ -141,10 +138,3 @@ Validators emit `code` values in stable categories: `missing-key`,
 `unknown-key`, `invalid-hex`, `invalid-rgba`, `whitespace`,
 `invalid-archetype`, `invalid-font-stack`, `invalid-shadow`,
 `invalid-radius`.
-
-## Hash
-
-`hashDesignMd(text)` returns `sha256(text)` over the raw UTF-8 bytes,
-including front-matter delimiters. Any change to the file — including
-whitespace inside the body — produces a new hash, which a prototyping
-loop past cycle 0 refuses.
