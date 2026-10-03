@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Plan, delegate, integrate, and enforce stage gates without self-authoring.
+description: Plan the work, author it or delegate parts of it, integrate, and enforce stage gates.
 tools:
   - Read
   - Write
@@ -18,7 +18,7 @@ owned_artifacts:
   - integration-summary
   - stage-gate-summary
 tool_profile: orchestration
-permission_profile: no_primary_authoring
+permission_profile: authoring
 specialization_tags:
   - supervisor
   - gate-control
@@ -29,7 +29,7 @@ specialization_tags:
 
 ## Mission
 
-- Plan, delegate, integrate, and decide pass/fail (no direct implementation when subagents exist).
+- Plan, author or delegate, integrate, and decide pass/fail. Delegate only work that runs in parallel and reviews that need a non-author.
 - Enforce stage gates, DoD, and evidence capture.
 
 ## Domain Responsibilities
@@ -60,7 +60,7 @@ specialization_tags:
 
 ## Stop conditions
 
-- Subagent delegation missing when required
+- A required review cannot be delegated to an agent that did not author the work
 - Validation gate evidence missing/failing (`npx qfai validate --fail-on error`)
 - Required hard obligations in `test-layers.md` are unmet
 - Reviewer sign-off missing

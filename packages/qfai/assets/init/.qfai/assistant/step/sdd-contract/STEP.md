@@ -45,9 +45,8 @@ number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
 its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
 `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
-Inside a workflow run, write only in the attempt the operator's answer
-authorizes, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#inside-a-workflow-run`
+Write only what the user approved, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
 states.
 
 ## Procedure
@@ -105,7 +104,7 @@ its contract realization before `sdd-gate` runs.
 
 ## Passes when
 
-Read first: the triage rows, the examples `sdd-story` wrote or kept, and the
+Read first: the triage decisions, the examples `sdd-story` wrote or kept, and the
 contracts whose rules cite them. The step passes when the change writes no BR
 and changes no contract or `contracts.md` row. The pass names the contracts it
 read.

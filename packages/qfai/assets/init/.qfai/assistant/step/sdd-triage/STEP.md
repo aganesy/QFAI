@@ -59,18 +59,20 @@ descendants when it still represents the requirement. Create a flow or story
 only when the existing tree cannot represent it. Trace impact through BF → US →
 AC → EX and every enforcing contract.
 
-Record triage, change requests, retired stories, and rejected options as rows of
-`<paths.specsDir>/decisions.md`; record unresolved questions in
-`<paths.specsDir>/open-questions.md`. Every row has exactly
+Record in `<paths.specsDir>/decisions.md` only what the user approved: each
+change request, and each critical decision the user made. Record unresolved
+questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
-Status. A triage Content names the operation, affected BF or US, and its source
-as `discussion-<id>#REQ-NNNN` when that source exists. A change request Content
-begins `Change request:` and names the affected paths or IDs. Do not write a
-second decision-record directory or a retired story file.
+Status. A change request Content begins `Change request:` and names the
+affected paths or IDs; its Approach names the operation, the affected BF or US,
+its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
+approved it, when, and the option chosen. A decision the agent took appends no
+row, and a declined change appends none. Do not write a second decision-record
+directory or a retired story file.
 
-An approval-required row begins at TODO, moves to WIP on approval, or REJECTED
-if declined. `--auto` asks no questions and never supplies its own approval;
-stop before the dependent write and report pending approvals.
+Put each approval-required operation to the user before anything depends on
+it. `--auto` asks no questions and never supplies its own approval; stop
+before the dependent write and report pending approvals.
 
 ### UI-bearing flows
 
@@ -93,8 +95,8 @@ what was built — decide which one owns the truth before any later step writes.
      states;
    - between two surfaces of one rank, the one a policy row, a contract or a
      decision names as the source.
-2. Record the owner, and the entry of that order that made it the owner, in the
-   triage row's Approach.
+2. Record the owner, and the entry of that order that made it the owner, with
+   the triage decision.
 3. The surface that does not own the truth is the one that changes. Where that
    is code, tests or shipped prose, `implement-tdd` aligns it, and this stage
    changes no story-tree file for it.
@@ -165,17 +167,11 @@ in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` and
 record it with `common-grilling-record`. Each later design-writing step runs its
 own checkpoint the same way.
 
-## Inside a workflow run
+## A change to the story tree
 
-Stage 1 approvals, and the rule that a story-tree or contract file changes only
-on the operator's answer given in this run, follow
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#inside-a-workflow-run`.
-Every later step of the stage writes under that rule.
-
-Under `--auto` inside a run, an approval-required row with no satisfying
-`human_decision` stops Stage 1: the row never reaches WIP, nothing that depends
-on it is written, and the stage reports the row with its operation and target.
-`--auto` approves nothing.
+A story-tree or contract file changes only on the user's approval, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+sets out. Every later step of the stage writes under that rule.
 
 ## Gate
 
