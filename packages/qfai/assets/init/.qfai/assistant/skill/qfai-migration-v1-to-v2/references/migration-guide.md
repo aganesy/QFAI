@@ -328,10 +328,10 @@ script. Keep it with the twelve numbered scripts.
 
 The same steps serve two runs:
 
-| Project                                    | What the steps do                                                                                                                                     |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks                                |
-| Migrated already by an earlier 2.x release | Steps 1 to 10 each change nothing and add a line saying the migration is already done; step 11 adds only what that release lacked, the hooks among it |
+| Project                                    | What the steps do                                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| On the 1.x spec-pack layout                | Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks   |
+| Migrated already by an earlier 2.x release | Steps 1 to 10 each find no 1.x layout and change nothing; step 11 adds only what that release lacked, the hooks among it |
 
 Steps 1 to 10 each print one line before their report, in a dry run and a real
 run. The line says what the step found:

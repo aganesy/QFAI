@@ -877,63 +877,74 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
   }
 
   // QFAI:AC-0004-0003-04
-  it("says steps 1 to 10 are already done and brings only the hooks and their text up to date", async () => {
+  it("finds no 1.x layout on a 2.0.0 migration and brings only the hooks and their text up to date", async () => {
     // QFAI:EX-0004-0003-30
     const { root } = await earlierRelease();
-    for (const pass of [1, 2]) {
-      const before = await entries(root);
-      for (let step = 1; step <= 12; step += 1) {
-        const preview = await stepIn(root, step, ["--dry-run"]);
-        const result = await stepIn(root, step);
-        expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
-        expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
-        if (step <= 10) {
-          expect(result.output.split("\n").slice(0, 3), `step ${step}`).toEqual([
-            VERDICT_DONE,
-            "",
-            "## Operations",
-          ]);
-          expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `step ${step}`).toBe(true);
-          expect(
-            result.output.split("\n").filter((line) => line.startsWith("Summary")),
-            `step ${step}`,
-          ).toEqual([]);
-          const items = result.output.split("\n").filter((line) => line.startsWith("- "));
-          expect(items, `step ${step}`).toEqual([]);
-        } else {
-          expect(result.output.startsWith("## Operations\n"), `step ${step}`).toBe(true);
+    // 2.0.0 kept its working state under the evidence tree, which no step reads.
+    const state = path.join(root, "tmp/qfai-migration");
+    const evidence = path.join(root, ".qfai/evidence/migration-spec-to-story");
+    await mkdir(path.dirname(evidence), { recursive: true });
+    await rename(state, evidence);
+    const none = "no 1.x layout found under .qfai/spec (paths.specsDir=.qfai/spec)";
+    const summaryNone = `Summary: ${none.replace("no 1.x layout found", "no 1.x layout was found")}. Check that this is where the specs live.`;
+    try {
+      for (const pass of [1, 2]) {
+        const before = await entries(root);
+        for (let step = 1; step <= 12; step += 1) {
+          const preview = await stepIn(root, step, ["--dry-run"]);
+          const result = await stepIn(root, step);
+          expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
+          expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
+          if (step <= 10) {
+            expect(result.output.split("\n").slice(0, 3), `step ${step}`).toEqual([
+              none,
+              "",
+              "## Operations",
+            ]);
+            expect(result.output, `step ${step}`).not.toContain(ALREADY_DONE);
+            expect(
+              result.output.split("\n").filter((line) => line.startsWith("Summary")),
+              `step ${step}`,
+            ).toEqual(step === 10 ? [summaryNone] : []);
+            const items = result.output.split("\n").filter((line) => line.startsWith("- "));
+            expect(items, `step ${step}`).toEqual([]);
+          } else {
+            expect(result.output.startsWith("## Operations\n"), `step ${step}`).toBe(true);
+          }
+          if (step === 11 && pass === 1) {
+            const operations = section(result.output, "Operations");
+            expect(operations).toHaveLength(3);
+            expect(operations[0]).toBe(HOOK_WRITES[0]);
+            expect(operations[1]).toMatch(
+              /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
+            );
+            expect(operations.slice(2)).toEqual([`${REMINDERS}: replace with the package's text`]);
+            expect(section(result.output, "Reminder hooks")).toEqual([
+              TRUST_CODEX_HOOKS,
+              `${REMINDERS}: replace with the package's text`,
+            ]);
+          }
+          if (step === 11 && pass === 2) {
+            expect(section(result.output, "Operations")).toEqual([]);
+            expect(section(result.output, "Reminder hooks")).toEqual([]);
+          }
         }
-        if (step === 11 && pass === 1) {
-          const operations = section(result.output, "Operations");
-          expect(operations).toHaveLength(3);
-          expect(operations[0]).toBe(HOOK_WRITES[0]);
-          expect(operations[1]).toMatch(
-            /^\.codex\/hooks\.json: update \(reminder hooks: .+; existing settings kept\)$/,
-          );
-          expect(operations.slice(2)).toEqual([`${REMINDERS}: replace with the package's text`]);
-          expect(section(result.output, "Reminder hooks")).toEqual([
-            TRUST_CODEX_HOOKS,
-            `${REMINDERS}: replace with the package's text`,
-          ]);
-        }
-        if (step === 11 && pass === 2) {
-          expect(section(result.output, "Operations")).toEqual([]);
-          expect(section(result.output, "Reminder hooks")).toEqual([]);
-        }
+        const changed = changedPaths(before, await entries(root));
+        expect(changed, `pass ${pass}`).toEqual(pass === 1 ? [REMINDERS, ...HOOK_FILES] : []);
       }
-      const changed = changedPaths(before, await entries(root));
-      expect(changed, `pass ${pass}`).toEqual(pass === 1 ? [REMINDERS, ...HOOK_FILES] : []);
-    }
-    for (const file of HOOK_FILES) {
-      expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
-    }
-    expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
+      for (const file of HOOK_FILES) {
+        expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
+      }
+      expect(await textOrNull(root, REMINDERS)).toBe(await readFile(SHIPPED_REMINDERS, "utf8"));
 
-    git(root, ["init", "-q"]);
-    const printed = await freeTextHookOutput(root);
-    const reminder = await shippedFreeTextReminder();
-    expect(printed.claude).toBe(reminder);
-    expect(printed.codex).toBe(reminder);
+      git(root, ["init", "-q"]);
+      const printed = await freeTextHookOutput(root);
+      const reminder = await shippedFreeTextReminder();
+      expect(printed.claude).toBe(reminder);
+      expect(printed.codex).toBe(reminder);
+    } finally {
+      await rename(evidence, state);
+    }
   }, 300_000);
 
   // QFAI:AC-0004-0003-04

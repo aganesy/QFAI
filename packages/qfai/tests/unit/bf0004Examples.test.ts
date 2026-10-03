@@ -752,7 +752,7 @@ describe("BF-0004 migration examples", () => {
         "Every step runs: steps 1 to 10 migrate the spec packs, and step 11 installs the free-text entry and the reminder hooks",
       );
       expect(prose, file).toContain("an earlier 2.x release");
-      expect(prose, file).toContain("the migration is already done");
+      expect(prose, file).toContain("find no 1.x layout and change nothing");
       expect(prose, file).toMatch(/step 11 adds only what that release lacked[^.]*hooks/i);
     }
   });

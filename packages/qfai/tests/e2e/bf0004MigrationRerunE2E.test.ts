@@ -269,7 +269,7 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     }
   });
 
-  it("runs again on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
+  it("finds no 1.x layout on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
     // The migrated tree itself, not a copy: on Windows a copy turns each host directory
     // link into a file link, which step 9 then has to repair. This is the last test.
     const root = journey.root;
@@ -288,6 +288,11 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     const { "free-text-entry": freeText, ...older } = messages;
     const olderText = `${JSON.stringify(older, null, 2)}\n`;
     await writeFile(path.join(root, REMINDERS), olderText);
+    // 2.0.0 kept its working state under the evidence tree, which no step reads.
+    const evidence = path.join(root, ".qfai/evidence/migration-spec-to-story");
+    await mkdir(path.dirname(evidence), { recursive: true });
+    await rename(path.join(root, "tmp/qfai-migration"), evidence);
+    const none = "no 1.x layout found under .qfai/spec (paths.specsDir=.qfai/spec)";
 
     for (const pass of [1, 2]) {
       const before = await snapshot(root);
@@ -298,11 +303,11 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
         expect(real.stdout, `pass ${pass} step ${number}`).toBe(dryRun.stdout);
         if (number <= 10) {
           expect(real.stdout.split(/\r?\n/).slice(0, 3), `step ${number}`).toEqual([
-            "already migrated (id-map.json present)",
+            none,
             "",
             "## Operations",
           ]);
-          expect(real.stdout.endsWith(`\n${ALREADY_DONE}\n`), `step ${number}`).toBe(true);
+          expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
         } else {
           expect(real.stdout, `step ${number}`).not.toContain(ALREADY_DONE);
           expect(real.stdout.split(/\r?\n/)[0], `step ${number}`).toBe("## Operations");

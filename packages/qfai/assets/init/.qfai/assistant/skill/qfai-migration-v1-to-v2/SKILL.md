@@ -35,10 +35,11 @@ itself:
 
 - **A 1.x project.** Every step runs: steps 1 to 10 migrate the spec packs,
   and step 11 installs the free-text entry and the reminder hooks.
-- **A project an earlier 2.x release migrated.** Steps 1 to 10 each report
-  that the migration is already done and change nothing. Step 11 adds only
-  what that release lacked, such as the reminder hooks. Report that only the
-  files step 11 lists changed. The guide says how to reach this copy of the
+- **A project an earlier 2.x release migrated.** Steps 1 to 10 each find no
+  1.x layout and change nothing, since that release kept its working state
+  under `.qfai/evidence/`, which no step reads. Step 11 adds only what that
+  release lacked, such as the reminder hooks. Report that only the files step
+  11 lists changed. The guide says how to reach this copy of the
   skill from an earlier release's.
 
 Steps 1 to 10 each print one line before their report, in a dry run and a
