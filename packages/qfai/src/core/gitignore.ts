@@ -116,42 +116,12 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // already had. `!.qfai/` matches the directory only, so the `.qfai/<subtree>/*` ignores above
   // still win for every generated file.
   "!.qfai/",
-  // The install-provenance record. It is the only thing that tells a FRESH CLONE
-  // which shipped files QFAI wrote and which the adopter deliberately deleted, so
-  // it has to survive in version control — and it sits directly under `.qfai/`,
-  // where a broad rule an adopting project already had (`.qfai/*`) matches it.
-  // Measured with `git check-ignore -v .qfai/install-provenance.json` on a tree
-  // carrying `.qfai/*` above the managed block: without this line the broad rule is
-  // still the winner, because `!.qfai/` re-includes only the DIRECTORY. Commit an
-  // install and then a deletion in that state and the fresh clone has neither the
-  // workflow nor the record, so the next `qfai init` reads the declined name as
-  // never-installed and writes it back — the one outcome the record exists to stop.
-  "!.qfai/install-provenance.json",
-  // The vendored assistant tree and the provenance record inside it. Same
-  // measurement, same rule: `!.qfai/` re-includes only the DIRECTORY `.qfai`,
-  // so a broad `.qfai/*` an adopting project already had still wins for
-  // `.qfai/assistant` — and git never descends into an ignored directory, which
-  // takes `constitution/`, `catalog/` and `.assets.lock.json` with it.
-  // Verified with `git check-ignore -v .qfai/assistant/.assets.lock.json` on a
-  // tree carrying `.qfai/*` above the managed block: ignored by that rule
-  // before these two lines, un-ignored after.
-  //
-  // The record specifically has to reach a FRESH CLONE. It is what tells the
-  // next `qfai init` which governed files qfai itself wrote: without it an
-  // untouched copy from an older release reads as a local fork
-  // (`QFAI-ASSETS-005`) that `--force` then refuses to refresh, and a rule the
-  // release withdrew can never be retired. The vendored rules are committed —
-  // they are cited by line number — so the record that explains them has to be
-  // committed beside them.
+  // The vendored assistant tree. `!.qfai/` re-includes only the directory, so a broad `.qfai/*`
+  // still wins for `.qfai/assistant`, and git never descends into an ignored directory.
   "!.qfai/assistant/",
-  // The subtree, not only its root. A project whose broad rule is `.qfai/**`
-  // rather than `.qfai/*` has every descendant matched in its own right, so
-  // re-including the directory re-includes nothing inside it: measured with
-  // `git status --ignored` on such a tree, the lock came back `??` from its
-  // leaf negation below while both governed files stayed `!!`. A fresh clone
-  // would then carry the record and none of the rules it vouches for.
+  // The subtree as well: under a broad `.qfai/**` every descendant is matched in its own right,
+  // so re-including the directory re-includes nothing inside it.
   "!.qfai/assistant/**",
-  "!.qfai/assistant/.assets.lock.json",
 ] as const;
 
 /**
@@ -217,6 +187,9 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
   "!.qfai/evidence/coverage-depth-*.md",
   "!.qfai/evidence/skeleton.md",
+  // QFAI keeps no install record, so the negations that kept its two records tracked are retired.
+  "!.qfai/install-provenance.json",
+  "!.qfai/assistant/.assets.lock.json",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [
@@ -263,7 +236,7 @@ export const QFAI_GITIGNORE_BLOCK = [
  * matching pattern, so a negation is effective only when no ignore line below
  * it matches the same path. Deciding that needs real gitignore glob semantics,
  * not a prefix comparison — a prefix test cannot see that `*.json` or
- * `**` + `/*.json`, placed after `!.qfai/install-provenance.json`,
+ * `**` + `/*.json`, placed after `!.qfai/assistant/**`,
  * re-ignores exactly what the negation re-included.
  *
  * Implemented rules, the ones a real `.gitignore` uses:

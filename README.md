@@ -315,17 +315,17 @@ flowchart LR
     (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
-    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                         |
-    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                     |
-    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
-    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
-    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
-    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                      |
-    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
-    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
-    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
-    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                     |
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                                                                                 |
+    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                             |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                 |
+    | `--force`                  | Overwrite the shipped skills, steps, agents and rules, the rule masters under `.agents/rules/`, their host wrappers, and generated Copilot instructions, whether or not you edited them. Project content, `qfai.config.yaml`, `DESIGN.md`, `AGENTS.md`, `CLAUDE.md` and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                             |
+    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                                                                                              |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                               |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                    |
+    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                         |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                             |
 
   - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
     supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
@@ -535,22 +535,17 @@ request first. If your branch protection requires these checks before every merg
 set the repository variable `QFAI_CI_PUSH_POLICY` to `protected`: the push then runs
 neither, and `qfai validate` still runs as the post-merge check.
 
-All three files are copied create-only — `qfai init` never overwrites an existing
-copy, not even with `--force` — so edit them freely. Deleting one is a choice
-`qfai init` remembers rather than undoes: it records what it installed in
-`.qfai/install-provenance.json` (keep that file committed), and never recreates
-a workflow you removed.
+All three files are copied create-only — `qfai init` writes a workflow only
+where no file of that name exists, and never overwrites one, not even with
+`--force` — so edit them freely. A workflow you delete is written again by the
+next `qfai init`. A workflow an earlier version shipped and this one does not is
+listed by `qfai init` and left for you to delete.
 
-Those two rules together mean a corrected template does not arrive on its own.
-`qfai doctor` reports an installed workflow whose content no longer matches the
-packaged one; taking the new copy is yours to do, either way round:
+A corrected template therefore does not arrive on its own. Take the packaged copy
+yourself, or delete yours and run `qfai init`:
 
 ```bash
-# Take the packaged file directly, leaving the record alone.
 cp node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml .github/workflows/
-
-# Or let init write it: remove the file and its entry from the record first,
-# otherwise the deletion reads as a decision and init writes nothing.
 ```
 
 Read your own edits out of the old copy before you replace it. Neither route
