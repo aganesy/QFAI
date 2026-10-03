@@ -6,42 +6,56 @@ Use this document to keep SKILL bodies compact. Skill files should reference thi
 
 This section binds every skill and every step as written. A skill or step
 restates none of it and writes no placeholder stanza for a subsection it does
-not change; it states only an override, under the subsection it overrides. In
-particular, whatever the skill: roles are never simulated, and a delegation
-failure is classified by the taxonomy below before any response.
+not change; it states only an override, under the subsection it overrides.
+
+Delegation is optional. The session agent, called the orchestrator below, may
+author any artifact itself. It uses a sub-agent only for work that runs in
+parallel and for a review that someone other than the author should do. The
+griller of a delegated grilling session is such a review: it examines decisions
+it did not author, before the draft rather than after it. A fact lookup a
+grilling session dispatches is parallel work: the session asks the rest of the
+frontier while the lookup runs.
+Whatever the skill, a role is never simulated, and a failed delegation is
+classified by the taxonomy below before any response.
 
 ### Orchestrator Protocol (MUST)
 
-- The orchestrator may create work orders, delegate tasks, integrate outputs, and present results.
-- The orchestrator must not generate the primary artifact first draft.
-- The orchestrator must not self-approve or act as reviewer for convenience.
+- The orchestrator may author any artifact itself, or give independent parts of
+  the work to sub-agents that run in parallel. It integrates and presents the
+  results.
+- A review is done by an agent that did not author what it reviews. The
+  orchestrator never reviews its own work and never approves it for
+  convenience.
 
 ### Capability Probe (MUST)
 
-1. Attempt the first required delegation at stage start using the platform's native delegation mechanism.
-2. Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.
-3. If the delegation fails, classify the failure first (see `Delegation Failure Taxonomy`), then apply the response for that class. Never simulate roles and never continue with self-execution, whatever the class.
+1. No delegation attempt is required at the start of a stage. The orchestrator
+   delegates only when it chooses to.
+2. When it does, the real delegation attempt is the capability check. Do not
+   gate execution on preflight availability questions or synthetic probe-only
+   checks.
+3. If the delegation fails, classify the failure first (see
+   `Delegation Failure Taxonomy`), then apply the response for that class.
+   Never simulate a role.
 
 ### Delegation Failure Taxonomy (MUST)
 
 Every delegation failure belongs to exactly one of two classes.
 
-| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                       |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.            | Hard stop.                                |
-| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry on the same stage. |
+| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.            | The orchestrator does the work itself. A review someone other than the author has to do stops the stage instead |
+| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry of the identical delegation                                                              |
 
 - Classify from the raw failure reason, and classify `saturated` only when the reason states or plainly implies that the identical call would succeed later **with no change by anyone**: a queue or pool that is currently full, a rate limit with a retry window, a concurrency cap that is momentarily reached, an explicit "try again later".
-- A limit or quota that only a user can lift is `unavailable`, not `saturated` — a configured concurrency cap of 0, a maximum delegation depth, an input-size limit, an exhausted account quota or plan. Waiting cannot clear those, so the retry loop would burn 30/60/120 seconds and then report "no user action needed" about a condition that needs exactly that.
-- When retryability is not explicit, default to `unavailable`. The two classes are not symmetric: mis-classifying as `unavailable` costs one unnecessary stop the user can act on, while mis-classifying as `saturated` hides an actionable failure behind a pointless wait.
-- `saturated` never authorises self-execution of a primary artifact or of a blocking review, and never authorises discarding stage progress.
-- When the `saturated` retry budget is exhausted, fall through to the hard stop and report the class as `saturated (retry budget exhausted)`.
+- A limit or quota that only a user can lift is `unavailable`, not `saturated` — a configured concurrency cap of 0, a maximum delegation depth, an input-size limit, an exhausted account quota or plan. Waiting cannot clear those, so a retry loop would only delay the response.
+- When retryability is not explicit, default to `unavailable`.
+- When the `saturated` retry budget is exhausted, handle the failure as `unavailable` and report the class as `saturated (retry budget exhausted)`.
 
 ### Delegation Failure — `saturated` (Bounded Retry)
 
-- Retry the identical delegation with backoff: 30s, then 60s, then 120s. Attempt cap: 3 retries per work order.
-- Do not re-scope, re-plan, or re-route the work order between retries — same role, same task.
-- The stage stays open and resumable across the wait; completed work orders keep their `PASS` status.
+- Retry the identical delegation with backoff: 30s, then 60s, then 120s. Attempt cap: 3 retries per delegation.
+- Do not re-scope, re-plan, or re-route the delegation between retries — same role, same task.
 - Report on entering the retry loop and on its outcome:
   - `Delegation deferred: <raw reason or concise summary>`
   - `Failure class: saturated`
@@ -49,30 +63,34 @@ Every delegation failure belongs to exactly one of two classes.
   - `Attempted task: <task title>`
   - `Retry condition: retry after <N> seconds / when a delegation slot frees`
   - `Attempts used: <n>/3`
-  - `Stage state: held open and resumable — no stage progress discarded`
+
+### Delegation Failure — `unavailable` (The Orchestrator Does The Work)
+
+- The orchestrator does the work itself and reports it as its own, never as the
+  attempted role's.
+- Report all of:
+  - `Delegation failure: <raw reason or concise summary>`
+  - `Failure class: unavailable | saturated (retry budget exhausted)`
+  - `Attempted role: <role>`
+  - `Attempted task: <task title>`
+  - `Done by: the orchestrator`
+- A review someone other than the author has to do is the exception. The
+  orchestrator does not do it, and the stage stops under the hard stop below.
 
 ### Delegation Failure (Hard Stop)
 
-Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
+Applies when the failed delegation is a review someone other than the author
+has to do, and the class is `unavailable` or
+`saturated (retry budget exhausted)`.
 
 - Report all of:
   - `Delegation failure: <raw reason or concise summary>`
   - `Failure class: unavailable | saturated (retry budget exhausted)`
   - `Attempted role: <role>`
   - `Attempted task: <task title>`
-  - `Why stopped: QFAI requires real sub-agent delegation in this environment.`
+  - `Why stopped: this review needs a reviewer that did not author the work.`
   - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
-  - `Retry condition: rerun after the required delegation succeeds`
-
-### Sanctioned exception: a read-only fact lookup
-
-One delegation may continue without a sub-agent: reading a fact the environment already holds, where the skill that dispatched it may read that fact itself. Reading the file and dispatching a sub-agent to read it are two ways of doing one job, so the dispatch is an optimisation, and losing it removes the optimisation rather than the job.
-
-The exception is bounded by what it covers.
-
-- **Reading, never authoring.** A primary artifact and a blocking review stay under the hard stop whatever their class.
-- **The class is still reported**, with every fact that stayed unread named, and every decision downstream of one held open.
-- **A skill claiming it MUST cite this section.** A skill that merely carries on has taken the override this section exists to replace, and a reader cannot tell that apart from a skill that never read the rule.
+  - `Retry condition: rerun after the review delegation succeeds`
 
 ### Commit Scoping (MUST)
 
@@ -101,7 +119,7 @@ Every major artifact in the stage should include this table schema:
   user-settled decision leaves the griller free to review the artifact, an agent-settled one keeps the griller that recommended it out of that review, and an agent-settled critical one makes the artifact wrong until the user decides — so a row recording only that a session happened tells the reviewer nothing it can act on.
   One format, always parenthesized, so a gate selecting `grilling(` finds every row.
 - **An `agents` row also carries why the recommendation was taken**, in `Output (refs)`: the reason, and each position that disagreed with whose it is. The stage's final report lists every `agents` row, which is how the user sees what a delegated session adopted without being asked about it.
-- `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE` would force an agent on that path to either break the schema or mislabel an unrun gate.
+- `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while any row is `PENDING`. A skill that allows only `PASS`/`REVISE` would force an agent on that path to either break the schema or mislabel an unrun gate.
 
 ## Reviewer Gate Baseline
 
@@ -280,37 +298,16 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 - First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
 - If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
 - Record the reuse in the Work Orders Summary (`Task title` prefixed `re-review (sequential reuse)`).
-- If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`; DONE stays blocked and the stage stays resumable.
+- If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`, and DONE stays blocked.
 - Never record a waived or self-performed review as `PASS`.
 
-## Inside a workflow run
+## Reviewer independence
 
-A run is one `npx qfai workflow` run, and its work orders are the ones the CLI
-issues to a stage.
-
-What authorizes a run's work, and the one target a work order binds its stage
-to:
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#what-authorizes-a-runs-work`.
-
-### Actor history in a run
-
-- The run's history of authors, recommenders and reviewers travels with every
-  work order, in its `actorHistory` field.
-- An agent instance recorded there as the author or recommender of an artifact
-  never counts as that artifact's independent reviewer, whichever stage it
-  was recorded in.
-- No required reviewer is dropped to save tokens. An unavailable required
-  delegation stops the run, as
+- An agent that authored or recommended an artifact never counts as that
+  artifact's independent reviewer.
+- No required reviewer is dropped to save tokens. A required review that cannot
+  be delegated stops the stage, as
   [Delegation Failure (Hard Stop)](#delegation-failure-hard-stop) states.
-
-### Grilling in a run
-
-- A grilling session inside a run takes what the work order's `settled` field
-  records as settled, and asks none of it again.
-- It works only the remaining frontier.
-- It keeps the split between user sessions and delegated sessions that
-  `.agents/rules/grilling.md` sets out.
-- No run invokes `qfai-grill`.
 
 ## Work order template
 
