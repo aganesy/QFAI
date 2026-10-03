@@ -346,7 +346,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tree against that record, so a change the run commits outside its write scope
   blocks the run with `invariant-violation` and is reported as
   `diff-out-of-scope`. A path that was dirty at `start` counts only once its
-  content, type or mode changes. `uncommitted` names only the run's own
+  content changes; a change to its file type or mode alone is not seen.
+  `uncommitted` names only the run's own
   changes. Under `validation.failOn: never`, `finish` still reads the
   validate findings to decide whether a debt is settled, so a debt whose
   finding remains stays `debt-open` while the validate gate passes. Before,
