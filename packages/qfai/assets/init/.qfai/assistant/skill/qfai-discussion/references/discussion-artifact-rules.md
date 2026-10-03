@@ -8,21 +8,16 @@ Each pack uses immutable timestamp naming: `.qfai/discussion/discussion-YYYYMMDD
 
 Required files:
 
-- `01_Context.md`
-- `02_Inception-Deck.md`
+- `01_Context.md`, which holds the inception deck
 - `03_Story-Workshop.md`
 - `04_Sources.md`
 - `05_Scope.md`
 - `06_REQ.md`
 - `07_NFR.md`
 - `08_Glossary.md`
-- `09_Constraints.md`
-- `10_Policy.md`
-- `11_OQ-Register.md`
-- `12_OQ-Resolution-Log.md`
-- `13_Deferred.md`
-- `14_Review-Request.md`
-- `99_delta.md`
+- `09_Constraints.md`, which holds the policies
+- `11_OQ-Register.md`, which holds every open, resolved, deferred and rejected
+  question
 
 Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 
@@ -30,11 +25,10 @@ Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, 
 
 - Run interview and requirement capture until `Disposition: open` is zero in `11_OQ-Register.md`.
 - OQ `Gate` values are `discussion`, `sdd`, `atdd`, `tdd`, or `ops`.
-- `deferred` is allowed only when `13_Deferred.md` has complete metadata.
-- Discussion outputs are rationale and intake logs; do not duplicate the story tree under `<paths.specsDir>`.
+- `deferred` is allowed only when the row's `Next-Decision-Point` names when, and by what signal, the question is reopened.
+- Discussion outputs state what was decided and why; do not duplicate the story tree under `<paths.specsDir>`, and do not record how the session went.
 - `03_Story-Workshop.md` must include at least one Mermaid diagram.
 - Use Mermaid fences only for diagrams.
-- `14_Review-Request.md` must reference `.qfai/assistant/rule/agent-selection.md` and the resolved review profile.
 
 ## UI/UX Exploration Family
 

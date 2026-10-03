@@ -12,6 +12,7 @@ Use this file for canonical field definitions in `/qfai-discussion`.
 - `Rationale`
 - `Options`
 - `Recommendation`
+- `Resolution`
 - `Next-Decision-Point`
 - `Due`
 - `Evidence`
@@ -20,19 +21,18 @@ Use this file for canonical field definitions in `/qfai-discussion`.
 
 `discussion|sdd|atdd|tdd|ops`
 
-## Deferred Fields
+## A Deferred Question
 
-- `OQ-ID`
-- `Title`
-- `Gate`
-- `Deferred-Reason`
-- `Deferred-Until`
-- `Owner`
-- `Due`
-- `Severity`
-- `Impact`
-- `Mitigation`
-- `Evidence`
+A deferred question stays in `11_OQ-Register.md` as a row with
+`Disposition: deferred`. Its fields carry the deferral:
+
+| Field                 | Holds                                              |
+| --------------------- | -------------------------------------------------- |
+| `Rationale`           | Why it is deferred                                 |
+| `Next-Decision-Point` | When, and by what signal, the question is reopened |
+| `Owner`               | Who reopens it                                     |
+| `Due`                 | The latest date it is looked at again              |
+| `Evidence`            | Where the deferral was agreed                      |
 
 ## Guardrails
 
@@ -43,29 +43,24 @@ Use this file for canonical field definitions in `/qfai-discussion`.
 ## Where a grilling session's outcome goes
 
 A session produces decisions and open questions, and both have a home already.
-No new file: the pack's fifteen carry them, and a third artifact would hold
+No new file: the pack's nine carry them, and another artifact would hold
 nothing they do not.
 
-| Outcome                                     | Home                                                                                                                                                     |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A decision the session settled              | `99_delta.md`, under `## Change History`, with any option it turned down under `## Rejected Decisions`                                                   |
-| A theme or visual direction it turned down  | `99_delta.md`, under `## Rejected Visual Directions`, which the template requires of a UI-bearing pack and which the generic table's columns cannot hold |
-| A decision the session did not settle       | `11_OQ-Register.md`, `Disposition: open`, **and** a `created` row in `12_OQ-Resolution-Log.md`                                                           |
-| A decision the user closed the questions on | `99_delta.md`, as an assumption labelled one. No register row                                                                                            |
-| An open question answered later             | `12_OQ-Resolution-Log.md` as `resolved`, **and** the register row moved to `Disposition: resolved`                                                       |
-| A question deliberately put off             | `13_Deferred.md`, `12_OQ-Resolution-Log.md` as `deferred`, and the register row moved to `Disposition: deferred`                                         |
-| A question that turned out not to be one    | `12_OQ-Resolution-Log.md` as `rejected`, and the register row moved to `Disposition: rejected`                                                           |
-| A question that turns out to be live again  | `12_OQ-Resolution-Log.md` as `reopened`, and the register row moved back to `Disposition: open`                                                          |
+| Outcome                                     | Home                                                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| A decision the session settled              | The pack file it shapes: `05_Scope.md`, `06_REQ.md`, `07_NFR.md`, `09_Constraints.md` or `01_Context.md` |
+| A theme or visual direction it turned down  | `04_Sources.md`, under `## Design Anti-Goals`, with its reason and the cue that stops it recurring       |
+| A decision the session did not settle       | `11_OQ-Register.md`, `Disposition: open`                                                                 |
+| A decision the user closed the questions on | `01_Context.md`, under `## Inputs`, as an assumption labelled one. No register row                       |
+| An open question answered later             | The register row moved to `Disposition: resolved`, with the answer in `Resolution`                       |
+| A question deliberately put off             | The register row moved to `Disposition: deferred`, with its `Next-Decision-Point`                        |
+| A question that turned out not to be one    | The register row moved to `Disposition: rejected`, with the reason in `Resolution`                       |
+| A question that turns out to be live again  | The register row moved back to `Disposition: open`                                                       |
 
-**The register is what readiness reads.** Writing an answer only into the
-resolution log leaves the row `open`, so the pack stays blocked on a question
-that has been answered. Every row a disposition change touches is moved in the
-register in the same edit.
-
-**The log carries every event, the register only the current state.** That is
-why a new question is logged as `created` and not only registered: without it,
-the first event in a question's history is missing while every later one is
-there, and the log is append-only precisely so the sequence can be read.
+**The register is what readiness reads.** Each row holds a question's current
+state, and a disposition change edits that row. An answer written anywhere else
+leaves the row `open`, so the pack stays blocked on a question that has been
+answered.
 
 **A closure the user asked for is not an open question.** Where the user ends
 the asking with `proceed`, `done`, or an answer to that effect, each decision

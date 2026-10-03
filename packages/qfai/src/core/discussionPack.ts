@@ -38,7 +38,6 @@ export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
 
 export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -46,12 +45,7 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
 
 export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
@@ -79,7 +73,7 @@ export type DiscussionPackReadiness = {
   missingSideArtifacts: RequiredDiscussionPackSideArtifact[];
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
-  deferredWithoutDetails: string[];
+  deferredWithoutReopenPoint: string[];
   prototypingRequired: boolean;
 };
 
@@ -136,7 +130,7 @@ export async function inspectLatestDiscussionPack(
       missingSideArtifacts: [],
       incompleteFiles: [],
       blockingOqIds: [],
-      deferredWithoutDetails: [],
+      deferredWithoutReopenPoint: [],
       prototypingRequired: false,
     };
   }
@@ -145,7 +139,7 @@ export async function inspectLatestDiscussionPack(
   const missingSideArtifacts: RequiredDiscussionPackSideArtifact[] = [];
   const incompleteFiles: RequiredDiscussionPackMarkdownFile[] = [];
   let blockingOqIds: string[] = [];
-  let deferredWithoutDetails: string[] = [];
+  let deferredWithoutReopenPoint: string[] = [];
   await readValidatedClassification(latestPackDir);
   const prototypingRequired = false;
 
@@ -161,14 +155,8 @@ export async function inspectLatestDiscussionPack(
     }
     if (fileName === "11_OQ-Register.md") {
       blockingOqIds = extractBlockingOqIds(content);
+      deferredWithoutReopenPoint = extractDeferredWithoutReopenPoint(content);
     }
-  }
-
-  // Check deferred coverage
-  const oqRegisterContent = await readSafe(path.join(latestPackDir, "11_OQ-Register.md"));
-  const deferredContent = await readSafe(path.join(latestPackDir, "13_Deferred.md"));
-  if (oqRegisterContent !== null && deferredContent !== null) {
-    deferredWithoutDetails = extractDeferredWithoutDetails(oqRegisterContent, deferredContent);
   }
 
   return {
@@ -181,7 +169,7 @@ export async function inspectLatestDiscussionPack(
     missingSideArtifacts,
     incompleteFiles,
     blockingOqIds,
-    deferredWithoutDetails,
+    deferredWithoutReopenPoint,
     prototypingRequired,
   };
 }
@@ -426,14 +414,17 @@ function extractBlockingOqIds(text: string): string[] {
   return blocking;
 }
 
-function extractOqTableRows(text: string): Array<{ id: string; disposition: string }> {
+type OqTableRow = { id: string; disposition: string; nextDecisionPoint: string };
+
+function extractOqTableRows(text: string): OqTableRow[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const results: Array<{ id: string; disposition: string }> = [];
+  const results: OqTableRow[] = [];
 
   // Find table header
   let headerIndex = -1;
   let oqIdCol = -1;
   let dispositionCol = -1;
+  let nextDecisionPointCol = -1;
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i] ?? "";
@@ -443,6 +434,7 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
 
     oqIdCol = normalizedCells.findIndex((c) => c === "oq-id" || c === "oqid");
     dispositionCol = normalizedCells.findIndex((c) => c === "disposition");
+    nextDecisionPointCol = normalizedCells.findIndex((c) => c === "next-decision-point");
 
     if (oqIdCol >= 0 && dispositionCol >= 0) {
       // Verify separator
@@ -469,6 +461,7 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
       results.push({
         id: oqMatch[1].toUpperCase(),
         disposition: dispositionRaw.trim().toLowerCase(),
+        nextDecisionPoint: nextDecisionPointCol >= 0 ? (cells[nextDecisionPointCol] ?? "") : "",
       });
     }
   }
@@ -476,36 +469,19 @@ function extractOqTableRows(text: string): Array<{ id: string; disposition: stri
   return results;
 }
 
-function extractDeferredWithoutDetails(oqRegisterText: string, deferredText: string): string[] {
-  const registerRows = extractOqTableRows(oqRegisterText);
-  const deferredIds = registerRows
-    .filter((row) => row.disposition === "deferred")
-    .map((row) => row.id);
-
-  if (deferredIds.length === 0) return [];
-
-  // 13_Deferred.md may use table format (OQ-ID column without Disposition)
-  // or heading format (### OQ-XXXX:...).  Extract all OQ-ID references
-  // regardless of structure so both formats are supported.
-  const deferredDetailSet = extractAllOqIds(deferredText);
-
-  return deferredIds.filter((id) => !deferredDetailSet.has(id));
-}
-
 /**
- * Extract every OQ-ID reference from arbitrary markdown text.
- * Works with tables, headings, list items, or inline mentions.
+ * The deferred questions whose `Next-Decision-Point` does not say when, and by
+ * what signal, they are reopened: the column is absent, or the cell is empty, a
+ * dash or a placeholder.
  */
-function extractAllOqIds(text: string): Set<string> {
-  const ids = new Set<string>();
-  const re = /\b(OQ-\d+)\b/gi;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    if (match[1]) {
-      ids.add(match[1].toUpperCase());
-    }
-  }
-  return ids;
+function extractDeferredWithoutReopenPoint(oqRegisterText: string): string[] {
+  return extractOqTableRows(oqRegisterText)
+    .filter((row) => row.disposition === "deferred")
+    .filter(
+      (row) =>
+        !/[\p{L}\p{N}]/u.test(row.nextDecisionPoint) || isPlaceholderLine(row.nextDecisionPoint),
+    )
+    .map((row) => row.id);
 }
 
 function parseTableCells(line: string): string[] {

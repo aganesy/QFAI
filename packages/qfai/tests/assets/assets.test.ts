@@ -1821,12 +1821,12 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/concept, scope, stakeholders, and constraints/i);
     expect(content).toMatch(/REQ, NFR, glossary, constraints, and policies/i);
     expect(content).toMatch(/exploration-first sidecar family/i);
-    expect(content).toContain("02_Inception-Deck.md");
+    expect(content).toContain("01_Context.md#Inception Deck");
     expect(content).toMatch(/HTML\+CSS/i);
     expect(content).toContain(".qfai/discussion/discussion-");
 
     // W-5: canonical discussion pack wording guardrail
-    expect(content).toContain("15-file discussion pack");
+    expect(content).toContain("nine-file discussion pack");
     expect(content).toContain("prototyping.yaml");
   });
 
@@ -1896,7 +1896,6 @@ describe("assets guardrails", () => {
     expect(discussionTemplates.sort()).toEqual(
       [
         "01_Context.md",
-        "02_Inception-Deck.md",
         "03_Story-Workshop.md",
         "04_Sources.md",
         "05_Scope.md",
@@ -1904,12 +1903,7 @@ describe("assets guardrails", () => {
         "07_NFR.md",
         "08_Glossary.md",
         "09_Constraints.md",
-        "10_Policy.md",
         "11_OQ-Register.md",
-        "12_OQ-Resolution-Log.md",
-        "13_Deferred.md",
-        "14_Review-Request.md",
-        "99_delta.md",
       ].sort(),
     );
   });
@@ -1977,7 +1971,7 @@ describe("assets guardrails", () => {
       "skill",
       "qfai-discussion",
       "templates",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     const storyTemplatePath = path.join(
       templateQfaiDir,
@@ -2057,25 +2051,6 @@ describe("assets guardrails", () => {
     expect(sddGate).toContain("## Review");
     expect(sddGate).toContain("BF-NNNN");
     expect(sddGate).toContain(".qfai/evidence/sdd-BF-NNNN.md");
-
-    const skillIds = ["qfai-discussion"];
-    for (const skillId of skillIds) {
-      const reviewTemplateDir = path.join(
-        templateQfaiDir,
-        "assistant",
-        "skill",
-        skillId,
-        "templates",
-        "review",
-      );
-      const templates = await fg(["*.*"], {
-        cwd: reviewTemplateDir,
-        absolute: false,
-      });
-      expect(templates.sort()).toEqual(
-        ["review_request.md", "Rxx_reviewer.md", "summary.json"].sort(),
-      );
-    }
   });
 
   it("keeps review playbooks aligned with validator target kinds", async () => {
@@ -2105,15 +2080,9 @@ describe("assets guardrails", () => {
       "common-review-cycle",
       "STEP.md",
     );
-    const reviewRequestTemplatePath = path.join(
-      discussionSkillDir,
-      "templates",
-      "14_Review-Request.md",
-    );
     const skillPath = path.join(discussionSkillDir, "SKILL.md");
-    const [discussionPlaybook, reviewRequestTemplate, discussionSkill] = await Promise.all([
+    const [discussionPlaybook, discussionSkill] = await Promise.all([
       readFile(discussionPlaybookPath, "utf-8"),
-      readFile(reviewRequestTemplatePath, "utf-8"),
       readFile(skillPath, "utf-8"),
     ]);
 
@@ -2128,7 +2097,6 @@ describe("assets guardrails", () => {
     for (const artifact of ["review_request.md", "R01_<reviewer>.md", "summary.json"]) {
       expect(discussionPlaybook).toContain(`\`${artifact}\``);
     }
-    expect(reviewRequestTemplate).toContain(`.qfai/review/${packDirName}/review_request.md`);
 
     // The skill body must actually route the run through the review step: a write-path rule
     // the skill never opens does not reach the reviewer step that writes the pack.

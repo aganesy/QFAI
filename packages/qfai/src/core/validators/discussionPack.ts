@@ -137,18 +137,18 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  if (readiness.deferredWithoutDetails.length > 0) {
-    const deferredPath = path.join(readiness.latestPackDir, "13_Deferred.md");
+  if (readiness.deferredWithoutReopenPoint.length > 0) {
+    const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(
       issue(
         "QFAI-DPACK-007",
-        `Deferred OQs in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
+        `Deferred OQs in 11_OQ-Register.md name no point at which they are reopened: ${readiness.deferredWithoutReopenPoint.join(", ")}`,
         "error",
-        deferredPath,
-        "discussionPack.deferredCoverage",
-        readiness.deferredWithoutDetails,
+        oqPath,
+        "discussionPack.deferredReopenPoint",
+        readiness.deferredWithoutReopenPoint,
         "change",
-        "List each OQ that the OQ register defers in 13_Deferred.md under the same OQ ID.",
+        "Write in `Next-Decision-Point` when, and by what signal, each deferred OQ is reopened.",
       ),
     );
   }

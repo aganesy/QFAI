@@ -270,7 +270,7 @@ type PackReadiness = {
   missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
-  deferredWithoutDetails: string[];
+  deferredWithoutReopenPoint: string[];
   prototypingRequired: boolean;
 };
 
@@ -334,11 +334,11 @@ function resolvePackGaps(readiness: PackReadiness): string[] {
   }
 
   // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
-  // run the discussion validator, so a deferral without its details would reach
-  // Stage 1 unnamed unless it is listed here.
-  if (readiness.deferredWithoutDetails.length > 0) {
+  // run the discussion validator, so a deferral with no reopening point would
+  // reach Stage 1 unnamed unless it is listed here.
+  if (readiness.deferredWithoutReopenPoint.length > 0) {
     gaps.push(
-      `Deferred entries in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
+      `Deferred entries in 11_OQ-Register.md name no point at which they are reopened: ${readiness.deferredWithoutReopenPoint.join(", ")}`,
     );
   }
 

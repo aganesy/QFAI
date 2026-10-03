@@ -76,7 +76,6 @@ describe("validateDiscussionPackReadiness — current-only wording", () => {
 
 const MINIMAL_PACK_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -84,10 +83,5 @@ const MINIMAL_PACK_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
