@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A shared rule records what a stage costs and which lever changes it**
+  (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
+  and its levels, and runs every agent at the host's default until a
+  measurement chooses another level for a role. It records two costs: a high
+  level on a long deliverable such as spec authoring, contract normalization
+  or a full review pack, and whole-file rewrites for small changes. The work
+  order template gains an advisory `Time budget: none | <seconds>` and an
+  elapsed line the agent ends every message with. Neither is a cap.
+
 - **Context summaries preserve requests, decisions, open work and stage state**
   (#2243), including question and review budgets. User wording stays close to
   verbatim.
@@ -22,6 +31,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `sources` like any other source, so a verified name can be told from one
     answered from memory.
   - The `web-research` skill points to both rules in the protocol.
+
+- **Assistant instructions state obligations without capitalised emphasis**
+  (#2240). Phrases read by validators, gates or tests remain; other obligations
+  use plain wording. A phrase allowlist guards the shipped assistant tree and
+  root rules, and the writing standard calls for direct statements.
 
 - **The Windows parity CI job's timeout is set from measured runs** (#2311).
   Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
@@ -112,6 +126,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   progress-report and completion-report sections and points to that article.
 
 ### Fixed
+
+- **Journal test reads preserve filesystem errors** (#2846).
+  Required artifact reads keep their original error instead of replacing it
+  with an empty result; rebuilt-snapshot checks still clean up after failure.
 
 - Host-capability refusals at workflow start state the reason and the next
   action in one sentence while preserving the refusal fields (#2839).

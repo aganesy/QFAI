@@ -54,7 +54,7 @@ describe("unattended runs: ending a turn", () => {
     it(`${tree}: forbids the four endings while work is owed`, async () => {
       const body = flat(section(await read(tree, BASELINE), "## Unattended Runs: Ending a Turn"));
 
-      expect(body).toContain("While work is still owed, a turn MUST NOT end with any of these:");
+      expect(body).toContain("While work is still owed, a turn must not end with any of these:");
       expect(body).toContain("1. A summary that announces the next step and does not take it.");
       expect(body).toContain("2. An offer to carry on unless the user would prefer otherwise.");
       expect(body).toContain(
