@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Mutation recipes remain in example tests.** `qfai doctor` reports a
+  warning when a recipe names a missing source file or original text (#2419).
+  The check reads recipes and source text; it runs no mutations or tests.
+
 - **A shared rule records what a stage costs and which lever changes it**
   (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
   and its levels, and runs every agent at the host's default until a

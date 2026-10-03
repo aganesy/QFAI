@@ -16,3 +16,4 @@
 | US-0003-0010 | per-skill manifest runtimeDependencies probe           | `user-story-0003-0010/` |
 | US-0003-0011 | shipped workflow drift detection (detection half)      | `user-story-0003-0011/` |
 | US-0003-0012 | Doctor failure threshold                               | `user-story-0003-0012/` |
+| US-0003-0030 | Mutation proofs that still replay                      | `user-story-0003-0030/` |
