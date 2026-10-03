@@ -501,7 +501,11 @@ export function journalExtrasOf(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
   decision: WorkflowDecision,
-  accepted: { reports: { path: string; digest: string }[]; dependencies: WorkflowDependency[] },
+  accepted: {
+    reports: { path: string; digest: string }[];
+    dependencies: WorkflowDependency[];
+    resultDigest?: string;
+  },
 ) {
   return (event: WorkflowEvent): Partial<JournalRecord> => {
     const actor = actorOf(snapshot, input, event);
@@ -518,6 +522,7 @@ export function journalExtrasOf(
       ...(testObservation ? { testObservation } : {}),
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(accepted.reports.length > 0 ? { reports: accepted.reports } : {}),
+      ...(accepted.resultDigest ? { resultDigest: accepted.resultDigest } : {}),
       dependencies: accepted.dependencies,
       ...actor,
     };
@@ -590,11 +595,19 @@ function closureOf(accepted: readonly WorkflowAcceptedStage[]) {
 }
 
 // The run summary, from the journal: IDs, digests and outcomes, never request text, an
-// answer or anything the run settled.
-// SIMPLIFIED: a stage's receipt digests are those of its report copies.
-// Lift when: the core writes each accepted result under `results/` and digests it.
+// answer or anything the run settled. A stage's receipt digests are its result file's, then its
+// report copies'.
 function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot) {
   const accepted = snapshot.acceptedStages ?? [];
+  const resultDigests = new Map(
+    records.flatMap((record): [string, string][] =>
+      record.resultRef && record.resultDigest ? [[record.resultRef, record.resultDigest]] : [],
+    ),
+  );
+  const resultDigestOf = (receiptRef: string | undefined): string[] => {
+    const digest = receiptRef ? resultDigests.get(receiptRef) : undefined;
+    return digest ? [digest] : [];
+  };
   return {
     runId: snapshot.run.id,
     qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
@@ -611,7 +624,10 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
       stageKind: stage.stageKind,
       outcome: stage.outcome,
       testObservation: stage.testObservation ?? "not_applicable",
-      receiptDigests: (stage.reports ?? []).map((report) => report.digest),
+      receiptDigests: [
+        ...resultDigestOf(stage.receiptRef),
+        ...(stage.reports ?? []).map((report) => report.digest),
+      ],
       reviewerRoles: (stage.reviewResults ?? [])
         .filter((review) => review.verdict === "PASS")
         .map((review) => review.role),
