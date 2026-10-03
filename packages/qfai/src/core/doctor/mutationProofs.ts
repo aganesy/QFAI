@@ -34,7 +34,13 @@ async function stillApplies(root: string, proof: Proof): Promise<boolean> {
   try {
     return (await readFile(path.resolve(root, proof.target), "utf8")).includes(proof.original);
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error.code === "ENOENT" || error.code === "ENOTDIR" || error.code === "EISDIR")
+    ) {
+      return false;
+    }
     throw error;
   }
 }
@@ -52,7 +58,7 @@ export async function checkMutationProofs(
   const read = await readStoryTests(root, config);
   if (read.truncated) {
     throw new Error(
-      `Mutation proof scan is incomplete: selected test files exceed the ${DEFAULT_GLOB_FILE_LIMIT} file limit.`,
+      `Mutation proof scan is incomplete: the test-file scan exceeded the ${DEFAULT_GLOB_FILE_LIMIT} file limit. Narrow the test globs or exclude unrelated test files and try again.`,
     );
   }
   const tests = read.files.filter((file) => file.selectedForExample);

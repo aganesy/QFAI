@@ -86,6 +86,18 @@ describe("mutation-proof target file boundary", () => {
       });
     },
   );
+
+  it.each(["EACCES", "EIO"])("preserves the original %s target-read failure", async (code) => {
+    const root = await project(WITH_PROOF);
+    const { config } = await loadConfig(root);
+    scan.targetPath = path.join(root, "src", "total.ts");
+    const fault = Object.assign(new Error("cannot read the proof target"), {
+      code,
+      path: scan.targetPath,
+    });
+    scan.targetFault = fault;
+    await expect(checkMutationProofs(root, config)).rejects.toBe(fault);
+  });
 });
 
 const CONFIG = [
@@ -140,7 +152,14 @@ describe("qfai doctor checks that each mutation proof still names existing code"
     ]);
 
     await rm(path.join(root, "src", "total.ts"));
-    expect((await mutationProofs(root))?.severity).toBe("warning");
+    const missing = await mutationProofs(root);
+    expect(missing?.severity).toBe("warning");
+    expect(missing?.message).toContain("tests/unit/total.test.ts:4");
+    if (!missing?.details)
+      throw new Error("missing mutation target must include diagnostic details");
+    expect(missing.details.stale).toEqual([
+      { test: "tests/unit/total.test.ts", line: 4, target: "src/total.ts", original: "a + b" },
+    ]);
   });
 
   // QFAI:EX-0003-0030-02
