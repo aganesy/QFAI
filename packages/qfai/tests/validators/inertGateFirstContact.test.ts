@@ -152,12 +152,12 @@ describe("the undeclared-dependency warning names what it is holding back", () =
     "openapi: 3.0.0",
     "info:",
     "  title: Orders",
-    "# QFAI-CONTRACT-ID: CON-API-0001",
+    "# QFAI-CONTRACT-ID: API-0001",
     "",
   ].join("\n");
 
   const undeclared = async (): Promise<string> =>
-    withPack({ ".qfai/contracts/api/orders.yaml": CONTRACT }, async (root) => {
+    withPack({ ".qfai/spec/03_contract/api/orders.yaml": CONTRACT }, async (root) => {
       const issues = await validateContracts(root, defaultConfig);
       return issues.find((item) => item.code === "QFAI-CONTRACT-015")?.message ?? "";
     });

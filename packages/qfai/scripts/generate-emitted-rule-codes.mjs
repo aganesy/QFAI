@@ -30,8 +30,7 @@
  *     code these validators emit.
  *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
  *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
- *     other shapes out: `GuardrailIssue` (`QFAI-GR-00N`, a `guardrails`-command
- *     type that `applyWaivers` never sees), `HandoffValidationIssue`, the
+ *     other shapes out: `HandoffValidationIssue`, the
  *     render-evidence error record and the justification catalog all carry a
  *     `code` but none of them is a validate `Issue`, and a waiver naming one
  *     could never match a finding.
@@ -129,9 +128,9 @@ const CORE_ISSUE_FACTORY = ["issue", { severityArg: 2, fixedSeverity: null }];
  * `issue(code, message, severity, file, rule, …)` — the argument a finding
  * carries as its `rule`.
  *
- * A waiver may name either spelling, and several rules publish an alias no
- * `code` literal ever yields: `tddList.ts` emits `TDDLIST-003` and
- * `TDDLIST-004` only here. Collecting them keeps a waiver written against the
+ * A waiver may name either spelling, and a rule may publish an alias no `code`
+ * literal ever yields: `waivers.ts` emits `WAIVER-001` only here, beside the
+ * code `QFAI-WAIVER-001`. Collecting them keeps a waiver written against the
  * documented spelling out of `QFAI-WAIVER-004` on a run where the rule stays
  * quiet. Only the shared helper is read — a local factory's parameter order is
  * its own — and `RULE_ID_RE` discards the `category.subcategory` strings this
@@ -410,7 +409,7 @@ function resolveValue(raw, literals, constants) {
  * passes them on, so the same file always holds the answer.
  *
  * Same-file is also what keeps the resolution honest: widening it to the whole
- * tree would let any `code:` field anywhere — `GuardrailIssue`'s included —
+ * tree would let any `code:` field anywhere — `HandoffValidationIssue`'s included —
  * answer for every `x.code` argument in `src/`.
  *
  * @param {string} raw sanitized source slice.
@@ -692,6 +691,10 @@ function collectStringConstants(sources) {
  */
 async function collectEmittedRuleCodes(srcDir, outputFile) {
   const skip = path.resolve(outputFile);
+  const activeFiles =
+    path.resolve(srcDir) === path.resolve(DEFAULT_SRC_DIR)
+      ? await activeValidateModules(srcDir)
+      : null;
   const sources = [];
   /**
    * Sources excluded because their findings land after `applyWaivers`. Scanned
@@ -702,6 +705,9 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const postWaiver = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
     if (path.resolve(file) === skip) {
+      continue;
+    }
+    if (activeFiles !== null && !activeFiles.has(path.resolve(file))) {
       continue;
     }
     if (isPostWaiverSource(file)) {
@@ -739,8 +745,15 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const aliasSet = new Set();
   for (const source of sources) {
     const resolvable = { ...source, properties: collectPropertyValues(source, constants) };
-    scanFactoryCalls(resolvable, factories, constants, emissions, aliasSet);
-    scanIssueObjectLiterals(resolvable, constants, emissions);
+    const found = new Map();
+    scanFactoryCalls(resolvable, factories, constants, found, aliasSet);
+    scanIssueObjectLiterals(resolvable, constants, found);
+    for (const [code, entry] of found) {
+      if (activeFiles !== null && isRetiredSpecPackEmission(srcDir, source.file, code)) continue;
+      const combined = emissions.get(code) ?? { severities: new Set() };
+      entry.severities.forEach((severity) => combined.severities.add(severity));
+      emissions.set(code, combined);
+    }
   }
 
   // The post-waiver codes, resolved the same way and against the same
@@ -768,6 +781,97 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     .filter((alias) => !emissions.has(alias))
     .sort((a, b) => a.localeCompare(b, "en"));
   return { codes, errorOnly, aliases, postWaiverCodes };
+}
+
+/**
+ * Follow the validate entry points instead of treating every retained legacy
+ * validator as a live waiver rule. The validator barrel exports migration and
+ * spec-pack readers for other commands; only bindings imported by validate
+ * can contribute to its finding stream. A new direct import is followed
+ * automatically, so the generated registry remains fail-closed on additions.
+ */
+async function activeValidateModules(srcDir) {
+  const entry = path.join(srcDir, "core", "validate.ts");
+  const cliEntry = path.join(srcDir, "cli", "commands", "validate.ts");
+  const barrel = path.join(srcDir, "core", "validators", "index.ts");
+  const entryText = await readFile(entry, "utf-8");
+  // These functions remain exported for migration and artifact readers, but
+  // `validate` no longer dispatches them. If a profile adopts one again, stop
+  // generation until its rule family has an honest profile owner.
+  for (const name of [
+    "validateLayerCoverage",
+    "validateTraceability",
+    "validateContractReferences",
+  ]) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(entryText)) {
+      throw new Error(`retired spec-pack validator ${name} is dispatched by validate`);
+    }
+  }
+  const barrelImport = /import\s*\{([^}]+)\}\s*from\s*["']\.\/validators\/index\.js["']/g;
+  const selected = new Set();
+  for (const match of entryText.matchAll(barrelImport)) {
+    for (const name of match[1].split(",")) {
+      const binding = name
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0];
+      if (binding) selected.add(binding);
+    }
+  }
+  const visited = new Set();
+  const queue = [entry, cliEntry];
+  while (queue.length > 0) {
+    const file = path.resolve(queue.pop());
+    if (visited.has(file)) continue;
+    visited.add(file);
+    let raw;
+    try {
+      raw = await readFile(file, "utf-8");
+    } catch (error) {
+      throw new Error(`failed to read active validate module ${file}: ${toMessage(error)}`, {
+        cause: error,
+      });
+    }
+    const statement = /\b(?:import|export)\s+([\s\S]*?)\s+from\s+["'](\.[^"']+)["'];/g;
+    for (const match of raw.matchAll(statement)) {
+      const target = path.resolve(path.dirname(file), match[2].replace(/\.js$/, ".ts"));
+      if (!target.startsWith(path.resolve(srcDir) + path.sep)) continue;
+      if (file === barrel) {
+        const named = /\{([^}]+)\}/.exec(match[1]);
+        if (
+          named &&
+          !named[1].split(",").some((name) => {
+            const exported = name
+              .trim()
+              .split(/\s+as\s+/)
+              .at(-1);
+            return selected.has(exported);
+          })
+        )
+          continue;
+      }
+      queue.push(target);
+    }
+    for (const match of raw.matchAll(/\bimport\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+      queue.push(path.resolve(path.dirname(file), match[1].replace(/\.js$/, ".ts")));
+    }
+  }
+  return visited;
+}
+
+/** Rule emissions retained for migration helpers but absent from validate. */
+function isRetiredSpecPackEmission(srcDir, file, code) {
+  const relative = path.relative(srcDir, file).split(path.sep).join("/");
+  if (relative === "core/validators/layerCoverage.ts") {
+    return /^QFAI-(?:COV|PLAN)-/.test(code);
+  }
+  if (relative === "core/validators/traceability.ts") {
+    return /^QFAI-TRACE-/.test(code);
+  }
+  if (relative === "core/validators/contractReferences.ts") {
+    return /^QFAI-CONTRACT-(?:030|032|033|035|043)$/.test(code);
+  }
+  return false;
 }
 
 /**
@@ -1073,7 +1177,11 @@ async function listTypeScriptFiles(dir) {
  */
 function renderEmittedRuleCodesModule(codes, errorOnly, aliases, postWaiverCodes) {
   const list = (values) =>
-    values.length === 0 ? "" : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
+    values.length === 0
+      ? ""
+      : values.length === 1
+        ? `"${values[0]}"`
+        : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
   return `/**
  * Every code a validate \`Issue\` from this package can carry.
  *
@@ -1100,10 +1208,10 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [${list(errorOnly)}];
 /**
  * Rule ids that only ever reach a finding through \`Issue.rule\`.
  *
- * Some emitters key the finding on a broad \`code\` and narrow it with a
- * per-defect \`rule\` — \`tddList.ts\` raises one code but tags each finding
- * \`TDDLIST-003\` / \`TDDLIST-004\`. A waiver may name either, so the ids that
- * never appear as a \`code\` are listed here rather than folded into
+ * An emitter may publish a finding under a \`rule\` no \`code\` spells —
+ * \`waivers.ts\` raises \`QFAI-WAIVER-001\` and tags it \`WAIVER-001\`. A waiver
+ * may name either, so the ids that never appear as a \`code\` are listed here
+ * rather than folded into
  * {@link EMITTED_RULE_CODES}: they are waivable, but they are not codes.
  */
 export const RULE_ID_ALIASES: readonly string[] = [${list(aliases)}];

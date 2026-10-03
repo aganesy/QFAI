@@ -1,36 +1,5 @@
-/**
- * Integration: Init Command Spec-0003 TDD Backfill
- *
- * Validates that the init command (spec-0003) requirements are covered
- * by existing implementation: init.ts CLI command module.
- *
- * Every case except TC-0003-0001 is Exception-pattern backfill (DR-0003-0006).
- * Existing coverage: tests/cli/init.test.ts, tests/codex/agents.test.ts.
- * TC-0003-0001 runs init into an empty directory and reads what it wrote.
- */
-// QFAI:SPEC-0003:TC-0003-0001
-// QFAI:SPEC-0003:TC-0003-0002
-// QFAI:SPEC-0003:TC-0003-0003
-// QFAI:SPEC-0003:TC-0003-0004
-// QFAI:SPEC-0003:TC-0003-0005
-// QFAI:SPEC-0003:TC-0003-0006
-// QFAI:SPEC-0003:TC-0003-0007
-// QFAI:SPEC-0003:TC-0003-0008
-// QFAI:SPEC-0003:TC-0003-0009
-// QFAI:SPEC-0003:TC-0003-0010
-// QFAI:SPEC-0003:TC-0003-0011
-// QFAI:SPEC-0003:TC-0003-0012
-// QFAI:SPEC-0003:TC-0003-0013
-// QFAI:SPEC-0003:TC-0003-0014
-// QFAI:SPEC-0003:TC-0003-0015
-// QFAI:SPEC-0003:TC-0003-0018
-// QFAI:SPEC-0003:TC-0003-0019
-// QFAI:SPEC-0003:TC-0003-0020
-// QFAI:SPEC-0003:TC-0003-0021
-// QFAI:SPEC-0003:TC-0003-0023
-// QFAI:SPEC-0003:TC-0003-0024
-// QFAI:SPEC-0003:TC-0003-0025
-// QFAI:SPEC-0003:TC-0003-0026
+/** Init integration traceability and assistant-tree wiring. */
+// QFAI:EX-0001-0020-01
 import { lstat, mkdtemp, readdir, readFile, readlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -41,6 +10,16 @@ import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "init.ts");
+// The managed-block writer init calls, shared with the migration steps.
+const ROOT_GITIGNORE_WRITER = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "core",
+  "init",
+  "rootGitignore.ts",
+);
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
@@ -60,7 +39,7 @@ describe("TC-0003-0001: Empty directory initialization", () => {
     }
   }
 
-  it("writes .qfai/assistant/ and qfai.config.yaml, none of the six artifact directories, and a link to every skill in each of the four skills/ directories", async () => {
+  it("writes the singular assistant tree and skill links without project artifacts", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tc0001-"));
     try {
       await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
@@ -71,7 +50,8 @@ describe("TC-0003-0001: Empty directory initialization", () => {
       for (const sub of ARTIFACT_DIRS) {
         if ((await kindOf(path.join(dir, ".qfai", sub))) !== "absent") present.push(sub);
       }
-      expect(present, "init wrote an artifact directory under .qfai/").toEqual([]);
+      expect(present, "init wrote a retired artifact directory under .qfai/").toEqual([]);
+      expect(await kindOf(path.join(dir, ".qfai", "spec", "01_policy"))).toBe("directory");
 
       // Verify bullet 2.
       expect(await kindOf(path.join(dir, "qfai.config.yaml"))).toBe("file");
@@ -79,7 +59,7 @@ describe("TC-0003-0001: Empty directory initialization", () => {
       // Verify bullet 3. Init has no fallback for a link it cannot create — it stops with the
       // Developer Mode message — so a copied directory here is a failure on every platform.
       const skills = (
-        await readdir(path.join(dir, ".qfai", "assistant", "skills"), { withFileTypes: true })
+        await readdir(path.join(dir, ".qfai", "assistant", "skill"), { withFileTypes: true })
       )
         .filter((entry) => entry.isDirectory() && entry.name.startsWith("qfai-"))
         .map((entry) => entry.name);
@@ -90,7 +70,7 @@ describe("TC-0003-0001: Empty directory initialization", () => {
           const link = path.join(dir, linkDir, skill);
           const target =
             (await kindOf(link)) === "symlink" ? (await readlink(link)).replace(/\\/g, "/") : "";
-          if (!target.endsWith(`.qfai/assistant/skills/${skill}`))
+          if (!target.endsWith(`.qfai/assistant/skill/${skill}`))
             unlinked.push(`${linkDir}/${skill}`);
         }
       }
@@ -223,30 +203,29 @@ describe("TC-0003-0015: Symlink idempotency (3 consecutive runs)", () => {
   });
 });
 
-// TC-0003-0018: gitignore 管理ブロック追記（新規）
+// TC-0003-0018: append the managed gitignore block (new file)
 // Actual assertions live in tests/cli/init.test.ts ("appends QFAI entries to root .gitignore on init").
 // This block records the TC→implementation coverage link for traceability.
-describe("TC-0003-0018: gitignore 管理ブロック追記（新規）", () => {
+describe("TC-0003-0018: append the managed gitignore block (new file)", () => {
   it("init wires QFAI_GITIGNORE_BLOCK writer into runInit", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("ensureRootGitignoreEntries");
-    expect(content).toContain("QFAI_GITIGNORE_BLOCK");
+    expect(await readFile(INIT_CLI, "utf-8")).toContain("ensureRootGitignoreEntries");
+    expect(await readFile(ROOT_GITIGNORE_WRITER, "utf-8")).toContain("QFAI_GITIGNORE_BLOCK");
   });
 });
 
-// TC-0003-0019: レガシー行除去と管理ブロック置換
+// TC-0003-0019: remove legacy lines and replace the managed block
 // Actual assertions live in tests/cli/init.test.ts ("strips legacy review-*/ negation lines when migrating from old managed block").
-describe("TC-0003-0019: レガシー行除去と管理ブロック置換", () => {
+describe("TC-0003-0019: remove legacy lines and replace the managed block", () => {
   it("init references QFAI_GITIGNORE_LEGACY_LINES for migration", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
+    const content = await readFile(ROOT_GITIGNORE_WRITER, "utf-8");
     expect(content).toContain("QFAI_GITIGNORE_LEGACY_LINES");
     expect(content).toContain("removeManagedBlock");
   });
 });
 
-// TC-0003-0020: review-*/ サブディレクトリが gitignore 対象
+// TC-0003-0020: review-*/ subdirectories are gitignored
 // Actual assertions live in tests/cli/init.test.ts ("does not track review-*/ subdirectories after init").
-describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象", () => {
+describe("TC-0003-0020: review-*/ subdirectories are gitignored", () => {
   it("QFAI_GITIGNORE_BLOCK SSOT excludes review-*/ negations from REQUIRED_ENTRIES", async () => {
     const { QFAI_GITIGNORE_BLOCK, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } =
       await import("../../src/core/gitignore.js");
@@ -260,48 +239,42 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
   });
 });
 
-// TC-0003-0021..0026 (v1.9.0 assistant-tree recut). Runtime assertions live
-// in tests/cli/init.test.ts; here we keep the static-content checks that
-// pin the SSOT imports and the assistantPaths.ts helpers.
+// Runtime assertions live in tests/cli/init.test.ts. These checks pin the
+// assistant-tree path helpers used by init.
 
-describe("TC-0003-0021: 4-layer asset-tree seed", () => {
-  it("init imports assistantPaths.ts and uses ASSISTANT_LAYERS / joinAssistantLayer", async () => {
+describe("TC-0003-0021: singular assistant-tree seed", () => {
+  it("init uses the assistant path SSOT and ships the singular layers", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("assistantPaths");
-    expect(content).toContain("ASSISTANT_LAYERS");
+    expect(content).toContain("ASSISTANT_DIR");
     expect(content).toContain("joinAssistantLayer");
+    expect(content).toContain('"assistant/skill"');
+    expect(content).toContain('"assistant/agent"');
+    expect(content).toContain('"assistant/step"');
+    const { ASSISTANT_LAYERS } = await import("../../src/core/paths/assistantPaths.js");
+    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
   });
 });
 
 describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
-  it("init wires --upgrade-assistant-tree to runUpgradeAssistantTree", async () => {
+  it("init moves only named legacy assets while keeping existing destinations", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("upgradeAssistantTree");
     expect(content).toContain("runUpgradeAssistantTree");
     expect(content).toContain("W-USER-EDIT-PRESERVED");
-  });
-});
-
-describe("TC-0003-0024: migration memo authoring", () => {
-  it("init authors the migration memo via buildMigrationMemo / joinMigrationMemo", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("buildMigrationMemo");
-    expect(content).toContain("joinMigrationMemo");
-    // The retirement label comes from the SSOT in `assistantPaths.ts`, shared
-    // with the validator, NOT from a release-relative computation.
-    expect(content).toContain("legacyAssistantSteeringSunsetLabel");
+    expect(content).toContain("UPGRADE_RULE_FILES");
+    expect(content).toContain('"qfai-sdd/references/requirements-decomposition.md"');
+    expect(content).toContain("if (target === null) continue");
   });
 });
 
 describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
-  it("exports the canonical 4 layer names and helper functions", async () => {
+  it("exports the singular layer names and path helpers", async () => {
     const mod = await import("../../src/core/paths/assistantPaths.js");
-    expect(mod.ASSISTANT_LAYERS).toEqual(["constitution", "manifest", "catalog", "process"]);
+    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
-    expect(typeof mod.joinLegacyAssistantSteering).toBe("function");
-    expect(typeof mod.joinMigrationMemo).toBe("function");
-    expect(mod.migrationMemoRelativePath("1.9.0")).toBe(
-      ".qfai/assistant/process/migrations/v1.9.0-assistant-layer-recut.md",
+    expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
+      path.join("project", ".qfai", "assistant", "rule", "quality.md"),
     );
   });
 });

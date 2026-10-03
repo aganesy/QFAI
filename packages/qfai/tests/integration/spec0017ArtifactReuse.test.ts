@@ -1,5 +1,5 @@
 /**
- * `BR-0017-0029`, as the conditional it is written as.
+ * `BR-0016-0029`, as the conditional it is written as.
  *
  * ## What changed, and why it is not a weakening
  *
@@ -21,7 +21,7 @@
  * **This does not say artifact reuse is done.** It is not: no leg downloads the build, no baseline has
  * been captured, and the requirement stays open in `10_Plan.md` and in `09_delta.md`'s follow-ups. What
  * this row now guarantees is that the day someone adopts reuse, they cannot adopt it without the
- * numbers — which is what `BR-0017-0030` asks for and what the old formulation could not check,
+ * numbers — which is what `BR-0016-0030` asks for and what the old formulation could not check,
  * because it was red either way.
  */
 
@@ -33,6 +33,30 @@ import { parse as parseYaml } from "yaml";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const CI = path.join(REPO_ROOT, ".github", "workflows", "ci.yml");
+const ROOT_MANIFEST = path.join(REPO_ROOT, "package.json");
+
+/**
+ * The two builds the pack-verification lifecycle fires today. Artifact reuse cannot remove them, so
+ * adopting it must leave this count as it is.
+ */
+const PACK_LIFECYCLE_BUILDS = 2;
+
+/**
+ * The helpers that reach `prepack -> npm run build`, and the npm call in each that does it.
+ *
+ * A `run:` line cannot show a build spawned inside a helper, so the helpers are named here and the
+ * test reads each one's source for its call. A helper that stops making the call fails the case
+ * rather than going on counting as a build.
+ */
+const PACK_LIFECYCLE_HELPERS = [
+  { script: "scripts/verify-pack.mjs", call: 'runNpm(["pack"' },
+  { script: "scripts/check-publish-dry-run.mjs", call: 'runNpm(["publish", "--dry-run"]' },
+] as const;
+
+/** The helpers use these literal calls; update the oracle if their spelling changes. */
+function hasOneLifecycleCall(source: string, call: string): boolean {
+  return source.split(call).length === 2;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -43,15 +67,15 @@ interface ReuseState {
   readonly rebuildLegs: readonly string[];
   /** Steps in the test job that take the build from an artifact instead. */
   readonly downloadSteps: readonly string[];
-  /** Bundler invocations the pack-verification lifecycle fires; outside reuse's reach (DTC-19). */
-  readonly packLifecycleSites: number;
+  /** Builds the pack-verification lifecycle fires; outside reuse's reach (DTC-19). */
+  readonly packLifecycleBuilds: number;
 }
 
 /**
- * `BR-0017-0029`. Vacuous while nothing downloads, and exact the moment something does.
+ * `BR-0016-0029`. Vacuous while nothing downloads, and exact the moment something does.
  *
  * The `before`/`after` pair is an input rather than something read here: the numbers live in the
- * decision record and the pull-request description, per `BR-0017-0030`, and whoever adopts reuse is
+ * decision record and the pull-request description, per `BR-0016-0030`, and whoever adopts reuse is
  * the party that measured them.
  */
 export function reuseRuleHolds(input: {
@@ -85,15 +109,61 @@ export function reuseRuleHolds(input: {
         String(input.recordedAfter),
     };
   }
-  if (state.packLifecycleSites !== 1) {
+  if (state.packLifecycleBuilds !== PACK_LIFECYCLE_BUILDS) {
     return {
       holds: false,
       reason:
-        "the pack-verification lifecycle's build is outside reuse's reach and must be unchanged; " +
-        `found ${String(state.packLifecycleSites)} invocation sites`,
+        "the pack-verification lifecycle's builds are outside reuse's reach and must be unchanged; " +
+        `expected ${String(PACK_LIFECYCLE_BUILDS)}, found ${String(state.packLifecycleBuilds)}`,
     };
   }
   return { holds: true, reason: "the build is produced once and the recorded count fell" };
+}
+
+/**
+ * The leaf commands a `run:` line reaches, with every `pnpm <script>` resolved through the root
+ * manifest's scripts. A script already being expanded is left as a leaf, so a cycle ends.
+ */
+export function expandRootScripts(
+  command: string,
+  scripts: Readonly<Record<string, string>>,
+  expanding: ReadonlySet<string> = new Set(),
+): string[] {
+  const leaves: string[] = [];
+  for (const raw of command.split("&&")) {
+    const segment = raw.trim();
+    if (segment === "") continue;
+    const name = /^pnpm\s+(?:run\s+)?([\w:.-]+)$/.exec(segment)?.[1];
+    const body = name !== undefined && Object.hasOwn(scripts, name) ? scripts[name] : undefined;
+    if (name === undefined || body === undefined || expanding.has(name)) {
+      leaves.push(segment);
+      continue;
+    }
+    leaves.push(...expandRootScripts(body, scripts, new Set([...expanding, name])));
+  }
+  return leaves;
+}
+
+/** How many pack-lifecycle builds a `run:` line fires, once its root scripts are resolved. */
+export function countPackLifecycleBuilds(
+  command: string,
+  scripts: Readonly<Record<string, string>>,
+): number {
+  return expandRootScripts(command, scripts).filter((leaf) => {
+    const [runner, target] = leaf.split(/\s+/);
+    const script = target?.replace(/^\.\//, "");
+    return runner === "node" && PACK_LIFECYCLE_HELPERS.some((helper) => helper.script === script);
+  }).length;
+}
+
+async function readRootScripts(): Promise<Record<string, string>> {
+  const manifest: unknown = JSON.parse(await readFile(ROOT_MANIFEST, "utf8"));
+  const scripts = isRecord(manifest) && isRecord(manifest["scripts"]) ? manifest["scripts"] : {};
+  const out: Record<string, string> = {};
+  for (const [name, body] of Object.entries(scripts)) {
+    if (typeof body === "string") out[name] = body;
+  }
+  return out;
 }
 
 async function readState(): Promise<ReuseState> {
@@ -124,17 +194,18 @@ async function readState(): Promise<ReuseState> {
     }
   }
 
-  let packLifecycleSites = 0;
+  const scripts = await readRootScripts();
+  let packLifecycleBuilds = 0;
   for (const step of stepsOf(jobs["build"])) {
     const run = typeof step["run"] === "string" ? step["run"] : "";
-    if (/\bci:build-verify\b/.test(run)) packLifecycleSites += 1;
+    packLifecycleBuilds += countPackLifecycleBuilds(run, scripts);
   }
 
-  return { rebuildLegs: rebuildLegs.sort(), downloadSteps, packLifecycleSites };
+  return { rebuildLegs: rebuildLegs.sort(), downloadSteps, packLifecycleBuilds };
 }
 
-// QFAI:SPEC-0017:TC-0017-0032
 describe("the build-artifact reuse rule holds, and holds vacuously until reuse is adopted", () => {
+  // QFAI:EX-0002-0016-01
   it("names the legs that would change, and binds the numbers to the moment one of them downloads", async () => {
     const state = await readState();
 
@@ -146,10 +217,41 @@ describe("the build-artifact reuse rule holds, and holds vacuously until reuse i
       "these are the legs artifact reuse would convert into downloads; a scan that cannot see them " +
         "would report reuse adopted the moment it was not",
     ).toEqual(["e2e", "integration"]);
+    // The helpers are named rather than followed, so each one's call is read here: a helper that
+    // stopped packing would otherwise go on counting as a build.
+    for (const { script, call } of PACK_LIFECYCLE_HELPERS) {
+      const source = await readFile(path.join(REPO_ROOT, script), "utf8");
+      expect(
+        hasOneLifecycleCall(source, call),
+        `${script} must fire the pack lifecycle exactly once for its leaf to count as one build`,
+      ).toBe(true);
+      if (script === "scripts/verify-pack.mjs") {
+        expect(
+          hasOneLifecycleCall(`${source}\nrunNpm(["pack"]);\n`, call),
+          "a second pack call must fail even when the root script still reaches one helper",
+        ).toBe(false);
+      }
+    }
     expect(
-      state.packLifecycleSites,
-      "the pack-verification lifecycle's build is outside reuse's reach (DTC-19) and is the baseline " +
-        "half that must not move",
+      state.packLifecycleBuilds,
+      "the pack-verification lifecycle's builds are outside reuse's reach (DTC-19) and are the " +
+        "baseline half that must not move: the build job's steps, resolved through the root scripts, " +
+        "reach both of them",
+    ).toBe(PACK_LIFECYCLE_BUILDS);
+
+    // Removing one lifecycle build from the root script the build job calls must change the count.
+    // The step's own `run:` line is the same either way, which is why the scripts are resolved.
+    const scripts = await readRootScripts();
+    const buildVerify = scripts["ci:build-verify"] ?? "";
+    expect(buildVerify, "the build job's script must still call the pack verification").toContain(
+      "pnpm verify:pack && ",
+    );
+    expect(
+      countPackLifecycleBuilds("pnpm ci:build-verify", {
+        ...scripts,
+        "ci:build-verify": buildVerify.replace("pnpm verify:pack && ", ""),
+      }),
+      "a build job that no longer runs the pack verification fires one lifecycle build, not two",
     ).toBe(1);
 
     const live = reuseRuleHolds({ state, recordedBefore: null, recordedAfter: null });
@@ -164,14 +266,14 @@ describe("the build-artifact reuse rule holds, and holds vacuously until reuse i
     const adopted: ReuseState = {
       rebuildLegs: [],
       downloadSteps: ["Download qfai build"],
-      packLifecycleSites: 1,
+      packLifecycleBuilds: PACK_LIFECYCLE_BUILDS,
     };
     expect(
       reuseRuleHolds({ state: adopted, recordedBefore: 4, recordedAfter: 2 }).holds,
       "reuse adopted, nothing rebuilding, and a recorded fall is the accepting shape",
     ).toBe(true);
     const missing = reuseRuleHolds({ state: adopted, recordedBefore: null, recordedAfter: null });
-    expect(missing.holds, "adopting it without the numbers is what BR-0017-0030 forbids").toBe(
+    expect(missing.holds, "adopting it without the numbers is what BR-0016-0030 forbids").toBe(
       false,
     );
     // The REASON, not just the verdict. Deleting the null check leaves `null >= null`, which is `true`
@@ -193,13 +295,15 @@ describe("the build-artifact reuse rule holds, and holds vacuously until reuse i
       }).holds,
       "downloading in one leg while another still builds is not producing the build once",
     ).toBe(false);
-    expect(
-      reuseRuleHolds({
-        state: { ...adopted, packLifecycleSites: 2 },
-        recordedBefore: 4,
-        recordedAfter: 2,
-      }).holds,
-      "the pack lifecycle's build must be unchanged; a second one there is a different change",
-    ).toBe(false);
+    for (const packLifecycleBuilds of [PACK_LIFECYCLE_BUILDS - 1, PACK_LIFECYCLE_BUILDS + 1]) {
+      expect(
+        reuseRuleHolds({
+          state: { ...adopted, packLifecycleBuilds },
+          recordedBefore: 4,
+          recordedAfter: 2,
+        }).holds,
+        `the pack lifecycle's builds must be unchanged; ${String(packLifecycleBuilds)} is a different change`,
+      ).toBe(false);
+    }
   });
 });

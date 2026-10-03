@@ -181,6 +181,8 @@ export interface SpawnCapturedOptions {
   env?: NodeJS.ProcessEnv;
   /** Written to the child's stdin, which is then closed. Omitted, stdin is `ignore`. */
   input?: string;
+  /** Passes the arguments to a Windows child as written, the way a host hands `cmd.exe /C` its line. */
+  windowsVerbatimArguments?: boolean;
 }
 
 /** Runs `command` to completion and answers with what it reported. */
@@ -189,11 +191,12 @@ export async function spawnCaptured(
   args: readonly string[],
   options: SpawnCapturedOptions = {},
 ): Promise<Spawned> {
-  const { cwd, env, input } = options;
+  const { cwd, env, input, windowsVerbatimArguments } = options;
   return await new Promise<Spawned>((resolve, reject) => {
     const child = spawn(command, [...args], {
       ...(cwd === undefined ? {} : { cwd }),
       ...(env === undefined ? {} : { env }),
+      ...(windowsVerbatimArguments === undefined ? {} : { windowsVerbatimArguments }),
       stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
 

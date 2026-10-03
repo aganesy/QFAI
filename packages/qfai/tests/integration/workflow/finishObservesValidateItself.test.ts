@@ -1,6 +1,6 @@
-// QFAI:SPEC-0018:TC-0018-0030
-// QFAI:SPEC-0018:TC-0018-0039
-// QFAI:SPEC-0018:TC-0018-0240
+// QFAI:AC-0001-0185-06
+// QFAI:EX-0001-0185-19
+// QFAI:EX-0001-0185-36
 
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { validateQuietly } from "../../../src/core/workflow/observe.js";
 import {
   CLI,
@@ -19,26 +20,28 @@ import {
   minimalProject,
   removeProjects,
   resultFor,
-  routedRun,
   submit,
   workflow,
 } from "./workflowProject.js";
 
 afterEach(removeProjects);
 
-it("TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, asserted first", async () => {
+it("Built CLI on a fixture whose validate is clean, asserted first", async () => {
   const root = await initProject();
   const errors = (await validateQuietly(root)).issues.filter((issue) => issue.severity === "error");
   const { runId, issued } = await featureRunAt(root, "verify");
-  const report = path.join(root, ".qfai", "runs", "shared", "verify.json");
+  const report = path.join(root, ".qfai", "run", "shared", "verify.json");
   await mkdir(path.dirname(report), { recursive: true });
-  await writeFile(report, '{"status":"PASS","scope":"full"}\n');
+  const text = '{"status":"PASS","scope":"full"}\n';
+  await writeFile(report, text);
   await submit(
     root,
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/runs/shared/verify.json", digest: "submitted" }],
+      artifactRefs: [
+        { path: ".qfai/run/shared/verify.json", digest: hashAssistantAssetText(text) },
+      ],
       reviewResults: [
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
@@ -104,7 +107,7 @@ function gitSubcommand(argv: string[]): string {
   return "";
 }
 
-it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async () => {
+it("Temp repo whose validate reports an error", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");
   const accepted = await submit(
@@ -113,8 +116,8 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     "accept",
     resultFor(issued.json, "verify-1", { gateResults: [{ gateId: "validate", verdict: "PASS" }] }),
   );
-  const log = path.join(root, ".qfai", "runs", "spawns.log");
-  const recorder = await spawnRecorder(path.join(root, ".qfai", "runs"), log);
+  const log = path.join(root, ".qfai", "run", "spawns.log");
+  const recorder = await spawnRecorder(path.join(root, ".qfai", "run"), log);
   const finished = spawnSync(
     process.execPath,
     ["--import", recorder, CLI, "workflow", "finish", "--run", runId],
@@ -130,7 +133,7 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     const args = Array.isArray(argv) ? argv.map(String) : [];
     return file !== "git" || !READ_ONLY_GIT.has(gitSubcommand(args));
   });
-  const journal = path.join(root, ".qfai", "runs", runId, "journal");
+  const journal = path.join(root, ".qfai", "run", runId, "journal");
   const events = await Promise.all(
     (await readdir(journal)).map((name) => readFile(path.join(journal, name), "utf8")),
   );
@@ -156,34 +159,4 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     submitted: [{ gateId: "validate", verdict: "PASS", trustLevel: "agent_reported" }],
     notReadOnlyGit: [],
   });
-});
-
-it("TC-0018-0240: Under failOn never, a debt whose finding the finish validate still reports", async () => {
-  const root = await minimalProject("validation:\n  failOn: never\n");
-  const finding = (await validateQuietly(root)).issues.find((issue) => issue.file);
-  const { runId } = await routedRun(root);
-  const issued = workflow(root, ["next", "--run", runId]);
-  const debt = {
-    findingCode: finding?.code,
-    path: finding?.file,
-    cause: "The finding stands after this stage.",
-    owningSpec: "spec-0001",
-    detectingCommand: "qfai validate",
-    resolvingOwner: "operator",
-    blockingExtent: "completion",
-  };
-  const accepted = await submit(
-    root,
-    runId,
-    "accept",
-    resultFor(issued.json, "discussion-1", { outcome: "accepted_with_debt", debts: [debt] }),
-  );
-  const unmet = field(workflow(root, ["finish", "--run", runId]).json, "unmet");
-  const conditions = (Array.isArray(unmet) ? unmet : []).map((entry) => field(entry, "condition"));
-
-  expect({
-    accepted: field(accepted.json, "ok"),
-    debtOpen: conditions.includes("debt-open"),
-    gateFailed: conditions.includes("gate-failed"),
-  }).toEqual({ accepted: true, debtOpen: true, gateFailed: false });
 });

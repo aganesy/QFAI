@@ -221,48 +221,31 @@ function terminatorOf(line: string | undefined): string {
 }
 
 const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
-const ENTRY_DIRECTIVE_PREFIX = "Send a first free-text change request to the `qfai-run` skill";
-
-function templateLine(template: string | null, prefix: string): string | undefined {
-  return template?.split(/\r?\n/).find((line) => line.startsWith(prefix));
-}
-
-/** Prepend the template's review directive only when no operative copy exists. */
-export function addReviewPointer(existing: string, template: string | null): string {
-  const pointer = templateLine(template, REVIEW_DIRECTIVE_PREFIX);
-  return pointer === undefined ? existing : prependDirective(existing, pointer, true);
-}
 
 /**
- * Prepend the template's directives that have no operative copy.
+ * Prepend the template's review directive only when no operative copy exists.
  *
- * The entry directive is always owed and ends on top. The review directive is
- * owed only where the project keeps a `REVIEW.md` for it to point at.
+ * An operative line in an earlier wording of the directive is rewritten in
+ * place instead. Left beside the current one, the two disagree on which branch
+ * a reviewer reads `REVIEW.md` from.
  */
-export function addEntryPointDirectives(
-  existing: string,
-  template: string | null,
-  hasReviewPolicy: boolean,
-): string {
-  const reviewed = hasReviewPolicy ? addReviewPointer(existing, template) : existing;
-  return addEntryDirective(reviewed, template);
-}
-
-/** Prepend the template's entry directive only when no operative copy exists. */
-export function addEntryDirective(existing: string, template: string | null): string {
-  const entry = templateLine(template, ENTRY_DIRECTIVE_PREFIX);
-  return entry === undefined ? existing : prependDirective(existing, entry, false);
+export function addReviewPointer(existing: string, template: string | null): string {
+  const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(REVIEW_DIRECTIVE_PREFIX));
+  return pointer === undefined ? existing : prependDirective(existing, pointer);
 }
 
 /**
- * `existing` with `pointer` on its first line, unless an operative copy is
- * already there. The review directive is followed by a blank line; the entry
- * directive by the line break alone, so the project's bytes follow it directly.
+ * `existing` with `pointer` on its first line, followed by a blank line, unless
+ * an operative copy is already there. An operative line in an earlier wording
+ * is replaced where it stands instead.
  */
-function prependDirective(existing: string, pointer: string, blankLine: boolean): string {
+function prependDirective(existing: string, pointer: string): string {
+  // Where the text of the first operative line in an earlier wording sits.
+  let earlier: { start: number; end: number } | null = null;
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
+
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
     label
@@ -914,21 +897,33 @@ function prependDirective(existing: string, pointer: string, blankLine: boolean)
           paragraph = false;
         quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
       }
-      if (
-        pass === 1 &&
-        container === "" &&
-        !lazyQuote &&
-        visible.trim().replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "") === pointer
-      )
-        return existing;
+      const operative = visible
+        .trim()
+        .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
+      if (pass === 1 && container === "" && !lazyQuote) {
+        if (operative === pointer) return existing;
+        // Only a line that reads exactly as written, with no markup after the
+        // directive's own opening: rewriting one that carries markup would drop it.
+        const line = raw.replace(/\r$/, "");
+        const lead =
+          /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
+        if (
+          earlier === null &&
+          operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
+          !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
+          line.slice(lead.length).trimEnd() === operative
+        )
+          earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
+      }
       offset += raw.length + 1;
     }
   }
 
+  if (earlier !== null)
+    return `${existing.slice(0, earlier.start)}${pointer}${existing.slice(earlier.end)}`;
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
-  const separator = blankLine ? `${end}${end}` : end;
-  return `${existing.slice(0, bom)}${pointer}${separator}${existing.slice(bom)}`;
+  return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;
 }
 
 /**
@@ -1135,6 +1130,12 @@ const SUPERSEDED_RULE_BULLETS: ReadonlyMap<string, readonly string[]> = new Map(
     [
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends on an empty frontier and the user's confirmation, never at a question count.",
       "- `.agents/rules/grilling.md` — interview the decision tree in rounds before a design is fixed; a session ends in one of four named endings, never at a question count.",
+    ],
+  ],
+  [
+    ".agents/rules/user-questions.md",
+    [
+      "- `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.",
     ],
   ],
 ]);

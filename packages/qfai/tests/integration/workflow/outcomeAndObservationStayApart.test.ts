@@ -1,10 +1,12 @@
-// QFAI:SPEC-0018:TC-0018-0050
+// QFAI:AC-0001-0185-08
+// QFAI:EX-0001-0185-30
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
   featureRunAt,
   field,
@@ -16,7 +18,7 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0050 (TDD-0307): Built CLI accept of a verify result naming its verify", async () => {
+it("Built CLI accept of a verify result naming its verify", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");
   const report = `${JSON.stringify({ status: "PASS", scope: "full" }, null, 2)}\r\n`;
@@ -27,10 +29,10 @@ it("TC-0018-0050 (TDD-0307): Built CLI accept of a verify result naming its veri
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/report/verify.json", digest: "submitted" }],
+      artifactRefs: [{ path: ".qfai/report/verify.json", digest: hashAssistantAssetText(report) }],
     }),
   );
-  const copy = path.join(root, ".qfai", "runs", runId, "reports", "verify", "verify.json");
+  const copy = path.join(root, ".qfai", "run", runId, "reports", "verify", "verify.json");
 
   expect({
     ok: field(accepted.json, "ok"),

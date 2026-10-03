@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0020
+// QFAI:EX-0003-0008-02
 //
 // Boundary: `qfai doctor --clean` is a move (never delete) operation;
 // re-running on an already-archived pack is a no-op. The
@@ -20,6 +20,9 @@ const tempDirs: string[] = [];
 async function newTempDir(label: string): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-doctor-noDelete-${label}-`));
   tempDirs.push(dir);
+  // A project carries the document-schema lane; doctor reports its absence as an error.
+  await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(dir, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
   return dir;
 }
 
@@ -32,7 +35,7 @@ afterEach(async () => {
   }
 });
 
-async function seedReviewPack(root: string, ts: string, _mtime: Date): Promise<string> {
+async function seedReviewPack(root: string, ts: string): Promise<string> {
   const dir = path.join(root, ".qfai", "review", `review-${ts}`);
   await mkdir(dir, { recursive: true });
   return dir;
@@ -51,7 +54,7 @@ describe("doctor --clean never deletes; validate review excludes _archive", () =
   it("second --clean run is a no-op after the first archived the pack", async () => {
     const root = await newTempDir("idempotent");
     const ts = "20260401120000123";
-    const oldDir = await seedReviewPack(root, ts, new Date());
+    const oldDir = await seedReviewPack(root, ts);
     // Force mtime to 30 days ago.
     const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     await utimes(oldDir, mtime, mtime);

@@ -1,4 +1,7 @@
-export type NormativeReferenceKind = "request" | "spec-id" | "contract-id" | "path";
+import { DECISION_INPUT, shapeFaults, STAGE_RESULT } from "./payloadShapes.js";
+import type { InputRefusal } from "./types.js";
+
+export type NormativeReferenceKind = "request" | "flow-id" | "contract-id" | "path";
 export type ObservedReferenceKind = "path" | "evidence";
 
 export interface RouteReference<Kind extends string> {
@@ -23,7 +26,7 @@ export type ParsedRouteReferences =
 
 const NORMATIVE_KINDS: readonly NormativeReferenceKind[] = [
   "request",
-  "spec-id",
+  "flow-id",
   "contract-id",
   "path",
 ];
@@ -96,13 +99,16 @@ export interface DecisionQuestionInput {
   recommendation?: string;
 }
 
-// A fact is asked as a value: it offers no options and carries no recommendation.
-export interface FactQuestionInput {
-  kind: "fact";
-  text: string;
-  options: QuestionOption[];
-  effect: QuestionEffect;
-}
+// A fact carries no recommendation. It is a choice where its candidates can be listed, and a
+// value request with one effect where they cannot.
+export type FactQuestionInput =
+  | {
+      kind: "fact";
+      text: string;
+      options: QuestionOption[];
+      selection: { min: number; max: number };
+    }
+  | { kind: "fact"; text: string; options: []; effect: QuestionEffect };
 
 function isEffect(value: unknown): value is QuestionEffect {
   return value === "proceed" || value === "replan" || value === "stop";
@@ -123,12 +129,24 @@ function parseOption(value: unknown): QuestionOption | undefined {
   return { optionId, label, description, effect };
 }
 
-// SIMPLIFIED: a fact question is read as a value request; a fact offering candidates is not read.
-// Lift when: a routing or stage result asks for a fact whose candidates can be listed.
+// A fact whose candidates can be listed is a choice among them, each option carrying its
+// effect; otherwise it is a value request, and `effect` applies to any value.
 function parseFactQuestion(value: Record<string, unknown>): FactQuestionInput | undefined {
   const { text, effect } = value;
+  if (value.recommendation !== undefined) return undefined;
+  if (value.options !== undefined) {
+    if (effect !== undefined) return undefined;
+    const choice = parseDecisionQuestion({ ...value, kind: "decision" });
+    if (!choice) return undefined;
+    return {
+      kind: "fact",
+      text: choice.text,
+      options: choice.options,
+      selection: choice.selection,
+    };
+  }
+  if (value.selection !== undefined) return undefined;
   if (typeof text !== "string" || !text.trim() || !isEffect(effect)) return undefined;
-  if (value.options !== undefined || value.recommendation !== undefined) return undefined;
   return { kind: "fact", text, options: [], effect };
 }
 
@@ -229,36 +247,35 @@ function fieldRefusals(
   }));
 }
 
-const RESULT_FIELDS = {
-  resultId: "string",
-  workOrderId: "string",
-  stageInstanceId: "string",
-  attempt: "number",
-  expectedSequence: "number",
-  outcome: "string",
-} as const;
+const AUTHORIZATION_KINDS: unknown[] = ["request_scope", "human_decision", "project_policy"];
 
-// A stage result's identity fields, and a route proposal's reference shape where it carries one.
-// SIMPLIFIED: every other field is checked by the decision function where it reads it.
-// Lift when: a stage result field the decision function never reads gets a refusal row.
-export function stageResultRefusals(value: Record<string, unknown>): SchemaReason[] {
-  const identity = fieldRefusals(value, RESULT_FIELDS, Object.keys(RESULT_FIELDS), false);
-  if (value.proposal === undefined || identity.length > 0) return identity;
-  const references = parseRouteReferences(value.proposal);
-  return references.ok ? [] : references.error.reasons;
+// Only the core records an authorization. One a payload carries is refused, and one of a kind
+// the core never records, such as one derived from a mode or a confidence value, says so.
+export function carriedAuthorization(payload: { approved?: unknown; authorization?: unknown }) {
+  const refusals: InputRefusal[] = [];
+  const { approved, authorization } = payload;
+  if (approved !== undefined) refusals.push({ reason: "schema", subject: "approved" });
+  if (authorization !== undefined) {
+    const kind = isRecord(authorization) ? authorization.kind : undefined;
+    const reason = AUTHORIZATION_KINDS.includes(kind) ? "schema" : "authorization-kind";
+    refusals.push({ reason, subject: "authorization" });
+  }
+  return refusals;
 }
 
-const DECISION_FIELDS = {
-  questionId: "string",
-  answer: "object",
-  answeredBy: "string",
-  expectedSequence: "number",
-  stop: "boolean",
-} as const;
+const schemaFaults = (subjects: readonly string[]): SchemaReason[] =>
+  subjects.map((subject) => ({ reason: "schema", subject: subject || "payload" }));
 
-// A decision input holds these and no other field.
+// A stage result is closed and complete: every field the stage-result schema requires, each of
+// its shape, and no key it does not declare. An authorization it tries to carry is named apart.
+export function stageResultRefusals(value: Record<string, unknown>): InputRefusal[] {
+  const { approved: _approved, authorization: _authorization, ...rest } = value;
+  return [...carriedAuthorization(value), ...schemaFaults(shapeFaults(rest, STAGE_RESULT, ""))];
+}
+
+// A decision input holds its own fields, each of its shape, and no other.
 export function decisionInputRefusals(value: Record<string, unknown>): SchemaReason[] {
-  return fieldRefusals(value, DECISION_FIELDS, [], true);
+  return schemaFaults(shapeFaults(value, DECISION_INPUT, ""));
 }
 
 const START_FIELDS = { request: "object", completionTarget: "string", harness: "object" } as const;

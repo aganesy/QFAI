@@ -35,8 +35,9 @@
  * path: it re-gates an already-sealed scope-limited certificate against
  * the validate-side gate signal and rewrites the scope marker in place
  * (`certify --check` is what catches HTML that moved after the seal).
- * The shipped `generator-prompt.md` states the same posture on the
- * authoring side; the two must not drift apart.
+ * The shipped `generator-prompt.md` allows token-backed Tailwind utilities,
+ * declared CSS custom-property references or `theme(...)` on the authoring
+ * side. This scanner checks captured values; the two must stay aligned.
  *
  * Input tree: both production call sites feed this scanner the CAPTURE
  * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`
@@ -853,7 +854,7 @@ function declarationBlocks(html: string): string[] {
  * Text that fails the contrast floor the project declared.
  *
  * `accessibility.contrast_ratio_min` was parsed, type-checked and hashed
- * into the lock, and no check read it as a threshold — a project could
+ * with the rest of DESIGN.md, and no check read it as a threshold — a project could
  * declare a stricter ratio than AA and be measured against AA, or declare
  * AA and have no capture measured at all. This is the clause that reads
  * it, on the same captures the other five clauses scan.

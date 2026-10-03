@@ -16,7 +16,7 @@
  * said about them — that one needs no Mermaid boot at all.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,6 +76,33 @@ const BROKEN_DIAGRAM = ["```mermaid", "flowchart TD", "  A[Start] -->--> B{{{oop
 );
 
 describe("check-mermaid lane", () => {
+  // QFAI:EX-0001-0011-05
+  it("parses the business-flow diagram in a one-flow one-story SDD sample", async () => {
+    const root = await newTempDir();
+    const source = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN",
+    );
+    const destination = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+    for (const relative of [
+      "business-flow.md",
+      "user-story-NNNN-NNNN/01_User-story.md",
+      "user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "user-story-NNNN-NNNN/03_Example.md",
+    ]) {
+      const target = path.join(
+        destination,
+        relative.replace("user-story-NNNN-NNNN", "user-story-0001-0001"),
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, await readFile(path.join(source, relative), "utf8"), "utf8");
+    }
+
+    const result = runLane([root]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+
   it("exits 0 and counts the diagrams when every block parses", async () => {
     const dir = await newTempDir();
     await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
@@ -171,6 +198,98 @@ describe("check-mermaid lane", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+});
+
+/**
+ * The lane's tools can live outside the tree the script runs from.
+ *
+ * The shipped document lane installs Mermaid and jsdom into a directory of its
+ * own, because the project's package manager may have laid out a dependency tree
+ * that npm cannot read. `--tools <dir>` names that directory; the tools are
+ * resolved from it first, then the way the script always resolved them.
+ */
+describe("check-mermaid --tools", () => {
+  const seedTool = async (tools: string, name: string, source: string): Promise<void> => {
+    const dir = path.join(tools, "node_modules", name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name, version: "0.0.0", type: "module", exports: { ".": "./index.mjs" } }),
+      "utf-8",
+    );
+    await writeFile(path.join(dir, "index.mjs"), source, "utf-8");
+  };
+
+  // QFAI:EX-0002-0003-08
+  it("parses with the Mermaid and jsdom the named directory holds", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    const tools = await newTempDir();
+    // A copy that refuses every diagram, so a verdict of "refused" can only have come from here.
+    await seedTool(
+      tools,
+      "mermaid",
+      "export default { initialize() {}, parse: () => Promise.reject(new Error('refused by the tools copy')) };\n",
+    );
+    await seedTool(
+      tools,
+      "jsdom",
+      "export class JSDOM { constructor() { this.window = { document: {} }; } }\n",
+    );
+
+    const result = runLane([dir, "--tools", tools]);
+
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain("refused by the tools copy");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("falls back to the tools the script resolves itself when the directory holds none", async () => {
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+    const tools = await newTempDir();
+
+    const result = runLane([dir, "--tools", tools]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("does not take a tool from a directory above the named one", async () => {
+    const parent = await newTempDir();
+    // A refusing copy one level up: if resolution walked there, the run would fail.
+    await seedTool(
+      parent,
+      "mermaid",
+      "export default { initialize() {}, parse: () => Promise.reject(new Error('refused by the parent copy')) };\n",
+    );
+    const tools = path.join(parent, "tools");
+    await mkdir(tools);
+    const dir = await newTempDir();
+    await writeFile(path.join(dir, "ok.md"), `# Fine\n\n${GOOD_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir, "--tools", tools]);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("1 diagram(s) parsed");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option", () => {
+    const result = runLane(["--tools", "--list"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools names no directory", () => {
+    const result = runLane(["--tools"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
   });
 });
 

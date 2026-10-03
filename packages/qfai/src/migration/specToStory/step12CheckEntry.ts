@@ -1,0 +1,132 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import { loadConfig, readWorkflowMode } from "../../core/config.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
+import { extractManagedBlock } from "../../core/init/rootGitignore.js";
+import { QFAI_RUN_STATE_IGNORE } from "../../core/gitignore.js";
+import { allPlanRefusals, type PlanRefusal } from "../../core/workflow/plans.js";
+import { isRecord } from "../../core/workflow/parse.js";
+import { EVIDENCE_DIR, reincludesEvidence, trackedEvidence } from "./evidenceIndex.js";
+import type { MigrationContext, MigrationStep } from "./harness.js";
+import { scanOldPaths } from "./step12OldPaths.js";
+import { linksToSkill } from "./step11InstallEntry.js";
+
+const RUN_SKILL = "qfai-run";
+
+function skillPath(skill: string, ...rest: string[]): string {
+  return [".qfai/assistant/skill", skill, ...rest].join("/");
+}
+
+/** One `## For a person` item, named by its check as `workflow start` names the cause. */
+function refusalItem(refusal: PlanRefusal): string {
+  const [skill = refusal.subject, detail = ""] = refusal.subject.split(":");
+  switch (refusal.reason) {
+    case "reviewer-missing":
+      return `reviewer-missing: qfai.config.yaml: the \`routing:\` override for \`${skill}\` drops \`${detail}\`, which the package's default routing requires`;
+    case "step-missing":
+      return `contract-undeclared: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
+    default:
+      return `contract-undeclared: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
+  }
+}
+
+async function modeItems(context: MigrationContext): Promise<string[]> {
+  const { document } = await loadConfig(context.root);
+  if (readWorkflowMode(document) !== null) return [];
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  const value = isRecord(workflow)
+    ? `workflow.mode is ${JSON.stringify(workflow.mode)}`
+    : "workflow is not a mapping";
+  return [`invalid-mode: qfai.config.yaml: ${value}, not active, shadow or off`];
+}
+
+async function gitignoreItems(context: MigrationContext): Promise<string[]> {
+  let content: string;
+  try {
+    content = await readFile(path.join(context.root, ".gitignore"), "utf8");
+  } catch (error) {
+    if (isEnoent(error)) return ["gitignore: .gitignore: the file does not exist"];
+    throw error;
+  }
+  const block = new Set(
+    extractManagedBlock(content)
+      .split("\n")
+      .map((line) => line.trimEnd()),
+  );
+  const items = block.has(QFAI_RUN_STATE_IGNORE)
+    ? []
+    : [`gitignore: .gitignore: the QFAI managed block lacks \`${QFAI_RUN_STATE_IGNORE}\``];
+  for (const line of content.split("\n").filter(reincludesEvidence)) {
+    items.push(`gitignore: .gitignore: \`${line.trimEnd()}\` re-includes \`.qfai/evidence/\``);
+  }
+  return [...items, ...(await nestedIgnoreItems(context))];
+}
+
+/** Every negation in the nested file re-includes a path under `.qfai/evidence/`. */
+async function nestedIgnoreItems(context: MigrationContext): Promise<string[]> {
+  const relative = `${EVIDENCE_DIR}/.gitignore`;
+  let content: string;
+  try {
+    content = await readFile(path.join(context.root, relative), "utf8");
+  } catch (error) {
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "EISDIR")) return [];
+    throw error;
+  }
+  return content
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.startsWith("!"))
+    .map(
+      (line) => `gitignore: ${relative}: \`${line}\` re-includes a path under \`.qfai/evidence/\``,
+    );
+}
+
+function trackedEvidenceItems(context: MigrationContext): string[] {
+  const tracked = trackedEvidence(context.root) ?? [];
+  if (tracked.length === 0) return [];
+  return [`evidence-tracked: git tracks ${tracked.map((entry) => `\`${entry}\``).join(", ")}`];
+}
+
+async function runLinkItems(context: MigrationContext): Promise<string[]> {
+  const skillDir = path.join(context.root, ".qfai", "assistant", "skill", RUN_SKILL);
+  const items: string[] = [];
+  for (const dir of SKILL_INTEGRATION_DIRS) {
+    if (await linksToSkill(path.join(context.root, dir, RUN_SKILL), skillDir)) continue;
+    items.push(
+      `qfai-run-link: ${dir}/${RUN_SKILL}: no link here resolves to ${skillPath(RUN_SKILL)}/`,
+    );
+  }
+  return items;
+}
+
+/**
+ * Makes the project checks `npx qfai workflow start` makes before it creates a
+ * run, checks what step 11 installs, checks that git keeps `.qfai/evidence/`
+ * out of the index as step 10 leaves it, and lists each line of a tracked
+ * project file that still names a 1.x path. It writes nothing and repairs
+ * nothing.
+ */
+export const step12: MigrationStep = {
+  number: 12,
+  writeSet: [],
+  sections: ["Files scanned", "For a person"],
+  async plan(context) {
+    // Read git first: a git failure ends the step before any other check reads the index.
+    const scan = await scanOldPaths(context);
+    const refusals = await allPlanRefusals(context.root, context.config);
+    return {
+      operations: [],
+      filesScanned: [scan.scanned],
+      forAPerson: [
+        ...refusals.map(refusalItem),
+        ...(await modeItems(context)),
+        ...(await gitignoreItems(context)),
+        ...(await runLinkItems(context)),
+        ...trackedEvidenceItems(context),
+        ...scan.items,
+      ],
+    };
+  },
+};
