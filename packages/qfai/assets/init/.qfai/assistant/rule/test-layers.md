@@ -89,6 +89,27 @@ assertion, or cannot observe the intended behavior. Validation inspects
 selected test files and reports stub findings. Repair the test and rerun the
 relevant Standard command and validation before claiming coverage.
 
+## A passing test is not the solution
+
+An example is done when its test passes. The test checks the solution; it does
+not define it. Code that passes for the test's inputs and fails for other
+valid inputs has not met the example's obligation, however green the gates
+read.
+
+- Do not hard-code a value to match a test case, and do not branch on a test's
+  own inputs.
+- Do not let a helper script or a workaround stand in for the standard tools
+  the task calls for.
+- Where the task cannot be done as specified, or a test case is itself wrong,
+  stop and report it. The route is a Change Request against the specification
+  (`.qfai/assistant/rule/drift-protocol.md`), never an edit that makes the
+  wrong case pass.
+
+That last point is why this is stated here rather than left to review.
+Elsewhere, code written around a test is a quality problem. Under Article V it
+is also a false link in the chain from requirement to evidence, and nothing
+shows the break, because every gate is green.
+
 ## CI lane mapping
 
 This section adds no layer token or layer heading and does not activate
