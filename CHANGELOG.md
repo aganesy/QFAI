@@ -22,6 +22,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     that was already there is recorded and deferred, never blocking. Findings
     are concrete problems, with no rating per check.
   - The `/qfai-implement` row of the reviewer remit table says the same.
+
 - **The delegation baseline names the host limits above the declared shape**
   (#2239). Dispatch limits are read by the agent that dispatches, so nothing in
   QFAI bounded a run that spawned more workers, nested delegation deeper or kept
