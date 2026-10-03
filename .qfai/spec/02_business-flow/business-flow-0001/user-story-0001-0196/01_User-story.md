@@ -6,7 +6,6 @@ As an adopter maintainer, I want `qfai init` and an upgrade to install `qfai-run
 
 ## Non-goals
 
-- The workflow core and what `start` refuses.
 - The routing entries of the two skills, which the package defaults carry.
 - Writing a `workflow.mode` key or asking for one.
 - Installing the built-in plans, which the package holds.
