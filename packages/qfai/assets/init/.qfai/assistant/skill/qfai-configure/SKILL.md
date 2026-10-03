@@ -52,11 +52,11 @@ both outlive an exhausted budget.
 
 - Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot-mandatory`.
 
-- Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
-  - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
-  - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
-  - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`
-  - `.qfai/assistant/skill/qfai-prototyping/references/evidence-requirements.md`
+- Before writing or editing a `.qfai/**` artifact, read the reference for that artifact:
+  - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md` — the story-tree layout and which file owns what. Read it before filling a policy file or `03_contract/tech.md`.
+  - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md` — the rules for a contract. Read it before writing a contract other than `tech.md`.
+  - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md` — a discussion pack's file rules. Read it only if asked to edit a pack.
+  - `.qfai/assistant/skill/qfai-prototyping/references/evidence-requirements.md` — what a prototyping evidence file must hold. Read it only if asked to edit one.
 
 ## Inputs Priority (Preflight)
 
@@ -186,76 +186,11 @@ Evidence must include:
 - chosen tools per layer (E2E/API/Integration/Component/Unit)
 - the Standard commands section in `03_contract/tech.md` and the commands actually executed
 
-### Required sections
-
-- Objective
-- Inputs reviewed (files/paths)
-- Decisions made (with rationale)
-- Work performed (what changed, where)
-- Commands executed + key outputs
-- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
-- Final status (PASS/FAIL) + who confirmed
-
-### Template
-
-```md
-# Configure Evidence: <run-id>
-
-## Objective
-
-## Inputs reviewed (files/paths)
-
-## Decisions made (with rationale)
-
-## Work performed (what changed, where)
-
-## Commands executed + key outputs
-
-## Proposed globs
-
-- include:
-- exclude:
-
-## Evidence samples (5-15)
-
-## Tool selection (per layer)
-
-## Minimum runnable path
-
-## Files changed
-
-- qfai.config.yaml:
-- policy and contract files:
-
-## Gaps / Open risks
-
-## Final status (PASS/FAIL) + who confirmed
-```
+Read `references/configure-evidence.md` when you create the evidence file. It holds the required sections and a template for the file. Not needed before then.
 
 ## Non-Negotiable Principles (QFAI Articles)
 
-These principles are inspired by "constitution / articles" patterns used by other agent frameworks, but adapted to QFAI.
-
-1. **SDD First (Specification is the source of truth)**  
-   If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
-
-2. **Traceability is mandatory**  
-   Every meaningful change must connect a business flow, story, acceptance criterion, example, test, code, and verification evidence. BF is covered by E2E tests, AC by integration or API tests, and EX by a selected non-E2E test. Full rule: `.qfai/assistant/rule/constitution.md` Article V.
-
-3. **Evidence over confidence**  
-   Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.
-
-4. **Minimize scope, but never hide gaps**  
-   Keep changes minimal, but do not "paper over" missing decisions. If something blocks correctness, stop and ask.
-
-5. **Quality gates are the decision mechanism**  
-   Use tests/lint/typecheck/build/pack verification (whatever the repo defines) as the primary guardrail. Fix until PASS.
-
-6. **Make it runnable**  
-   Outputs must be executable in terminal/CI. Provide copy-paste commands.
-
-7. **User time is expensive**  
-   Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
+Read `references/principles.md` when the steps below do not settle a choice: code disagrees with the spec, a gap blocks correctness, or you are unsure a question is worth asking. It holds the seven principles this skill works by. Not needed while the steps answer the question.
 
 ## README Rule
 
@@ -411,63 +346,9 @@ Sample 5-15 actual test files that match the proposed globs.
   blocker.
 - If some directories are ambiguous, list them as Open Questions.
 
-## Checkpoints
+## Completion
 
-- [ ] Repository analysis completed (frameworks, test layout, naming rules).
-- [ ] Project-owned policy and contract files updated with evidence or `TBD`.
-- [ ] Standard commands recorded only in `03_contract/tech.md`.
-- [ ] Proposed include/exclude globs with rationale.
-- [ ] `qfai.config.yaml` updated (minimal diff).
-- [ ] BF, AC, and EX test layers inspected.
-- [ ] Evidence: sample matched files listed.
-
-## Output
-
-Provide:
-
-1. Updated `qfai.config.yaml` (diff or full file, as appropriate).
-2. Updated project-owned policy and contract files (diff or summary).
-3. A short summary of changes and rationale.
-4. Validation checklist with sampled files.
-5. If routing or review profiles changed, list each whole-entry override and its reason.
-6. Open questions (blocking vs non-blocking).
-
-Suggest next step: `/qfai-discussion` (or rerun `/qfai-configure` if configuration is not ready).
-
-## DONE Declaration (Mandatory Output)
-
-When you declare DONE, include:
-
-- Referenced inputs: instructions, project context, `decisions.md`, and any applicable story.
-- DEC IDs referenced (or "none" when no decision applies).
-- Confirmation that no rejected option was reintroduced.
-
-## FINAL CHECKLIST (Check Last)
-
-- [ ] Hard Constraints were followed.
-- [ ] Evidence file exists and is complete.
-- [ ] All mandatory checks were executed and recorded.
-- [ ] No untracked gaps remain (or they are explicitly documented).
-- [ ] Completion approved by a reviewer who did not modify the config.
-
-## Completion Checklist
-
-- [ ] This skill's Definition of Done is satisfied.
-- [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `open-questions.md`.
-- [ ] The completion message was presented to the user.
-- [ ] Next actions were enumerated for all available options.
-
-## Completion Message & Next Actions
-
-When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
-
-- Proceed (recommended): `/qfai-discussion`.
-  Action: run it to formalize requirements from the configured project context.
-- Discussion needs more input: rerun `/qfai-discussion`.
-  Action: collect missing scope, constraints, and assumptions first.
-- Configuration needs refinement: rerun `/qfai-configure`.
-  Action: provide additional include/exclude evidence and update `qfai.config.yaml`.
+Read `references/completion.md` once Step 5 is done and before you declare DONE. It holds the checkpoints, the output to provide, the DONE declaration, the final and completion checklists, and the next actions to offer the user. Not needed before then.
 
 ## Default Autopilot Policy
 

@@ -1,6 +1,6 @@
 # SDD Execution Playbook
 
-Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape, and spec-traceability-rules.md#document-shapes states what a template cannot show.
+Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ define each file's shape, and the Document shapes section of the SDD traceability rules states what a template cannot show.
 
 ## Stage 0: source inventory
 
@@ -13,7 +13,7 @@ A review is completed only when its summary.json exists. Match the resolved pack
 
 ## Stage 1: triage and decisions
 
-Follow sdd-triage.md. Classify each requirement against existing policy, flow, story, example, and contract content.
+Follow the SDD triage rules. Classify each requirement against existing policy, flow, story, example, and contract content.
 Identify every affected flow. Append decisions and open questions to the two four-column tables before a dependent
 write. If a row requires approval, obtain it through the shared user-question protocol; in --auto, leave it pending and
 stop dependent work. A declined change stays as a REJECTED decision row.
@@ -24,7 +24,7 @@ stop dependent work. A declined change stays as a REJECTED decision row.
    A constraint is a limit in plain words; its ID is its place in its section, so removing a row renumbers the rows after it.
    A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the pack records and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.
    A layer is a group of modules whose dependencies point one way: down. The section draws the layers as one `flowchart TD`, then lists them in the table from the uppermost down, and the two name the same layers and edges.
-   Implementation places new code by that table and reviewers judge a change against it, as spec-traceability-rules.md#architecture states.
+   Implementation places new code by that table and reviewers judge a change against it.
 2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
 3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
 
@@ -39,12 +39,12 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. tech.md holds the stack, the runtime dependencies and, in its Standard commands section, the only quality-gate command definitions. It holds no BR.
 2. Put each BR inside the contract that enforces it, numbered `BR-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
-3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
+3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by the contract artifact rules.
 4. For a visual UI surface, the root DESIGN.md is written and validated by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require one.
 
 ## Concrete-abstract cycle
 
-When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in concrete-abstract-cycle.md before the gate: an independent test-design-analyst raises findings against the tree, one griller decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
+When Stage 4 wrote or changed a BR Statement or Examples cell, run the concrete-abstract cycle before the gate: an independent test-design-analyst raises findings against the tree, one griller decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
 
 ## Stage 5: gate, review, and completion
 

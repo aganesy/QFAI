@@ -92,8 +92,12 @@ describe("shipped reviewer payload schema", () => {
   // `parseEvaluatorReview` outright, so the prompt has to say which of its
   // two outputs each schema belongs to.
   it("keeps the reviewer prompt from pointing the per-screen payload at the summary shape", async () => {
+    // A reference names no other reference, so the loop step that hands the
+    // reviewer its prompt is what names the schema file.
+    for (const step of await readShipped(LOOP_STEP_REL)) {
+      expect(step).toContain(SCHEMA_REL.slice("skill/qfai-prototyping/".length));
+    }
     for (const prompt of await readShipped(PROMPT_REL)) {
-      expect(prompt).toContain(SCHEMA_REL.slice("skill/qfai-prototyping/".length));
       expect(prompt).toContain("<screen>.review.json");
       // The legacy shape stays documented, but only as the per-cycle
       // summary the orchestrator folds into `prototyping.json`.

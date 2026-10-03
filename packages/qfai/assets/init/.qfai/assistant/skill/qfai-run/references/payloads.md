@@ -3,6 +3,16 @@
 The calls `qfai-run` makes, and the files it writes for them. Field names are
 exact: an unknown key is refused.
 
+## Contents
+
+- Calls
+- Start input
+- Routing result
+- Question input
+- Decision input
+- Work order
+- Stage result
+
 ## Calls
 
 | Call                                                   | When                                                  |
@@ -93,7 +103,7 @@ The routing work order's result carries the proposal.
   it as the recommender, and never counts it as an independent reviewer.
 - `requestKind` is `routed`: a change, a question, a proposal to decide or a
   report to close. The run refuses any other kind.
-- `extraction` holds the facts `references/extraction.md` defines: `intent`,
+- `extraction` holds the request facts: `intent`,
   `entryFlags`, `qualifiers`, `signals`, `risks`, `gate`, `artifacts` and
   `confidence`. `alternatives` is required at `low`, allowed at `medium` and
   left out at `high`; each one is `{ intent, entryFlags, qualifiers, signals }`.

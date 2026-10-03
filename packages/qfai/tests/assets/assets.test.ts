@@ -31,6 +31,7 @@ import {
 } from "../../src/core/validators/autopilotPolicy.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
+  assistantAssetMaxLines,
   countLines,
   LINE_BUDGET_EXEMPT,
   SKILL_MD_MAX_LINES,
@@ -2306,7 +2307,8 @@ describe("assets guardrails", () => {
   });
 
   it("keeps every shipped assistant asset inside the line ceiling", async () => {
-    // One ceiling for every file (see SKILL_MD_MAX_LINES). The per-skill
+    // One ceiling for every Markdown file (see SKILL_MD_MAX_LINES), and one for
+    // every YAML file (see assistantAssetMaxLines). The per-skill
     // numbers this replaced disagreed with each other about the same file and
     // had to be raised one at a time; the ceiling is a backstop, and the design
     // rule is that detail lives in the skill's references/ topic files.
@@ -2328,7 +2330,7 @@ describe("assets guardrails", () => {
       }
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const lineCount = countLines(content);
-      if (lineCount > SKILL_MD_MAX_LINES) {
+      if (lineCount > assistantAssetMaxLines(relativePath)) {
         oversized.push(`${relativePath} (${lineCount})`);
       }
     }

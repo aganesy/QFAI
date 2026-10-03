@@ -27,6 +27,9 @@ const ENTRY = "assistant/skill/qfai-grill/SKILL.md";
 const readSkill = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 const read = (tree: string): Promise<string> => readSkill(tree, SKILL);
+/** A section the body moved into its own reference, read where it now lives. */
+const readReference = (tree: string, name: string): Promise<string> =>
+  readSkill(tree, `assistant/skill/qfai-grilling/references/${name}`);
 
 /** The front matter block, which is where a host reads a skill's offer from. */
 const frontMatter = (raw: string): string => raw.slice(0, raw.indexOf("\n---", 4));
@@ -50,9 +53,24 @@ describe("the grilling primitive", () => {
         /answerable by number/,
         /spends no clarification budget/,
         /no fact lookup is still running/,
-        /build something to react to/,
       ]) {
         expect(text).toMatch(clause);
+      }
+      const talking = flat(await readReference(tree, "when-talking-cannot-settle.md"));
+      expect(talking).toMatch(/build something to react to/);
+    });
+
+    it(`${tree}: points at every section it moved out, with a read condition`, async () => {
+      const text = flat(await read(tree));
+      for (const name of [
+        "when-talking-cannot-settle.md",
+        "rounds-between-agents.md",
+        "lookup-failure.md",
+        "work-orders-summary.md",
+        "reviewer-gate.md",
+      ]) {
+        // The sentence naming the file opens with when to read it.
+        expect(text).toMatch(new RegExp(`Read \`references/${name}\` (?:when|before) `));
       }
     });
 
@@ -121,7 +139,9 @@ describe("the grilling primitive", () => {
       const raw = await read(tree);
       const frontMatter = raw.slice(0, raw.indexOf("\n---", 4));
       expect(frontMatter).not.toMatch(/^routing-profile:/m);
-      expect(flat(raw)).toMatch(/the gate that covers a session is the invoking stage's/);
+      expect(flat(await readReference(tree, "reviewer-gate.md"))).toMatch(
+        /the gate that covers a session is the invoking stage's/,
+      );
     });
 
     it(`${tree}: every tree path it cites exists in that tree`, async () => {
@@ -308,7 +328,7 @@ describe("the session does not settle what the user settles", () => {
       // continuing with self-execution. A skill that only says "read it
       // yourself" leaves an agent to pick which instruction wins, and two
       // agents pick differently.
-      const text = flat(await read(tree));
+      const text = flat(await readReference(tree, "lookup-failure.md"));
       expect(text).toMatch(/under the baseline's sanctioned exception for a read-only fact lookup/);
       expect(text).toMatch(/This is not an override of the hard stop/);
       expect(text).toMatch(/it permits reading only/);
@@ -328,7 +348,7 @@ describe("the session does not settle what the user settles", () => {
       // "The reaction is the answer" does not say whose reaction, so an agent
       // may read it as its own, and settle a question of taste on the user's
       // behalf while following the words.
-      const text = flat(await read(tree));
+      const text = flat(await readReference(tree, "when-talking-cannot-settle.md"));
       expect(text).toMatch(/put it in front of the user and ask the original question again/);
       expect(text).toMatch(/\*\*Their\*\* reaction is the answer/);
       expect(text).toMatch(/it does not transfer ownership of it/);

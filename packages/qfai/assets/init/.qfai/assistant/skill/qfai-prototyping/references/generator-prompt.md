@@ -5,6 +5,16 @@ Brand identity is locked by root `DESIGN.md`. Iterate on **information
 architecture**, **navigation flow**, and **usability** — not visual
 identity.
 
+## Contents
+
+- Read order
+- HTML envelope (mandatory on every iter)
+- Hard constraints (enforced by the compliance gate)
+- Output layout — two trees, two shapes
+- Cycle 0 (seed)
+- Cycles 1..9
+- Pivot guidance (what changes vs what does not)
+
 ## Read order
 
 1. Root `DESIGN.md` (front-matter tokens + `# Brand Philosophy` body).

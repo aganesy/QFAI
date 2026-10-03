@@ -8,7 +8,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 - Quality-gate commands occur only in the Standard commands section of <paths.contractsDir>/tech.md. Other files point there.
 - 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has exactly one Mermaid flowchart or sequenceDiagram, in `## Flow`.
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
-- The story tree was written from its paired templates under ../templates/spec/ and holds no heading, section, content kind or history they do not show, as spec-traceability-rules.md#document-shapes sets out.
+- The story tree was written from its paired templates under ../templates/spec/ and holds no heading, section, content kind or history they do not show, as the Document shapes section of the SDD traceability rules sets out.
 - decisions.md and open-questions.md have four cells per row: ID, Content, Approach, Status. Existing rows changed only in Status.
 - Triage, change requests, retirement, and rejected options have decision rows. Unanswered critical decisions have open-question rows and prevent completion.
 
@@ -22,7 +22,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 - Every contract file written has a contracts.md row from the same change.
 - Every persisted attribute and state named by an AC, EX, or BR is realizable by its contract directly or through a stated join.
 - Paired API and DB contracts agree on terminal states and error outcomes.
-- Each changed DB contract was applied to a scratch database and its declared write paths were exercised as contract-artifact-rules.md requires. The result appears under Contract executability in the affected flow evidence.
+- Each changed DB contract was applied to a scratch database and its declared write paths were exercised as the contract artifact rules require. The result appears under Contract executability in the affected flow evidence.
 - UI work uses a product-owned DESIGN.md that parses and validates; a sample design is not adopted.
 
 ## Flow validation
@@ -48,7 +48,7 @@ Do not use a sibling's in-flight findings to hold or clear the current flow. Rec
 
 ## Concrete-abstract cycle record
 
-Where the cycle ran (concrete-abstract-cycle.md), the completion reviewer reads the flow evidence's `## Concrete-Abstract Cycle` table. No validator reads it. The reviewer returns REVISE, naming the cycle, finding or item at fault, when:
+Where the concrete-abstract cycle ran, the completion reviewer reads the flow evidence's `## Concrete-Abstract Cycle` table. No validator reads it. The reviewer returns REVISE, naming the cycle, finding or item at fault, when:
 
 - a cycle that ran has no row;
 - the finder wrote a BR it read;

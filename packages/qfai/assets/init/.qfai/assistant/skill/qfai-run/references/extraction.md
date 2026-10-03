@@ -7,6 +7,20 @@ give the same plan. `qfai-run` names no route, stage or step.
 Every vocabulary here is closed. The run refuses a value this file does not
 define.
 
+## Contents
+
+- Procedure
+- Not the request
+- Intent
+- Entry flags
+- Qualifiers
+- Signals
+- Artifacts
+- Risks
+- Gate
+- Confidence and alternatives
+- Examples
+
 ## Procedure
 
 1. Separate the request from the text it quotes: see

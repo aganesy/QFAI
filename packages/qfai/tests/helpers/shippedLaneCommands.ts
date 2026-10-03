@@ -1376,10 +1376,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
     //
-    // The generated rule list cites action-reversibility and untrusted-content.
+    // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
+    "d964d3cd88b70de571eaf06256ac6d2cdaf351c9ccedd8cd12a249f3e810feb9",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1464,10 +1464,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
   //
-  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
+  // The entry files cite action-reversibility, untrusted-content and ai-readable-markdown.
   // These digests cover the shipped root templates, which init copies into a fresh project.
-  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
-  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
+  ["AGENTS.md", "27d645ff2cb93c3b5c3ee886de489952c726c3d120386a6bdfa0327f1c470a2a"],
+  ["CLAUDE.md", "39be7bca3d514d89e92879cd635a5edc75b9e407160decb4d68368fd8982e1d0"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1710,6 +1710,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/action-reversibility.md",
+  "root/.agents/rules/ai-readable-markdown.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",

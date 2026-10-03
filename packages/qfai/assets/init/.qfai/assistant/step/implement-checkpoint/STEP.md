@@ -24,6 +24,9 @@ or at once when none was owed.
 - `.qfai/assistant/skill/qfai-implement/references/checkpoint-verification.md`
   and
   `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md`.
+- `.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md`
+  when an example changed a shared artifact; it holds how to find the flows
+  that depend on it. Not needed when every change stays inside this flow.
 - The Test, Lint, Typecheck and Build commands, through `common-gate-run`.
 
 ## Procedure

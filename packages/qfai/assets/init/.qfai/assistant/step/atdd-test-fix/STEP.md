@@ -50,7 +50,8 @@ matched ID is a BF or an AC is refused.
    as `.qfai/assistant/skill/qfai-atdd/references/red-provenance.md` requires
    for a changed test, and rerun every consumer of a changed shared fixture as
    `.qfai/assistant/skill/qfai-atdd/references/shared-test-artifacts.md`
-   requires.
+   requires. Write the retaken record in the revision form
+   `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` holds.
 4. Re-run the fixed test with the Test command `common-gate-run` names, and
    record the command and result.
 

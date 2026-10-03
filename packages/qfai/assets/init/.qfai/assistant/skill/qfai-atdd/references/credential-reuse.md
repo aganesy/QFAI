@@ -4,6 +4,15 @@ Acceptance tests that need an authenticated actor pay for the sign-in once per w
 per test. This file is the rule set. It is prose guidance — it adds no validator, no finding code,
 no test layer and no annotation token, and nothing here is checked by a tool.
 
+## Contents
+
+- Scope
+- Not dogfooded here
+- The seven session-reuse rules
+- The companion rule: a caller-injected environment is not the harness's to manage
+- Script naming: adopter guidance
+- A worked example, as one illustration among possible backends
+
 ## Scope
 
 These rules oblige the **E2E, API and Integration** layers only, which is this skill's whole scope.

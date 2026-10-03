@@ -53,7 +53,9 @@ API test: the first matched ID is a BF or an AC. An invocation that authors
 tests skips it.
 
 Before dispatching a step's agents, resolve its routing as
-`.qfai/assistant/skill/qfai-atdd/references/stale-manifest.md` says. Roles are
+`.qfai/assistant/skill/qfai-atdd/references/stale-manifest.md` says. It holds
+what to do when the project's routing override is older than the shipped step,
+and is not needed when `qfai.config.yaml` overrides no routing. Roles are
 selected under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 Questions to the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.

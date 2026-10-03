@@ -16,9 +16,9 @@ The operator states a change once. This skill reads the request into facts,
 from which `npx qfai workflow` chooses the route, and hands each work order to a
 sub-agent that runs its steps; the CLI decides what happens next.
 
-- The facts a request is read into: `references/extraction.md`.
-- Every call and payload shape: `references/payloads.md`.
-- What the operator sees, and how questions are put: `references/operator-screens.md`.
+- Read `references/extraction.md` before extracting request facts; it defines them.
+- Read `references/payloads.md` before a workflow call or input file; it gives their shapes.
+- Read `references/operator-screens.md` before any output or question; it gives their forms.
 - Invoke the CLI through the launcher of `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
 ## What this skill never does

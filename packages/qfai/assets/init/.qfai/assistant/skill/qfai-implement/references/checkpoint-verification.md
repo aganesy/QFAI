@@ -9,7 +9,7 @@ Each gate is run, recorded and repaired as
 
 Run the selector that exercises the current EX ID after RED, after GREEN, and after refactor. Preserve the command, exit code, output, and source revision for each observation. A GREEN is the assertion passing at the intended boundary; a test process starting or a report file appearing is insufficient.
 
-Run the relevant tests for modules and contracts the example changes. For a shared artifact, use cross-spec-ownership.md to find the dependent flows. Keep the previously passing examples green on the integrated tree.
+Run the relevant tests for modules and contracts the example changes. For a shared artifact, use the cross-spec ownership rules to find the dependent flows. Keep the previously passing examples green on the integrated tree.
 
 ## Flow checkpoint
 

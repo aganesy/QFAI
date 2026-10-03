@@ -2,6 +2,16 @@
 
 Use this file when `/qfai-sdd` creates or updates `<paths.contractsDir>/**`. Write the concrete EX before its enforcing BR.
 
+## Contents
+
+- Purpose
+- Rules
+- What validation checks in a `.sql` contract
+- Cross-contract Reconciliation (MUST)
+- Executability (MUST)
+- Obligation realizability
+- Review checklist
+
 ## Purpose
 
 Contracts are version-managed downstream execution truth and inputs:
@@ -14,7 +24,7 @@ The brand SSOT is root `DESIGN.md` at the project root, and screens are `ui/`
 contracts. No other directory under `<paths.contractsDir>` holds a contract, and
 `QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
 either: the review validation the QFAI CLI applies fixes them (restated in
-`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`).
+the prototyping reviewer prompt).
 
 Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/rule/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `<paths.contractsDir>/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
 

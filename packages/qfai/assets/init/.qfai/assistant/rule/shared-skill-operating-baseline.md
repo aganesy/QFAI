@@ -14,11 +14,10 @@ A `SKILL.md` states the contract and points at the file that carries the detail.
 - **One topic per file.** Do not replace an oversized `SKILL.md` with an oversized `references/everything.md`; that is the same problem one directory down. Split by topic and keep each file readable on its own — a reader who followed one pointer should not have to scan past three unrelated subjects to reach the one they came for.
 - **Every pointer resolves.** A line that moves detail out must name the file (and anchor, when the file covers more than one topic) so the reader is never left guessing where the rule went.
 
-A hard line ceiling backs this up: **800 lines per assistant asset file**, for every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as `content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor` measures it and reports every file over the ceiling as `assets.lineBudget`. The ceiling is a backstop, not the rule: a file approaching it is a signal to move a section out, not
-to raise the number.
+A hard line ceiling backs this up: **500 lines per assistant asset file**, for every `.qfai/assistant/**/*.md` file, and 800 for a `.yml` or `.yaml` file, counted as `content.split(/\r?\n/).length` — blank lines included.
+`npx qfai doctor` measures it and reports every file over the ceiling as `assets.lineBudget`. The ceiling is a backstop, not the rule: a file approaching it is a signal to move a section out, not to raise the number.
 
-It was raised from 500 once, and on measurement rather than on the "this file is long" claim the number exists to refuse: three skill bodies had converged on that ceiling, and the changes in flight against one of them added 161 lines to a body already at 498 — eleven of them crossing the ceiling on their own. The detail those bodies carry is required to sit in the body rather than behind
-a pointer, so splitting could not absorb it. Converging on the limit was itself the signal — a body at the ceiling stops shedding topics and starts packing them into longer lines, and a line count cannot see that. Raise it again only against evidence of that kind.
+The 500-line limit, and how a body points at what moved out, come from `.agents/rules/ai-readable-markdown.md`.
 
 **A width ceiling makes the count honest: 400 characters per line.** A count of lines bounds reading cost only while a line is a roughly constant unit of reading, and packing broke that — one line in the shipped tree ran 9,104 characters against a median of 118, and cost the budget one unit. The two are read together, because each permits what the other refuses: width alone allows a thin
 file of a thousand short lines, and the count alone allows a packed one.

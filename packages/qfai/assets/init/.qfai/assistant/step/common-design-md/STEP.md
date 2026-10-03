@@ -32,6 +32,8 @@ for it.
   `.qfai/assistant/skill/qfai-prototyping/references/design-md-spec.md`.
 - The archetype catalog:
   `.qfai/assistant/skill/qfai-sdd/references/design-md-brand-catalog.md`.
+- Before turning an archetype's defaults into root `DESIGN.md` values, read
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`.
 - The starting sample:
   `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`.
 

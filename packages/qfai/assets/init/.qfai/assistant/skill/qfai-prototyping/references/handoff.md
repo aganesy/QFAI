@@ -1,5 +1,12 @@
 # Handoff (post-loop)
 
+## Contents
+
+- Inputs
+- Outputs
+- Checking an implementation's tokens
+- Cert
+
 ## Inputs
 
 `.qfai/prototype/iter-<final>/index.html` — the final accepted
@@ -14,8 +21,8 @@ a distinct tree from the **capture** artifacts at
 `npx qfai prototyping iterate --capture` fans out one pair per declared
 screen. Handoff copies the authoring artifact; `npx qfai prototyping
 certify` gates on the capture artifacts and never opens the
-`prototypes/` tree. Both must exist before handoff can complete: see
-"Output layout" in `references/generator-prompt.md`.
+`prototypes/` tree. Both must exist before handoff can complete. The generator
+prompt defines their output layout.
 
 Root `DESIGN.md` remains the brand SSOT through handoff.
 
@@ -128,8 +135,7 @@ Run the gates in this order, every time:
    option-B phase-isolation contract, and a `full` run at this point
    necessarily fails the stage-5 ATDD traceability rules
    (`QFAI-ATDD-111/112/113`). The field list and the `scope` enum are
-   specified in
-   `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
+   specified in the verify output contract `/qfai-verify` ships.
 3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate carries `designMd` (the path and sha256 of root

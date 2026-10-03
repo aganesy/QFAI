@@ -1,6 +1,6 @@
 # SDD Phase Checklists
 
-Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A checked item requires evidence in the story tree or the flow evidence file.
+Use these checkpoints with the ordered stages of the SDD execution playbook. A checked item requires evidence in the story tree or the flow evidence file.
 
 ## Source and triage
 
@@ -14,7 +14,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 
 ## Policy and business flow
 
-- Files in 01_policy/ and 02_business-flow/ were copied from paired templates and hold their headings and nothing else, as spec-traceability-rules.md#document-shapes sets out. No section records history.
+- Files in 01_policy/ and 02_business-flow/ were copied from paired templates and hold their headings and nothing else, as the Document shapes section of the SDD traceability rules sets out. No section records history.
 - Objective, initiative, principle, and tech state each fact in one place. Gate commands occur only in tech.md Standard commands.
 - Every affected business-flow.md has exactly one Mermaid flowchart or sequenceDiagram in `## Flow`, and at least one alternate or exception path.
 - business-flows.md and user-stories.md index actual flows and stories with their assigned BF and US IDs and the titles in their H1s after the ID, word for word.
@@ -37,12 +37,12 @@ The one example a diagnosed missing test needs is appended as `.qfai/assistant/s
 - No contract names an implementation file.
 - Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
-- Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the flow evidence.
+- Changed DB contracts were applied to a scratch database and their declared write paths exercised as the contract artifact rules require. Record the command and result under Contract executability in the flow evidence.
 - UI contracts follow the product's own root `DESIGN.md`; the sample design was not adopted.
 
 ## Concrete-abstract cycle
 
-Follow concrete-abstract-cycle.md.
+Follow the concrete-abstract cycle reference `sdd-cycle` reads.
 
 - A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or in an `sdd_append` stage.
 - The finder is a test-design-analyst that wrote none of the BRs it read. Each cycle had one griller, neither the finder nor an author of a targeted item.

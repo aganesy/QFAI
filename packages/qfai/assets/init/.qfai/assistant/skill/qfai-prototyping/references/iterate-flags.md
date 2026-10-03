@@ -40,7 +40,7 @@ passed.
   exists: the destructive-rerun gate refuses to overwrite it otherwise. It backs
   `iter-00` up to `iter-00.backup-<ISO>` and clears stale `iter-NN`
   directories. Detail:
-  `references/iteration-loop.md#sealed-loop`.
+  "Sealed loop" in the iteration loop reference.
 - `--dry-run` — plan the cycle and write nothing. It reports what a real run
   would create, move or overwrite — including the `iter-00` backup `--force`
   would take — and exits without touching the tree. Use it to read a
@@ -69,7 +69,7 @@ passed.
 - `--emit-skeletons` — cycle 0 only: write one placeholder HTML file per
   declared screen as a seed aid, not an alternative output shape. Ignored at
   cycle >= 1. Detail:
-  `references/generator-prompt.md`.
+  the generator prompt.
 - `--skeleton-mode <placeholder|full|stub>` — output mode for
   `--emit-skeletons` (default `placeholder`). No effect without it.
 - `--mode <convergence|exploration>` — loop posture, default `convergence`.

@@ -62,7 +62,10 @@ naming the BF or AC. Never invent a waiver in the test or suppress a finding.
    A load error or broken fixture is not a RED proof. For an already
    implemented surface, use a controlled falsifiability check and restore the
    mutation. The whole record is
-   `.qfai/assistant/skill/qfai-atdd/references/red-provenance.md`.
+   `.qfai/assistant/skill/qfai-atdd/references/red-provenance.md`. When a RED
+   record is retaken after a test or fixture edit, read
+   `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`; it
+   holds the revision form for the new attempt. Not needed for a first record.
 3. A shared fixture change needs the affected tests rerun and their
    provenance updated; see
    `.qfai/assistant/skill/qfai-atdd/references/shared-test-artifacts.md`.

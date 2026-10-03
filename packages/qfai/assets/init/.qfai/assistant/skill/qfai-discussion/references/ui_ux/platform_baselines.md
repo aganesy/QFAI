@@ -2,6 +2,17 @@
 
 Use this file only when the current discussion needs platform-specific detail.
 
+## Contents
+
+- Cross-Platform Baseline
+- Web
+- Mobile
+- Desktop
+- CLI
+- States
+- Dark Mode
+- Motion
+
 ## Cross-Platform Baseline
 
 - Keep the same conceptual model across surfaces.

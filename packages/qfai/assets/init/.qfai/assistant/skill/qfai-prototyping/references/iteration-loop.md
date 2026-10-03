@@ -1,5 +1,17 @@
 # Iteration Loop
 
+## Contents
+
+- Phases
+- Per-iter artifacts
+- Stop conditions (deterministic)
+- Best-of-history is gone
+- Surface profile
+- Contracts read
+- Produced after the loop
+- Frozen brand identity
+- Sealed loop
+
 ## Phases
 
 ```text
@@ -20,8 +32,8 @@
 
 The per-screen review path is mandatory from cycle 0 onward: the reviewer writes one
 payload per `(UI contract, screen)` pair alongside the per-cycle `review.json`
-summary (schema: `references/review-payload-schema.md`, aggregation
-rule: `references/reviewer-prompt.md`). `npx qfai prototyping certify`
+summary (schema: the review payload schema, aggregation
+rule: the reviewer prompt). `npx qfai prototyping certify`
 rejects the run (exit `64`) when a declared pair has no payload, so a
 run that only writes the flat summary cannot be certified — that holds
 for a single-contract run as much as for a multi-contract one.
@@ -81,8 +93,8 @@ It is neutral with respect to AI behavior.
 
 ## Produced after the loop
 
-- `.qfai/prototype/final/index.html` and `prototyping.json#handoff`. See
-  `handoff.md`.
+- `.qfai/prototype/final/index.html` and `prototyping.json#handoff`. The
+  prototyping-handoff step defines the handoff.
 - `.qfai/evidence/prototyping/completion-certificate.json` (records
   `designMd`, the path and sha256 of root `DESIGN.md`)
 

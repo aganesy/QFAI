@@ -154,9 +154,27 @@ describe("generated-design anti-patterns", () => {
     }
   });
 
-  it("is what the catalog, the review bundle and the comparison review point at", async () => {
+  it("uses anti-pattern guidance in design authoring and reviews", async () => {
     const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
-    expect(sectionOf(catalog, "Patterns to avoid")).toContain("`design-anti-patterns.md`");
+    const patterns = sectionOf(catalog, "Patterns to avoid").replace(/\s+/g, " ");
+    expect(patterns).toContain(
+      "The anti-pattern list groups the patterns that mark a design as generated " +
+        "by aspect, with the substitutes a model falls back to once one is banned.",
+    );
+    expect(patterns).toContain(
+      "Read it before turning an archetype's defaults into `DESIGN.md` values.",
+    );
+    expect(patterns).toContain(
+      "A value that produces a listed pattern stays only where the recorded brand direction asks for it.",
+    );
+
+    const designStep = await readFile(
+      path.join(skills, "..", "step", "common-design-md", "STEP.md"),
+      "utf-8",
+    );
+    expect(sectionOf(designStep, "Reads").replace(/\s+/g, " ")).toContain(
+      `- Before turning an archetype's defaults into root \`DESIGN.md\` values, read \`${antiPatternsInstallPath}\`.`,
+    );
 
     const bundle = await read("qfai-discussion/templates/uiux/50_review_input_bundle.md");
     expect(bundle).not.toMatch(/AI slop/i);

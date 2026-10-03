@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **AI-readable Markdown has a shipped size and reference rule** (#2246).
+  Markdown stays within 500 lines and a `SKILL.md` body within 20,000 characters.
+  Skill sections load conditionally, entries name each reference directly, and
+  long references list their contents. `qfai doctor` uses the 500-line ceiling
+  for Markdown and keeps YAML at 800 lines.
+
 - **A shared rule records what a stage costs and which lever changes it**
   (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
   and its levels, and runs every agent at the host's default until a
