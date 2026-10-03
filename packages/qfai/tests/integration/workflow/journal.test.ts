@@ -69,7 +69,7 @@ afterEach(async () => {
 
 // Every file under a directory, as text.
 async function filesUnder(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { recursive: true, withFileTypes: true }).catch(() => []);
+  const entries = await readdir(dir, { recursive: true, withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile());
   return Promise.all(
     files.map((entry) => readFile(path.join(entry.parentPath, entry.name), "utf8")),
@@ -103,7 +103,7 @@ async function rewriteEvent(
 
 async function trackedSummary(root: string, runId: string): Promise<unknown> {
   const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
-  return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
+  return JSON.parse(await readFile(file, "utf8"));
 }
 
 it.each(["EACCES", "EPERM", "EIO", "ENOENT"])(
@@ -585,14 +585,17 @@ it("Delete snapshot", async () => {
   const journal = await readJournal(runDir);
   const rebuilt = await mkdtemp(path.join(os.tmpdir(), "qfai-rebuilt-"));
   const folded = journal.ok ? snapshotOf(journal.records) : null;
-  if (folded) await writeSnapshot(rebuilt, folded);
-  const copy = await readFile(path.join(rebuilt, "snapshot.json"), "utf8").catch(() => "");
-  await rm(rebuilt, { recursive: true, force: true });
+  try {
+    if (folded) await writeSnapshot(rebuilt, folded);
+    const copy = await readFile(path.join(rebuilt, "snapshot.json"), "utf8");
 
-  expect({ status: after === before, rebuilt: copy === deleted }).toEqual({
-    status: true,
-    rebuilt: true,
-  });
+    expect({ status: after === before, rebuilt: copy === deleted }).toEqual({
+      status: true,
+      rebuilt: true,
+    });
+  } finally {
+    await rm(rebuilt, { recursive: true, force: true });
+  }
 });
 
 it("Files under work-orders/ that no event references, left by a crash at write step 4", async () => {
