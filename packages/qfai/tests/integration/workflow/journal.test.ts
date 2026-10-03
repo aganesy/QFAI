@@ -21,6 +21,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import { existsSync } from "node:fs";
+import type * as FsPromises from "node:fs/promises";
 import {
   mkdir,
   mkdtemp,
@@ -34,7 +35,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
@@ -55,11 +56,20 @@ import {
   workflow,
 } from "./workflowProject.js";
 
-afterEach(removeProjects);
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, readdir: vi.fn(actual.readdir), readFile: vi.fn(actual.readFile) };
+});
+
+afterEach(async () => {
+  vi.mocked(readdir).mockReset();
+  vi.mocked(readFile).mockReset();
+  await removeProjects();
+});
 
 // Every file under a directory, as text.
 async function filesUnder(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { recursive: true, withFileTypes: true }).catch(() => []);
+  const entries = await readdir(dir, { recursive: true, withFileTypes: true });
   const files = entries.filter((entry) => entry.isFile());
   return Promise.all(
     files.map((entry) => readFile(path.join(entry.parentPath, entry.name), "utf8")),
@@ -93,8 +103,38 @@ async function rewriteEvent(
 
 async function trackedSummary(root: string, runId: string): Promise<unknown> {
   const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
-  return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
+  return JSON.parse(await readFile(file, "utf8"));
 }
+
+it.each(["EACCES", "EPERM", "EIO", "ENOENT"])(
+  "filesUnder preserves the original %s directory error",
+  async (code) => {
+    const root = await minimalProject();
+    const error = Object.assign(new Error(`Cannot list required files at ${root}`), {
+      code,
+      path: root,
+    });
+    vi.mocked(readdir).mockRejectedValueOnce(error);
+
+    await expect(filesUnder(root)).rejects.toBe(error);
+  },
+);
+
+it.each(["EACCES", "EPERM", "EIO", "ENOENT"])(
+  "trackedSummary preserves the original %s read error",
+  async (code) => {
+    const root = await minimalProject();
+    const runId = "required-summary";
+    const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
+    const error = Object.assign(new Error(`Cannot read required summary at ${file}`), {
+      code,
+      path: file,
+    });
+    vi.mocked(readFile).mockRejectedValueOnce(error);
+
+    await expect(trackedSummary(root, runId)).rejects.toBe(error);
+  },
+);
 
 // QFAI:EX-0001-0194-39
 it("Built CLI run with a distinctive request sentence under a temp root", async () => {
@@ -574,14 +614,17 @@ it("Delete snapshot", async () => {
   const journal = await readJournal(runDir);
   const rebuilt = await mkdtemp(path.join(os.tmpdir(), "qfai-rebuilt-"));
   const folded = journal.ok ? snapshotOf(journal.records) : null;
-  if (folded) await writeSnapshot(rebuilt, folded);
-  const copy = await readFile(path.join(rebuilt, "snapshot.json"), "utf8").catch(() => "");
-  await rm(rebuilt, { recursive: true, force: true });
+  try {
+    if (folded) await writeSnapshot(rebuilt, folded);
+    const copy = await readFile(path.join(rebuilt, "snapshot.json"), "utf8");
 
-  expect({ status: after === before, rebuilt: copy === deleted }).toEqual({
-    status: true,
-    rebuilt: true,
-  });
+    expect({ status: after === before, rebuilt: copy === deleted }).toEqual({
+      status: true,
+      rebuilt: true,
+    });
+  } finally {
+    await rm(rebuilt, { recursive: true, force: true });
+  }
 });
 
 it("Files under work-orders/ that no event references, left by a crash at write step 4", async () => {
