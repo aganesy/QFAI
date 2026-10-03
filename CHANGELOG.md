@@ -6,6 +6,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The repository's dogfooding ratchet keeps diff-dependent findings out of
+  its pins.** `QFAI-DRIFT-001` reports a protected story-tree file changed
+  since the base branch without a change request, so it exists only on the
+  branch that made the change. Pinned there, it read one less after the merge
+  and failed every later pull request. `scripts/check-dogfood-backlog.mjs` now
+  leaves it, and `QFAI-STORY-010`, out of the counts it compares and pins, and
+  fails the lane on them outright in the pull request that produces them.
+  Fixes #2352.
+
 - **The patterns that mark a design as generated are named** (#2241). A new
   `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
   color and typography to copy, flow and untouched library defaults. Each one
