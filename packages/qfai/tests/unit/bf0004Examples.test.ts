@@ -166,7 +166,7 @@ describe("BF-0004 migration examples", () => {
       'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../core/init/rootGitignore.js"',
     );
     expect(ignore).toContain("await ensureRootGitignoreEntries(root, false");
-    expect(ignore).toContain("await replaceRootGitignore(root, file,");
+    expect(ignore).toContain("await replaceRootGitignore(file,");
     expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });

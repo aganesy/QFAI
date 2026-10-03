@@ -22,11 +22,6 @@ import {
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
 import {
-  AGENTS_RULES_DIR,
-  REMINDERS_BASENAME,
-  RULE_LOCK_BASENAME,
-} from "../../core/ruleMasterUpdates.js";
-import {
   loadConfig,
   resolvePath,
   WORKFLOW_MODE_MESSAGE,
@@ -142,12 +137,11 @@ const HOST_LINKS = [
   ".github/agents",
 ] as const;
 
-/** The hook files step 11 writes, and the message file and record the hooks read. */
+/** The hook files step 11 writes, and the message file the hooks read. */
 const REMINDER_FILES = [
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
-  `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`,
-  `${AGENTS_RULES_DIR}/${RULE_LOCK_BASENAME}`,
+  ".agents/rules/reminders.json",
 ];
 
 const GITIGNORE_STAGE_NAME =

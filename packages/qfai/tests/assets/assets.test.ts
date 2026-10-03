@@ -2742,13 +2742,6 @@ function shouldSkipReference(ref: string): boolean {
   if (ref.includes(".qfai/report/") || ref.includes(".qfai/evidence/")) {
     return true;
   }
-  // Written by `qfai init` into the ADOPTER's tree, so it is nameable in the
-  // README (the reader has to know to commit it) and absent from this one —
-  // the same class as the `.qfai/report/` outputs above, pinned to the single
-  // filename rather than a directory because that is the whole of the class.
-  if (ref === ".qfai/install-provenance.json") {
-    return true;
-  }
   // A path inside the installed package. Naming a file under it is how the
   // README tells an adopter where the packaged copy of a shipped file sits in
   // THEIR tree. Whether it exists here depends only on whether this checkout

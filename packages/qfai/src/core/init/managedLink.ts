@@ -37,11 +37,6 @@ export type WrapperSyncOptions = {
   platform?: NodeJS.Platform;
   /** Previous generated target, accepted only when retargeting a flattened link. */
   legacyTarget?: string;
-  /**
-   * The masters whose file carries the release's text once this run is done.
-   * Given, a rebuilt Copilot file keeps its own bullet for every other master.
-   */
-  installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
   /**

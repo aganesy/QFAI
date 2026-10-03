@@ -20,9 +20,9 @@ import path from "node:path";
 import type * as fsPromises from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/** One of the records `qfai init` writes and never removes. */
+/** A file `qfai init` writes, which marks that it ran. */
 async function seedInitRecord(root: string): Promise<void> {
-  const target = path.join(root, ".qfai", "install-provenance.json");
+  const target = path.join(root, ".qfai", "waivers.yml");
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, "{}\n", "utf-8");
 }

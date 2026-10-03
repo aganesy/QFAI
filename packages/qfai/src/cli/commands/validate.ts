@@ -1271,11 +1271,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
   // the same two states at five different heights.
-  // `paths.skillsDir` is configurable and the diff is taken against whatever it
-  // resolves to, so the expected state names the tree by role. The directory
-  // actually compared is on the finding's `target:` line.
-  "QFAI-SKILLS-001":
-    "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
     "The contract-layer tech.md holds project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
   // Both state the graph, not a path: `paths.skillsDir` is configurable, and
@@ -1294,23 +1289,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
-  // The assistant-tree provenance family. Every governed file under
-  // `constitution/` and `catalog/` is either byte-identical to the installed
-  // release or an explicitly recorded local overlay; the four classifications
-  // below are the ways that can fail, and the fifth is the comparison itself
-  // being impossible.
-  "QFAI-ASSETS-004":
-    "Every governed assistant file qfai wrote is still the content the installed release ships (`qfai init --force` refreshes an unedited stale copy).",
-  "QFAI-ASSETS-005":
-    "No governed assistant file is a local fork: a project-specific rule lives in a `*.local.md` overlay of the same layer, not in the qfai-owned file.",
-  "QFAI-ASSETS-006":
-    "Every file under the governed assistant layers is either shipped by the installed release or a `*.local.md` overlay.",
-  "QFAI-ASSETS-007":
-    "Every normative file the installed release ships exists in the project as a regular file.",
-  "QFAI-ASSETS-008":
-    "The governed assistant layers can be read on both sides, so provenance is actually compared rather than assumed clean.",
-  "QFAI-ASSETS-009":
-    "The assistant layers `qfai init --force` regenerates (`skills/`, `agents/`) hold what the installed release ships, so the project is not running the skill bodies it initialised with.",
   "QFAI-RESEARCH-013":
     "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
   "QFAI-RESEARCH-014":

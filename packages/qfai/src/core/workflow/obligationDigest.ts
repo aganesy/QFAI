@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../shared/text.js";
 import type { FlowScope } from "../flowScope.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 
