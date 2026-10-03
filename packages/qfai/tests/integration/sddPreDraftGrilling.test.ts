@@ -19,7 +19,6 @@ describe("qfai-sdd pre-draft grilling", () => {
         "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
       );
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
-      const evidence = await read(tree, "assistant/skill/qfai-sdd/templates/evidence/sdd-flow.md");
       for (const stage of [
         "Triage and records",
         "Policy and flows",
@@ -35,8 +34,6 @@ describe("qfai-sdd pre-draft grilling", () => {
         expect(text, step).toContain("references/sdd-pre-draft-grilling.md");
       }
       expect(gate).toContain("A skipped checkpoint fails the gate");
-      expect(evidence).toContain("## Pre-draft Grilling");
-      expect(evidence).toContain("before its first story-tree");
     });
   }
 });

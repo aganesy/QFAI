@@ -26,7 +26,6 @@ const CONTRACT_STEP = "step/sdd-contract/STEP.md";
 const CYCLE_CITATION = ".qfai/assistant/skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
-const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
 const DECISIONS_TEMPLATE = "skill/qfai-sdd/templates/spec/decisions.md";
 const FINDER_CARD = "agent/test-design-analyst.md";
 
@@ -251,19 +250,13 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   });
 
   // QFAI:AC-0001-0147-14
-  it("holds the record in the evidence template and has the completion reviewer's gate read it", async () => {
+  it("holds the record in the SDD report and has the completion reviewer's gate read it", async () => {
     const reference = await section(CYCLE, "## The record");
-    await expectResolvedCitation(CYCLE, reference, "../templates/evidence/sdd-flow.md");
-    const template = await section(EVIDENCE, "## Concrete-Abstract Cycle");
-    expect(headerCells(template, "Adjudicator")).toEqual([
-      "Cycle",
-      "Finding",
-      "Kind",
-      "Target IDs",
-      "Decision",
-      "Adjudicator",
-      "Reason",
-    ]);
+    expectSentence(
+      reference,
+      "the columns",
+      /cycle, finding, kind, target IDs, decision, adjudicator and reason/i,
+    );
     const gate = await section(GATE, "## Concrete-abstract cycle record");
     expectSentence(
       gate,

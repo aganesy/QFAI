@@ -356,8 +356,6 @@ describe("discussion skill template integration", () => {
   it("the Reviewer Gate and the review bundle look at the recorded design direction, not DESIGN.md", async () => {
     const gatePaths = [
       path.join(templateBase, "templates", "14_Review-Request.md"),
-      path.join(templateBase, "templates", "review", "review_request.md"),
-      path.join(templateBase, "templates", "review", "Rxx_reviewer.md"),
       path.join(uiuxTemplateDir, "50_review_input_bundle.md"),
     ];
     for (const gatePath of gatePaths) {
@@ -455,8 +453,6 @@ describe("discussion skill template integration", () => {
   // reviewer fails the forbidden-sidecar check — the UI-bearing pack cannot be
   // completed at all.
   it("the review template requires the same UI families as the completion matrix", async () => {
-    const reviewDir = path.join(templateBase, "templates", "review");
-
     // Half one: the matrix itself must still carry the current UI family and
     // must not have regrown any retired completion condition.
     const matrix = await readFile(completionMatrixPath, "utf-8");
@@ -478,8 +474,8 @@ describe("discussion skill template integration", () => {
 
     // Half two: the Reviewer Gate templates must demand the same family in the
     // same words, so neither half can send back a pack the other accepts.
-    for (const fileName of ["review_request.md", "Rxx_reviewer.md"]) {
-      const content = await readFile(path.join(reviewDir, fileName), "utf-8");
+    for (const fileName of ["14_Review-Request.md"]) {
+      const content = await readFile(path.join(templateBase, "templates", fileName), "utf-8");
       for (const pattern of RETIRED_CONCEPT_PATTERNS) {
         expect(content).not.toMatch(pattern);
       }

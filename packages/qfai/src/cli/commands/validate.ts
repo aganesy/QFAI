@@ -1498,6 +1498,6 @@ function escapeGitHubCommandValue(value: string): string {
  * The message escapes above plus `:` and `,`, which are the separators GitHub parses the
  * metadata block with — `%` first, or it would re-encode the escapes that follow it.
  */
-function escapeGitHubCommandProperty(value: string): string {
+export function escapeGitHubCommandProperty(value: string): string {
   return escapeGitHubCommandValue(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
