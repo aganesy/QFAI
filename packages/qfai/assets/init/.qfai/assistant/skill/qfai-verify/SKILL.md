@@ -78,16 +78,17 @@ this file adds nothing to it.
 
 ## Review
 
-A run that wrote nothing holds no review: an exit code decides each gate, and
-each step's `## Gate` section says what passes it. A run whose
-`verify-change-note` wrote a change note ends with the code review of that
-note, by `implementation-reviewer`.
+A run that wrote no tracked file holds no review: an exit code decides each
+gate, and each step's `## Gate` section says what passes it. A run that wrote a
+tracked file — a change note, an advisory draft, release notes, or a fix the
+fix loop of `verify-repo-gate` made — ends with the code review of what it
+wrote, by `implementation-reviewer`.
 
 ## Completion
 
 The invocation completes on the gate of the last step that ran. Where
-`verify-change-note` wrote a change note, every finding of the code review
-above is fixed or answered.
+the run wrote a tracked file, every finding of the code review above is fixed
+or answered.
 
 When declaring DONE, include:
 

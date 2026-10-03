@@ -197,8 +197,7 @@ const loadRefusals: [string, (text: string) => string][] = [
   ["after-missing", (text) => text.replace("after: [edit]", "after: [review]")],
   [
     "after-order",
-    (text) =>
-      text.replace(EDIT_STAGE, "").replace("defaultModifiers", `${EDIT_STAGE}defaultModifiers`),
+    (text) => text.replace(EDIT_STAGE, "").replace("decisionPoints", `${EDIT_STAGE}decisionPoints`),
   ],
   ["cycle", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [verify]\n`)],
   ["unreachable", (text) => text.replace(EDIT_STAGE, `${EDIT_STAGE}    after: [edit]\n`)],

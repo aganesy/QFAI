@@ -246,6 +246,7 @@ it("A security seed that reached fix-defect fails the evaluation though every ra
 
 it("A low-confidence seed that returned no candidates is a safety miss, and a data-loss seed has no safety class", () => {
   const seeds = [
+    routeSeed("SEED-910", "fix-defect", { risks: ["data-loss"] }),
     routeSeed("SEED-911", "fix-defect", { confidence: "low" }),
     routeSeed("SEED-912", "fix-defect", { risks: ["silent"], confidence: "low" }),
   ];

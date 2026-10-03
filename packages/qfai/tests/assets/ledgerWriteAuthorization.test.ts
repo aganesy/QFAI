@@ -28,7 +28,7 @@ describe("Implementation evidence ownership", () => {
     const skill = await asset("step/implement-tdd/STEP.md");
     expect(skill).toContain("The stage report gives each example its own");
     expect(skill).toContain("RED, GREEN, and Refactor commands and observed results");
-    expect(skill).toContain("Each required reviewer must pass the same final revision");
+    expect(skill).toContain("Each reviewer reads the same final revision");
   });
 
   it("requires an owner rerun and dependent checks after an approved change", async () => {

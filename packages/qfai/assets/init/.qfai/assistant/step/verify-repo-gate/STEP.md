@@ -97,7 +97,7 @@ Classification (Primary/Tags) that
 Write `.qfai/report/verify.json` at the end of the run. It is the
 machine-readable verdict downstream gates read, and the evidence markdown does
 not replace it. `status` is `"PASS"` only when every gate in scope passed.
-`scope` is the one `verify-context` fixed, never a stage this run did not
+`scope` is the one `verify-qfai-gate` ran, never a stage this run did not
 cover. Fields, the closed `scope` enum, a conforming example and what must
 never be written are in
 `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.

@@ -212,10 +212,10 @@ evidence and the product-surface-reviewer where an example is UI-affecting.
 
 The review request identifies the BF, every EX the stage implemented, the
 revision and the requested reviewers.
-Each required reviewer must pass the same final revision.
+Each reviewer reads the same final revision.
 Classify findings as
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
-says. A blocking REVISE opens the next round of the examples it names.
+says. A blocking REVISE is fixed or answered for the examples it names, with no re-review.
 A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 Record explicit PASS or REVISE for the current revision.
 

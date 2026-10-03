@@ -292,7 +292,7 @@ describe("a parent skill invoked by name", () => {
       expect(front["routing-profile"], step).toBe("runtime-heavy");
     }
     expect(flat(sectionOf(skill, "## Review"))).toMatch(
-      /a run that wrote nothing holds no review/i,
+      /a run that wrote no tracked file holds no review/i,
     );
   });
 

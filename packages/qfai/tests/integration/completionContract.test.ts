@@ -60,7 +60,7 @@ describe("BF completion gate", () => {
     const c = await loadContent();
     expect(c).toMatch(/implementation-reviewer checks code and tests/);
     expect(c).toMatch(/author does not certify their own result/);
-    expect(c).toMatch(/Each required reviewer must pass the same final revision/);
+    expect(c).toMatch(/Each reviewer reads the same final revision/);
     expect(c).toMatch(/current evidence and the required independent PASS reviews/);
     expect(c).toMatch(/A reviewer\s+REVISE follows/);
   });
@@ -71,7 +71,7 @@ describe("BF completion gate", () => {
     expect(c).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
     expect(c).toContain("A fresh validate result has no test-obligation EX finding for this BF");
     expect(c).toContain("implementation-reviewer checks code and tests");
-    expect(c).toContain("Each required reviewer must pass the same final revision");
+    expect(c).toContain("Each reviewer reads the same final revision");
   });
 
   it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {

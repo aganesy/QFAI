@@ -22,10 +22,12 @@ them; it is the procedure that applies them.
 
 ## Reads
 
-- **The reviewer set.** The specification review: `requirements-reviewer`,
-  joined by `architecture-reviewer` when a contract changed. The code review of
-  the whole diff: `implementation-reviewer`. On a flow a UI contract with
-  screens serves, `product-surface-reviewer` joins either review.
+- **The reviewer set.** In a route, the specification review:
+  `requirements-reviewer`, joined by `architecture-reviewer` when a contract
+  changed; the code review of the whole diff: `implementation-reviewer`. On a
+  flow a UI contract with screens serves, `product-surface-reviewer` joins
+  either review. A parent skill invoked by name uses the reviewers its own
+  `## Review` section names, such as `qfai-discussion`'s.
 - **The review target.** The specification review: every path and ID the
   stage it follows wrote or changed, and the source it was written from. The
   code review: the route's whole diff against the revision the route started
@@ -66,14 +68,14 @@ them; it is the procedure that applies them.
 
 ## Rounds of tested results
 
-Where the stage records test observations, a blocking finding opens a new round
-for the affected test.
+Where the stage records test observations, the fix of a blocking finding
+records the affected test again; no second review follows.
 
 - Keep the earlier observation and the response that rejected it. Append the
   changed test, revision, command, result and review response.
 - Never relabel an old result as current.
-- After changing a test or its fixture, verify its oracle again before asking
-  for review.
+- After changing a test or its fixture, verify its oracle again before
+  recording the fix.
 - Where a production change alone answered the finding, rerun the selected test
   and the relevant suite, keep the original RED subject and report the new
   result.

@@ -71,7 +71,7 @@ describe("story-tree acceptance and implementation assets", () => {
   it("addresses each observation on one final revision", async () => {
     const implement = await read("step/implement-tdd/STEP.md");
     expect(implement).toContain("implementation-reviewer checks code and tests");
-    expect(implement).toContain("Each required reviewer must pass the same final revision");
+    expect(implement).toContain("Each reviewer reads the same final revision");
   });
 
   it("keeps the assistant file budget and review boundaries explicit", async () => {

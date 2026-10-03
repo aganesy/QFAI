@@ -277,7 +277,7 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 - First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
 - If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
-- Record the reuse in the Work Orders Summary (`Task title` prefixed `re-review (sequential reuse)`).
+- Record the reuse in the Work Orders Summary (`Task title` prefixed `review (sequential reuse)`).
 - If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`, and DONE stays blocked.
 - Never record a waived or self-performed review as `PASS`.
 

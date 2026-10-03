@@ -42,7 +42,7 @@ describe("E2E: implementation follows flow-scoped example obligations", () => {
   it("binds independent review to the same final revision", async () => {
     const content = await skill();
     expect(content).toContain("The stage report gives each example its own");
-    expect(content).toContain("Each required reviewer must pass the same final revision");
+    expect(content).toContain("Each reviewer reads the same final revision");
     expect(content).toContain("reviewer verdicts, and open findings");
   });
 

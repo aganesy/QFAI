@@ -47,7 +47,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toContain("Work one EX at a time by default");
     expect(content).toContain("Parallel work requires disjoint");
     expect(content).toContain("required user consent");
-    expect(content).toContain("Each required reviewer must pass the same final revision");
+    expect(content).toContain("Each reviewer reads the same final revision");
   });
 
   it("defines the example handoff and review sequence", async () => {

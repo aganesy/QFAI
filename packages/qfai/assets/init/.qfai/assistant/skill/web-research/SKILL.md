@@ -328,7 +328,7 @@ Create lightweight evidence that records:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Session-log requirements were satisfied.
-- [ ] Reviewer Gate returned PASS.
+- [ ] Every Reviewer Gate finding is fixed or answered.
 - [ ] Evidence was recorded.
 
 ## Completion Checklist (MUST)
@@ -345,4 +345,4 @@ Create lightweight evidence that records:
 - Need more evidence:
   Action: rerun the pipeline with refined query, allowlist, or `--max-depth` settings.
 - Reviewer returned REVISE:
-  Action: address the cited gaps, then rerun the reviewer gate before reuse.
+  Action: fix or answer each cited gap and record it before reuse; no second review runs.
