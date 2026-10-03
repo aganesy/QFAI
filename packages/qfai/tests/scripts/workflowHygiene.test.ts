@@ -594,7 +594,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
     const dir = plantedTree((d) => {
       editWorkflow(d, "ci.yml", (t) =>
         t.replace(
-          "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
+          "        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
           "        uses: actions/upload-artifact@" + "v" + "4",
         ),
       );
@@ -613,7 +613,7 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
 
   // QFAI:EX-0002-0014-07
   it("names a floating major-version reference planted only in the composite setup action", () => {
-    const pinned = "uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0";
+    const pinned = "uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0";
     const floating = "uses: actions/setup-node@" + "v" + "5";
     const actionRel = path.join(".github", "actions", "setup", "action.yml");
     const dir = plantedTree((d) => {
