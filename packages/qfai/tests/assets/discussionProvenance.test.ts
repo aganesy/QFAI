@@ -21,7 +21,7 @@ describe("discussion IDs remain provenance, not story-tree IDs", () => {
         "provenance and design input, not a normative SSOT",
       );
       expect(skill).toContain("do not edit the");
-      expect(decomposition).toContain("Record a create, update, or retirement operation in");
+      expect(decomposition).toContain("Put a create, update, or retirement operation to the user");
       expect(decomposition).toContain("decisions.md");
     });
 

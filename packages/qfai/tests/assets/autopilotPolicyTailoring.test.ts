@@ -26,9 +26,9 @@ describe("autopilot choices cannot supply missing approval", () => {
       expect(step).toContain("sdd-triage.md");
       expect(triage).toContain("CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE");
       expect(triage).toContain("Do not self-approve");
-      expect(triage).toContain("In --auto, ask no question, leave approval-required rows at TODO");
-      expect(triage).toContain("stop before their dependent writes");
-      expect(triage).toContain("report every pending row with its operation and target");
+      expect(triage).toContain("In --auto, ask no question, append no row");
+      expect(triage).toContain("stop before the dependent writes");
+      expect(triage).toContain("report every pending operation with its target");
     });
 
     it(tree + ": the shared rule keeps mandatory approvals outside the prompt budget", async () => {

@@ -1207,7 +1207,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
   "QFAI-DPACK-006": "Legacy discussion serial packs should be migrated or removed.",
   "QFAI-DPACK-007":
-    "Every deferred OQ in `11_OQ-Register.md` must have a corresponding row in `13_Deferred.md`.",
+    "Every deferred OQ row in `11_OQ-Register.md` records its `Resolution` and a `Next-Decision-Point` naming when and by what signal it is reopened.",
   "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
   "QFAI-DPACK-009":
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
@@ -1226,7 +1226,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-REVIEW-005": "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
   "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
   "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
-  "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
+  "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
