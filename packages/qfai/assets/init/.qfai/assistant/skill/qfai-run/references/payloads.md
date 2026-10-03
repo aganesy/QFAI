@@ -233,7 +233,8 @@ A routing or stage result carries a question as:
 - A step with `passThrough: true` still runs. When it shows it has nothing to
   write, the result records a pass for it, and writes nothing for that step.
 - The stage is reviewed once, after its last step, by every role in
-  `requiredReviewerRoles`.
+  `requiredReviewerRoles`. A result that reports the stage accepted carries a
+  PASS from each of them, or the run refuses it.
 - The routing work order carries `executor` `qfai-run` and `operation` `route`
   instead of `steps`.
 - A routing work order issued by a re-route also carries

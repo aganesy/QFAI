@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { parse as parseYaml } from "yaml";
 
+import { requiredReviews } from "../../helpers/requiredReviews.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
 import { extractionFor } from "../../helpers/workflowExtraction.js";
 
@@ -251,6 +252,9 @@ export function resultFor(document: unknown, resultId: string, extra: object = {
     outcome: "accepted",
     testObservation: "not_applicable",
     actor: { agentInstance: `agent-${resultId}` },
+    ...("reviewResults" in extra
+      ? {}
+      : { reviewResults: requiredReviews(field(workOrder, "requiredReviewerRoles"), resultId) }),
     ...extra,
   };
 }

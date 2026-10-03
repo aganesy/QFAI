@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Accepted stage results require PASS from every issued reviewer role**
+  (#2297). A reviewer must be independent of the output it reviews; an author
+  or recommender of another stage may review it. Valid re-routing results
+  keep their declared handoff exemption.
+
 - **Mutation recipes remain in example tests.** `qfai doctor` reports a
   warning when a recipe names a missing source file or original text (#2419).
   The check reads recipes and source text; it runs no mutations or tests.

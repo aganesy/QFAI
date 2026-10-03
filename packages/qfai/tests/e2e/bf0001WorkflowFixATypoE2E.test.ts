@@ -6,6 +6,7 @@
  * file in scope, a full verify follows, and `finish` completes the run from `ready`. A change
  * outside the checked scope is refused at `accept` and leaves the run where it was.
  */
+import { requiredReviews } from "../helpers/requiredReviews.js";
 import { afterEach, expect, it } from "vitest";
 
 import {
@@ -71,6 +72,10 @@ it("the edit-text plan edits the one file, verifies in full, and finish complete
       testObservation: "pass",
       artifactRefs: [await fileRef(root, ".qfai/report/verify.json")],
       reviewResults: [
+        ...requiredReviews(
+          field(verify.json, "workOrder.requiredReviewerRoles"),
+          "verify-1",
+        ).filter((review) => review.role !== "qa-gatekeeper"),
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
     }),

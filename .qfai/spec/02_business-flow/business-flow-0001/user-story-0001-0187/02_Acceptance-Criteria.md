@@ -26,9 +26,10 @@ Feature: Repair a defective test with example coverage untouched
     And the obligation set stays as it was
 
   # AC-0001-0187-04
-  Scenario: A review counts only from an instance the run has not recorded as author or recommender
+  Scenario: A review counts only from an instance that did not author the stage it reviews
     Given stage results that name their `actor`
     When a later result is reviewed
     Then every work order's `actorHistory` holds the recorded authors, recommenders and reviewers
-    And a review by the result's own `actor`, an author or a recommender is refused, and a result with no `actor` is refused
+    And a review by the result's own `actor` or by an author of the same stage is refused, and a result with no `actor` is refused
+    And a review by an instance recorded only as the author or recommender of another stage counts
 ```
