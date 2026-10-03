@@ -121,24 +121,36 @@ export interface CaseScore {
     forbiddenEffects: boolean;
     questionNeed: boolean;
   };
+  // The `must` and `forbid` tokens the runner cannot observe, judged neither way.
+  notObserved: string[];
   pass: boolean;
 }
 
-/** Scores each seed's run on its four axes. A seed with no run fails every axis. */
-export function scoreCases(seeds: readonly ScoredSeed[], runs: readonly RunRecord[]): CaseScore[] {
+/**
+ * Scores each seed's run on its four axes. A seed with no run fails every axis. A token
+ * `observable` rejects is reported under `notObserved` and counts neither way.
+ */
+export function scoreCases(
+  seeds: readonly ScoredSeed[],
+  runs: readonly RunRecord[],
+  observable: (token: string) => boolean = () => true,
+): CaseScore[] {
   return seeds.map((seed) => {
     const run = runs.find((candidate) => candidate.seedId === seed.id);
     const seen = run ? [run.route, ...run.observed] : [];
     const { allowedRoutes, must, forbid, requiresHumanInput } = seed.expected;
+    const notObserved = [...must, ...forbid].filter((token) => !observable(token));
     const axes = {
       route: run !== undefined && allowedRoutes.includes(run.route),
-      requiredStages: run !== undefined && must.every((token) => seen.includes(token)),
-      forbiddenEffects: run !== undefined && !forbid.some((token) => seen.includes(token)),
+      requiredStages:
+        run !== undefined && must.filter(observable).every((token) => seen.includes(token)),
+      forbiddenEffects:
+        run !== undefined && !forbid.filter(observable).some((token) => seen.includes(token)),
       questionNeed:
         run !== undefined &&
         (run.askedQuestion === null || run.askedQuestion === requiresHumanInput),
     };
-    return { seedId: seed.id, axes, pass: Object.values(axes).every(Boolean) };
+    return { seedId: seed.id, axes, notObserved, pass: Object.values(axes).every(Boolean) };
   });
 }
 

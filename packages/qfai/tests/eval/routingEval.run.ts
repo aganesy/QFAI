@@ -261,7 +261,16 @@ async function runEval(): Promise<void> {
     await removeTempTree(baseRoot);
   }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
-  const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
+  // A plan exposes its route and its stage kinds; every other token is reported not observed.
+  const plans = await loadBuiltInPlans();
+  const exposed = new Set([
+    ...plans.map((plan) => plan.route),
+    ...plans.flatMap((plan) => plan.stages.map((stage) => stage.kind)),
+  ]);
+  const cases = scoreCases(seeds, observed, (token) => exposed.has(token)).map((score) => ({
+    ...score,
+    run: runs[score.seedId],
+  }));
   const verdict = releaseVerdict(cases, safetyList);
   const { version }: { version: string } = JSON.parse(
     await readFile(path.join(PACKAGE_ROOT, "package.json"), "utf8"),
