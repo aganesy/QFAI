@@ -122,8 +122,6 @@ export function currentStory(snapshot: WorkflowSnapshot): WorkflowStorySlot | un
   return snapshot.stories?.find((story) => story.slotId === slotId);
 }
 
-// SIMPLIFIED: judges staleness only from the facts the snapshot carries.
-// Lift when: the snapshot is rebuilt from the journal, which carries both digests and texts.
 export function approvalIsStale(snapshot: WorkflowSnapshot): boolean {
   const recorded = snapshot.approval?.scopeDigest;
   const approved = snapshot.approval?.target?.story;
@@ -144,8 +142,8 @@ export function flowOfRun(snapshot: WorkflowSnapshot): string | undefined {
   return snapshot.flowBinding?.flowId ?? snapshot.approval?.target?.story?.flowId ?? undefined;
 }
 
-// SIMPLIFIED: an input whose digest the facts do not carry is left out of the work order.
-// Lift when: the command adapter supplies the digest of every file a work order names.
+// An `sdd_append` work order names the diagnosis's reproduction record as its input, at the
+// digest the file has now. A record that names no readable file has no digest, and is not named.
 function diagnosisInputs(stageKind: string, snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
   const diagnosis = snapshot.diagnosis;
   const digest = diagnosis ? facts.fileDigests?.[diagnosis.reproductionRef] : undefined;

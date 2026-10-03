@@ -29,6 +29,11 @@ import {
 type Rule = { id: string; statement: string; examples: string[] };
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 
+/** A statement on one line: each line break, with the indentation around it, is one space. */
+function oneLine(value: string): string {
+  return value.replace(/[^\S\r\n]*\r?\n\s*/g, " ").trim();
+}
+
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
 }
@@ -109,15 +114,12 @@ function sqlRules(original: string): Map<string, Rule | null> {
     const continuations = block
       .slice(1, examplesIndex)
       .map((line) => (line.startsWith("-- ") ? line.slice(3) : null));
-    if (
-      header[2] === undefined ||
-      examplesIndex < 1 ||
-      continuations.some((line) => line === null)
-    ) {
+    const lines = continuations.filter((line): line is string => line !== null);
+    if (header[2] === undefined || examplesIndex < 1 || lines.length !== continuations.length) {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = [header[2].replace(/^ /, ""), ...(continuations as string[])].join("\n");
+    const statement = oneLine([header[2], ...lines].join("\n"));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
@@ -126,6 +128,33 @@ function sqlRules(original: string): Map<string, Rule | null> {
     rememberRule(current, id, { id, statement, examples });
   }
   return current;
+}
+
+/**
+ * An SQL rule an earlier step 7 wrote over several comment lines, for each of `ids`, written
+ * as the one-line block `qfai validate` reads: `-- Rule` and, on the next line, `-- Examples:`.
+ */
+function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): string {
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4}):([^\r\n]*)/gm)];
+  let repaired = original;
+  for (const [index, header] of [...headers.entries()].reverse()) {
+    const id = header[1] ?? "";
+    if (!ids.has(id)) continue;
+    const end = headers[index + 1]?.index ?? original.length;
+    const block = original.slice(header.index, end).split(/\r?\n/);
+    const examplesIndex = block.findIndex((line) => line.startsWith("-- Examples:"));
+    const continuations = block.slice(1, examplesIndex);
+    if (examplesIndex < 2 || !continuations.every((line) => line.startsWith("-- "))) continue;
+    const statement = oneLine(
+      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join("\n"),
+    );
+    const lines = [`-- Rule ${id}: ${statement}`, ...block.slice(examplesIndex)];
+    repaired = `${repaired.slice(0, header.index)}${lines.join(newline)}${repaired.slice(
+      header.index + original.slice(header.index, end).length,
+    )}`;
+  }
+  return repaired;
 }
 
 function markdownRules(original: string): Map<string, Rule | null> {
@@ -170,9 +199,19 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     }
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
     const additional = pendingRules(structuredRules(current), rules, file);
-    if (additional.length === 0) return original;
+    if (additional.length === 0) {
+      // An earlier step 7 folded a long dependency list over several lines, which
+      // `QFAI-CONTRACT-015` does not read: written again, it stays on one line.
+      const folded = /^x-qfai-depends-on:\s*\[[^\]]*\n[^\]]*\]/m.test(original);
+      const dependsOn = (parsed as Record<string, unknown>)["x-qfai-depends-on"];
+      if (!folded || !Array.isArray(dependsOn)) return original;
+      const flat = document.createNode(dependsOn);
+      flat.flow = true;
+      document.set("x-qfai-depends-on", flat);
+      return document.toString({ lineWidth: 0 });
+    }
     document.set("x-qfai-rules", [...current, ...additional]);
-    return String(document);
+    return document.toString({ lineWidth: 0 });
   }
   if (extension === ".json") {
     // The contract declares its ID on a comment line above the JSON document.
@@ -197,10 +236,15 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
-    const additional = pendingRules(sqlRules(original), rules, file);
+    const repaired = repairMultiLineSqlRules(original, new Set(rules.map((rule) => rule.id)));
+    const additional = pendingRules(
+      sqlRules(repaired),
+      rules.map((rule) => ({ ...rule, statement: oneLine(rule.statement) })),
+      file,
+    );
     return additional.length === 0
-      ? original
-      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement.split(/\r?\n/).join("\n-- ")}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
+      ? repaired
+      : `${repaired.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
     const additional = pendingRules(

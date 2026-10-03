@@ -43,11 +43,3 @@
 /.github/workflows/qfai-validate.yml text=auto eol=lf
 /.github/workflows/qfai-tests.yml text=auto eol=lf
 /.github/workflows/qfai-docs.yml text=auto eol=lf
-
-# The two registers every change appends to. Two branches that each append a row
-# conflict on the same last line when the second one merges. A union merge keeps
-# the rows of both sides instead. Two rows that end up with the same ID are still
-# reported by `npx qfai validate`; renumber the newer one. These paths assume the
-# default `paths.specsDir`; change them if the project moved it.
-/.qfai/spec/decisions.md merge=union
-/.qfai/spec/open-questions.md merge=union

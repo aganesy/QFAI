@@ -61,6 +61,22 @@ afterEach(async () => {
 });
 
 describe("story-tree initialization", () => {
+  // QFAI:AC-0001-0196-15
+  it("seeds the two register merge rules and preserves existing attributes under force", async () => {
+    const root = await sandbox();
+    await init(root);
+    const attributes = path.join(root, ".gitattributes");
+    const seeded = await readFile(attributes, "utf-8");
+    expect(seeded).toContain("/.qfai/spec/decisions.md merge=union");
+    expect(seeded).toContain("/.qfai/spec/open-questions.md merge=union");
+    expect(seeded).not.toMatch(/^\*\s/m);
+
+    const existing = "*.md text eol=crlf\n";
+    await writeFile(attributes, existing);
+    await init(root, true);
+    expect(await readFile(attributes, "utf-8")).toBe(existing);
+  });
+
   it("seeds only the shared story documents and contract-kind directories", async () => {
     const root = await sandbox();
     await init(root);
