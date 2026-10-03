@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-04
+
 ### Breaking changes
 
 This release makes the workflow lighter. QFAI no longer keeps integrity
