@@ -1,7 +1,7 @@
 ---
 name: qfai-run
 title: QFAI Run (Change request entry)
-description: "Use when the operator states a change, a fix or a question about the project in plain words and names no stage skill. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
+description: "Use when the operator asks for a change, a fix, an investigation of the codebase or a question about the project in plain words and names no stage skill. A question that one command or one file read answers needs no run. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
@@ -69,7 +69,7 @@ Classify the request before any write call. Only `routed` calls `start`.
 5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2. One carrying `reroute` has its route fixed already: the result supplies only the scope, the flows and the new stories for it, and the decision rules do not choose again.
    - Any other work order: hand it whole to one sub-agent. It reads the `path`
      of each entry in `steps`, in order and only the current one, and runs that
-     step. After the last step it runs one review, by `requiredReviewerRoles`.
+     step. After the last step it runs one review, by `requiredReviewerRoles`, and none when the work order names none: a question is one work order, run by one sub-agent with no separate reviewer.
      Write its stage result under `.qfai/run/<runId>/inbox/` and call `accept`.
      A `retry` names the delay before the same work order is handed over again.
    - `awaiting_input`: put each open question as `references/operator-screens.md`
@@ -78,7 +78,7 @@ Classify the request before any write call. Only `routed` calls `start`.
    - `blocked`: give the halt notice and stop.
    - `ready` with every stage accepted: go to step 6.
 6. **Finish.** For `qfai_done`, commit the run's changes first. Then call
-   `finish` and give the completion report.
+   `finish` and give the completion report. A run ends at `finish`, or at `decision` with `stop`: an answer already given does not end it, so keep calling `next` through the last stage, and when the session must end first, stop the run and say so.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -120,7 +120,7 @@ Report one row per work order handed on.
 
 ### Reviewer Gate (MUST)
 
-This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers return PASS or
+This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers, where it names any, return PASS or
 REVISE on that stage's work, and `accept` refuses a result whose reviewer is not independent.
 
 - The Drift Protocol applies to the run: a stage that would change a story, a

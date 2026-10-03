@@ -165,6 +165,37 @@
       matchDepTypes: ["engines", "packageManager"],
       groupName: null,
     },
+    {
+      // The test runner's coverage provider moves only with the runner. Its peer range names
+      // the runner version exactly, so a provider one major ahead is not a version mismatch to
+      // resolve later — it fails at import, in the one lane that reads coverage.
+      //
+      // `constraintsFiltering` cannot hold the two together. It reads a release's own
+      // `engines`, the provider declares none, and every release of it therefore passes
+      // whatever Node range this file states — while the runner, which does declare one, is
+      // dropped the moment its range stops covering ours. The group then arrives with the
+      // member that carries no constraint and without the member that does.
+      //
+      // Narrowing this to majors is not enough. The provider's peer range names the runner
+      // version exactly, and every runner release since its third major excludes at least one
+      // odd Node line — so the filter drops all of them against the range below, and a provider
+      // minor or patch arrives unpaired for the same reason a major does.
+      //
+      // So the pair is not offered at all, and it moves by hand: one manifest edit raising both,
+      // where a reviewer sees the two versions together. This rule goes when the two can be
+      // offered as one again, which is a question about the declared Node range rather than
+      // about these packages.
+      //
+      // BOTH halves, because the mismatch has two directions. Disabling the provider alone
+      // would rest on the filter continuing to drop every runner release, and a runner that
+      // widened its engine range would then be offered on its own — the same exact-peer
+      // mismatch, arriving from the other side.
+      //
+      // A security fix still reaches them: `vulnerabilityAlerts` below is applied as a forced
+      // override, so the `enabled: true` there outranks this refusal for that one path.
+      matchPackageNames: ["vitest", "@vitest/coverage-v8"],
+      enabled: false,
+    },
   ],
 
   customManagers: [
@@ -193,6 +224,12 @@
     // fix to settle either. Automerge is INHERITED from the top level rather than restated: this
     // block lists what differs from the ordinary path, and a security fix merging on a green CI
     // run is the ordinary path, reached sooner.
+    //
+    // `enabled` is STATED here, and it is the one key in this block that is not about timing.
+    // This whole block is applied as a forced override, so it is the only thing that reaches a
+    // package a rule above has switched off — and one is. Without it the manual-update exception
+    // would also be an exception to this policy, on the path where waiting costs most.
+    enabled: true,
     labels: ["dependencies", "security"],
     schedule: null,
     minimumReleaseAge: null,
