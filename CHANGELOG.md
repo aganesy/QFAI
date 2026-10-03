@@ -4,12 +4,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Fixed
-
-- **Journal test reads preserve filesystem errors** (#2846).
-  Required artifact reads keep their original error instead of replacing it
-  with an empty result; rebuilt-snapshot checks still clean up after failure.
-
 ### Added
 
 - **A shared rule records what a stage costs and which lever changes it**
@@ -116,6 +110,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   progress-report and completion-report sections and points to that article.
 
 ### Fixed
+
+- **Journal test reads preserve filesystem errors** (#2846).
+  Required artifact reads keep their original error instead of replacing it
+  with an empty result; rebuilt-snapshot checks still clean up after failure.
 
 - Host-capability refusals at workflow start state the reason and the next
   action in one sentence while preserving the refusal fields (#2839).
