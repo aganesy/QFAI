@@ -11,9 +11,7 @@ import { afterEach, expect, it } from "vitest";
 import {
   AC_FILE,
   criteria,
-  GREEN_RECEIPT,
   PRODUCTION_FILE,
-  RED_RECEIPT,
   receiptProject,
   receiptsOf,
   runWithReceipts,
@@ -26,10 +24,11 @@ afterEach(removeProjects);
 // A run holding RED and GREEN receipts, changed by `change`, then resumed.
 async function resumedAfter(change: (root: string) => Promise<void>) {
   const root = await receiptProject();
-  const { runId, outstanding } = await runWithReceipts(root, true);
+  const { runId, outstanding, redReceipt, greenReceipt } = await runWithReceipts(root, true);
+  if (!greenReceipt) throw new Error("missing GREEN receipt");
   await change(root);
   const resumed = workflow(root, ["resume", "--run", runId]);
-  return { outstanding, resumed, receipts: receiptsOf(resumed.json) };
+  return { outstanding, resumed, receipts: receiptsOf(resumed.json), redReceipt, greenReceipt };
 }
 
 function validities(receipts: Record<string, unknown>): unknown[] {
@@ -64,22 +63,22 @@ it("Change the text of an AC the test and implementation receipts depend on", as
 }, 120_000);
 
 it("Add a file matching an input glob, leaving every existing file's hash unchanged", async () => {
-  const { receipts } = await resumedAfter((root) =>
+  const { receipts, redReceipt, greenReceipt } = await resumedAfter((root) =>
     write(root, "src/extra.ts", "export const extra = 1;\n"),
   );
 
-  expect({ red: receipts[RED_RECEIPT], green: receipts[GREEN_RECEIPT] }).toEqual({
+  expect({ red: receipts[redReceipt], green: receipts[greenReceipt] }).toEqual({
     red: "valid",
     green: "stale",
   });
 }, 120_000);
 
 it("Record RED, then change the production file", async () => {
-  const { receipts } = await resumedAfter((root) =>
+  const { receipts, redReceipt, greenReceipt } = await resumedAfter((root) =>
     write(root, PRODUCTION_FILE, "export const exportCsv = () => ['a', 'b', 'c'];\n"),
   );
 
-  expect({ red: receipts[RED_RECEIPT], green: receipts[GREEN_RECEIPT] }).toEqual({
+  expect({ red: receipts[redReceipt], green: receipts[greenReceipt] }).toEqual({
     red: "valid",
     green: "stale",
   });

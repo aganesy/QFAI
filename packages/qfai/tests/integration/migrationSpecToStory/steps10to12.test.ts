@@ -33,6 +33,7 @@ import { checkPlans } from "../../../src/core/workflow/plans.js";
 import { isRecord } from "../../../src/core/workflow/parse.js";
 import { runStep } from "../../../src/migration/specToStory/harness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
+import { deleteE2eCaseAnnotation } from "../../helpers/migrationE2eAnnotation.js";
 import {
   MIGRATION_REPORT_DIR,
   isMigrationReportPath,
@@ -84,6 +85,12 @@ const TRUST_CODEX_HOOKS =
   "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
 const ALREADY_DONE =
   "Already done: an earlier run migrated this project, and steps 1 to 10 have nothing left to do.";
+const VERDICT_DONE = "already migrated (id-map.json present)";
+const VERDICT_FOUND = "1.x layout found, migrating";
+// Step 12 on a migrated project outside a git repository: nothing to list, and the scan says why
+// it did not run.
+const CLEAN_REPORT =
+  "## Operations\nnone\n\n## Files scanned\n- not checked: the project is not a git repository\n\n## For a person\nnone\n\n";
 const temporary: string[] = [];
 
 type Run = { code: number; output: string; errors: string };
@@ -252,7 +259,7 @@ function ignored(root: string, file: string): boolean {
   return spawnSync("git", ["check-ignore", "--quiet", file], { cwd: root }).status === 0;
 }
 
-async function put(root: string, relative: string, content: string): Promise<void> {
+async function put(root: string, relative: string, content: string | Uint8Array): Promise<void> {
   await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
   await writeFile(path.join(root, relative), content);
 }
@@ -329,6 +336,7 @@ async function migratedByEarlierRelease(): Promise<EarlierMigration> {
   const test = "tests/integration/order.test.ts";
   await reannotate(root, test, "CON-API-0001", "API-0001");
   await reannotate(root, test, "SPEC-0001:US-0001-0001", "AC-0001-0001-01");
+  await deleteE2eCaseAnnotation(root, "tests/e2e/order.test.ts");
   // What an earlier release left: no Claude Code settings, its own Codex hook
   // file, and a recorded reminder text without the free-text entry.
   await rm(path.join(root, ".claude/settings.json"));
@@ -699,7 +707,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const before = await fingerprint(root);
     const result = await stepIn(root, 12);
     expect(result.code).toBe(0);
-    expect(result.output).toBe("## Operations\nnone\n\n## For a person\nnone\n\n");
+    expect(result.output).toBe(CLEAN_REPORT);
     expect(await fingerprint(root)).toBe(before);
     expect(await lstat(path.join(root, ".qfai/run")).catch(() => null)).toBeNull();
     const loaded = await loadConfig(root);
@@ -1143,9 +1151,20 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         expect(result.code, `pass ${pass} step ${step}: ${result.output}`).toBe(0);
         expect(result.output, `pass ${pass} step ${step}`).toBe(preview.output);
         if (step <= 10) {
+          expect(result.output.split("\n").slice(0, 3), `step ${step}`).toEqual([
+            VERDICT_DONE,
+            "",
+            "## Operations",
+          ]);
           expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `step ${step}`).toBe(true);
+          expect(
+            result.output.split("\n").filter((line) => line.startsWith("Summary")),
+            `step ${step}`,
+          ).toEqual([]);
           const items = result.output.split("\n").filter((line) => line.startsWith("- "));
           expect(items, `step ${step}`).toEqual([]);
+        } else {
+          expect(result.output.startsWith("## Operations\n"), `step ${step}`).toBe(true);
         }
         if (step === 11 && pass === 1) {
           const operations = section(result.output, "Operations");
@@ -1241,6 +1260,7 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
         const result = await stepIn(root, step);
         expect(result.code, `${name} step ${step}: ${result.output}${result.errors}`).toBe(0);
         expect(result.output, `${name} step ${step}`).toBe(preview.output);
+        expect(result.output.split("\n")[0], `${name} step ${step}`).toBe(VERDICT_DONE);
         expect(result.output.endsWith(`\n${ALREADY_DONE}\n`), `${name} step ${step}`).toBe(true);
       }
       expect(await fingerprint(root), name).toBe(before);
@@ -1297,6 +1317,42 @@ describe("migration steps 1 to 12 on a project an earlier 2.x release migrated",
       expect(section(five.output, "For a person"), name).toEqual([
         expect.stringContaining("TC-0001-0009: no criterion"),
       ]);
+    }
+  }, 300_000);
+
+  // QFAI:AC-0004-0003-08
+  it("opens a stopped migration with the found line in steps 4, 5 and 7 and never with the already-migrated line", async () => {
+    // QFAI:EX-0004-0003-44
+    const { root: finished } = await earlierRelease();
+    const unsettled = await clone(finished);
+    await appendFile(
+      path.join(
+        unsettled,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md",
+      ),
+      "| TC-0001-0009 | — | — | Cancel an order | The order is gone |\n",
+    );
+    for (const step of [4, 5, 7]) {
+      for (const args of [["--dry-run"], []]) {
+        const label = `step ${step} ${args.join(" ")}`.trimEnd();
+        const result = await stepIn(unsettled, step, args);
+        expect(result.code, `${label}: ${result.errors}`).toBe(step === 5 ? 3 : 0);
+        expect(result.output.split("\n").slice(0, 3), label).toEqual([
+          VERDICT_FOUND,
+          "",
+          "## Operations",
+        ]);
+        expect(result.output, label).not.toContain(ALREADY_DONE);
+        if (step === 5) {
+          expect(section(result.output, "For a person"), label).toEqual([
+            expect.stringContaining("TC-0001-0009: no criterion"),
+          ]);
+        } else {
+          for (const heading of [...result.output.matchAll(/^## (.+)$/gm)].map((m) => m[1])) {
+            expect(result.output, `${label}: ${heading}`).toContain(`## ${heading}\nnone\n`);
+          }
+        }
+      }
     }
   }, 300_000);
 });
@@ -1415,7 +1471,7 @@ describe("migration steps 11 and 12: the report file", () => {
     const beforeClean = await entries(clean);
     const passed = await stepIn(clean, 12);
     expect(passed.code).toBe(0);
-    expect(passed.output).toBe("## Operations\nnone\n\n## For a person\nnone\n\n");
+    expect(passed.output).toBe(CLEAN_REPORT);
     const passedFile = reportFile("run", "step-12-001.md");
     expect(await migrationReportFiles(clean, "run", 12)).toEqual([passedFile]);
     const passedReport = await readMigrationReport(clean, passedFile);
@@ -1423,4 +1479,454 @@ describe("migration steps 11 and 12: the report file", () => {
     expect(lastLine(passedReport)).toBe("Exit code: 0");
     expect(changedPaths(beforeClean, await entries(clean))).toEqual([]);
   }, 300_000);
+});
+
+/** The thirteen 1.x paths step 12 looks for: a line that names it, and the label the item prints. */
+const OLD_PATH_LINES: ReadonlyArray<readonly [line: string, label: string]> = [
+  [".qfai/specs/", ".qfai/specs"],
+  [".qfai/contracts/", ".qfai/contracts"],
+  [".qfai/prototypes/", ".qfai/prototypes"],
+  [".qfai/assistant/skills/", ".qfai/assistant/skills"],
+  [".qfai/assistant/agents/", ".qfai/assistant/agents"],
+  [".qfai/assistant/prompts/", ".qfai/assistant/prompts"],
+  [".qfai/evidence/decisions/", ".qfai/evidence/decisions"],
+  [".qfai/report/specs-coverage/", ".qfai/report/specs-coverage"],
+  ["_policies/", "_policies/"],
+  ["spec-0001", "spec-NNNN"],
+  ["assistant/steering/", "assistant/steering"],
+  ["assistant/instructions/", "assistant/instructions"],
+  ["01_Spec.md", "01_Spec.md"],
+];
+
+/** Lines that look like a 1.x path and are not one. */
+const NEAR_MISSES = [
+  ".qfai/spec/01_policy/objective.md",
+  ".qfai/assistant/skill/qfai-sdd/SKILL.md",
+  "aspec-0001",
+  "spec-00012",
+  "qfai-spec-0001",
+  "spec-abcd",
+  "spec-0001-x",
+  "spec-0001_x",
+  "security_policies/",
+];
+
+type Seed = Record<string, string | Uint8Array | null>;
+
+/** `total` lines, numbered from 1: filler everywhere but at the lines `named` gives. */
+function linesWith(total: number, named: Record<number, string>, eol = "\n"): string {
+  const lines = Array.from({ length: total }, (_, at) => named[at + 1] ?? `Filler line ${at + 1}.`);
+  return `${lines.join(eol)}${eol}`;
+}
+
+/** The item step 12 prints for one line of a project file. */
+function oldPathItem(file: string, line: number, ...labels: string[]): string {
+  const paths = labels.map((label) => `\`${label}\``).join(", ");
+  return `old-path: ${file}:${line}: still names 1.x paths: ${paths}`;
+}
+
+/**
+ * A copy of `source` that is a git repository whose index holds exactly the files of `seed`,
+ * nothing committed. A `null` value stands for a file the copy already holds.
+ */
+async function indexedProject(source: string, seed: Seed): Promise<string> {
+  const root = await clone(source);
+  git(root, ["init", "-q"]);
+  for (const [file, content] of Object.entries(seed)) {
+    if (content !== null) await put(root, file, content);
+  }
+  git(root, ["add", "-f", "--", ...Object.keys(seed)]);
+  return root;
+}
+
+/** Writes a symbolic link and records it in the index as one, whatever a checkout would write. */
+async function indexLink(
+  root: string,
+  link: string,
+  target: string,
+  type: "file" | "dir",
+): Promise<void> {
+  await mkdir(path.dirname(path.join(root, link)), { recursive: true });
+  await symlink(target, path.join(root, link), type);
+  indexLinkEntry(root, link, target);
+}
+
+/** Records `link` in the index as a symbolic link to `target`, whatever the working tree holds. */
+function indexLinkEntry(root: string, link: string, target: string): void {
+  const blob = spawnSync("git", ["hash-object", "-w", "--stdin"], {
+    cwd: root,
+    encoding: "utf8",
+    input: target,
+  });
+  if (blob.status !== 0) throw new Error(`git hash-object: ${blob.stderr}`);
+  git(root, ["update-index", "--add", "--cacheinfo", `120000,${blob.stdout.trim()},${link}`]);
+}
+
+/** Runs step 12 and holds that it wrote no file but its report and created no run. */
+async function checkedStep12(root: string, args: string[] = []): Promise<Run> {
+  const before = await fingerprint(root);
+  const result = await stepIn(root, 12, args);
+  expect(await fingerprint(root), "step 12 changed a file").toBe(before);
+  expect(await lstat(path.join(root, ".qfai/run")).catch(() => null)).toBeNull();
+  return result;
+}
+
+function scanned(count: number): string[] {
+  return [`files checked for 1.x paths: ${count}`];
+}
+
+/** The rows of every Markdown table in `text`, as trimmed cells, one block per table. */
+function tableBlocks(text: string): string[][][] {
+  const blocks: string[][][] = [];
+  let current: string[][] = [];
+  for (const line of text.split("\n")) {
+    if (line.startsWith("|")) {
+      current.push(
+        line
+          .replace(/^\||\|\s*$/g, "")
+          .split("|")
+          .map((cell) => cell.trim()),
+      );
+    } else if (current.length > 0) {
+      blocks.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) blocks.push(current);
+  return blocks;
+}
+
+/** The position of each marker in `prose`, each searched for after the one before it. */
+function markerPositions(prose: string, markers: readonly string[]): number[] {
+  const found: number[] = [];
+  const text = prose.toLowerCase();
+  let from = 0;
+  for (const marker of markers) {
+    const at = text.indexOf(marker.toLowerCase(), from);
+    found.push(at);
+    if (at >= 0) from = at + marker.length;
+  }
+  return found;
+}
+
+/** Each 1.x path the guide's table names, and what its row gives as where the content is now. */
+const GUIDE_TABLE: ReadonlyArray<readonly [oldPath: string, now: readonly string[]]> = [
+  [".qfai/specs", ["`.qfai/spec`"]],
+  [".qfai/contracts", ["`.qfai/spec/03_contract`"]],
+  [".qfai/prototypes", ["`.qfai/prototype`"]],
+  [".qfai/assistant/skills", ["`.qfai/assistant/skill`", "`.qfai/assistant/skill.local`"]],
+  [".qfai/assistant/agents", ["`.qfai/assistant/agent`"]],
+  [".qfai/assistant/prompts", ["`.qfai/assistant/prompt`"]],
+  [".qfai/evidence/decisions", ["`.qfai/evidence/decision`"]],
+  [".qfai/report/specs-coverage", ["`.qfai/report/spec-coverage`"]],
+  [
+    "_policies/",
+    [
+      "`.qfai/spec/01_policy/`",
+      "`objective.md`",
+      "`initiative.md`",
+      "`glossary.md`",
+      "`constraint.md`",
+      "`.qfai/spec/03_contract/contracts.md`",
+      "`.qfai/spec/02_business-flow/`",
+      "`.qfai/evidence/migration-spec-to-story/retired/_policies/`",
+    ],
+  ],
+  [
+    "spec-NNNN",
+    [
+      "`business-flow-NNNN/`",
+      "`user-story-NNNN-NNNN/`",
+      "`.qfai/spec/02_business-flow/`",
+      "`.qfai/evidence/migration-spec-to-story/id-map.json`",
+    ],
+  ],
+  ["01_Spec.md", ["`.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`"]],
+  [
+    "assistant/steering",
+    ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
+  ],
+  [
+    "assistant/instructions",
+    ["`.qfai/assistant/rule/`", "`.qfai/spec/01_policy/`", "`.qfai/spec/03_contract/tech.md`"],
+  ],
+];
+
+describe("migration step 12: project files that still name a 1.x path", () => {
+  // QFAI:AC-0004-0042-01
+  it("lists each line that names 1.x paths, in file order and line order, whatever the line ending", async () => {
+    // QFAI:EX-0004-0042-01
+    const root = await indexedProject(migrated11, {
+      ".agents/skills/intake/SKILL.md": linesWith(12, {
+        7: "Read `.qfai/specs/_policies/01_Objective.md` first",
+        12: "Open .qfai/specs/spec-0003/01_Spec.md",
+      }),
+      ".github/agents/reviewer.md": linesWith(
+        6,
+        { 4: "Follow .qfai/assistant/steering/test-layers.md" },
+        "\r\n",
+      ),
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(3);
+    expect(section(result.output, "For a person")).toEqual([
+      oldPathItem(".agents/skills/intake/SKILL.md", 7, ".qfai/specs", "_policies/"),
+      oldPathItem(".agents/skills/intake/SKILL.md", 12, ".qfai/specs", "spec-NNNN", "01_Spec.md"),
+      oldPathItem(".github/agents/reviewer.md", 4, "assistant/steering"),
+    ]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(2));
+  });
+
+  // QFAI:AC-0004-0042-01
+  it("names each of the thirteen 1.x paths, and only the one a line holds", async () => {
+    // QFAI:EX-0004-0042-02
+    const named = Object.fromEntries(OLD_PATH_LINES.map(([line], at) => [at + 1, line]));
+    const root = await indexedProject(migrated11, {
+      "docs/paths.md": linesWith(OLD_PATH_LINES.length, named),
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(3);
+    expect(section(result.output, "For a person")).toEqual(
+      OLD_PATH_LINES.map(([, label], at) => oldPathItem("docs/paths.md", at + 1, label)),
+    );
+  });
+
+  // QFAI:AC-0004-0042-01
+  it("reads a line that only looks like a 1.x path as no 1.x path", async () => {
+    // QFAI:EX-0004-0042-03
+    const named = Object.fromEntries(NEAR_MISSES.map((line, at) => [at + 1, line]));
+    const root = await indexedProject(migrated11, {
+      "docs/near.md": linesWith(NEAR_MISSES.length, named),
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(1));
+  });
+
+  // QFAI:AC-0004-0042-01
+  it("prints a name as git stores it, neither quoted nor escaped", async () => {
+    // QFAI:EX-0004-0042-13
+    const file = "docs/my notes é.md";
+    const root = await indexedProject(migrated11, {
+      [file]: linesWith(2, { 2: "Open .qfai/specs" }),
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(3);
+    expect(section(result.output, "For a person")).toEqual([oldPathItem(file, 2, ".qfai/specs")]);
+  });
+
+  // QFAI:AC-0004-0042-02
+  it("leaves out the QFAI tree, the init-written copilot file and the files it does not own", async () => {
+    // QFAI:EX-0004-0042-04
+    const copilot = await readFile(
+      path.join(initialised, ".github/copilot-instructions.md"),
+      "utf8",
+    );
+    expect(copilot).toContain("assistant/steering");
+    expect(copilot).toContain("assistant/instructions");
+    const old = "| DEC-0001 | Read .qfai/specs/spec-0001/07_Decisions.md |\n";
+    const root = await indexedProject(migrated11, {
+      ".qfai/spec/decisions.md": old,
+      ".qfai/assistant/skill/qfai-sdd/SKILL.md": old,
+      ".qfai/assistant/skill.local/mine/SKILL.md": old,
+      ".github/copilot-instructions.md": copilot,
+      "qfai.config.yaml": null,
+      "README.md": "# Project\n",
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(2));
+  });
+
+  // QFAI:AC-0004-0042-02
+  it("lists a file a link leads to once, under its own path, and never a link", async () => {
+    // QFAI:EX-0004-0042-05
+    const root = await indexedProject(migrated11, {
+      ".agents/skills/intake/SKILL.md": linesWith(3, { 3: "Read .qfai/specs" }),
+    });
+    await indexLink(root, ".claude/skills/intake", "../../.agents/skills/intake", "dir");
+    await indexLink(root, "docs/intake.md", "../.agents/skills/intake/SKILL.md", "file");
+    // A checkout that cannot make links writes a regular file for a link the index records.
+    await put(root, "docs/copy.md", "Read .qfai/specs\n");
+    indexLinkEntry(root, "docs/copy.md", "../.agents/skills/intake/SKILL.md");
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(3);
+    expect(section(result.output, "For a person")).toEqual([
+      oldPathItem(".agents/skills/intake/SKILL.md", 3, ".qfai/specs"),
+    ]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(1));
+  });
+
+  // QFAI:AC-0004-0042-02
+  it("leaves out a binary file, a file gone from the working tree and a file git does not track", async () => {
+    // QFAI:EX-0004-0042-06
+    const root = await indexedProject(migrated11, {
+      "assets/blob.bin": Buffer.concat([Buffer.from([0]), Buffer.from(".qfai/specs\n")]),
+      "docs/old.md": "Read .qfai/specs\n",
+    });
+    await rm(path.join(root, "docs/old.md"));
+    await put(root, "docs/draft.md", "Read .qfai/specs\n");
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(0));
+  });
+
+  // QFAI:AC-0004-0042-02
+  it("leaves out a submodule and an indexed file that is a directory in the working tree", async () => {
+    // QFAI:EX-0004-0042-12
+    const root = await indexedProject(migrated11, { "docs/dir.md": "placeholder\n" });
+    git(root, ["update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},vendor/lib`]);
+    await rm(path.join(root, "docs/dir.md"));
+    await put(root, "docs/dir.md/inner.md", "Read .qfai/specs\n");
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(0));
+  });
+
+  // QFAI:AC-0004-0042-02
+  it("leaves out the configured spec and contract directories", async () => {
+    // QFAI:EX-0004-0042-14
+    const configured = await clone(migrated11);
+    await writeConfig(configured, (config) => {
+      const paths = isRecord(config.paths) ? config.paths : {};
+      config.paths = { ...paths, specsDir: "docs/spec", contractsDir: "docs/contract" };
+    });
+    const root = await indexedProject(configured, {
+      "docs/spec/decisions.md": "| DEC-0001 | Read .qfai/specs/spec-0001/07_Decisions.md |\n",
+      "docs/contract/cli/cli-0001-tool.md": "Follows spec-0001\n",
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(0));
+  });
+
+  // QFAI:AC-0004-0042-03
+  it("says how many files it checked when it finds nothing, in a dry run too", async () => {
+    // QFAI:EX-0004-0042-07
+    const root = await indexedProject(migrated11, {
+      "README.md": "# Project\n",
+      "qfai.config.yaml": null,
+      ".gitignore": null,
+      ".qfai/spec/decisions.md": "# Decisions\n",
+    });
+    await indexLink(root, "docs/link.md", "../README.md", "file");
+    const real = await checkedStep12(root);
+    const dry = await checkedStep12(root, ["--dry-run"]);
+    for (const result of [real, dry]) {
+      expect(result.code, result.output).toBe(0);
+      expect(section(result.output, "Files scanned")).toEqual(scanned(3));
+      expect(section(result.output, "For a person")).toEqual([]);
+      const headings = result.output.split("\n").filter((line) => line.startsWith("## "));
+      expect(headings).toEqual(["## Operations", "## Files scanned", "## For a person"]);
+    }
+    expect(dry.output).toBe(real.output);
+  });
+
+  // QFAI:AC-0004-0042-03
+  it("says that a project outside git was not checked, and lists nothing for it", async () => {
+    // QFAI:EX-0004-0042-08
+    const root = await clone(migrated11);
+    await put(root, "docs/old.md", "Read .qfai/specs\n");
+    const real = await checkedStep12(root);
+    const dry = await checkedStep12(root, ["--dry-run"]);
+    for (const result of [real, dry]) {
+      expect(result.code, result.output).toBe(0);
+      expect(section(result.output, "Files scanned")).toEqual([
+        "not checked: the project is not a git repository",
+      ]);
+      expect(section(result.output, "For a person")).toEqual([]);
+    }
+    expect(dry.output).toBe(real.output);
+  });
+
+  // QFAI:AC-0004-0042-05
+  it("fails with git's message when git cannot read the index, and does not call it no repository", async () => {
+    // QFAI:EX-0004-0042-11
+    const root = await indexedProject(migrated11, { "README.md": "# Project\n" });
+    await writeFile(path.join(root, ".git/index"), "not an index\n");
+    // A failure no step handles ends the script with exit 1, so a thrown error reads as that.
+    const before = await fingerprint(root);
+    const result = await stepIn(root, 12).catch((error: unknown): Run => ({
+      code: 1,
+      output: "",
+      errors: String(error),
+    }));
+    expect(await fingerprint(root)).toBe(before);
+    expect(result.code, result.output).toBe(2);
+    expect(result.errors).toMatch(/index/i);
+    expect(result.errors).not.toMatch(/not a git repository/i);
+    expect(result.output).not.toContain("## Files scanned");
+    expect(result.output).not.toContain("not checked");
+  });
+
+  // QFAI:AC-0004-0042-04
+  it("tells in the guide what the migration leaves alone and what each 1.x path is now", async () => {
+    // QFAI:EX-0004-0042-09
+    const guide = await readFile(
+      path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/references/migration-guide.md"),
+      "utf8",
+    );
+    const prose = guide.replace(/\s+/g, " ");
+    const markers = [
+      "does not rewrite a skill, agent or document the project wrote",
+      "step 12 lists each line of a tracked file that names a 1.x path",
+      "`old-path`",
+      "configured spec and contract directories",
+      "`.github/copilot-instructions.md`",
+      "a symbolic link",
+      "a file git does not track",
+      "`.qfai/assistant/skill.local/`",
+      "by hand",
+    ];
+    const positions = markerPositions(prose, markers);
+    expect(
+      markers.filter((_, at) => (positions[at] ?? -1) < 0),
+      "markers the guide lacks, in this order",
+    ).toEqual([]);
+    expect(prose).toMatch(/retired\/`[\s\S]{0,200}only in (?:this|the) working copy/);
+
+    const firstCell = (cells: string[], oldPath: string): boolean =>
+      (cells[0] ?? "").includes(`\`${oldPath}\``);
+    const table = tableBlocks(guide).find((rows) =>
+      GUIDE_TABLE.every(([oldPath]) => rows.some((cells) => firstCell(cells, oldPath))),
+    );
+    expect(table, "one table that gives each of the thirteen 1.x paths").toBeDefined();
+    for (const [oldPath, now] of GUIDE_TABLE) {
+      const row = (table ?? []).find((cells) => firstCell(cells, oldPath)) ?? [];
+      const where = row.slice(1).join(" | ");
+      for (const fragment of now) expect(where, `${oldPath} -> ${fragment}`).toContain(fragment);
+    }
+    // The skills directory is given together with its project-local sibling, on the old side.
+    const skillsRow = (table ?? []).find((cells) => firstCell(cells, ".qfai/assistant/skills"));
+    expect((skillsRow ?? []).join(" | ")).toContain("`.qfai/assistant/skills.local`");
+  });
+
+  // QFAI:AC-0004-0042-04
+  it("tells the AI in SKILL.md to resolve each old-path item with the person who wrote the file", async () => {
+    // QFAI:EX-0004-0042-10
+    const skill = await readFile(
+      path.join(SKILL_ASSETS, "qfai-migration-v1-to-v2/SKILL.md"),
+      "utf8",
+    );
+    const prose = skill.replace(/\s+/g, " ");
+    const markers = [
+      "Resolve every item step 12 lists",
+      "`old-path`",
+      "with the person who wrote the file",
+      "rewording the line so that it no longer names the old path",
+      "2.x path",
+      "table",
+      "Rerun step 12 until it exits 0",
+    ];
+    const positions = markerPositions(prose, markers);
+    expect(
+      markers.filter((_, at) => (positions[at] ?? -1) < 0),
+      "markers SKILL.md lacks, in this order",
+    ).toEqual([]);
+  });
 });

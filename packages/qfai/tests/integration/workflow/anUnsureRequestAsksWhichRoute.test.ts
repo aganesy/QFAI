@@ -153,7 +153,7 @@ it("Release notes are drafted, the run waits for release approval, and finish ne
     { intent: "release", signals: ["release-notes"], artifacts: ["release"] },
     { affectedFlowIds: [], proposedWriteScope: [NOTES] },
   );
-  const facts = await runFacts();
+  const facts = await runFacts(run);
   const draft = run.next(facts);
   const drafted = run.accept(
     {

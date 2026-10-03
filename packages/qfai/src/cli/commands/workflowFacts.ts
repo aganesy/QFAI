@@ -75,12 +75,16 @@ export async function readPayload(
   return parsePayload(await readFile(real, "utf8"));
 }
 
-// The paths a result submits as changed, whatever shape the rest of the payload has.
-function changedPathsOf(result: WorkflowResult | undefined): string[] {
-  const changed: unknown = result?.changedFiles;
-  return (Array.isArray(changed) ? changed : []).flatMap((entry: unknown) =>
+// The paths a submitted file list names, whatever shape the rest of the payload has.
+function pathsOf(list: unknown): string[] {
+  return (Array.isArray(list) ? list : []).flatMap((entry: unknown) =>
     isRecord(entry) && typeof entry.path === "string" ? [entry.path] : [],
   );
+}
+
+// The paths a result submits as changed.
+function changedPathsOf(result: WorkflowResult | undefined): string[] {
+  return pathsOf(result?.changedFiles);
 }
 
 // Where each submitted changed path really is: a link or a case variant is judged by the file it
@@ -101,12 +105,17 @@ async function realPathsOf(
   return Object.fromEntries(entries.flat());
 }
 
-// The core's own digest of each file a result or a work order names, after CRLF
-// normalization. A file that cannot be read has none.
+// The core's own digest of each file a result or a work order names (a changed file, an artifact,
+// an input of the outstanding work order, the diagnosis's reproduction record), after CRLF
+// normalization. A file that cannot be read, or whose real path lies outside the project's real
+// root, has none.
 async function fileDigestsOf(root: string, files: readonly string[]) {
+  const realRoot = await realpath(root);
   const entries = await Promise.all(
     [...new Set(files)].map(async (file): Promise<[string, string][]> => {
-      const text = await readFile(path.join(root, file), "utf8").catch(() => undefined);
+      const real = await realpath(path.resolve(root, file)).catch(() => undefined);
+      if (real === undefined || !real.startsWith(`${realRoot}${path.sep}`)) return [];
+      const text = await readFile(real, "utf8").catch(() => undefined);
       return text === undefined ? [] : [[file, hashAssistantAssetText(text)]];
     }),
   );
@@ -120,7 +129,12 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
   const { config } = await loadConfig(root);
   const accepting = input.operation === "accept";
   const reproduction = snapshot.diagnosis?.reproductionRef;
-  const changed = changedPathsOf(input.result);
+  const named = [
+    ...changedPathsOf(input.result),
+    ...pathsOf(input.result?.artifactRefs),
+    ...(snapshot.outstandingWorkOrder?.inputs ?? []).map((each) => each.path),
+    ...(reproduction ? [reproduction] : []),
+  ];
   const [
     story,
     reviewerRoles,
@@ -134,7 +148,7 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     reviewerRolesOf(config),
     heavyReviewerRolesOf(config),
     accepting ? realPathsOf(root, input.result) : undefined,
-    fileDigestsOf(root, [...changed, ...(reproduction ? [reproduction] : [])]),
+    fileDigestsOf(root, named),
     input.operation === "resume" || input.operation === "next"
       ? receiptValidityOf(root, snapshot)
       : undefined,

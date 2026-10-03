@@ -1,7 +1,7 @@
 // `accept` of the routing work order's result: the core decides the route from the extraction,
 // checks the proposal against it, and opens the questions routing needs before the first stage.
 
-import { refusedWith } from "./common.js";
+import { refusedWith, resultRefOf } from "./common.js";
 import { createQuestion } from "./issue.js";
 import type { RouteChoice } from "./decisionRules.js";
 import { carries, entriesOf } from "./modifiers.js";
@@ -194,7 +194,7 @@ function blockedRouting(run: WorkflowRun, result: WorkflowResult): WorkflowDecis
   const blocked = { ...run, state: "blocked", sequence: run.sequence + 1 };
   const event = {
     type: "missing-capability",
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     stageInstanceId: result.stageInstanceId,
     outcome: result.outcome,
   };
@@ -248,7 +248,7 @@ export function acceptRouting(
     proposal,
     facts,
     settled,
-    resultRef: `results/${result.resultId}.json`,
+    resultRef: resultRefOf(result.resultId),
     inputs: parsed,
   };
   const { taken } = outcome;
