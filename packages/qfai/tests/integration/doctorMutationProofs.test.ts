@@ -17,11 +17,13 @@ const scan = vi.hoisted(
     truncated: boolean;
     targetFault: Error | undefined;
     targetPath: string | undefined;
+    displayTestPath: string | undefined;
   } => ({
     fault: undefined,
     truncated: false,
     targetFault: undefined,
     targetPath: undefined,
+    displayTestPath: undefined,
   }),
 );
 
@@ -43,6 +45,12 @@ vi.mock("../../src/core/validators/storyTreeObligations.js", async (importOrigin
     readStoryTests: async (...args: Parameters<typeof actual.readStoryTests>) => {
       if (scan.fault) throw scan.fault;
       const read = await actual.readStoryTests(...args);
+      if (scan.displayTestPath) {
+        read.files = read.files.map((file) => ({
+          ...file,
+          file: scan.displayTestPath ?? file.file,
+        }));
+      }
       return scan.truncated ? { ...read, truncated: true } : read;
     },
   };
@@ -55,6 +63,7 @@ afterEach(async () => {
   scan.truncated = false;
   scan.targetFault = undefined;
   scan.targetPath = undefined;
+  scan.displayTestPath = undefined;
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
@@ -97,6 +106,36 @@ describe("mutation-proof target file boundary", () => {
     });
     scan.targetFault = fault;
     await expect(checkMutationProofs(root, config)).rejects.toBe(fault);
+  });
+});
+
+describe("mutation-proof diagnostic display boundary", () => {
+  it("escapes a test filename's newline while retaining the raw structured path", async () => {
+    const root = await project(WITH_PROOF);
+    const { config } = await loadConfig(root);
+    scan.displayTestPath = path.join(root, "tests", "unit", "total\n[ok] forged.test.ts");
+    await rm(path.join(root, "src", "total.ts"));
+    const check = await checkMutationProofs(root, config);
+    if (!check) throw new Error("a missing mutation target must produce a check");
+    expect(check.message).not.toContain("\n");
+    expect(check.message).toContain("total\\x0a[ok] forged.test.ts:4");
+    expect(check.details.stale[0]?.test).toBe("tests/unit/total\n[ok] forged.test.ts");
+  });
+
+  it("escapes a target's terminal sequence while retaining its raw structured path", async () => {
+    const target = "src/\u001b[2Jmissing.ts";
+    const root = await project(WITH_PROOF.replace("src/total.ts", target));
+    const { config } = await loadConfig(root);
+    scan.targetPath = path.resolve(root, target);
+    scan.targetFault = Object.assign(new Error("proof target is missing"), {
+      code: "ENOENT",
+      path: scan.targetPath,
+    });
+    const check = await checkMutationProofs(root, config);
+    if (!check) throw new Error("a missing mutation target must produce a check");
+    expect(check.message).not.toContain("\u001b");
+    expect(check.message).toContain("src/\\x1b[2Jmissing.ts");
+    expect(check.details.stale[0]?.target).toBe(target);
   });
 });
 
