@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { hashAssistantAssetText } from "../../core/assistantAssetProvenance.js";
+import { hashAssistantAssetText } from "../../shared/text.js";
 import { loadConfig } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { gitStdout } from "../../core/gitChanges.js";

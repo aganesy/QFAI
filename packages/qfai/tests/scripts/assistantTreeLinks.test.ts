@@ -40,21 +40,11 @@ async function makeIsolatedTree(): Promise<{ root: string; script: string; assis
   const script = path.join(root, "scripts", "link-assistant-tree.mjs");
   const assistant = path.join(root, ".qfai", "assistant");
   const source = path.join(root, "packages", "qfai", "assets", "init", ".qfai", "assistant");
-  const provenance = path.join(
-    root,
-    "packages",
-    "qfai",
-    "src",
-    "core",
-    "assistantAssetProvenance.ts",
-  );
   await mkdir(path.dirname(script), { recursive: true });
   await mkdir(path.join(source, "rule"), { recursive: true });
-  await mkdir(path.dirname(provenance), { recursive: true });
   await mkdir(assistant, { recursive: true });
   await cp(SCRIPT, script);
   await writeFile(path.join(source, "rule", "quality.md"), "# Quality\n", "utf-8");
-  await writeFile(provenance, "export const ADOPTER_OWNED_CATALOG_FILES = [] as const;\n", "utf-8");
   return { root, script, assistant };
 }
 
@@ -71,8 +61,7 @@ function runIsolated(
 }
 
 function runCheck(): { status: number; output: string } {
-  // Both streams: a problem goes to stderr, and the success path prints the
-  // kept list to stdout.
+  // Both streams: a problem goes to stderr, and the success path prints to stdout.
   const result = spawnSync("node", [SCRIPT, "--check"], { cwd: repoRoot, encoding: "utf-8" });
   return {
     status: result.status ?? 1,
@@ -148,17 +137,6 @@ describe("link-assistant-tree --check", () => {
     expect(source).toContain("Add it to the assets, delete it, or allow-list it");
   });
 
-  it("reads the owned-file constant without executing TypeScript", async () => {
-    // Importing the `.ts` module needs the type stripping Node gained after the
-    // floor this package supports, so the lane that runs on that floor could
-    // not execute this script at all. Reading it as text keeps one source.
-    const source = await readFile(SCRIPT, "utf-8");
-
-    expect(source).toContain("ADOPTER_OWNED_CATALOG_FILES");
-    expect(source).not.toContain("ts-specifier-hook");
-    expect(source).not.toContain("await import(");
-  });
-
   it("ignores untracked regular scratch files", async () => {
     // A suite may leave an untracked file in the working tree. Such a file
     // does not change what this repository ships.
@@ -169,32 +147,12 @@ describe("link-assistant-tree --check", () => {
     expect(source).toContain("TRACKED !== null");
   });
 
-  it("accepts an explicitly empty adopter-owned list after the catalog moves", async () => {
+  it("links the shipped tree of an isolated checkout", async () => {
     const { root, script, assistant } = await makeIsolatedTree();
     expect(runIsolated(script, root, false).status).toBe(0);
     const checked = runIsolated(script, root, true);
     expect(checked.status).toBe(0);
     expect(lstatSync(path.join(assistant, "rule")).isSymbolicLink()).toBe(true);
-  });
-
-  it("rejects an owned-file list whose contents cannot be parsed", async () => {
-    const { root, script } = await makeIsolatedTree();
-    const provenance = path.join(
-      root,
-      "packages",
-      "qfai",
-      "src",
-      "core",
-      "assistantAssetProvenance.ts",
-    );
-    await writeFile(
-      provenance,
-      "export const ADOPTER_OWNED_CATALOG_FILES = [unknownName] as const;\n",
-      "utf-8",
-    );
-    const checked = runIsolated(script, root, true);
-    expect(checked.status).toBe(1);
-    expect(checked.output).toContain("not a literal string list");
   });
 
   // QFAI:EX-0002-0022-02

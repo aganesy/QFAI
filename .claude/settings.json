@@ -97,7 +97,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let p;try{p=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path}catch{}if(typeof p!=='string'||!/[\\\\/]\\.qfai[\\\\/]run[\\\\/]/.test(p)){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "grilling-design-artifact"
             ]
@@ -164,7 +164,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let p;try{p=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path}catch{}if(typeof p!=='string'||!/[\\\\/]\\.qfai[\\\\/]run[\\\\/]/.test(p)){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-write"
             ]
@@ -176,7 +176,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let p;try{p=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path}catch{}if(typeof p!=='string'||!/[\\\\/]\\.qfai[\\\\/]run[\\\\/]/.test(p)){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "documentation-clarity-after-edit"
             ]
@@ -192,7 +192,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const f=require('fs');let p;try{p=JSON.parse(f.readFileSync(0,'utf8')).tool_input.file_path}catch{}if(typeof p!=='string'||!/[\\\\/]\\.qfai[\\\\/]run[\\\\/]/.test(p)){const m=JSON.parse(f.readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
+              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "minimal-implementation"
             ]

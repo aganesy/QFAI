@@ -12,7 +12,7 @@ schema_version: "1.0"
 # `.qfai/assistant/step/<name>/STEP.md`; a `- skill: <name>` entry routes a
 # skill that is not split into steps. A parent skill that runs steps has no
 # entry of its own: each of its steps carries its agents and its review
-# profile, and a run reviews the union of the steps it ran.
+# profile, and the parent runs the one review it names after its last step.
 #
 # Contract with each entry's `roles:` frontmatter — the step's `STEP.md` or
 # the skill's `SKILL.md` (validated by `QFAI-AGENT-015` .. `QFAI-AGENT-019`):

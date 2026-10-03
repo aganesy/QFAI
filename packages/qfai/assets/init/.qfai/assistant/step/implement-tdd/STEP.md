@@ -215,9 +215,9 @@ freshness and round fields.
 ## Stage review
 
 The stage is reviewed once, after its last step, through `common-review-cycle`,
-over every example the stage implemented. The reviewers are the union of the
-stage's steps' reviewers: the implementation-reviewer, the qa-gatekeeper for the recorded RED and GREEN evidence, and the
-product-surface-reviewer where an example is UI-affecting.
+over every example the stage implemented: the code review, by the
+implementation-reviewer, with the qa-gatekeeper for the recorded RED and GREEN
+evidence and the product-surface-reviewer where an example is UI-affecting.
 
 The stage's review pack identifies the BF, every EX the stage implemented, the
 evidence path, the revision and the requested reviewers.

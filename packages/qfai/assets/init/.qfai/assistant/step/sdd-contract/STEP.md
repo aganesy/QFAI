@@ -2,7 +2,7 @@
 name: sdd-contract
 owner: qfai-sdd
 purpose: "Write the contracts and business rules the flow's examples need, or repair one named contract."
-requires: [common-grilling-record]
+requires: []
 roles:
   [solution-architect, test-design-analyst, product-experience-architect, architecture-reviewer]
 routing-profile: architecture-heavy
@@ -39,16 +39,15 @@ number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
 its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
 `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
-Inside a workflow run, write only in the attempt the operator's answer
-authorizes, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#inside-a-workflow-run`
+Write only what the user approved, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
 states.
 
 ## Procedure
 
 1. Run the pre-draft grilling checkpoint for `Contracts and rules` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and record it with `common-grilling-record`.
+   the first write, and list each decision it adopted in the final report.
 2. Write a BR only after the EX it cites exists. Every BR cites at least one
    full EX ID, and nothing but EX IDs; every EX is cited by at least one BR.
    The relation may be many-to-many.
@@ -99,7 +98,7 @@ its contract realization before `sdd-gate` runs.
 
 ## Passes when
 
-Read first: the triage rows, the examples `sdd-story` wrote or kept, and the
+Read first: the triage decisions, the examples `sdd-story` wrote or kept, and the
 contracts whose rules cite them. The step passes when the change writes no BR
 and changes no contract or `contracts.md` row. The pass names the contracts it
 read.

@@ -44,7 +44,7 @@ const implementSkillPath = path.join(
  *
  * Three of four cases within 1.7 s of the ceiling, the closest by **372 ms**,
  * with the full suite still to add. It had not failed yet; it had run out of
- * margin, which is the state `skillsIntegrity.test.ts` was in before it started
+ * margin, which is the state another suite was in before it started
  * failing at the same distance.
  */
 describe("wrapper parity across all three platforms", () => {

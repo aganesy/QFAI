@@ -101,7 +101,7 @@ The test obligation is determined by the ID and the test's layer:
 `.qfai/assistant/rule/test-layers.md` defines the layer directories. Test
 selection uses `validation.traceability.testFileGlobs`. A missing BF, AC, or EX
 test is an uncovered obligation, even if tests in another layer mention it.
-Resolve a valid exception through a row in `.qfai/spec/decisions.md`; do not
+Resolve a valid exception through a `.qfai/spec/decisions.md` row the user approved; do not
 invent a test annotation to suppress a finding.
 
 When practical, cite the BF, US, AC and EX IDs, and the contract and BR IDs

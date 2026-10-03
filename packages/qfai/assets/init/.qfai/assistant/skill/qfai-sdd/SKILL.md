@@ -61,7 +61,7 @@ it, then move to the next.
 
 | Step               | What it does                                                   | Skipped when                                               |
 | ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
-| `sdd-triage`       | Source, preflight, triage rows, approvals and ID allocation    | Never                                                      |
+| `sdd-triage`       | Source, preflight, triage, approvals and ID allocation         | Never                                                      |
 | `sdd-flow`         | Policy, `tech.md` and business flows                           | Triage changed no policy fact and no flow                  |
 | `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
@@ -81,11 +81,6 @@ joined by `architecture-reviewer` when a contract changed and by
 `product-surface-reviewer` for a UI-bearing flow.
 What they check is the `## Review` section of `sdd-gate`. Roles are selected
 under `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
-
-### Reviewer Gate
-
-Where the concrete-abstract cycle ran, the completion reviewer also checks its
-record, as `sdd-cycle` states.
 
 ## Completion
 

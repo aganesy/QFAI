@@ -81,7 +81,6 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ### Work Orders Summary (MANDATORY evidence)
 
@@ -89,16 +88,15 @@ Use the shared schema.
 
 ### Stage Minimum Roles (MUST)
 
-- Delegate: PrimaryAuthor create first drafts of major artifact drafts for this stage.
-- Integrate: Orchestrator consolidates delegated outputs and presents them to the user for confirmation.
-- Gate: Reviewer is delegated independently and returns only `PASS` or `REVISE`.
-- Orchestrator must not draft the primary artifact body and must not self-approve.
+- Author: the orchestrator writes the artifacts itself, or gives independent parts to sub-agents that run in parallel.
+- Integrate: the orchestrator presents the result to the user for confirmation.
+- Gate: a reviewer that did not author the work returns only `PASS` or `REVISE`. The orchestrator never approves its own work.
 
 ### Reviewer Gate (MUST)
 
 - Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
-  - required roles were delegated;
+  - no reviewer authored what it reviewed;
   - doctor evidence exists: `npx qfai doctor --fail-on error` completed without failing checks;
   - Drift Protocol enforced;
   - test-layer policy enforced against `.qfai/assistant/rule/test-layers.md`;
@@ -272,15 +270,13 @@ Do not create `.qfai/**/README.md` files as scaffold or format documentation; ke
 
 ## Multi-Role Orchestration (Subagents)
 
-Use the platform's native sub-agent delegation mechanism for Claude Code, GitHub Copilot, and Codex.
+When the orchestrator delegates, it uses the platform's native sub-agent mechanism for Claude Code, GitHub Copilot, and Codex.
 
 ### Delegation order
 
 Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
 
-- First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.
-- Then follow routed phases in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).
-- Do not prepend non-routed roles before the first required delegation attempt.
+- Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).
 
 ### Delegation contract (tool-neutral)
 
@@ -299,8 +295,8 @@ Return:
 
 ### Failure rule
 
-- The first required delegation attempt doubles as the capability check.
-- If that delegation fails, stop immediately. Do not simulate roles or continue with self-execution.
+- A delegation the orchestrator chose to make is its own capability check.
+- A failed delegation is handled as `.qfai/assistant/rule/shared-skill-delegation-baseline.md` sets out. Do not simulate roles.
 
 ## Completion Separation (mandatory)
 

@@ -39,15 +39,15 @@ Both classes use the same approval and owner-rerun path.
 ## When drift is detected
 
 1. Stop work on the affected obligation and its dependents. Other flows continue. Name the affected BF, US, AC, EX, BR, and contract references where they exist, plus the code or tests that consume the disputed artifact. Do not claim a repository-wide stop without a repository-wide dependency.
-2. Ask the SDD owner to append one DEC-NNNN row to decisions.md under paths.specsDir. Its four columns are ID, Content,
-   Approach, and Status. Content starts with Change request: followed by the affected repository-relative paths or IDs,
-   separated by commas. Approach records the drift class, evidence or reproduction, proposed change, impacted items,
-   approval needed, and owner rerun. A pending request has Status TODO. The row may be written without prior
-   authorization; the change to the protected artifact may not.
-3. Obtain the operator's explicit answer. Record its provenance in the stage evidence and move the pending row to WIP
-   only when the proposed change and affected set are approved as written. If the answer changes either, append a
-   replacement row and mark the earlier row SUPERSEDED (by DEC-NNNN). A declined request becomes REJECTED. A WIP or DONE
-   Change request: row is the in-force authorization that the drift gate reads; TODO is not authorization.
+2. Prepare the change request for the SDD owner: the affected repository-relative paths or IDs, the drift class,
+   the evidence or reproduction, the proposed change, the impacted items, and the owner rerun.
+3. Obtain the user's explicit answer. Only on approval does the SDD owner append one DEC-NNNN row to decisions.md under
+   paths.specsDir. Its four columns are ID, Content, Approach, and Status. Content starts with Change request: followed
+   by the affected paths or IDs, separated by commas. Approach records the proposed change and who approved it, when,
+   and the option chosen. The row starts at WIP. A declined request appends no row and the artifact stays as it is.
+   When the user cannot be asked, write no row to either table: report the proposed change as the decision still
+   needed and keep the affected items stopped. A WIP or DONE Change request: row is the in-force authorization that the drift gate reads.
+   TODO is not authorization.
 4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
    The owner updates the specification and its tests together, then validates the relevant flow.
@@ -103,5 +103,5 @@ copy of a locked file before deciding its lock is wrong.
 
 - Downstream stages do not patch protected upstream artifacts before an in-force Change request: decision row authorizes the path. The drift profile compares the branch against baseBranch and reports QFAI-DRIFT-001 for an unapproved protected change. The SDD owner may create the request row itself without a prior row.
 - Existing decisions.md and open-questions.md rows retain their ID, Content, and Approach. A former row may change Status; new content is appended as a new row.
-- Vendored assistant rules are changed in the package and synchronized into projects. A local edit that diverges from its provenance record is reported by the assistant asset gate.
+- Vendored assistant rules are changed in the package and synchronized into projects by `npx qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When approval is unavailable, keep the affected items stopped and report the decision needed. Continue unrelated work.

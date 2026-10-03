@@ -14,9 +14,9 @@ A review is completed only when its summary.json exists. Match the resolved pack
 ## Stage 1: triage and decisions
 
 Follow sdd-triage.md. Classify each requirement against existing policy, flow, story, example, and contract content.
-Identify every affected flow. Append decisions and open questions to the two four-column tables before a dependent
-write. If a row requires approval, obtain it through the shared user-question protocol; in --auto, leave it pending and
-stop dependent work. A declined change stays as a REJECTED decision row.
+Identify every affected flow. Put each approval-required operation to the user through the shared user-question
+protocol before a dependent write, and append its change request row to decisions.md once approved; record unresolved
+questions in open-questions.md. In --auto, ask nothing and stop dependent work. A declined change appends no row.
 
 ## Stage 2: policy and flow
 
@@ -44,7 +44,7 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Concrete-abstract cycle
 
-When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in concrete-abstract-cycle.md before the gate: an independent test-design-analyst raises findings against the tree, one griller decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
+When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in concrete-abstract-cycle.md before the gate: a sub-agent that wrote none of the BRs raises findings against the tree, the session agent decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
 
 ## Stage 5: gate, review, and completion
 

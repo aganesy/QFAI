@@ -45,7 +45,7 @@ contracts and evidence only.
 ## Procedure
 
 1. Refresh the steering as `common-steering-refresh` says.
-2. Delegate the plan (below) and read the inputs.
+2. Write the plan, or delegate it (below), and read the inputs.
 3. Analyse the project (below).
 4. Fix the scope (below) and write it into the evidence Objective.
 5. Hold the preflight session (below).
@@ -55,9 +55,7 @@ contracts and evidence only.
 
 Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
 
-- First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.
-- Then follow routed phases in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).
-- Do not prepend non-routed roles before the first required delegation attempt.
+- Routed phases, in order: `plan` (`delivery-planner`, `qa-strategist`) -> `execution` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`, optional `implementation-reviewer` when code fixes are in scope).
 
 ```text
 Role: delivery-planner
