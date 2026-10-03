@@ -126,12 +126,6 @@ async function oldProject(): Promise<string> {
   return root;
 }
 
-async function cloneProject(source: string): Promise<string> {
-  const root = await scratch("qfai-migration-rerun-copy-");
-  await cp(source, root, { recursive: true, verbatimSymlinks: true });
-  return root;
-}
-
 /** Every file and link the project holds, with what it holds; `.git` and the package are left out. */
 async function snapshot(root: string): Promise<Map<string, string>> {
   const found = new Map<string, string>();
@@ -248,7 +242,10 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     expect(section(applied[10]?.stdout ?? "", "Operations")).toEqual(
       expect.arrayContaining(HOOK_WRITES),
     );
-    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    expect(section(applied[10]?.stdout ?? "", "Reminder hooks")).toEqual([
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
 
     await expect(lstat(path.join(root, ".qfai/specs"))).rejects.toMatchObject({ code: "ENOENT" });
     expect(
@@ -273,7 +270,9 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
   });
 
   it("runs again on a project 2.0.0 migrated and brings only the hooks and their text up to date", async () => {
-    const root = await cloneProject(journey.root);
+    // The migrated tree itself, not a copy: on Windows a copy turns each host directory
+    // link into a file link, which step 9 then has to repair. This is the last test.
+    const root = journey.root;
     // What a person settles from the first run's reports, then what 2.0.0
     // left: no Claude Code settings, its own Codex hook file, and a recorded
     // reminder text without the free-text entry.

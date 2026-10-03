@@ -31,14 +31,6 @@ the 2.x validation and authoring workflow.
 Do not run `npx qfai init --force` to migrate. It can write beyond the migration
 scripts' allowed paths and replace local edits.
 
-The first `npx qfai init` records the workflows it installs in
-`.qfai/install-provenance.json`, so delete a shipped workflow the project does
-not want after that run and commit the record, and later `npx qfai init` runs
-leave it deleted. A workflow already in the 1.x tree has no record, because
-`init` records only the files it writes. To keep such a workflow deleted, delete
-it before that run, let `init` write it and record it, then delete it again and
-commit the record.
-
 ## Place stories and rules
 
 The AI writes `tmp/qfai-migration/plan.yaml` before running

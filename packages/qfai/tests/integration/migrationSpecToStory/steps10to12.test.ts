@@ -254,7 +254,7 @@ async function writeLegacyIgnore(root: string): Promise<void> {
     `${MARKER}\n`,
     `${MARKER}\n!.qfai/evidence/decision/\n!.qfai/evidence/workflow/\n`,
   );
-  await writeFile(file, `${legacy}!.qfai/\n!.qfai/assistant/**\nnode_modules/\n`);
+  await writeFile(file, `${legacy}!docs/keep.md\nnode_modules/\n`);
 }
 
 /** Reads a file of `root`, or `null` when nothing is there. */
@@ -395,7 +395,7 @@ describe("migration step 10: the managed .gitignore block", () => {
     expect(result.code, result.output).toBe(0);
     const ignore = await readFile(path.join(root, ".gitignore"), "utf8");
     expect(ignore).not.toContain("!.qfai/evidence/");
-    expect(ignore).toContain("\n!.qfai/\n!.qfai/assistant/**\nnode_modules/\n");
+    expect(ignore).toContain("\n!docs/keep.md\nnode_modules/\n");
     expect((await ensureRootGitignoreEntries(root, true, () => {})).copied).toEqual([]);
     expect(ignored(root, ".qfai/evidence/decision/r.md")).toBe(true);
     expect(section(result.output, "Operations")).toEqual([
@@ -685,7 +685,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
         ),
       ).toBe(true);
     }
-    expect(await readFile(doc, "utf8")).toBe(edited);
+    expect(
+      await readFile(path.join(root, ".qfai/assistant/skill.local", old, "SKILL.md"), "utf8"),
+    ).toBe(edited);
     const result = await validateProject(root);
     const naming = result.issues.filter((issue) => JSON.stringify(issue).includes(old));
     expect(naming).toEqual([]);
@@ -702,7 +704,10 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(result.code).toBe(0);
     expect(section(preview.output, "Operations")).toEqual(expect.arrayContaining(HOOK_WRITES));
     expect(section(result.output, "Operations")).toEqual(section(preview.output, "Operations"));
-    expect(section(result.output, "Reminder hooks")).toEqual([TRUST_CODEX_HOOKS]);
+    expect(section(result.output, "Reminder hooks")).toEqual([
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
     for (const file of HOOK_FILES) {
       expect(await textOrNull(root, file), file).toBe(await textOrNull(initialised, file));
     }
@@ -737,7 +742,11 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(section(first.output, "Operations")).toContain(
       ".claude/settings.json: update (reminder hooks: UserPromptSubmit; permission entries; existing settings kept)",
     );
-    expect(section(first.output, "Reminder hooks")).toEqual([kept, TRUST_CODEX_HOOKS]);
+    expect(section(first.output, "Reminder hooks")).toEqual([
+      kept,
+      TRUST_CODEX_HOOKS,
+      `${REMINDERS}: write from the package`,
+    ]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
     expect(merged).toBe(await readFile(path.join(byInit, ".claude/settings.json"), "utf8"));
     expect(merged).toContain('"our-own-question"');
@@ -765,7 +774,9 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(section(result.output, "For a person")).toEqual([
       ".codex/hooks.json was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder hooks are not wired up.",
     ]);
-    expect(section(result.output, "Reminder hooks")).toEqual([]);
+    expect(section(result.output, "Reminder hooks")).toEqual([
+      `${REMINDERS}: write from the package`,
+    ]);
     expect(await readlink(path.join(root, ".codex/hooks.json"))).toBe(outside);
     expect(await readFile(outside, "utf8")).toBe("{}\n");
     expect(await textOrNull(root, ".claude/settings.json")).toBe(

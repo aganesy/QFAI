@@ -449,8 +449,8 @@ export const step07: MigrationStep = {
     // A mark of a pack step 7 has deleted names a rule no pack holds any longer; the
     // ID map still holds that pack.
     // SIMPLIFIED: a mark of a pack still present is checked against the rules it holds
-    // now, so a rerun refuses a mark whose rule an earlier run removed from it. Lift
-    // when: such a rerun has to pass, and something records which rules step 7 removed.
+    // now, so a rerun refuses a mark whose rule an earlier run removed from it.
+    // Lift when: such a rerun has to pass, and something records which rules step 7 removed.
     const presentPacks = new Set(sourceFiles.map((file) => path.basename(path.dirname(file))));
     const unmatched = plan.marks.find((mark) => {
       if (seenRules.has(mark.id)) return false;
@@ -473,7 +473,8 @@ export const step07: MigrationStep = {
         });
     }
     operations.push(...sourceChanges);
-    let packsLeft = 0;
+    // Step 4 reads the old flow while a pack it places from is left; a retired pack places none.
+    let activePacksLeft = 0;
     for (const file of await legacyPackFiles(context, "01_Spec.md")) {
       const content = await readMigrationInput(file);
       if (content === null) continue;
@@ -485,8 +486,9 @@ export const step07: MigrationStep = {
         );
       const packDir = path.dirname(file);
       const rulesGone = removedRuleFiles.has(path.join(packDir, "04_Business-Rules.md"));
-      if (!rulesGone || !packPlaced(await readOldPack(context, specId, true), map)) {
-        packsLeft += 1;
+      const pack = await readOldPack(context, specId, true);
+      if (!rulesGone || !packPlaced(pack, map)) {
+        if (!pack.retired) activePacksLeft += 1;
         continue;
       }
       // Every part of the pack has a destination, so its files go, and the
@@ -505,11 +507,11 @@ export const step07: MigrationStep = {
           kind: "remove-empty-directory",
           target: repositoryRelative(context.root, packDir),
         });
-      } else {
-        packsLeft += 1;
+      } else if (!pack.retired) {
+        activePacksLeft += 1;
       }
     }
-    if (packsLeft === 0) operations.push(...(await policyRemainder(context)));
+    if (activePacksLeft === 0) operations.push(...(await policyRemainder(context)));
     return { operations, forAPerson };
   },
 };
@@ -524,8 +526,8 @@ async function listEntries(dir: string): Promise<string[]> {
 }
 
 /**
- * The old business flow step 4 reads while a pack is left, and `_policies/`
- * once nothing else is in it.
+ * The old business flow step 4 reads while a pack it places from is left, and
+ * `_policies/` once nothing else is in it.
  */
 async function policyRemainder(context: MigrationContext): Promise<MigrationOperation[]> {
   const policies = path.join(context.specsDir, "_policies");

@@ -645,6 +645,9 @@ export async function runInit(
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
+  const retiredSkillNotes = options.force
+    ? await keepRetiredMigrationSkill(destRoot, options.dryRun)
+    : [];
 
   // Retired shipped workflows: retired-name-set membership AND recorded
   // QFAI ownership, both. The adopter's `.github/workflows/` directory is
@@ -796,7 +799,11 @@ export async function runInit(
     info(CODEX_HOOKS_TRUST_NOTE);
   }
 
-  for (const note of [...upgradeResult.preservedNotes, ...differingSkillsNote(differingSkills)]) {
+  for (const note of [
+    ...upgradeResult.preservedNotes,
+    ...differingSkillsNote(differingSkills),
+    ...retiredSkillNotes,
+  ]) {
     info(note);
   }
 
@@ -2805,6 +2812,45 @@ function report(
     info(dryRun ? "  would remove paths:" : "  removed paths:");
     listReportPaths(removedPaths);
   }
+}
+
+/** The migration skill's name in earlier 2.0 releases. */
+const RETIRED_MIGRATION_SKILL = "qfai-migration-spec-to-story";
+
+/**
+ * Moves the retired migration skill's directory to `skill.local/`, where a
+ * project keeps its own skills.
+ *
+ * Nothing records what the release that shipped it wrote, so a copy the
+ * project edited cannot be told from an untouched one. Moving it whole keeps
+ * either, and leaves nothing under the skill tree that validate would report.
+ */
+async function keepRetiredMigrationSkill(destRoot: string, dryRun: boolean): Promise<string[]> {
+  const source = path.join(destRoot, ".qfai", "assistant", "skill", RETIRED_MIGRATION_SKILL);
+  const target = path.join(destRoot, ".qfai", "assistant", "skill.local", RETIRED_MIGRATION_SKILL);
+  const sourceStats = await lstat(source).catch(() => null);
+  if (sourceStats?.isDirectory() !== true) return [];
+  const shown = (entry: string) => formatReportPath(toRelativePath(destRoot, entry));
+  if (
+    (await firstLinkedComponent(source, destRoot)) !== null ||
+    (await firstLinkedComponent(path.dirname(target), destRoot)) !== null
+  ) {
+    return [
+      `NOTE: ${shown(source)}, a retired skill, was left in place because its path or the destination's passes through a symbolic link. Move it out of the skill tree by hand.`,
+    ];
+  }
+  if (await pathExists(target)) {
+    return [
+      `NOTE: ${shown(source)}, a retired skill, was left in place because ${shown(target)} already exists. Keep the copy you need and delete the other.`,
+    ];
+  }
+  if (!dryRun) {
+    await mkdir(path.dirname(target), { recursive: true });
+    await rename(source, target);
+  }
+  return [
+    `  ${dryRun ? "would move" : "moved"} retired skill: ${shown(source)} → ${shown(target)}`,
+  ];
 }
 
 async function pruneLegacySkillFiles(destRoot: string, dryRun: boolean): Promise<string[]> {
