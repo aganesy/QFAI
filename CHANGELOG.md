@@ -27,6 +27,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in the same file no longer passes at the same count. A pin still written as a
   bare count is refused with the command that re-pins it. Fixes #2355.
 
+- **Assistant instructions state obligations without capitalised emphasis**
+  (#2240). Phrases read by validators, gates or tests remain; other obligations
+  use plain wording. A phrase allowlist guards the shipped assistant tree and
+  root rules, and the writing standard calls for direct statements.
+
 - **The Windows parity CI job's timeout is set from measured runs** (#2311).
   Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
   now 20, twice the slowest run rounded up to five minutes, down from an

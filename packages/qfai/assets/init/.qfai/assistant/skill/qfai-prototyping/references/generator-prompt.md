@@ -261,7 +261,7 @@ Authoring `font-family: inherit`, `border-radius: 0`, or
 
 ### Allowed expression forms
 
-The generator MUST express every styled surface as one of:
+The generator must express every styled surface as one of:
 
 - A Tailwind utility class whose token resolves through the
   `tailwind.config.theme.extend.*` injection above (e.g. `bg-primary`,
