@@ -6,9 +6,9 @@ no test layer and no annotation token, and nothing here is checked by a tool.
 
 ## Scope
 
-These rules oblige the **E2E, API and Integration** layers only, which is this skill's whole scope.
-They introduce no unit or component obligation: those layers belong to `/qfai-implement`, and a
-unit test that needs a credential is describing an integration.
+These rules oblige the **E2E, API and Integration** layers only: the acceptance tests
+`implement-credentials` serves. They introduce no unit or component obligation, and a unit test
+that needs a credential is describing an integration.
 
 This guidance names no test runner and no browser automation library. Every rule below is stated
 about a _session cache_ and a _worker_, which every parallel runner has under some spelling, so

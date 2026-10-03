@@ -158,7 +158,6 @@ describe("reviewer gates terminate", () => {
       for (const stage of [
         "/qfai-discussion",
         "/qfai-sdd",
-        "/qfai-atdd",
         "/qfai-implement",
         "/qfai-configure",
         "/qfai-verify",

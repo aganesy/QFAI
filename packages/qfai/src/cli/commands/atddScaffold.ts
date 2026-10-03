@@ -9,12 +9,6 @@ import {
   type ScaffoldTarget,
 } from "../../core/atdd/scaffold.js";
 import { resolveScaffoldDialect, SCAFFOLD_RUNNERS } from "../../core/atdd/scaffoldDialect.js";
-import {
-  recordScaffoldAttempt,
-  resetScaffoldAttempt,
-  resolveEscalateThreshold,
-  shouldEscalate,
-} from "../../core/atdd/scaffoldEscalation.js";
 import { loadConfig } from "../../core/config.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
@@ -115,22 +109,12 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
       return 2;
     }
     const dialect = resolution.dialect;
-    const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
     const summary: string[] = [];
     for (const target of targets) {
       const destination = scaffoldDestPath(options.root, target, testsDir, dialect);
       const outcome = await emitSkeleton(target, destination, buildSkeleton(target, dialect));
-      if (outcome.alreadyProgressed) await resetScaffoldAttempt(options.root, target.id);
-      else {
-        const cycles = await recordScaffoldAttempt(options.root, target.id);
-        if (shouldEscalate(cycles, threshold)) {
-          writeErr(
-            `qfai atdd scaffold: escalation — ${target.id} remains a placeholder after ${cycles} scaffold runs.`,
-          );
-        }
-      }
       summary.push(
-        `${target.id}: ${outcome.wrote ? "created" : outcome.alreadyPlaceholder ? "existing placeholder" : "existing test"} (${path.relative(options.root, destination).replace(/\\/g, "/")})`,
+        `${target.id}: ${outcome.wrote ? "created" : "existing test"} (${path.relative(options.root, destination).replace(/\\/g, "/")})`,
       );
     }
     write(`qfai atdd scaffold: ${summary.length} target(s) processed.\n${summary.join("\n")}`);

@@ -21,7 +21,6 @@ export {
 } from "./storyTreeStructure.js";
 export { validateStoryTreeDrift } from "./upstreamSsotGuard.js";
 export { validateDocumentSchema } from "./documentSchema.js";
-export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export {
   validateDelegationMapIssues,

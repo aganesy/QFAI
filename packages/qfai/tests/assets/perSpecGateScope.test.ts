@@ -10,10 +10,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 
 describe("flow-scoped acceptance and implementation gates", () => {
-  it("ATDD validates the selected BF and records sibling findings with owners", async () => {
-    const content = await readFile(path.join(assistant, "step/atdd-author/STEP.md"), "utf8");
+  it("acceptance tests validate the selected BF", async () => {
+    const content = await readFile(
+      path.join(assistant, "step/implement-acceptance/STEP.md"),
+      "utf8",
+    );
     expect(content).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");
-    expect(content).toContain("Report repo-wide findings attributed to another flow");
     expect(content).toMatch(/no\s+error owned by this flow/);
   });
 

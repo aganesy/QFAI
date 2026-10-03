@@ -10,12 +10,13 @@ const read = (tree: string, relative: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, relative), "utf-8");
 
 describe.each(trees)("%s — implementation stage binding", (tree) => {
-  it("places implementation between acceptance tests and verification", async () => {
+  it("places implementation, acceptance tests included, before verification", async () => {
     const workflow = await read(tree, "assistant/rule/workflow.md");
-    expect(workflow).toContain("5. Acceptance tests (ATDD)");
-    expect(workflow).toContain("6. Implementation: `/qfai-implement`");
-    expect(workflow).toContain("7. Verify: run quality gates");
-    expect(workflow).toContain("`qfai-atdd`, `qfai-implement`, `qfai-verify`");
+    expect(workflow).toContain(
+      "5. Implementation: `/qfai-implement` writes the BF E2E test and the AC",
+    );
+    expect(workflow).toContain("6. Verify: run quality gates");
+    expect(workflow).toContain("`qfai-prototyping`, `qfai-implement`, `qfai-verify`");
   });
 
   it("requires a fresh story obligation and the project command contract", async () => {

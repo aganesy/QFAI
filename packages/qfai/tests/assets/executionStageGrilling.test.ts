@@ -20,11 +20,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const CONSTITUTION = "assistant/rule/constitution.md";
-const STAGES = ["qfai-implement", "qfai-atdd", "qfai-verify"];
+const STAGES = ["qfai-implement", "qfai-verify"];
 /** Where a split stage states its sessions: the step that holds its preflight. */
 const GRILLING_FILE: Readonly<Record<string, string>> = {
   "qfai-implement": "assistant/step/implement-tdd/STEP.md",
-  "qfai-atdd": "assistant/step/atdd-scaffold/STEP.md",
   "qfai-verify": "assistant/step/verify-context/STEP.md",
 };
 const grillingFile = (skill: string): string =>

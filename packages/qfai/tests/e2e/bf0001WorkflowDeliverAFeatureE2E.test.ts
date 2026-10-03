@@ -221,7 +221,7 @@ it("a result for a work order never issued is refused and changes nothing, and t
   const refused = await submit(root, runId, "accept", forged);
   const skills = path.join(root, ".qfai", "assistant", "skill");
   const handover = await Promise.all(
-    ["qfai-sdd", "qfai-atdd", "qfai-implement", "qfai-verify"].map(async (skill) =>
+    ["qfai-sdd", "qfai-implement", "qfai-verify"].map(async (skill) =>
       (await readFile(path.join(skills, skill, "SKILL.md"), "utf8")).includes(BASELINE),
     ),
   );

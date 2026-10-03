@@ -588,7 +588,7 @@ describe("applyWaivers", () => {
   it.each([
     ["QFAI-STORY-006", "storyTree.testObligation"],
     ["QFAI-STORY-007", "storyTree.misplacedAnnotation"],
-    ["D-SCAFFOLD-PLACEHOLDER", "distributedSurface.scaffold"],
+    ["D-DEPRECATED-PATH", "config.deprecatedPath"],
     ["QFAI-CFG-LINK-001", "config.link"],
     ["QFAI-STORY-008", "storyTree.undeclaredAnnotation"],
     ["QFAI-STORY-009", "storyTree.testException"],

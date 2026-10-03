@@ -14,17 +14,6 @@ async function read(relative: string): Promise<string> {
 }
 
 describe("story-tree acceptance and implementation assets", () => {
-  it("uses the BF, AC and EX layer split and records non-gating volume signals", async () => {
-    const atdd = await read("step/atdd-author/STEP.md");
-    const volume = await read("skill/qfai-atdd/references/volume-signals.md");
-    expect(atdd).toContain("QFAI:BF-NNNN");
-    expect(atdd).toContain("QFAI:AC-NNNN-NNNN-NN");
-    expect(atdd).toContain("QFAI:EX-NNNN-NNNN-NN");
-    expect(volume).toContain("Do not count a shared AC in both layers");
-    expect(volume).toContain("EX tests belong");
-    expect(volume).toContain("Signals are planning observations, not quality gates");
-  });
-
   it("selects affected suites through imports and reruns shared consumers", async () => {
     const suite = await read("skill/qfai-implement/references/relevant-test-suite.md");
     expect(suite).toContain("current QFAI:EX annotation");
@@ -69,30 +58,6 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(ui).toContain("product-surface-reviewer");
     expect(ui).toContain("If the implementation or capture changes after the verdict");
     expect(gatekeeper).toContain("For UI work, inspect the rendered surface");
-  });
-
-  it("requires observed acceptance RED or controlled falsifiability", async () => {
-    const red = await read("skill/qfai-atdd/references/red-provenance.md");
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
-    expect(red).toContain("selected-test output");
-    expect(red).toContain("test plus fixtures or snapshots");
-    expect(red).toContain("A module-load error, missing dependency, broken fixture");
-    expect(red).toContain("restore the mutation");
-    expect(gatekeeper).toContain("A syntax error, deleted export");
-  });
-
-  it("reads the RED test hash's execute bit where git reads it", async () => {
-    // Windows has no execute bit on disk, so a bit read off the disk hashes a
-    // file git marks executable differently on Windows and POSIX checkouts.
-    const red = (await read("skill/qfai-atdd/references/red-provenance.md")).replace(/\s+/g, " ");
-    expect(red).toContain("`100755` for a file `git add` would record as executable");
-    expect(red).toContain(
-      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index",
-    );
-    expect(red).toContain("take the owner's execute bit off the disk: a `0654` file is `100644`");
-    expect(red).toContain("Resolve and stage a merge conflict in a manifest file");
-    expect(red).not.toContain("any execute bit set");
-    expect(red).not.toContain("record its hash on the platform that will verify it");
   });
 
   it("rejects a load error and proves RED came from the selected assertion", async () => {

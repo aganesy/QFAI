@@ -65,7 +65,7 @@ Quality gates are the decision mechanism. Fix until PASS.
   batch.
 - Verify never rewrites the story tree or a contract. A spec or contract
   finding goes to its owner through `.qfai/assistant/rule/drift-protocol.md`:
-  `/qfai-sdd`, `/qfai-atdd` or `/qfai-implement`.
+  `/qfai-sdd` or `/qfai-implement`.
 - A fix that changes code brings `implementation-reviewer` into the review.
 
 ## Report
@@ -132,7 +132,7 @@ not cause returns `needs_repair`, with the finding listed in `debts` under its
 | Finding                   | `resolvingOwner` |
 | ------------------------- | ---------------- |
 | A story or contract gap   | `qfai-sdd`       |
-| An acceptance-test defect | `qfai-atdd`      |
+| An acceptance-test defect | `qfai-implement` |
 | An implementation defect  | `qfai-implement` |
 
 These three are the only repairs verify routes.
