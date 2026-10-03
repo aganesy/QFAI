@@ -59,7 +59,7 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toContain("Record command, selector, failure, test hash, and");
     expect(content).toContain("Run the same selector and record");
     expect(content).toContain(
-      "The stage's review pack identifies the BF, every EX the stage implemented, the",
+      "The review request identifies the BF, every EX the stage implemented, the",
     );
     expect(content).toContain("references/ui-affecting.md");
   });

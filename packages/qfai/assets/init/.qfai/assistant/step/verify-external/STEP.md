@@ -2,7 +2,7 @@
 name: verify-external
 owner: qfai-verify
 purpose: "Ask the reporter, a device or a production-like environment to confirm the fix, and record the answer."
-requires: [common-evidence-record]
+requires: []
 roles: [orchestrator, qa-strategist, completion-reviewer]
 routing-profile: default
 ---
@@ -18,13 +18,12 @@ someone who can.
 - The original report, and the environment it names or that
   `triage-request-info` collected.
 - The reproduction the diagnosis recorded.
-- The fix, and the verify results in `.qfai/evidence/verify-<run-id>.md`.
+- The fix, and the verify results in the stage report.
 
 ## Writes
 
 - The confirmation request.
-- In `.qfai/evidence/verify-<run-id>.md`: the request, the answer, who gave it
-  and when.
+- In the stage report: the request, the answer, who gave it and when.
 
 The step sends nothing itself. Contacting the reporter is the operator's.
 

@@ -450,12 +450,7 @@ export async function runPrototypingCertify(
   // DONE condition without requiring ATDD / implement artefacts.
   // Non-prototyping scopes (`atdd` / `implement` / `full`) are refused
   // at the certify gate so the operator hits a single clear error
-  // before any downstream artifact is touched. The same circular-read
-  // class is enforced as a validator finding by
-  // `core/validators/reviewerGate.ts::detectCertifyVerifyCircular`
-  // (R-CERTIFY-VERIFY-CIRCULAR); this CLI-side gate keeps the certify
-  // command self-contained instead of relying on a downstream validate
-  // pass to surface the same condition.
+  // before any downstream artifact is touched.
   const verifyScope = extractString(verifyRead.json, "scope");
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
     // This is the enforcement for the circular-read class. The validator

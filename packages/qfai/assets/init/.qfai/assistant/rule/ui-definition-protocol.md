@@ -37,7 +37,6 @@ A downstream skill reads the UI definition in this order.
      and implementation notes
    - prototyping screenshots / HTML / snapshots / command logs
    - evaluator reviews
-   - implementation and verification evidence
 
 The paths that render a user-visible surface are declared by `uiux.surfacePaths`
 in `qfai.config.yaml`, and nowhere else.

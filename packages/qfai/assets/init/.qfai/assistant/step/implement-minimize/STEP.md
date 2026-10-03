@@ -37,9 +37,8 @@ removed.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the signature, the original and the
-  minimal input, and the command that runs it. It is git-ignored and is named
-  in `artifactRefs`. The test that keeps the input is written later, by the
+- The stage report holds the signature, the original and the
+  minimal input, and the command that runs it. The test that keeps the input is written later, by the
   implement stage.
 
 ## Gate

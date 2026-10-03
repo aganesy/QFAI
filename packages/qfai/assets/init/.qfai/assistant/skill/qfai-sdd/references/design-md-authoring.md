@@ -20,7 +20,7 @@ this flow's provenance names:
 `01_Context.md#Design Direction` is the decision the user made: the adopted
 theme, what departs from it, and what stays ordinary. A UI-bearing pack that
 records none leaves the brand unchosen — stop and ask rather than pick one,
-which is the same rule a pack taken in through import-lite gets.
+which is the same rule an imported specification gets.
 
 Each registry entry carries what was adopted, what was rejected, and how it
 was translated. The competitor registry feeds brand and tokens; the component

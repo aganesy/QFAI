@@ -1,5 +1,4 @@
 import { runAtddScaffold } from "./commands/atddScaffold.js";
-import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
@@ -52,7 +51,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "report",
   "doctor",
   "db-drift",
-  "audit",
   "sdd",
   "atdd",
   "discussion",
@@ -223,19 +221,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
-    case "audit":
-      {
-        // parseArgs already rejected a missing or invalid subcommand (invalidReason).
-        const resolvedRoot = await resolveRoot(options);
-        process.exitCode = await runAuditLog({
-          root: resolvedRoot,
-          ...(options.auditFormat ? { format: options.auditFormat } : {}),
-          ...(options.auditScope !== undefined ? { scope: options.auditScope } : {}),
-          ...(options.auditOperator !== undefined ? { operator: options.auditOperator } : {}),
-          ...(options.auditClause !== undefined ? { clause: options.auditClause } : {}),
-        });
-      }
-      return;
     case "sdd":
       {
         if (!options.sddAction) {
@@ -253,6 +238,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.sddFormat ? { format: options.sddFormat } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
+          ...(options.sddImport !== undefined ? { importPath: options.sddImport } : {}),
         });
       }
       return;
@@ -428,8 +414,8 @@ Commands:
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
-  audit log [filters]          List the decision log under .qfai/evidence/decision/ (--scope/--operator/--clause + --format table|json)
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
+  sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
@@ -493,13 +479,10 @@ Options:
   --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)
-  --scope <value>               audit log: filter on the scope field
   --scope <saas-package|full>   prototyping certify: issue a scope-limited certificate (saas-package lists the skipped gates in notes[])
   --upgrade-scope full          prototyping certify: promote a scope-limited certificate to full DONE (re-evaluates the validate --profile saas-package signal)
-  --operator <value>            audit log: filter on the operatorIdentity field
-  --clause <substring>          audit log: substring filter on envelopeContractClause
-  --clean                       doctor: move review packs past their TTL into _archive/, and delete validate run logs (outDir/run-*) past their TTL (the newest N are always kept; combinable with --dry-run)
-  --autoremediate               doctor: run install + clean + config-fill together
+  --clean                       doctor: delete validate run logs (outDir/run-*) past their TTL (the newest N are always kept; combinable with --dry-run)
+  --autoremediate               doctor: run install + clean together
   --assume <text>               sdd preflight: record a carried-over open question / assumption in the summary (repeatable)
   --story <US-ID>               atdd scaffold: target story (e.g. US-0001-0001)
   --flow <BF-ID>                atdd scaffold: target flow (e.g. BF-0001)

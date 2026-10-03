@@ -187,7 +187,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
       `${EXIT_CODES.findings} = a runtime error`,
-      "(init / discussion / audit log)",
+      "(init / discussion)",
     ],
   },
 ];

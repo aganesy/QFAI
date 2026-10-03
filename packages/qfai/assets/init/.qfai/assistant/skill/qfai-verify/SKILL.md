@@ -46,7 +46,7 @@ first.
   `npx qfai prototyping certify`. `verify-context` fixes it.
 - The change, and the story tree, contracts, tests and evidence it touches.
 
-The run's evidence is `.qfai/evidence/verify-<run-id>.md`, and its verdict is
+The run is reported in the stage report, and its verdict is
 `.qfai/report/verify.json`.
 
 ## Steps
@@ -61,7 +61,7 @@ condition holds:
 | `verify-change-note`   | The changelog entry, the migration steps, the breaking changes   | Never; it passes when there is nothing to write |
 | `verify-context`       | Reads the inputs, fixes the scope, finds a command for each gate | Never                                           |
 | `verify-qfai-gate`     | The QFAI validation of the scope                                 | Never                                           |
-| `verify-repo-gate`     | The repository gates, the fix loop, the evidence, `verify.json`  | Never                                           |
+| `verify-repo-gate`     | The repository gates, the fix loop, the report, `verify.json`    | Never                                           |
 | `verify-external`      | Asks the reporter or a real environment to confirm the fix       | The gates here can confirm the fix              |
 | `verify-manual`        | Follows a written test plan on each environment                  | No written test plan is handed in               |
 | `verify-release-notes` | Drafts the release notes                                         | Release notes were not asked for                |

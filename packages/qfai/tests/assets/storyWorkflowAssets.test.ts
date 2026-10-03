@@ -103,24 +103,10 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(admissibility).toContain("restore the assertion");
   });
 
-  it("addresses each observation and seals review packs without rewriting history", async () => {
-    const evidence = await read("skill/qfai-implement/references/evidence-revision.md");
-    expect(evidence).toContain("working-tree+<content hash>");
-    expect(evidence).toContain("RED, the temporary falsifiability mutation, GREEN");
-    expect(evidence).toContain("Review pack seal");
-    expect(evidence).toContain("A later result does not retitle an earlier observation");
+  it("addresses each observation on one final revision", async () => {
     const implement = await read("step/implement-tdd/STEP.md");
     expect(implement).toContain("implementation-reviewer checks code and tests");
     expect(implement).toContain("Each required reviewer must pass the same final revision");
-  });
-
-  it("nests every EX round under its own section and refreshes changed proof", async () => {
-    const rounds = await read("skill/qfai-implement/references/round-evidence.md");
-    expect(rounds).toContain("### EX-NNNN-NNNN-NN");
-    expect(rounds).toContain("#### Round N");
-    expect(rounds).toContain("A blocking REVISE opens the next round");
-    expect(rounds).toContain("Every reviewer verdict names its reviewed revision");
-    expect(rounds).toContain("repeat observations whose inputs moved");
   });
 
   it("keeps the assistant file budget and review boundaries explicit", async () => {

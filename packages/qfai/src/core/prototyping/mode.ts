@@ -121,9 +121,8 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   // validators/configReferenceIntegrity.ts — config path references
   "QFAI-CFG-LINK-001",
   "QFAI-CFG-LINK-003",
-  // validators/reviewerGate.ts + evidenceMutationUnlogged.ts
+  // validators/reviewerGate.ts
   "R-MOCK-HREF-DRIFT",
-  "R-EVIDENCE-MUTATION-UNLOGGED",
   // validators/renderCritique.ts — critique record structure
   "QFAI-CRIT-001",
   "QFAI-CRIT-002",
