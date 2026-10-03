@@ -13,8 +13,13 @@ import {
   type LegacyRecord,
 } from "./legacyRecords.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
-import { assertUnchangedPlacements, readMigrationPlan } from "./step04RenumberIds.js";
 import {
+  assertUnchangedPlacements,
+  readMigrationPlan,
+  type PlannedMark,
+} from "./step04RenumberIds.js";
+import {
+  isDashReference,
   legacyPackFiles,
   readLegacyRows,
   readMigrationInput,
@@ -23,6 +28,11 @@ import {
 
 type Rule = { id: string; statement: string; examples: string[] };
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
+
+/** A statement on one line: each line break, with the indentation around it, is one space. */
+function oneLine(value: string): string {
+  return value.replace(/[^\S\r\n]*\r?\n\s*/g, " ").trim();
+}
 
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
@@ -104,15 +114,12 @@ function sqlRules(original: string): Map<string, Rule | null> {
     const continuations = block
       .slice(1, examplesIndex)
       .map((line) => (line.startsWith("-- ") ? line.slice(3) : null));
-    if (
-      header[2] === undefined ||
-      examplesIndex < 1 ||
-      continuations.some((line) => line === null)
-    ) {
+    const lines = continuations.filter((line): line is string => line !== null);
+    if (header[2] === undefined || examplesIndex < 1 || lines.length !== continuations.length) {
       rememberRule(current, id, null);
       continue;
     }
-    const statement = [header[2].replace(/^ /, ""), ...(continuations as string[])].join("\n");
+    const statement = oneLine([header[2], ...lines].join("\n"));
     const examples = (block[examplesIndex] ?? "")
       .slice("-- Examples:".length)
       .split(",")
@@ -121,6 +128,33 @@ function sqlRules(original: string): Map<string, Rule | null> {
     rememberRule(current, id, { id, statement, examples });
   }
   return current;
+}
+
+/**
+ * An SQL rule an earlier step 7 wrote over several comment lines, for each of `ids`, written
+ * as the one-line block `qfai validate` reads: `-- Rule` and, on the next line, `-- Examples:`.
+ */
+function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): string {
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4}):([^\r\n]*)/gm)];
+  let repaired = original;
+  for (const [index, header] of [...headers.entries()].reverse()) {
+    const id = header[1] ?? "";
+    if (!ids.has(id)) continue;
+    const end = headers[index + 1]?.index ?? original.length;
+    const block = original.slice(header.index, end).split(/\r?\n/);
+    const examplesIndex = block.findIndex((line) => line.startsWith("-- Examples:"));
+    const continuations = block.slice(1, examplesIndex);
+    if (examplesIndex < 2 || !continuations.every((line) => line.startsWith("-- "))) continue;
+    const statement = oneLine(
+      [header[2] ?? "", ...continuations.map((line) => line.slice(3))].join("\n"),
+    );
+    const lines = [`-- Rule ${id}: ${statement}`, ...block.slice(examplesIndex)];
+    repaired = `${repaired.slice(0, header.index)}${lines.join(newline)}${repaired.slice(
+      header.index + original.slice(header.index, end).length,
+    )}`;
+  }
+  return repaired;
 }
 
 function markdownRules(original: string): Map<string, Rule | null> {
@@ -165,9 +199,19 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     }
     const current: unknown[] = raw === undefined ? [] : (raw as unknown[]);
     const additional = pendingRules(structuredRules(current), rules, file);
-    if (additional.length === 0) return original;
+    if (additional.length === 0) {
+      // An earlier step 7 folded a long dependency list over several lines, which
+      // `QFAI-CONTRACT-015` does not read: written again, it stays on one line.
+      const folded = /^x-qfai-depends-on:\s*\[[^\]]*\n[^\]]*\]/m.test(original);
+      const dependsOn = (parsed as Record<string, unknown>)["x-qfai-depends-on"];
+      if (!folded || !Array.isArray(dependsOn)) return original;
+      const flat = document.createNode(dependsOn);
+      flat.flow = true;
+      document.set("x-qfai-depends-on", flat);
+      return document.toString({ lineWidth: 0 });
+    }
     document.set("x-qfai-rules", [...current, ...additional]);
-    return String(document);
+    return document.toString({ lineWidth: 0 });
   }
   if (extension === ".json") {
     // The contract declares its ID on a comment line above the JSON document.
@@ -192,10 +236,15 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
-    const additional = pendingRules(sqlRules(original), rules, file);
+    const repaired = repairMultiLineSqlRules(original, new Set(rules.map((rule) => rule.id)));
+    const additional = pendingRules(
+      sqlRules(repaired),
+      rules.map((rule) => ({ ...rule, statement: oneLine(rule.statement) })),
+      file,
+    );
     return additional.length === 0
-      ? original
-      : `${original.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement.split(/\r?\n/).join("\n-- ")}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
+      ? repaired
+      : `${repaired.trimEnd()}\n\n${additional.map((rule) => `-- Rule ${rule.id}: ${rule.statement}\n-- Examples: ${rule.examples.join(", ")}`).join("\n\n")}\n`;
   }
   if (extension === ".md") {
     const additional = pendingRules(
@@ -264,6 +313,75 @@ function assertArchiveRemainder(
   );
 }
 
+/**
+ * Refuses `binds: none` on a rule that carries a retired status, and on one that binds a contract.
+ * A `retire` mark is how a rule with a retired status is disposed of.
+ */
+function assertMarkable(source: string, record: LegacyRecord, mark: PlannedMark): void {
+  if (mark.retire === null && retiredLegacyStatus(record.cells.Status ?? "")) {
+    throw new MigrationInputError(`${source}: ${record.id} is retired and cannot be marked`);
+  }
+  if (mark.retire === null && !isDashReference(record.cells["Contract-Refs"] ?? "")) {
+    throw new MigrationInputError(
+      `${source}: ${record.id} binds none, but its Contract-Refs is not "-"`,
+    );
+  }
+}
+
+/** The report line for a rule the plan removes from its source without placing it in a contract. */
+function markNote(oldId: string, mark: PlannedMark): string {
+  return mark.retire === null
+    ? `${oldId}: removed from its rule source; it binds no contract`
+    : `${oldId}: removed from its rule source; retired: ${mark.retire}`;
+}
+
+type SourceFile = {
+  sourcePath: string;
+  retiredPath: string;
+  original: string;
+  current: string;
+  archivedBefore: boolean;
+  rows: readonly LegacyRecord[];
+  moved: ReadonlySet<string>;
+  /** One line for each marked rule this run removes from the file. */
+  notes: readonly string[];
+};
+
+/** What happens to a pack's rule file: its archival, and the removal of the rules moved out of it. */
+function sourceFileChanges(file: SourceFile): MigrationOperation[] {
+  const { sourcePath, retiredPath, original, current, rows, moved, notes } = file;
+  if (rows.length === moved.size) {
+    const description =
+      rows.length === 0
+        ? "archive complete; remove empty rule source"
+        : "archive complete; remove migrated rule source";
+    if (file.archivedBefore) {
+      return [
+        { kind: "remove", target: sourcePath, description: [description, ...notes].join("; ") },
+      ];
+    }
+    if (notes.length === 0) return [{ kind: "move", source: sourcePath, target: retiredPath }];
+    return [
+      { kind: "write", target: retiredPath, content: original, notes },
+      { kind: "remove", target: sourcePath, description },
+    ];
+  }
+  const operations: MigrationOperation[] = [];
+  if (!file.archivedBefore) {
+    operations.push({ kind: "write", target: retiredPath, content: original, notes });
+  }
+  const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
+  if (current !== remaining) {
+    operations.push({
+      kind: "write",
+      target: sourcePath,
+      content: remaining,
+      ...(file.archivedBefore ? { notes } : {}),
+    });
+  }
+  return operations;
+}
+
 export const step07: MigrationStep = {
   number: 7,
   writeSet: ["qfai", "specs", "contracts"],
@@ -271,9 +389,13 @@ export const step07: MigrationStep = {
   async plan(context) {
     const map = await readIdMap(context.root);
     if (!map) return { operations: [] };
+    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md", false);
+    // With no spec pack left there is nothing to move, so no plan is read.
+    if (sourceFiles.length === 0) return { operations: [] };
     const plan = await readMigrationPlan(context);
-    if (!plan) throw new MigrationInputError("Migration plan is missing before step 7");
+    if (!plan) throw new MigrationInputError("plan.yaml is missing before step 7");
     assertUnchangedPlacements(plan, map);
+    const marks = new Map(plan.marks.map((mark) => [mark.id, mark]));
     // The plan names a contract by its path before step 3 renamed it.
     const placements = new Map(
       plan.rules.map((entry) => [
@@ -292,11 +414,11 @@ export const step07: MigrationStep = {
         citing.set(key, [...new Set([...(citing.get(key) ?? []), newExample])]);
       }
     }
-    const sourceFiles = await legacyPackFiles(context, "04_Business-Rules.md", false);
     const forAPerson: string[] = [];
     const groups = new Map<string, Rule[]>();
     const sourceChanges: MigrationOperation[] = [];
     const routedByPack = new Map<string, Set<string>>();
+    const seenRules = new Set<string>();
     for (const source of sourceFiles) {
       const current = await readMigrationInput(source);
       if (current === null) continue;
@@ -305,10 +427,19 @@ export const step07: MigrationStep = {
       const archived = await readMigrationInput(retired);
       const original = archived ?? current;
       const rows = parseLegacyRecords(original, "BR", source);
+      for (const row of rows) seenRules.add(row.id);
       const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
       const moved = new Set<string>();
+      const notes: string[] = [];
       for (const record of rows) {
         const oldId = record.id;
+        const mark = marks.get(oldId);
+        if (mark) {
+          assertMarkable(repositoryRelative(context.root, source), record, mark);
+          if (present.has(oldId)) notes.push(markNote(oldId, mark));
+          moved.add(oldId);
+          continue;
+        }
         const contract = placements.get(oldId);
         if (contract && retiredLegacyStatus(record.cells.Status ?? "")) {
           throw new MigrationInputError(
@@ -348,28 +479,28 @@ export const step07: MigrationStep = {
       assertArchiveRemainder(context.root, source, current, original, rows, present, moved);
       const sourcePath = repositoryRelative(context.root, source);
       const retiredPath = repositoryRelative(context.root, retired);
-      if (rows.length === moved.size) {
-        sourceChanges.push(
-          archived === null
-            ? { kind: "move", source: sourcePath, target: retiredPath }
-            : {
-                kind: "remove",
-                target: sourcePath,
-                description:
-                  rows.length === 0
-                    ? "archive complete; remove empty rule source"
-                    : "archive complete; remove migrated rule source",
-              },
-        );
-        continue;
-      }
-      if (archived === null) {
-        sourceChanges.push({ kind: "write", target: retiredPath, content: original });
-      }
-      const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
-      if (current !== remaining) {
-        sourceChanges.push({ kind: "write", target: sourcePath, content: remaining });
-      }
+      sourceChanges.push(
+        ...sourceFileChanges({
+          sourcePath,
+          retiredPath,
+          original,
+          current,
+          archivedBefore: archived !== null,
+          rows,
+          moved,
+          notes,
+        }),
+      );
+    }
+    // A pack whose rule file is already archived still holds the rules its marks name.
+    for (const archived of await legacyPackFiles(context, "04_Business-Rules.md")) {
+      const text = await readMigrationInput(archived);
+      if (text === null) continue;
+      for (const row of parseLegacyRecords(text, "BR", archived)) seenRules.add(row.id);
+    }
+    const unmatched = plan.marks.find((mark) => !seenRules.has(mark.id));
+    if (unmatched) {
+      throw new MigrationInputError(`plan.yaml: ${unmatched.id} names no rule of its pack`);
     }
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {

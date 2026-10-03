@@ -95,11 +95,11 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
+  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  await mkdir(uiDir, { recursive: true });
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01 Spec — t\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
+    path.join(uiDir, "ui-0001.yaml"),
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
 }

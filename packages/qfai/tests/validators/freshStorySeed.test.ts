@@ -44,6 +44,30 @@ describe("fresh story seed validation", () => {
     });
   });
 
+  // QFAI:EX-0001-0038-10
+  it("reads a clone that lost the empty contract directories as the same untouched seed", async () => {
+    await withInit(async (root) => {
+      // A clone has none of these: version control tracks no empty directory.
+      for (const kind of ["api", "cli", "db", "ui"]) {
+        await rm(path.join(root, ".qfai", "spec", "03_contract", kind), { recursive: true });
+      }
+
+      expect(await validateStorySteeringPlaceholders(root, defaultConfig)).toEqual([]);
+    });
+  });
+
+  // QFAI:EX-0001-0038-10
+  it("still reads the seed as edited when a file changed and the empty directories are gone", async () => {
+    await withInit(async (root) => {
+      await editObjective(root);
+      await rm(path.join(root, ".qfai", "spec", "03_contract", "api"), { recursive: true });
+
+      expect(
+        (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
+      ).toEqual(["QFAI-ASSETS-003"]);
+    });
+  });
+
   it("enforces the steering obligation after any seed content is edited", async () => {
     await withInit(async (root) => {
       await editObjective(root);

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
@@ -70,8 +70,41 @@ export function resolveStoryTreeRoots(root: string, config: QfaiConfig): StoryTr
   };
 }
 
+function isLegacySpecPackEntry(entry: string): boolean {
+  return entry === "_policies" || /^spec-[^/\\]+$/.test(entry);
+}
+
 export function hasLegacySpecPackEntries(entries: readonly string[]): boolean {
-  return entries.some((entry) => entry === "_policies" || /^spec-[^/\\]+$/.test(entry));
+  return entries.some(isLegacySpecPackEntry);
+}
+
+/** Every file under the spec-pack and policy directories of an old layout, project-relative. */
+export async function listLegacySpecPackFiles(
+  root: string,
+  layoutRoot: string,
+  entries: readonly string[],
+): Promise<string[]> {
+  const files: string[] = [];
+  for (const entry of entries.filter(isLegacySpecPackEntry)) {
+    const entryPath = path.join(layoutRoot, entry);
+    if (!(await lstat(entryPath)).isDirectory()) {
+      files.push(entryPath);
+      continue;
+    }
+    for (const found of await readdir(entryPath, { recursive: true, withFileTypes: true })) {
+      if (!found.isDirectory()) files.push(path.join(found.parentPath, found.name));
+    }
+  }
+  return files.map((file) => path.relative(root, file).split(path.sep).join("/")).sort();
+}
+
+/** The message of the one error an old layout raises: where it is, what remains, how to finish. */
+export function oldLayoutMessage(layoutRoot: string, files: readonly string[]): string {
+  return [
+    `Old spec-pack layout at ${layoutRoot}. These files remain under its spec-*/ and _policies/ directories:`,
+    ...files,
+    "Run /qfai-migration-v1-to-v2 and place what it lists through /qfai-sdd; delete a file only once the migration has archived it under .qfai/evidence/migration-spec-to-story/retired/.",
+  ].join("\n");
 }
 
 export function hasStoryTreeEntries(entries: readonly string[]): boolean {
