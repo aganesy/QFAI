@@ -91,12 +91,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **Every decision a stage records carries one fixed form** (#2236). The
-  thinking rule no longer walks the agent through a five-step reasoning
-  procedure: current models reason before every reply and choose the depth
-  themselves, so restating the goal and listing unknowns added tokens and
-  nothing else. Its `## What the stage records` section now says where a
-  decision goes. `qfai-sdd`, which owns `decisions.md`, records it as a row
+- **Every decision a stage records carries one fixed form** (#2236).
+  The thinking rule now names where each decision is recorded.
+  `qfai-sdd`, which owns `decisions.md`, records it as a row
   there. Every other stage records it in its own evidence file. The seeded
   `decisions.md` states the form both records use, in this order:
 
