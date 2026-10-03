@@ -112,7 +112,7 @@ async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
     cause: each.reason,
   }));
   const message =
-    "A plan the package ships does not load in this project. Reinstall qfai, or run `npx qfai init --force` to restore the missing steps.";
+    "A plan the package ships does not load in this project. Reinstall qfai, or rerun its init with --force to restore the missing steps.";
   return { ok: false, document: refusal(message, reasons) };
 }
 

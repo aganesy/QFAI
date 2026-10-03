@@ -5,7 +5,7 @@
 // QFAI:AC-0001-0222-05
 // QFAI:AC-0001-0210-05
 
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -231,4 +231,26 @@ it("Help prints the operation as text", async () => {
   const help = workflow(root, ["--help"]);
 
   expect([help.status, help.json, help.stdout.includes("plan")]).toEqual([0, undefined, true]);
+});
+
+// QFAI:EX-0001-0222-07
+it("An --in file that cannot be read is an io-error, JSON that does not parse and an unknown flag are invalid input", async () => {
+  const root = await minimalProject();
+  await writeFile(path.join(root, "broken.json"), "{ not json");
+  const missing = workflow(root, ["plan", "--in", "absent.json"]);
+  const broken = workflow(root, ["plan", "--in", "broken.json"]);
+  const flagged = workflow(root, ["plan", "--route", "add-feature", "--sideways"]);
+
+  expect(
+    [missing, broken, flagged].map((run) => [
+      run.status,
+      field(run.json, "ok"),
+      field(run.json, "reasons.0.reason"),
+      field(run.json, "reasons.0.subject"),
+    ]),
+  ).toEqual([
+    [1, false, "io-error", "absent.json"],
+    [2, false, "invalid-input", "broken.json"],
+    [2, false, "invalid-input", "--sideways"],
+  ]);
 });

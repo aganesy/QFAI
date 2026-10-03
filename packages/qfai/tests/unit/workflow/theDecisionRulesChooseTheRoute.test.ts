@@ -304,6 +304,7 @@ it("An extraction value outside its vocabulary is refused as a shape, naming the
     alternativesAtHigh: refused({ alternatives: [reading] }),
     lowWithout: refused({ confidence: "low" }),
     lowWith: refused({ confidence: "low", alternatives: [reading] }),
+    unknownBeside: refused({ confidence: "low", route: "add-feature" }),
   }).toEqual({
     intent: ["schema:intent"],
     flag: ["schema:entryFlags[0]"],
@@ -311,5 +312,6 @@ it("An extraction value outside its vocabulary is refused as a shape, naming the
     alternativesAtHigh: ["schema:alternatives"],
     lowWithout: ["schema:alternatives"],
     lowWith: [],
+    unknownBeside: ["schema:alternatives", "schema:route"],
   });
 });

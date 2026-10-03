@@ -14,6 +14,7 @@ import {
   SIGNALS,
   type WorkflowExtraction,
 } from "./extraction.js";
+import { isRecord } from "./parse.js";
 
 type Shape =
   | { kind: "enum"; values: readonly (string | null)[] }
@@ -60,10 +61,6 @@ const EXTRACTION: Shape = {
   holdsField: "alternatives",
 };
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 // The fields of `value` that depart from the extraction's shape, none for an extraction.
 export function extractionFaults(value: unknown): string[] {
   return shapeFaults(value, EXTRACTION, "");
@@ -93,9 +90,10 @@ function objectFaults(
   shape: Extract<Shape, { kind: "object" }>,
   at: string,
 ): string[] {
-  if (!isPlainObject(value)) return [at || "extraction"];
+  if (!isRecord(value)) return [at || "extraction"];
   const within = (name: string) => (at ? `${at}.${name}` : name);
-  if (shape.holds && !shape.holds(value)) return [shape.holdsField ? within(shape.holdsField) : at];
+  const broken = shape.holds && !shape.holds(value);
+  const rule = broken ? [shape.holdsField ? within(shape.holdsField) : at] : [];
   const missing = shape.required.filter((name) => value[name] === undefined).map(within);
   const unknown = Object.keys(value)
     .filter((name) => !Object.hasOwn(shape.fields, name))
@@ -104,5 +102,5 @@ function objectFaults(
     const fieldShape = shape.fields[name];
     return fieldShape && field !== undefined ? shapeFaults(field, fieldShape, within(name)) : [];
   });
-  return [...missing, ...unknown, ...wrong];
+  return [...new Set([...rule, ...missing, ...unknown, ...wrong])];
 }

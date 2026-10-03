@@ -4,12 +4,15 @@
 import { decideRoute, reachedFirst, type RouteChoice } from "./decisionRules.js";
 import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
 import { defaultModifiersOf, type WorkflowModifier } from "./modifiers.js";
-import { loadBuiltInPlans } from "./plans.js";
-import type { WorkflowRoute } from "./routes.js";
+import { loadPackagePlan } from "./plans.js";
+import { WORKFLOW_ROUTES, type WorkflowRoute } from "./routes.js";
 
-// A route's default modifiers, as the package's plans declare them. Rule 15 reads them.
+// A route's default modifiers, as the package's plans declare them. Rule 15 reads them. A plan
+// that does not load reads as declaring none: the route the rules choose is loaded on its own
+// afterwards, and refused there when it is the one that does not load.
 export async function routeDefaults(): Promise<(route: WorkflowRoute) => WorkflowModifier[]> {
-  const plans = new Map((await loadBuiltInPlans()).map((plan) => [plan.route, plan]));
+  const loads = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
+  const plans = new Map(loads.flatMap((load) => (load.ok ? [[load.plan.route, load.plan]] : [])));
   return (route) => defaultModifiersOf(plans.get(route)?.defaultModifiers);
 }
 
