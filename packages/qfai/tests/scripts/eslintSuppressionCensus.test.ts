@@ -86,9 +86,6 @@ const PINNED: readonly string[] = [
   // The `paths.promptsDir` compat shim. The `validation.testStrategy`
   // shims need no suppression (see the file header).
   "packages/qfai/src/core/config.ts :: @typescript-eslint/no-deprecated",
-  "packages/qfai/src/core/critique/adapter.ts :: no-console",
-  "packages/qfai/src/core/critique/adapter.ts :: no-console",
-  "packages/qfai/src/core/critique/genericCommandProvider.ts :: no-control-regex",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
   "packages/qfai/src/core/design/designMd.ts :: @typescript-eslint/no-unnecessary-condition */",
@@ -105,7 +102,6 @@ const PINNED: readonly string[] = [
   "packages/qfai/src/core/handoff/reader.ts :: no-console",
   "packages/qfai/src/core/handoff/reader.ts :: no-console",
   "packages/qfai/src/core/observability/writer.ts :: no-console",
-  "packages/qfai/src/core/prototyping/playwrightCliLauncher.ts :: @typescript-eslint/no-deprecated",
   "packages/qfai/src/core/uiux/renderEvidence.ts :: @typescript-eslint/no-unnecessary-condition",
   "packages/qfai/src/core/validators/layoutAntiPatterns.ts :: @typescript-eslint/no-non-null-assertion",
 ];

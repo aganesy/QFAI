@@ -239,12 +239,9 @@ describe("the skills a workflow run's steps belong to", () => {
       "prototyping-grill",
       "prototyping-preflight",
       "prototyping-loop",
-      "prototyping-recover",
       "prototyping-handoff",
     ]);
-    expect(await stageNames("prototype-feature", "prototype")).toEqual([
-      owned.filter((step) => step !== "prototyping-recover"),
-    ]);
+    expect(await stageNames("prototype-feature", "prototype")).toEqual([owned]);
   });
 });
 

@@ -42,8 +42,8 @@ first.
 ## Inputs
 
 - `[--auto]`: ask nothing and record explicit assumptions.
-- The scope: `full` by default, or `prototyping` for the gate that runs before
-  `npx qfai prototyping certify`. `verify-context` fixes it.
+- The scope: `full` by default, or `prototyping` for the prototyping profile
+  alone. `verify-context` fixes it.
 - The change, and the story tree, contracts, tests and evidence it touches.
 
 The run is reported in the stage report, and its verdict is
@@ -118,7 +118,6 @@ them in the report instead:
 
 - Proceed (recommended): create a PR on your hosting platform, with the
   verification evidence summary as its description.
-- A `prototyping` scope that passed: run `npx qfai prototyping certify`.
 - A gate failed: return to the owning skill, fix the issue, then rerun
   `/qfai-verify`.
 - A report is needed: run `npx qfai report` once the validation outputs are

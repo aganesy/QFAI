@@ -146,10 +146,6 @@ export type QfaiUiuxConfig = {
   audit?: QfaiUiuxAuditConfig;
 };
 
-export type QfaiPrototypingCalibrationConfig = {
-  packPath?: string;
-};
-
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
@@ -163,27 +159,12 @@ export type QfaiPrototypingExecutionConfig = {
 };
 
 export type QfaiPrototypingConfig = {
-  calibration?: QfaiPrototypingCalibrationConfig;
   execution?: QfaiPrototypingExecutionConfig;
   /**
    * Explicit primary UI contract for `/qfai-prototyping`.
    * Uses the full `UI-NNNN` identifier.
    */
   primaryUiContract?: string;
-  /**
-   * Second-wave loop posture discriminator.
-   *
-   *   - `convergence` (default): every prototyping gate applies at the
-   *     declared severity (today's behavior).
-   *   - `exploration`: medium gate relaxation — soft-rubric gates
-   *     (loop completion, design-compliance drift) downgrade error →
-   *     warning. Schema / path / license (exit 66) gates stay hard
-   *     error.
-   *
-   * Overridden per-run by `qfai prototyping iterate --mode <value>`.
-   * Optional; absence defaults to `convergence`.
-   */
-  mode?: "convergence" | "exploration";
 };
 
 export type QfaiReportConfig = {
@@ -310,9 +291,6 @@ export const defaultConfig: QfaiConfig = {
     validateJsonPath: ".qfai/report/validate.json",
   },
   prototyping: {
-    calibration: {
-      packPath: ".qfai/evidence/calibration.yaml",
-    },
     execution: {
       targetUrl: null,
       browserTool: "playwright",
@@ -667,7 +645,6 @@ function normalizePrototyping(
     return undefined;
   }
 
-  const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
   if (Object.prototype.hasOwnProperty.call(raw, "primarySpecId")) {
     issues.push(
@@ -678,36 +655,13 @@ function normalizePrototyping(
     );
   }
   const primaryUiContract = normalizePrimaryUiContract(raw.primaryUiContract, configPath, issues);
-  const mode = normalizePrototypingMode(raw.mode, configPath, issues);
-  if (!calibration && !execution && primaryUiContract === undefined && mode === undefined) {
+  if (!execution && primaryUiContract === undefined) {
     return undefined;
   }
   return {
-    ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
     ...(primaryUiContract !== undefined ? { primaryUiContract } : {}),
-    ...(mode !== undefined ? { mode } : {}),
   };
-}
-
-function normalizePrototypingMode(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): "convergence" | "exploration" | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (raw === "convergence" || raw === "exploration") {
-    return raw;
-  }
-  issues.push(
-    configIssue(
-      configPath,
-      `prototyping.mode must be "convergence" or "exploration". Received: ${JSON.stringify(raw)}`,
-    ),
-  );
-  return undefined;
 }
 
 function normalizePrimaryUiContract(
@@ -740,32 +694,6 @@ export function readRejectedPrimaryUiContract(loaded: ConfigLoadResult): string 
   if (raw === undefined || raw === null) return undefined;
   if (loaded.config.prototyping?.primaryUiContract !== undefined) return undefined;
   return primaryUiContractMessage(raw);
-}
-
-function normalizePrototypingCalibration(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiPrototypingCalibrationConfig | undefined {
-  const base = defaultConfig.prototyping?.calibration;
-  if (raw === undefined || raw === null) {
-    return base ? { ...base } : undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "prototyping.calibration must be an object."));
-    return base ? { ...base } : undefined;
-  }
-
-  validateObsoleteCalibrationFields(raw, configPath, issues);
-  return {
-    packPath: readString(
-      raw.packPath,
-      base?.packPath ?? ".qfai/evidence/calibration.yaml",
-      "prototyping.calibration.packPath",
-      configPath,
-      issues,
-    ),
-  };
 }
 
 function normalizePrototypingExecution(
@@ -885,29 +813,6 @@ function normalizeReport(
     }
   }
   return Object.keys(result).length === 0 ? undefined : result;
-}
-
-function validateObsoleteCalibrationFields(
-  raw: Record<string, unknown>,
-  configPath: string,
-  issues: Issue[],
-): void {
-  const obsoleteFields = [
-    "thresholds",
-    "maxIterations",
-    "plateauDelta",
-    "plateauLookback",
-  ] as const;
-  for (const field of obsoleteFields) {
-    if (raw[field] !== undefined) {
-      issues.push(
-        configIssue(
-          configPath,
-          `prototyping.calibration.${field} is retired. Use the calibration pack only, and set just prototyping.calibration.packPath.`,
-        ),
-      );
-    }
-  }
 }
 
 function readString(

@@ -97,13 +97,12 @@ never reduced to incremental checks.
 in the repository. Each scope names the validate profile that produces it, and
 the two must match:
 
-| Scope         | When                                                                  | Profile                 |
-| ------------- | --------------------------------------------------------------------- | ----------------------- |
-| `full`        | Any whole-repository run, and every run inside a workflow run         | `--profile verify`      |
-| `prototyping` | The prototyping DONE gate, before `npx qfai prototyping certify` runs | `--profile prototyping` |
+| Scope         | When                                                          | Profile                 |
+| ------------- | ------------------------------------------------------------- | ----------------------- |
+| `full`        | Any whole-repository run, and every run inside a workflow run | `--profile verify`      |
+| `prototyping` | A run checking the prototyping profile alone                  | `--profile prototyping` |
 
-A `full`-profile run is `full` whatever stage triggered it. The certificate
-accepts only `prototyping`. A prototyping-scoped run covers the prototyping
+A `full`-profile run is `full` whatever stage triggered it. A prototyping-scoped run covers the prototyping
 profile alone: BF, AC and EX test coverage belongs to the later acceptance or
 full run and is never fabricated to pass this earlier gate. The closed scope
 enum is in `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.

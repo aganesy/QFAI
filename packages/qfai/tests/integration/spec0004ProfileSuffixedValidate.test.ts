@@ -10,19 +10,14 @@
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0002-0010-02
 
-import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
 import { removeTempTree } from "../helpers/tempTree.js";
-
-const execFileP = promisify(execFile);
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -36,20 +31,6 @@ async function pathExists(p: string): Promise<boolean> {
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-spec0004-chg005-${prefix}-`));
 }
-
-const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
-const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
-
-const CHECK_SCRIPT = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "..",
-  "scripts",
-  "check-prompt-scanner-pair.mjs",
-);
 
 let root: string;
 
@@ -170,143 +151,6 @@ describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 wh
     };
     const dep = body.issues.find((i) => i.code === "D-DEPRECATED-PATH");
     expect(dep).toBeUndefined();
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// REQ-0102 — Pair-changed CI lane (script: scripts/check-prompt-scanner-pair.mjs)
-// ────────────────────────────────────────────────────────────────────────────
-
-async function runCheckScript(
-  args: string[],
-): Promise<{ code: number; stdout: string; stderr: string }> {
-  try {
-    const result = await execFileP("node", [CHECK_SCRIPT, ...args], {
-      cwd: process.cwd(),
-    });
-    return { code: 0, stdout: result.stdout, stderr: result.stderr };
-  } catch (err: unknown) {
-    const e = err as { code?: number; stdout?: string; stderr?: string };
-    return {
-      code: typeof e.code === "number" ? e.code : 1,
-      stdout: e.stdout ?? "",
-      stderr: e.stderr ?? "",
-    };
-  }
-}
-
-describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () => {
-  // QFAI:EX-0002-0010-01
-  it("scanner-only PR emits R-PROMPT-SCANNER-DRIFT naming the scanner and un-paired prompt", async () => {
-    const result = await runCheckScript(["--changed", SCANNER_REL]);
-    expect(result.code).not.toBe(0);
-    const out = result.stdout + result.stderr;
-    expect(out).toMatch(/R-PROMPT-SCANNER-DRIFT/);
-    expect(out).toMatch(/designMdViolations\.ts/);
-    expect(out).toMatch(/generator-prompt\.md/);
-    expect(out).toMatch(/clause=/);
-  });
-});
-
-describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () => {
-  // QFAI:EX-0002-0010-01
-  it("prompt-only PR emits R-PROMPT-SCANNER-DRIFT naming the prompt and un-paired scanner", async () => {
-    const result = await runCheckScript(["--changed", PROMPT_REL]);
-    expect(result.code).not.toBe(0);
-    const out = result.stdout + result.stderr;
-    expect(out).toMatch(/R-PROMPT-SCANNER-DRIFT/);
-    expect(out).toMatch(/generator-prompt\.md/);
-    expect(out).toMatch(/designMdViolations\.ts/);
-  });
-});
-
-describe("TC-0004-0061: pair-changed lane passes when both halves change", () => {
-  // QFAI:EX-0002-0010-01
-  it("both-changed PR passes the lane silently with no drift finding", async () => {
-    const result = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
-    expect(result.code).toBe(0);
-    expect(result.stdout).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
-  });
-});
-
-describe("TC-0004-0062: pair-changed lane passes when neither half changes", () => {
-  it("neither-changed PR (README typo etc.) passes the lane silently", async () => {
-    const result = await runCheckScript(["--changed", "README.md"]);
-    expect(result.code).toBe(0);
-    expect(result.stdout).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// Certify + post-sunset consumer
-// ────────────────────────────────────────────────────────────────────────────
-
-// QFAI:AC-0001-0047-03
-// QFAI:EX-0001-0047-04
-describe("certify reads the prototyping-profile validate report", () => {
-  it("rejects the prototyping report's error even when the latest tdd report passed", async () => {
-    // Seed the same prerequisite evidence as a normal certify invocation.
-    const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
-    await mkdir(uiDir, { recursive: true });
-    await writeFile(
-      path.join(uiDir, "ui-0004.yaml"),
-      "# QFAI-CONTRACT-ID: UI-0004\nscreens:\n  - id: home\n    route: /\n",
-      "utf-8",
-    );
-    const protoDir = path.join(root, ".qfai/evidence/prototyping");
-    await mkdir(protoDir, { recursive: true });
-    await writeFile(
-      path.join(protoDir, "prototyping.json"),
-      JSON.stringify({
-        runId: "run-x",
-        phase: "prototyping",
-        designMd: { sha256: "0".repeat(64) },
-        reviewerGate: { result: "PASS" },
-        iterations: [{}],
-        uiContractsCovered: ["UI-0004"],
-        frozenSurfaceUnion: ["UI-0004"],
-      }),
-      "utf-8",
-    );
-    await mkdir(path.join(root, ".qfai/output"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/output/verify.json"),
-      JSON.stringify({ status: "PASS" }),
-      "utf-8",
-    );
-    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
-    await writeFile(
-      path.join(root, ".qfai/report/validate.json"),
-      JSON.stringify({ counts: { error: 0 }, profile: "tdd" }),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(root, ".qfai/report/validate-prototyping.json"),
-      JSON.stringify({ counts: { error: 1 }, profile: "prototyping" }),
-      "utf-8",
-    );
-
-    // Capture stderr from runPrototypingCertify.
-    const errs: string[] = [];
-    const origErr = process.stderr.write.bind(process.stderr);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (process.stderr as any).write = (chunk: string | Uint8Array) => {
-      errs.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    };
-    let exitCode: number;
-    try {
-      exitCode = await runPrototypingCertify({ root, check: false });
-    } finally {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (process.stderr as any).write = origErr;
-    }
-
-    expect(exitCode).not.toBe(0);
-    const combined = errs.join("");
-    expect(combined).toContain("validate-prototyping.json");
-    expect(combined).toMatch(/1 error/);
-    expect(combined).not.toMatch(/profile="tdd"/);
   });
 });
 

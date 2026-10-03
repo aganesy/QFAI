@@ -45,8 +45,6 @@ describe("qfai-discussion in a workflow run", () => {
 });
 
 describe("qfai-prototyping in a workflow run", () => {
-  // QFAI:AC-0001-0204-01
-  // QFAI:EX-0001-0204-01
   it("follows the entry check and cites it on one SKILL.md line", async () => {
     const body = await readShipped("skill/qfai-prototyping/SKILL.md");
     const citing = body

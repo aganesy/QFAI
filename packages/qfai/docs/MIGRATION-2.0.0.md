@@ -55,10 +55,10 @@ does not write them into the new tree:
 - every file under `design/`, which no longer exists: the brand belongs in the
   root `DESIGN.md`, and a screen in a `ui/` contract.
 
-Each is listed for a person and deleted, so a plan cannot place a rule in one. The old `design/prototype-handoff.yaml` is now the
-`handoff` object of `.qfai/evidence/prototyping/prototyping.json`, which
-`/qfai-prototyping` writes. The migration does not convert the old file into
-it.
+Each is listed for a person and deleted, so a plan cannot place a rule in one.
+The old `design/prototype-handoff.yaml` is now
+`.qfai/prototype/final/handoff.json`, which `/qfai-prototyping` writes. The
+migration does not convert the old file into it.
 
 The result separates project policy, concrete behavior, and enforcing
 contracts:
@@ -188,10 +188,10 @@ listed for a person with its file and line; replace it by hand. Record a permitt
 exception in `decisions.md` when a test is intentionally absent.
 
 Update project CI to use the new tree and annotation patterns. On pull
-requests, run full validation and the drift profile. A checkout without
-`.qfai/evidence/prototyping/` passes full validation with no prototyping
-evidence; the `prototyping` and `saas-package` profiles are the local checks
-that need it. Run
+requests, run full validation and the drift profile. No profile reads
+prototyping evidence. The `saas-package` profile needs root `DESIGN.md` and
+the handoff record `.qfai/prototype/final/handoff.json`, which
+`/qfai-prototyping` writes when the user confirms the prototype. Run
 document-shape and
 Mermaid checks against the configured story-tree path. Keep test jobs for
 the applicable layers. The workflows installed by `qfai init` are

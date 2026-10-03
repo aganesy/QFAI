@@ -33,7 +33,7 @@ import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { readStoryTreeModel } from "./storyTree/tree.js";
 import type { Issue } from "./types.js";
-import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { BIDIRECTIONAL_CONTROLS, LINE_SEPARATORS } from "./validators/assistantAssets.js";
 import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { applyWaivers } from "./waivers.js";
@@ -88,7 +88,7 @@ type CreateDoctorDataOptions = {
   /**
    * Per-skill profile name (e.g. "qfai-prototyping"). Distinct from
    * the legacy `profile: "prototyping"` enum which gates the bundled
-   * prototyping preflight checks. When a skill profile is supplied,
+   * prototyping checks. When a skill profile is supplied,
    * the manifest probe runs and contributes `skill.runtimeDependencies`
    * findings.
    */
@@ -1336,7 +1336,7 @@ async function buildPrototypingDesignMdReadinessCheck(
   root: string,
   config: Awaited<ReturnType<typeof loadConfig>>["config"],
 ): Promise<DoctorCheck> {
-  const issues = await validateSddDesignContractReadiness(root, config);
+  const issues = await validateDesignContractReadiness(root, config);
   if (issues.length === 0) {
     return {
       id: "prototyping.designMdReadiness",
@@ -1630,7 +1630,7 @@ async function buildTargetUrlCheck(
       severity: "warning",
       title: "Target URL",
       message:
-        "no targetUrl configured for prototyping preflight (set prototyping.execution.targetUrl or pass --target-url)",
+        "no targetUrl configured for the prototyping profile (set prototyping.execution.targetUrl or pass --target-url)",
     };
   }
 

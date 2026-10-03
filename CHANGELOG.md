@@ -246,6 +246,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai sdd preflight` no longer looks for an import-lite file under
   `.qfai/evidence/`** (#2805). Pass an imported specification with
   `qfai sdd preflight --import <path>` instead.
+- **The `qfai prototyping` command group, and the checks that certified a
+  prototype** (#2808). Prototyping now completes when the user confirms the
+  prototype: `/qfai-prototyping` builds, reviews and puts each iteration to the
+  user until they say it is done, and keeps every file it writes under
+  `.qfai/prototype/`, the handoff included in `final/handoff.json`.
+  - `qfai prototyping preflight`, `iterate`, `certify`, `rescope` and
+    `show-ui-contract` are gone. `qfai doctor --profile prototyping` is the
+    preflight.
+  - `qfai validate` no longer reports `QFAI-PROT-*`, `QFAI-UIE-*`,
+    `QFAI-CRIT-*`, `QFAI-DCON-012`, `QFAI-DCON-013`, `QFAI-CFG-LINK-003`,
+    `R-CERTIFY-VERIFY-CIRCULAR`, `R-PROMPT-SCANNER-DRIFT`,
+    `R-EVIDENCE-MUTATION-UNLOGGED` or `R-EXPLORATION-CERTIFY-ATTEMPT`, and
+    reads no prototyping record.
+  - The completion certificate, the `DESIGN.md` sha256 freeze and
+    `hashDesignMd`, the iterate and rescope records, the capture checksum, the
+    license patch audit, the critique providers and the calibration pack go
+    with them. `prototyping.calibration` and `prototyping.mode` are no longer
+    read from `qfai.config.yaml`.
+  - `qfai report` no longer prints a prototyping section.
+  - The prompt and scanner pair guard and the scanner coverage CI job are
+    removed with the scanner they checked.
 
 ### Fixed
 
