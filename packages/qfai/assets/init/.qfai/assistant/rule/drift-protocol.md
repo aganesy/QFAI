@@ -40,14 +40,16 @@ Both classes use the same approval and owner-rerun path.
 
 1. Stop work on the affected obligation and its dependents. Other flows continue. Name the affected BF, US, AC, EX, BR, and contract references where they exist, plus the code or tests that consume the disputed artifact. Do not claim a repository-wide stop without a repository-wide dependency.
 2. Ask the SDD owner to append one DEC-NNNN row to decisions.md under paths.specsDir. Its four columns are ID, Content,
-   Approach, and Status. Content starts with Change request: followed by the affected repository-relative paths or IDs,
-   separated by commas. Approach records the drift class, evidence or reproduction, proposed change, impacted items,
+   Approach, and Status. Content starts with Change request: followed by the affected repository-relative paths,
+   separated by commas. Only a path authorizes an edit; an ID written there authorizes nothing. Approach records the drift class, evidence or reproduction, proposed change, impacted items,
    approval needed, and owner rerun. A pending request has Status TODO. The row may be written without prior
    authorization; the change to the protected artifact may not.
 3. Obtain the operator's explicit answer. Record its provenance in the stage evidence and move the pending row to WIP
    only when the proposed change and affected set are approved as written. If the answer changes either, append a
-   replacement row and mark the earlier row SUPERSEDED (by DEC-NNNN). A declined request becomes REJECTED. A WIP or DONE
-   Change request: row is the in-force authorization that the drift gate reads; TODO is not authorization.
+   replacement row and mark the earlier row SUPERSEDED (by DEC-NNNN). A declined request becomes REJECTED. A WIP
+   Change request: row is the in-force authorization that the drift gate reads; TODO is not authorization. A DONE row
+   authorizes only on the branch that appended it or moved it from WIP. A DONE row the base already holds records a
+   change already applied, so a later edit to the same path needs a row of its own.
 4. Rerun the owner skill against the affected artifact. The owner names the approved decision row, the input revision, and whether it is confirming existing content or changing it.
    A contract with a contract ID, such as `API-0002`, is selected by its full ID; a contract without one is selected by its repository-relative path.
    The owner updates the specification and its tests together, then validates the relevant flow.

@@ -65,7 +65,7 @@ Record triage, change requests, retired stories, and rejected options as rows of
 `ID | Content | Approach | Status`. Append rows only; afterwards change only
 Status. A triage Content names the operation, affected BF or US, and its source
 as `discussion-<id>#REQ-NNNN` when that source exists. A change request Content
-begins `Change request:` and names the affected paths or IDs. Do not write a
+begins `Change request:` and names the affected repository-relative paths. Do not write a
 second decision-record directory or a retired story file.
 
 An approval-required row begins at TODO, moves to WIP on approval, or REJECTED
