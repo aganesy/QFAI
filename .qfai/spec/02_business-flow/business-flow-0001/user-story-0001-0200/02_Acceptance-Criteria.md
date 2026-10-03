@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Implement as a stage of a run
+Feature: Implement as a stage of a route
   # AC-0001-0200-01
   Scenario: The implement stage follows the stage-skill handover
     Given workflow mode active

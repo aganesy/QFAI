@@ -6,7 +6,6 @@ As an adopter moving a project from QFAI 1.x to 2.x, I want the migration skill 
 
 ## Non-goals
 
-- Creating a run.
 - Changing a routing or review-profile override the project wrote.
 - Repairing an item step 12 reports.
 - Installing agent cards.

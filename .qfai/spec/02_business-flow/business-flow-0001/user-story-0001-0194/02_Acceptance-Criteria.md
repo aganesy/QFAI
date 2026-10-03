@@ -5,11 +5,10 @@
 ```gherkin
 Feature: Claim a host as supported only with evidence
   # AC-0001-0194-01
-  Scenario: The seeds are tracked as rewritten and the fault seeds run on every pull request
-    Given the tracked fault-seed and routing-seed fixtures
+  Scenario: The routing seeds are tracked as rewritten
+    Given the tracked routing-seed fixture
     When a pull request is checked
-    Then the fixtures hold 24 fault cases and 64 routing cases as rewritten
-    And every fault seed runs as a deterministic test with no network and no paid model
+    Then the fixture holds 64 routing cases as rewritten
 
   # AC-0001-0194-02
   Scenario: The routing eval is a manual release gate scored case by case
