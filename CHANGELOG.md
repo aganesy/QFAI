@@ -10,6 +10,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Required artifact reads keep their original error instead of replacing it
   with an empty result; rebuilt-snapshot checks still clean up after failure.
 
+- Host-capability refusals at workflow start state the reason and the next
+  action in one sentence while preserving the refusal fields (#2839).
+
 ### Added
 
 - **A shared rule records what a stage costs and which lever changes it**
@@ -119,11 +122,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   decisions; a slip that changes none of those is fixed without comment. This
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
-
-### Fixed
-
-- Host-capability refusals at workflow start state the reason and the next
-  action in one sentence while preserving the refusal fields (#2839).
 
 ## [2.0.2] - 2026-10-03
 
