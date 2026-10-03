@@ -35,8 +35,9 @@
  * path: it re-gates an already-sealed scope-limited certificate against
  * the validate-side gate signal and rewrites the scope marker in place
  * (`certify --check` is what catches HTML that moved after the seal).
- * The shipped `generator-prompt.md` states the same posture on the
- * authoring side; the two must not drift apart.
+ * The shipped `generator-prompt.md` allows token-backed Tailwind utilities,
+ * declared CSS custom-property references or `theme(...)` on the authoring
+ * side. This scanner checks captured values; the two must stay aligned.
  *
  * Input tree: both production call sites feed this scanner the CAPTURE
  * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`

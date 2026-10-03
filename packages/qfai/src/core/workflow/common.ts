@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
 import type {
@@ -13,6 +14,10 @@ import type {
 } from "./types.js";
 
 export const RESULT_ID = /^[A-Za-z0-9._-]{1,64}$/;
+
+export function resultRefOf(resultId: string): string {
+  return path.posix.join("results", `~${Buffer.from(resultId, "utf8").toString("hex")}.json`);
+}
 
 export const TERMINAL_STATES = ["completed", "cancelled", "failed"];
 

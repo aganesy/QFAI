@@ -68,6 +68,8 @@ Feature: Continue, or stop, an interrupted run
     Given a run operation
     When a file read or write fails with `EBUSY`, `EPERM` or `EACCES`, or the same run cycle runs on Linux and on Windows
     Then the failing operation is refused `io-error` after one attempt
+    And an initial canonical-journal read fault reports no run metadata when none has been verified for this operation
+    And a later fault keeps the run metadata already obtained from a verified journal
     And both platforms give the same verdicts, with equal digests for LF and CRLF copies
 
   # AC-0001-0189-10

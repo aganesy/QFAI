@@ -21,6 +21,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Assistant instructions state obligations without capitalised emphasis**
+  (#2240). Phrases read by validators, gates or tests remain; other obligations
+  use plain wording. A phrase allowlist guards the shipped assistant tree and
+  root rules, and the writing standard calls for direct statements.
+
 - **The Windows parity CI job's timeout is set from measured runs** (#2311).
   Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
   now 20, twice the slowest run rounded up to five minutes, down from an
@@ -112,11 +117,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Fixed
 
 - **`qfai workflow` keeps each stage result it records under the run's
-  `results/`** (#2348). A journal event named `results/<resultId>.json`, but
-  the core never wrote that file. It is now written before the event is
-  published, as the run's write steps require. The tracked `summary.json`
-  lists the digest of that file first in each stage's `receiptDigests`,
-  followed by the digests of the stage's report copies.
+  `results/`** (#2348). Complete JSON is stored before its journal event.
+  New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
+  case-distinct IDs and Windows device names keep separate receipts.
+  Earlier recorded paths remain readable. The tracked `summary.json` lists
+  each accepted result's digest before the stage's report-copy digests.
+
+- **Journal directory read errors retain their original cause** (#2841).
+  Missing directories still identify a legacy run. Busy or denied reads reach
+  the workflow's I/O refusal; other errors propagate.
+  An initial busy or denied read is attempted once and reports no run metadata.
+  Later failures retain metadata verified by a successful journal read.
 
 - **Journal test reads preserve filesystem errors** (#2846).
   Required artifact reads keep their original error instead of replacing it
