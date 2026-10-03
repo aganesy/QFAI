@@ -18,17 +18,13 @@ describe("answered review demands are carried into the next existing request", (
         "MUST NOT be re-raised under another wording",
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",
-        "Carry prior answers forward",
+        "Carry prior answers into the next review's",
         "before dispatching reviewers",
         "a new defect or evidence that an answer no longer applies",
-        "the authoritative reviewer accepts the fix or a reasoned decline",
-        "or the user adjudicates it",
-        "A producer's reply alone does not close a demand",
-        "An unresolved blocking demand remains REVISE when repeated",
       ]) {
         expect(text.includes(clause), clause).toBe(true);
       }
-      expect(text).toContain("Severity overrides lateness");
+      expect(text).toContain("A critical decision in it still goes to the user");
     });
 
     it.each([

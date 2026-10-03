@@ -200,7 +200,7 @@ The field asks about the artifact **as it now stands**. A recommendation the art
 
 ### Review convergence (MUST)
 
-The convergence rules that decide which findings a reviewer may still raise live in `.qfai/assistant/rule/review-convergence.md`.
+A stage is reviewed once, and the author fixes or answers every finding with no re-review: `.qfai/assistant/rule/review-convergence.md`.
 
 ### Reviewer remit (in scope per stage)
 
@@ -316,7 +316,6 @@ Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`:
 ```text
 Reviewer role: <sub-agent role that produced this response>   # REQUIRED — a `Result:` line with no speaker is a report, not a verdict
 Reviewed artifact: <path/anchor this verdict rules on>        # REQUIRED — bounds the ruling; a PASS here clears nothing else
-Round: <n>
 Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
@@ -332,8 +331,6 @@ Advisory / Change Request proposals:
 Evidence checked:
 - <refs>
 ```
-
-`Round` is required — the convergence rules in `.qfai/assistant/rule/review-convergence.md` read it.
 
 - `Audited evidence hash` is required when a verdict audits ATDD or implementation evidence. The reviewer computes it over the phase-authored EX round or BF acceptance evidence. Use `rule/audited-evidence-hash.md` for subjects, normalization and serialization. An orchestrator cannot compute the hash on the reviewer's behalf.
 - `Reviewed revision` is required. Compute it by `skill/qfai-implement/references/evidence-revision.md`. The evidence tree and review pack are excluded from that code-revision address; their contents are bound by the audited evidence hash and pack seal. The reviewer names the integrated tree actually inspected. If it changes during review, report the stale verdict and review the new revision.

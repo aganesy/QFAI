@@ -1,7 +1,7 @@
 ---
 name: common-review-cycle
 owner: common
-purpose: "Review what a stage wrote, once, after its last step: build the review pack, dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and seal the result."
+purpose: "Review what a stage wrote, once, after its last step: build the review pack, dispatch the independent reviewers once, fix or answer every finding, and seal the result."
 requires: []
 roles: []
 ---
@@ -87,14 +87,15 @@ fields and the value its `version` takes are
    `.qfai/assistant/skill/qfai-implement/references/evidence-revision.md`, and
    `Audited evidence hash` follows `.qfai/assistant/rule/audited-evidence-hash.md`
    wherever ATDD or implementation evidence is audited.
-4. **On a blocking REVISE**, fix the finding in its owning source with the
-   smallest edit that resolves it, and leave unaffected content alone. An
+4. **Address every finding** once: fix it in its owning source with the
+   smallest edit that resolves it, or record a reasoned answer beside it. An
    upstream finding is not repaired here: stop under
-   `.qfai/assistant/rule/drift-protocol.md`. Then rerun the gate.
-   - Then rerun that reviewer, and any reviewer whose scope the fix changed.
-   - Each new cycle gets a new pack.
-5. **Complete** only when every routed blocking reviewer returns `PASS` on the
-   same final revision. A pending response is not `PASS`.
+   `.qfai/assistant/rule/drift-protocol.md`. Rerun the gate after the fixes.
+   No reviewer is rerun.
+5. **Complete** once every reviewer has responded and every finding is fixed or
+   answered. A finding the author cannot fix goes in the stage's final report;
+   a critical decision goes to the user
+   (`.qfai/assistant/rule/review-convergence.md#one-review-must`).
 
 ## summary.json
 
@@ -102,8 +103,8 @@ fields and the value its `version` takes are
 - A REVISE is written as `status: "FAIL"` when `summary.json` is written. Do
   not invent a third verdict.
 - Serialized reviewer statuses are `PASS`, `FAIL` and `NA`.
-- `overall_status` is `PASS` only when every routed blocking reviewer passed
-  and no unresolved `FAIL` remains.
+- `overall_status` is `PASS` when every finding is fixed or answered, and
+  `FAIL` while one is neither.
 - A cycle that received no response still gets a summary: `overall_status`
   `FAIL` and an empty `reviewers` list.
 - `revision_form` and `revision` name the state the verdicts describe. A stale
@@ -151,6 +152,7 @@ a new round for the affected test.
 
 ## Gate
 
-Every routed blocking reviewer returned `PASS` on the final revision, the
-recorded seals recompute, and the evidence names each verdict. Anything short of
-that is reported with the open findings, not as a pass.
+Every routed reviewer responded once, every finding is fixed or answered, the
+recorded seals recompute, and the evidence names each verdict and each answer. A
+finding the author cannot fix is in the stage's final report, and a critical
+decision has gone to the user.

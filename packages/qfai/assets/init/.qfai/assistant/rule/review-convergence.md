@@ -1,46 +1,38 @@
 # Review Convergence
 
-How a review round ends, and what may follow it. Referenced from
+How a stage's review ends, and what may follow it. Referenced from
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md#review-convergence-must`,
 which owns the delegation rules these sit beside.
 
-## Convergence (MUST)
+## One review (MUST)
 
-- The round number MUST be recorded on each reviewer response
-  (`Round:` in the shared response template).
-- A finding first raised in round N > 1 MUST state why it was not raisable in
-  round N-1 — the fix introduced it, or the fix exposed it. A finding that was
-  raisable in round 1 and was not raised is **late**: record it as an Open
-  Question or a decision row for the owning stage, do not block on it.
-- A reviewer MUST NOT open a new blocking _class_ of finding after the artifact
-  under review has been declared stable. New classes go to the owning stage.
-- **Severity overrides lateness.** A late finding that names a concrete
-  security defect, data loss or corruption, or a correctness defect that would
-  break a released contract is **not** deferrable: the orchestrator stops and
-  puts it to the user immediately, with its evidence. Deferring such a finding
-  to an Open Question so a `PASS` can be returned is prohibited, whoever
-  proposes the deferral.
+- The review runs once, after the stage's last step.
+- The author fixes or answers every finding: a fix in the finding's owning
+  source, or a reasoned answer recorded beside the finding.
+- There is no re-review and no `REVISE` loop. Once every finding is fixed or
+  answered, the work proceeds.
+- A finding the author cannot fix is reported in the stage's final report, with
+  the finding and why it stays open.
+- A critical decision still goes to the user: one that contradicts a spec, a
+  contract or a recorded decision, one whose effect cannot be taken back, or one
+  that rests on product intent nothing written states. So does a finding that
+  names a concrete security defect, data loss or corruption, or a correctness
+  defect that would break a released contract; it is never only reported.
 
 ## Answered demands (MUST)
 
-A demand already answered MUST NOT be re-raised under another wording. Close a
-repeat by citing its recorded answer. This bounds what a reviewer may require,
-not what a reviewer may report.
+A demand a later review of the same artifact sees again, already answered, MUST
+NOT be re-raised under another wording. Close a repeat by citing its recorded
+answer. This bounds what a reviewer may require, not what a reviewer may report.
 
-A demand is answered only after the authoritative reviewer accepts the fix or a
-reasoned decline, or the user adjudicates it. Record that disposition and its
-evidence in the existing Response and Evidence cells. A producer's reply alone
-does not close a demand. An unresolved blocking demand remains REVISE when
-repeated; cite its prior finding and unresolved disposition instead of requiring
-new work under another wording.
-
-Carry prior answers forward, alongside newly answered demands, into the next
-cycle's `review_request.md` before dispatching reviewers. Each entry names the
-original finding source, demand, response and evidence supporting the response.
-When there are no answered demands, write `None`.
+Record each finding's fix or answer, and its evidence, in the Response and
+Evidence cells. Carry prior answers into the next review's `review_request.md`
+before dispatching reviewers: each entry names the original finding source,
+demand, response and evidence. When there are no answered demands, write
+`None`.
 
 A report of a new defect or evidence that an answer no longer applies must
-state what changed. The severity rule under Convergence still applies.
+state what changed. A critical decision in it still goes to the user.
 
 ## Discussion review precision
 

@@ -42,37 +42,37 @@ function expectNoPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).not.toContain(unwrap(phrase));
 }
 
-// The convergence rules live in their own file; the reviewer remit table and
-// the response template stay on the delegation baseline.
+// The one-review rule lives in its own file; the reviewer remit table and the
+// response template stay on the delegation baseline.
 const CONVERGENCE = "assistant/rule/review-convergence.md";
 const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
 const OPERATING = "assistant/rule/shared-skill-operating-baseline.md";
 
 describe("reviewer convergence", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: a late high-severity finding still blocks`, async () => {
+    it(`${tree}: a stage is reviewed once and the author fixes or answers each finding`, async () => {
       const content = await read(tree, CONVERGENCE);
-      expectPhrase(content, "**Severity overrides lateness.**");
-      expectPhrase(content, "security defect, data loss or corruption");
-      expectPhrase(content, "puts it to the user immediately");
+      expectPhrase(content, "## One review (MUST)");
+      expectPhrase(content, "The review runs once, after the stage's last step.");
+      expectPhrase(content, "The author fixes or answers every finding");
+      expectPhrase(content, "There is no re-review and no `REVISE` loop.");
       expectPhrase(
         content,
-        "Deferring such a finding to an Open Question so a `PASS` can be returned is prohibited",
+        "A finding the author cannot fix is reported in the stage's final report",
       );
+      expectPhrase(content, "A critical decision still goes to the user");
+      expectNoPhrase(content, "round N-1");
     });
 
-    it(`${tree}: the response template carries the round number`, async () => {
-      const content = await read(tree, DELEGATION);
-      expectPhrase(content, "Round: <n>");
-      expectPhrase(content, "`Round` is required");
-    });
-
-    it(`${tree}: a later-round finding must justify itself`, async () => {
+    it(`${tree}: a severe finding goes to the user, never only to the report`, async () => {
       const content = await read(tree, CONVERGENCE);
-      expectPhrase(content, "## Convergence (MUST)");
-      expectPhrase(content, "MUST state why it was not raisable in\n  round N-1");
-      expectPhrase(content, "is **late**");
-      expectPhrase(content, "MUST NOT open a new blocking _class_");
+      expectPhrase(content, "security defect, data loss or corruption");
+      expectPhrase(content, "it is never only reported");
+    });
+
+    it(`${tree}: the response template carries no round number`, async () => {
+      const content = await read(tree, DELEGATION);
+      expectNoPhrase(content, "Round: <n>");
     });
 
     it(`${tree}: each stage's reviewer remit is bounded`, async () => {
