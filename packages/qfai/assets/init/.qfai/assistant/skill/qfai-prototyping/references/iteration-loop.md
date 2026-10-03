@@ -4,7 +4,7 @@
 
 ```text
 [Build]   iteration NN: generate iter-NN/index.html under DESIGN.md tokens
-[Review]  iteration NN: the reviewer operates Playwright and writes the reviews
+[Review]  iteration NN: the reviewer operates Playwright and returns the reviews
 [Ask]     iteration NN: the user confirms the prototype, or answers with a change
 [Handoff] confirmed:    final/index.html + final/handoff.json
 ```
@@ -17,7 +17,7 @@
 .qfai/prototype/iter-NN/UI-NNNN/<screen>.review.json
 ```
 
-The reviewer writes one payload per `(UI contract, screen)` pair beside the
+The orchestrator writes the reviewer's payload for each `(UI contract, screen)` pair beside the
 per-iteration `review.json` summary, from the first iteration on (schema:
 `references/review-payload-schema.md`, aggregation rule:
 `references/reviewer-prompt.md`). That holds for a single-contract run as much

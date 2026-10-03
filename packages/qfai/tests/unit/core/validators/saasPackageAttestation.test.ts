@@ -205,6 +205,16 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
   });
 
   // QFAI:EX-0001-0049-01
+  it("does not pass with a handoff written as YAML rather than JSON", async () => {
+    await seedAttestation();
+    await seedHandoff("finalArtifact: .qfai/prototype/final/index.html\n");
+    const issues = await runSaasPackageProfile(root, []);
+    const rejected = issues.find((i) => i.code === "D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+    expect(rejected?.severity).toBe("error");
+    expect(rejected?.file).toBe(".qfai/prototype/final/handoff.json");
+  });
+
+  // QFAI:EX-0001-0049-01
   it("does not pass without the prototyping handoff record, and names the file", async () => {
     await seedAttestation();
     const issues = await runSaasPackageProfile(root, []);

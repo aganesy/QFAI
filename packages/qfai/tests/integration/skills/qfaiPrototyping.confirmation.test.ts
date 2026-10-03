@@ -144,6 +144,13 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain(
       "A value in another form is refused, naming the `UI-NNNN` shape and the value received, and is never normalised.",
     );
+    const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain(
+      "The step checks it against the resolved UI-bearing contracts and stops, naming the ID, when it is not among them.",
+    );
+    expect(preflight).toContain(
+      "an error about `prototyping.primaryUiContract`, refused or unresolved, when the request names the primary contract;",
+    );
   });
 
   // QFAI:AC-0001-0138-01
@@ -269,7 +276,17 @@ describe.each(TREES)("%s", (tree) => {
       "**Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the URL preflight checked, and hands that URL to the reviewer.",
     );
     expect(loop).toContain(
-      "Each payload is checked against the closed schema before it is written, and one that does not conform is written again.",
+      "Each payload is checked against the closed schema before it is written, and one that does not conform is asked for again.",
+    );
+    // The reviewer runs read-only, so the orchestrator writes what it returns.
+    expect(loop).toContain(
+      "**Orchestrator.** Writes each payload to `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to `iter-NN/review.json`.",
+    );
+    const schema = flat(
+      await read(tree, "skill/qfai-prototyping/references/review-payload-schema.md"),
+    );
+    expect(schema).toContain(
+      "The orchestrator writes the pair's payload itself, with `sessionStatus` `launchFailed` or `retryExhausted`,",
     );
   });
 

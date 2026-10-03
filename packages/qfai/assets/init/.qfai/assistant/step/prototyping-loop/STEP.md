@@ -50,7 +50,8 @@ answer. No command, score or check decides that the loop is done.
 ## Delegation Scope Table
 
 Generation and review use two distinct sub-agent identities. The reviewer
-operates Playwright during the assessment and owns its review payload. There is
+operates Playwright during the assessment and returns its review payloads;
+it has no write access, so the orchestrator writes them. There is
 no fixed capture identity: a screenshot is taken by whoever needs it. The build
 owner is separate from this identity rule.
 
@@ -79,15 +80,18 @@ under `.qfai/prototype/`, or `00` when there are none.
 2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/iter-NN/` at the
    URL preflight checked, and hands that URL to the reviewer.
 3. **Reviewer** (product-surface-reviewer). Opens that URL, operates
-   Playwright live and writes
-   `iter-NN/<ui-contract-id>/<screen>.review.json` for each UI contract and
-   screen pair, and the per-iteration summary `iter-NN/review.json` aggregated
-   from them, per the reviewer prompt: the four ordinal UX axes, a critique of
-   at most 500 words, `blockingFindings`, `layoutAntiPatternsDetected[]`,
-   `designMdViolations[]` and `pivotDirective`. Each payload is checked
-   against the closed schema before it is written, and one that does not
-   conform is written again.
-4. **Orchestrator.** Appends one line for the iteration to `progress.md`.
+   Playwright live and returns the payload for each UI contract and screen
+   pair, and the per-iteration summary aggregated from them, per the reviewer
+   prompt: the four ordinal UX axes, a critique of at most 500 words,
+   `blockingFindings`, `layoutAntiPatternsDetected[]`,
+   `designMdViolations[]` and `pivotDirective`.
+4. **Orchestrator.** Writes each payload to
+   `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to
+   `iter-NN/review.json`. Each payload is checked against the closed schema
+   before it is written, and one that does not conform is asked for again. It
+   runs the reviewer's attempts and writes a failed pair's payload, as the
+   payload schema sets out. Then it appends one line for the iteration to
+   `progress.md`.
 5. **The user.** Put the prototype to the user, as below.
 
 ### Putting the prototype to the user

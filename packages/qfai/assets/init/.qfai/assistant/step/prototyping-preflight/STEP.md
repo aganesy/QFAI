@@ -60,11 +60,18 @@ for a failing doctor check.
 
 The step passes when `npx qfai doctor --profile prototyping --target-url <url>`
 reports no error, with at least one UI-bearing contract resolved and a launcher
-that does not install anything. Two doctor errors do not stop it, and each is
-reported:
+that does not install anything.
 
-- a refused `prototyping.primaryUiContract` when the request names the primary
-  contract, which wins over the configured value;
+When the request names the primary contract, that ID replaces the configured
+one. The step checks it against the resolved UI-bearing contracts and stops,
+naming the ID, when it is not among them. Doctor checks only the configured
+value, so its error about `prototyping.primaryUiContract` is reported and does
+not stop the step.
+
+Two doctor errors do not stop it, and each is reported:
+
+- an error about `prototyping.primaryUiContract`, refused or unresolved, when
+  the request names the primary contract;
 - inside a workflow run, a finding about a UI contract that does not serve the
   bound flow. With zero UI-bearing contracts the run ends
   here, and the later steps do not run.

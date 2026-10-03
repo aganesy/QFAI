@@ -45,9 +45,9 @@ transition-pass percentages as a substitute for the qualitative review.
 
 ## Outputs — two files, two schemas
 
-You write two different files. They are not interchangeable. Both
-paths are given in full below and are relative to the project root —
-write them exactly there.
+You return two different results, and the orchestrator writes each to
+its file. They are not interchangeable. Both paths are given in full
+below and are relative to the project root.
 
 1. **Per-contract / per-screen payload** —
    `.qfai/prototype/iter-NN/<ui-contract-id>/<screen>.review.json`,
@@ -55,7 +55,7 @@ write them exactly there.
    per-UI-contract subdirectory is mandatory for every run that declares UI
    screens, including a run with one contract. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
-   `references/review-payload-schema.md`. Write it from that
+   `references/review-payload-schema.md`. Build it from that
    reference, not from the block below.
 2. **Per-iteration summary** —
    `.qfai/prototype/iter-NN/review.json`, one per iteration. Its shape is

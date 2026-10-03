@@ -1,13 +1,13 @@
 # Review Payload Schema (`<screen>.review.json`)
 
 SSOT for the per-UI-contract / per-screen review payload. The
-product-surface-reviewer sub-agent writes it, and the user reads what it
-finds before confirming the prototype.
+product-surface-reviewer sub-agent returns it, the orchestrator writes it,
+and the user reads what it finds before confirming the prototype.
 
 The schema is **closed**: any key not listed below is rejected. The
-reviewer checks each payload against it before writing it, and a payload
-that does not conform is written again before the prototype is put to the
-user. A near-miss (extra key, misspelled field, legacy flat key) fails the
+orchestrator checks each payload against it before writing it, and asks the
+reviewer again for one that does not conform before the prototype is put to
+the user. A near-miss (extra key, misspelled field, legacy flat key) fails the
 whole file.
 
 ## Path
@@ -19,10 +19,10 @@ whole file.
 One file per (UI contract × screen × iteration). `<ui-contract-id>` is the full
 `UI-NNNN` ID, and `<screen>` is declared in that contract's `screens[]`.
 `<screen>.review.json` is the **only**
-per-(UI contract × screen) artifact the Reviewer writes — no `.html`, no
+per-(UI contract × screen) artifact written for a review — no `.html`, no
 `.png`, no `.interaction.json`.
 
-The Reviewer's other output is the per-iteration summary
+The Reviewer's other result is the per-iteration summary
 `iter-NN/review.json` (one per iteration, a different shape — see
 `references/reviewer-prompt.md`). It is not a per-screen artifact and
 is never read against this schema.
@@ -111,14 +111,19 @@ exponential backoff (`base * 2^attemptIndex` ms, `base = 250`).
 
 Who records which status:
 
-- The Reviewer records `sessionStatus` itself whenever it can still
-  write a payload for the pair. A session that completed is `ok` —
-  including one that only succeeded after earlier failed attempts;
-  record the retries consumed in `retryCount` and leave
-  `sessionStatus: "ok"`. Never write `retryExhausted` on a run that
-  produced a session: that value means every attempt failed.
+- The orchestrator dispatches the reviewer for each pair and runs the
+  attempts. A session that completed is `ok`, including one that
+  succeeded after earlier failed attempts: the reviewer returns
+  `sessionStatus: "ok"` with the retries consumed in `retryCount`.
+- When the reviewer cannot be started, or every attempt fails, no
+  reviewer payload exists. The orchestrator writes the pair's payload
+  itself, with `sessionStatus` `launchFailed` or `retryExhausted`,
+  `retryCount` the retries consumed, every impression and array empty,
+  `wallTimeSec` the time spent, and `softWarnings.timeBudget` derived
+  from it.
 - A payload that carries `retryExhausted` / `launchFailed` reviewed
-  nothing. Tell the user that pair was not reviewed.
+  nothing. It adds nothing to the summary, and the user is told that pair
+  was not reviewed.
 
 `impressions.*` prose is not deterministic and MUST NOT be asserted for
 exact equality. The stable surfaces are `blockingFindings`,

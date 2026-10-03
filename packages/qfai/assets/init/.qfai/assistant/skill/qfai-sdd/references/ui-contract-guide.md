@@ -163,14 +163,12 @@ who reads only the template still learns the contract.
 
 ## Typical failures
 
-**The page renders a static string, and `QFAI-PROT-238` fires.** The contract
-declares elements and actions that the runtime evidence does not satisfy. Either
-render the declared elements, or add `data-qfai` markers and wire the minimum
-actions for that route.
+**A declared marker is rendered nowhere, and `QFAI-CONTRACT-037` fires.** The
+contract names a `data-qfai` marker that no file under `paths.srcDir` contains.
+Render the element with that marker, or remove the marker from the contract.
 
 **A label does not match.** Update the contract label, then the rendered text or
-marker mapping. Updating one side leaves
-`QFAI-PROT-238` standing.
+marker mapping. Updating one side leaves the two out of step.
 
 **The discussion pack already has screen contracts, so this looks redundant.**
 It is not. A discussion pack is discovery output and is non-normative; the
