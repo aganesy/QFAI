@@ -42,6 +42,7 @@ export interface WorkflowPlanFile {
 
 export type PlanRefusalReason =
   | "file-missing"
+  | "unreadable"
   | "not-mapping"
   | "unknown-key"
   | "route-name"

@@ -11,7 +11,7 @@ type Facts = Partial<WorkflowExtraction>;
 // The route and rule the decision rules give an extraction, over the package's own plans.
 async function decided(facts: Facts) {
   const read = extraction(facts);
-  const choice = decideRoute(read, await routeDefaults());
+  const choice = decideRoute(read, (await routeDefaults()).defaultsOf);
   return [choice.route, choice.rule];
 }
 

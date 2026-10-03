@@ -226,6 +226,17 @@ it("A project whose sdd-gate step is not installed is refused with the step name
   }).toEqual({ status: 1, ok: false, reason: ["plan-invalid", "sdd-gate"], unchanged: true });
 });
 
+// QFAI:EX-0001-0222-08
+it("An option given without its value is refused, naming the option", async () => {
+  const root = await minimalProject();
+  const refused = workflow(root, ["plan", "--in"]);
+
+  expect([refused.status, field(refused.json, "reasons")]).toEqual([
+    2,
+    [{ reason: "invalid-input", subject: "--in" }],
+  ]);
+});
+
 it("Help prints the operation as text", async () => {
   const root = await minimalProject();
   const help = workflow(root, ["--help"]);

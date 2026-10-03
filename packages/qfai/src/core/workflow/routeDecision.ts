@@ -4,16 +4,30 @@
 import { decideRoute, reachedFirst, type RouteChoice } from "./decisionRules.js";
 import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
 import { defaultModifiersOf, type WorkflowModifier } from "./modifiers.js";
-import { loadPackagePlan } from "./plans.js";
+import { loadPackagePlan, type PlanRefusal } from "./plans.js";
 import { WORKFLOW_ROUTES, type WorkflowRoute } from "./routes.js";
 
-// A route's default modifiers, as the package's plans declare them. Rule 15 reads them. A plan
-// that does not load reads as declaring none: the route the rules choose is loaded on its own
-// afterwards, and refused there when it is the one that does not load.
-export async function routeDefaults(): Promise<(route: WorkflowRoute) => WorkflowModifier[]> {
-  const loads = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
-  const plans = new Map(loads.flatMap((load) => (load.ok ? [[load.plan.route, load.plan]] : [])));
-  return (route) => defaultModifiersOf(plans.get(route)?.defaultModifiers);
+export interface RouteDefaults {
+  // A route's default modifiers, as its plan declares them. Rule 15 reads them.
+  defaultsOf: (route: WorkflowRoute) => WorkflowModifier[];
+  // Why each plan the rules consulted does not load. A plan nobody consulted is not reported.
+  refusals: PlanRefusal[];
+}
+
+export async function routeDefaults(): Promise<RouteDefaults> {
+  const loads = new Map(
+    await Promise.all(
+      WORKFLOW_ROUTES.map(async (route) => [route, await loadPackagePlan(route)] as const),
+    ),
+  );
+  const refusals: PlanRefusal[] = [];
+  const defaultsOf = (route: WorkflowRoute): WorkflowModifier[] => {
+    const load = loads.get(route);
+    if (load?.ok) return defaultModifiersOf(load.plan.defaultModifiers);
+    refusals.push(...(load?.refusals ?? []));
+    return [];
+  };
+  return { defaultsOf, refusals };
 }
 
 export type RoutingOutcome =

@@ -296,9 +296,7 @@ describe("qfai-run", () => {
     expect(work).toMatch(
       /before the first stage, give the goal, the stages in order in plain words, and the files the work may change\. ask nothing/i,
     );
-    expect(work).toMatch(
-      /for each stage in order, read the `path` of each step and run the step, in order/i,
-    );
+    expect(work).toMatch(/run each stage in plan order, and each of its steps in order/i);
     const announcement = flat(sectionOf(await readShipped(SCREENS), "## The announcement"));
     expect(announcement).toMatch(/it asks nothing and lists no skipped stage/i);
     expect(flat(await readShipped(RUN))).toMatch(/add, drop or reorder a step the plan names/i);
@@ -312,7 +310,7 @@ describe("qfai-run", () => {
     expect(work).toMatch(
       /give a part to a sub-agent only to run independent parts in parallel, or for a review/i,
     );
-    expect(work).toMatch(/`review: spec` is done by `requirements-reviewer`/);
+    expect(work).toMatch(/whose `review` is `spec`, `requirements-reviewer` reviews/);
     expect(work).toMatch(/no agent reviews its own work/i);
   });
 
@@ -326,6 +324,18 @@ describe("qfai-run", () => {
     expect(work).toMatch(
       /before the third move and every one after it, ask the user, naming the destination in plain words; `stop` ends the work/i,
     );
+  });
+
+  // QFAI:AC-0001-0223-03
+  // QFAI:EX-0001-0223-05
+  it("handles each release, decision and branch point at its step, inside the step loop", async () => {
+    const work = sectionOf(await readShipped(RUN), "## The work");
+    const loop = flat(work.split("4. **Run the stages.**")[1]?.split("5. **Review.**")[0] ?? "");
+    expect(loop).toMatch(/at each step, handle the points the plan names for it/i);
+    for (const point of ["release point", "decision point", "branch point"]) {
+      expect(loop.toLowerCase()).toContain(`**${point}.**`);
+    }
+    expect(loop).toMatch(/at once: no later step of this route runs/i);
   });
 
   // QFAI:AC-0001-0224-05
@@ -387,7 +397,7 @@ describe("qfai-run", () => {
   it("asks for release approval at the release point, and the approval authorizes no push or publication", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
-      /where `releasePoint` names a step, ask the user to approve the release before that step runs; where it is `end`, after the last stage/i,
+      /before a step `releasePoint` names runs, ask the user to approve the release; where it is `end`, ask after the last stage/i,
     );
     expect(work).toMatch(
       /nothing after it runs without the approval, and the approval authorizes no push, merge, tag or publication/i,
@@ -399,9 +409,9 @@ describe("qfai-run", () => {
   it("records each approval as one decisions row, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
-      /each approval the user gives, of a specification change, a critical decision or a release, is one `decisions\.md` row naming what was approved, who approved it, when, and the label of the option chosen/i,
+      /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
     );
-    expect(work).toMatch(/a decision you took yourself appends no row/i);
+    expect(work).toMatch(/a decision you took appends no row/i);
   });
 
   // QFAI:AC-0001-0223-05

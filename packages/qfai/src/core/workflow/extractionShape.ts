@@ -89,7 +89,7 @@ function objectFaults(
   at: string,
 ): string[] {
   if (!isRecord(value)) return [at || "extraction"];
-  const within = (name: string) => (at ? `${at}.${name}` : name);
+  const within = (name: string) => (at ? `${at}.${name}` : name || 'extraction[""]');
   const broken = shape.holds && !shape.holds(value);
   const rule = broken ? [shape.holdsField ? within(shape.holdsField) : at] : [];
   const missing = shape.required.filter((name) => value[name] === undefined).map(within);

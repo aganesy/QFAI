@@ -26,7 +26,7 @@ describe("qfai-atdd in a workflow run", () => {
   it("works only the bound flow's BF and AC items, gated by that flow, and hands over otherwise", async () => {
     const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
     expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
-    expect(rowOf(entry, "| `worker`")).toMatch(/Check the run, stage and work-order IDs/);
+    expect(rowOf(entry, "| `step`")).toMatch(/Do only that step.s work/);
     const reads = await section(SCAFFOLD, "## Reads");
     expect(reads).toMatch(/the work order's `target` names it, and no question asks which flow/i);
     const procedure = await section(SCAFFOLD, "## Procedure");
@@ -188,7 +188,7 @@ describe("qfai-verify in a workflow run", () => {
   it("runs only the work order's gates and hands over a request with no work order", async () => {
     const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
     expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
-    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
+    expect(rowOf(entry, "| `step`")).toMatch(/Do only that step.s work/);
     const steps = await section(OPERATING, "### A work order's steps");
     expect(steps).toMatch(
       /runs the steps the work order names, in its `steps:` list, and no other/i,

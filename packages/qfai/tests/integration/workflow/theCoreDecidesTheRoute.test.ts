@@ -88,7 +88,7 @@ function readingsOf(intent: RoutingReading["intent"], size: number): RoutingRead
 // SIMPLIFIED: combines at most three facts per extraction, not every subset of them.
 // Lift when: a rule reads more than three facts together.
 it("Every extraction reaches exactly one catalog route by a rule, and an unsignalled release is handed off", async () => {
-  const defaultsOf = await routeDefaults();
+  const { defaultsOf } = await routeDefaults();
   const unrouted: string[] = [];
   const outside: string[] = [];
   let decided = 0;

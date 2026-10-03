@@ -178,6 +178,8 @@ export type ParsedArgs = {
     reportFlowIds: string[];
     /** The operation of `qfai workflow <operation>`. */
     workflowAction?: WorkflowOperation;
+    /** The first option whose value or placement the parser refused. */
+    invalidOption?: string;
     /** A token in the operation position of `qfai workflow` that names no operation. */
     workflowUnknownOperation?: string;
     /** `--route <route>` for `qfai workflow plan`. */
@@ -280,11 +282,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   };
 
   const scope = (): string => (command ? `qfai ${command}` : "qfai");
-  const missingValue = (flag: string): string => `${scope()}: ${flag} requires a value.`;
+  const refusedOption = (flag: string): string => {
+    options.invalidOption ??= flag;
+    return scope();
+  };
+  const missingValue = (flag: string): string =>
+    `${refusedOption(flag)}: ${flag} requires a value.`;
   const badValue = (flag: string, value: string, expected: string): string =>
-    `${scope()}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
+    `${refusedOption(flag)}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
   const notValidHere = (flag: string): string =>
-    `${scope()}: ${flag} is not valid for this command.`;
+    `${refusedOption(flag)}: ${flag} is not valid for this command.`;
   const formatReason = (value: string): string => {
     const choices = formatChoicesFor(command);
     return choices ? badValue("--format", value, choices) : notValidHere("--format");

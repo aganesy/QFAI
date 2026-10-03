@@ -152,8 +152,7 @@ describe("qfai-sdd as a stage of a run", () => {
   it("hands over, refuses or works the order as the entry check says", async () => {
     const text = await section(BASELINE, "## Workflow Run Entry Check (Mandatory)");
     expect(text).toMatch(/edit nothing\. pass the request to `qfai-run` in the same turn/i);
-    expect(text).toMatch(/edit nothing, and return the refusal to the harness/i);
-    expect(text).toMatch(/then do only that work/i);
+    expect(text).toMatch(/do only that step.s work/i);
   });
 
   // QFAI:AC-0001-0207-05

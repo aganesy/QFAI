@@ -3,7 +3,12 @@
 
 import type { RouteChoice } from "./decisionRules.js";
 import { extractionFaults, isExtraction } from "./extractionShape.js";
-import { loadInstalledPlan, type PlanBranchPoint, type WorkflowPlanFile } from "./plans.js";
+import {
+  loadInstalledPlan,
+  type PlanBranchPoint,
+  type PlanRefusal,
+  type WorkflowPlanFile,
+} from "./plans.js";
 import { routeDefaults, routingOutcome } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
 import { stepPath } from "./steps.js";
@@ -102,10 +107,8 @@ export function planned(plan: WorkflowPlanFile, rule?: number | null): PlanDocum
 
 type Loaded = { ok: true; plan: WorkflowPlanFile } | { ok: false; document: PlanDocument };
 
-async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
-  const load = await loadInstalledPlan(root, route);
-  if (load.ok) return load;
-  const reasons = load.refusals.map((each) => ({
+function planInvalid(refusals: readonly PlanRefusal[]): PlanDocument {
+  const reasons = refusals.map((each) => ({
     reason: "plan-invalid" as const,
     subject: each.subject,
     file: `${each.route}.yml`,
@@ -113,7 +116,12 @@ async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
   }));
   const message =
     "A plan the package ships does not load in this project. Reinstall qfai, or rerun its init with --force to restore the missing steps.";
-  return { ok: false, document: refusal(message, reasons) };
+  return refusal(message, reasons);
+}
+
+async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
+  const load = await loadInstalledPlan(root, route);
+  return load.ok ? load : { ok: false, document: planInvalid(load.refusals) };
 }
 
 async function candidatesOf(
@@ -125,12 +133,13 @@ async function candidatesOf(
   for (const choice of choices) {
     const load = await loaded(root, choice.route);
     if (!load.ok) return load.document;
-    const { family } = load.plan;
+    const { family, stages } = load.plan;
+    const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${stages.map((stage) => stage.id).join(", ")}.`;
     candidates.push({
       route: choice.route,
       family,
       rule: choice.rule,
-      summary: FAMILY_SUMMARIES[family] ?? "Run this plan.",
+      summary,
       recommended: choice.route === recommended,
     });
   }
@@ -140,13 +149,16 @@ async function candidatesOf(
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
   if (!isExtraction(extraction)) {
     const subjects = extractionFaults(extraction);
-    const message = "The extraction has a field this command does not take. Fix it and try again.";
+    const message =
+      "The extraction does not match its schema: a field is missing, unknown or holds a value it does not take. Fix the named fields and try again.";
     return refusal(
       message,
       subjects.map((subject) => ({ reason: "schema", subject })),
     );
   }
-  const outcome = routingOutcome(extraction, await routeDefaults());
+  const { defaultsOf, refusals } = await routeDefaults();
+  const outcome = routingOutcome(extraction, defaultsOf);
+  if (refusals.length > 0) return planInvalid(refusals);
   if ("candidates" in outcome) return candidatesOf(root, outcome.candidates, outcome.recommended);
   const load = await loaded(root, outcome.taken.route);
   return load.ok ? planned(load.plan, outcome.taken.rule) : load.document;

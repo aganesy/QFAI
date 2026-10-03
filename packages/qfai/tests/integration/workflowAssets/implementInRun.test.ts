@@ -27,7 +27,7 @@ describe("qfai-implement in a workflow run", () => {
   it("works only the work order's examples and hands over a request with no work order", async () => {
     const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
     expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
-    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
+    expect(rowOf(entry, "| `step`")).toMatch(/Do only that step.s work/);
     const steps = flat(sectionOf(await readShipped(OPERATING), "### A work order's steps"));
     expect(steps).toMatch(
       /runs the steps the work order names, in its `steps:` list, and no other/i,

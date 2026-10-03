@@ -28,12 +28,13 @@ export function packagePlansDir(): string {
   return path.resolve(getInitAssetsDir(), "..", "defaults", "workflows");
 }
 
-async function readIfPresent(file: string): Promise<string | undefined> {
+// The file's text, `undefined` when it does not exist, and `null` when it cannot be read.
+async function readIfPresent(file: string): Promise<string | null | undefined> {
   try {
     return await readFile(file, "utf8");
   } catch (error) {
     if (isRecord(error) && error.code === "ENOENT") return undefined;
-    throw error;
+    return null;
   }
 }
 
@@ -42,6 +43,9 @@ export async function loadPackagePlan(route: WorkflowRoute): Promise<PlanLoad> {
   const text = await readIfPresent(path.join(packagePlansDir(), `${route}.yml`));
   if (text === undefined) {
     return { ok: false, refusals: [{ route, reason: "file-missing", subject: route }] };
+  }
+  if (text === null) {
+    return { ok: false, refusals: [{ route, reason: "unreadable", subject: route }] };
   }
   return parsePlan(text, route);
 }

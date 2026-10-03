@@ -45,8 +45,6 @@ value but the three below plans nothing.
 - A change, a question, a proposal to decide or a report to close is planned.
   A question plans a route that answers it and changes nothing. Text that is
   not a request is not planned.
-- Carrying on in a new session: plan the route again with `--route`, and
-  start at the first step whose work git and the working tree do not show.
 - `stop`: end the work at once and list every open decision as open.
 - A request naming a stage skill: invoke that skill by name.
 
@@ -60,37 +58,39 @@ value but the three below plans nothing.
    then run `npx qfai workflow plan --route <route>` for the chosen one.
 3. **Announce.** Before the first stage, give the goal, the stages in order in
    plain words, and the files the work may change. Ask nothing.
-4. **Run the stages.** For each stage in order, read the `path` of each step
-   and run the step, in order. Write any artifact yourself. Give a part to a
-   sub-agent only to run independent parts in parallel, or for a review.
-5. **Review.** `review: spec` is done by `requirements-reviewer`, with
-   `architecture-reviewer` when a contract changed; `review: code` by
-   `implementation-reviewer`. `product-surface-reviewer` joins both where a
-   UI contract with screens serves the flow. No agent reviews its own work.
-6. **Decision points.** At a step `decisionPoints` names, put each critical
-   decision to the user through the structured question tool before changing
-   anything that depends on it. A decision is critical when it contradicts a
-   specification, a contract or a recorded decision, cannot be taken back, or
-   rests on product intent nothing written states. Take every other decision
-   yourself, ask nothing, and list it with its reason in the final report.
-7. **Release point.** Where `releasePoint` names a step, ask the user to
-   approve the release before that step runs; where it is `end`, after the
-   last stage. Nothing after it runs without the approval, and the approval
-   authorizes no push, merge, tag or publication.
-8. **Approvals.** Each approval the user gives, of a specification change, a
-   critical decision or a release, is one `decisions.md` row naming what was
-   approved, who approved it, when, and the label of the option chosen. A
-   decision you took yourself appends no row.
-9. **Branch points.** At a step `branchPoints` names, an outcome paired with
-   one route moves there; one paired with several moves to the one the step
-   names; `decision-table` moves to the route `plan --in` gives the step's new
-   extraction. Take the destination's plan with
-   `npx qfai workflow plan --route <route>` and continue on it. Any other
-   outcome continues the route. Before the third move and every one after it,
-   ask the user, naming the destination in plain words; `stop` ends the work.
-10. **A finding no stage serves.** Stop, and name the finding, its owner and
-    the stage skill to invoke by name.
-11. **Report.** As `references/operator-screens.md` sets out.
+4. **Run the stages.** Run each stage in plan order, and each of its steps in
+   order. Write any artifact yourself. Give a part to a sub-agent only to run
+   independent parts in parallel, or for a review. At each step, handle the
+   points the plan names for it:
+   - **Release point.** Before a step `releasePoint` names runs, ask the user
+     to approve the release; where it is `end`, ask after the last stage.
+     Nothing after it runs without the approval, and the approval authorizes
+     no push, merge, tag or publication.
+   - **Decision point.** At a step `decisionPoints` names, put each critical
+     decision to the user through the structured question tool before
+     changing anything that depends on it. A decision is critical when it
+     contradicts a specification, a contract or a recorded decision, cannot be
+     taken back, or rests on product intent nothing written states. Take every
+     other decision yourself, ask nothing, and list it with its reason in the
+     final report.
+   - **Branch point.** When a step `branchPoints` names reports an outcome
+     paired with one route, move there; with several, to the one the step
+     names; with `decision-table`, to the route `plan --in` gives the step's
+     new extraction. Take the destination's plan with
+     `npx qfai workflow plan --route <route>` at once: no later step of this
+     route runs. Any other outcome continues the route. Before the third move
+     and every one after it, ask the user, naming the destination in plain
+     words; `stop` ends the work.
+5. **Review.** After a stage whose `review` is `spec`, `requirements-reviewer`
+   reviews, with `architecture-reviewer` when a contract changed; after one
+   whose `review` is `code`, `implementation-reviewer`.
+   `product-surface-reviewer` joins both where a UI contract with screens
+   serves the flow. No agent reviews its own work.
+6. **Approvals.** Each approval of a specification change, a critical decision
+   or a release is one `decisions.md` row: what was approved, who approved it,
+   when, and the chosen option's label. A decision you took appends no row.
+7. **A finding no stage serves.** Stop, and name the finding, its owner and
+   the stage skill to invoke by name.
 
 ## Under a no-question mode
 
@@ -133,7 +133,6 @@ the request did not cover stops and says so.
 - auto-decide:
   - output formatting
   - equivalent-option pick
-  - every decision that is not critical
 - ask-user:
   - each critical decision at a decision point, and each release point
   - the candidate question, and a third branch move

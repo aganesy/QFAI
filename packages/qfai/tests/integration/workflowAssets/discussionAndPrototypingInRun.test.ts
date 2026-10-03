@@ -40,7 +40,7 @@ describe("qfai-discussion in a workflow run", () => {
     expect(byName).toContain("Run the [entry check](#workflow-run-entry-check-mandatory)");
     const entry = sectionOf(await readShipped(OPERATING), "## Workflow Run Entry Check");
     expect(rowOf(entry, "| `pass-on`")).toMatch(/Edit nothing\. Pass the request to `qfai-run`/);
-    expect(rowOf(entry, "| `worker`")).toMatch(/then do only that work/);
+    expect(rowOf(entry, "| `step`")).toMatch(/Do only that step.s work/);
   });
 });
 

@@ -421,7 +421,7 @@ function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"
   if (options.workflowUnknownOperation !== undefined) return [options.workflowUnknownOperation];
   if (options.unknownFlags.length > 0) return options.unknownFlags;
   if (!options.workflowAction) return ["operation"];
-  if (invalid) return ["arguments"];
+  if (invalid) return [options.invalidOption ?? "arguments"];
   const given = [
     ...(options.workflowIn !== undefined ? ["--in"] : []),
     ...(options.workflowRoute !== undefined ? ["--route"] : []),

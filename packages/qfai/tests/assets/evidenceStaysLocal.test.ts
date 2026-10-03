@@ -65,7 +65,7 @@ describe("shipped instructions keep evidence local", () => {
   it("records an approval in the decision row, not in a committed run record", async () => {
     const skill = await read("skill/qfai-run/SKILL.md");
     expect(skill).toMatch(
-      /is one `decisions\.md` row naming what was\s+approved, who approved it, when, and the label of the option chosen/,
+      /is one `decisions\.md` row: what was approved, who approved it,\s+when, and the chosen option's label/,
     );
     const plan = await read("skill/qfai-run/references/plan.md");
     expect(plan).toContain("Each call prints one JSON document and writes no file.");

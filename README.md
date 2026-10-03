@@ -125,8 +125,6 @@ parent directory. Where it is missing the hook says to run the project's install
 The package ships one plan file per route under `assets/defaults/workflows/`,
 named after the route.
 
-- In a new session, ask to carry on: the route is planned again and the work starts at the first
-  step git and the working tree do not show as done.
 - Say `stop` to end the work.
 - You are asked only which route a request that reads two ways should take, each decision that
   contradicts a specification, a contract or a recorded decision, cannot be taken back or rests

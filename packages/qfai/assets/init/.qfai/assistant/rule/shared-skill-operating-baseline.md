@@ -264,21 +264,12 @@ A skill that a built-in workflow plan names runs this check first, before
 Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 `active`.
 
-A QFAI work order is the one `npx qfai workflow` issues to a stage. It is not a
-delegation work order.
-
-| State     | Mode              | When                                                 | What the skill does                                                                                                                          |
-| --------- | ----------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pass-on` | `active`          | Neither invoked by name nor handed a QFAI work order | Edit nothing. Pass the request to `qfai-run` in the same turn. Show the operator at most one line, and no explanation of modes or stages     |
-| `by-name` | `active`          | Invoked by name                                      | Run standalone and end at this stage. Start no other stage. A request to take the work to the end becomes a whole run: pass it to `qfai-run` |
-| `worker`  | `active`          | Handed a QFAI work order that matches an issued one  | Check the run, stage and work-order IDs, then do only that work. Say nothing to the operator                                                 |
-| `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the harness                                                                                          |
-| `off`     | `off` or `shadow` | Always                                               | No entry check. Behave as when invoked by name                                                                                               |
-
-A work order matches an issued one when its run, stage-instance and work-order
-IDs equal those of the outstanding work order that
-`npx qfai workflow status --run <runId>` reports. `status` only reads, so the
-check changes nothing in the run.
+| State     | Mode              | When                                               | What the skill does                                                                                                                          |
+| --------- | ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pass-on` | `active`          | Neither invoked by name nor run by `qfai-run`      | Edit nothing. Pass the request to `qfai-run` in the same turn. Show the operator at most one line, and no explanation of modes or stages     |
+| `by-name` | `active`          | Invoked by name                                    | Run standalone and end at this stage. Start no other stage. A request to take the work to the end becomes a whole run: pass it to `qfai-run` |
+| `step`    | `active`          | Run by `qfai-run` as a step of the plan it follows | Do only that step's work                                                                                                                     |
+| `off`     | `off` or `shadow` | Always                                             | No entry check. Behave as when invoked by name                                                                                               |
 
 ### What authorizes a run's work
 
