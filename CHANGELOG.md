@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Mutation recipes remain in example tests.** `qfai doctor` reports a
+  warning when a recipe names a missing source file or original text (#2419).
+  The check reads recipes and source text; it runs no mutations or tests.
+
 - **A shared rule records what a stage costs and which lever changes it**
   (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
   and its levels, and runs every agent at the host's default until a
@@ -33,6 +37,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reviewer cards, and the review checks the implement and ATDD skills give,
   each gain one check for these. Test coverage for every source change is still
   required.
+
+- **A DONE change request authorises only the branch that applies it**
+  (#2251). A WIP row authorises as before, and a DONE row authorises
+  only where the base lacks it or holds it at WIP. A later edit to the same path
+  needs a row of its own. The shipped instructions name repository-relative
+  paths; an ID in the row authorises nothing.
 
 - **The `sdd` dogfooding lane is a clean gate.** CI validates this repository
   with `--profile sdd --fail-on error`, so every error fails the build.
