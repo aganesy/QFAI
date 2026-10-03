@@ -337,8 +337,8 @@ describe("assets guardrails", () => {
       "the call that starts it returns at once",
       "the finished result arrives as a later message",
       "the orchestrator can wait for a result on purpose",
-      // Carrying on is recommended, not only permitted, and a host without the
-      // three capabilities keeps the orchestrator waiting.
+      // With all three host capabilities, the orchestrator works while work remains.
+      // Otherwise it waits.
       "it carries on with its own work meanwhile, and waits only when it has nothing to do.",
       "A host without all three keeps the orchestrator waiting.",
       // What the orchestrator's own work covers, including an independent
