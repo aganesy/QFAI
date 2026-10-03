@@ -9,4 +9,4 @@ As an operator fixing a bug the stories already describe in general but no examp
 - Changing a story, a criterion or a rule statement
 - Seeding when an example already states the case, which needs no SDD stage
 - Writing the test, which a later stage does
-- The Change request row every SDD-kind stage of a run appends, which US-0001-0207 states
+- The Change request row every SDD-kind stage of a route appends, which US-0001-0207 states

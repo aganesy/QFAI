@@ -2,52 +2,55 @@
 
 ## Purpose
 
-Take a project need through discussion, story and contract authoring, acceptance
-tests, implementation, verification and a report. The current story tree and
-contracts are the execution source; discussion records the decisions that led
-to them.
+Take a project need through discussion, story and contract authoring,
+implementation with its acceptance tests, verification and a report. The
+current story tree and contracts are the execution source; discussion records
+the decisions that led to them.
 
 ## Flow
 
 ```mermaid
 flowchart TD
   Need[Project need] --> Discuss[Discuss scope and open decisions]
-  Request[Free-text change request] --> Route[Route it and announce the plan]
-  Route -->|Chain the planned stages| SDD
+  Request[Free-text change request] --> Route[Plan the route and announce it]
+  Route -->|Plan with a specification stage| SDD
+  Route -->|Plan with no specification stage| Implement
+  Route -->|Plan ending at triage-close| Close[Answer, close or hand over the request]
   Discuss --> SDD[Author flows, stories, criteria and contracts]
   SDD --> Validate[Validate current story tree]
   Validate --> Ready{Valid and decisions closed?}
   Ready -->|No| Repair[Resolve finding in owning artifact]
   Repair --> Validate
-  Ready -->|Yes| UI{UI contracts declare screens?}
-  UI -->|Yes| Prototype[Prototype against frozen design and screen contracts]
-  UI -->|No| ATDD[Write acceptance tests]
-  Prototype --> ATDD
-  ATDD --> Implement[Implement EX-scoped TDD cycles]
-  Implement --> Verify[Run repository gates and reviewers]
+  Ready -->|Yes| SpecReview[Review the specification change]
+  SpecReview --> UI{UI contracts declare screens?}
+  UI -->|Yes| Prototype[Prototype until the user confirms it]
+  UI -->|No| Implement[Make the planned change, with acceptance tests and EX-scoped TDD cycles where the plan holds them]
+  Prototype --> Implement
+  Implement --> CodeReview[Review the whole diff]
+  CodeReview --> Verify[Run the repository gates]
   Verify --> Gate{All gates pass?}
   Gate -->|No| Repair
   Gate -->|Yes| Report[Produce validation and delivery report]
-  Gate -->|Yes, in a run| Finish[Judge the run gates and completion target]
-  Finish --> Report
 ```
 
 ## Alternate and exception paths
 
 - Missing usable discussion source stops SDD until the source is supplied.
 - An open product decision returns to discussion and SDD before implementation.
-- UI work requires its declared screen contracts and frozen design inputs;
-  missing inputs stop prototyping and UI validation.
-- A failed validation or reviewer gate returns to the artifact that owns the
-  finding. Completion is recorded only after the relevant gate passes.
-- A free-text change request in mode `active` is routed by `qfai-run` and
-  driven through `npx qfai workflow`, which chains the planned stages with no
-  stage typed by the operator and ends at `finish`. A new story, and each change
-  a story-authoring stage makes to the tree, wait for the operator's approval.
-  Text that is not a request, or a mode of `off` or `shadow`, starts no run.
+- UI work requires its declared screen contracts and root `DESIGN.md`;
+  prototyping completes when the user confirms the prototype.
+- A failed validation, review or gate returns to the artifact that owns the
+  finding. Completion is reported only after the relevant gate passes.
+- A free-text change request in mode `active` is planned by `qfai-run` with
+  `npx qfai workflow plan`, and the session follows the planned stages with no
+  stage typed by the user. A critical decision, each change to the story tree
+  and each release wait for the user's approval. Text that is not a request, or
+  a mode of `off` or `shadow`, is not planned.
 - Fixed decision rules choose the route from the facts read out of the request.
   A request that needs no change runs a route that answers, closes, splits or
-  hands it back and writes nothing. A diagnosis showing the run is on the wrong
+  hands it back and writes nothing. A diagnosis showing the work is on the wrong
   route moves it, at a branch point the route declares, to the route that fits.
+- A request to write the acceptance tests of a flow runs the quality-phase
+  route, which writes the bodies of the empty acceptance tests.
 - A scope change discovered after an accepted implementation item follows the
   drift protocol through SDD before another item is selected.
