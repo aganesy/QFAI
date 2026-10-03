@@ -212,6 +212,7 @@
     "tests/integration/cli/commands/doctorClean.runLogs.test.ts",
     "tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts",
     "tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts",
+    "tests/integration/cli/commands/prototypingIterate.captureUrlRefused.test.ts",
     "tests/integration/cli/commands/prototypingIterate.signals.test.ts",
     "tests/integration/cli/commands/validate.profileCoverageNotice.test.ts",
     "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",

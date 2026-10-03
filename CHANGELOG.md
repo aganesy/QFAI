@@ -25,6 +25,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A test requires a refused capture URL to name its screen and exit 2**
+  (#2280). When `qfai prototyping iterate --capture` cannot compose a screen's
+  URL, it names the screen and `--target-url` and exits 2. No test checked the
+  screen in the reason, or ran a URL pair that does not compose. A new
+  integration test covers both refusals: a route-relative URL with no
+  `--target-url`, and a `--target-url` that is not a URL. Each asserts the
+  screen and `--target-url` in the reason, exit 2, and that nothing was
+  captured.
+
 - **A DONE change request authorises only the branch that applies it**
   (#2251). A WIP row authorises as before, and a DONE row authorises
   only where the base lacks it or holds it at WIP. A later edit to the same path
