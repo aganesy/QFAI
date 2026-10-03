@@ -59,9 +59,14 @@ schema_version: "1.0"
 #
 # `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
 #
-# - `failed-agents-only`        re-run only the agents that did not return PASS
-# - `changed-scope-dependents`  re-run every agent whose inputs the change
-#                               touched, including ones that passed
+# - `failed-agents-only`        when a step runs again, as a Change Request's
+#                               owner rerun does, re-run only the agents whose
+#                               work failed
+# - `changed-scope-dependents`  when a step runs again, re-run every agent whose
+#                               inputs the change touched
+#
+# Neither re-runs a review: a stage is reviewed once, and its findings are
+# fixed or answered (`.qfai/assistant/rule/review-convergence.md`).
 #
 # A key that is defined nowhere and read by nothing hides its own typos, which is
 # why the vocabulary is validated. `.qfai/assistant/rule/drift-protocol.md`
