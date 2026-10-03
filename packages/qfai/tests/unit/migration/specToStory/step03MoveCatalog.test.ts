@@ -859,6 +859,35 @@ describe("migration catalog move", () => {
     expect(second.output).toContain("## Operations\nnone");
   });
 
+  it("keeps a source whose destination exists and differs, and deletes the others", async () => {
+    const context = await fixture();
+    const existing = "# Objective\n\nWritten by the project.\n";
+    await put(context.root, ".qfai/spec/01_policy/objective.md", existing);
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Objective\n\n- Buyers can order.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const source = ".qfai/spec/_policies/01_Objective.md";
+    expect(forAPerson(result.output)).toContain(
+      `${source}: kept, since .qfai/spec/01_policy/objective.md was not written; delete it once what it states is carried by hand`,
+    );
+    expect(result.output).not.toContain(`- ${source}: delete`);
+    expect(await readFile(path.join(context.root, source), "utf8")).toContain("Buyers can order");
+    expect(await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8")).toBe(
+      existing,
+    );
+    expect(result.output).toContain("- .qfai/spec/_policies/06_Glossary.md: delete");
+    expect(result.output).not.toContain(".qfai/spec/_policies: remove empty directory");
+  });
+
   it("leaves the policy directory for step 4 while capability and flow sources remain", async () => {
     const context = await fixture();
     await put(context.root, ".qfai/spec/_policies/01_Objective.md", "# Objective\n");

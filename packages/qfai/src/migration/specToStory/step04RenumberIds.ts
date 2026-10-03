@@ -61,6 +61,17 @@ export type MigrationPlan = {
   examples: PlannedExample[];
 };
 
+/**
+ * The refusal for a plan entry no spec pack holds once an ID map exists. Step 7
+ * deletes what it has moved, and the migration keeps no copy of it, so a run of
+ * step 4 or 7 after step 7 cannot read the entry back.
+ */
+export function goneAfterStep7(id: string, kind: "story" | "rule"): MigrationInputError {
+  return new MigrationInputError(
+    `${PLAN_PATH}: ${id} names no ${kind} a spec pack holds. If step 7 has already removed it, steps 4 to 7 cannot run again: restore the spec packs from git history and run the migration again from step 1.`,
+  );
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -946,7 +957,7 @@ function reportUnplaced(
 
 const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
 /** Fields of an old story block that the story tree does not keep. */
-const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
+const DROPPED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
 
 type StoryParts = { sentence: string; nonGoals: string[] };
 /** A story block that holds some of its `As a`, `I want` and `So that` fields and not all. */
@@ -1025,7 +1036,7 @@ function storyParts(body: string): StoryParts | PartialStory | null {
       sentences.push(entry.text);
     } else if (entry.key === "non-goals") {
       nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
-    } else if (ARCHIVED_STORY_FIELDS.has(entry.key)) {
+    } else if (DROPPED_STORY_FIELDS.has(entry.key)) {
       continue;
     } else if (entry.items.length > 0) {
       return null;
@@ -1035,7 +1046,7 @@ function storyParts(body: string): StoryParts | PartialStory | null {
       if (entry.article) fields.set("article", entry.article);
     } else if (entry.key === "goal") {
       sentences.push(entry.value);
-    } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
+    } else if (!DROPPED_STORY_FIELDS.has(entry.key)) {
       return null;
     }
   }
@@ -1065,7 +1076,7 @@ function storyFromFields(
  * continuation lines. A line inside a fence is content, never a field. Every other
  * line stays as written, except a blank line a removed field leaves beside another.
  */
-function withoutArchivedFields(body: string): string {
+function withoutDroppedFields(body: string): string {
   const kept: string[] = [];
   let skipping = false;
   let removed = false;
@@ -1073,7 +1084,7 @@ function withoutArchivedFields(body: string): string {
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
-    if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
+    if (field) skipping = DROPPED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
     else if (fence === null && line.trim() !== "" && !/^\s+\S/.test(line)) skipping = false;
     const run = marker?.[1] ?? "";
     if (marker && fence === null) fence = run;
@@ -1104,7 +1115,7 @@ function outputStory(
 ): string {
   const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
   if (parts === null) {
-    return `${heading}${replacedIds(withoutArchivedFields(story.body), ids).trim()}\n`;
+    return `${heading}${replacedIds(withoutDroppedFields(story.body), ids).trim()}\n`;
   }
   const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
   return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
@@ -1358,6 +1369,7 @@ export const step04: MigrationStep = {
     for (const flow of plan.flows) {
       for (const planned of flow.stories) {
         const story = storyById.get(planned.id);
+        if (!story && existingMap !== null) throw goneAfterStep7(planned.id, "story");
         if (!story || byPack.get(packOf(planned.id))?.retired) {
           throw new MigrationInputError(`${PLAN_PATH}: unknown active story ${planned.id}`);
         }
@@ -1448,17 +1460,7 @@ export const step04: MigrationStep = {
     for (const rule of [...plan.rules, ...plan.marks]) {
       const pack = byPack.get(packOf(rule.id));
       const oldRule = pack?.rules.find((candidate) => candidate.id === rule.id);
-      // Step 7 removes a rule it placed from its pack, so a later run of this step
-      // finds the rule gone and its new ID in the map.
-      // SIMPLIFIED: a marked rule step 7 removed takes no map entry, so a later run
-      // refuses its mark as naming no rule. Lift when: a rerun after step 7 has to
-      // accept such a mark, and something records which rules step 7 removed.
-      const placedEarlier =
-        pack !== undefined &&
-        !pack.retired &&
-        "contract" in rule &&
-        existingMap?.ids[pack.id]?.[rule.id] !== undefined;
-      if (!oldRule && placedEarlier) continue;
+      if (!oldRule && existingMap !== null) throw goneAfterStep7(rule.id, "rule");
       if (!oldRule || pack?.retired) {
         throw new MigrationInputError(`${PLAN_PATH}: unknown active rule ${rule.id}`);
       }

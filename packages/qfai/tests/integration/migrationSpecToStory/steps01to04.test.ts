@@ -1391,43 +1391,6 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
-  it("reruns step 4 after step 7 moved part of a pack's rules", async () => {
-    await withProject(async (root) => {
-      await putMinimalPack(root);
-      const rules =
-        "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | First rule. |\n| BR-0001-0002 | Second rule. |\n";
-      await put(root, ".qfai/spec/spec-0001/04_Business-Rules.md", rules);
-      await put(
-        root,
-        "tmp/qfai-migration/plan.yaml",
-        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/api-0001-orders.yaml\n  - id: BR-0001-0002\n    contract: api/api-0002-later.yaml\n",
-      );
-      await put(
-        root,
-        ".qfai/spec/03_contract/api/api-0001-orders.yaml",
-        "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
-      );
-      await put(
-        root,
-        ".qfai/spec/03_contract/api/api-0002-later.yaml",
-        "# QFAI-CONTRACT-ID: API-0002\nopenapi: 3.0.0\n",
-      );
-      const first = await run(step04, await context(root));
-      expect(first.errors).toBe("");
-      const mapPath = path.join(root, "tmp/qfai-migration/id-map.json");
-      const map = await readFile(mapPath, "utf8");
-      await put(
-        root,
-        ".qfai/spec/spec-0001/04_Business-Rules.md",
-        "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0002 | Second rule. |",
-      );
-      const rerun = await run(step04, await context(root));
-      expect(rerun.errors).toBe("");
-      expect(rerun.code).toBe(first.code);
-      expect(await readFile(mapPath, "utf8")).toBe(map);
-    });
-  });
-
   it("refuses each invalid plan key before writing and names the entry", async () => {
     // QFAI:EX-0004-0003-38
     await withProject(async (root) => {
@@ -1578,6 +1541,7 @@ describe("migration steps 1 to 4", () => {
         const result = await run(step07, await context(root));
         expect(result.code, missing).toBe(2);
         expect(result.errors, missing).toContain(missing);
+        expect(result.errors, missing).toContain("steps 4 to 7 cannot run again");
         expect(await treeHash(root), missing).toBe(before);
       });
     }
@@ -2274,6 +2238,99 @@ describe("migration steps 1 to 4", () => {
       expect(lines.some((line) => line >= 8 && line <= 12)).toBe(true);
       expect(refused.errors).toMatch(/index table row, a heading section or both/);
       expect(refused.errors).toMatch(/equal values/);
+      expect(await treeHash(root)).toBe(before);
+    });
+  });
+});
+
+describe("migration step 7 deletes a pack only whole", () => {
+  /** A pack whose one story, criterion, example, test case and rule step 4 and step 7 all place. */
+  async function putPlacedPack(root: string): Promise<void> {
+    await put(
+      root,
+      "qfai.config.yaml",
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(root, `${PACK_DIR}/01_Spec.md`, "# Spec\n\n- Status: active\n");
+    await put(
+      root,
+      `${PACK_DIR}/02_User-stories.md`,
+      "# Stories\n\n## US-0001-0001: Place order\n\nAs a buyer, I want to order, so that the cart is bought.\n",
+    );
+    await put(
+      root,
+      `${PACK_DIR}/03_Acceptance-Criteria.md`,
+      "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place an order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+    );
+    await put(
+      root,
+      `${PACK_DIR}/04_Business-Rules.md`,
+      "# Rules\n\n| BR-ID | Rule | Contract-Refs |\n| --- | --- | --- |\n| BR-0001-0001 | Orders have an item. | CON-API-0001 |\n",
+    );
+    await put(
+      root,
+      `${PACK_DIR}/05_Examples.md`,
+      "# Examples\n\n| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | one item | accepted |\n",
+    );
+    await put(
+      root,
+      `${PACK_DIR}/06_Test-Cases.md`,
+      "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | submit | accepted |\n",
+    );
+    await put(
+      root,
+      `.qfai/spec/03_contract/${CONTRACT}`,
+      "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
+    );
+    await put(
+      root,
+      PLAN_FILE,
+      `flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: ${CONTRACT}\n`,
+    );
+  }
+
+  it("keeps a placed pack that holds a file no step reads, and names the file", async () => {
+    await withProject(async (root) => {
+      await putPlacedPack(root);
+      await put(root, `${PACK_DIR}/notes.md`, "Our notes.\n");
+      expect((await run(step04, await context(root))).code).toBe(3);
+      const kept = await run(step07, await context(root));
+      expect(kept.code, kept.errors).toBe(3);
+      expect(kept.output).toContain(
+        `${PACK_DIR}: every part of the pack is placed, but it also holds notes.md, which no step reads`,
+      );
+      for (const name of [
+        "01_Spec.md",
+        "02_User-stories.md",
+        "05_Examples.md",
+        "06_Test-Cases.md",
+      ]) {
+        expect(await readFile(path.join(root, PACK_DIR, name), "utf8"), name).not.toBe("");
+      }
+      await rm(path.join(root, PACK_DIR, "notes.md"));
+      const deleted = await run(step07, await context(root));
+      expect(deleted.code, deleted.errors).toBe(0);
+      expect(deleted.output).toContain(`${PACK_DIR}: remove empty directory`);
+      await expect(readdir(path.join(root, PACK_DIR))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
+  it("refuses a step 4 rerun after step 7, telling the person to restore the packs and start again", async () => {
+    // A decision of this release builds nothing for a partly migrated tree, so a rerun
+    // of step 4 once step 7 has removed what it moved is refused with the way back.
+    await withProject(async (root) => {
+      await putPlacedPack(root);
+      await put(root, `${PACK_DIR}/notes.md`, "Our notes.\n");
+      expect((await run(step04, await context(root))).code).toBe(3);
+      expect((await run(step07, await context(root))).code).toBe(3);
+      const before = await treeHash(root);
+      const rerun = await run(step04, await context(root));
+      expect(rerun.code).toBe(2);
+      expect(rerun.errors).toContain("BR-0001-0001 names no rule a spec pack holds");
+      expect(rerun.errors).toContain("steps 4 to 7 cannot run again");
+      expect(rerun.errors).toContain(
+        "restore the spec packs from git history and run the migration again from step 1",
+      );
       expect(await treeHash(root)).toBe(before);
     });
   });

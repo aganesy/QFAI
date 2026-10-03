@@ -392,15 +392,22 @@ async function contestedOverlays(root: string): Promise<string[]> {
   return contested;
 }
 
+/** The item for a destination step 3 leaves as it is because it exists and differs. */
+function notWritten(target: string): string {
+  return `${target}: the file already exists, so step 3 did not write it; carry what its sources state by hand`;
+}
+
 /**
  * Puts the new `contracts.md` among the documents step 3 writes, and returns what
- * a person carries by hand. An existing file that differs is left as it is.
+ * a person carries by hand. An existing file that differs is left as it is and
+ * added to `refused`.
  */
 async function writeContractIndex(
   context: MigrationContext,
   old: { source: string; content: string; target: string },
   contracts: ContractPlan,
   documents: Map<string, string>,
+  refused: Set<string>,
 ): Promise<string[]> {
   const index = renderContractIndex({
     source: old.content,
@@ -412,10 +419,10 @@ async function writeContractIndex(
   });
   const absolute = path.join(context.root, old.target);
   if (!(await exists(absolute))) documents.set(old.target, index.content);
-  else if ((await readInput(absolute)) !== index.content)
-    index.forAPerson.push(
-      `${old.target}: the file already exists, so step 3 did not write it; carry its sources by hand from git history`,
-    );
+  else if ((await readInput(absolute)) !== index.content) {
+    refused.add(old.target);
+    index.forAPerson.push(notWritten(old.target));
+  }
   return index.forAPerson;
 }
 
@@ -452,6 +459,10 @@ export const step03: MigrationStep = {
     const forAPerson: string[] = [...contracts.forAPerson];
     const identifiers: string[] = [];
     const documents = new Map<string, string>();
+    // Each source and the destinations its content goes to. A source is deleted only
+    // once every one of them is written; one that exists and differs keeps it.
+    const routedTo = new Map<string, Set<string>>();
+    const refused = new Set<string>();
     let surfacePaths: string[] | undefined;
     const policies = relative(context.root, path.join(context.specsDir, "_policies"));
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
@@ -470,13 +481,14 @@ export const step03: MigrationStep = {
       if (!(await exists(absolute))) continue;
       const content = await readInput(absolute);
       const { preamble, sections } = sectionParts(content);
-      const retire: MigrationOperation = { kind: "remove", target: source, description: "delete" };
+      const targets = new Set<string>();
+      routedTo.set(source, targets);
       if (source.endsWith("/structure.md")) {
         const routed = await routeStructure(context, { source, preamble, sections }, draftFor);
         forAPerson.push(...routed.forAPerson);
         surfacePaths = routed.surfacePaths;
         if (routed.skeletonLines.length > 0) addTechCommands(draftFor(tech), routed.skeletonLines);
-        operations.push(retire);
+        if (drafts.has(tech)) targets.add(tech);
         continue;
       }
       const fallback = route(source, "", context);
@@ -487,11 +499,13 @@ export const step03: MigrationStep = {
             { source, content, target: fallback },
             contracts,
             documents,
+            refused,
           )),
         );
-        operations.push(retire);
+        targets.add(fallback);
         continue;
       }
+      targets.add(fallback);
       if (shaped(fallback)) {
         draftFor(fallback);
         const h1 = parseHeadings(content).find((item) => item.level === 1);
@@ -517,6 +531,7 @@ export const step03: MigrationStep = {
       }
       for (const section of sections) {
         const target = route(source, section.heading, context);
+        targets.add(target);
         if (shaped(target)) {
           const move = target === tech ? moveTechSection : movePolicySection;
           forAPerson.push(...move(draftFor(target), { ...section, source }));
@@ -530,7 +545,6 @@ export const step03: MigrationStep = {
           appendSection(documents.get(target) ?? "", section.heading, section.body),
         );
       }
-      operations.push(retire);
     }
     for (const [target, draft] of drafts) {
       if (isPolicyDocument(target) && path.posix.basename(target) === "constraint.md")
@@ -539,10 +553,22 @@ export const step03: MigrationStep = {
         target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);
       if (!(await exists(absolute))) documents.set(target, content);
-      else if ((await readInput(absolute)) !== content)
-        forAPerson.push(
-          `${target}: the file already exists, so step 3 did not write it; carry its sources by hand from git history`,
-        );
+      else if ((await readInput(absolute)) !== content) {
+        refused.add(target);
+        forAPerson.push(notWritten(target));
+      }
+    }
+    const keptSources = new Set<string>();
+    for (const [source, targets] of routedTo) {
+      const blocked = [...targets].filter((target) => refused.has(target));
+      if (blocked.length === 0) {
+        operations.push({ kind: "remove", target: source, description: "delete" });
+        continue;
+      }
+      keptSources.add(source);
+      forAPerson.push(
+        `${source}: kept, since ${blocked.join(" and ")} was not written; delete it once what it states is carried by hand`,
+      );
     }
 
     const sliceSource = `${policies}/11_Slice-Policy.md`;
@@ -568,6 +594,10 @@ export const step03: MigrationStep = {
           operations.some((operation) => operation.kind === "remove" && operation.target === source)
         )
           continue;
+        if (keptSources.has(source)) {
+          kept = true;
+          continue;
+        }
         if (entry.isSymbolicLink())
           throw new MigrationInputError(`Migration input is a symbolic link: ${source}`);
         if (entry.name.endsWith(".local.md") && entry.isFile()) {

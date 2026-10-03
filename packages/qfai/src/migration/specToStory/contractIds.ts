@@ -49,8 +49,6 @@ const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
 export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+(?!-?\w)/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
 const FILE_LIMIT = 200_000;
-/** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */
-
 /**
  * Why step 3 writes no contract from a file under the contracts directory, or
  * null when the file is a contract. `relative` is posix.
@@ -280,7 +278,7 @@ function contractTitle(text: string, relative: string): string {
 /**
  * Step 3's contract work: the contract map, read back when an earlier run wrote
  * it, for each 1.x contract still at its old path the write of its renamed
- * copy and the removal of the old file, and the archiving of every file that is
+ * copy and the removal of the old file, and the deletion of every file that is
  * no contract.
  */
 export async function planContracts(context: MigrationContext): Promise<ContractPlan> {

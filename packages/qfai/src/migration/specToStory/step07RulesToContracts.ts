@@ -20,6 +20,7 @@ import {
 } from "./harness.js";
 import {
   assertUnchangedPlacements,
+  goneAfterStep7,
   PACK_FILES,
   readMigrationPlan,
   readOldPack,
@@ -446,20 +447,8 @@ export const step07: MigrationStep = {
       if (changes.some((change) => change.kind === "remove")) removedRuleFiles.add(source);
       sourceChanges.push(...changes);
     }
-    // A mark of a pack step 7 has deleted names a rule no pack holds any longer; the
-    // ID map still holds that pack.
-    // SIMPLIFIED: a mark of a pack still present is checked against the rules it holds
-    // now, so a rerun refuses a mark whose rule an earlier run removed from it.
-    // Lift when: such a rerun has to pass, and something records which rules step 7 removed.
-    const presentPacks = new Set(sourceFiles.map((file) => path.basename(path.dirname(file))));
-    const unmatched = plan.marks.find((mark) => {
-      if (seenRules.has(mark.id)) return false;
-      const pack = `spec-${mark.id.slice("BR-".length, "BR-".length + 4)}`;
-      return presentPacks.has(pack) || map.ids[pack] === undefined;
-    });
-    if (unmatched) {
-      throw new MigrationInputError(`plan.yaml: ${unmatched.id} names no rule of its pack`);
-    }
+    const unmatched = plan.marks.find((mark) => !seenRules.has(mark.id));
+    if (unmatched) throw goneAfterStep7(unmatched.id, "rule");
     const operations: MigrationOperation[] = [];
     for (const [target, rules] of groups) {
       const original = await readMigrationInput(target);
@@ -491,25 +480,29 @@ export const step07: MigrationStep = {
         if (!pack.retired) activePacksLeft += 1;
         continue;
       }
-      // Every part of the pack has a destination, so its files go, and the
-      // directory with them unless it holds a file no step reads.
-      const deleted = new Set<string>(["04_Business-Rules.md"]);
+      // Every part of the pack has a destination, so the pack goes whole. A file no
+      // step reads keeps all of it, so the pack is never left half deleted.
+      const others = (await listEntries(packDir)).filter(
+        (entry) => !(PACK_FILES as readonly string[]).includes(entry),
+      );
+      if (others.length > 0) {
+        forAPerson.push(
+          `${repositoryRelative(context.root, packDir)}: every part of the pack is placed, but it also holds ${others.join(", ")}, which no step reads; move or delete that, then run step 7 again to delete the pack`,
+        );
+        if (!pack.retired) activePacksLeft += 1;
+        continue;
+      }
       for (const name of PACK_FILES.filter((name) => name !== "04_Business-Rules.md")) {
         operations.push({
           kind: "remove",
           target: repositoryRelative(context.root, path.join(packDir, name)),
           description: "delete: every part has moved",
         });
-        deleted.add(name);
       }
-      if ((await listEntries(packDir)).every((entry) => deleted.has(entry))) {
-        operations.push({
-          kind: "remove-empty-directory",
-          target: repositoryRelative(context.root, packDir),
-        });
-      } else if (!pack.retired) {
-        activePacksLeft += 1;
-      }
+      operations.push({
+        kind: "remove-empty-directory",
+        target: repositoryRelative(context.root, packDir),
+      });
     }
     if (activePacksLeft === 0) operations.push(...(await policyRemainder(context)));
     return { operations, forAPerson };
