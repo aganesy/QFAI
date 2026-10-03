@@ -61,7 +61,9 @@ Questions to the user follow
 ### Reviewer Gate
 
 The one review after the last step checks what the `Review` section of each
-step that ran names.
+step that ran names. It also checks for code written only to pass a test:
+no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
+(`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
 ## Completion
 
