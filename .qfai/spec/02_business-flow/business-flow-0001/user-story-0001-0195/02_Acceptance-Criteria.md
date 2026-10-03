@@ -18,7 +18,7 @@ Feature: A stage skill picked up by free text hands over
     Given a stage skill invoked by name
     When it runs
     Then it runs standalone and ends at that stage, starting no other stage
-    And a request to take the work to the end becomes a whole run
+    And a request to take the work to the end is handed to `qfai-run`, which plans the whole route
 
   # AC-0001-0195-04
   Scenario: Each stage-skill description opens with its trigger condition
@@ -50,6 +50,6 @@ Feature: A stage skill picked up by free text hands over
     When it runs
     Then it runs its listed steps one at a time, in order, skipping only a step whose skip condition holds
     And it reads each step's `STEP.md` only when that step starts
-    And after its last step it runs one review, whose reviewers are the union of the reviewers of the steps it ran
+    And after its last step it runs one review: the specification review for qfai-sdd and qfai-discussion, the code review for a skill that changed code, tests or a change note, and none for qfai-triage or for a qfai-verify run that wrote nothing
     And no review runs between two of its steps
 ```

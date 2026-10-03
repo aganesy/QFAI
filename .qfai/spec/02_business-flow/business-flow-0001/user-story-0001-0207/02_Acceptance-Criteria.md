@@ -3,13 +3,13 @@
 ## Criteria
 
 ```gherkin
-Feature: Run `/qfai-sdd` as a stage of a run
+Feature: Run `/qfai-sdd` as a scoped stage
   # AC-0001-0207-02
   Scenario: Invoked by name, /qfai-sdd runs standalone
     Given the operator invokes /qfai-sdd by name
     When SDD completes
-    Then the skill stops and creates no run
-    And a request to go to the end is handed to a whole run
+    Then the skill stops at SDD
+    And a request to go to the end is handed to qfai-run, which plans the whole route
 
   # AC-0001-0207-04
   Scenario: /qfai-sdd lists the steps the plans run for story authoring

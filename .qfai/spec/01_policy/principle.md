@@ -10,7 +10,7 @@
 
 - Every active obligation has one authoritative home in the story tree or an enforcing contract. A linked document cites that home instead of restating it.
 - A validation result proves only the scope and revision it actually checked. A partial profile does not establish repository-wide completion.
-- Test annotations require executed behavior and an observable assertion. A placeholder or annotation alone is not coverage.
+- Test annotations require executed behavior and an observable assertion. A placeholder or annotation alone is not coverage, except an acceptance test `qfai atdd scaffold` wrote: it passes with an empty body and raises no finding until the `write-acceptance-tests` route writes its assertions.
 - Independent reviewers report PASS or REVISE against current evidence. Authors do not certify their own work.
 - The package ships its own source and assets; this repository does not install itself as a dependency.
 - Sources: `.qfai/assistant/rule/test-layers.md`, `.qfai/assistant/rule/review-convergence.md`, `.agents/rules/minimal-implementation.md`, and `scripts/check-not-a-dependency.mjs`.
