@@ -63,7 +63,8 @@ function levelTwoHeadings(markdown: string): string[] {
   for (const line of markdown.split(/\r?\n/)) {
     const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
     if (fence !== undefined) {
-      if (marker !== undefined && marker[0] === fence[0] && marker.length >= fence.length) {
+      const closing = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line)?.[1];
+      if (closing !== undefined && closing[0] === fence[0] && closing.length >= fence.length) {
         fence = undefined;
       }
       continue;

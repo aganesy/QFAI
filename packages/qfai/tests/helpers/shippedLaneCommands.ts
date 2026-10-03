@@ -1379,7 +1379,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // The generated rule list cites action-reversibility, untrusted-content and ai-readable-markdown.
     // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "637dbaa5115fe04e60ed6c619a1665530de7980e23cdfeb5bc417eb6452eb369",
+    "d964d3cd88b70de571eaf06256ac6d2cdaf351c9ccedd8cd12a249f3e810feb9",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
