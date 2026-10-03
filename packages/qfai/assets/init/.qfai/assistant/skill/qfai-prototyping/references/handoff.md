@@ -17,7 +17,10 @@ reads this as a read-only artifact.
 
 ### `.qfai/prototype/final/handoff.json`
 
-Write a JSON object with exactly these three keys:
+Write a record of the canonical handoff schema, CLI-HANDOFF. Its fields are
+`companyName`, `primaryUiContract`, `startDate`, `signature`, `entryPattern`
+and `productScope`, each an optional string, and a record may carry further
+keys. The prototyping handoff carries three of its own:
 
 ```json
 {
@@ -67,8 +70,10 @@ design system's default, which has already answered each one and answers
 them consistently with each other
 (`.qfai/assistant/rule/ui-procurement.md`).
 
-No `qfai` command reads or checks the handoff. `/qfai-implement` and the
-reviewers read it in the same checkout.
+`/qfai-implement` and the reviewers read it as a CLI-HANDOFF record in the
+same checkout. `qfai validate --profile saas-package` requires it to be present
+and to conform, and reports `D-SAAS-PACKAGE-HANDOFF-SCHEMA` naming the file
+otherwise; no other command reads it.
 
 ## Checking an implementation's tokens
 

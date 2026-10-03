@@ -30,7 +30,7 @@ Runs only after the user confirmed the prototype in `prototyping-loop`.
 
 - `.qfai/prototype/final/index.html` — a copy, not a symlink, of the confirmed
   iteration.
-- `.qfai/prototype/final/handoff.json`.
+- `.qfai/prototype/final/handoff.json`, a CLI-HANDOFF record.
 
 ## Procedure
 
@@ -40,7 +40,8 @@ Runs only after the user confirmed the prototype in `prototyping-loop`.
 
 ## Gate
 
-The step passes when both files exist. No command checks them.
+The step passes when both files exist. Only `qfai validate --profile
+saas-package` checks the handoff record; nothing certifies the prototype.
 
 The completion report names:
 

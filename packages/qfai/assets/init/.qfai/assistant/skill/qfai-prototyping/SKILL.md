@@ -42,8 +42,10 @@ no `prototyping` command group, and no command or check certifies the result:
 prototyping completes when the user confirms the prototype.
 
 Every file the loop writes stays under `.qfai/prototype/`: the session record,
-each iteration and its reviews, and the handoff. No `qfai` command reads or
-writes that directory.
+each iteration and its reviews, and the handoff. No `qfai` command writes
+there. The one file a command reads is the handoff record
+`.qfai/prototype/final/handoff.json`, which
+`qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.
 
 ## Inputs Priority
 
@@ -109,4 +111,4 @@ out. Under a no-question mode, list them in the report instead.
 project_memory:
 
 - Prototyping completes on the user's confirmation; no command certifies it.
-- Every file the loop writes is under `.qfai/prototype/`, and no `qfai` command reads it.
+- Every file the loop writes is under `.qfai/prototype/`; a `qfai` command reads only `final/handoff.json`.

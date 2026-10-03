@@ -122,7 +122,9 @@ describe.each(TREES)("%s", (tree) => {
   it("keeps every file the loop writes under .qfai/prototype", async () => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
     expect(skill).toContain("Every file the loop writes stays under `.qfai/prototype/`");
-    expect(skill).toContain("No `qfai` command reads or writes that directory.");
+    expect(skill).toContain(
+      "No `qfai` command writes there. The one file a command reads is the handoff record `.qfai/prototype/final/handoff.json`, which `qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.",
+    );
 
     for (const step of ["prototyping-grill", "prototyping-loop", "prototyping-handoff"]) {
       const writes = section(await read(tree, `step/${step}/STEP.md`), "Writes");
@@ -269,6 +271,21 @@ describe.each(TREES)("%s", (tree) => {
     expect(loop).toContain(
       "Each payload is checked against the closed schema before it is written, and one that does not conform is written again.",
     );
+  });
+
+  // QFAI:AC-0001-0095-01
+  // QFAI:EX-0001-0095-01
+  it("writes the handoff as a CLI-HANDOFF record with the prototyping extension fields", async () => {
+    const handoff = flat(await read(tree, "skill/qfai-prototyping/references/handoff.md"));
+    const rule = flat(await read(tree, "rule/ui-definition-protocol.md"));
+    expect(handoff).toContain("Write a record of the canonical handoff schema, CLI-HANDOFF.");
+    expect(handoff).toContain("The prototyping handoff carries three of its own:");
+    for (const field of ["finalArtifact", "procurement", "implementationNotes"]) {
+      expect(handoff).toContain(`"${field}":`);
+    }
+    expect(handoff).not.toMatch(/mustPreserve|mayAdapt|mustNotCopy/);
+    expect(rule).toContain("`.qfai/prototype/final/handoff.json`");
+    expect(rule).toContain("root `DESIGN.md`");
   });
 
   // QFAI:AC-0001-0114-01
