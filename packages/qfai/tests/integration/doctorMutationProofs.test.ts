@@ -112,30 +112,41 @@ describe("mutation-proof target file boundary", () => {
 describe("mutation-proof diagnostic display boundary", () => {
   it("escapes a test filename's newline while retaining the raw structured path", async () => {
     const root = await project(WITH_PROOF);
-    const { config } = await loadConfig(root);
     scan.displayTestPath = path.join(root, "tests", "unit", "total\n[ok] forged.test.ts");
     await rm(path.join(root, "src", "total.ts"));
-    const check = await checkMutationProofs(root, config);
-    if (!check) throw new Error("a missing mutation target must produce a check");
+    const check = await mutationProofs(root);
+    if (!check?.details)
+      throw new Error("a missing mutation target must produce a diagnostic check");
     expect(check.message).not.toContain("\n");
     expect(check.message).toContain("total\\x0a[ok] forged.test.ts:4");
-    expect(check.details.stale[0]?.test).toBe("tests/unit/total\n[ok] forged.test.ts");
+    expect(check.details).toEqual({
+      stale: [
+        {
+          test: "tests/unit/total\n[ok] forged.test.ts",
+          line: 4,
+          target: "src/total.ts",
+          original: "a + b",
+        },
+      ],
+    });
   });
 
   it("escapes a target's terminal sequence while retaining its raw structured path", async () => {
     const target = "src/\u001b[2Jmissing.ts";
     const root = await project(WITH_PROOF.replace("src/total.ts", target));
-    const { config } = await loadConfig(root);
     scan.targetPath = path.resolve(root, target);
     scan.targetFault = Object.assign(new Error("proof target is missing"), {
       code: "ENOENT",
       path: scan.targetPath,
     });
-    const check = await checkMutationProofs(root, config);
-    if (!check) throw new Error("a missing mutation target must produce a check");
+    const check = await mutationProofs(root);
+    if (!check?.details)
+      throw new Error("a missing mutation target must produce a diagnostic check");
     expect(check.message).not.toContain("\u001b");
     expect(check.message).toContain("src/\\x1b[2Jmissing.ts");
-    expect(check.details.stale[0]?.target).toBe(target);
+    expect(check.details).toEqual({
+      stale: [{ test: "tests/unit/total.test.ts", line: 4, target, original: "a + b" }],
+    });
   });
 });
 
