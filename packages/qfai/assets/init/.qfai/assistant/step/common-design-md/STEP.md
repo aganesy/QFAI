@@ -26,7 +26,7 @@ for it.
   `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#where-the-answers-come-from`
   lists it: `01_Context.md#Design Direction`, the reference registries in
   `04_Sources.md`, and the `uiux/` sidecars. For an imported tree, the surface
-  recorded in the import-lite evidence.
+  the import source names, or the user's answer.
 - The schema and validation rules:
   `.qfai/assistant/skill/qfai-prototyping/references/design-md-spec.md`.
 - The archetype catalog:
@@ -82,7 +82,7 @@ no issue. The pass names the surface set and the validation result.
 ## Writes
 
 - Root `DESIGN.md`, only when it was missing.
-- In the stage evidence: the source of each brand field and the validation
+- In the stage report: the source of each brand field and the validation
   result.
 
 ## Gate

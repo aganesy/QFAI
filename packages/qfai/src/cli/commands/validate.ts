@@ -443,9 +443,8 @@ export const GATE_GROUP_FAMILIES = {
     "W-STALE-REFERENCE",
     "I-ASSISTANT-LAYER-UNSEEDED",
   ],
-  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*", "R-REJECTED-READOPT"],
+  "reviewer-gate-sdd": ["R-AUTOPILOT-POLICY-*"],
   "reviewer-gate-shared": ["R-MOCK-HREF-DRIFT"],
-  "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -467,7 +466,6 @@ export const GATE_GROUP_FAMILIES = {
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
-  "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
     "QFAI-DT-*",
     "QFAI-MOCK-*",
@@ -519,13 +517,7 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: FULL_GATE_GROUPS,
   verify: FULL_GATE_GROUPS,
-  discussion: [
-    "discussion",
-    "research-summary",
-    "canonical-uix",
-    "review-artifacts",
-    "root-design-md-parse",
-  ],
+  discussion: ["discussion", "research-summary", "canonical-uix", "root-design-md-parse"],
   sdd: [
     "story-structure",
     "document-schema",
@@ -533,13 +525,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "design-contract-readiness",
     "sdd",
     "reviewer-gate-sdd",
-    "reviewer-gate-shared",
-    "reviewer-justification-only",
     "contracts",
     "ui-screen-entries",
     "contract-parse",
     "package-self-governance",
-    "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
   atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
@@ -982,11 +971,11 @@ export function gitHubLevel(issue: Issue): GitHubLevel {
   return issue.severity === "warning" ? "warning" : "notice";
 }
 
-function emitGitHub(issue: Issue, failOn: FailOn): void {
+/** One issue as a GitHub workflow command on stdout. */
+export function emitGitHub(issue: Issue, failOn: FailOn): void {
   const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
-  // ones. `issue.file` can come from a finding the reviewer gate
-  // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
+  // ones. `issue.file` can name a path a pull request chose — so a
   // `file` of `x\n::stop-commands::token` split this line in two and let a fork's pull
   // request inject a workflow command, suppressing or forging every annotation after it.
   //
@@ -1198,15 +1187,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
-  "QFAI-REVIEW-001":
-    "Root `.gitignore` contains QFAI managed entries or legacy `.qfai/review/.gitignore` exists.",
-  "QFAI-REVIEW-002":
-    "At least one review pack directory exists under `.qfai/review/review-<timestamp>/`.",
-  "QFAI-REVIEW-003": "Each review pack contains `review_request.md`.",
-  "QFAI-REVIEW-004": "Each review pack contains `summary.json`.",
-  "QFAI-REVIEW-005": "Each review pack contains one or more reviewer files (`Rxx_*.md`).",
-  "QFAI-REVIEW-006": "Each review summary JSON is parseable.",
-  "QFAI-REVIEW-007": "Each review summary satisfies the minimum schema.",
+  "QFAI-HYG-003":
+    "The root `.gitignore` carries every recommended QFAI ignore entry, the root `tmp/` included.",
   "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",

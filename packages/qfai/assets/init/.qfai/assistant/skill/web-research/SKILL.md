@@ -177,7 +177,7 @@ Every pipeline execution produces a session log with **6 mandatory fields**:
 | `sources`    | List of fetched URLs with status codes  |
 | `citations`  | Final citation entries                  |
 
-Session logs are stored under `.qfai/evidence/web-research/`.
+The session log is part of the research report, not a file of its own.
 
 ## 5. Evaluation Metrics
 
@@ -305,7 +305,7 @@ evaluation. Each golden task is scored against 4 metrics:
 - **Freshness** — recency of cited sources.
 - **Security hygiene** — sanitization pass rate.
 
-Golden task results are stored under `.qfai/evidence/web-research/golden/`.
+Golden task results are reported with the evaluation run.
 
 ## Completion Contract (Shared)
 

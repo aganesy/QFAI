@@ -2,7 +2,7 @@
 name: verify-context
 owner: qfai-verify
 purpose: "Load what the change is verified against, fix the run's scope, and give every gate in that scope a command."
-requires: [common-steering-refresh, common-evidence-record, common-grilling-record]
+requires: [common-steering-refresh, common-grilling-record]
 roles: [orchestrator, delivery-planner, qa-strategist]
 ---
 
@@ -36,8 +36,7 @@ contracts and evidence only.
 
 ## Writes
 
-- `.qfai/evidence/verify-<run-id>.md`, opened as `common-evidence-record`
-  says where `verify-change-note` has not opened it already: the Objective with the declared scope, the inputs reviewed, and this
+- In the stage report: the declared scope, the inputs reviewed, and this
   invocation's `## Grilling Session` block.
 - Gate commands found here, in
   `.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`.
@@ -47,7 +46,7 @@ contracts and evidence only.
 1. Refresh the steering as `common-steering-refresh` says.
 2. Write the plan, or delegate it (below), and read the inputs.
 3. Analyse the project (below).
-4. Fix the scope (below) and write it into the evidence Objective.
+4. Fix the scope (below) and state it in the stage report.
 5. Hold the preflight session (below).
 6. Give each gate in scope a command (below).
 
@@ -133,8 +132,7 @@ recommendation.
   input must change, `.qfai/assistant/rule/drift-protocol.md` governs. Where it
   concludes the obstacle is this run's to solve, the run solves it.
 
-Record both as `common-grilling-record` says, in
-`.qfai/evidence/verify-<run-id>.md`, under the heading
+Record both as `common-grilling-record` says, under the heading
 `### /qfai-verify — run started <time>`. The preflight session's `Subject` is
 `preflight`. `Work resumed` is the first gate result after the preflight
 session, and the first edit after a detected one.
@@ -158,8 +156,8 @@ and still missing.
 The step is done when:
 
 - the inputs are read and the discussion pack is not among them;
-- the scope is fixed, matches its profile and is written in the evidence
-  Objective;
+- the scope is fixed, matches its profile and is stated in the stage
+  report;
 - every input the scope needs is resolved;
 - the preflight is recorded as a session or as `confidence high`;
 - every gate in scope has a command in `tech.md`, or is named as UNRUN with

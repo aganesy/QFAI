@@ -447,7 +447,7 @@ describe("the lane profile", () => {
 describe("script resolution through the helper", () => {
   it("keeps workflow hygiene ahead of every independent lane", () => {
     expect(rootScripts()["ci:lint"]).toBe(
-      "node ./scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene && bash ./scripts/run-lint-checks.sh",
+      "node ./scripts/check-workflow-hygiene.mjs && bash ./scripts/run-lint-checks.sh",
     );
     const bodies = invokedScriptBodies("pnpm ci:lint", root);
     for (const key of [

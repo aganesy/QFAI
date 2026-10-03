@@ -184,13 +184,7 @@ describe("issue code uniqueness", () => {
 // `suggested_action` is passed on only some of their call sites — every one of
 // those was invisible to an earlier cut of the helper, so the lists were
 // re-baselined each time to name the codes that hole had been hiding.
-//
-// `R-PACK-LOCATION-DRIFT` stays off the lists because it never belonged: it is a
-// `JustificationCatalogEntry` descriptor, not an emission. It does reach
-// `validate`, but only through `validateReviewerJustification` re-emitting a
-// code it read out of a reviewer report, a data-driven path no static census
-// can see; `R-REJECTED-READOPT` reaches it the same way and has never been
-// listed here either.
+
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
@@ -341,11 +335,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-RESEARCH-009",
   "QFAI-RESEARCH-010",
   "QFAI-RESEARCH-011",
-  "QFAI-REVIEW-003",
-  "QFAI-REVIEW-004",
-  "QFAI-REVIEW-005",
-  "QFAI-REVIEW-006",
-  "QFAI-REVIEW-007",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
   "QFAI-TRACE-118",
@@ -625,9 +614,6 @@ describe("the form of a finding code", () => {
     "QFAI-RESEARCH-009",
     "QFAI-RESEARCH-010",
     "QFAI-RESEARCH-011",
-    "QFAI-REVIEW-008",
-    "QFAI-REVIEW-009",
-    "QFAI-REVIEW-010",
     "QFAI-SKILLS-010",
     "QFAI-SKILLS-011",
     "QFAI-SKILLS-012",

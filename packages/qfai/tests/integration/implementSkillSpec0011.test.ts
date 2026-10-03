@@ -34,7 +34,7 @@ describe("implement skill flow and example contract", () => {
 
   it("requires current evidence, independent reviewers and a final flow gate", async () => {
     const content = await readImplementFlowSteps(assistantDir);
-    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("The stage report gives each example its own");
     expect(content).toContain("### EX-NNNN-NNNN-NN");
     expect(content).toContain("The author does not certify their own result");
     expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");

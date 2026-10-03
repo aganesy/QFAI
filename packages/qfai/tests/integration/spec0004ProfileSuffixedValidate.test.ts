@@ -1,7 +1,6 @@
 /**
  * Integration: spec-0004 CHG-005 — Profile-suffixed validate output +
- * SSOT-sync pair-changed CI lane + Reviewer-Gate justification
- * ingestion gate.
+ * SSOT-sync pair-changed CI lane.
  *
  * Covers TC-0004-0055..0066.
  */
@@ -10,8 +9,6 @@
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0002-0010-02
-// QFAI:EX-0001-0048-01
-// QFAI:EX-0001-0048-01
 
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";

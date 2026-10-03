@@ -351,7 +351,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          0b03c5bc80ed75679afa1da6e55aefd2eae783f143783315575e4f9d15139f2f  .github/pinned-bytes.txt
+          8f94aeecdccbe6335709c72954c4873579f2217fee8e5a914f70732f63d15e96  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -681,76 +681,9 @@ jobs:
       - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
 
-      # ── The hygiene lane's findings, where the Reviewer Gate can read them ──────────
-      # The gate ingests `{ findings: [...] }` JSON under `.qfai/review/**`, and the lane
-      # writes it — but the lane runs in `lint`, on that job's own checkout, and the
-      # dogfooding validate below runs HERE on a fresh one. Review finding [26]: with the
-      # artifact confined to another job's workspace and nothing transferring it, a hygiene
-      # violation reddened `lint` and never once reached the Reviewer Gate the
-      # shipped-workflows contract promises it reaches.
-      #
-      # Re-run rather than uploaded and downloaded between jobs. The lane parses a handful of
-      # YAML files — it is a second or two — and an artifact round trip would need `build` to
-      # wait on `lint`, serialising two lanes that run in parallel today. Producing the
-      # evidence beside the consumer also removes the transfer as a thing that can silently
-      # stop working.
-      #
-      # The lane's exit code is deliberately NOT propagated. `lint` is the job that fails on a
-      # hygiene violation, and it does; this step's job is to leave the findings where the gate
-      # looks, which it must do for a DIRTY tree above all. Failing here would abort before the
-      # validate steps that read them, so the finding would once again reach no reviewer.
-      #
-      # `|| status=$?` and not `set -uo pipefail` plus a bare call. GitHub runs `shell: bash` as
-      # `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the INVOCATION and `set -uo`
-      # does not remove it — the first version of this step aborted on the lane's non-zero exit
-      # before `status=$?` ever ran, which is precisely the abort the comment above says must not
-      # happen. Making the call part of an `||` list is what suspends `-e` for it.
-      #
-      # A MISSING artifact is fatal, though, and that asymmetry is the point: the lane failing means
-      # a violation the gate should now see, while no artifact at all means the bridge did not run —
-      # and a silent bridge is the defect this step exists to remove.
-      - name: Write the hygiene lane's findings for the Reviewer Gate
-        shell: bash
-        run: |
-          set -uo pipefail
-          artifact=".qfai/review/workflow-hygiene/workflow-hygiene.json"
-          status=0
-          node scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene || status=$?
-          if [ ! -s "$artifact" ]; then
-            echo "::error::the hygiene lane wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than a clean tree"
-            exit 1
-          fi
-          echo "hygiene findings at ${artifact}; lane exit ${status} (the lint job is what fails on a violation)"
-
-      # ── The shape gate's findings, for the same reason and in the same place ───────
-      # `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in the gate's deferred-registration set beside
-      # `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. Review finding [38]:
-      # the shape lane grew a producer, but it runs inside `lint:workflow-shape` — the `lint`
-      # job's checkout — and the bridge above re-runs only the hygiene lane. So shape drift wrote
-      # its artifact where nothing reads it, and the three self-validates below found no shape
-      # findings on this job's fresh checkout. Half the exemption still reached no reviewer.
-      #
-      # Re-run rather than transferred between jobs, for the same reasons as the hygiene bridge:
-      # an artifact round trip would make `build` wait on `lint`, serialising two lanes that run
-      # in parallel today, and producing the evidence beside the consumer removes the transfer as
-      # a thing that can silently stop working.
-      #
-      # The gate writes its artifact BEFORE it asserts, so a drifted tree produces findings here
-      # and then a non-zero exit — which is suspended by the `||` for the same reason as above,
-      # and for the same reason a missing artifact is fatal instead.
-      - name: Write the shape gate's findings for the Reviewer Gate
-        shell: bash
-        run: |
-          set -uo pipefail
-          artifact=".qfai/review/shipped-workflow-shape/shipped-workflow-shape.json"
-          status=0
-          pnpm -C packages/qfai lint:workflow-shape || status=$?
-          if [ ! -s "$artifact" ]; then
-            echo "::error::the shape gate wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than an accepted shape"
-            exit 1
-          fi
-          echo "shape findings at ${artifact}; lane exit ${status} (the lint job is what fails on drift)"
-
+      # SHIPPED-CI: not-applicable
+      # Because: the steps removed here wrote lint findings for a reviewer-report check that
+      # only this repository's validate ran; the shipped workflows never carried them.
       - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
         run: |

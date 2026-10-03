@@ -96,12 +96,12 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
 
 ## Storage
 
-- `research_summary` goes to the invoking stage's own evidence when it is
+- `research_summary` goes to the invoking stage's own report when it is
   produced, and is carried into the artifact that consumes it when that artifact
   is authored. For `/qfai-discussion` that artifact is the pack's
   `04_Sources.md`, under its `## Research Summary` section.
-- The evidence first, because a stage may hold authoring until something
+- The report first, because a stage may hold authoring until something
   authorizes it. Writing the summary straight into the artifact creates the
   artifact, and a run cancelled before that authorization leaves it behind as
   the newest of its kind — which is what every later reader then picks up.
-- Not persisted globally. The evidence belongs to the run that produced it.
+- Not persisted globally. The report belongs to the run that produced it.

@@ -167,16 +167,6 @@ export type QfaiPrototypingConfig = {
   primaryUiContract?: string;
 };
 
-export type QfaiReviewConfig = {
-  /**
-   * Stale review-pack TTL (calendar days) used by `qfai doctor --clean`
-   * to decide whether to move `.qfai/review/<ts>/` packs into
-   * `.qfai/review/_archive/<ts>/`. Default (when unset) is applied at
-   * the call-site by `REVIEW_STALE_TTL_DAYS_DEFAULT`.
-   */
-  staleTtlDays?: number;
-};
-
 export type QfaiReportConfig = {
   /**
    * Stale run-log TTL (calendar days) used by `qfai doctor --clean` to
@@ -227,7 +217,6 @@ export type QfaiConfig = {
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
-  review?: QfaiReviewConfig;
   report?: QfaiReportConfig;
   atdd?: QfaiAtddConfig;
   routing?: QfaiRoutingEntry[];
@@ -402,7 +391,6 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
-  const review = normalizeReview(raw.review, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const routing = normalizeRouting(raw.routing, configPath, issues);
@@ -417,9 +405,6 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   }
   if (prototyping) {
     base.prototyping = prototyping;
-  }
-  if (review) {
-    base.review = review;
   }
   if (report) {
     base.report = report;
@@ -791,39 +776,6 @@ function normalizePrototypingExecution(
           ) ?? null),
     browserTool,
   };
-}
-
-function normalizeReview(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiReviewConfig | undefined {
-  if (raw === undefined || raw === null) {
-    return undefined;
-  }
-  if (!isRecord(raw)) {
-    issues.push(configIssue(configPath, "review must be an object."));
-    return undefined;
-  }
-  const result: QfaiReviewConfig = {};
-  if (raw.staleTtlDays !== undefined) {
-    if (
-      typeof raw.staleTtlDays === "number" &&
-      Number.isFinite(raw.staleTtlDays) &&
-      Number.isInteger(raw.staleTtlDays) &&
-      raw.staleTtlDays >= 0
-    ) {
-      result.staleTtlDays = raw.staleTtlDays;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "review.staleTtlDays must be an integer greater than or equal to 0.",
-        ),
-      );
-    }
-  }
-  return Object.keys(result).length === 0 ? undefined : result;
 }
 
 function readNonNegativeInteger(

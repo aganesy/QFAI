@@ -254,7 +254,7 @@ describe("parseArgs", () => {
       expect(parsed.options.dryRun).toBe(true);
     });
 
-    it.each([["validate"], ["report"], ["audit"], ["atdd"], ["discussion"]])(
+    it.each([["validate"], ["report"], ["atdd"], ["discussion"]])(
       "marks --dry-run invalid on %s and leaves dryRun off",
       (command) => {
         const parsed = parseArgs([command, "--dry-run"], process.cwd());
@@ -284,62 +284,16 @@ describe("parseArgs", () => {
   describe("misplaced-subcommand value-taking flags: markInvalid + consume value token", () => {
     it("--spec on a non-atdd subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(["audit", "log", "--spec", "spec-0006", "--format", "json"], cwd);
+      const parsed = parseArgs(
+        ["discussion", "list", "--spec", "spec-0006", "--format", "json"],
+        cwd,
+      );
       expect(parsed.invalid).toBe(true);
       // The "spec-0006" value must NOT have shifted into a positional;
       // --format following it should still be honored.
-      expect(parsed.options.auditAction).toBe("log");
+      expect(parsed.options.discussionFormat).toBe("json");
       // No atdd spec id should have been recorded.
       expect(parsed.options.atddSpecId).toBeUndefined();
-    });
-
-    it("--operator on a non-audit subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["validate", "--operator", "alice", "--format", "github"], cwd);
-      expect(parsed.invalid).toBe(true);
-      // "alice" must NOT have shifted into a positional, so --format
-      // remains parseable downstream.
-      expect(parsed.options.validateFormat).toBe("github");
-      expect(parsed.options.auditOperator).toBeUndefined();
-    });
-
-    it("--clause on a non-audit subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["report", "--clause", "skill-envelope", "--format", "json"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.reportFormat).toBe("json");
-      expect(parsed.options.auditClause).toBeUndefined();
-    });
-
-    it("--scope on a non-audit subcommand marks invalid AND consumes the value token", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["validate", "--scope", "saas-package", "--format", "github"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.validateFormat).toBe("github");
-      expect(parsed.options.auditScope).toBeUndefined();
-    });
-
-    // Adjacent-flag regression probe. If a misplaced value-taking flag
-    // skips its `i += 1` (the pre-PR `--upgrade-scope` bug), the next
-    // iteration sees the flag's intended value as a token, which can
-    // shift downstream flag parsing in subtle ways. With the unified
-    // contract, `--upgrade-scope` on a non-certify subcommand always
-    // consumes the next token, so a following `--scope full` on an
-    // `audit` subcommand still parses to `auditScope === "full"`. A
-    // regression that strips the consume would re-process the dangling
-    // `full` as a positional and break the chain.
-    it("misplaced --upgrade-scope consumes its value before --scope on a chained audit invocation", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["audit", "log", "--upgrade-scope", "full", "--scope", "deviation"],
-        cwd,
-      );
-      // The misplaced flag is invalid, but the downstream `--scope
-      // deviation` (which IS valid for audit) must still populate
-      // `auditScope`. With the consume contract this works because
-      // the dangling `full` does not interfere with the next iter.
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.auditScope).toBe("deviation");
     });
   });
   // The rejection reason (invalidReason) is the diagnostic main.ts writes to
@@ -366,9 +320,6 @@ describe("parseArgs", () => {
 
     it("reuses the per-family subcommand wording when the subcommand is missing", () => {
       const cwd = process.cwd();
-      expect(parseArgs(["audit"], cwd).invalidReason).toBe(
-        "qfai audit: unknown or missing subcommand. Expected: log",
-      );
       expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
         "qfai atdd: unknown or missing subcommand. Expected: scaffold",
       );
@@ -381,10 +332,10 @@ describe("parseArgs", () => {
     });
 
     it("quotes the rejected subcommand token", () => {
-      const parsed = parseArgs(["audit", "bogusaction"], process.cwd());
+      const parsed = parseArgs(["atdd", "bogusaction"], process.cwd());
       expect(parsed.invalid).toBe(true);
       expect(parsed.invalidReason).toBe(
-        'qfai audit: unknown subcommand "bogusaction". Expected: log',
+        'qfai atdd: unknown subcommand "bogusaction". Expected: scaffold',
       );
     });
 
@@ -412,7 +363,7 @@ describe("parseArgs", () => {
     // The usage-error code is one number for every command. Asserted over a
     // spread of commands rather than one, because a single case cannot tell a
     // default from a special case.
-    it.each(["init", "validate", "report", "doctor", "atdd", "discussion", "audit"])(
+    it.each(["init", "validate", "report", "doctor", "atdd", "discussion"])(
       "reserves the same usage-error code on %s",
       (command) => {
         const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
@@ -651,10 +602,6 @@ describe("parseArgs", () => {
       expect(initStrict.invalid).toBe(true);
       expect(initStrict.options.strict).toBe(false);
 
-      const auditFailOn = parseArgs(["audit", "log", "--fail-on", "warning"], cwd);
-      expect(auditFailOn.invalid).toBe(true);
-      expect(auditFailOn.options.failOn).toBeUndefined();
-
       const validateStrict = parseArgs(["validate", "--strict", "--fail-on", "warning"], cwd);
       expect(validateStrict.invalid).toBe(false);
       expect(validateStrict.options.strict).toBe(true);
@@ -803,7 +750,7 @@ describe("parseArgs --version", () => {
   // The subcommand scan runs before the flag loop and only skipped `--`
   // tokens, so a short flag was shifted away as an unknown action: the long
   // form worked on these commands and the short one printed help.
-  for (const command of ["audit", "atdd", "discussion", "sdd"] as const) {
+  for (const command of ["atdd", "discussion", "sdd"] as const) {
     for (const flag of ["--version", "-V"] as const) {
       it(`sets version for \`qfai ${command} ${flag}\``, () => {
         const parsed = parseArgs([command, flag], process.cwd());
@@ -822,13 +769,13 @@ describe("parseArgs --version", () => {
   it("still rejects an unknown subcommand name", () => {
     // Skipping dash-prefixed tokens must not skip a real typo: the post-loop
     // "action required" guard still has to fire.
-    const parsed = parseArgs(["audit", "lgo"], process.cwd());
+    const parsed = parseArgs(["atdd", "scafold"], process.cwd());
     expect(parsed.invalid).toBe(true);
-    expect(parsed.options.auditAction).toBeUndefined();
+    expect(parsed.options.atddAction).toBeUndefined();
   });
 
   it("still requires a subcommand when only flags follow", () => {
-    const parsed = parseArgs(["audit", "--root", "."], process.cwd());
+    const parsed = parseArgs(["atdd", "--root", "."], process.cwd());
     expect(parsed.invalid).toBe(true);
   });
 });

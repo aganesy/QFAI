@@ -210,6 +210,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **`qfai audit log` and the evidence and review-pack records are gone** (#2805).
+  The assistant no longer writes `.qfai/evidence/` or `.qfai/review/`: each
+  stage reports its gate results, review verdicts and grilling record in its
+  final report. `qfai audit log`, the decision records it listed, and the
+  `QFAI-REVIEW-001` to `QFAI-REVIEW-010` checks are removed, so `qfai validate`
+  reads no reviewer report. Running `qfai audit log` is now an unknown-command
+  error; nothing replaces it. Files already under `.qfai/evidence/` and
+  `.qfai/review/` stay where they are and the managed `.gitignore` block still
+  ignores them; `qfai doctor` lists them as leftovers to delete by hand.
+- **`qfai doctor --clean` and `--autoremediate` prune run logs only** (#2805).
+  They no longer move review packs into `.qfai/review/_archive/`, record legacy
+  packs, or add a `review:` key to `qfai.config.yaml`. The `review.staleTtlDays`
+  key is no longer read; `report.staleTtlDays` and `report.keepLatestRuns` still
+  govern the run-log prune.
+- **`qfai sdd preflight` no longer looks for an import-lite file under
+  `.qfai/evidence/`** (#2805). Pass an imported specification with
+  `qfai sdd preflight --import <path>` instead.
 - **The `qfai prototyping` command group, and the checks that certified a
   prototype** (#2808). Prototyping now completes when the user confirms the
   prototype: `/qfai-prototyping` builds, reviews and puts each iteration to the

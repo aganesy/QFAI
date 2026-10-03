@@ -2,7 +2,7 @@
 name: verify-qfai-gate
 owner: qfai-verify
 purpose: "Run the QFAI validation of the run's scope and record what it finds."
-requires: [common-gate-run, common-evidence-record, common-grilling-record]
+requires: [common-gate-run, common-grilling-record]
 roles:
   [orchestrator, devops-ci-engineer, qa-gatekeeper, completion-reviewer, implementation-reviewer]
 routing-profile: runtime-heavy
@@ -16,7 +16,7 @@ signals; this one decides. It records failures and repairs none of them:
 
 ## Reads
 
-- The scope in the Objective of `.qfai/evidence/verify-<run-id>.md`.
+- The scope `verify-context` declared.
 - `.qfai/report/validate.json`. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
 - `.qfai/waivers.yml`, where the project has one.
@@ -35,7 +35,7 @@ signals; this one decides. It records failures and repairs none of them:
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
 2. Run `npx qfai report` when the repository uses it.
 3. Run the static policy checks (below).
-4. Record each result as `common-evidence-record` says.
+4. Report each result in the stage report.
 
 ## What this gate is
 

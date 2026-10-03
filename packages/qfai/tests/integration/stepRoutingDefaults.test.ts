@@ -77,9 +77,9 @@ describe("routing keyed by step", () => {
       expect(roles, agent).toContain(agent);
     }
 
-    const evidenceRecord = frontMatterOf(await readShipped("step/common-evidence-record/STEP.md"));
-    expect(evidenceRecord["routing-profile"]).toBeUndefined();
-    expect(entries.some((candidate) => candidate.step === "common-evidence-record")).toBe(false);
+    const gateRun = frontMatterOf(await readShipped("step/common-gate-run/STEP.md"));
+    expect(gateRun["routing-profile"]).toBeUndefined();
+    expect(entries.some((candidate) => candidate.step === "common-gate-run")).toBe(false);
     expect(entries.some((candidate) => candidate.skill === "qfai-sdd")).toBe(false);
 
     expect(await agentFindings()).toEqual([]);

@@ -14,7 +14,7 @@ describe("SDD completion hands off story obligations without an execution ledger
       const skill = await read(tree, "assistant/step/sdd-gate/STEP.md");
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
       expect(skill).toContain("--flow BF-NNNN");
-      expect(skill).toContain(".qfai/evidence/sdd-BF-NNNN.md");
+      expect(skill).toContain("Report, per flow, in the stage report");
       expect(gate).toContain("BF → US → AC → EX ← BR");
       expect(gate).toContain("Every EX has exactly one existing AC-Ref");
       expect(skill).not.toContain("tdd/test-list.md");

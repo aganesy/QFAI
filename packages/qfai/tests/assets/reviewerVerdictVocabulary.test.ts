@@ -60,7 +60,6 @@ describe("reviewer verdict vocabulary", () => {
         expect(content).toMatch(/(?:blocking |On `)REVISE/);
         expect(content).not.toMatch(/(?:blocking |On `)FAIL/);
         expect(content).toMatch(/rerun\s+(?:only\s+)?that\s+reviewer/);
-        expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
       }
     }
   });
@@ -69,7 +68,6 @@ describe("reviewer verdict vocabulary", () => {
     for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toMatch(/`?PASS`?\s*(?:\/|or)\s*`?REVISE`?/);
-        expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
       }
     }
 
@@ -95,18 +93,10 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
-  it("names the same serialized status in the implement skill and its reference", async () => {
-    for (const content of await readShipped(
-      "skill/qfai-implement/references/review-artifact-layout.md",
-    )) {
-      expect(content).toContain("A blocking REVISE is status FAIL in the summary");
-      expect(content).not.toContain('status: "REVISE"');
-    }
-
+  it("keeps the reviewer response template on PASS | REVISE", async () => {
     for (const content of await readShipped("rule/shared-skill-delegation-baseline.md")) {
       expect(content).toContain("Result: PASS | REVISE");
       expect(content).not.toContain("Result: PASS | FAIL");
-      expect(content).toContain('maps to `status: "FAIL"`');
       expect(content).toContain(
         "Every reviewer returning `REVISE` must include a concrete fix proposal",
       );

@@ -1,8 +1,8 @@
 # Verify Output Contract — `.qfai/report/verify.json`
 
-`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<run-id>.md` remains the human-readable evidence and does not replace it. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
+`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
 
-Canonical path: `.qfai/report/verify.json` (NOT `.qfai/evidence/`, NOT `.qfai/output/`). Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
+Canonical path: `.qfai/report/verify.json` (NOT `.qfai/output/`). Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
 
 `.qfai/output/verify.json` is the legacy location, history for projects created before the move. Never write there.
 
@@ -12,7 +12,7 @@ Canonical path: `.qfai/report/verify.json` (NOT `.qfai/evidence/`, NOT `.qfai/ou
 | `scope`      | string           | yes      | Which stage's gate set this run covers. See the enum below.                                              |
 | `flowId`     | string           | no       | The business flow this run targeted, when scoped to one (e.g. `"BF-0001"`).                              |
 | `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                  |
-| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                         |
+| `summary`    | string           | no       | One or two sentences an operator can read without opening the stage report.                              |
 | `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                    |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
