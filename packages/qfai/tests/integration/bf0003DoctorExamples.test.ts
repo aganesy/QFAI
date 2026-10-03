@@ -389,6 +389,7 @@ describe("BF-0003 advisory grouping", () => {
   });
 
   it("fails --fail-on warning on skills.integrity drift alone", async () => {
+    // QFAI:AC-0003-0007-01
     // QFAI:EX-0003-0007-03
     const root = await newTempDir("skills-warning");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });

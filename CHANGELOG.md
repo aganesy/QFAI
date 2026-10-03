@@ -12,6 +12,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Fourteen doctor criteria now name the tests that prove them.** Existing
+  integration tests carry standalone `QFAI:AC-...` comments.
+  `AC-0003-0004-01` gains a deprecated `paths.promptsDir` warning case, and
+  the warning-threshold case also names `AC-0003-0007-01`.
+  The BF-0003 full pin retains three criteria: `AC-0003-0006-01`,
+  `AC-0003-0006-03` and `AC-0003-0011-06`. Refs #2367.
+
 - **The implementation reviewer checks silent failure and type design**
   (#2248). It reads the whole of every file a change touches, not only the
   lines the change adds or alters.
