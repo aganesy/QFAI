@@ -4,24 +4,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Context summaries preserve requests, decisions, open work and stage state**
+  (#2243), including question and review budgets. User wording stays close to
+  verbatim.
+
 ### Changed
-
-- **The implementation reviewer checks silent failure and type design**
-  (#2248). It reads the whole of every file a change touches, not only the
-  lines the change adds or alters.
-
-  - Silent failure: an empty catch or a silent return, a catch that also
-    catches errors it did not expect, a fallback that masks the problem, a
-    failure that should propagate instead, a log entry too thin to debug from,
-    and user feedback that does not say what to do next.
-  - Type design: mutable internals exposed, an invariant held only by
-    documentation, validation missing at construction, enforcement that
-    differs between mutations, and outside code left to maintain an invariant
-    the type should own.
-  - A finding on what the change added or altered can block. A finding on code
-    that was already there is recorded and deferred, never blocking. Findings
-    are concrete problems, with no rating per check.
-  - The `/qfai-implement` row of the reviewer remit table says the same.
 
 - **Review is the detector for a security defect** (#2252). No repository gate
   scans for a security or data-integrity defect, and the Drift Protocol now
@@ -41,6 +30,35 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     it is used, across files the change did not touch. A path the change opens
     there blocks.
   - The `/qfai-implement` row of the reviewer remit table names the check.
+
+- **The Windows parity CI job's timeout is set from measured runs** (#2311).
+  Across 20 green runs the job took 317 s to 582 s. Its `timeout-minutes` is
+  now 20, twice the slowest run rounded up to five minutes, down from an
+  unmeasured 30. The per-suite file and test counts and timings are recorded
+  in DEC-1010 of `.qfai/spec/decisions.md`. This affects this repository's CI
+  only.
+
+- **The routing eval's release verdict lists the failing cases outside the
+  safety list** (#2303). Only a failing safety case blocks the release. Every
+  other failing case is listed in the eval record beside the safety failures,
+  and the maintainer accepts or rejects that list at release.
+
+- **The implementation reviewer checks silent failure and type design**
+  (#2248). It reads the whole of every file a change touches, not only the
+  lines the change adds or alters.
+
+  - Silent failure: an empty catch or a silent return, a catch that also
+    catches errors it did not expect, a fallback that masks the problem, a
+    failure that should propagate instead, a log entry too thin to debug from,
+    and user feedback that does not say what to do next.
+  - Type design: mutable internals exposed, an invariant held only by
+    documentation, validation missing at construction, enforcement that
+    differs between mutations, and outside code left to maintain an invariant
+    the type should own.
+  - A finding on what the change added or altered can block. A finding on code
+    that was already there is recorded and deferred, never blocking. Findings
+    are concrete problems, with no rating per check.
+  - The `/qfai-implement` row of the reviewer remit table says the same.
 
 - **The patterns that mark a design as generated are named** (#2241). A new
   `qfai-sdd` reference, `design-anti-patterns.md`, lists them by aspect, from
@@ -100,6 +118,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   decisions; a slip that changes none of those is fixed without comment. This
   repository's `.instruction/00_universal/communication.md` drops its own
   progress-report and completion-report sections and points to that article.
+
+### Fixed
+
+- Host-capability refusals at workflow start state the reason and the next
+  action in one sentence while preserving the refusal fields (#2839).
 
 ## [2.0.2] - 2026-10-03
 
