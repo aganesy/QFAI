@@ -38,7 +38,7 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Implement one E2E test per BF and integration or API tests for each active AC obligation. Annotate the test at its owning layer and assert observable behavior.
-- Use active API and DB contracts to shape assertions. Keep BF E2E and AC coverage separate from EX unit or component tests owned by `/qfai-implement`.
+- Use active API and DB contracts to shape assertions. Keep BF E2E and AC coverage separate from the EX unit or component tests `implement-tdd` writes test first.
 - Keep shared fixtures isolated and record selected commands, observed RED or falsifiability proof, results and revisions in ATDD evidence.
 - Apply `.agents/rules/minimal-implementation.md` to each test without reducing the approved coverage obligation.
 

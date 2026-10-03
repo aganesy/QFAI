@@ -34,10 +34,6 @@ import { QFAI_STATE_SCRATCH_SUFFIX } from "./gitignore.js";
  * silently destroys everyone else's.
  *
  * Therefore:
- *   - `readStateTolerant` is for READ-ONLY callers. It keeps the old
- *     permissive contract (missing file / unreadable file / malformed
- *     JSON all collapse to `null`) because a failed read cannot lose
- *     data.
  *   - `readStateStrict` is for READ-MODIFY-WRITE callers. It returns
  *     `null` ONLY for a genuinely absent file and throws
  *     `StateUnreadableError` for every other failure class, so the
@@ -178,17 +174,6 @@ async function loadState(root: string): Promise<StateLoad> {
   // `Record<string, unknown>` is the structural supertype of any parsed
   // JSON object; callers narrow each field they read.
   return { kind: "ok", state: parsed as Record<string, unknown> };
-}
-
-/**
- * Read-only accessor: returns the parsed state, or `null` when the
- * file is missing / unreadable / not a JSON object. Never throws.
- * Use this ONLY when the result is not about to be written back —
- * a tolerated read failure that feeds a merge is data loss.
- */
-export async function readStateTolerant(root: string): Promise<Record<string, unknown> | null> {
-  const loaded = await loadState(root);
-  return loaded.kind === "ok" ? loaded.state : null;
 }
 
 /**

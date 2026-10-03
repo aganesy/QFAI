@@ -71,16 +71,16 @@ observable assertion. An annotation or scaffold alone does not discharge an
 obligation. A DONE `Test exception:` decision can resolve one only when it
 names the item.
 
-From ATDD onward, read the annotated tests themselves. Check the normal,
+Once the acceptance tests exist, read the annotated tests themselves. Check the normal,
 failure, boundary, special, state-transition and combinatorial cases the
 active story and contract make meaningful. Return REVISE for an unexplained
 required gap or weak oracle; report a gap owned by another stage with that
 owner. During SDD, assess the requirement links without demanding tests that
-the ATDD stage has not written.
+implementation has not written.
 
 ## RED and GREEN observation gate
 
-For each ATDD acceptance test or implementation EX under review, inspect
+For each acceptance test or implementation EX under review, inspect
 its evidence on the revision submitted for review.
 
 - An ordinary RED must show the selected test command, selector and observed
@@ -112,7 +112,7 @@ scope or the whole flow.
   command/results, reviewer verdicts and review pack seals. Use
   `rule/audited-evidence-hash.md` and the owning skill's evidence reference to
   check freshness.
-- An ATDD gate uses
+- An acceptance-test gate uses
   `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses
   `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`.

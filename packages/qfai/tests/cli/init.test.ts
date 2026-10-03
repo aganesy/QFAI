@@ -984,6 +984,39 @@ describe("qfai init", () => {
     }
   });
 
+  it("removes the qfai-atdd link init installed and keeps a project's own qfai-atdd link", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // What an earlier release left: the canonical skill and init's link to it.
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "# qfai-atdd\n", "utf-8");
+      const installed = path.join(root, ".claude", "skills", "qfai-atdd");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skill", "qfai-atdd"),
+        installed,
+        "dir",
+      );
+
+      // A link of the same name the project points at a skill of its own.
+      const own = path.join(root, "project-skills", "qfai-atdd");
+      await mkdir(own, { recursive: true });
+      await writeFile(path.join(own, "SKILL.md"), "project skill\n", "utf-8");
+      const projectLink = path.join(root, ".agents", "skills", "qfai-atdd");
+      await symlink(path.join("..", "..", "project-skills", "qfai-atdd"), projectLink, "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(installed)).rejects.toMatchObject({ code: "ENOENT" });
+      await expectSymlink(projectLink);
+      expect(await readFile(path.join(projectLink, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("keeps a project's files beside a retired directory wrapper it prunes", async () => {
     // Ownership was proved for `SKILL.md` and nothing else. A project that
     // added notes or scripts to the same directory keeps them, and the

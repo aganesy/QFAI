@@ -55,7 +55,8 @@ coverage depth before a stage claims completion.
   and target IDs and changes no file. The finder does not raise again a finding
   already decided, rejected, or answered by a pending or declined change
   request, and it does not decide its own findings.
-- During ATDD, review the BF E2E test and the AC integration or API tests
+- During `implement-scaffold` and `implement-acceptance`, review the BF E2E
+  test and the AC integration or API tests
   for depth. Report every gap with its owner, including an EX gap that
   `/qfai-implement` will close.
 - During implementation, review the selected EX and its test against the
@@ -106,7 +107,7 @@ another flow when a shared contract changes.
 ## Deliverables
 
 For SDD, return obligation mapping, layer decisions, and concrete gaps with
-their owning stage. For ATDD, report the covered IDs, missing cases and oracle
+their owning stage. For acceptance tests, report the covered IDs, missing cases and oracle
 risks. For implementation, return an EX-level review of the test layer,
 selector and oracle.
 

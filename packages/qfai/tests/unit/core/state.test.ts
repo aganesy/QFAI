@@ -38,7 +38,7 @@ import {
 import {
   StateUnreadableError,
   readDiscussionCurrentId,
-  readStateTolerant,
+  readStateStrict,
   updateState,
   writeDiscussionCurrentId,
   writeStateFile,
@@ -291,7 +291,7 @@ describe("TC-0010-0012: updateState serializes concurrent read-modify-write", ()
     // writes, so the last write wins and `counter` ends at 1.
     await Promise.all(Array.from({ length: rounds }, () => bumpCounter(root)));
 
-    const state = await readStateTolerant(root);
+    const state = await readStateStrict(root);
     expect(state?.counter).toBe(rounds);
   });
 
@@ -302,7 +302,7 @@ describe("TC-0010-0012: updateState serializes concurrent read-modify-write", ()
       bumpCounter(root),
     ]);
 
-    const state = await readStateTolerant(root);
+    const state = await readStateStrict(root);
     expect(state?.counter).toBe(2);
     expect(await readDiscussionCurrentId(root)).toBe("discussion-20260101000000000");
   });
@@ -337,7 +337,7 @@ describe("TC-0010-0012: updateState serializes concurrent read-modify-write", ()
     }
     await Promise.all(targets.map((target) => bumpCounter(target)));
 
-    const state = await readStateTolerant(realDir);
+    const state = await readStateStrict(realDir);
     expect(state?.counter).toBe(rounds);
   });
 });
@@ -450,7 +450,7 @@ describe("TC-0010-0012: updateState lock ownership", () => {
     const lockPath = await plantLock(root, process.pid, 30_000);
     try {
       await expect(bumpCounter(root)).rejects.toThrow(/is still held after/);
-      expect(await readStateTolerant(root)).toBeNull();
+      expect(await readStateStrict(root)).toBeNull();
     } finally {
       await rm(lockPath, { force: true });
     }
