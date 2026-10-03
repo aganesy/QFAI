@@ -1,31 +1,19 @@
-// QFAI:SPEC-0018:TC-0018-0049
+// QFAI:EX-0001-0185-30
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 const plan = {
-  route: "direct",
-  stages: [
-    {
-      stageInstanceId: "direct-edit",
-      stageKind: "maintenance",
-      skill: "qfai-maintain",
-      operation: "non-normative-edit",
-    },
-    {
-      stageInstanceId: "direct-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-    },
-  ],
+  route: "edit-text",
+  stages: [planStage("direct-edit", "maintenance"), planStage("direct-verify", "verify")],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
-it("TC-0018-0049 (TDD-0064): A result with outcome unrun", () => {
+it("A result with outcome unrun", () => {
   const issued = decide(
-    { run: { id: "run-unrun", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-unrun", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -34,7 +22,7 @@ it("TC-0018-0049 (TDD-0064): A result with outcome unrun", () => {
   const decision =
     workOrder && run
       ? decide(
-          { run, plan, specBinding, outstandingWorkOrder: workOrder },
+          { run, plan, flowBinding, outstandingWorkOrder: workOrder },
           {
             operation: "accept",
             result: {

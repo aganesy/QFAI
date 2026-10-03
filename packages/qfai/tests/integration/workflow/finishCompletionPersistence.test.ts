@@ -1,11 +1,13 @@
-// QFAI:SPEC-0018:TC-0018-0266
-// QFAI:SPEC-0018:TC-0018-0267
+// QFAI:AC-0001-0185-15
+// QFAI:EX-0001-0185-42
+// QFAI:EX-0001-0185-43
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
   commitAll,
   featureRunAt,
@@ -20,21 +22,24 @@ import {
 
 afterEach(removeProjects);
 
-// A feature run in `ready` after its verify stage was accepted with this run's report.
+// An add-feature run in `ready` after its verify stage was accepted with this run's report.
 async function verifiedRun(root: string, completionTarget: string) {
   const { runId, issued } = await featureRunAt(root, "verify", {
     ...START_INPUT,
     completionTarget,
   });
-  const report = path.join(root, ".qfai", "runs", "shared", "verify.json");
+  const report = path.join(root, ".qfai", "run", "shared", "verify.json");
   await mkdir(path.dirname(report), { recursive: true });
-  await writeFile(report, '{"status":"PASS","scope":"full"}\n');
+  const text = '{"status":"PASS","scope":"full"}\n';
+  await writeFile(report, text);
   await submit(
     root,
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/runs/shared/verify.json", digest: "submitted" }],
+      artifactRefs: [
+        { path: ".qfai/run/shared/verify.json", digest: hashAssistantAssetText(text) },
+      ],
       reviewResults: [
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
@@ -48,7 +53,7 @@ async function finishedAndReported(root: string, runId: string) {
   const summaryFile = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
   const summary = await readFile(summaryFile);
   const finished = workflow(root, ["finish", "--run", runId]);
-  const runDir = path.join(root, ".qfai", "runs", runId);
+  const runDir = path.join(root, ".qfai", "run", runId);
   const snapshot: unknown = JSON.parse(await readFile(path.join(runDir, "snapshot.json"), "utf8"));
   return {
     finished: field(finished.json, "run.state"),
@@ -67,7 +72,7 @@ const COMPLETED_AT_RUNTIME_ONLY = {
   status: "completed",
 };
 
-it("TC-0018-0266 (TDD-0525): committed qfai_done finishes at runtime only", async () => {
+it("committed qfai_done finishes at runtime only", async () => {
   const root = await initProject();
   const runId = await verifiedRun(root, "qfai_done");
   commitAll(root);
@@ -75,7 +80,7 @@ it("TC-0018-0266 (TDD-0525): committed qfai_done finishes at runtime only", asyn
   expect(await finishedAndReported(root, runId)).toEqual(COMPLETED_AT_RUNTIME_ONLY);
 }, 180_000);
 
-it("TC-0018-0267 (TDD-0526): uncommitted working_tree finishes at runtime only", async () => {
+it("uncommitted working_tree finishes at runtime only", async () => {
   const root = await initProject();
   const runId = await verifiedRun(root, "working_tree");
 

@@ -1,101 +1,117 @@
-# Release 手順
+# Release procedure
 
-## 前提
+## Prerequisites
 
-前提は経路ごとに異なります。**自動化された経路は、手動経路が「更新済み」を要求している
-ものを更新するための経路です。** 先に版を上げてから Prepare release を実行すると、入力
-した版が現在の版と一致するため必ず拒否されます。
+The prerequisites differ by path. **The automated path exists to update what the
+manual path requires to be "already updated".** If you bump the version first and
+then run Prepare release, it is always rejected, because the version you enter
+matches the current version.
 
-### 共通
+### Common
 
-- main に対象コミットが揃っている
-- 各変更が `CHANGELOG.md` の `## [Unreleased]` に説明を書いている（空、または
-  `### Added` のような見出しだけの状態では Prepare release は失敗します）
-- Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
+- The target commits are all on main
+- Each change has its description under `## [Unreleased]` in `CHANGELOG.md`
+  (Prepare release fails if the section is empty, or holds only headings such as
+  `### Added`)
+- Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS or later
 
-### 自動化された経路を使う場合
+### Using the automated path
 
-- `packages/qfai/package.json#version` と `CHANGELOG.md` の版見出しは **まだ更新して
-  いない**こと。更新するのがこの経路の仕事です
-- リポジトリに `RELEASE_AUTOMATION_TOKEN` secret が設定されている（下記「必要な secret」）
-- npm publish 権限は不要です。publish は `release` environment の必須レビュアーが承認
-  したうえで CI が trusted publishing (OIDC) で実行します
+- `packages/qfai/package.json#version` and the version heading in `CHANGELOG.md`
+  are **not yet updated**. Updating them is this path's job
+- The repository has the `RELEASE_AUTOMATION_TOKEN` secret set (see "Required
+  secret" below)
+- No npm publish permission is needed. A required reviewer of the `release`
+  environment approves the publish, and CI runs it through trusted publishing
+  (OIDC)
 
-### 手動の経路を使う場合
+### Using the manual path
 
-- `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
-- npm publish 権限があり、`npm whoami` が成功する
-- 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
+- The version in `packages/qfai/package.json` and `CHANGELOG.md` are already updated
+- You have npm publish permission, and `npm whoami` succeeds
+- Before moving to the next major version, reconcile things with patch releases
+  and proceed step by step
 
-## 権限と責務
+## Permissions and responsibilities
 
-- PR/コミット作成: 誰でも可
-- マージ/タグ付け/リリース作業: 権限保有者のみ
-- 権限が無い環境では PR 作成まで実施し、マージ/タグ/公開は権限保有者へ引き継ぐ
+- Creating PRs and commits: anyone
+- Merging, tagging and release work: permission holders only
+- In an environment without permission, stop at creating the PR and hand merging,
+  tagging and publishing over to a permission holder
 
-## ブランチ/PR
+## Branch and PR
 
-- ブランチ命名: `feature/vX.Y.Z`
-- PR 作成前にローカル CI を実行（次節のコマンド）
-- レビュー完了基準: DoD を満たし、追加指摘がすべて解消されていること
-- PR のマージ/タグ付けは権限保有者が実施する
+- Branch naming: on the automated path Prepare release creates `release/vX.Y.Z`.
+  On the manual path, use `feature/vX.Y.Z`
+- Run CI locally before creating the PR (the commands are in the next section)
+- Review completion criteria: the DoD is met and every additional finding is resolved
+- A permission holder merges the PR. On the automated path, Tag release commit
+  pushes the tag. It does not tag a merge from `feature/vX.Y.Z`, so on the manual
+  path a permission holder pushes the tag by hand (step 4 of the manual procedure)
 
-## 自動化された経路（推奨）
+## Automated path (recommended)
 
-版番号を1回入力すれば、PR 作成と tag 付けは自動で進みます。publish は `release`
-environment の必須レビュアー承認で従来どおり止まります。
+Enter the version number once, and PR creation and tagging proceed automatically.
+The publish still stops at the `release` environment's required reviewer approval,
+as before.
 
-1. Actions で **Prepare release** を実行し、`version` に `X.Y.Z`（先頭 `v` なし）を入力する
-2. 作成された `release/vX.Y.Z` の PR をレビューして merge する
-3. **Tag release commit** が `vX.Y.Z` を自動で push し、`release.yml` が起動する
-4. `release` environment の承認を与えると npm publish が走る
+1. Run **Prepare release** in Actions and enter `X.Y.Z` (without a leading `v`) as `version`
+2. Review and merge the `release/vX.Y.Z` PR it creates
+3. **Tag release commit** pushes `vX.Y.Z` automatically, and `release.yml` starts
+4. Approving the `release` environment runs the npm publish
 
-### この自動化が「しない」こと
+### What this automation does not do
 
-**リリース文面を書きません。** `CHANGELOG.md` の `## [Unreleased]` は各変更が入るたびに
-その変更の作者が書き足すもので、リリース時に起きるのは「どこで区切るか」だけです。
-Prepare release がするのは次の3点だけで、散文は一切生成しません。
+**It does not write the release text.** Whoever makes each change adds to
+`## [Unreleased]` in `CHANGELOG.md` as the change lands, so the only thing decided
+at release time is where to cut. Prepare release does only the following three
+things and generates no prose.
 
-- `packages/qfai/package.json#version` の同期
-- `## [Unreleased]` を `## [X.Y.Z] - <日付>` に rename
-  （日付は **Prepare release を実行した日** です。tag が切られるのは PR がマージされた
-  ときなので、翌日以降にマージする場合はその PR の中で日付を直してください。マージ後に
-  直すには `main` への別コミットが必要になります）
-- 空の `## [Unreleased]` を再挿入
+- Syncs `packages/qfai/package.json#version`
+- Renames `## [Unreleased]` to `## [X.Y.Z] - <date>`
+  (the date is **the day you ran Prepare release**. The tag is created when the
+  PR is merged, so if you merge on a later day, fix the date inside that PR.
+  Fixing it after the merge needs a separate commit to `main`)
+- Re-inserts an empty `## [Unreleased]`
 
-GitHub Release の本文も `release.yml` が同じセクションを抽出して使います。つまり公開される
-説明は、マージ済み PR が書いた内容そのものです。
+`release.yml` extracts the same section for the GitHub Release body. In other
+words, the published description is exactly what the merged PRs wrote.
 
-裏返しとして、**`## [Unreleased]` が空なら Prepare release は失敗します**。誰も書いていない
-リリースノートは「何も起きなかった」と読めてしまい、無いより悪いためです。
+The flip side: **Prepare release fails if `## [Unreleased]` is empty**. A release
+note nobody wrote reads as "nothing happened", which is worse than having none.
 
-**版番号も選びません。** `.agents/rules/version-discipline.md` は版番号の決定権をユーザに
-置いており、フォームへの入力がその明示指示にあたります。入力は必須で、既定値はありません。
+**It does not choose the version number either.** `.agents/rules/version-discipline.md`
+leaves the decision on the version number to the user, and entering it in the form
+is that explicit instruction. The input is required and has no default.
 
-### 必要な secret
+### Required secret
 
-`RELEASE_AUTOMATION_TOKEN`（`contents: write` と `pull-requests: write`）。理由は2つあります。
+`RELEASE_AUTOMATION_TOKEN` (`contents: write` and `pull-requests: write`). There
+are two reasons.
 
-- **`GITHUB_TOKEN` で push した tag は他の workflow を起動しません。** 職務トークンで tag を
-  打つと `release.yml` が発火せず、リリースが無言で止まります。
-- ワークフロー側の `permissions:` を `contents: read` のまま保てるため、最小権限から
-  外れる箇所を増やさずに済みます。
+- **A tag pushed with `GITHUB_TOKEN` does not start other workflows.** If a
+  workflow token creates the tag, `release.yml` never fires and the release
+  stalls silently.
+- The workflows can keep `permissions:` at `contents: read`, so no more places
+  depart from least privilege.
 
-secret が未設定なら、両ワークフローとも理由を述べて失敗します（黙って何もしないことはありません）。
+If the secret is not set, both workflows fail and say why (they never do nothing
+silently).
 
-## 手順（手動）
+## Procedure (manual)
 
-自動化を使わない場合、または権限が無い環境では以下の手順で実施します。
+Use these steps when you do not use the automation, or in an environment without
+permission.
 
-※ 以下のコマンドは、特記がない限りリポジトリ直下で実行してください。
+Note: run the commands below from the repository root unless stated otherwise.
 
-1. 依存を揃える
+1. Install dependencies
 
    ```sh
    pnpm install
    ```
 
-2. ローカル CI（PR 前に必須）
+2. Local CI (required before the PR)
 
    ```sh
    pnpm format:check
@@ -111,52 +127,56 @@ secret が未設定なら、両ワークフローとも理由を述べて失敗�
    pnpm verify:pack
    ```
 
-   `pnpm verify:pack` はリポジトリ直下で実行してください（直接実行する場合は `node ./scripts/verify-pack.mjs`）。
+   Run `pnpm verify:pack` from the repository root (to run it directly, use `node ./scripts/verify-pack.mjs`).
 
-3. パッケージ確認（dry-run）
+3. Package check (dry-run)
 
    ```sh
    cd packages/qfai
    npm publish --dry-run
    ```
 
-   publish 前の成功条件:
-   - `pnpm build` が成功
-   - `pnpm verify:pack` が成功
-   - `npm publish --dry-run` が成功
+   Success conditions before publishing:
+   - `pnpm build` succeeds
+   - `pnpm verify:pack` succeeds
+   - `npm publish --dry-run` succeeds
 
-   dry-run 実行後はリポジトリ直下に戻ってください（Unix/Linux: `cd ../../`、PowerShell: `Set-Location ..\\..`）。以降の手順はリポジトリ直下で実行します。
+   After the dry-run, return to the repository root (Unix/Linux: `cd ../../`, PowerShell: `Set-Location ..\\..`). Run the remaining steps from the repository root.
 
-4. タグ作成
+4. Create the tag (manual path only)
+
+   On the automated path, Tag release commit pushes the tag when the
+   `release/vX.Y.Z` PR merges. A hand tag there races it, so skip this step.
+   On the manual path, push it only on the user's explicit instruction.
 
    ```sh
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
 
-   例: `git tag vX.Y.Z`
+   Example: `git tag vX.Y.Z`
 
-5. GitHub Release 作成（CHANGELOG を引用）
+5. Create the GitHub Release (quote the CHANGELOG)
 
-6. npm publish（必要な場合）
+6. npm publish (when needed)
 
    ```sh
    cd packages/qfai
    npm publish
    ```
 
-## リリース後の最終確認
+## Final check after the release
 
-空の作業ディレクトリで実行してください（既存ファイル衝突を避けるため）。
+Run it in an empty working directory (to avoid clashing with existing files).
 
-Unix/Linux（bash/zsh）の場合:
+On Unix/Linux (bash/zsh):
 
 ```sh
 mkdir -p tmp/qfai-release-smoke
 cd tmp/qfai-release-smoke
 ```
 
-PowerShell の場合:
+On PowerShell:
 
 ```powershell
 New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
@@ -166,16 +186,16 @@ Set-Location tmp/qfai-release-smoke
 ```sh
 npm i -D qfai
 npx qfai init
-# validate で validate.json を生成
+# validate generates validate.json
 npx qfai validate
 npx qfai report --out .qfai/report/report.md
 ```
 
-## 注意
+## Notes
 
-- `npm whoami` でログイン状態を確認してください。
-- 2FA 有効時は automation token（`NPM_TOKEN`）の利用を推奨します。
-- npm publish 実行には `NPM_TOKEN` などの認証が必要です。
-- unscoped パッケージでは `--access public` は不要です（scoped の場合のみ必要）。
-- publish は必ず `packages/qfai` 配下で実行してください。
-- `report.json` / `doctor.json` は内部表現で互換非保証です。外部連携は `report.md` など Markdown 出力を推奨します。
+- Check that you are logged in with `npm whoami`.
+- With 2FA enabled, use an automation token (`NPM_TOKEN`).
+- Running npm publish needs authentication such as `NPM_TOKEN`.
+- `--access public` is not needed for unscoped packages (only for scoped ones).
+- Always run publish under `packages/qfai`.
+- `report.json` and `doctor.json` are internal representations with no compatibility guarantee. For external integration, use Markdown output such as `report.md`.

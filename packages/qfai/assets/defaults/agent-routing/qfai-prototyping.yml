@@ -1,0 +1,93 @@
+# Routing defaults for the `qfai-prototyping` steps.
+# `_contract.yml` states what every file in this directory holds.
+
+routing:
+  - step: prototyping-grill
+    phases:
+      - id: seed
+        mandatory_agents: [product-experience-architect]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [product-experience-architect]
+        rerun_policy: failed-agents-only
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  - step: prototyping-preflight
+    phases:
+      - id: seed
+        mandatory_agents: [devops-ci-engineer]
+        conditional_agents: [product-experience-architect]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: failed-agents-only
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
+  # One prototype lineage per spec and screen pair, cycles 0 to 9, judged on
+  # the ordinal axes, the impressions, layout anti-patterns and DESIGN.md token
+  # violations.
+  - step: prototyping-loop
+    phases:
+      - id: seed
+        mandatory_agents: [product-experience-architect]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [product-experience-architect]
+        rerun_policy: failed-agents-only
+      - id: loop
+        mandatory_agents:
+          [devops-ci-engineer, product-surface-reviewer, product-experience-architect]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [product-surface-reviewer]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, product-surface-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer, product-surface-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: ui-bearing
+
+  - step: prototyping-handoff
+    phases:
+      - id: handoff
+        mandatory_agents: [product-experience-architect]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer, product-surface-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer, product-surface-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: ui-bearing
+
+  - step: prototyping-recover
+    phases:
+      - id: recover
+        mandatory_agents: [product-experience-architect]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: [product-experience-architect]
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default

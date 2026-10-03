@@ -35,7 +35,7 @@ function instructionPath(root: string, name: string): string {
   return path.join(root, ".github", "instructions", name);
 }
 
-// QFAI:SPEC-0003:US-0003-0011
+// QFAI:BF-0001
 describe("E2E: Copilot review instructions are distributed create-only (US-0003-0011)", () => {
   it("writes both instruction files on a first init", async () => {
     const tmpDir = await createTempDir();
@@ -85,7 +85,7 @@ describe("E2E: Copilot review instructions are distributed create-only (US-0003-
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0012
+// QFAI:BF-0001
 describe("E2E: --force regenerates the instruction files (US-0003-0012)", () => {
   it("restores an edited file to what a fresh init writes", async () => {
     const tmpDir = await createTempDir();
@@ -118,7 +118,7 @@ describe("E2E: --force regenerates the instruction files (US-0003-0012)", () => 
   });
 });
 
-// QFAI:SPEC-0003:US-0003-0013
+// QFAI:BF-0001
 describe("E2E: activation guidance for newly created instructions (US-0003-0013)", () => {
   it("names the comment and the workflow that switch the review on", async () => {
     const tmpDir = await createTempDir();

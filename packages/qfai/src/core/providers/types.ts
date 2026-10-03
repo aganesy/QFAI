@@ -1,10 +1,10 @@
 /**
  * Browser provider types.
  *
- * Provider interface is minimal (DEC-0003). Registration is optional;
+ * Provider interface is minimal. Registration is optional;
  * absence is a valid state with fail-open semantics.
  *
- * WS-B: BrowserQaProvider is the canonical interface for 4-phase Browser QA.
+ * BrowserQaProvider is the canonical interface for 4-phase Browser QA.
  * BrowserProvider defines the browser QA and capture provider interface.
  */
 
@@ -30,7 +30,7 @@ export type BrowserProvider = {
 };
 
 /**
- * Canonical Browser QA provider — WS-B.
+ * Canonical Browser QA provider.
  * All run* methods are required. If a provider does not support a phase,
  * it must return `{ status: "skipped" }` instead of being optional.
  */

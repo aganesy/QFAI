@@ -4,6 +4,7 @@
  * The driver's contract:
  *   - every in-scope document conforms          -> exit 0
  *   - any document violates its schema          -> exit 1, naming the document type
+ *   - any document carries the opt-out marker   -> exit 1, naming the document
  *   - `--scope files` checks only what is named
  *   - `--scope all` checks everything the manifest matches
  *   - a degraded git base FAILS OPEN to `all` rather than checking nothing
@@ -16,6 +17,7 @@
  * never the contract they are checked against.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +26,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { storyTreeMarkdownPatterns } from "../../src/core/storyTree/layout.js";
+
 // The IMPLEMENTATION, not the repository-root delegator: the delegator exits
 // the process on load, so it exports nothing at all — importing it would end the
 // test run during collection. The spawn cases below still address the delegator,
@@ -31,9 +35,12 @@ import { afterEach, describe, expect, it } from "vitest";
 // @ts-expect-error -- a plain .mjs guard with no type declarations
 import {
   IGNORE_MARKER,
+  documentsWithoutOneEntry,
   findMdschemaCommand,
   firstHeading,
-  optsOutOfSchema,
+  carriesIgnoreMarker,
+  checkDocuments,
+  parseViolations,
   patternToRegExp,
   rootHeadingPattern,
 } from "../../assets/scripts/check-mdschema.mjs";
@@ -63,6 +70,11 @@ const tempDirs: string[] = [];
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-lane-"));
   tempDirs.push(dir);
+  await writeFile(
+    path.join(dir, "qfai.config.yaml"),
+    "paths:\n  specsDir: .qfai/specs\n  contractsDir: .qfai/contracts\n",
+    "utf-8",
+  );
   return dir;
 }
 
@@ -75,61 +87,127 @@ afterEach(async () => {
   }
 });
 
-/** A `01_Spec.md` that satisfies the shipped spec-overview schema. */
-const CONFORMING_SPEC = [
-  "# 01 Spec",
-  "",
-  "## Consumer View",
-  "",
-  "- Primary SSOT for execution: this file",
-  "",
-  "## Scope",
-  "",
-  "- In: the thing",
-  "- Out: the other thing",
-  "",
-  "## Applicable NFR",
-  "",
-  "- NFR: none inherited",
-  "",
-  "## Applicable Policy",
-  "",
-  "- Policy: none inherited",
-  "",
-  "## Evidence Summary",
-  "",
-  "- Evidence: none yet",
-  "",
-  "## Relevant Requirements",
-  "",
-  "- REQ: none yet",
-  "",
-  "## Entry points",
-  "",
-  "- US range in this spec: none yet",
-  "",
-].join("\n");
+/**
+ * A `business-flow.md` that satisfies its schema: the shipped template, read
+ * rather than restated, so a change to the pair moves this fixture with it.
+ */
+const CONFORMING_FLOW = readFileSync(
+  path.join(
+    REPO_ROOT,
+    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN/business-flow.md",
+  ),
+  "utf-8",
+).replace(/\r\n/g, "\n");
 
-/** The same document with `## Scope` removed. */
-const NON_CONFORMING_SPEC = CONFORMING_SPEC.replace(
-  "## Scope\n\n- In: the thing\n- Out: the other thing\n\n",
-  "",
-);
+/** The same document with its `## Flow` section removed. */
+const NON_CONFORMING_FLOW = CONFORMING_FLOW.replace(/^## Flow\n[\s\S]*?(?=^## |(?![\s\S]))/m, "");
 
 /** The same document with only its root heading replaced, sections intact. */
-const WRONG_ROOT = CONFORMING_SPEC.replace("# 01 Spec", "# Something Else Entirely");
+const WRONG_ROOT = CONFORMING_FLOW.replace(/^# .*$/m, "# Something Else Entirely");
 
-async function writeSpec(root: string, pack: string, body: string): Promise<string> {
-  const dir = path.join(root, ".qfai", "specs", pack);
+async function writeFlow(root: string, flow: string, body: string): Promise<string> {
+  const dir = path.join(root, ".qfai", "specs", "02_business-flow", flow);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, "01_Spec.md"), body, "utf-8");
-  return `.qfai/specs/${pack}/01_Spec.md`;
+  await writeFile(path.join(dir, "business-flow.md"), body, "utf-8");
+  return `.qfai/specs/02_business-flow/${flow}/business-flow.md`;
 }
 
 describe("check-mdschema driver", () => {
+  it("uses the story-tree directories without a config file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-defaults-"));
+    tempDirs.push(root);
+    const file = path.join(root, ".qfai", "spec", "03_contract", "tech.md");
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, "# Wrong root\n", "utf-8");
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("story-tech");
+  });
+
+  // QFAI:EX-0001-0011-01
+  // QFAI:EX-0001-0011-02
+  it("gives every fixed story-tree document and a CLI contract one schema entry", () => {
+    const manifest = readFileSync(
+      path.join(REPO_ROOT, "packages/qfai/assets/mdschema/manifest.yml"),
+      "utf-8",
+    );
+    const files = [
+      ...storyTreeMarkdownPatterns("docs/spec", "docs/contracts"),
+      "docs/contracts/cli/example.md",
+    ];
+
+    expect(
+      documentsWithoutOneEntry(manifest, files, {
+        specsDir: "docs/spec",
+        contractsDir: "docs/contracts",
+      }),
+    ).toEqual([]);
+    const withoutOpenQuestions = manifest.replace(
+      / {2}- id: story-open-questions\r?\n {4}schema: [^\r\n]+\r?\n {4}pattern: [^\r\n]+\r?\n/,
+      "",
+    );
+    expect(
+      documentsWithoutOneEntry(withoutOpenQuestions, files, {
+        specsDir: "docs/spec",
+        contractsDir: "docs/contracts",
+      }),
+    ).toEqual(["docs/spec/open-questions.md"]);
+  });
+
+  // QFAI:EX-0001-0011-14
+  it("finds only files with zero or several manifest entries", () => {
+    const manifest = [
+      "documents:",
+      "  - id: decision",
+      "    schema: story/decisions.mdschema.yml",
+      '    pattern: "{specsDir}/decisions.md"',
+      "  - id: decision-other",
+      "    schema: story/decisions.mdschema.yml",
+      '    pattern: "{specsDir}/decisions.md"',
+      "  - id: contract",
+      "    schema: story/03_contract/tech.mdschema.yml",
+      '    pattern: "{contractsDir}/tech.md"',
+    ].join("\n");
+    expect(
+      documentsWithoutOneEntry(
+        manifest,
+        ["docs/spec/decisions.md", "docs/spec/open-questions.md", "docs/contracts/tech.md"],
+        { specsDir: "docs/spec", contractsDir: "docs/contracts" },
+      ),
+    ).toEqual(["docs/spec/decisions.md", "docs/spec/open-questions.md"]);
+  });
+
+  // QFAI:EX-0001-0011-03
+  it("checks a contract file at the configured contractsDir", async () => {
+    const root = await newTempDir();
+    const contract = path.join(root, "docs", "contracts", "tech.md");
+    await mkdir(path.dirname(contract), { recursive: true });
+    await writeFile(contract, "# Wrong root\n", "utf-8");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: docs/spec\n  contractsDir: docs/contracts\n",
+      "utf-8",
+    );
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("story-tech");
+
+    const template = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+    );
+    await writeFile(contract, readFileSync(template, "utf-8"), "utf-8");
+    const valid = runDriver(["--root", root, "--scope", "all"]);
+    expect(valid.status, valid.stderr).toBe(0);
+  });
+
   it("exits 0 and counts the files when every document conforms", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
@@ -137,34 +215,66 @@ describe("check-mdschema driver", () => {
     expect(result.stdout).toContain("1 file(s) conform");
   });
 
+  // QFAI:EX-0001-0011-04
+  it("accepts a one-flow one-story sample copied from the SDD templates", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      "utf-8",
+    );
+    const source = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN",
+    );
+    const destination = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+    for (const relative of [
+      "business-flow.md",
+      "user-story-NNNN-NNNN/01_User-story.md",
+      "user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "user-story-NNNN-NNNN/03_Example.md",
+    ]) {
+      const target = path.join(
+        destination,
+        relative.replace("user-story-NNNN-NNNN", "user-story-0001-0001"),
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, readFileSync(path.join(source, relative), "utf-8"), "utf-8");
+    }
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("4 file(s) conform");
+  });
+
   it("exits 1 and names the document type when a document violates its schema", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", NON_CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(1);
     // The manifest entry id, so a reader knows which contract was broken
     // without matching the violation text against 22 schemas by eye.
-    expect(result.stderr).toContain("spec-overview");
-    expect(result.stderr).toContain("Scope");
+    expect(result.stderr).toContain("story-business-flow");
+    expect(result.stderr).toContain("Flow");
   });
 
   it("reports a per-document-type summary when asked", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "all", "--summary"]);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("PASS");
-    expect(result.stdout).toContain("spec-overview");
+    expect(result.stdout).toContain("story-business-flow");
   });
 
   it("checks only the named documents under --scope files", async () => {
     const root = await newTempDir();
-    const good = await writeSpec(root, "spec-0001", CONFORMING_SPEC);
-    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+    const good = await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    await writeFlow(root, "business-flow-0002", NON_CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "files", good]);
 
@@ -176,7 +286,7 @@ describe("check-mdschema driver", () => {
 
   it("fails open to the whole tree when the git base is unreachable", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", NON_CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
 
     // A temp directory is not a git repository, so the diff is degraded. The
     // lane must widen rather than silently check nothing and report green —
@@ -184,14 +294,14 @@ describe("check-mdschema driver", () => {
     const result = runDriver(["--root", root, "--base", "no/such/ref"]);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("spec-overview");
+    expect(result.stderr).toContain("story-business-flow");
   });
 
   it("reads paths.specsDir from the tree's own qfai.config.yaml", async () => {
     const root = await newTempDir();
-    const dir = path.join(root, "docs", "specs", "spec-0001");
+    const dir = path.join(root, "docs", "specs", "02_business-flow", "business-flow-0001");
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "01_Spec.md"), NON_CONFORMING_SPEC, "utf-8");
+    await writeFile(path.join(dir, "business-flow.md"), NON_CONFORMING_FLOW, "utf-8");
     await writeFile(
       path.join(root, "qfai.config.yaml"),
       "paths:\n  specsDir: docs/specs\n  outDir: .qfai/report\n",
@@ -203,7 +313,7 @@ describe("check-mdschema driver", () => {
     // Found at the relocated path: an adopter who moved their specs is covered
     // without editing the manifest.
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("spec-overview");
+    expect(result.stderr).toContain("story-business-flow");
   });
 
   it("exits 0 when the tree has no documents the manifest matches", async () => {
@@ -238,6 +348,26 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("not a directory");
   });
 
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools names no directory", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--scope", "all", "--tools"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("exits 2 when --tools is followed by another option, which it must not swallow", async () => {
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--tools", "--scope", "all"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--tools needs a directory");
+  });
+
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newTempDir();
 
@@ -248,56 +378,112 @@ describe("check-mdschema driver", () => {
   });
 });
 
-describe("a document that opts out of its schema", () => {
-  it("is left unchecked, and the run says how many were", async () => {
-    // A pack outlives what it specifies. A deleted spec is kept as the record
-    // of why it went away, and that record cannot carry a consumer view for
-    // something that no longer exists — so the choice is between writing
-    // fiction and weakening the schema for every live pack.
+describe("a Markdown file no schema covers", () => {
+  // QFAI:EX-0001-0011-12
+  it("fails the lane under every scope that includes it, naming the file", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${NON_CONFORMING_SPEC}`);
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    const notes = ".qfai/contracts/design/notes.md";
+    await mkdir(path.dirname(path.join(root, notes)), { recursive: true });
+    await writeFile(path.join(root, notes), "# Notes\n", "utf-8");
 
-    const result = runDriver(["--root", root, "--scope", "all"]);
+    const all = runDriver(["--root", root, "--scope", "all"]);
+    expect(all.status).toBe(1);
+    expect(all.stderr).toContain(notes);
+    expect(all.stderr).toContain("no schema covers this document");
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("1 ignored");
+    const named = runDriver(["--root", root, "--scope", "files", notes]);
+    expect(named.status).toBe(1);
+    expect(named.stderr).toContain(notes);
+
+    const other = runDriver([
+      "--root",
+      root,
+      "--scope",
+      "files",
+      ".qfai/specs/02_business-flow/business-flow-0001/business-flow.md",
+    ]);
+    expect(other.status, other.stderr).toBe(0);
   });
 
-  it("is counted rather than made invisible", async () => {
-    // An exclusion nobody can see is one nobody reviews. The per-type summary
-    // names it too, so a whole document type opting out cannot read as a type
-    // with no documents.
+  // QFAI:EX-0001-0011-15
+  it.each([
+    ["a leading ./", "./.qfai/specs", "./.qfai/contracts/"],
+    ["backslashes", ".qfai\\specs", ".qfai\\contracts\\"],
+  ])(
+    "reads configured directories spelled with %s as the same tree",
+    async (_, specs, contracts) => {
+      const root = await newTempDir();
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `paths:\n  specsDir: ${specs}\n  contractsDir: ${contracts}\n`,
+        "utf-8",
+      );
+      await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+
+      const result = runDriver(["--root", root, "--scope", "all"]);
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("1 file(s) conform");
+      expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    },
+  );
+
+  it("is returned to a caller as a coverage violation", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${CONFORMING_SPEC}`);
+    const notes = ".qfai/specs/README.md";
+    await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+    await writeFile(path.join(root, notes), "# Readme\n", "utf-8");
 
-    const result = runDriver(["--root", root, "--scope", "all", "--summary"]);
-
-    expect(result.stdout).toContain("1 ignored");
-    expect(result.stdout).toMatch(/spec-overview \(0 file\(s\), 1 ignored\)/);
+    expect(checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 0,
+      violations: [expect.objectContaining({ file: notes, rule: "coverage", line: 1 })],
+    });
   });
+});
 
-  it("leaves the documents beside it checked", async () => {
-    // The marker is per document. One pack opting out must not excuse the
-    // next, which is the whole difference from turning the lane off.
+describe("a document that carries the opt-out marker", () => {
+  // QFAI:EX-0001-0011-07
+  it("is refused and reported, however well it conforms", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", `${IGNORE_MARKER}\n\n${NON_CONFORMING_SPEC}`);
-    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+    const file = await writeFlow(
+      root,
+      "business-flow-0001",
+      `${IGNORE_MARKER}\n\n${CONFORMING_FLOW}`,
+    );
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("spec-overview");
+    expect(result.stderr).toContain(file);
+    expect(result.stderr).toContain("is not accepted");
   });
 
-  it("does not read a marker written below the content", async () => {
-    // A marker further down would cover a document that reads as checked to
-    // anyone who does not scroll.
+  it("is still graded against its schema", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", `${NON_CONFORMING_SPEC}\n${IGNORE_MARKER}\n`);
+    await writeFlow(root, "business-flow-0001", `${IGNORE_MARKER}\n\n${NON_CONFORMING_FLOW}`);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(1);
+    expect(result.stderr).toContain("is not accepted");
+    expect(result.stderr).toContain("Flow");
+  });
+
+  it("is not read from a mention below the content", async () => {
+    const root = await newTempDir();
+    // The mention sits after the first section's prose, where the schema allows a
+    // paragraph, so the document conforms and only the marker's position is tested.
+    await writeFlow(
+      root,
+      "business-flow-0001",
+      CONFORMING_FLOW.replace(/^## Flow$/m, `${IGNORE_MARKER}\n\n## Flow`),
+    );
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status, result.stderr).toBe(0);
   });
 });
 
@@ -331,14 +517,14 @@ describe("reading the opt-out marker", () => {
     // A marker inside a comment is comment text, not a marker.
     ["inside a comment", `<!-- a note\n${IGNORE_MARKER}\n# Title\n`, false],
   ])("reads a marker %s as %s", (_where, text, expected) => {
-    expect(optsOutOfSchema(text)).toBe(expected);
+    expect(carriesIgnoreMarker(text)).toBe(expected);
   });
 
   it("reads only the marker itself, not a line that carries it", () => {
     // A line mentioning the marker — a document explaining the convention — is
     // not a document using it.
-    expect(optsOutOfSchema(`${IGNORE_MARKER} for a deleted pack\n`)).toBe(false);
-    expect(optsOutOfSchema(`Write ${IGNORE_MARKER} at the top.\n`)).toBe(false);
+    expect(carriesIgnoreMarker(`${IGNORE_MARKER} for a deleted pack\n`)).toBe(false);
+    expect(carriesIgnoreMarker(`Write ${IGNORE_MARKER} at the top.\n`)).toBe(false);
   });
 });
 
@@ -475,6 +661,45 @@ describe("check-mdschema command resolution", () => {
     expect(findMdschemaCommand(inner)?.args).toEqual([entry]);
   });
 
+  // QFAI:EX-0002-0003-08
+  it("prefers the installation in the tools directory over the tree's own", async () => {
+    // The shipped document lane installs the checker into a directory of its own
+    // and names it with `--tools`; that copy is the one the lane pinned.
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    await seedPackage(root, { mdschema: "bin/cli.js" });
+    const pinned = await seedPackage(tools, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)).toEqual({ command: process.execPath, args: [pinned] });
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("falls back to the tree's own installation when the tools directory holds none", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
+  });
+
+  // QFAI:EX-0002-0003-08
+  it("ignores a bin that points outside its own package", async () => {
+    const root = await newTempDir();
+    const tools = await newTempDir();
+    const entry = await seedPackage(root, { mdschema: "bin/cli.js" });
+    const packageDir = path.join(tools, "node_modules", "@jackchuka", "mdschema");
+    await mkdir(packageDir, { recursive: true });
+    const outside = path.join(tools, "node_modules", "@jackchuka", "outside.js");
+    await writeFile(outside, "", "utf-8");
+    await writeFile(
+      path.join(packageDir, "package.json"),
+      JSON.stringify({ name: "@jackchuka/mdschema", bin: { mdschema: "../outside.js" } }),
+      "utf-8",
+    );
+
+    expect(findMdschemaCommand(root, tools)?.args).toEqual([entry]);
+  });
+
   it.each([
     ["a manifest that is not JSON", "{"],
     ["a manifest declaring no bin", JSON.stringify({ name: "@jackchuka/mdschema" })],
@@ -532,13 +757,13 @@ describe("the ratchet in --scope changed", () => {
     git(root, "config", "user.email", "lane@example.com");
     git(root, "config", "user.name", "lane");
     for (const [pack, body] of Object.entries(base)) {
-      await writeSpec(root, pack, body);
+      await writeFlow(root, pack, body);
     }
     git(root, "add", "-A");
     git(root, "commit", "-qm", "base");
     git(root, "checkout", "-q", "-b", "work");
     for (const [pack, body] of Object.entries(head)) {
-      await writeSpec(root, pack, body);
+      await writeFlow(root, pack, body);
     }
     git(root, "add", "-A");
     git(root, "commit", "-qm", "head");
@@ -546,11 +771,14 @@ describe("the ratchet in --scope changed", () => {
   }
 
   /** The same legacy document at both revisions, one line longer at the head. */
-  const LEGACY = "# spec: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
+  const LEGACY = "# flow: a heading the schema does not accept\n\n## Metadata\n\n- something\n";
   const LEGACY_EDITED = `${LEGACY}- one more line\n`;
 
   it("leaves a pre-existing failure to its own change when a branch edits the document", async () => {
-    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+    const root = await twoCommits(
+      { "business-flow-0002": LEGACY },
+      { "business-flow-0002": LEGACY_EDITED },
+    );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
@@ -562,31 +790,37 @@ describe("the ratchet in --scope changed", () => {
   it("reports the inherited failure rather than dropping it", async () => {
     // Held back is not the same as hidden. A document nobody is told about is
     // one nobody migrates, which is the backlog this flag exists to let shrink.
-    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+    const root = await twoCommits(
+      { "business-flow-0002": LEGACY },
+      { "business-flow-0002": LEGACY_EDITED },
+    );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
 
     expect(result.stdout).toContain("pre-existing, not this branch's");
-    expect(result.stdout).toContain("01_Spec.md");
-    expect(result.stdout).toContain("PASS  spec-overview (1 file(s), 1 pre-existing)");
+    expect(result.stdout).toContain("business-flow.md");
+    expect(result.stdout).toContain("PASS  story-business-flow (1 file(s), 1 pre-existing)");
   });
 
   it("fails when a branch breaks a document that conformed at the merge base", async () => {
     const root = await twoCommits(
-      { "spec-0001": CONFORMING_SPEC },
-      { "spec-0001": NON_CONFORMING_SPEC },
+      { "business-flow-0001": CONFORMING_FLOW },
+      { "business-flow-0001": NON_CONFORMING_FLOW },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("spec-overview");
+    expect(result.stderr).toContain("story-business-flow");
   });
 
   it("fails when a branch adds a document that does not conform", async () => {
     // Absent at the base is not "was already failing". This is the first run
     // that could have reported it.
-    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0003": LEGACY });
+    const root = await twoCommits(
+      { "business-flow-0001": CONFORMING_FLOW },
+      { "business-flow-0003": LEGACY },
+    );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
@@ -595,8 +829,8 @@ describe("the ratchet in --scope changed", () => {
 
   it("still fails for what the branch owes when it also edits a legacy document", async () => {
     const root = await twoCommits(
-      { "spec-0001": CONFORMING_SPEC, "spec-0002": LEGACY },
-      { "spec-0001": NON_CONFORMING_SPEC, "spec-0002": LEGACY_EDITED },
+      { "business-flow-0001": CONFORMING_FLOW, "business-flow-0002": LEGACY },
+      { "business-flow-0001": NON_CONFORMING_FLOW, "business-flow-0002": LEGACY_EDITED },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
@@ -604,33 +838,29 @@ describe("the ratchet in --scope changed", () => {
     expect(result.status).toBe(1);
     // The two are separated by where they are printed: what this branch owes
     // goes to stderr with the failure, the inherited one to stdout without it.
-    expect(result.stderr).toContain("spec-0001");
-    expect(result.stderr).not.toContain("spec-0002");
-    expect(result.stdout).toContain("spec-0002");
+    expect(result.stderr).toContain("business-flow-0001");
+    expect(result.stderr).not.toContain("business-flow-0002");
+    expect(result.stdout).toContain("business-flow-0002");
   });
 
-  it("does not excuse a document the merge base checked against another contract", async () => {
-    // Live at the base and retired at the head is two document shapes at one
-    // path. Running the base text against the head's contract would fail it for
-    // lacking a section only the retired shape owes, and the real omission
-    // would read as pre-existing.
-    const retiredWithoutItsRecord = CONFORMING_SPEC.replace(
-      "# 01 Spec\n",
-      "# 01 Spec\n\n- Status: superseded\n",
-    );
+  it("refuses the opt-out marker even where the merge base carried it", async () => {
+    const marked = `${IGNORE_MARKER}\n\n${CONFORMING_FLOW}`;
     const root = await twoCommits(
-      { "spec-0001": CONFORMING_SPEC },
-      { "spec-0001": retiredWithoutItsRecord },
+      { "business-flow-0001": marked },
+      { "business-flow-0001": `${marked}\nOne more paragraph.\n` },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("spec-overview-retired");
+    expect(result.stderr).toContain("is not accepted");
   });
 
   it("holds every violation against --scope all, which is the migration view", async () => {
-    const root = await twoCommits({ "spec-0002": LEGACY }, { "spec-0002": LEGACY_EDITED });
+    const root = await twoCommits(
+      { "business-flow-0002": LEGACY },
+      { "business-flow-0002": LEGACY_EDITED },
+    );
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
@@ -642,8 +872,8 @@ describe("the ratchet in --scope changed", () => {
     // The root-heading verdict is taken without `mdschema`, so it needs its own
     // answer to the ownership question the ratchet asks of everything else.
     const root = await twoCommits(
-      { "spec-0002": WRONG_ROOT },
-      { "spec-0002": `${WRONG_ROOT}- one more line\n` },
+      { "business-flow-0002": WRONG_ROOT },
+      { "business-flow-0002": `${WRONG_ROOT}- one more line\n` },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
@@ -654,7 +884,10 @@ describe("the ratchet in --scope changed", () => {
   });
 
   it("fails when a branch breaks a root heading that matched at the merge base", async () => {
-    const root = await twoCommits({ "spec-0001": CONFORMING_SPEC }, { "spec-0001": WRONG_ROOT });
+    const root = await twoCommits(
+      { "business-flow-0001": CONFORMING_FLOW },
+      { "business-flow-0001": WRONG_ROOT },
+    );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
@@ -669,8 +902,8 @@ describe("the ratchet in --scope changed", () => {
     // "normalise the line endings" and "keep the docs lane green" read as
     // alternatives.
     const root = await twoCommits(
-      { "spec-0002": LEGACY },
-      { "spec-0002": LEGACY.replace(/\n/g, "\r\n") },
+      { "business-flow-0002": LEGACY },
+      { "business-flow-0002": LEGACY.replace(/\n/g, "\r\n") },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
@@ -685,8 +918,8 @@ describe("the ratchet in --scope changed", () => {
     // shape change this gate grades. Ignoring all whitespace to reach the line
     // endings would take this edit with it.
     const root = await twoCommits(
-      { "spec-0002": LEGACY },
-      { "spec-0002": LEGACY.replace("- something", "  - something") },
+      { "business-flow-0002": LEGACY },
+      { "business-flow-0002": LEGACY.replace("- something", "  - something") },
     );
 
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
@@ -709,31 +942,31 @@ describe("the ratchet in --scope changed", () => {
 describe("a root heading the schema does not accept", () => {
   it("reports one violation rather than one per section", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", WRONG_ROOT);
+    await writeFlow(root, "business-flow-0001", WRONG_ROOT);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
     const marks = (result.stderr.match(/✗/g) ?? []).length;
 
-    // The document carries seven sections under its root.
+    // The document carries several sections under its root.
     expect(result.status).toBe(1);
     expect(marks).toBe(1);
   });
 
   it("names what is there and what the schema requires", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", WRONG_ROOT);
+    await writeFlow(root, "business-flow-0001", WRONG_ROOT);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.stderr).toContain('"# Something Else Entirely"');
-    expect(result.stderr).toContain("^# 01 Spec");
+    expect(result.stderr).toContain("^# BF-");
   });
 
   it("says the document is not checked further", async () => {
     // Without that line a reader takes the absence of other violations for the
     // rest of the document being sound.
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", WRONG_ROOT);
+    await writeFlow(root, "business-flow-0001", WRONG_ROOT);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
@@ -742,7 +975,7 @@ describe("a root heading the schema does not accept", () => {
 
   it("says so for a document with no heading at all", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", "Just a paragraph, no heading.\n");
+    await writeFlow(root, "business-flow-0001", "Just a paragraph, no heading.\n");
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
@@ -754,25 +987,25 @@ describe("a root heading the schema does not accept", () => {
     // The short-circuit is scoped to the one condition that makes grading
     // meaningless. Everything else is still `mdschema`'s to answer.
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", NON_CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(1);
     expect(result.stderr).not.toContain("Root heading is");
-    expect(result.stderr).toContain("Scope");
+    expect(result.stderr).toContain("Flow");
   });
 
   it("reports both kinds in one run, each from its own source", async () => {
     const root = await newTempDir();
-    await writeSpec(root, "spec-0001", WRONG_ROOT);
-    await writeSpec(root, "spec-0002", NON_CONFORMING_SPEC);
+    await writeFlow(root, "business-flow-0001", WRONG_ROOT);
+    await writeFlow(root, "business-flow-0002", NON_CONFORMING_FLOW);
 
     const result = runDriver(["--root", root, "--scope", "all"]);
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Root heading is");
-    expect(result.stderr).toContain("Scope");
+    expect(result.stderr).toContain("Flow");
   });
 });
 
@@ -811,5 +1044,108 @@ describe("reading the root heading", () => {
 
   it("answers null when the document has no heading", () => {
     expect(firstHeading("Just a paragraph.\n")).toBeNull();
+  });
+});
+
+/**
+ * The same check, for a caller rather than a log.
+ *
+ * `qfai validate` reports what `checkDocuments` returns, so it has to return
+ * each violation with the document and the line it is on.
+ */
+describe("checking documents for a caller", () => {
+  it("returns each violation with its document and line", async () => {
+    const root = await newTempDir();
+    const file = await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
+
+    const result = checkDocuments(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.checked).toBe(1);
+    expect(result.violations.length).toBeGreaterThan(0);
+    for (const violation of result.violations) {
+      expect(violation.file).toBe(file);
+      expect(violation.line).toBeGreaterThan(0);
+      expect(violation.rule).not.toBe("");
+    }
+    expect(result.violations.map((v: { message: string }) => v.message).join("\n")).toContain(
+      "Flow",
+    );
+  });
+
+  it("returns no violation for a conforming tree", async () => {
+    const root = await newTempDir();
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+
+    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+  });
+
+  it("returns the refused marker and the root heading as violations of their own", async () => {
+    const root = await newTempDir();
+    const marked = await writeFlow(
+      root,
+      "business-flow-0001",
+      `${IGNORE_MARKER}\n\n${CONFORMING_FLOW}`,
+    );
+    const wrong = await writeFlow(root, "business-flow-0002", WRONG_ROOT);
+
+    const result = checkDocuments(root);
+
+    expect(result.violations).toEqual([
+      expect.objectContaining({ file: marked, rule: "ignore", line: 1 }),
+      expect.objectContaining({ file: wrong, rule: "structure", line: 1 }),
+    ]);
+  });
+
+  it("uses the roots it is given rather than the config file", async () => {
+    const root = await newTempDir();
+    const dir = path.join(root, "docs", "02_business-flow", "business-flow-0001");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "business-flow.md"), NON_CONFORMING_FLOW, "utf-8");
+
+    const result = checkDocuments(root, { specsDir: "docs", contractsDir: "docs/03_contract" });
+
+    expect(result.ok).toBe(true);
+    expect(result.violations.map((v: { file: string }) => v.file)).toContain(
+      "docs/02_business-flow/business-flow-0001/business-flow.md",
+    );
+  });
+});
+
+describe("reading mdschema's output", () => {
+  const root = path.resolve(os.tmpdir(), "tree");
+  const file = ".qfai/spec/decisions.md";
+  const output = [
+    path.join(root, file),
+    '  ✗ 1:3 [structure] Required element "^## Decisions$" not found within "Decisions"',
+    '  ✗ 3:4 [structure] First heading under "Decisions" is "## Wrong"',
+    "",
+    "✗ Found 2 violation(s) in 1 file(s)",
+  ].join("\n");
+
+  it("attributes each violation line to the document above it", () => {
+    const parsed = parseViolations(output, [file], root);
+
+    expect(parsed.unattributed).toEqual([]);
+    expect(parsed.perFile.get(file)).toEqual([
+      {
+        line: 1,
+        column: 3,
+        rule: "structure",
+        message: 'Required element "^## Decisions$" not found within "Decisions"',
+      },
+      {
+        line: 3,
+        column: 4,
+        rule: "structure",
+        message: 'First heading under "Decisions" is "## Wrong"',
+      },
+    ]);
+  });
+
+  it("keeps a line it cannot place rather than dropping it", () => {
+    const parsed = parseViolations(`${output}\nsomething new the tool printed`, [file], root);
+
+    expect(parsed.unattributed).toEqual(["something new the tool printed"]);
   });
 });

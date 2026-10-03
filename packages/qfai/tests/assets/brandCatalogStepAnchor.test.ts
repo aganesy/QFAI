@@ -1,212 +1,244 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-describe("brand catalog step anchor", () => {
-  const repoRoot = path.resolve(process.cwd(), "..", "..");
-  const assetsRoot = path.resolve(repoRoot, "packages", "qfai", "assets");
-  const skillsRoot = path.join(assetsRoot, "init", ".qfai", "assistant", "skills");
-  const discussionSkillDir = path.join(skillsRoot, "qfai-discussion");
-  const sddReferences = path.join(skillsRoot, "qfai-sdd", "references");
-  const catalogPath = path.join(sddReferences, "design-md-brand-catalog.md");
-  const authoringPath = path.join(sddReferences, "design-md-authoring.md");
-  const sddSkillMdPath = path.join(skillsRoot, "qfai-sdd", "SKILL.md");
+import { readDiscussionSkill } from "../helpers/discussionSteps.js";
 
-  it("no discussion-skill asset routes work to the retired `Step 11.3` address", async () => {
-    // `/qfai-discussion`'s Required Process is a flat 11-item list with
-    // no sub-steps, so `Step 11.3` addresses nothing this skill defines.
-    // Scope: the discussion skill tree only. Step numbers are per-skill
-    // local names, not a shipped-wide namespace, so scanning every asset
-    // Markdown file would fail CI the moment another skill legitimately
-    // numbered a step `11.3` — exactly as `qfai-verify/SKILL.md` already
-    // defines its own `Step 0.5`.
-    const discussionMd = await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true });
-    expect(discussionMd.length).toBeGreaterThan(0);
-    const dangling = /Step\s+11\.3/i;
-    const hits: string[] = [];
-    for (const file of discussionMd) {
-      const text = await readFile(file, "utf-8");
-      const lines = text.split("\n");
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (line === undefined) continue;
-        if (dangling.test(line)) {
-          hits.push(`${path.relative(discussionSkillDir, file)}:${i + 1}: ${line.trim()}`);
-        }
-      }
-    }
-    expect(hits).toEqual([]);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const skills = path.join(root, "packages/qfai/assets/init/.qfai/assistant/skill");
+const read = (rel: string): Promise<string> => readFile(path.join(skills, rel), "utf-8");
+const readStep = async (name: string): Promise<string> =>
+  (await readFile(path.join(skills, "..", "step", name, "STEP.md"), "utf-8")).replace(/\s+/g, " ");
+
+describe("brand catalog ownership", () => {
+  it("gives root DESIGN.md authoring to SDD for a visual surface", async () => {
+    const discussion = (await readDiscussionSkill(path.dirname(skills))).replace(/\s+/g, " ");
+    const authoring = await read("qfai-sdd/references/design-md-authoring.md");
+    const sdd = await readStep("sdd-contract");
+    expect(discussion).toContain("root `DESIGN.md` — is authored");
+    expect(discussion).toContain("/qfai-sdd");
+    expect(authoring).toContain("How `/qfai-sdd` writes the root `DESIGN.md`");
+    expect(sdd).toContain("root `DESIGN.md`, which `common-design-md`");
   });
 
-  it("the retired-address scan stays inside the discussion skill tree", async () => {
-    // Over-correction pin. Re-widening the scan to `assetsRoot` would pull
-    // in sibling skills whose step numbers are their own local namespace.
-    // `qfai-verify/SKILL.md` is the live proof: it defines `## Step 0.5`,
-    // which is valid there and says nothing about discussion's steps.
-    const verifySkillMd = path.join(skillsRoot, "qfai-verify", "SKILL.md");
-    expect(await readFile(verifySkillMd, "utf-8")).toMatch(/^##\s+Step 0\.5\b/m);
-
-    // `fast-glob` returns POSIX-separated paths even with `absolute: true`, and even on
-    // Windows. Both sides of every comparison below are therefore normalised to `/`
-    // rather than to `path.sep`, which is what the two assertions used to do.
-    //
-    // Neither of them worked on Windows, and they failed in opposite directions. The
-    // `startsWith` check compared a `/`-separated result against a `\`-separated prefix,
-    // so it could never be true and the row failed on a tree nobody had touched. The
-    // `not.toContain` check compared against a `\`-separated absolute path, so it could
-    // never match — always passing, checking nothing. A row that cannot fail is the worse
-    // of the two, because it reports as coverage.
-    const posix = (p: string): string => p.split(path.sep).join("/");
-    const root = posix(discussionSkillDir);
-
-    const scanned = (await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true })).map(posix);
-    expect(
-      scanned,
-      "a sibling skill's file must not be in the scan: its step numbers are its own namespace",
-    ).not.toContain(posix(verifySkillMd));
-    expect(scanned.length, "the scan must have found files for this to be about").toBeGreaterThan(
-      0,
-    );
-    for (const file of scanned) {
-      expect(file.startsWith(`${root}/`)).toBe(true);
-    }
-  });
-
-  it("the catalog routes archetype selection to the phase that writes the field", async () => {
-    const catalog = await readFile(catalogPath, "utf-8");
-    // Opening line and Selection Guide must both name the phase that
-    // actually writes `brand.archetype`.
-    expect(catalog).toMatch(/Phase 0 DESIGN\.md Freeze picks one/);
-    expect(catalog).toMatch(/Use this catalog during Phase 0 DESIGN\.md Freeze[^\n]*qfai-sdd/);
-    // The output mapping the catalog defers to must exist by anchor.
-    expect(catalog).toContain("design-md-authoring.md#output-mapping");
-  });
-
-  it("only one skill authors root DESIGN.md, and it is the one holding the catalog", async () => {
-    // The catalog, the mapping and the instruction to write the file have to
-    // travel together. A discussion step that still emits the draft would put
-    // two skills on the same artifact, and the second writer would overwrite a
-    // brand the first had already frozen.
-    const sddSkill = await readFile(sddSkillMdPath, "utf-8");
-    const freezeStart = sddSkill.indexOf("## Phase 0 DESIGN.md Freeze");
-    expect(freezeStart, "qfai-sdd has no Phase 0 DESIGN.md Freeze section").toBeGreaterThan(-1);
-    const freezeEnd = sddSkill.indexOf("\n## ", freezeStart + 1);
-    const freeze = sddSkill.slice(freezeStart, freezeEnd === -1 ? undefined : freezeEnd);
-    expect(freeze).toMatch(/author it here per `references\/design-md-authoring\.md`/);
-
-    // A Required Process step is written as an imperative, so the test reads
-    // the step's own opening verb rather than anywhere `DESIGN.md` appears —
-    // step 9 legitimately names the file when it hands it to the next skill.
-    const discussionSkill = await readFile(path.join(discussionSkillDir, "SKILL.md"), "utf-8");
-    const authoringSteps = discussionSkill
-      .split("\n")
-      .filter((line) =>
-        /^\d+\.\s+(?:\*\*)?(Emit|Author|Generate|Write|Draft|Produce)\b[^\n]*DESIGN\.md/i.test(
-          line,
-        ),
-      );
-    expect(authoringSteps, "discussion must not carry a DESIGN.md authoring step").toEqual([]);
-
-    // And it must not block on the file either: a completion condition on an
-    // artifact the skill no longer writes can never be satisfied from inside
-    // the run that has to satisfy it.
-    expect(discussionSkill).not.toMatch(/root `DESIGN\.md` draft exists/);
-  });
-
-  // The same claim one layer down. Moving the step in the skills left the
-  // source saying the old thing, and one of those sentences is not a comment:
-  // `QFAI-DCON-034`'s remediation told an operator to run `/qfai-discussion`
-  // to get a draft it no longer emits, which is an instruction that cannot be
-  // followed.
-  it("no source file attributes root DESIGN.md authoring to the discussion stage", async () => {
-    const files = await fg("**/*.ts", {
-      cwd: path.join(repoRoot, "packages", "qfai", "src"),
-      absolute: true,
-    });
-    expect(files.length, "the sweep must have found source to be about").toBeGreaterThan(0);
-
-    const offenders: string[] = [];
-    for (const file of files) {
-      const lines = (await readFile(file, "utf-8")).split("\n");
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i] ?? "";
-        // The SKILL name, not the stage. A remediation may say the direction
-        // came from "the discussion pack" — that is where it was recorded, and
-        // recording is not authoring — so the pattern is the invocable name.
-        // No exemption beyond that: these strings run to a couple of hundred
-        // characters, and a phrase-level carve-out would exempt the whole line.
-        if (!/qfai-discussion/.test(line)) continue;
-        if (!/DESIGN\.md|brand intent/i.test(line)) continue;
-        offenders.push(`${path.relative(repoRoot, file).replace(/\\/g, "/")}:${i + 1}`);
-      }
-    }
-
-    expect(offenders, "source naming the discussion stage as DESIGN.md's author").toEqual([]);
-  });
-
-  it("the archetype `interaction` default is routed to `accessibility.motion`", async () => {
-    // `visual` rejects unknown keys (`readVisual` in
-    // `src/core/design/designMd.ts` allows only
-    // colors | typography | radius | shadow | spacing), so an agent told
-    // to fold every `aesthetic_properties` entry into `visual.*` would
-    // emit `visual.motion` / `visual.interaction` and fail DESIGN.md
-    // parsing. Both files an author reads must name the split.
-    const catalog = await readFile(catalogPath, "utf-8");
-    const catalogRouting = catalog
-      .split("\n")
-      .find((line) => line.includes("split by destination"));
-    expect(catalogRouting).toBeDefined();
-    expect(catalogRouting ?? "").toContain("visual.*");
-    expect(catalogRouting ?? "").toContain("accessibility.motion");
-
-    const authoring = await readFile(authoringPath, "utf-8");
-    expect(authoring).toContain("accessibility.motion");
-    expect(authoring).toMatch(/`visual\.motion`[\s\S]{0,80}fails DESIGN\.md validation/);
-  });
-
-  it("the authoring reference keeps the field required and says where its answer comes from", async () => {
-    // `brand.archetype` is a hard-required DESIGN.md field
-    // (`validateDesignMd` in `src/core/design/designMd.ts` raises
-    // `missing-required` on it), so the reference that replaces the old
-    // discussion step must still tell the author to fill it — and must name
-    // the recorded direction it is filled from, or the author invents one.
-    const authoring = await readFile(authoringPath, "utf-8");
-    // The answer comes from the theme the user chose, not from the assistant
-    // scoring the product's prose. Scoring survives as the fallback for a pack
-    // that recorded no theme, and the reference says whose answer that is.
-    expect(authoring).toMatch(/Brand archetype → `brand\.archetype`/);
-    expect(authoring).toContain("design-md-brand-catalog.md");
+  it("uses the adopted discussion direction as the brand input", async () => {
+    const authoring = await read("qfai-sdd/references/design-md-authoring.md");
+    const discussion = await read("qfai-discussion/references/discussion-completion-matrix.md");
+    expect(authoring).toContain("01_Context.md#Design Direction");
     expect(authoring).toContain("04_Sources.md");
+    expect(discussion).toContain("common-design-md` step authors root `DESIGN.md`");
   });
 
-  it("discussion still records what Phase 0 authors from", async () => {
-    // Over-correction pin. Moving the artifact must not take its inputs with
-    // it: Phase 0 has nothing to write from unless discussion still captures
-    // the direction, and the unranked-directions rule is a separate axis that
-    // the move does not touch.
-    const matrix = await readFile(
-      path.join(discussionSkillDir, "references", "discussion-completion-matrix.md"),
+  it("does not invent a visual brand for a CLI-only target", async () => {
+    const authoring = await read("qfai-sdd/references/design-md-authoring.md");
+    const sdd = await readStep("sdd-contract");
+    expect(authoring).toContain("A cli-only target has no root");
+    expect(sdd).toContain("A CLI-only surface does not require one");
+  });
+
+  it("routes brand archetype and interaction into supported fields", async () => {
+    const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
+    const authoring = await read("qfai-sdd/references/design-md-authoring.md");
+    expect(catalog).toContain("brand.archetype");
+    expect(catalog).toContain("accessibility.motion");
+    expect(authoring).toContain("Brand archetype → `brand.archetype`");
+    expect(authoring).toContain("`visual.interaction` key fails DESIGN.md validation");
+  });
+
+  it("uses a deterministic tie-break from recorded input", async () => {
+    const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
+    expect(catalog).toContain("brand.voice");
+    expect(catalog).toContain("audience.emotion");
+    expect(catalog).toContain("audience.do_not_look_like");
+    expect(catalog).toContain("alphabetical archetype name");
+    expect(catalog).not.toContain("visual-theme weight wins");
+  });
+});
+
+// A general "avoid the generic look" instruction swaps one default for another;
+// only a named pattern can be checked. The list lives in one reference, and the
+// surfaces that review a design point at it instead of restating it.
+describe("generated-design anti-patterns", () => {
+  const antiPatterns = "qfai-sdd/references/design-anti-patterns.md";
+  const antiPatternsInstallPath = `.qfai/assistant/skill/${antiPatterns}`;
+  const sectionOf = (doc: string, heading: string): string => {
+    const start = doc.indexOf(`\n## ${heading}\n`);
+    if (start < 0) {
+      return "";
+    }
+    const end = doc.indexOf("\n## ", start + 1);
+    return doc.slice(start, end < 0 ? undefined : end);
+  };
+
+  it("lists the patterns by aspect, in the reviewed order", async () => {
+    const doc = await read(antiPatterns);
+    const aspects = [
+      "Color and background",
+      "Typography",
+      "Iconography and imagery",
+      "Surfaces",
+      "Components",
+      "Layout and composition",
+      "Placement",
+      "Motion and transitions",
+      "Copy in the UI",
+      "Information architecture and flow",
+      "States and accessibility",
+      "Implementation defaults",
+      "Displacement",
+    ];
+    const headings = doc
+      .split("\n")
+      .filter((line) => line.startsWith("## "))
+      .map((line) => line.slice(3));
+    expect(headings.filter((heading) => aspects.includes(heading))).toEqual(aspects);
+
+    // One representative per aspect, most often the most-cited one, which
+    // opens its section.
+    const representatives: [string, RegExp][] = [
+      ["Color and background", /^- The hero, background, buttons or accents use a purple/m],
+      ["Typography", /^- All text is set in one default sans-serif/m],
+      ["Iconography and imagery", /^- Emoji stand in for icons/m],
+      ["Surfaces", /^- Every card, button and panel has the same corner radius/m],
+      ["Components", /^- Features are a row of three/m],
+      ["Layout and composition", /stock generated-SaaS template/],
+      ["Placement", /A row of three cards sits directly beneath the hero/],
+      ["Motion and transitions", /same fade-in or fade-and-slide-up/],
+      ["Copy in the UI", /^- Copy leans on hollow buzzwords/m],
+      ["Information architecture and flow", /Sections follow the stock order/],
+      ["States and accessibility", /contrast below WCAG AA/],
+      ["Implementation defaults", /default palette ships unchanged/],
+    ];
+    for (const [aspect, pattern] of representatives) {
+      expect(sectionOf(doc, aspect), aspect).toMatch(pattern);
+    }
+
+    const expectedCounts = [14, 14, 13, 11, 15, 14, 6, 9, 20, 8, 6, 4];
+    const patterns = representatives.flatMap(([aspect], index) => {
+      const entries = sectionOf(doc, aspect)
+        .split(/\n(?=- )/)
+        .slice(1)
+        .map((entry) => entry.trim().replace(/\s+/g, " "));
+      expect(entries.length, aspect).toBe(expectedCounts[index]);
+      expect(new Set(entries).size, aspect).toBe(entries.length);
+      return entries;
+    });
+    expect(patterns).toHaveLength(134);
+
+    // The shipped list carries no citation counts, source numbers or links.
+    expect(doc).not.toMatch(/https?:\/\//);
+    expect(doc).not.toMatch(/\b(?:en|ja|zh|ru):\d/);
+    expect(doc).not.toMatch(/\b\d+ sources?\b/i);
+  });
+
+  it("pairs each banned default with the substitute a model falls back to", async () => {
+    const displacement = sectionOf(await read(antiPatterns), "Displacement");
+    expect(displacement).toMatch(/pattern to avoid as well/);
+    const rows = displacement
+      .split("\n")
+      .filter((line) => line.startsWith("| ") && !/^\| (?:-|First default)/.test(line));
+    for (const substitute of [
+      /cream or beige ground .*terracotta/,
+      /Near-black ground.*acid-green or vermilion/,
+      /newspaper look: a high-contrast serif or Mincho/,
+      /Zero radius everywhere, with hairline rules/,
+      /tracked all-caps monospace eyebrow labels/,
+      /Space Grotesk, Instrument Serif, Geist, Fraunces, Satoshi/,
+    ]) {
+      expect(
+        rows.some((row) => substitute.test(row)),
+        String(substitute),
+      ).toBe(true);
+    }
+  });
+
+  it("is what the catalog, the review bundle and the comparison review point at", async () => {
+    const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
+    expect(sectionOf(catalog, "Patterns to avoid")).toContain("`design-anti-patterns.md`");
+
+    const bundle = await read("qfai-discussion/templates/uiux/50_review_input_bundle.md");
+    expect(bundle).not.toMatch(/AI slop/i);
+    const item = sectionOf(bundle, "Trend-derived review focus").replace(/\s+/g, " ");
+    expect(item).toContain(
+      `- Neither a reference adopted in \`04_Sources.md\` nor the prototype carries a pattern listed in \`${antiPatternsInstallPath}\` unless the recorded brand direction asks for it. Fail this item on any such pattern, and name the pattern.`,
+    );
+
+    const comparison = await readFile(
+      path.join(root, "packages/qfai/assets/uix-rev/comparison-review.md"),
       "utf-8",
     );
-    expect(matrix).toMatch(/reference registries in `04_Sources\.md` are complete/);
-    expect(matrix).toMatch(/Exploration directions are carried unranked/);
+    expect(comparison.replace(/\s+/g, " ")).toContain(
+      `- No direction shows a pattern listed in \`${antiPatternsInstallPath}\` that the recorded brand direction does not ask for. Name the pattern when flagging one.`,
+    );
+    expect(comparison).not.toMatch(/anti-slop pattern list/i);
+
+    // The prototyping loop's reviewer keeps its lock on brand values and does
+    // not apply the list.
+    const reviewerPrompt = await read("qfai-prototyping/references/reviewer-prompt.md");
+    const reviewer = reviewerPrompt.replace(/\s+/g, " ");
+    expect(reviewer).toContain("Do not comment on brand colors, typefaces, radii, or shadows");
+    expect(reviewer).not.toContain("design-anti-patterns.md");
   });
 
-  it("keeps the tie-break decidable from the inputs the selection actually has", async () => {
-    // "highest visual-theme weight wins" named a number the catalog does not
-    // publish for any archetype, and nothing in the authoring reference or the
-    // intake produces one. Two agents on the same pack could therefore pick
-    // different archetypes and different tokens. The helper that consumed that
-    // number is gone; the tie-break the Selection Guide states is what an agent
-    // reads, and this row is what holds it.
-    const catalog = await readFile(catalogPath, "utf-8");
-    expect(catalog).not.toMatch(/visual-theme weight wins/);
-    expect(catalog).toMatch(/contradict fewer entries of `audience\.do_not_look_like`/);
-    expect(catalog).toMatch(/alphabetical archetype name/);
-    // Over-correction pin: the scoring step still reads the three intake
-    // fields, so the tie-break is a tail rule and not a replacement for fit.
-    expect(catalog).toMatch(/`brand\.voice`, `audience\.emotion`, `audience\.do_not_look_like`/);
+  it("offers typeface candidates that are not a default or its substitute", async () => {
+    const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
+    const archetypeCandidates = catalog
+      .split("\n")
+      .filter((line) => line.startsWith("- typeface_candidates:"));
+    expect(archetypeCandidates).toHaveLength(8);
+    for (const archetype of [
+      "Minimal",
+      "Bold",
+      "Corporate",
+      "Playful",
+      "Organic",
+      "Tech",
+      "Elegant",
+      "Casual",
+    ]) {
+      const candidateLines = sectionOf(catalog, `Archetype: ${archetype}`)
+        .split("\n")
+        .filter((line) => line.startsWith("- typeface_candidates:"));
+      expect(candidateLines, archetype).toHaveLength(1);
+      const candidates = candidateLines.flatMap((line) =>
+        line
+          .slice("- typeface_candidates:".length)
+          .split(",")
+          .map((family) => family.trim()),
+      );
+      expect(candidates.length, archetype).toBeGreaterThanOrEqual(2);
+      expect(candidates.length, archetype).toBeLessThanOrEqual(3);
+      for (const family of candidates) {
+        expect(family, archetype).not.toBe("");
+      }
+    }
+    const scriptCandidates = catalog
+      .split("\n")
+      .filter((line) => /^- (?:Japanese|Chinese|Cyrillic): /.test(line));
+    expect(scriptCandidates).toHaveLength(3);
+
+    const excluded =
+      /\b(?:Inter|Roboto|Arial|Open Sans|Lato|Poppins|system-ui|Space Grotesk|Geist|Instrument Serif|Fraunces|Satoshi)\b/;
+    for (const line of [...archetypeCandidates, ...scriptCandidates]) {
+      expect(line).not.toMatch(excluded);
+    }
+    expect(sectionOf(catalog, "Typeface candidates")).toMatch(
+      /becomes the new default once it is used everywhere/,
+    );
+  });
+
+  it("keeps every archetype clear of the patterns the list names", async () => {
+    const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
+    const properties = catalog
+      .split("\n")
+      .filter((line) => /^ {2}- (?:color_tendency|typography|spacing|interaction):/.test(line));
+    expect(properties).toHaveLength(32);
+    const prescribed =
+      /terracotta|neon|cyan|ivory|near-white|uppercase|all-caps|wide letter-spacing|monospace or|mid-range blues|3–4 accent|bouncy|fade-based|favors whitespace|ease-in-out/i;
+    for (const line of properties) {
+      expect(line).not.toMatch(prescribed);
+    }
   });
 });

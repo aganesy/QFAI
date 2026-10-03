@@ -77,7 +77,7 @@ export async function validateCompletionCertificateIssues(
           "prototyping.completionCertificate.presence",
           undefined,
           "canonical",
-          "completion 主張の前に `qfai prototyping certify` を成功させてください。",
+          "Run `qfai prototyping certify` successfully before claiming completion.",
         ),
       ];
     }
@@ -101,7 +101,7 @@ export async function validateCompletionCertificateIssues(
       "prototyping.completionCertificate.digest",
       undefined,
       "canonical",
-      "evidence を変更した場合は `qfai prototyping certify` を再実行して certificate を更新してください。",
+      "If the evidence changed, rerun `qfai prototyping certify` to refresh the certificate.",
     ),
   ];
 }

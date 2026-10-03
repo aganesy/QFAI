@@ -1,0 +1,55 @@
+# Document schema: <specsDir>/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md
+#
+# The rules under "Criteria" read the text inside the Gherkin block: mdschema's
+# required_text and forbidden_text see a fenced block's contents.
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
+structure:
+  - heading:
+      pattern: "^# Acceptance Criteria$"
+      regex: true
+    description: The acceptance criteria of this story.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
+    children:
+      - heading:
+          pattern: "^## Criteria$"
+          regex: true
+        description: >-
+          One Gherkin block and nothing else. It opens with "Feature: <story
+          title>"; each criterion is a "# AC-NNNN-NNNN-NN" comment followed by
+          one named Scenario.
+        allow_additional: false
+        code_blocks:
+          - lang: gherkin
+            min: 1
+            max: 1
+        required_text:
+          - pattern: '(?m)^Feature: \S'
+            regex: true
+          - pattern: "(?m)^  # AC-[0-9]{4}-[0-9]{4}-[0-9]{2}$"
+            regex: true
+        forbidden_text:
+          # Text before the block.
+          - pattern: '\A\s*[^`\s]'
+            regex: true
+          # Text after the block's closing fence.
+          - pattern: '(?s)\n```[ \t]*\n.*\S'
+            regex: true
+          # The parent story is the directory; a comment restating it is not written.
+          - pattern: '(?m)^\s*# Parent:'
+            regex: true
+          # A scenario is named for its outcome, not by its ID.
+          - pattern: '(?m)^\s*Scenario:\s*(AC-[0-9]{4}-[0-9]{4}-[0-9]{2}\s*)?$'
+            regex: true
+          # One scenario per criterion.
+          - pattern: '(?m)^\s*Scenario:.*\n(?:[ \t]*(?:(?:Given|When|Then|And|But)\s.*)?\n)*[ \t]*Scenario:'
+            regex: true
+          # Two spaces before a criterion comment and a Scenario, four before a step.
+          - pattern: "(?m)^( ?| {3,})(# AC-|Scenario:)"
+            regex: true
+          - pattern: '(?m)^( {0,3}| {5,})(Given|When|Then|And|But)\s'
+            regex: true

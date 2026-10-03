@@ -1,26 +1,21 @@
-// QFAI:SPEC-0018:TC-0018-0106
-// QFAI:SPEC-0018:TC-0018-0107
-// QFAI:SPEC-0018:TC-0018-0117
-// QFAI:SPEC-0018:TC-0018-0118
-// QFAI:SPEC-0018:TC-0018-0119
-// QFAI:SPEC-0018:TC-0018-0120
-// QFAI:SPEC-0018:TC-0018-0121
-// QFAI:SPEC-0018:TC-0018-0123
-// QFAI:SPEC-0018:TC-0018-0124
-// QFAI:SPEC-0018:TC-0018-0125
-// QFAI:SPEC-0018:TC-0018-0126
-// QFAI:SPEC-0018:TC-0018-0127
-// QFAI:SPEC-0018:TC-0018-0128
-// QFAI:SPEC-0018:TC-0018-0129
-// QFAI:SPEC-0018:TC-0018-0130
-// QFAI:SPEC-0018:TC-0018-0131
-// QFAI:SPEC-0018:TC-0018-0132
-// QFAI:SPEC-0018:TC-0018-0133
-// QFAI:SPEC-0018:TC-0018-0134
-// QFAI:SPEC-0018:TC-0018-0171
-// QFAI:SPEC-0018:TC-0018-0234
-// QFAI:SPEC-0018:TC-0018-0237
-// QFAI:SPEC-0018:TC-0018-0242
+// QFAI:AC-0001-0188-05
+// QFAI:AC-0001-0189-01
+// QFAI:AC-0001-0189-04
+// QFAI:AC-0001-0189-05
+// QFAI:AC-0001-0189-07
+// QFAI:AC-0001-0189-09
+// QFAI:AC-0001-0192-01
+// QFAI:AC-0001-0194-05
+// QFAI:EX-0001-0188-11
+// QFAI:EX-0001-0189-03
+// QFAI:EX-0001-0189-08
+// QFAI:EX-0001-0189-10
+// QFAI:EX-0001-0189-11
+// QFAI:EX-0001-0189-12
+// QFAI:EX-0001-0189-19
+// QFAI:EX-0001-0192-03
+// QFAI:EX-0001-0194-18
+// QFAI:EX-0001-0194-20
 // Fault seeds: FAULT-001, FAULT-002, FAULT-005, FAULT-006, FAULT-022
 
 import { spawnSync } from "node:child_process";
@@ -41,8 +36,10 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
-import { readJournal, snapshotOf, writeSnapshot } from "../../../src/core/workflow/persistence.js";
+import { snapshotOf, writeSnapshot } from "../../../src/core/workflow/fold.js";
+import { readJournal } from "../../../src/core/workflow/persistence.js";
 import {
   featureRunAt,
   field,
@@ -77,7 +74,7 @@ async function rewriteEvent(
   sequence: number,
   edit: (event: Record<string, unknown>) => object,
 ) {
-  const journal = path.join(root, ".qfai", "runs", runId, "journal");
+  const journal = path.join(root, ".qfai", "run", runId, "journal");
   const names = (await readdir(journal)).filter((name) => /^\d{6}\.json$/.test(name)).sort();
   let prevHash: string | null = null;
   for (const [index, name] of names.entries()) {
@@ -99,7 +96,8 @@ async function trackedSummary(root: string, runId: string): Promise<unknown> {
   return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
 }
 
-it("TC-0018-0234 (TDD-0451): Built CLI run with a distinctive request sentence under a temp root", async () => {
+// QFAI:EX-0001-0194-39
+it("Built CLI run with a distinctive request sentence under a temp root", async () => {
   const root = await minimalProject();
   const sentence = "Paint the zebra crossing ultraviolet at dawn.";
   const input = { ...START_INPUT, request: { text: sentence } };
@@ -109,7 +107,7 @@ it("TC-0018-0234 (TDD-0451): Built CLI run with a distinctive request sentence u
   const roots = [root, real, root.split(path.sep).join("/"), real.split(path.sep).join("/")];
   const escaped = roots.map((each) => JSON.stringify(each).slice(1, -1));
   const privateCopy: unknown = JSON.parse(
-    await readFile(path.join(root, ".qfai", "runs", runId, "request.private.json"), "utf8"),
+    await readFile(path.join(root, ".qfai", "run", runId, "request.private.json"), "utf8"),
   );
   const key = String(field(privateCopy, "digestKey"));
   const requestDigest = field(await trackedSummary(root, runId), "requestDigest");
@@ -122,10 +120,18 @@ it("TC-0018-0234 (TDD-0451): Built CLI run with a distinctive request sentence u
       requestDigest ===
       createHmac("sha256", Buffer.from(key, "hex")).update(sentence).digest("hex"),
     bare: requestDigest === createHash("sha256").update(sentence).digest("hex"),
-  }).toEqual({ files: true, sentence: false, root: false, keyed: true, bare: false });
+    secret: tracked.some((text) => text.includes(key)),
+  }).toEqual({
+    files: true,
+    sentence: false,
+    root: false,
+    keyed: true,
+    bare: false,
+    secret: false,
+  });
 });
 
-it("TC-0018-0237 (TDD-0454): Built CLI run from start to finish on a temp project", async () => {
+it("Built CLI run from start to finish on a temp project", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");
   await submit(root, runId, "accept", resultFor(issued.json, "verify-1"));
@@ -142,12 +148,12 @@ it("TC-0018-0237 (TDD-0454): Built CLI run from start to finish on a temp projec
 
   expect({
     finished: typeof field(finished.json, "run.state"),
-    outsideRuns: written.filter((file) => !file.startsWith(".qfai/runs/")),
+    outsideRuns: written.filter((file) => !file.startsWith(".qfai/run/")),
     stateFile: existsSync(path.join(root, ".qfai", "state.json")),
   }).toEqual({ finished: "string", outsideRuns: [], stateFile: false });
 });
 
-it("TC-0018-0242 (TDD-0471): the tracked summary copies nothing of settled", async () => {
+it("the tracked summary copies nothing of settled", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "implement");
   const settled = field(issued.json, "workOrder.settled.answers.0");
@@ -161,14 +167,43 @@ it("TC-0018-0242 (TDD-0471): the tracked summary copies nothing of settled", asy
   }).toEqual({ summary: true, settledField: false, question: false, chosen: false });
 });
 
+it("Built CLI: each accepted result is kept under results/, and its digest leads the stage's receipt digests", async () => {
+  const root = await minimalProject();
+  const { runId } = await featureRunAt(root, "implement");
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  const accepted = journal.ok
+    ? journal.records.filter((record) => record.event === "accept-nonfinal-result")
+    : [];
+  const kept = await Promise.all(
+    accepted.map(async (record) => {
+      const file = path.join(runDir, ...String(record.resultRef).split("/"));
+      const bytes = await readFile(file);
+      const resultId = field(JSON.parse(bytes.toString("utf8")), "resultId");
+      return { resultId, digest: createHash("sha256").update(bytes).digest("hex") };
+    }),
+  );
+  const stages = field(await trackedSummary(root, runId), "stages");
+
+  expect({
+    accepted: accepted.length > 0,
+    resultIds: kept.map((each) => `results/${String(each.resultId)}.json`),
+    leading: Array.isArray(stages) ? stages.map((stage) => field(stage, "receiptDigests.0")) : [],
+  }).toEqual({
+    accepted: true,
+    resultIds: accepted.map((record) => record.resultRef),
+    leading: kept.map((each) => each.digest),
+  });
+});
+
 const NEWER: [string, string[]][] = [
-  ["TC-0018-0106 (TDD-0319): next", ["next"]],
-  ["TC-0018-0106 (TDD-0320): accept", ["accept", "--in"]],
-  ["TC-0018-0106 (TDD-0321): decision", ["decision", "--in"]],
-  ["TC-0018-0106 (TDD-0322): status", ["status"]],
-  ["TC-0018-0106 (TDD-0323): resume", ["resume"]],
-  ["TC-0018-0106 (TDD-0324): finish", ["finish"]],
-  ["TC-0018-0106 (TDD-0325): start", ["start"]],
+  ["next", ["next"]],
+  ["accept", ["accept", "--in"]],
+  ["decision", ["decision", "--in"]],
+  ["status", ["status"]],
+  ["resume", ["resume"]],
+  ["finish", ["finish"]],
+  ["start", ["start"]],
 ];
 
 for (const [title, [operation = "", withInput]] of NEWER) {
@@ -191,13 +226,13 @@ for (const [title, [operation = "", withInput]] of NEWER) {
   });
 }
 
-const RUNS = path.join(".qfai", "runs");
+const RUNS = path.join(".qfai", "run");
 
 function runDirOf(root: string, runId: string): string {
   return path.join(root, RUNS, runId);
 }
 
-// A discovery run routed and ready, whose journal holds four events.
+// A decide-design run routed and ready, whose journal holds four events.
 async function readyRun() {
   const root = await minimalProject();
   const { runId, routed } = await routedRun(root);
@@ -220,7 +255,7 @@ async function writeLock(root: string, owner: object): Promise<string> {
   return text;
 }
 
-it("TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse as a record", async () => {
+it("A run directory whose journal the core cannot parse as a record", async () => {
   const root = await minimalProject();
   const legacy = "run-20200101000000000";
   await mkdir(path.join(root, RUNS, legacy, "journal"), { recursive: true });
@@ -237,7 +272,7 @@ it("TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse
   }).toEqual({ state: "legacy", start: [true, undefined] });
 });
 
-it("TC-0018-0117 (TDD-0336): Built CLI", async () => {
+it("Built CLI", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);
   const second = workflow(root, ["start", "--in", await inbox(root, null, "again", START_INPUT)]);
@@ -249,7 +284,7 @@ it("TC-0018-0117 (TDD-0336): Built CLI", async () => {
   }).toEqual({ code: "run-active", run: [runId, "routing"], exit: 2 });
 });
 
-it("TC-0018-0118 (TDD-0337): A write operation while", async () => {
+it("A write operation while", async () => {
   const { root, runId } = await readyRun();
   const startedAt = "2026-09-25T01:02:03.456Z";
   await writeLock(root, { runId, operation: "accept", startedAt });
@@ -262,7 +297,7 @@ it("TC-0018-0118 (TDD-0337): A write operation while", async () => {
   }).toEqual({ code: "lock-held", names: [true, true, true] });
 });
 
-it("TC-0018-0119 (TDD-0338): A lock whose start time is years old and whose pid is the live test process", async () => {
+it("A lock whose start time is years old and whose pid is the live test process", async () => {
   const { root, runId } = await readyRun();
   const lock = await writeLock(root, { runId, startedAt: "2001-01-01T00:00:00.000Z" });
   const refused = workflow(root, ["next", "--run", runId]);
@@ -273,7 +308,7 @@ it("TC-0018-0119 (TDD-0338): A lock whose start time is years old and whose pid 
   }).toEqual({ code: "lock-held", lock });
 });
 
-it("TC-0018-0120 (TDD-0339): A lock on this host whose pid is an exited child, with an orphan journal/", async () => {
+it("A lock on this host whose pid is an exited child, with an orphan journal/", async () => {
   const { root, runId, routed } = await readyRun();
   const child = spawnSync(process.execPath, ["-e", ""]);
   await writeLock(root, { runId, pid: child.pid });
@@ -290,7 +325,7 @@ it("TC-0018-0120 (TDD-0339): A lock on this host whose pid is an exited child, w
   }).toEqual({ ok: true, state: "running", orphan: false, lock: false });
 });
 
-it("TC-0018-0121 (TDD-0340): A lock naming another hostname and a pid not alive here", async () => {
+it("A lock naming another hostname and a pid not alive here", async () => {
   const { root, runId } = await readyRun();
   const child = spawnSync(process.execPath, ["-e", ""]);
   const lock = await writeLock(root, {
@@ -306,7 +341,7 @@ it("TC-0018-0121 (TDD-0340): A lock naming another hostname and a pid not alive 
   }).toEqual({ code: "lock-held", lock });
 });
 
-it("TC-0018-0123 (TDD-0341): An LF and a CRLF copy of a watched file", async () => {
+it("An LF and a CRLF copy of a watched file", async () => {
   const lf = "workflow:\n  mode: active\nvalidation:\n  failOn: error\n";
   const root = await minimalProject(lf);
   const before = await policyDigestsOf(root);
@@ -340,7 +375,7 @@ async function verdictsIn(root: string) {
   ]);
 }
 
-it("TC-0018-0124 (TDD-0342): Built CLI under a temp root whose name has a space", async () => {
+it("Built CLI under a temp root whose name has a space", async () => {
   const spaced = await minimalProject(undefined, "qfai workflow ");
   const plain = await minimalProject();
 
@@ -350,7 +385,7 @@ it("TC-0018-0124 (TDD-0342): Built CLI under a temp root whose name has a space"
   });
 });
 
-it("TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root", async () => {
+it("A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root", async () => {
   const root = await minimalProject();
   const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
   await writeFile(path.join(outside, "total.ts"), "export const total = 0;\n");
@@ -362,7 +397,12 @@ it("TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, 
     runId,
     "accept",
     resultFor(issued.json, "implement-1", {
-      changedFiles: [{ path: "src/linked/total.ts", digest: "submitted" }],
+      changedFiles: [
+        {
+          path: "src/linked/total.ts",
+          digest: hashAssistantAssetText("export const total = 0;\n"),
+        },
+      ],
     }),
   );
   await rm(outside, { recursive: true, force: true });
@@ -376,7 +416,7 @@ it("TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, 
   });
 });
 
-it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-area path", async () => {
+it("A changed file named by a case variant of a write-area path", async () => {
   const root = await minimalProject();
   await mkdir(path.join(root, "src"), { recursive: true });
   await writeFile(path.join(root, "src", "total.ts"), "export const total = 0;\n");
@@ -387,7 +427,9 @@ it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-a
     runId,
     "accept",
     resultFor(issued.json, "implement-1", {
-      changedFiles: [{ path: "SRC/total.ts", digest: "submitted" }],
+      changedFiles: [
+        { path: "SRC/total.ts", digest: hashAssistantAssetText("export const total = 0;\n") },
+      ],
     }),
   );
 
@@ -401,6 +443,32 @@ it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-a
   );
 });
 
+it("accept refuses an artifact whose submitted digest is not the file's own", async () => {
+  const root = await minimalProject();
+  const record = ".qfai/report/stage-record.md";
+  const text = "Reviewed.\r\n";
+  await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
+  await writeFile(path.join(root, record), text);
+  const { runId, issued } = await featureRunAt(root, "implement");
+  const result = (resultId: string, digest: string) =>
+    resultFor(issued.json, resultId, { artifactRefs: [{ path: record, digest }] });
+  const refused = await submit(root, runId, "accept", result("implement-1", "0".repeat(64)));
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    result("implement-2", hashAssistantAssetText(text)),
+  );
+
+  expect({
+    reasons: field(refused.json, "error.reasons"),
+    ok: field(accepted.json, "ok"),
+  }).toEqual({
+    reasons: [{ reason: "digest-mismatch", subject: record }],
+    ok: true,
+  });
+});
+
 async function integrityRefusal(root: string, runId: string) {
   const before = await treeDigest(root);
   const refused = workflow(root, ["next", "--run", runId]);
@@ -411,7 +479,7 @@ async function integrityRefusal(root: string, runId: string) {
   };
 }
 
-it("TC-0018-0127 (TDD-0345): A published journal/000004", async () => {
+it("A published journal/000004", async () => {
   const { root, runId } = await readyRun();
   await writeFile(path.join(runDirOf(root, runId), "journal", "000004.json"), '{"sequence": 4,');
   const refused = await integrityRefusal(root, runId);
@@ -426,8 +494,8 @@ it("TC-0018-0127 (TDD-0345): A published journal/000004", async () => {
 });
 
 const GAPS: [string, string][] = [
-  ["TC-0018-0128 (TDD-0346): missing-000003", "000003.json"],
-  ["TC-0018-0128 (TDD-0347): missing-000001", "000001.json"],
+  ["missing-000003", "000003.json"],
+  ["missing-000001", "000001.json"],
 ];
 
 for (const [title, missing] of GAPS) {
@@ -443,7 +511,7 @@ for (const [title, missing] of GAPS) {
   });
 }
 
-it("TC-0018-0129 (TDD-0348): An event whose prevHash does not match the previous file's bytes", async () => {
+it("An event whose prevHash does not match the previous file's bytes", async () => {
   const { root, runId } = await readyRun();
   const third = path.join(runDirOf(root, runId), "journal", "000003.json");
   const event: unknown = JSON.parse(await readFile(third, "utf8"));
@@ -460,7 +528,7 @@ it("TC-0018-0129 (TDD-0348): An event whose prevHash does not match the previous
   });
 });
 
-it("TC-0018-0130 (TDD-0349): status on a journal with a torn event", async () => {
+it("status on a journal with a torn event", async () => {
   const { root, runId } = await readyRun();
   await writeFile(path.join(runDirOf(root, runId), "journal", "000004.json"), "{");
   const before = await treeDigest(root);
@@ -474,7 +542,7 @@ it("TC-0018-0130 (TDD-0349): status on a journal with a torn event", async () =>
   }).toEqual({ state: "failed", cause: "torn-event", exit: 0, unchanged: true });
 });
 
-it("TC-0018-0131 (TDD-0350): A published event with a snapshot one sequence behind", async () => {
+it("A published event with a snapshot one sequence behind", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);
   const snapshotFile = path.join(runDirOf(root, runId), "snapshot.json");
@@ -496,7 +564,7 @@ it("TC-0018-0131 (TDD-0350): A published event with a snapshot one sequence behi
   });
 });
 
-it("TC-0018-0132 (TDD-0351): Delete snapshot", async () => {
+it("Delete snapshot", async () => {
   const { root, runId } = await readyRun();
   const runDir = runDirOf(root, runId);
   const deleted = await readFile(path.join(runDir, "snapshot.json"), "utf8");
@@ -516,7 +584,7 @@ it("TC-0018-0132 (TDD-0351): Delete snapshot", async () => {
   });
 });
 
-it("TC-0018-0133 (TDD-0352): Files under work-orders/ that no event references, left by a crash at write step 4", async () => {
+it("Files under work-orders/ that no event references, left by a crash at write step 4", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);
   const workOrders = path.join(runDirOf(root, runId), "work-orders");
@@ -536,7 +604,7 @@ it("TC-0018-0133 (TDD-0352): Files under work-orders/ that no event references, 
   }).toEqual({ issued: "work-order-route-1", replaced: true, stage: "route" });
 });
 
-it("TC-0018-0134 (TDD-0353): Tracked files behind the journal after a crash at write step 6", async () => {
+it("Tracked files behind the journal after a crash at write step 6", async () => {
   const root = await minimalProject();
   const { runId } = await featureRunAt(root, "implement");
   const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
@@ -552,7 +620,7 @@ it("TC-0018-0134 (TDD-0353): Tracked files behind the journal after a crash at w
   expect(without(rebuilt)).toEqual(without(current));
 });
 
-it("TC-0018-0171 (TDD-0375): Built CLI status while", async () => {
+it("Built CLI status while", async () => {
   const { root, runId, routed } = await readyRun();
   await writeLock(root, { runId });
   const pending = String(Number(field(routed.json, "run.sequence")) + 1).padStart(6, "0");
@@ -565,4 +633,83 @@ it("TC-0018-0171 (TDD-0375): Built CLI status while", async () => {
     sequence: field(status.json, "run.sequence"),
     unchanged: (await treeDigest(runDirOf(root, runId))) === before,
   }).toEqual({ ok: true, sequence: field(routed.json, "run.sequence"), unchanged: true });
+});
+
+// QFAI:EX-0001-0194-40
+it("Run records of a feature run approved at routing", async () => {
+  const root = await minimalProject();
+  const { runId } = await featureRunAt(root, "implement");
+  const records = path.join(root, ".qfai", "evidence", "workflow", runId, "authorizations");
+  const keys = (value: unknown): string[] =>
+    typeof value === "object" && value !== null ? Object.keys(value).sort() : [];
+  const authorizations = await Promise.all(
+    (await readdir(records)).map(async (name): Promise<unknown> =>
+      JSON.parse(await readFile(path.join(records, name), "utf8")),
+    ),
+  );
+
+  const summary = await trackedSummary(root, runId);
+
+  expect({
+    summary: keys(summary),
+    binding: keys(field(summary, "targetBindings.0")),
+    stage: keys(field(summary, "stages.0")),
+    authorizations: authorizations.map((record) => ({
+      kind: field(record, "kind"),
+      capture: field(record, "capture"),
+      operation: field(record, "operation"),
+      fields: keys(record),
+      question: keys(field(record, "question")),
+    })),
+  }).toEqual({
+    summary: [
+      "authorizationIds",
+      "closure",
+      "completionTarget",
+      "createdAt",
+      "debts",
+      "modifiers",
+      "qfaiVersion",
+      "requestDigest",
+      "reroutes",
+      "route",
+      "runId",
+      "stages",
+      "state",
+      "targetBindings",
+      "updatedAt",
+    ],
+    binding: ["flowId", "slotId", "storyIds"],
+    stage: [
+      "outcome",
+      "receiptDigests",
+      "reviewerRoles",
+      "stageInstanceId",
+      "stageKind",
+      "testObservation",
+    ],
+    authorizations: [
+      {
+        kind: "human_decision",
+        capture: "agent_captured",
+        operation: "CREATE",
+        fields: [
+          "answer",
+          "answeredBy",
+          "authorizationId",
+          "capture",
+          "effect",
+          "kind",
+          "operation",
+          "question",
+          "questionId",
+          "recordedAt",
+          "runId",
+          "scopeDigest",
+          "target",
+        ],
+        question: ["options", "selection", "text"],
+      },
+    ],
+  });
 });
