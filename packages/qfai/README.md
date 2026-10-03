@@ -92,7 +92,7 @@ See [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 You state the change once, in your own words.
 The `qfai-run` skill reads it into facts: what it asks for, its risks, and how sure that reading is.
-`npx qfai workflow` then picks one of 39 fixed routes from those facts by ordered decision rules,
+`npx qfai workflow` then picks one of 34 fixed routes from those facts by ordered decision rules,
 and each stage of the route runs through its own skill until `finish` confirms the completion target.
 You type no stage name.
 
@@ -100,7 +100,7 @@ You type no stage name.
 to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
 Each stage of a run is a sub-agent, so a question that one command or one file read answers
 is answered directly, with no run. Any other question about the project that changes no file runs one
-stage, in one sub-agent, with no separate reviewer unless the run carries `review:heavy`.
+stage, in one sub-agent, with no review.
 An existing `.codex/hooks.json` gains the hooks the way `.claude/settings.json` does.
 Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
@@ -116,8 +116,7 @@ parent directory. Where it is missing the hook says to run the project's install
 `npm i -D qfai` when `package.json` does not list `qfai`.
 
 - Every run on a route runs the same steps. A step with nothing to do records why and passes.
-- Three modifiers, `review:heavy`, `gate:user` and `gate:release`, can raise the review or add a
-  stop for your approval. They never change the steps, and a run never loses one.
+- Two modifiers, `gate:user` and `gate:release`, can add a stop for your approval. They never change the steps, and a run never loses one.
 - A question, a duplicate, a request missing information or an operation only a person can run
   takes a route that changes no file, run by `qfai-triage`.
 - When a diagnosis shows the run is on the wrong route, the run moves at a point its route

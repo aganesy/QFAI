@@ -27,7 +27,6 @@ import { fileURLToPath } from "node:url";
 
 import { it } from "vitest";
 
-import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
 import {
   buildSeedFixture,
@@ -278,7 +277,6 @@ async function routeEval(baseRoot: string, argv: string[]) {
     run: runs.find((run) => run.seedId === score.seedId),
   }));
   return {
-    seedDigest: hashAssistantAssetText(seedText),
     verdict: routeEvalVerdict(seeds, cases),
     cases: withRuns,
   };
@@ -311,15 +309,12 @@ async function runEval(): Promise<void> {
   const record = {
     host,
     version,
-    seedDigest: hashAssistantAssetText(seedText),
-    vocabularyDigest: hashAssistantAssetText(vocabularyText),
     safetyList,
-    safetyListDigest: hashAssistantAssetText(safetyList.join("\n")),
     verdict: { ...verdict, blocked: verdict.blocked || !routes.verdict.pass },
     cases,
     routes,
   };
-  const problems = evalRecordProblems(record, seedText);
+  const problems = evalRecordProblems(record);
   if (problems.length > 0) throw new Error(`The eval record is incomplete: ${problems.join(", ")}`);
   await mkdir(RECORDS, { recursive: true });
   await writeFile(

@@ -3,7 +3,7 @@ name: maintain-edit
 owner: qfai-maintain
 purpose: "Change wording, a typo, a code comment or document prose inside the write scope, with no behaviour change, and stop before any edit that has a semantic effect."
 requires: [common-gate-run]
-roles: [doc-steward]
+roles: [doc-steward, implementation-reviewer]
 routing-profile: default
 ---
 

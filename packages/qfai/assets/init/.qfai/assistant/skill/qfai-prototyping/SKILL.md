@@ -4,7 +4,14 @@ title: QFAI Prototyping (DESIGN.md-driven UX Loop)
 description: "Use when invoked by name or handed a QFAI work order to settle a visual or interaction decision by prototyping UI contracts under the root DESIGN.md."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-roles: [orchestrator, product-experience-architect, devops-ci-engineer, product-surface-reviewer]
+roles:
+  [
+    orchestrator,
+    product-experience-architect,
+    devops-ci-engineer,
+    product-surface-reviewer,
+    implementation-reviewer,
+  ]
 steps:
   [
     prototyping-grill,

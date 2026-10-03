@@ -38,7 +38,7 @@ export function routingOutcome(extraction: WorkflowExtraction): RoutingOutcome {
   const candidates = choicesOf(extraction);
   const [main] = candidates;
   if (!main) throw new Error("A reading always reaches a route.");
-  const ask = candidates.length > 1 && extraction.confidence === "low";
+  const ask = extraction.confidence === "low";
   const modifiers = entriesOf(extractionModifiers(extraction), "extraction");
   if (ask) {
     return { candidates: [...candidates].sort(reachedFirst), recommended: main.route, modifiers };

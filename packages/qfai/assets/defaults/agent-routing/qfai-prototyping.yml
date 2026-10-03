@@ -57,10 +57,10 @@ routing:
         blocking_agents: []
         rerun_policy: changed-scope-dependents
       - id: review
-        mandatory_agents: [product-surface-reviewer]
+        mandatory_agents: [product-surface-reviewer, implementation-reviewer]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [product-surface-reviewer]
+        blocking_agents: [product-surface-reviewer, implementation-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: ui-bearing
 

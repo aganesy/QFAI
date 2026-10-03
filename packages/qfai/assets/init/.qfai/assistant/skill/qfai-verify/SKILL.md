@@ -85,8 +85,9 @@ note, by `implementation-reviewer`.
 
 ## Completion
 
-The invocation completes on the gate of the last step that ran and a PASS of
-the review above.
+The invocation completes on the gate of the last step that ran. Where
+`verify-change-note` wrote a change note, it also needs a PASS of the code
+review above.
 
 When declaring DONE, include:
 

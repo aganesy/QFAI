@@ -516,9 +516,11 @@ describe("the entry skills' routing entries", () => {
     const maintain = await routingEntry("maintain-edit", "step");
     expect(maintain?.review_profile).toBe("default");
     const maintainPhases = phasesOf(maintain);
-    const authors = maintainPhases.flatMap(phaseAgents);
+    const authors = maintainPhases.filter((phase) => phase.id !== "review").flatMap(phaseAgents);
     expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
     expect(authors, "the code review is not an author's").not.toContain("implementation-reviewer");
+    const reviewing = maintainPhases.filter((phase) => phase.id === "review").flatMap(phaseAgents);
+    expect([...new Set(reviewing)], "the code review").toEqual(["implementation-reviewer"]);
 
     expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
 

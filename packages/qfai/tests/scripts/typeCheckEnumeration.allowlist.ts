@@ -45,7 +45,7 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/qualityGatesStackNeutral.test.ts",
   "tests/assets/rerunInvocation.test.ts",
   "tests/assets/reviewFocusDrift.test.ts",
-  "tests/assets/reviewerRoundBudget.test.ts",
+  "tests/assets/reviewerConvergence.test.ts",
   "tests/assets/reviewerVerdictVocabulary.test.ts",
   "tests/assets/sddEvidenceTemplate.test.ts",
   "tests/assets/sddTemplateCoverage.test.ts",
