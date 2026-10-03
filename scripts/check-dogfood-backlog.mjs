@@ -75,12 +75,12 @@ export function compareAgainstPin(counts, pinned) {
  * on the tree alone. `QFAI-STORY-010` runs only under the drift profile, which
  * no lane ratchets; it is listed so that ratcheting that profile cannot pin it.
  */
-export const DIFF_DEPENDENT_CODES = new Set(["QFAI-DRIFT-001", "QFAI-STORY-010"]);
+export const EXCLUDED_FROM_PIN_CODES = new Set(["QFAI-DRIFT-001", "QFAI-STORY-010"]);
 
 /** Errors the pin may not hold, because the next branch would read them differently. */
 export function diffDependentErrors(report) {
   return (report.issues ?? [])
-    .filter((issue) => issue.severity === "error" && DIFF_DEPENDENT_CODES.has(issue.code))
+    .filter((issue) => issue.severity === "error" && EXCLUDED_FROM_PIN_CODES.has(issue.code))
     .map(({ code, file, message }) => ({ code, file: file ?? "(no file)", message }));
 }
 
@@ -88,7 +88,7 @@ export function diffDependentErrors(report) {
 export function errorsByFile(report) {
   const counts = new Map();
   for (const issue of report.issues ?? []) {
-    if (issue.severity !== "error" || DIFF_DEPENDENT_CODES.has(issue.code)) continue;
+    if (issue.severity !== "error" || EXCLUDED_FROM_PIN_CODES.has(issue.code)) continue;
     const file = issue.file ?? "(no file)";
     counts.set(file, (counts.get(file) ?? 0) + 1);
   }
@@ -101,7 +101,7 @@ export function errorsForFile(report, file) {
     .filter(
       (issue) =>
         issue.severity === "error" &&
-        !DIFF_DEPENDENT_CODES.has(issue.code) &&
+        !EXCLUDED_FROM_PIN_CODES.has(issue.code) &&
         (issue.file ?? "(no file)") === file,
     )
     .map(({ code, message }) => ({ code, message }));
@@ -207,9 +207,18 @@ function main() {
   }
   if (unpinned.length > 0 || over.length > 0 || diffDependent.length > 0) {
     console.error(
-      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.\n" +
-        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+      "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.",
     );
+    if (unpinned.length > 0 || over.length > 0) {
+      console.error(
+        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+      );
+    }
+    if (diffDependent.length > 0) {
+      console.error(
+        "Fix the diff-dependent findings and re-run this lane. Re-pinning will not clear these findings.",
+      );
+    }
     process.exit(1);
   }
 

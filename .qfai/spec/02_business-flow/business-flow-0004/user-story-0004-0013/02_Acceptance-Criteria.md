@@ -24,7 +24,7 @@ Feature: A migrated project runs the free-text entry
 
   # AC-0004-0013-03
   Scenario: Step 12 passes on a migrated project
-    Given a project that steps 1 to 11 have migrated
+    Given a project that steps 1 to 11 have migrated, whose tracked project files name no 1.x path
     When step 12 runs
     Then it changes no file, creates no run and exits 0
     And `npx qfai workflow start` is refused by none of `contract-undeclared`, `reviewer-missing` and `invalid-mode`

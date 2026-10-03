@@ -7,10 +7,12 @@
  * only thing between "this lane still catches a regression" and "this lane is
  * off".
  *
- * Reached through the comparison rather than through a profile run: a case
- * that ran `validate` would assert against whatever the repository currently
- * carries, so it would pass for a lane that had been turned off entirely.
+ * Helper comparisons and a sandbox report exercise the ratchet without
+ * depending on this repository's current backlog.
  */
+import { spawnSync } from "node:child_process";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -94,6 +96,38 @@ describe("diff-dependent findings", () => {
   // and fails the ratchet there, on work that never touched the file.
   const PROTECTED =
     ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/03_Example.md";
+  const diffFindings = [
+    { code: "QFAI-DRIFT-001", file: PROTECTED, severity: "error", message: "no request" },
+    { code: "QFAI-STORY-010", file: LEDGER, severity: "error", message: "drift" },
+  ];
+
+  async function stageConsumer(root: string, pinnedCount: number): Promise<string> {
+    const scriptDir = path.join(root, "scripts");
+    const cliDir = path.join(root, "packages", "qfai", "dist", "cli");
+    const reportDir = path.join(root, ".qfai", "report");
+    await mkdir(scriptDir, { recursive: true });
+    await mkdir(cliDir, { recursive: true });
+    await mkdir(reportDir, { recursive: true });
+    const script = path.join(scriptDir, "check-dogfood-backlog.mjs");
+    await copyFile(path.join(repoRoot, "scripts", "check-dogfood-backlog.mjs"), script);
+    await writeFile(path.join(cliDir, "index.mjs"), "process.exit(0);\n", "utf-8");
+    await writeFile(
+      path.join(reportDir, "validate.json"),
+      JSON.stringify({
+        issues: [
+          { code: "E-TREE", file: CLEAN, severity: "error", message: "tree problem" },
+          ...diffFindings,
+        ],
+      }),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(scriptDir, "dogfood-backlog.json"),
+      JSON.stringify({ profiles: { tdd: { [CLEAN]: pinnedCount }, sdd: { [LEDGER]: 7 } } }),
+      "utf-8",
+    );
+    return script;
+  }
 
   it("leaves every diff-dependent code out of the count a pin records", async () => {
     const { errorsByFile } = await load();
@@ -126,6 +160,65 @@ describe("diff-dependent findings", () => {
       { code: "QFAI-STORY-010", file: "(no file)", message: "drift" },
     ]);
   });
+
+  it("fails the lane on each diff-dependent error even when its tree count matches the pin", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dogfood-diff-"));
+    try {
+      const script = await stageConsumer(root, 1);
+      const result = spawnSync(process.execPath, [script, "--profile", "tdd"], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "tdd reports 2 error(s) that depend on this branch's diff, which no pin holds:",
+      );
+      for (const { file, code, message } of diffFindings) {
+        expect(result.stderr).toContain(`${file}: ${code}: ${message}`);
+      }
+      expect(result.stderr).not.toContain("past its pinned");
+      expect(result.stderr).not.toContain("pin is behind the tree");
+      expect(result.stderr).toContain(
+        "Fix the diff-dependent findings and re-run this lane. Re-pinning will not clear these findings.",
+      );
+      expect(result.stderr).not.toContain(
+        "node scripts/check-dogfood-backlog.mjs --profile tdd --pin",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("pins only the tree count and warns about each excluded diff-dependent error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dogfood-pin-"));
+    try {
+      const script = await stageConsumer(root, 9);
+      const result = spawnSync(process.execPath, [script, "--profile", "tdd", "--pin"], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("pinned tdd at 1 error(s) across 1 file(s).");
+      expect(result.stderr).toContain(
+        "2 error(s) depend on this branch's diff and were not pinned.",
+      );
+      for (const { file, code, message } of diffFindings) {
+        expect(result.stderr).toContain(`${file}: ${code}: ${message}`);
+      }
+      const saved: unknown = JSON.parse(
+        await readFile(path.join(root, "scripts", "dogfood-backlog.json"), "utf-8"),
+      );
+      expect(saved).toEqual({ profiles: { tdd: { [CLEAN]: 1 }, sdd: { [LEDGER]: 7 } } });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("errorsForFile", () => {
@@ -135,6 +228,8 @@ describe("errorsForFile", () => {
       {
         issues: [
           { file: CLEAN, severity: "error", code: "E-NEW", message: "new problem" },
+          { file: CLEAN, severity: "error", code: "QFAI-DRIFT-001", message: "no request" },
+          { file: CLEAN, severity: "error", code: "QFAI-STORY-010", message: "drift" },
           { file: CLEAN, severity: "warning", code: "W-OLD", message: "warning" },
           { file: LEDGER, severity: "error", code: "E-OTHER", message: "other file" },
         ],
