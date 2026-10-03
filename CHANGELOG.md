@@ -6,6 +6,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Changed examples warn when no annotating test changed** (#2309, #2310).
+  The `tdd` and `drift` profiles report the example ID and file so its owner
+  can check whether unchanged tests still assert the intended behavior.
+
 - **Mutation recipes remain in example tests.** `qfai doctor` reports a
   warning when a recipe names a missing source file or original text (#2419).
   The check reads recipes and source text; it runs no mutations or tests.

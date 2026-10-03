@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/integration/storyTreeExampleDrift.test.ts",
     "vitest.config.ts",
     "vitest.knobs.ts",
     "vitest.workspace.ts",

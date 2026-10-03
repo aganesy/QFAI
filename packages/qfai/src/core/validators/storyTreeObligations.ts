@@ -221,6 +221,10 @@ export async function readStoryTests(
   return { files, truncated: acceptance.truncated || examples.truncated };
 }
 
+export function storyTestScanIssue(root: string, message: string): Issue {
+  return issue("QFAI-SCAN-002", message, "error", root, "storyTree.testScan");
+}
+
 export async function validateStoryTreeObligations(
   root: string,
   config: QfaiConfig,
@@ -233,24 +237,13 @@ export async function validateStoryTreeObligations(
     scan = await readStoryTests(root, config);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan failed: ${reason}`,
-        "error",
-        root,
-        "storyTree.testScan",
-      ),
-    ];
+    return [storyTestScanIssue(root, `Story-tree test scan failed: ${reason}`)];
   }
   if (scan.truncated) {
     return [
-      issue(
-        "QFAI-SCAN-002",
-        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; coverage is incomplete`,
-        "error",
+      storyTestScanIssue(
         root,
-        "storyTree.testScan",
+        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; coverage is incomplete`,
       ),
     ];
   }
