@@ -201,9 +201,9 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "3375c7df4741e2f65ddc35db75c3e463af16bc38f6a2aca5895a037693e48ef3",
-        ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
-        ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
+        ".github/actions/setup/action.yml": "0d43e94b95ebd6b61073d62fc39e9e6b9ad29ae0eb1164ba0a16767f171d8478",
+        ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
+        ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
         "scripts/check-bidi.mjs": "b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-changelog-released-sections.mjs": "a852f0e21c2a4cfee83a673b52ace2d607e7d6d3fc94f6f4e237799f8c18a1eb",
@@ -232,7 +232,7 @@
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10",
         "scripts/check-workflow-hygiene.mjs": "b2de48062c62f31b2e8ee8eeead2430d65899fdfcb0d49eecdef459847c671db",
-        "scripts/dogfood-backlog.json": "215ca52d02642895562dad8c1000fb1c8c6ead4d15354ee13b8b5ae3f7e28e89",
+        "scripts/dogfood-backlog.json": "d4d4a5aea159a157d0a496c08885128d6f38145bdf357a0af09e1446cf4cdd64",
         "scripts/fresh-init-findings.json": "591fbd87f24ba68427460af193101621beae50ab7885975fbc0bd6065180d7e1",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-codex-agents.mjs": "276e9af87f49df9de8332365ea79a4ddfe5d03b72af9666cc58dab7d818ea637",
@@ -277,8 +277,8 @@
         "file says, and no file under either pinned root is missing from it."
       ],
       "closureActions": [
-        "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
       ],
       "closureActionsNote": [
         "The EXTERNAL actions a step in this context's closure may invoke directly, as",
@@ -294,7 +294,7 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
+      "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -318,7 +318,7 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
+        "mayPrecede": ["actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -403,7 +403,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "57bb3d1606ab16aa",
+        "Verify the toolchain action before running it": "75df6649b7f6cec3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "e12ec93ff4a1be75",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "789e930d0d948215",

@@ -222,7 +222,13 @@ function terminatorOf(line: string | undefined): string {
 
 const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
 
-/** Prepend the template's review directive only when no operative copy exists. */
+/**
+ * Prepend the template's review directive only when no operative copy exists.
+ *
+ * An operative line in an earlier wording of the directive is rewritten in
+ * place instead. Left beside the current one, the two disagree on which branch
+ * a reviewer reads `REVIEW.md` from.
+ */
 export function addReviewPointer(existing: string, template: string | null): string {
   const pointer = template?.split(/\r?\n/).find((line) => line.startsWith(REVIEW_DIRECTIVE_PREFIX));
   return pointer === undefined ? existing : prependDirective(existing, pointer);
@@ -230,9 +236,12 @@ export function addReviewPointer(existing: string, template: string | null): str
 
 /**
  * `existing` with `pointer` on its first line, followed by a blank line, unless
- * an operative copy is already there.
+ * an operative copy is already there. An operative line in an earlier wording
+ * is replaced where it stands instead.
  */
 function prependDirective(existing: string, pointer: string): string {
+  // Where the text of the first operative line in an earlier wording sits.
+  let earlier: { start: number; end: number } | null = null;
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
@@ -888,17 +897,30 @@ function prependDirective(existing: string, pointer: string): string {
           paragraph = false;
         quotedParagraph = paragraph && !paragraphInterrupt.test(fenceLine(visible));
       }
-      if (
-        pass === 1 &&
-        container === "" &&
-        !lazyQuote &&
-        visible.trim().replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "") === pointer
-      )
-        return existing;
+      const operative = visible
+        .trim()
+        .replace(/^(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))+/, "");
+      if (pass === 1 && container === "" && !lazyQuote) {
+        if (operative === pointer) return existing;
+        // Only a line that reads exactly as written, with no markup after the
+        // directive's own opening: rewriting one that carries markup would drop it.
+        const line = raw.replace(/\r$/, "");
+        const lead =
+          /^\uFEFF?[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]{1,4}(?![ \t]))*/.exec(line)?.[0] ?? "";
+        if (
+          earlier === null &&
+          operative.startsWith(REVIEW_DIRECTIVE_PREFIX) &&
+          !/[*_~<>[\]`&\\!]/.test(operative.slice(REVIEW_DIRECTIVE_PREFIX.length)) &&
+          line.slice(lead.length).trimEnd() === operative
+        )
+          earlier = { start: offset + lead.length, end: offset + lead.length + operative.length };
+      }
       offset += raw.length + 1;
     }
   }
 
+  if (earlier !== null)
+    return `${existing.slice(0, earlier.start)}${pointer}${existing.slice(earlier.end)}`;
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
   return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;

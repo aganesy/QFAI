@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
@@ -56,7 +56,7 @@ async function tryBrokenLink(root: string, linkPath: string): Promise<boolean> {
 
 function check(data: Awaited<ReturnType<typeof createDoctorData>>, id: string) {
   const found = data.checks.find((entry) => entry.id === id);
-  expect(found, `missing doctor check ${id}`).toBeDefined();
+  assert.isDefined(found, `missing doctor check ${id}`);
   return found;
 }
 
@@ -250,7 +250,7 @@ describe("BF-0003 doctor acceptance", () => {
         severity: "warning",
         details: { path: ".qfai/assistant/legacy-prompts", configured: true },
       });
-      expect(legacy?.message).toContain("migrate to skillsDir");
+      expect(legacy.message).toContain("migrate to skillsDir");
 
       const output = await captureStdout(async () => {
         await runDoctor({ root, rootExplicit: true, format: "text", failOn: "error" });
