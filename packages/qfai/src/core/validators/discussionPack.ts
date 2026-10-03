@@ -121,6 +121,21 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
+  for (const { legacy, target } of readiness.unmigratedFiles) {
+    issues.push(
+      issue(
+        "QFAI-DPACK-003",
+        `${legacy} still holds content that ${target} now carries`,
+        "error",
+        path.join(readiness.latestPackDir, legacy),
+        "discussionPack.unmigratedFile",
+        [legacy, target],
+        "change",
+        `Move the content of ${legacy} into ${target}, then delete ${legacy}.`,
+      ),
+    );
+  }
+
   if (readiness.blockingOqIds.length > 0) {
     const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(

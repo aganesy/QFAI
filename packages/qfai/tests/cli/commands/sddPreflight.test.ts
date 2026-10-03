@@ -441,6 +441,8 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
+        "- Resolution: ship without contract versioning for now.",
+        "- Next-Decision-Point: the next cycle review, or the first breaking contract change.",
         "- Reason: it does not affect the start of implementation at this stage, so it is deferred.",
         "",
         "Note: this does not meet the blocking condition (Disposition=open).",

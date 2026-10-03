@@ -50,6 +50,18 @@ export const REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES = [
 
 export const REQUIRED_DISCUSSION_PACK_SIDE_ARTIFACTS = [] as const;
 
+/**
+ * Files a pack no longer holds whose content a required file now carries. A
+ * pack that still has one keeps that content where no later stage reads it.
+ */
+const RELOCATED_DISCUSSION_PACK_FILES = [
+  { legacy: "02_Inception-Deck.md", target: "01_Context.md" },
+  { legacy: "10_Policy.md", target: "09_Constraints.md" },
+  { legacy: "13_Deferred.md", target: "11_OQ-Register.md" },
+] as const;
+
+export type UnmigratedDiscussionPackFile = (typeof RELOCATED_DISCUSSION_PACK_FILES)[number];
+
 /** @deprecated Use REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES instead */
 export const REQUIRED_DISCUSSION_PACK_FILES = REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES;
 
@@ -74,6 +86,7 @@ export type DiscussionPackReadiness = {
   incompleteFiles: RequiredDiscussionPackMarkdownFile[];
   blockingOqIds: string[];
   incompleteDeferredOqIds: string[];
+  unmigratedFiles: UnmigratedDiscussionPackFile[];
   prototypingRequired: boolean;
 };
 
@@ -131,6 +144,7 @@ export async function inspectLatestDiscussionPack(
       incompleteFiles: [],
       blockingOqIds: [],
       incompleteDeferredOqIds: [],
+      unmigratedFiles: [],
       prototypingRequired: false,
     };
   }
@@ -159,6 +173,13 @@ export async function inspectLatestDiscussionPack(
     }
   }
 
+  const unmigratedFiles: UnmigratedDiscussionPackFile[] = [];
+  for (const relocated of RELOCATED_DISCUSSION_PACK_FILES) {
+    if ((await readSafe(path.join(latestPackDir, relocated.legacy))) !== null) {
+      unmigratedFiles.push(relocated);
+    }
+  }
+
   return {
     discussionRoot,
     latestPackDir,
@@ -170,6 +191,7 @@ export async function inspectLatestDiscussionPack(
     incompleteFiles,
     blockingOqIds,
     incompleteDeferredOqIds,
+    unmigratedFiles,
     prototypingRequired,
   };
 }
@@ -483,21 +505,51 @@ function extractOqTableRows(text: string): OqTableRow[] {
  * column is absent, or the cell is empty, a dash or a placeholder.
  */
 function extractIncompleteDeferredOqIds(oqRegisterText: string): string[] {
-  return extractOqTableRows(oqRegisterText)
+  const ids = [...extractOqTableRows(oqRegisterText), ...extractOqHeadingEntries(oqRegisterText)]
     .filter((row) => row.disposition === "deferred")
     .filter((row) => !hasContent(row.resolution) || !hasContent(row.nextDecisionPoint))
     .map((row) => row.id);
+  return [...new Set(ids)];
+}
+
+/**
+ * Register entries written as a heading naming the OQ, followed by
+ * `- Disposition:`, `- Resolution:` and `- Next-Decision-Point:` list items.
+ */
+function extractOqHeadingEntries(text: string): OqTableRow[] {
+  const entries: OqTableRow[] = [];
+  let current: OqTableRow | null = null;
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*#/.test(line)) {
+      const id = /\b(OQ-\d+)\b/i.exec(line)?.[1];
+      current = id
+        ? { id: id.toUpperCase(), disposition: "", resolution: "", nextDecisionPoint: "" }
+        : null;
+      if (current) entries.push(current);
+      continue;
+    }
+    if (current === null) continue;
+    const field = /^\s*[-*]\s*([A-Za-z][A-Za-z -]*?)\s*:\s*(.*)$/.exec(line);
+    if (!field?.[1]) continue;
+    const name = field[1].toLowerCase().replace(/[\s-]+/g, "-");
+    const value = (field[2] ?? "").trim();
+    if (name === "disposition") current.disposition = value.toLowerCase();
+    else if (name === "resolution") current.resolution = value;
+    else if (name === "next-decision-point") current.nextDecisionPoint = value;
+  }
+  return entries;
 }
 
 function hasContent(cell: string): boolean {
   return /[\p{L}\p{N}]/u.test(cell) && !isPlaceholderLine(cell);
 }
 
+/** Splits a table row on unescaped pipes, so `A \| B` stays one cell. */
 function parseTableCells(line: string): string[] {
   const trimmed = line.trim();
   if (!trimmed.startsWith("|")) return [];
-  const normalized = trimmed.replace(/^\|/, "").replace(/\|$/, "");
-  return normalized.split("|").map((cell) => cell.trim());
+  const normalized = trimmed.replace(/^\|/, "").replace(/(?<!\\)\|$/, "");
+  return normalized.split(/(?<!\\)\|/).map((cell) => cell.trim());
 }
 
 async function readSafe(filePath: string): Promise<string | null> {

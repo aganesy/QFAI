@@ -20,7 +20,10 @@ which owns the delegation rules these sit beside.
   - _Accept as Open Question_ or _drop from scope_ — the artifact may reach
     DONE with the finding recorded; the reviewer's outstanding `REVISE` is
     superseded by the recorded user decision. Cite the decision where the
-    stage records decisions: the discussion pack's `11_OQ-Register.md`, or a row of
+    stage records decisions: in a discussion pack, a `deferred` row of
+    `11_OQ-Register.md` whose `Resolution` records the user's decision and
+    whose `Next-Decision-Point` says when the finding is taken up again, so
+    the pack still completes; elsewhere, a row of
     `<paths.specsDir>/decisions.md`, which is a `Change request:` row when the
     decision changes a settled item.
   - _Apply a named fix_ — one **verification review** of exactly that fix is

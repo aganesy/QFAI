@@ -125,6 +125,31 @@ it.each([
   ["a dash as its Resolution", oqRegister("deferred", "After launch", "—")],
   ["a placeholder Resolution", oqRegister("deferred", "After launch", "TBD")],
   [
+    "an escaped pipe in an earlier cell and no reopening point",
+    [
+      "# OQ Register",
+      "",
+      "| OQ-ID | Options | Disposition | Recommendation | Resolution | Next-Decision-Point |",
+      "| --- | --- | --- | --- | --- | --- |",
+      `| OQ-0001 | A \\| B | deferred | A | ${DEFERRED_RESOLUTION} | TBD |`,
+      "",
+      filler,
+    ].join("\n"),
+  ],
+  [
+    "a heading-form entry and no reopening point",
+    [
+      "# OQ Register",
+      "",
+      "### OQ-0001: Which launch route?",
+      "",
+      "- Disposition: deferred",
+      `- Resolution: ${DEFERRED_RESOLUTION}`,
+      "",
+      filler,
+    ].join("\n"),
+  ],
+  [
     "no Resolution column",
     [
       "# OQ Register",
@@ -163,6 +188,53 @@ it("blocks the shipped register template's sample deferred row until it is fille
     await writeFile(path.join(pack, "11_OQ-Register.md"), template, "utf8");
     const findings = await validateDiscussionPackReadiness(root, defaultConfig);
     expect(namesOq(findings, "QFAI-DPACK-007")).toBe(true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0014-03
+it("accepts a complete heading-form deferred entry", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    await writeFile(
+      path.join(pack, "11_OQ-Register.md"),
+      [
+        "# OQ Register",
+        "",
+        "### OQ-0001: Which launch route?",
+        "",
+        "- Disposition: deferred",
+        `- Resolution: ${DEFERRED_RESOLUTION}`,
+        "- Next-Decision-Point: After launch, when support tickets name the route",
+        "",
+        filler,
+      ].join("\n"),
+      "utf8",
+    );
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(namesOq(findings, "QFAI-DPACK-007")).toBe(false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0013-01
+it.each([
+  ["02_Inception-Deck.md", "01_Context.md"],
+  ["10_Policy.md", "09_Constraints.md"],
+  ["13_Deferred.md", "11_OQ-Register.md"],
+])("reports %s left beside the nine files until its content moves", async (legacy, target) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    await writeFile(path.join(pack, legacy), `# ${legacy}\n\n${filler}`, "utf8");
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    const finding = findings.find(
+      (item) => item.code === "QFAI-DPACK-003" && item.refs?.includes(legacy),
+    );
+    expect(finding?.refs).toEqual([legacy, target]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
