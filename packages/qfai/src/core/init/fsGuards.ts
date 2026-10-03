@@ -229,3 +229,74 @@ export async function safeLstat(target: string): Promise<Stats | undefined> {
     return undefined;
   }
 }
+
+/**
+ * A path component init must not write through, relative to the project, and
+ * whether it is a symlink (a junction included) or not a directory.
+ */
+export type UnsafeComponent = { readonly relativePath: string; readonly symlink: boolean };
+
+/**
+ * The first component of `relativeDir` under `destRoot` that must not be
+ * written through, or `undefined` when the whole chain is safe.
+ *
+ * `.codex/agents` is a path an untrusted repository controls, and a directory
+ * component of it can be a symlink out of the tree — a checked-in
+ * `.codex/agents -> /home/user/.config` is enough. `mkdir` follows it,
+ * `writeFile` follows it, and `removeSymlinkAt` cannot see it: that guard
+ * looks at the leaf `<name>.toml` only. A plain `qfai init` would then write
+ * every profile into that external directory, and `--force` would let it
+ * delete the orphan profiles there. So every component is `lstat`-ed before
+ * anything is written or removed, and one link anywhere in the chain skips the
+ * step whole rather than writing part of it somewhere unexpected.
+ *
+ * A component that does not exist yet ends the walk: `mkdir` creates real
+ * directories, and nothing below an absent parent can exist either.
+ *
+ * The answer names the component by its path relative to `destRoot`. An
+ * absolute path carries the destination directory's own name, which on an
+ * untrusted repository can hold a newline or an ANSI escape.
+ */
+export async function findUnsafeWrapperComponent(
+  destRoot: string,
+  relativeDir: string,
+): Promise<UnsafeComponent | undefined> {
+  const segments = relativeDir.split("/");
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const relativePath = segments.slice(0, depth).join("/");
+    const stats = await safeLstat(path.join(destRoot, ...segments.slice(0, depth)));
+    if (stats === undefined) {
+      return undefined;
+    }
+    if (stats.isSymbolicLink()) {
+      return { relativePath, symlink: true };
+    }
+    if (!stats.isDirectory()) {
+      return { relativePath, symlink: false };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The component that keeps a file init writes into a host directory, such as
+ * a hook file or `.github/copilot-instructions.md`, from being read or
+ * written: a directory on its path that is a symbolic link or not a directory,
+ * or the file itself when it is a symbolic link, whether its target exists or
+ * not. `undefined` when the path is safe.
+ */
+export async function findUnsafeHostFileComponent(
+  destRoot: string,
+  segments: readonly string[],
+): Promise<UnsafeComponent | undefined> {
+  const parent = segments.slice(0, -1).join("/");
+  const unsafeParent =
+    parent === "" ? undefined : await findUnsafeWrapperComponent(destRoot, parent);
+  if (unsafeParent !== undefined) {
+    return unsafeParent;
+  }
+  const leaf = await safeLstat(path.join(destRoot, ...segments));
+  return leaf?.isSymbolicLink() === true
+    ? { relativePath: segments.join("/"), symlink: true }
+    : undefined;
+}

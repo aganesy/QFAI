@@ -85,8 +85,8 @@ writes one names it here.
 
 ## The reminder
 
-`.claude/settings.json` puts this rule in front of the agent before a shell
-command, through a `PreToolUse` hook matching `Bash`.
+`.claude/settings.json` and `.codex/hooks.json` put this rule in front of the
+agent before a shell command, through a `PreToolUse` hook matching `Bash`.
 
 `documentation-clarity.md` keeps its own hook off the shell, and that decision
 stands: a matcher on the tool name alone fires on every compound command, and a
@@ -95,8 +95,11 @@ it. This hook takes the same matcher and then reads the command, printing only
 where the command mentions the forge's CLI or its API host. The filter is in the
 program rather than in the matcher, which is the whole of the difference.
 
-It reminds and never blocks. It runs `node` directly, with no shell and no
-network, and prints one message from `.agents/rules/reminders.json`. Input it
+It reminds and never blocks. Claude Code runs `node` directly, with no shell and
+no network. Codex runs the same filter as one command line, the same under
+every shell, whose program finds the message file by looking upward from where
+it runs, once the project's hooks are trusted. Either way it
+prints one message from `.agents/rules/reminders.json`. Input it
 does not recognise prints nothing, as do a missing and an unreadable message
 file, so it cannot fail the session it is attached to.
 

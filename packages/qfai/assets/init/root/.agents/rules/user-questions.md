@@ -231,11 +231,19 @@ Every turn rather than once, because the moment a question forms is
 unpredictable and a session-start reminder is gone by the time the context is
 compacted — which is when a long session starts reaching for an exception.
 
+Every turn the user types, that is. A turn the host starts on its own — a
+background task's notification, a scheduled wake-up, a sub-agent's report — is
+not one where a question to the user forms. The Claude Code hook reads the prompt
+from its input and stays silent when a line of it opens with a `<task-notification>`
+or `<wake>` wrapper. Any other prompt, and input it cannot read, gets the reminder.
+The Codex hook prints on every turn.
+
 It reminds and never blocks. Deciding whether a question should have been asked
 as a structured choice needs intent, and a false positive on a hook that fires
 every turn stops the session outright. Claude Code runs `node` directly, with
-no shell and no network. Codex runs the same reader as one shell command, which
-finds the repository root with `git`, once the project's hooks are trusted.
+no shell and no network. Codex runs one command line, the same under every
+shell, whose program finds the message file by looking upward from where it
+runs, once the project's hooks are trusted.
 Either way it prints one message from `.agents/rules/reminders.json`. A missing
 or unreadable file prints nothing, so it cannot fail the session it is attached
 to.

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
@@ -8,7 +8,11 @@ import {
   flowScopeContainsId,
   type FlowScope,
 } from "./flowScope.js";
-import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
+import {
+  hasLegacySpecPackEntries,
+  listLegacySpecPackFiles,
+  oldLayoutMessage,
+} from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
@@ -17,6 +21,7 @@ import { validateStoryTreeContractReferences } from "./validators/contractRefere
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
+import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
 import { issue } from "./validators/utils.js";
 import type {
   Issue,
@@ -121,6 +126,7 @@ export async function validateProject(
 
   const specsRoot = resolvePath(root, config, "specsDir");
   let oldLayoutRoot: string | undefined;
+  const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
     let entries: string[] = [];
     try {
@@ -129,14 +135,14 @@ export async function validateProject(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     if (hasLegacySpecPackEntries(entries)) {
-      oldLayoutRoot = candidate;
-      break;
+      oldLayoutRoot ??= candidate;
+      oldLayoutFiles.push(...(await listLegacySpecPackFiles(root, candidate, entries)));
     }
   }
   if (oldLayoutRoot) {
     const layoutIssue = issue(
       "QFAI-LAYOUT-001",
-      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-v1-to-v2 before validation.`,
+      oldLayoutMessage(oldLayoutRoot, oldLayoutFiles),
       "error",
       oldLayoutRoot,
       "storyTree.oldLayout",
@@ -343,15 +349,18 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
         `This project declares qfai as a dependency, but the copy that is running is a ` +
           `different one at ${located.packageDir}. It was resolved from outside the ` +
           `directory the declaration points to, so this project's lockfile does not decide ` +
-          `which version gated the run. npx searched for the bare name up the parent ` +
-          `directories, and it is running either the qfai of another checkout ` +
-          `(another branch or lockfile) or a qfai@latest that npx fetched silently.`,
+          `which version gated the run. The copy is either the qfai of another checkout ` +
+          `(another branch or lockfile) or a qfai@latest that npx fetched silently. Another ` +
+          `checkout's copy is reached through a parent directory's node_modules, or through ` +
+          `a node_modules that is a link to that checkout's.`,
         severity,
         undefined,
         "toolProvenance.resolvedAgainstDeclaration",
         [located.packageDir],
         "canonical",
-        "Run `npm ci` / `pnpm install` in this working tree, then run again. " +
+        "If this working tree's node_modules is a link to another checkout's, remove the " +
+          "link itself, not what it points to. Then run `npm ci` / `pnpm install` in this " +
+          "working tree and run again. " +
           "If a global install is intended, remove the qfai dependency declaration from " +
           "this project — a declaration that disagrees with the running copy is the " +
           "state this finding reports.",
@@ -362,17 +371,20 @@ async function buildToolProvenanceIssues(root: string): Promise<Issue[]> {
     issue(
       "QFAI-TOOL-001",
       `The running qfai (${located.packageDir}) was resolved from outside the project root ` +
-        `being validated (${root}). This project does not declare qfai as a dependency, ` +
-        `so a global install or an npx fetch is the only way to run it, and both are ` +
-        `intended choices. A mismatch between the declaration and the running copy is ` +
-        `reported separately as QFAI-TOOL-002.`,
+        `being validated (${root}). No qfai dependency declaration of this project was ` +
+        `answered by another copy, so the copy was reached in a way the project allows: ` +
+        `a parent directory's node_modules, a global install or an npx fetch. A mismatch ` +
+        `between the declaration and the running copy is reported separately as ` +
+        `QFAI-TOOL-002.`,
       "info",
       undefined,
       "toolProvenance.resolvedOutsideProject",
       [located.packageDir],
       "canonical",
-      "If this resolution is intended, ignore this finding. Otherwise run " +
-        "`npm ci` / `pnpm install` in this working tree, then run again.",
+      "If this resolution is intended, ignore this finding. Otherwise, if this working " +
+        "tree's node_modules is a link to another checkout's, remove the link itself, not " +
+        "what it points to. Then run `npm ci` / `pnpm install` in this working tree and " +
+        "run again.",
     ),
   ];
 }
@@ -560,7 +572,7 @@ async function runStoryProfileValidators(
           ...(await validateAssistantAssets(root, config)),
           ...(await runDiscussionValidators(root, config, "all")),
           ...(await sdd(false)),
-          ...(await runPrototypingValidators(root, config, timings, platformOption)),
+          ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
           ...(await validatePrototypingSkill(root, config)),
@@ -701,6 +713,47 @@ async function runPrototypingValidators(
     // executionPlan, so bootstrap projects are unaffected.
     ...(await validatePrototypingDelegationMap(root)),
   ];
+}
+
+/** The findings that say a prototyping output is missing from the checkout. */
+const EVIDENCE_PRESENCE_CODES: ReadonlySet<string> = new Set([
+  "QFAI-PROT-001",
+  "QFAI-UIE-001",
+  "QFAI-UIE-002",
+]);
+
+/**
+ * The prototyping issue set as `full` / `verify` report it.
+ *
+ * The prototyping outputs are local and untracked, so a fresh checkout, which
+ * is where CI runs, has no `.qfai/evidence/prototyping/`. With that directory
+ * absent, prototyping was not run in this checkout and the presence gates have
+ * nothing to check. The `prototyping` and `saas-package` profiles do not go
+ * through here and keep them.
+ */
+async function runPrototypingValidatorsForCi(
+  root: string,
+  config: ConfigLoadResult["config"],
+  timings: TimingsSink,
+  platformOption?: string,
+): Promise<Issue[]> {
+  const issues = await runPrototypingValidators(root, config, timings, platformOption);
+  if (await evidenceDirectoryExists(root)) return issues;
+  return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
+}
+
+/**
+ * Whether the prototyping evidence directory may hold output. Only a missing
+ * path counts as absent: one that cannot be read is treated as present, so the
+ * presence gates keep running rather than hide behind a permission error.
+ */
+async function evidenceDirectoryExists(root: string): Promise<boolean> {
+  try {
+    await stat(path.join(root, PROTOTYPING_EVIDENCE_REL));
+    return true;
+  } catch (error) {
+    return !isEnoent(error);
+  }
 }
 
 /**

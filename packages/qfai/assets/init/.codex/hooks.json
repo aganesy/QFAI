@@ -6,7 +6,7 @@
           {
             "type": "command",
             "statusMessage": "QFAI structured-question reminder",
-            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" structured-question",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" structured-question",
             "timeout": 10
           }
         ]
@@ -16,7 +16,93 @@
           {
             "type": "command",
             "statusMessage": "QFAI free-text entry reminder",
-            "command": "node -e \"try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}\" \"$(git rev-parse --show-toplevel)/.agents/rules/reminders.json\" free-text-entry",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" free-text-entry",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI install check reminder",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){let e=p.dirname(p.dirname(p.dirname(r))),ok=0;for(;;){if(f.existsSync(p.join(e,'node_modules','.bin','qfai'))){ok=1;break}if(f.existsSync(p.join(e,'.pnp.cjs'))){try{const j=JSON.parse(f.readFileSync(p.join(e,'package.json'),'utf8'));if((j.dependencies||{}).qfai||(j.devDependencies||{}).qfai){ok=1;break}}catch{}}if(f.existsSync(p.join(e,'.git')))break;const u=p.dirname(e);if(u===e)break;e=u}if(ok===0){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" qfai-not-installed",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__github__(create_pull_request|update_pull_request|issue_write|add_issue_comment|pull_request_review_write|add_comment_to_pending_review|add_reply_to_pull_request_comment)",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" documentation-clarity-before-post",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: design artifact",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" grilling-design-artifact",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "spawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI grilling reminder: delegation",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" grilling-delegation",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI api-budget reminder",
+            "command": "node -e \"try{const i=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof i==='string'&&/[^\\w.-]gh[^\\w.-]|api\\.github\\.com/.test(' '+i+' ')){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" api-budget",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const i=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof i==='string'&&/^\\*\\*\\* Add File: .*\\.md\\r?\\n/m.test(i)){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" documentation-clarity-after-write",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "statusMessage": "QFAI documentation-clarity reminder",
+            "command": "node -e \"try{const i=JSON.parse(require('fs').readFileSync(0,'utf8')).tool_input.command;if(typeof i==='string'&&/^\\*\\*\\* Update File: .*\\.md\\r?\\n/m.test(i)){const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}}catch{}\" documentation-clarity-after-edit",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI minimal-implementation reminder",
+            "command": "node -e \"try{const f=require('fs'),p=require('path');let d=process.cwd(),r;for(;;){const c=p.join(d,'.agents','rules','reminders.json');if(r===undefined&&f.existsSync(c))r=c;if(f.existsSync(p.join(d,'.git')))break;const u=p.dirname(d);if(u===d){r=undefined;break}d=u}if(r){const m=JSON.parse(f.readFileSync(r,'utf8'))[process.argv[1]];m===undefined||console.log(JSON.stringify(m))}}catch{}\" minimal-implementation",
             "timeout": 10
           }
         ]

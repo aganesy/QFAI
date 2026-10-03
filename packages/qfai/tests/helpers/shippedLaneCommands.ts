@@ -1126,6 +1126,12 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // program under a path an adopter controls, still fails this list.
   "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
   "node node_modules/qfai/assets/scripts/check-mermaid.mjs",
+  // The same two files, from the directory the lane installs its tools into. A project that does
+  // not depend on QFAI gets the package there instead of in its own `node_modules`, which npm
+  // cannot install into when another package manager laid the tree out. The directory is fixed and
+  // under `tmp/`, so it is still a path inside an installed package and never one an adopter owns.
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+  "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -1145,8 +1151,8 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
  * `ALLOWED_STEP_BODIES` is built on.
  */
 export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
-  ["actions/checkout", "fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"],
-  ["actions/setup-node", "a0853c24544627f65ddf259abe73b1d18a591444"],
+  ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
+  ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
   ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
 ]);
 
@@ -1237,9 +1243,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "2ad1523e42db03cf08b832076ef88c158aff7cc4f6933bd8ba2bd1fc720f98ba"],
-  ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
-  ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
+  ["qfai-docs.yml", "749f4c8dde256a5627ee20906289172ab778cadb143ffcec8ac7961d8d8d3f83"],
+  ["qfai-tests.yml", "d83dfcb1d6d8408a69b73651a332cd69d3757553123d6701ef9c93464a4f9164"],
+  ["qfai-validate.yml", "c1660cacff5c30ecd91250d8bbe4f13fef1c6d2bff554fb59c03077c9db4bda0"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1302,8 +1308,9 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
- * so their bytes are the reviewed surface. Each opens with the entry directive that sends a first
- * free-text change request to `qfai-run`, then a blank line; below it the bytes are unchanged.
+ * so their bytes are the reviewed surface. Each opens with its level-1 heading; the line that once
+ * sent a first free-text change request to `qfai-run` is gone, because the prompt-time hook is the
+ * one place that rule is stated.
  *
  * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
  * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
@@ -1368,8 +1375,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the user-questions bullet, which now also says a turn that waits on the user
     // ends with a question listing the next actions. Derived by running `qfai init` into a temp
     // root; restoring the old wording reproduces `0a58ab20…` byte for byte.
+    //
+    // The generated rule list cites action-reversibility and untrusted-content.
+    // This digest covers the bytes produced by the builder strings.
     ".github/copilot-instructions.md",
-    "dfa370bc935f988bf29374437af39a24cba55aacf178387e82e5a9f982869b0c",
+    "5ebaa61d69fb28c4df4583f522d53af514465cabdc82d7621f6ae92595621de5",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1453,8 +1463,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // ends with a question listing the next actions. Derived by running `qfai init` into a temp
   // root; restoring the old wording in both written files reproduces `837a2663…` and
   // `85cd31b5…` byte for byte.
-  ["AGENTS.md", "6d12562c684becef7fc90a742cc5c3413a594f6fbdcd7c92aa91c962f7a22305"],
-  ["CLAUDE.md", "1832d2675a3d78c7e67c0487c100479c2e15db28a40d468be4e6629bb1f57044"],
+  //
+  // The entry files cite action-reversibility and untrusted-content, and open with their heading.
+  // These digests cover the shipped root templates, which init copies into a fresh project.
+  ["AGENTS.md", "7b826192d40fdb1d54f578bd77a486f61537e003071557895ad253bc284b693c"],
+  ["CLAUDE.md", "f90dda5cf1c63bdf6b6c60b164ec3de0ee530ffc66f32541d1067fea5a69baf2"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1501,14 +1514,48 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the `reminders.json` path and the key `free-text-entry`. Derived by running `qfai init` into a
   // temp root and hashing what it wrote; dropping that one group reproduces `65be5439…` byte for
   // byte.
-  [".claude/settings.json", "7662f70056f52555e0c4dd5b8fdfec9461e93d5c4b876df2a61d742bd6acbef6"],
+  //
+  // Re-pinned for three more changes, each a reviewed delta. A `permissions.allow` list names one
+  // `Skill(<name>)` entry for each shipped skill and the three launcher spellings. The grilling
+  // reminder before a write and the documentation-clarity and minimal-implementation reminders
+  // after one read the tool call and print nothing for a file under `.qfai/run/`. A third `UserPromptSubmit` group, the install check,
+  // looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // the project up to its git root and prints only where there is none. Derived by running `qfai init` into a temp root and hashing what it wrote.
+  //
+  // Re-pinned when the structured-question group started reading its input. Its program parses the
+  // prompt from stdin and stays silent when a line of it opens with a `<task-notification>` or
+  // `<wake>` wrapper, which marks a turn the host started rather than one the user typed. Any other
+  // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
+  // one message key, no shell and no network. Events, matchers and markers are unchanged; the
+  // previous group is listed as superseded so the merge refreshes it.
+  [".claude/settings.json", "d3c9b6f5b4d4adde281fe0c36dec12dc1673eb8f07d06c4c854a0ce5ffa2897c"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
   // through the session's shell over `$(git rev-parse --show-toplevel)/.agents/rules/reminders.json`;
   // a shell that does not expand `$(...)` names a path that does not exist, and the reader prints
   // nothing. Derived by running `qfai init` into a temp root and hashing what it wrote.
-  [".codex/hooks.json", "fe86567accd2389e36b0de6cb957f65a3252994cc365624f170d6fe3af1f7ef5"],
+  //
+  // Re-pinned for the tool-time groups: four under `PreToolUse` and two under `PostToolUse`,
+  // matched on Codex's tool names. Each runs the same reader over the same path and one message
+  // key; the API-budget and Markdown entries first read the tool call from stdin and print only
+  // when it matches. Every entry also has a `commandWindows` line, which Codex runs through
+  // `cmd.exe /C` on Windows: `for /f` over `git rev-parse --show-toplevel` finds the root, the
+  // same reader runs, and `exit /b 0` keeps a failed lookup at exit 0. Derived the same way;
+  // dropping those two events and every `commandWindows` reproduces `fe86567a…`.
+  //
+  // Re-pinned for one line per entry that every hook shell runs alike: `sh`, `cmd.exe /C` and
+  // PowerShell. Each entry is `node -e "<program>" <key>`; the program finds
+  // `.agents/rules/reminders.json` by looking upward from where it runs, stopping after the
+  // first directory that holds `.git`, and holds no character any of those shells expands. No
+  // entry has a `commandWindows`. Derived the same way; the file an earlier release wrote,
+  // `4c710d7e…`, is kept as a fixture the merge test upgrades.
+  //
+  // Re-pinned for the install check, a third `UserPromptSubmit` group. Its line finds the message
+  // file as every other line does, then looks for `node_modules/.bin/qfai`, or `.pnp.cjs` beside a `package.json` that lists qfai, from
+  // that project up to the first directory that holds `.git`, and holds no character those shells
+  // expand. Derived the same way; dropping that one group reproduces `d48bbc58…`.
+  [".codex/hooks.json", "d159e0319cdf72a8843a47f5943ca7fe7393d9e55225495020e2f7263dece46c"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1662,6 +1709,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
@@ -1672,6 +1720,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/untrusted-content.md",
   "root/.agents/rules/user-questions.md",
   "root/.agents/rules/version-discipline.md",
   "root/.gitattributes",
@@ -1990,7 +2039,7 @@ export function initMustNotShip(
 export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   [
     "qfai-docs.yml#scope",
-    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
+    '{"name":"Checkout with full history via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":0}}',
   ],
   [
     "qfai-docs.yml#scope",
@@ -1998,7 +2047,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2018,7 +2067,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2026,15 +2075,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body befb43afc6800850d3a14c00df4ffb4d6d3c7a310b2659cf3c3a43b86a0066fb>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 29d4d4ffdc27885fb3608373da72ce6fc119738a3a4d2cf8595b29586a06c25a>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body dc64220796b9ca5fa999241442d70074d186b93894b92b6626b3bb4097d884cb>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 51b5b26d3613f7250e7e16d2a696da10dab52e0df5f5901c423d292c0ccc9ff0>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 1255663d291ad8e0951cdc1eeba102fcd20f9fa27a484a52c55b196cb033d517>"}',
+    '{"name":"Check Mermaid diagram syntax","if":"matrix.check == \'mermaid\'","shell":"bash","run":"<body 2b158e79aad529228eb30165f5a496b4677daf6fb8bd609bb4ac9661449e8c79>"}',
   ],
   [
     "qfai-docs.yml#docs",
@@ -2042,7 +2091,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Checkout with full history via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":0}}',
+    '{"name":"Checkout with full history via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":0}}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2058,7 +2107,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2078,7 +2127,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#tests",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-tests.yml#tests",
@@ -2094,7 +2143,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Checkout via actions/checkout 5.1.0","uses":"actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
+    '{"name":"Checkout via actions/checkout 7.0.1","uses":"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1","with":{"persist-credentials":false,"fetch-depth":"${{ github.event_name == \'pull_request\' && \'0\' || \'1\' }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2114,7 +2163,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Set up Node via actions/setup-node 5.0.0","uses":"actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
+    '{"name":"Set up Node via actions/setup-node 7.0.0","uses":"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020","with":{"node-version":"${{ steps.node-version.outputs.version }}","cache":"${{ steps.node-cache.outputs.cache }}"}}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2315,7 +2364,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
   "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
-  "qfai",
+  "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
@@ -2345,7 +2394,27 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // nothing in the adopter's manifest — and `--registry` names WHERE the pinned
   // versions come from, which a version alone does not say: npm resolves its
   // registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc` otherwise.
-  ["npm install", new Set(["--no-audit", "--no-fund", "--no-save", "--registry"])],
+  //
+  // `--prefix` is what keeps that install away from the project's own dependency tree: npm cannot
+  // read a `node_modules` another package manager laid out. Its value is pinned by the test that
+  // executes the delivered step, so the flag can only ever name the lane's own directory.
+  //
+  // `--ignore-scripts` keeps the tool install from running any package's install script. The
+  // schema checker's platform binary arrives as an optional dependency, which installs without
+  // one, so the lane does not depend on the script. `--include=optional` keeps a user-level npm
+  // setting that omits optional dependencies from dropping that platform package.
+  [
+    "npm install",
+    new Set([
+      "--no-audit",
+      "--no-fund",
+      "--no-save",
+      "--registry",
+      "--prefix",
+      "--ignore-scripts",
+      "--include",
+    ]),
+  ],
   ["pnpm install", new Set(["--frozen-lockfile"])],
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],
@@ -2354,8 +2423,19 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // The document lane's checkers. `--scope all` is what makes the lane check the
   // whole tree rather than a diff (an adopter's CI has no ratchet to apply), and
   // `--summary` prints the per-document-type result the lane's log is read for.
-  ["node node_modules/qfai/assets/scripts/check-mdschema.mjs", new Set(["--scope", "--summary"])],
-  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set<string>()],
+  [
+    "node node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  ["node node_modules/qfai/assets/scripts/check-mermaid.mjs", new Set(["--tools"])],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
+    new Set(["--scope", "--summary", "--tools"]),
+  ],
+  [
+    "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
+    new Set(["--tools"]),
+  ],
   // `--no-renames` joins `--name-only` because the shipped detection lane needs both: with rename
   // detection ON git reports only the DESTINATION of a move, so `src/x.ts` -> `docs/x.md` arrives as
   // one documentation path and the source half selects no lane. It is a reporting flag — it cannot
