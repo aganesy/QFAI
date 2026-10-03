@@ -21,6 +21,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import { existsSync } from "node:fs";
+import type * as FsPromises from "node:fs/promises";
 import {
   mkdir,
   mkdtemp,
@@ -34,7 +35,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
@@ -55,7 +56,16 @@ import {
   workflow,
 } from "./workflowProject.js";
 
-afterEach(removeProjects);
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return { ...actual, readdir: vi.fn(actual.readdir), readFile: vi.fn(actual.readFile) };
+});
+
+afterEach(async () => {
+  vi.mocked(readdir).mockReset();
+  vi.mocked(readFile).mockReset();
+  await removeProjects();
+});
 
 // Every file under a directory, as text.
 async function filesUnder(dir: string): Promise<string[]> {
@@ -95,6 +105,36 @@ async function trackedSummary(root: string, runId: string): Promise<unknown> {
   const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
   return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
 }
+
+it.each(["EACCES", "EPERM", "EIO", "ENOENT"])(
+  "filesUnder preserves the original %s directory error",
+  async (code) => {
+    const root = await minimalProject();
+    const error = Object.assign(new Error(`Cannot list required files at ${root}`), {
+      code,
+      path: root,
+    });
+    vi.mocked(readdir).mockRejectedValueOnce(error);
+
+    await expect(filesUnder(root)).rejects.toBe(error);
+  },
+);
+
+it.each(["EACCES", "EPERM", "EIO", "ENOENT"])(
+  "trackedSummary preserves the original %s read error",
+  async (code) => {
+    const root = await minimalProject();
+    const runId = "required-summary";
+    const file = path.join(root, ".qfai", "evidence", "workflow", runId, "summary.json");
+    const error = Object.assign(new Error(`Cannot read required summary at ${file}`), {
+      code,
+      path: file,
+    });
+    vi.mocked(readFile).mockRejectedValueOnce(error);
+
+    await expect(trackedSummary(root, runId)).rejects.toBe(error);
+  },
+);
 
 // QFAI:EX-0001-0194-39
 it("Built CLI run with a distinctive request sentence under a temp root", async () => {
