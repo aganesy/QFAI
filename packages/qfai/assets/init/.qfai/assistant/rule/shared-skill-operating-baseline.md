@@ -372,7 +372,7 @@ can resolve stops at preflight.
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (see `.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`):
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail. A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once, as `.qfai/assistant/rule/review-convergence.md` sets out.
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting — in `validate.json`, read `counts` for the verdict and `issues[].code` for each finding; the array is `issues`, not `findings` (keys: `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`);
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;

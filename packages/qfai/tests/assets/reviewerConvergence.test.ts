@@ -111,14 +111,13 @@ describe("reviewer convergence", () => {
       }
     });
 
-    it(`${tree}: the autorepair protocol covers reviewer verdicts`, async () => {
+    it(`${tree}: the autorepair protocol leaves a REVISE to the one-review rule`, async () => {
       const content = await read(tree, OPERATING);
-      // `REVISE` is the in-flight verdict; `FAIL` is only the serialized
-      // `summary.json` status, so the trigger names REVISE and points at the
-      // vocabulary rather than offering both as reviewer verdicts.
-      expectPhrase(content, "or when a blocking reviewer returns `REVISE`");
-      expectPhrase(content, "shared-skill-delegation-baseline.md#verdict-vocabulary");
-      expectNoPhrase(content, "reviewer returns `FAIL` / `REVISE`");
+      expectPhrase(
+        content,
+        "A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once",
+      );
+      expectNoPhrase(content, "or when a blocking reviewer returns `REVISE`");
     });
   }
 });

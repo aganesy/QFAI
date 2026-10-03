@@ -53,6 +53,12 @@ without evidence.
 
 Quality gates are the decision mechanism. Fix until PASS.
 
+In a route the code review has already read the diff, and the verify stage
+holds no review. A repair this loop
+makes is therefore listed in the final report with its diff, as a change made
+after the code review, and the user sees it there. Invoked by name, the run's
+one code review reads the repair, as `qfai-verify`'s `## Review` section says.
+
 - If failing, produce an actionable fix list (not vague). Stop and escalate
   when a gate fails without one.
 - Identify whether the failure is a spec mismatch, a test issue or an
