@@ -663,17 +663,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The dogfooding lanes below run `QFAI-TDDLIST-009`, which asks
-          # whether anything a recorded observation covered has moved since the
-          # revision it names. On the default depth-1 clone that revision is
-          # unreachable, the interval cannot be computed, and the rule reported
-          # nothing — indistinguishable, in the output, from a ledger it had
-          # cleared. This is the one lane whose result blocks a merge, so it is
-          # the one that needs the history.
+          # The TDD drift check needs full history to reach the merge base on origin/main.
           # SHIPPED-CI: not-applicable
           # Because: the shipped `qfai-validate.yml` already fetches the full
           # history on a pull request, so the lane an adopter runs `validate`
-          # in can compute the interval today.
+          # in can reach the merge base today.
           fetch-depth: 0
       # The four-step toolchain preamble, defined once in
       # `.github/actions/setup/action.yml`. It stood inline here six times.
@@ -695,9 +689,10 @@ jobs:
           # `tdd` checks story test obligations, drift, test stubs, and
           # contracts against the repository root.
           #
-          # The lane is a ratchet, not a clean gate. The ledger rules it runs
-          # report `error`, and this repository carries rows written before
-          # they existed. `check-dogfood-backlog.mjs` holds every file absent
+          # The lane is a ratchet, not a clean gate. This repository's story
+          # tree still owes tests: examples with no annotated unit test, which the
+          # test-obligation check reports as `error`.
+          # `check-dogfood-backlog.mjs` holds every file absent
           # from the pin at zero and every pinned file to its pinned count, so
           # a new failure still fails the build while the backfill lands. A
           # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
@@ -711,14 +706,13 @@ jobs:
           # `sdd` checks story tree structure, contract references, steering,
           # and review artifacts against the repository root. It is paired
           # with `tdd` and the full sandbox validate below.
-          # The lane is a ratchet, not a clean gate. The ledger rules it runs
-          # report `error`, and this repository carries rows written before
-          # they existed. `check-dogfood-backlog.mjs` holds every file absent
-          # from the pin at zero and every pinned file to its pinned count, so
-          # a new failure still fails the build while the backfill lands. A
-          # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose
-          # rule is an error.
-          node scripts/check-dogfood-backlog.mjs --profile sdd
+          #
+          # A clean gate: this profile reports no `error` on the repository's
+          # own story tree, so any error fails the build.
+          # SHIPPED-CI: not-applicable
+          # Because: this lane validates this repository's own story tree, and
+          # the shipped validate workflow already fails on any error.
+          node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github --root .
 
       - name: QFAI self-validate this repo (dogfooding — full profile)
         shell: bash
@@ -736,9 +730,11 @@ jobs:
           # PUBLISHED release — CI would validate a version nobody is reviewing.
           # That is why the run was folded in rather than repointed at the
           # shipped workflow file.
-          # The lane is a ratchet, not a clean gate. The ledger rules it runs
-          # report `error`, and this repository carries rows written before
-          # they existed. `check-dogfood-backlog.mjs` holds every file absent
+          # The lane is a ratchet, not a clean gate. This repository's story
+          # tree still owes tests: examples with no annotated unit test, and
+          # acceptance criteria no integration or API test annotates, which
+          # the test-obligation check reports as `error`.
+          # `check-dogfood-backlog.mjs` holds every file absent
           # from the pin at zero and every pinned file to its pinned count, so
           # a new failure still fails the build while the backfill lands. A
           # waiver cannot substitute: `QFAI-WAIVER-002` refuses a waiver whose

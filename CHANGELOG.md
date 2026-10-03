@@ -234,6 +234,11 @@ its code. Several commands, findings and files go with that.
   re-routes by the decision rules. This replaces the earlier multi-stage
   question routes and their reviews. Fixes #2730.
 
+- **The `sdd` dogfooding lane is a clean gate.** CI validates this repository
+  with `--profile sdd --fail-on error`, so every error fails the build.
+  The comments name the test obligations still tracked by the other lanes
+  (#1436).
+
 - **The research-first protocol governs quotation and name lookups** (#2245).
   - A `best_practices` or `anti_patterns` description is written in the
     analyst's own words. A phrase kept from the source is put in ordinary
