@@ -97,7 +97,7 @@ of the reviewers of the steps that ran: `completion-reviewer` and
 architecture-affecting decision. Roles are selected under
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 The reviewers check each `## Gate` section of the steps that ran.
 
