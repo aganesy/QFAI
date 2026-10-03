@@ -862,14 +862,14 @@ describe("uiux validators", () => {
       ".qfai",
       "discussion",
       "discussion-20260416000000000",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     const latestPackPath = path.join(
       root,
       ".qfai",
       "discussion",
       "discussion-20260417000000000",
-      "02_Inception-Deck.md",
+      "01_Context.md",
     );
     await mkdir(path.dirname(stalePackPath), { recursive: true });
     await mkdir(path.dirname(latestPackPath), { recursive: true });
