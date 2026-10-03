@@ -63,11 +63,11 @@ describe("shipped instructions keep evidence local", () => {
 
   // QFAI:EX-0001-0002-08
   it("records an approval in the decision row, not in a committed run record", async () => {
-    const payloads = await read("skill/qfai-run/references/payloads.md");
-    expect(payloads).toContain("is written into the `decisions.md` row the run appends");
-    expect(payloads).toMatch(
-      /its `answeredBy`, its `recordedAt`, and the\s+`question\.options\[\]\.label` of each option the answer chose/,
+    const skill = await read("skill/qfai-run/SKILL.md");
+    expect(skill).toMatch(
+      /is one `decisions\.md` row naming what was\s+approved, who approved it, when, and the label of the option chosen/,
     );
-    expect(payloads).toContain("stay local and are never committed");
+    const plan = await read("skill/qfai-run/references/plan.md");
+    expect(plan).toContain("Each call prints one JSON document and writes no file.");
   });
 });

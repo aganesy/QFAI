@@ -178,9 +178,11 @@ export type ParsedArgs = {
     reportFlowIds: string[];
     /** The operation of `qfai workflow <operation>`. */
     workflowAction?: WorkflowOperation;
-    /** `--run <runId>` for `qfai workflow`. */
-    workflowRun?: string;
-    /** `--in <path>` for `qfai workflow`: the payload file under `.qfai/run/`. */
+    /** A token in the operation position of `qfai workflow` that names no operation. */
+    workflowUnknownOperation?: string;
+    /** `--route <route>` for `qfai workflow plan`. */
+    workflowRoute?: string;
+    /** `--in <path|->` for `qfai workflow plan`: the extraction file, or `-` for stdin. */
     workflowIn?: string;
     help: boolean;
     /**
@@ -202,16 +204,8 @@ export type ParsedArgs = {
   };
 };
 
-/** The seven operations of `qfai workflow`, and no other. */
-export const WORKFLOW_OPERATIONS = [
-  "start",
-  "next",
-  "accept",
-  "decision",
-  "status",
-  "resume",
-  "finish",
-] as const;
+/** The one operation of `qfai workflow`. */
+export const WORKFLOW_OPERATIONS = ["plan"] as const;
 
 export type WorkflowOperation = (typeof WORKFLOW_OPERATIONS)[number];
 
@@ -397,6 +391,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (operation) {
         options.workflowAction = operation;
       } else {
+        options.workflowUnknownOperation = candidate;
         markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
@@ -714,16 +709,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--run": {
+      case "--route": {
         const next = consumeOptionValue();
         if (next === null) {
-          markInvalid(missingValue("--run"));
+          markInvalid(missingValue("--route"));
           break;
         }
         if (command === "workflow") {
-          options.workflowRun = next;
+          options.workflowRoute = next;
         } else {
-          markInvalid(notValidHere("--run"));
+          markInvalid(notValidHere("--route"));
         }
         break;
       }

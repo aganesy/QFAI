@@ -23,40 +23,15 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { loadConfig } from "../../../src/core/config.js";
-import { decide } from "../../../src/core/workflow/decide.js";
+import { planOf as planned } from "../../../src/core/workflow/plan.js";
 import {
-  checkPlans,
+  allPlanRefusals,
   loadBuiltInPlans,
   packagePlansDir,
   parsePlan,
   type WorkflowPlanFile,
 } from "../../../src/core/workflow/plans.js";
 import { removeTempTree } from "../../helpers/tempTree.js";
-
-type Facts = Parameters<typeof decide>[2];
-
-const startFacts: Facts = {
-  start: {
-    runId: "run-20260925000000010",
-    qfaiVersion: "2.0.0",
-    digestKey: "d".repeat(64),
-    policyDigests: {},
-    planDigests: {},
-  },
-};
-
-const capabilities = Object.fromEntries(
-  [
-    "fetchSkillBody",
-    "invokeStage",
-    "delegateSubAgent",
-    "relayQuestion",
-    "runShellAndTests",
-    "writeProjectRoot",
-    "keepRunRecord",
-    "resume",
-  ].map((capability) => [capability, true]),
-);
 
 const roots: string[] = [];
 
@@ -80,39 +55,11 @@ async function project(config?: string): Promise<string> {
   return root;
 }
 
-// `start` on the project, with the cause the plan check found in its facts.
-async function startOn(root: string) {
+// Every refusal over the package's plans for the project.
+async function refusalsFor(root: string) {
   const { config } = await loadConfig(root);
-  const check = await checkPlans(root, config);
-  const facts = check.cause ? { ...startFacts, cause: check.cause } : startFacts;
-  const decision = decide(
-    null,
-    {
-      operation: "start",
-      request: { text: "Fix the export." },
-      harness: { host: "claude-code", capabilities },
-    },
-    facts,
-  );
-  const error = decision.verdict.error;
-  return {
-    run: decision.verdict.run,
-    code: error?.code,
-    cause: error && "cause" in error ? error.cause : undefined,
-    events: decision.events.length,
-    reasons: check.refusals.map((refusal) => refusal.reason),
-    subjects: check.refusals.map((refusal) => refusal.subject),
-  };
+  return allPlanRefusals(root, config);
 }
-
-const started = {
-  run: { id: "run-20260925000000010", state: "routing", sequence: 2 },
-  code: undefined,
-  cause: undefined,
-  events: 2,
-  reasons: [],
-  subjects: [],
-};
 
 // Each stage as its kind and its steps, a pass-through step marked with `°`.
 function shape(plan: WorkflowPlanFile | undefined) {
@@ -222,7 +169,7 @@ it("A routing override that keeps every required agent", async () => {
     "",
   ].join("\n");
 
-  expect(await startOn(await project(override))).toEqual(started);
+  expect(await refusalsFor(await project(override))).toEqual([]);
 });
 
 const EDIT_STAGE = "  - id: edit\n    kind: maintenance\n    steps: [maintain-edit]\n";
@@ -456,33 +403,35 @@ it("crlf-equal", async () => {
   expect(await refusalsOf("edit-text", (text) => text.replace(/\r?\n/g, "\r\n"))).toEqual([]);
 });
 
-// QFAI:EX-0001-0192-11
 it("A plan copy under the project's assistant tree is never read", async () => {
   const root = await project();
   const copy = path.join(root, ".qfai", "assistant", "process", "workflows", "edit-text.yml");
   await mkdir(path.dirname(copy), { recursive: true });
   await writeFile(copy, "route: edit-text\nstages: []\n");
 
-  expect(await startOn(root)).toEqual(started);
+  expect((await planned(root, { route: "edit-text" })).ok).toBe(true);
 });
 
 it("Every shipped plan loads and every step it names is installed", async () => {
   const root = await project();
-  const { config } = await loadConfig(root);
 
-  expect((await checkPlans(root, config)).refusals).toEqual([]);
+  expect(await refusalsFor(root)).toEqual([]);
 });
 
 it("A project whose sdd-gate step is not installed", async () => {
   const root = await project();
   await rm(path.join(root, ".qfai", "assistant", "step", "sdd-gate"), { recursive: true });
 
-  expect(await startOn(root)).toEqual({
-    run: null,
-    code: "fail-closed",
-    cause: "contract-undeclared",
-    events: 0,
-    reasons: ["step-missing"],
-    subjects: ["sdd-gate"],
+  expect(await planned(root, { route: "add-feature" })).toEqual({
+    ok: false,
+    message: expect.any(String),
+    reasons: [
+      {
+        reason: "plan-invalid",
+        subject: "sdd-gate",
+        file: "add-feature.yml",
+        cause: "step-missing",
+      },
+    ],
   });
 });

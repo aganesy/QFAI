@@ -4,7 +4,13 @@ import { isModifier } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
-import type { PlanStep } from "./types.js";
+
+// One step of a stage, with the mode the route fixes for it and whether it is pass-through.
+export interface PlanStep {
+  name: string;
+  passThrough?: boolean;
+  mode?: string;
+}
 
 export interface PlanStage {
   id: string;
@@ -12,9 +18,9 @@ export interface PlanStage {
   steps: PlanStep[];
   after: string[];
   effects: string[];
-  // `none`: the stage's steps add no reviewer to its work order. A stage that omits it is
-  // reviewed by the reviewers of its steps.
-  review?: "none";
+  // `spec` or `code`: the review that follows the stage. `none` marks a triage stage that no
+  // review follows, as a stage with no `review` is.
+  review?: "spec" | "code" | "none";
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -282,12 +288,19 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   return stage;
 }
 
-// A stage's `review`: absent, or `none` on a stage that changes no tracked file, which is a
-// triage stage.
-function reviewOf(value: unknown, kind: string, id: string, refuse: Refuse): "none" | undefined {
+// A stage's `review`: absent; `spec` or `code` on a stage that is not a triage stage; or `none`
+// on a triage stage, which changes no tracked file.
+function reviewOf(
+  value: unknown,
+  kind: string,
+  id: string,
+  refuse: Refuse,
+): PlanStage["review"] | undefined {
   if (value === undefined) return undefined;
-  if (value !== "none" || kind !== "triage") refuse("shape", id);
-  return value === "none" ? "none" : undefined;
+  if (kind === "triage" && value === "none") return value;
+  if (kind !== "triage" && (value === "spec" || value === "code")) return value;
+  refuse("shape", id);
+  return undefined;
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {

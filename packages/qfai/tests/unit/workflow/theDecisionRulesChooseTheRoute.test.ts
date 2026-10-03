@@ -2,9 +2,8 @@ import { expect, it } from "vitest";
 
 import { decideRoute } from "../../../src/core/workflow/decisionRules.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { planFacts } from "../../../src/core/workflow/observe.js";
-import { stageResultRefusals } from "../../../src/core/workflow/parse.js";
-import { defaultsIn } from "../../../src/core/workflow/routeDecision.js";
+import { extractionFaults } from "../../../src/core/workflow/extractionShape.js";
+import { routeDefaults } from "../../../src/core/workflow/routeDecision.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 
 type Facts = Partial<WorkflowExtraction>;
@@ -12,7 +11,7 @@ type Facts = Partial<WorkflowExtraction>;
 // The route and rule the decision rules give an extraction, over the package's own plans.
 async function decided(facts: Facts) {
   const read = extraction(facts);
-  const choice = decideRoute(read, defaultsIn(await planFacts()));
+  const choice = decideRoute(read, await routeDefaults());
   return [choice.route, choice.rule];
 }
 
@@ -290,53 +289,27 @@ it("A refactor and a documentation change", async () => {
   ]);
 });
 
-type Result = Record<string, unknown>;
-
-function routingResult(extractionFields: Record<string, unknown>, proposalFields: object = {}) {
-  const result: Result = {
-    resultId: "route-1",
-    workOrderId: "work-order-route-1",
-    stageInstanceId: "route",
-    attempt: 1,
-    expectedSequence: 3,
-    outcome: "accepted",
-    testObservation: "not_applicable",
-    actor: { agentInstance: "router-1" },
-    proposal: {
-      requestKind: "routed",
-      extraction: { ...extraction(), ...extractionFields },
-      goal: "Serve the request.",
-      expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
-      observedRefs: [],
-      affectedFlowIds: [],
-      riskSignals: [],
-      unresolvedQuestions: [],
-      newStories: [],
-      proposedWriteScope: [],
-      protectedTargets: [],
-      rationale: "The facts read out of the request.",
-      ...proposalFields,
-    },
-  };
-  return stageResultRefusals(result).map((refusal) => `${refusal.reason}:${refusal.subject}`);
+// The fields of an extraction that `plan` refuses.
+function refused(fields: Record<string, unknown>) {
+  return extractionFaults({ ...extraction(), ...fields }).map((subject) => `schema:${subject}`);
 }
 
 // QFAI:EX-0001-0211-03
 it("An extraction value outside its vocabulary is refused as a shape, naming the field", () => {
   const reading = { intent: "feature", entryFlags: [], qualifiers: [], signals: [] };
   expect({
-    intent: routingResult({ intent: "bug" }),
-    flag: routingResult({ entryFlags: ["urgent"] }),
-    confidence: routingResult({ confidence: 0.9 }),
-    alternativesAtHigh: routingResult({ alternatives: [reading] }),
-    lowWithout: routingResult({ confidence: "low" }),
-    lowWith: routingResult({ confidence: "low", alternatives: [reading] }),
+    intent: refused({ intent: "bug" }),
+    flag: refused({ entryFlags: ["urgent"] }),
+    confidence: refused({ confidence: 0.9 }),
+    alternativesAtHigh: refused({ alternatives: [reading] }),
+    lowWithout: refused({ confidence: "low" }),
+    lowWith: refused({ confidence: "low", alternatives: [reading] }),
   }).toEqual({
-    intent: ["schema:proposal.extraction.intent"],
-    flag: ["schema:proposal.extraction.entryFlags[0]"],
-    confidence: ["schema:proposal.extraction.confidence"],
-    alternativesAtHigh: ["schema:proposal.extraction.alternatives"],
-    lowWithout: ["schema:proposal.extraction.alternatives"],
+    intent: ["schema:intent"],
+    flag: ["schema:entryFlags[0]"],
+    confidence: ["schema:confidence"],
+    alternativesAtHigh: ["schema:alternatives"],
+    lowWithout: ["schema:alternatives"],
     lowWith: [],
   });
 });

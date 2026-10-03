@@ -21,7 +21,7 @@ interface DecisionRule {
 }
 
 // The route a request that no rule holds for takes, and one whose intent could not be read.
-export const FALLBACK_ROUTE: WorkflowRoute = "investigate-question";
+export const FALLBACK_ROUTE: WorkflowRoute = "answer-question";
 
 // Which route a rule chose, the rule and its clause; `rule: null` is the fallback.
 export interface RouteChoice {

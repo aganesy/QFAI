@@ -1,10 +1,11 @@
 # qfai-run extraction
 
-The facts `qfai-run` reads out of a request for the routing result. The CLI's
-decision rules choose the route from these facts alone, so the same facts always
-give the same plan. `qfai-run` names no route, stage or step.
+The facts `qfai-run` reads out of a request and passes to
+`npx qfai workflow plan`. The CLI's decision rules choose the route from these
+facts alone, so the same facts always give the same plan. `qfai-run` names no
+route, stage or step.
 
-Every vocabulary here is closed. The run refuses a value this file does not
+Every vocabulary here is closed. `plan` refuses a value this file does not
 define.
 
 ## Procedure
@@ -159,20 +160,20 @@ it is marked accepted or approved, or an implementing change is linked.
 Each refines the intent or flag in its second column. Set one only after
 reading what it depends on.
 
-| Qualifier               | Goes with       | Set it when                                                                                                   |
-| ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| `docs-answerable`       | `question-help` | The documents or the code already answer it. Cite what answers it in `observedRefs`                           |
-| `known-duplicate`       | any intent      | An existing item is the same request. Name it in `rationale`                                                  |
-| `mixed-bundle`          | `bundle`        | The bundled findings differ in kind. Findings that share one intent take that intent instead                  |
-| `human-run`             | `order`         | Only a person can run the operation: it is paid, bound to a host, or needs credentials the run does not hold  |
-| `distribution-incident` | `release`       | A published key, certificate, feed or package is broken                                                       |
-| `settled-design`        | `upstream`      | The cited record exists, is in force, and settles the design                                                  |
-| `red-since-change`      | `ci`            | CI fails since a named change, and a correct existing test catches it                                         |
-| `check-misses`          | `unenforced`    | A check exists and misses cases, or a check the declaration needs is absent                                   |
-| `mechanism-inert`       | `unenforced`    | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces |
-| `removal-requested`     | `unenforced`    | The request says to remove the mechanism rather than make it work                                             |
-| `visual-open`           | `feature`       | A visual or interaction decision is still open                                                                |
-| `contradicts-record`    | any intent      | The request contradicts a row of `decisions.md` that is in force                                              |
+| Qualifier               | Goes with       | Set it when                                                                                                      |
+| ----------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `docs-answerable`       | `question-help` | The documents or the code already answer it. Read what answers it first                                          |
+| `known-duplicate`       | any intent      | An existing item is the same request. Read the item first                                                        |
+| `mixed-bundle`          | `bundle`        | The bundled findings differ in kind. Findings that share one intent take that intent instead                     |
+| `human-run`             | `order`         | Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold |
+| `distribution-incident` | `release`       | A published key, certificate, feed or package is broken                                                          |
+| `settled-design`        | `upstream`      | The cited record exists, is in force, and settles the design                                                     |
+| `red-since-change`      | `ci`            | CI fails since a named change, and a correct existing test catches it                                            |
+| `check-misses`          | `unenforced`    | A check exists and misses cases, or a check the declaration needs is absent                                      |
+| `mechanism-inert`       | `unenforced`    | A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces    |
+| `removal-requested`     | `unenforced`    | The request says to remove the mechanism rather than make it work                                                |
+| `visual-open`           | `feature`       | A visual or interaction decision is still open                                                                   |
+| `contradicts-record`    | any intent      | The request contradicts a row of `decisions.md` that is in force                                                 |
 
 ## Signals
 
