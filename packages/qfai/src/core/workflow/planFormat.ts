@@ -1,10 +1,15 @@
 import { parse as parseYaml } from "yaml";
 
-import { isModifier } from "./modifiers.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
-import type { PlanStep } from "./types.js";
+
+// One step of a stage, with the mode the route fixes for it and whether it is pass-through.
+export interface PlanStep {
+  name: string;
+  passThrough?: boolean;
+  mode?: string;
+}
 
 export interface PlanStage {
   id: string;
@@ -12,9 +17,8 @@ export interface PlanStage {
   steps: PlanStep[];
   after: string[];
   effects: string[];
-  // `none`: the stage's steps add no reviewer to its work order. A stage that omits it is
-  // reviewed by the reviewers of its steps.
-  review?: "none";
+  // The review that follows the stage: the specification review or the code review.
+  review?: "spec" | "code";
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -28,7 +32,6 @@ export interface WorkflowPlanFile {
   route: string;
   family: string;
   stages: PlanStage[];
-  defaultModifiers: string[];
   decisionPoints: string[];
   releasePoint?: string;
   branchPoints: PlanBranchPoint[];
@@ -36,6 +39,7 @@ export interface WorkflowPlanFile {
 
 export type PlanRefusalReason =
   | "file-missing"
+  | "unreadable"
   | "not-mapping"
   | "unknown-key"
   | "route-name"
@@ -48,6 +52,7 @@ export type PlanRefusalReason =
   | "pass-through"
   | "seam"
   | "after-missing"
+  | "after-order"
   | "cycle"
   | "unreachable"
   | "point"
@@ -67,15 +72,7 @@ export interface PlanRefusal {
 export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
-const PLAN_KEYS = [
-  "route",
-  "family",
-  "stages",
-  "defaultModifiers",
-  "decisionPoints",
-  "releasePoint",
-  "branchPoints",
-];
+const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
 const STAGE_KEYS = ["id", "kind", "steps", "after", "effects", "review"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
@@ -86,12 +83,7 @@ const MODES: Record<string, string> = { settled: "sdd-triage", "read-only": "imp
 
 const SDD_APPEND = ["sdd-story", "sdd-gate"];
 
-const VERIFY_BLOCK = [
-  "verify-change-note",
-  "verify-context",
-  "verify-qfai-gate",
-  "verify-repo-gate",
-];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
 
 // Each stage kind, with the steps a stage of that kind may run.
 const KINDS: Record<string, string[]> = {
@@ -130,12 +122,13 @@ const KINDS: Record<string, string[]> = {
     "prototyping-loop",
     "prototyping-handoff",
   ],
-  acceptance: ["atdd-scaffold", "atdd-credentials", "atdd-author"],
-  test_fix: ["atdd-test-fix", "implement-test-fix"],
+  test_fix: ["implement-test-fix"],
   regression_fix: ["implement-regression-fix"],
   maintenance: ["maintain-edit"],
   verify: [
+    "verify-change-note",
     ...VERIFY_BLOCK,
+    "verify-context",
     "verify-repeat-run",
     "verify-advisory",
     "verify-external",
@@ -143,6 +136,9 @@ const KINDS: Record<string, string[]> = {
     "verify-release-notes",
   ],
   implement: [
+    "implement-scaffold",
+    "implement-credentials",
+    "implement-acceptance",
     "implement-tdd",
     "implement-checkpoint",
     "implement-refactor",
@@ -169,10 +165,15 @@ export const PASS_THROUGH_STEPS = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "atdd-credentials",
-  "atdd-author",
+  "discussion-pack",
   "discussion-uiux",
-  "atdd-test-fix",
+  "triage-investigate",
+  "implement-bisect",
+  "implement-minimize",
+  "implement-scaffold",
+  "implement-tdd",
+  "implement-credentials",
+  "implement-sweep",
   "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
@@ -272,7 +273,7 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   if (!effects || effects.some((effect) => !EFFECTS.includes(effect))) {
     refuse("effects", typeof id === "string" ? id : "stages");
   }
-  if (typeof id !== "string" || typeof kind !== "string" || !steps || !after) {
+  if (typeof id !== "string" || id === "" || typeof kind !== "string" || !steps || !after) {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   if (!effects) return refused(refuse, "shape", id);
@@ -282,12 +283,20 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
   return stage;
 }
 
-// A stage's `review`: absent, or `none` on a stage that changes no tracked file, which is a
-// triage stage.
-function reviewOf(value: unknown, kind: string, id: string, refuse: Refuse): "none" | undefined {
+// A stage's `review`: absent, or `spec` or `code` on a stage that is not a triage stage, which
+// changes no tracked file.
+function reviewOf(
+  value: unknown,
+  kind: string,
+  id: string,
+  refuse: Refuse,
+): "spec" | "code" | undefined {
   if (value === undefined) return undefined;
-  if (value !== "none" || kind !== "triage") refuse("shape", id);
-  return value === "none" ? "none" : undefined;
+  if ((value !== "spec" && value !== "code") || kind === "triage") {
+    refuse("shape", id);
+    return undefined;
+  }
+  return value;
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {
@@ -319,8 +328,10 @@ function reachedFrom(stages: PlanStage[], from: PlanStage[]): Set<string> {
 
 function graphRefusals(stages: PlanStage[], refuse: Refuse) {
   const ids = new Set(stages.map((stage) => stage.id));
-  for (const stage of stages) {
+  for (const [index, stage] of stages.entries()) {
     if (stage.after.some((id) => !ids.has(id))) refuse("after-missing", stage.id);
+    const later = stages.slice(index + 1).filter((each) => stage.after.includes(each.id));
+    for (const each of later) refuse("after-order", `${stage.id}:${each.id}`);
   }
   for (const stage of stages) {
     if (reachedFrom(stages, followersOf(stages, stage.id)).has(stage.id)) refuse("cycle", stage.id);
@@ -374,18 +385,6 @@ function terminalRefusals(stages: PlanStage[], refuse: Refuse) {
   }
 }
 
-function modifiersOf(value: unknown, refuse: Refuse): string[] {
-  const modifiers = stringList(value);
-  if (!modifiers) {
-    refuse("shape", "defaultModifiers");
-    return [];
-  }
-  for (const modifier of modifiers) {
-    if (!isModifier(modifier)) refuse("out-of-vocabulary", modifier);
-  }
-  return modifiers;
-}
-
 function outcomeOf(value: unknown, refuse: Refuse): PlanBranchPoint["outcomes"][number] | null {
   if (!isRecord(value)) return null;
   unknownKeys(value, OUTCOME_KEYS, refuse);
@@ -418,12 +417,13 @@ function branchPointsOf(value: unknown, refuse: Refuse): PlanBranchPoint[] {
   return value.flatMap((entry) => branchPointOf(entry, refuse) ?? []);
 }
 
-// Each decision, release and branch point names a step the plan runs exactly once.
+// Each decision, release and branch point names a step the plan runs exactly once; a release
+// point of `end` names none.
 function pointRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const names = plan.stages.flatMap(namesOf);
   const points = [
     ...plan.decisionPoints,
-    ...(plan.releasePoint === undefined ? [] : [plan.releasePoint]),
+    ...(plan.releasePoint === undefined || plan.releasePoint === "end" ? [] : [plan.releasePoint]),
     ...plan.branchPoints.map((point) => point.step),
   ];
   for (const point of points) {
@@ -454,7 +454,6 @@ function headerOf(document: Record<string, unknown>, route: string, refuse: Refu
   }
   return {
     family,
-    defaultModifiers: modifiersOf(document.defaultModifiers, refuse),
     decisionPoints: decisionPoints ?? [],
     ...(typeof releasePoint === "string" ? { releasePoint } : {}),
     branchPoints: branchPointsOf(document.branchPoints, refuse),

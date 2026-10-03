@@ -8,6 +8,6 @@ Feature: discussion-to-SDD handoff
   Scenario: SDD consumes a selected discussion pack as source material
     Given SDD preflight selected a usable discussion pack with requirements, sources, and a completed review
     When `/qfai-sdd` prepares the story tree
-    Then it reads the selected pack and records source provenance in SDD-owned evidence
-    And it records a discrepancy in an SDD-owned decision rather than rewriting the discussion pack
+    Then it reads the selected pack as source material
+    And it states a discrepancy in its final report or as an open question rather than rewriting the discussion pack
 ```

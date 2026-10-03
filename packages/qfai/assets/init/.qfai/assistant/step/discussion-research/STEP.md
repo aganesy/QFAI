@@ -1,9 +1,9 @@
 ---
 name: discussion-research
 owner: qfai-discussion
-purpose: "Open the run's stage evidence and record the research the interview reads."
-requires: [common-evidence-record, common-steering-refresh]
-roles: [delivery-planner, discovery-analyst, completion-reviewer]
+purpose: "Record the research the interview reads."
+requires: [common-steering-refresh]
+roles: [delivery-planner, discovery-analyst]
 routing-profile: default
 ---
 
@@ -20,24 +20,15 @@ runs before any decision is taken.
 
 ## Writes
 
-- `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`: this run's stage
-  evidence.
-
-Nothing under `.qfai/discussion/`, and no steering file.
+The research summary, in the stage report. Nothing under `.qfai/discussion/`,
+and no steering file.
 
 ## Procedure
 
-1. Open this run's stage evidence at
-   `.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md` with
-   `common-evidence-record`, under the run's own stamp, before anything else is
-   written. Its first two records have no other home before the pack exists:
-   this step's research summary, and the `## Grilling Session` row whose
-   `Ended at` is written before the first pack file.
-2. Run `common-steering-refresh`. Discussion owns no steering file, so a gap it
+1. Run `common-steering-refresh`. Discussion owns no steering file, so a gap it
    finds is routed to its owner or recorded as an open question.
-3. Run `.qfai/assistant/rule/research-first-protocol.md` before any other
-   artifact is authored, and record its `research_summary` output in this run's
-   stage evidence. Its `best_practices` and `anti_patterns` are inputs to every
+2. Run `.qfai/assistant/rule/research-first-protocol.md` before any other
+   artifact is authored, and report its `research_summary` output. Its `best_practices` and `anti_patterns` are inputs to every
    later step, not a late fill-in.
 
 ## Gate
@@ -49,7 +40,4 @@ one-file directory that every later validator and the `/qfai-sdd` preflight
 read in place of the last complete pack. A cancellation would make the project
 look broken.
 
-**The pack opens under this step's stamp**, so this run's pack and this run's
-evidence carry one name. A second stamp makes the two unpairable: a reader
-holding the pack cannot say which record belongs to it, and a check for a run
-that recorded nothing reports one that did.
+**The pack opens under this run's stamp**, taken when this step starts.

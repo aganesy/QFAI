@@ -62,7 +62,6 @@ describe("an example is not met by code written for its test", () => {
       ["agent", "implementation-reviewer.md"],
       ["agent", "qa-gatekeeper.md"],
       ["skill", "qfai-implement", "SKILL.md"],
-      ["skill", "qfai-atdd", "SKILL.md"],
     ];
     for (const place of places) {
       const body = unwrap(await readAssistant(...place));

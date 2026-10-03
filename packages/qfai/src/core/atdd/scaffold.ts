@@ -1,11 +1,9 @@
-import { mkdir, open, readFile } from "node:fs/promises";
+import { lstat, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 
 import { atddTestKindDirs } from "../atddTraceability.js";
 import { isStoryTreeId } from "../storyTree/ids.js";
 import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
-
-export const SCAFFOLD_PLACEHOLDER_MARKER = "QFAI-SCAFFOLD-PLACEHOLDER";
 
 export type ScaffoldTarget =
   { id: string; kind: "AC"; storyId: string } | { id: string; kind: "BF" };
@@ -23,28 +21,17 @@ export function buildSkeleton(
   dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
 ): string {
   if (!isScaffoldTarget(target)) throw new TypeError(`Invalid scaffold target: ${target.id}`);
-  const prefix = dialect.commentPrefix;
   return [
-    `${prefix} QFAI:${target.id}`,
-    `${prefix} ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`,
+    `${dialect.commentPrefix} QFAI:${target.id}`,
     "",
     ...dialect.buildBody(target.id),
     "",
   ].join("\n");
 }
 
-export function isStillPlaceholder(body: string, id: string): boolean {
-  return (
-    body.includes(SCAFFOLD_PLACEHOLDER_MARKER) &&
-    body.includes(`TODO: implement assertion for ${id}`)
-  );
-}
-
 export type EmitSkeletonResult = {
   destPath: string;
   wrote: boolean;
-  alreadyPlaceholder: boolean;
-  alreadyProgressed: boolean;
 };
 
 export async function emitSkeleton(
@@ -61,12 +48,15 @@ export async function emitSkeleton(
     } finally {
       await handle.close();
     }
-    return { destPath, wrote: true, alreadyPlaceholder: false, alreadyProgressed: false };
+    return { destPath, wrote: true };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    const existing = await readFile(destPath, "utf8");
-    const alreadyPlaceholder = isStillPlaceholder(existing, target.id);
-    return { destPath, wrote: false, alreadyPlaceholder, alreadyProgressed: !alreadyPlaceholder };
+    // Only an existing test file is kept. A directory or a dangling link at the
+    // destination is not a test, and reporting it as one hides the collision.
+    if (!(await lstat(destPath)).isFile()) {
+      throw new Error(`${destPath} exists and is not a test file`, { cause: error });
+    }
+    return { destPath, wrote: false };
   }
 }
 

@@ -44,7 +44,7 @@
   //
   // The merge condition is CI and nothing else. That is a deliberate trade and it is only sound
   // because of what CI here IS: `ci-pass` aggregates every lane — lint, both type lanes, the Node
-  // floor, the full Vitest set, scanner coverage and the packaged-build verification — and its
+  // floor, the full Vitest set and the packaged-build verification — and its
   // accepting set rejects any job result that is not `success` or `skipped`. A dependency that
   // breaks this repository fails that verdict, so the pull request does not merge; a dependency
   // that does not, merges without anyone reading it.

@@ -2,14 +2,13 @@
 name: implement-dep-bump
 owner: qfai-implement
 purpose: "Raise a dependency to a new version and check that the runtime, the version floors the project declares, and every call into it still hold."
-requires: [common-steering-refresh, common-gate-run, common-evidence-record]
+requires: [common-steering-refresh, common-gate-run]
 roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
 routing-profile: implementation-heavy
 ---
 
@@ -44,8 +43,7 @@ advisory to clear.
 ## What it writes
 
 - The manifest, the lockfile and any adapted call, listed in `changedFiles`.
-- A record of the versions, the breaking changes read and how each was met,
-  written with `common-evidence-record`.
+- A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate
 

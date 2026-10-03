@@ -64,9 +64,12 @@ const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
  * use were folklore. It is validated rather than deleted because the Drift
  * Protocol's rerun step needs exactly this vocabulary.
  *
- * - `failed-agents-only` — re-run only the agents that did not return PASS.
- * - `changed-scope-dependents` — re-run every agent whose inputs the change
- *   touched, including ones that passed.
+ * - `failed-agents-only` — when a step runs again, re-run only the agents whose
+ *   work failed.
+ * - `changed-scope-dependents` — when a step runs again, re-run every agent
+ *   whose inputs the change touched.
+ *
+ * Neither re-runs a review: a stage is reviewed once.
  */
 const RERUN_POLICIES = new Set(["failed-agents-only", "changed-scope-dependents"]);
 

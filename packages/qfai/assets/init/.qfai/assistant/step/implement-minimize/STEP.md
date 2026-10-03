@@ -7,7 +7,6 @@ roles:
   - devops-ci-engineer
   - frontend-engineer
   - backend-engineer
-  - completion-reviewer
 routing-profile: default
 ---
 
@@ -16,6 +15,14 @@ routing-profile: default
 A crash came with the input that causes it: a file, a request, a program, a
 sequence of calls. This step reduces that input until nothing more can be
 removed.
+
+## Passes when
+
+Read first: the report and the reproduction it gives. The step passes when the
+report holds no input to reduce, such as a defect with no crashing input or
+trace, or when its reproduction is already one command or one input with
+nothing left to remove. The pass names which of the two holds and the
+reproduction, where there is one.
 
 ## Reads
 
@@ -37,9 +44,8 @@ removed.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the signature, the original and the
-  minimal input, and the command that runs it. It is git-ignored and is named
-  in `artifactRefs`. The test that keeps the input is written later, by the
+- The stage report holds the signature, the original and the
+  minimal input, and the command that runs it. The test that keeps the input is written later, by the
   implement stage.
 
 ## Gate

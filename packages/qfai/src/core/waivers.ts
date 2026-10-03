@@ -37,7 +37,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * appears in no shipped artifact.
  *
  * It accepts every code shape the package emits, including `QFAI-STORY-006`,
- * `D-SCAFFOLD-PLACEHOLDER`, and the stripped `STORY-006` spelling.
+ * `D-DEPRECATED-PATH`, and the stripped `STORY-006` spelling.
  */
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 

@@ -4,22 +4,235 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-04
+
+### Breaking changes
+
+This release makes the workflow lighter. QFAI no longer keeps integrity
+hashes, evidence records, review packs or reviews of the process itself. The
+session agent runs the work, a stage reports its results in its final report,
+and each change is reviewed twice: once for its specification and once for
+its code. Several commands, findings and files go with that.
+
+- **`qfai workflow` has one operation, `plan`.** `npx qfai workflow plan --in <path|->`
+  reads a request's extraction, from a file or standard input, and
+  `npx qfai workflow plan --route <route>` names a route. Either prints one
+  JSON document: the route's stages and step files with their decision,
+  release and branch points, the candidate routes of an unsure extraction, or
+  a refusal (`invalid-input`, `schema`, `unknown-route`, `plan-invalid`,
+  `io-error`). It writes no file.
+  - `start`, `next`, `accept`, `decision`, `status`, `resume`, `finish` and
+    `--run` are gone, with the run records under `.qfai/run/` and
+    `.qfai/evidence/workflow/`, and every hash and digest check the run engine
+    made.
+  - The shipped schemas are `extraction.schema.json` and `plan.schema.json`.
+  - `qfai-run` runs the plan in the session. At a decision point it asks each
+    critical decision before anything that depends on it changes, and takes
+    and reports every other decision. The release point asks for approval.
+    Each approval is one `decisions.md` row. Under a no-question mode the
+    decision becomes an `open-questions.md` row and the step stops.
+
+- **The route catalog holds 34 routes, and a change route has two reviews.**
+  - Merged: `investigate-question` into `answer-question`, `decide-acceptance`
+    into `decide-design`, `sweep-guard` into `repair-consistency`,
+    `apply-settled-spec` and `apply-settled-build` into `apply-settled`, and
+    `fix-crash` and `fix-regression` into `fix-defect`.
+  - New: `write-acceptance-tests` writes the bodies of empty acceptance tests.
+  - A change route reviews the specification once when it can change it, and
+    the whole diff once. `requirements-reviewer` reviews the specification,
+    joined by `architecture-reviewer` when a contract changed;
+    `implementation-reviewer` reviews the code; `product-surface-reviewer`
+    joins either on a UI flow. A plan marks the stage `review: spec` or
+    `review: code`.
+  - The acceptance stage folds into `implement`. The verify block runs
+    `verify-change-note`, `verify-qfai-gate` and `verify-repo-gate` and holds
+    no review.
+  - Removed: the required `completion-reviewer` (the agent card stays, for use
+    on request), the `heavy` review profile and `review:heavy`, the review
+    round budget with its escalation exits and corrective review, and
+    `defaultModifiers`, which a plan may no longer carry.
+
+- **The evidence tree, review packs and `qfai audit log` are gone** (#2805).
+  The assistant writes nothing under `.qfai/evidence/` or `.qfai/review/`.
+  Each stage reports its gate results, review verdicts and grilling record in
+  its final report.
+  - `qfai audit log` and the decision records it listed are removed; running
+    it is an unknown-command error.
+  - `qfai validate` no longer reports `QFAI-REVIEW-001` to `QFAI-REVIEW-010`
+    and reads no reviewer report.
+  - `qfai doctor --clean` and `--autoremediate` prune run logs only. They no
+    longer archive review packs or add a `review:` key to `qfai.config.yaml`,
+    and `review.staleTtlDays` is no longer read.
+  - `qfai sdd preflight` no longer looks for an import-lite file under
+    `.qfai/evidence/`. Pass an imported specification with `--import <path>`.
+
+- **The `qfai prototyping` command group is gone** (#2808). Prototyping
+  completes when the user confirms the prototype: `/qfai-prototyping` builds,
+  reviews and puts each iteration to the user until they say it is done. It
+  keeps every file it writes under `.qfai/prototype/`, the handoff included in
+  `final/handoff.json`.
+  - `preflight`, `iterate`, `certify`, `rescope` and `show-ui-contract` are
+    removed. `qfai doctor --profile prototyping` is the preflight.
+  - `qfai validate` no longer reports `QFAI-PROT-*`, `QFAI-UIE-*`,
+    `QFAI-CRIT-*`, `QFAI-DCON-012`, `QFAI-DCON-013`, `QFAI-CFG-LINK-003`,
+    `R-CERTIFY-VERIFY-CIRCULAR`, `R-PROMPT-SCANNER-DRIFT`,
+    `R-EVIDENCE-MUTATION-UNLOGGED` or `R-EXPLORATION-CERTIFY-ATTEMPT`, and
+    reads no prototyping record.
+  - The completion certificate, the `DESIGN.md` sha256 freeze and
+    `hashDesignMd`, the iterate and rescope records, the capture checksum, the
+    license patch audit, the critique providers and the calibration pack are
+    removed. `prototyping.calibration` and `prototyping.mode` are no longer
+    read.
+  - `qfai report` no longer prints a prototyping section.
+
+- **The `qfai-atdd` skill is gone, and acceptance tests come in two phases.**
+  `/qfai-implement` first writes the E2E test of each business flow and the
+  integration test of each acceptance criterion with `npx qfai atdd scaffold`,
+  through its `implement-scaffold` step, and writes their bodies later through
+  `implement-acceptance`. Unit and component tests stay test first.
+  `implement-credentials` sets up per-worker sign-in reuse, and
+  `implement-test-fix` repairs a defective test at any layer.
+  - For every dialect, `qfai atdd scaffold` writes a test that carries its
+    annotation, is not skipped, and has an empty body that passes. An empty
+    test raises no finding. `QFAI-TEST-003` reports a skipped test and
+    `QFAI-TEST-001` a `todo` one, whoever wrote it.
+  - `D-SCAFFOLD-PLACEHOLDER`, its escalation and `atdd.scaffoldEscalateCycles`
+    are removed; an `atdd` block in `qfai.config.yaml` is ignored.
+  - `qfai init --force` removes the `qfai-atdd` skill links it installed, moves
+    the retired skill into `.qfai/assistant/skill.local/`, and lists each
+    retired `atdd-*` step still in the step tree for you to move or delete.
+
+- **`qfai init --force` overwrites the assistant files it regenerates, and init
+  keeps no record of what it wrote** (#2809).
+  - `--force` overwrites the skill, step, agent and rule trees, the rule
+    masters under `.agents/rules/`, the host links and the generated Copilot
+    instructions, whether or not the project edited them. A plain run writes
+    them only where they are missing. `qfai.config.yaml`, `DESIGN.md`, the root
+    `AGENTS.md` and `CLAUDE.md`, the story-tree seeds, rule overlays and
+    `skill.local/` are never overwritten.
+  - `.qfai/assistant/.assets.lock.json`, `.agents/rules/.qfai-rules.lock.json`
+    and `.qfai/install-provenance.json` are no longer written or read.
+  - A shipped workflow is written only where no file of that name exists. It
+    is never overwritten or removed, so a deleted workflow comes back on the
+    next run.
+  - `qfai doctor` drops `skills.integrity` and `workflows.integrity`, and adds
+    `paths.leftovers`, at `info`, listing the files an earlier release left
+    behind. `qfai init` prints the same list. Neither deletes any of them.
+  - `qfai validate` drops `QFAI-SKILLS-001` and `QFAI-ASSETS-004` to
+    `QFAI-ASSETS-009`, the comparisons of the assistant tree against the
+    package.
+
+- **A discussion pack holds nine files beside its `00_index.md`** (#2811), and
+  they keep their numbers:
+  `01_Context.md`, `03_Story-Workshop.md`, `04_Sources.md`, `05_Scope.md`,
+  `06_REQ.md`, `07_NFR.md`, `08_Glossary.md`, `09_Constraints.md` and
+  `11_OQ-Register.md`.
+
+  | Removed file              | Where its content goes                                                                  |
+  | ------------------------- | --------------------------------------------------------------------------------------- |
+  | `02_Inception-Deck.md`    | `01_Context.md`, under `## Inception Deck`                                              |
+  | `10_Policy.md`            | `09_Constraints.md`, as the four policy sections                                        |
+  | `12_OQ-Resolution-Log.md` | `11_OQ-Register.md`: the row is edited, and its `Resolution` column says how            |
+  | `13_Deferred.md`          | `11_OQ-Register.md`: a deferred row names its `Next-Decision-Point`                     |
+  | `14_Review-Request.md`    | Removed, with the review templates                                                      |
+  | `99_delta.md`             | Removed: a decision goes to the file it shapes, a rejected direction to `04_Sources.md` |
+
+  `QFAI-DPACK-007` reports a deferred question whose `Next-Decision-Point` is
+  missing, empty, a dash or a placeholder. `QFAI-VIS-001` reads the Inception
+  Deck diagram from `01_Context.md`.
+
+- **The session agent holds the work** (#2806). Delegating to a sub-agent is
+  optional: the session delegates only parallel work and a review someone
+  other than the author has to do. A delegation that is unavailable is done by
+  the session and reported as its own; a review that needs another reviewer
+  stops the stage instead.
+  - `qfai-sdd` runs at most two concrete-to-abstract cycles in the session. It
+    decides each finding that is not critical, puts critical ones and changes
+    to approved items to the user, and writes one `Unadjudicated:` open
+    question for each finding left open. It writes no cycle record, no
+    rejected-finding row and no triage row for its own decisions.
+  - `decisions.md` gains a change-request row only once the user approves it,
+    with who approved it, when and the option chosen. A declined request adds
+    no row; where the user cannot be asked, the proposal becomes an
+    `open-questions.md` row.
+
+- **`qfai-migration-v1-to-v2` keeps no archive and writes nothing under
+  `.qfai/evidence/`** (#2810). A 1.x file with no destination is deleted and
+  listed under `## Operations`, an untracked file and an uncommitted edit
+  included. Only what git history holds can be recovered, and the skill says
+  so before the first real run. Step 11 replaces a customised shipped skill or
+  step. The plan, the ID map and the contract map are under
+  `tmp/qfai-migration/`, and each step prints its report and writes it to no
+  file. Step 10 only resets the managed `.gitignore` block.
+
+- **Steps 1 to 10 of `qfai-migration-v1-to-v2` open their report with a verdict
+  line** (#2727): `no 1.x layout found under <specsDir> (paths.specsDir=<value>)`,
+  `1.x layout found, migrating` or `already migrated (id-map.json present)`,
+  then an empty line and `## Operations`. The directory is written relative to
+  the project root. Step 10 also ends with a `Summary:` line in the first two
+  cases. A script that read a report from its first line must now start at the
+  `## Operations` heading. The skill tells the AI to report that there is
+  nothing to migrate in the directory the line names, and to ask the person to
+  check that the specs live there.
+
+#### Upgrading from 2.0
+
+1. Install 2.1.0 and run `npx qfai doctor`. Note what `paths.leftovers` lists.
+2. Move every edit you made to a shipped skill, step, agent or rule into
+   `.qfai/assistant/skill.local/` or a rule overlay. The next step overwrites
+   the shipped copies.
+3. Run `npx qfai init --force`. It regenerates the assistant files and retires
+   the `qfai-atdd` skill.
+4. Delete these leftovers, where present, once nothing you keep reads them: `.qfai/evidence/`,
+   `.qfai/review/`, `.qfai/run/`, `.qfai/assistant/.assets.lock.json`,
+   `.agents/rules/.qfai-rules.lock.json` and `.qfai/install-provenance.json`.
+   `.qfai/evidence/migration-spec-to-story/` may hold the only copy of what the
+   1.x migration retired, so read it before deleting it.
+5. In each discussion pack, move the content of the removed files to where the
+   table above sends it, then delete them.
+6. Replace scripts and CI steps that call a removed command: the `qfai workflow`
+   run operations, `qfai audit log` and every `qfai prototyping` subcommand.
+   Use `npx qfai workflow plan` and `npx qfai doctor --profile prototyping`.
+   Remove filters or waivers that name a finding this release no longer
+   reports.
+7. Remove the keys that are no longer read from `qfai.config.yaml`:
+   `atdd.scaffoldEscalateCycles`, `review.staleTtlDays`,
+   `prototyping.calibration` and `prototyping.mode`. They are ignored, so this
+   is tidying, not a requirement.
+8. To take a newer copy of a shipped workflow, delete the file under
+   `.github/workflows/` and run `npx qfai init` again. Init never overwrites
+   an existing workflow.
+9. Write the bodies of placeholder acceptance tests an earlier release
+   scaffolded. Each raises `QFAI-TEST-003` (JavaScript) or `QFAI-TEST-001`
+   (Python) until it has one; the `write-acceptance-tests` route writes them.
+10. Run `npx qfai validate` and fix what it reports.
+
 ### Added
 
 - **A shared rule records what a stage costs and which lever changes it**
   (#2238). `rule/stage-cost.md` names reasoning depth by the `effort` setting
   and its levels, and runs every agent at the host's default until a
   measurement chooses another level for a role. It records two costs: a high
-  level on a long deliverable such as spec authoring, contract normalization
-  or a full review pack, and whole-file rewrites for small changes. The work
+  level on a long deliverable such as spec authoring or contract
+  normalization, and whole-file rewrites for small changes. The work
   order template gains an advisory `Time budget: none | <seconds>` and an
   elapsed line the agent ends every message with. Neither is a cap.
 
 - **Context summaries preserve requests, decisions, open work and stage state**
-  (#2243), including question and review budgets. User wording stays close to
+  (#2243), including the question budget and the stage's review. User wording stays close to
   verbatim.
 
 ### Changed
+
+- **A question that one command answers needs no plan.** The free-text
+  reminder and the `qfai-run` description say a question that one command or
+  one file read answers is answered directly.
+
+- **A question that changes no file is answered in one stage, with no separate
+  reviewer.** `answer-question` is one stage that runs every step of the route
+  down to `triage-close`. A triage stage carries no review. A defect found while investigating still
+  re-routes by the decision rules. This replaces the earlier multi-stage
+  question routes and their reviews. Fixes #2730.
 
 - **The `sdd` dogfooding lane is a clean gate.** CI validates this repository
   with `--profile sdd --fail-on error`, so every error fails the build.
@@ -102,8 +315,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The reviewer gate is not self-verification.** The independent-reviewer
   definition now says why guidance against using sub-agents to verify your own
   work does not reach the reviewer gate: an independent reviewer authored none
-  of what it reviews, and its verdict is recorded and pinned to a hash of the
-  reviewed state. The author cannot accept its own output.
+  of what it reviews. The author cannot accept its own output.
 
 - **The artifact-reuse and tuning-scope tests fail on the cases they reject**
   (#2217).
@@ -132,25 +344,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **`qfai workflow` keeps each stage result it records under the run's
-  `results/`** (#2348). Complete JSON is stored before its journal event.
-  New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
-  case-distinct IDs and Windows device names keep separate receipts.
-  Earlier recorded paths remain readable. The tracked `summary.json` lists
-  each accepted result's digest before the stage's report-copy digests.
-
-- **Journal directory read errors retain their original cause** (#2841).
-  Missing directories still identify a legacy run. Busy or denied reads reach
-  the workflow's I/O refusal; other errors propagate.
-  An initial busy or denied read is attempted once and reports no run metadata.
-  Later failures retain metadata verified by a successful journal read.
-
-- **Journal test reads preserve filesystem errors** (#2846).
-  Required artifact reads keep their original error instead of replacing it
-  with an empty result; rebuilt-snapshot checks still clean up after failure.
-
-- Host-capability refusals at workflow start state the reason and the next
-  action in one sentence while preserving the refusal fields (#2839).
+- **Step 3 lists every `routing:` override it writes (#2714).** An
+  `agent-routing.yml` entry copied into `qfai.config.yaml` hides the roles the
+  2.x skills declare. Step 3 keeps every entry that differs from the installed
+  default, including an unmodified entry an earlier 1.x release shipped, and
+  lists each under `## For a person` with a warning to that effect, so a person
+  removes the ones nobody customised.
 
 ## [2.0.2] - 2026-10-03
 

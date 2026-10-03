@@ -2,35 +2,29 @@ schema_version: "1.0"
 
 profiles:
   default:
-    always_required: [completion-reviewer]
+    always_required: []
     conditional_required: []
   requirements-heavy:
-    always_required: [completion-reviewer, requirements-reviewer]
+    always_required: [requirements-reviewer]
     conditional_required: []
   architecture-heavy:
-    always_required: [completion-reviewer, architecture-reviewer]
+    always_required: [architecture-reviewer]
     conditional_required: []
   ui-bearing:
-    always_required: [completion-reviewer, product-surface-reviewer]
+    always_required: [product-surface-reviewer]
     conditional_required: []
   runtime-heavy:
-    always_required: [completion-reviewer, qa-gatekeeper]
+    always_required: [qa-gatekeeper]
     conditional_required: [implementation-reviewer]
   # The steps that change production code (`implement-tdd`,
   # `implement-regression-fix`, `implement-seam`) make an `implementation-reviewer`
   # PASS part of their completion gate, so for them the code-quality review is
   # always required and always blocking. The other `runtime-heavy` users — the
-  # atdd, verify and test-running steps and qfai-configure — keep that reviewer
+  # acceptance-test, verify and test-running steps and qfai-configure — keep that reviewer
   # genuinely conditional, hence a profile of its own rather than widening
   # runtime-heavy for all of them.
   implementation-heavy:
-    always_required: [completion-reviewer, qa-gatekeeper, implementation-reviewer]
-    conditional_required: []
-  # No step names this profile. A run carrying `review:heavy` adds its
-  # reviewers, all blocking, to every stage's own.
-  heavy:
-    always_required:
-      [completion-reviewer, architecture-reviewer, requirements-reviewer, implementation-reviewer]
+    always_required: [qa-gatekeeper, implementation-reviewer]
     conditional_required: []
 
 optional_modes:

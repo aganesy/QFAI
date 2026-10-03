@@ -4,25 +4,20 @@ stages:
   - id: sdd
     kind: sdd
     steps: [sdd-triage, sdd-contract, sdd-story, sdd-gate]
-  - id: acceptance
-    kind: acceptance
-    steps:
-      - atdd-scaffold
-      - { step: atdd-credentials, passThrough: true }
-      - { step: atdd-author, passThrough: true }
-    after: [sdd]
+    review: spec
   - id: implement
     kind: implement
-    steps: [implement-tdd, implement-checkpoint]
-    after: [acceptance]
-  - id: verify
+    steps: [implement-scaffold, implement-tdd]
+    after: [sdd]
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [implement]
-defaultModifiers: [gate:user, review:heavy]
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: [sdd-triage]
 branchPoints: []

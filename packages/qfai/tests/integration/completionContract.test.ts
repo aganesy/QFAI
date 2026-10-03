@@ -55,31 +55,6 @@ describe("BF completion gate", () => {
     expect(c).toMatch(/Every implemented EX has an observed RED, GREEN and Refactor result/);
   });
 
-  it("requires current evidence and independent reviewer PASS for the integrated revision", async () => {
-    // QFAI:EX-0001-0094-04
-    const c = await loadContent();
-    expect(c).toMatch(/implementation-reviewer checks code and tests/);
-    expect(c).toMatch(
-      /completion-reviewer checks\s+obligation, commands, and evidence independently/,
-    );
-    expect(c).toMatch(/author does not certify their own result/);
-    expect(c).toMatch(/Each required reviewer must pass the same final revision/);
-    expect(c).toMatch(/current evidence and the required independent PASS reviews/);
-    expect(c).toMatch(/A reviewer\s+REVISE follows/);
-  });
-
-  it("requires phase evidence, checkpoint verification and both independent reviewer passes", async () => {
-    // QFAI:EX-0001-0094-01
-    const c = await loadContent();
-    expect(c).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
-    expect(c).toContain("A fresh validate result has no test-obligation EX finding for this BF");
-    expect(c).toContain("implementation-reviewer checks code and tests");
-    expect(c).toMatch(
-      /completion-reviewer checks\s+obligation, commands, and evidence independently/,
-    );
-    expect(c).toContain("Each required reviewer must pass the same final revision");
-  });
-
   it("reports nothing to do only after a current scoped TDD gate finds no owed EX", async () => {
     // QFAI:EX-0001-0094-02
     const c = await loadContent();
@@ -88,26 +63,6 @@ describe("BF completion gate", () => {
     expect(c).toMatch(/When no EX work remains at entry, still run the current flow checkpoint/);
     expect(c).toMatch(/report "nothing to do" only after the scoped gate and applicable commands/);
     expect(c).not.toContain("test-list.md");
-  });
-
-  it("rejects stale phase evidence from an earlier revision", async () => {
-    // QFAI:EX-0001-0094-03
-    const c = await loadContent();
-    const parallelPolicy = await readFile(
-      path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
-      "utf8",
-    );
-    expect(c).toMatch(/Record command, selector, failure, test hash, and\s+revision/);
-    expect(c).toContain("Run the same selector and record");
-    expect(c).toContain("current evidence and the required independent PASS reviews");
-    expect(parallelPolicy).toContain("Retake evidence whose source revision changed");
-  });
-
-  it("rejects a phase entry with a status and no command or result", async () => {
-    // QFAI:EX-0001-0094-07
-    const c = await loadContent();
-    expect(c).toContain("Evidence without a command and result pair does not prove a");
-    expect(c).toMatch(/RED, GREEN, and Refactor commands and observed\s+results/);
   });
 
   it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {

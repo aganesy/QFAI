@@ -44,8 +44,8 @@ it("The shipped catalog, a row citing an unknown decision, and one citing a row 
   const unknown = withRow("edit-text", (row) =>
     row.replace(`Approved by ${approvedBy("edit-text")}.`, "Approved by DEC-9999."),
   );
-  const notARequest = withRow("fix-crash", (row) =>
-    row.replace(`Approved by ${approvedBy("fix-crash")}.`, "Approved by DEC-0003."),
+  const notARequest = withRow("fix-intermittent", (row) =>
+    row.replace(`Approved by ${approvedBy("fix-intermittent")}.`, "Approved by DEC-0003."),
   );
 
   expect({
@@ -55,7 +55,9 @@ it("The shipped catalog, a row citing an unknown decision, and one citing a row 
   }).toEqual({
     shipped: [],
     unknown: ["edit-text: the row cites DEC-9999, which decisions.md does not hold"],
-    notARequest: [`fix-crash: DEC-0003 is not an in-force change request naming ${CONTRACT}`],
+    notARequest: [
+      `fix-intermittent: DEC-0003 is not an in-force change request naming ${CONTRACT}`,
+    ],
   });
 });
 
@@ -63,39 +65,31 @@ it("The shipped catalog, a row citing an unknown decision, and one citing a row 
 it("The shipped plans, an extra plan, a missing plan, and a plan its row no longer states", () => {
   const plans = readPlans(REPO_ROOT);
   const extra = new Map([...plans, ["triage-everything", plans.get("close-no-change") ?? ""]]);
-  const missing = new Map([...plans].filter(([route]) => route !== "fix-crash"));
+  const missing = new Map([...plans].filter(([route]) => route !== "fix-intermittent"));
   const drifted = new Map(plans);
   drifted.set(
-    "fix-crash",
-    (plans.get("fix-crash") ?? "").replace(
-      "steps: [implement-minimize]",
-      "steps: [implement-bisect]",
+    "fix-intermittent",
+    (plans.get("fix-intermittent") ?? "").replace(
+      "steps: [implement-stress-harness]",
+      "steps: [implement-oracle-parity]",
     ),
-  );
-
-  const reviewed = new Map(plans);
-  reviewed.set(
-    "answer-question",
-    (plans.get("answer-question") ?? "").replace("    review: none\n", ""),
   );
 
   expect({
     shipped: planFaults(contract, plans),
-    reviewed: planFaults(contract, reviewed),
     extra: planFaults(contract, extra),
     missing: planFaults(contract, missing),
     drifted: planFaults(contract, drifted),
   }).toEqual({
     shipped: [],
-    reviewed: ["answer-question: the plan's plan is not what its route row states"],
     extra: ["triage-everything.yml: no route row of the catalog names it"],
-    missing: ["fix-crash: the package ships no plan for this route row"],
-    drifted: ["fix-crash: the plan's plan is not what its route row states"],
+    missing: ["fix-intermittent: the package ships no plan for this route row"],
+    drifted: ["fix-intermittent: the plan's plan is not what its route row states"],
   });
 });
 
 const TRIAGE_STALE = (cited: string) =>
-  `| BR-0015-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Default modifiers: none. Decision points: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
+  `| BR-0015-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Decision points: none. Release point: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
 
 // The lines with `added` inserted after the last line `matches` holds.
 function insertedAfterLast(lines: string[], matches: (line: string) => boolean, added: string) {

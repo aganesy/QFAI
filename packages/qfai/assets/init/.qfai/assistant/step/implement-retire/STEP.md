@@ -5,7 +5,6 @@ purpose: "Delete a mechanism the project decided to retire: its code, its tests,
 requires:
   - common-steering-refresh
   - common-gate-run
-  - common-evidence-record
 roles:
   - frontend-engineer
   - backend-engineer
@@ -13,7 +12,6 @@ roles:
   - doc-steward
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
 routing-profile: implementation-heavy
 ---
 
@@ -45,8 +43,7 @@ This step carries it out.
 ## What it writes
 
 - The deleted and changed files, listed in `changedFiles`.
-- A record of each reference found and what happened to it, written with
-  `common-evidence-record`.
+- A record of each reference found and what happened to it, in the stage report.
 
 ## Gate
 

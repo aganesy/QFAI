@@ -6,15 +6,12 @@
  * workflow core's, not this module's.
  */
 import { describe, expect, it } from "vitest";
-import { parse } from "yaml";
 
-import { defaultConfig } from "../../../src/core/config.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
+import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
 import {
   defaultRoutingEntries,
   flat,
   frontMatterOf,
-  readDefault,
   readShipped,
   sectionOf,
 } from "../../helpers/shippedAssistant.js";
@@ -26,10 +23,15 @@ const PASS_THROUGH = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "atdd-credentials",
-  "atdd-author",
+  "discussion-pack",
   "discussion-uiux",
-  "atdd-test-fix",
+  "triage-investigate",
+  "implement-bisect",
+  "implement-minimize",
+  "implement-scaffold",
+  "implement-tdd",
+  "implement-credentials",
+  "implement-sweep",
   "implement-test-fix",
   "maintain-edit",
   "verify-change-note",
@@ -67,7 +69,9 @@ describe("a step that may pass with evidence", () => {
       ),
     );
     expect(baseline).toMatch(/always runs/i);
-    expect(baseline).toMatch(/`passes` as `\{ step, reason, evidenceRef \}`/);
+    expect(baseline).toMatch(
+      /writes nothing and states why; the stage's review reads that statement/i,
+    );
     expect(baseline).toMatch(/a pass is not a skip/i);
   });
 
@@ -91,6 +95,63 @@ describe("a step that may pass with evidence", () => {
     expect(triage).toMatch(/record the owner/i);
   });
 
+  // QFAI:AC-0001-0186-01
+  // QFAI:EX-0001-0186-11
+  it("lets sdd-story pass in an append stage citing the example that states the case, and has implement-tdd test it", async () => {
+    expect(await passesWhen("sdd-story")).toMatch(
+      /the pass cites that example, and no row is appended to `decisions\.md`/i,
+    );
+    expect(flat(await readShipped("step/implement-tdd/STEP.md"))).toMatch(
+      /an EX that states the case is worked as an EX no test annotates/i,
+    );
+  });
+
+  // QFAI:AC-0001-0216-01
+  // QFAI:EX-0001-0216-01
+  it("runs add-feature's sdd-flow, common-design-md and sdd-cycle every time, and has the review read why each wrote nothing", async () => {
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "add-feature");
+    const marked = (plan?.stages ?? [])
+      .flatMap((stage) => stage.steps)
+      .filter((step) => ["sdd-flow", "common-design-md", "sdd-cycle"].includes(step.name));
+    expect(marked.map((step) => [step.name, step.passThrough])).toEqual([
+      ["sdd-flow", true],
+      ["common-design-md", true],
+      ["sdd-cycle", true],
+    ]);
+    for (const step of ["sdd-flow", "common-design-md", "sdd-cycle"]) {
+      expect(await passesWhen(step), step).toMatch(/Read first: /);
+    }
+    const baseline = flat(
+      sectionOf(
+        await readShipped("rule/shared-skill-operating-baseline.md"),
+        "### A pass-through step",
+      ),
+    );
+    expect(baseline).toMatch(
+      /writes nothing and states why; the stage's review reads that statement/i,
+    );
+  });
+
+  // QFAI:AC-0001-0216-04
+  // QFAI:EX-0001-0216-09
+  it("lets implement-scaffold pass when every BF and AC already has its test, and write the missing one otherwise", async () => {
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "apply-settled");
+    const scaffold = plan?.stages
+      .flatMap((stage) => stage.steps)
+      .find((step) => step.name === "implement-scaffold");
+    expect(scaffold?.passThrough).toBe(true);
+    expect(await passesWhen("implement-scaffold")).toMatch(
+      /the step passes when every one already has an annotating test at its layer/i,
+    );
+    const procedure = flat(
+      sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
+    );
+    expect(procedure).toMatch(
+      /for each story with an acceptance criterion no test annotates, run `npx qfai atdd scaffold --story US-NNNN-NNNN`/i,
+    );
+    expect(procedure).toMatch(/the command never overwrites an existing test/i);
+  });
+
   it("leaves no step with a skip condition a plan predicate decided", async () => {
     for (const step of PASS_THROUGH) {
       const text = await readShipped(`step/${step}/STEP.md`);
@@ -111,14 +172,12 @@ describe("the verify steps a route adds", () => {
       "verify-release-notes": "default",
     };
     const routing = await defaultRoutingEntries();
-    const effective = await readEffectiveRouting(defaultConfig);
     for (const [step, profile] of Object.entries(profiles)) {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
       expect(front.owner, step).toBe("qfai-verify");
       expect(front["routing-profile"], step).toBe(profile);
       const entry = routing.filter(isRecord).find((each) => each.step === step);
       expect(entry?.review_profile, step).toBe(profile);
-      expect(stepReview(effective, step).alwaysRequired, step).toContain("completion-reviewer");
     }
   });
 
@@ -135,6 +194,8 @@ describe("the verify steps a route adds", () => {
 });
 
 describe("what the routes ask of sdd-triage and the review cycle", () => {
+  // QFAI:AC-0001-0215-02
+  // QFAI:EX-0001-0215-08
   it("has sdd-triage decide the owner, wire or retire, and stop outside a settled record", async () => {
     const text = await readShipped("step/sdd-triage/STEP.md");
     const owner = flat(sectionOf(text, "## Which surface owns the truth"));
@@ -144,30 +205,10 @@ describe("what the routes ask of sdd-triage and the review cycle", () => {
     expect(inert).toMatch(/report `branch: \{ outcome: retire \}`/);
     const settled = flat(sectionOf(text, "## Settled mode"));
     expect(settled).toMatch(/`mode: settled`/);
-    expect(settled).toMatch(/report `branch: \{ outcome: outside-record, route \}`/);
+    expect(settled).toMatch(/write nothing, and report `branch: \{ outcome: outside-record \}`/i);
     const point = flat(sectionOf(text, "## At a decision point"));
     expect(point).toMatch(/`adopted` as `\{ step, decision, reason \}`/);
     expect(point).toMatch(/return `awaiting_input` and change nothing/i);
     expect(point).toMatch(/raises `gate:user` through `raise`/i);
-  });
-
-  it("adds the heavy profile's reviewers, all blocking, under review:heavy", async () => {
-    const file: unknown = parse(await readDefault("review-profiles.yml"));
-    const profiles = isRecord(file) && isRecord(file.profiles) ? file.profiles : {};
-    const heavy = isRecord(profiles.heavy) ? profiles.heavy : {};
-    expect(heavy.always_required).toEqual([
-      "completion-reviewer",
-      "architecture-reviewer",
-      "requirements-reviewer",
-      "implementation-reviewer",
-    ]);
-    const routing = await defaultRoutingEntries();
-    expect(routing.filter(isRecord).filter((entry) => entry.review_profile === "heavy")).toEqual(
-      [],
-    );
-    const cycle = flat(await readShipped("step/common-review-cycle/STEP.md"));
-    expect(cycle).toMatch(
-      /also hold the reviewers of the `heavy` review profile, and every one of them is blocking/i,
-    );
   });
 });

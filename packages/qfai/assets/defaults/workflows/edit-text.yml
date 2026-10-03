@@ -4,14 +4,15 @@ stages:
   - id: edit
     kind: maintenance
     steps: [maintain-edit]
-  - id: verify
+  - id: note
     kind: verify
     steps:
       - { step: verify-change-note, passThrough: true }
-      - verify-context
-      - verify-qfai-gate
-      - verify-repo-gate
     after: [edit]
-defaultModifiers: []
+    review: code
+  - id: verify
+    kind: verify
+    steps: [verify-qfai-gate, verify-repo-gate]
+    after: [note]
 decisionPoints: []
 branchPoints: []

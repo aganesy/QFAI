@@ -4,20 +4,13 @@
 
 ```gherkin
 Feature: Diagnose a reported defect without changing product code
-  # AC-0001-0201-01
-  Scenario: A diagnose-only operation changes no tracked project file
-    Given a diagnose-only work order with the expected-behaviour reference and the scope
-    When /qfai-implement serves it
-    Then no file git tracks is changed, so no product code, test or story file differs
-    And a file it writes that git ignores, such as its reproduction record, is named as an artifact, not as a changed file
-
   # AC-0001-0201-02
   Scenario: A diagnosis returns one verdict and what supports it
-    Given a diagnose-only work order
-    When the stage returns
-    Then the result carries exactly one verdict: a missing test, a defective test, a regression, an expectation that differs from the request, or one of the verdicts that end the run or move it to another route
-    And it names the BF, AC or EX IDs of the bound flow that the next work order acts on
-    And the reproduction, the cause candidates and the impact are in the record the result references
+    Given a diagnose stage
+    When it returns
+    Then it reports exactly one verdict: a missing test, a defective test, a regression, an expectation that differs from the request, or one of the verdicts that end the work or move it to another route
+    And it names the BF, AC or EX IDs of the flow that the next stage acts on
+    And the reproduction, the cause candidates and the impact are in the record it names
 
   # AC-0001-0201-03
   Scenario: A diagnosed missing test raises no change request from implement

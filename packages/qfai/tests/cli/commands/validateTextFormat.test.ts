@@ -10,7 +10,7 @@
  * The rules are used as a *complete* output contract, so the fixtures below
  * mirror production faithfully: counts skip suppressed issues (as `countIssues`
  * does), an error issue carries a multi-line `suggested_action` (as
- * `QFAI-SKILLS-001` does), and the trailing `run-log:` line is exercised through
+ * a real finding does), and the trailing `run-log:` line is exercised through
  * `runValidate`, not through the emitter alone.
  */
 

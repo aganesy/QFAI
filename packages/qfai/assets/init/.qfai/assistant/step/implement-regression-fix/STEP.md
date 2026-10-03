@@ -6,13 +6,11 @@ requires:
   - common-steering-refresh
   - common-gate-run
   - common-grilling-record
-  - common-evidence-record
 roles:
   - frontend-engineer
   - backend-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
   - product-surface-reviewer
 routing-profile: implementation-heavy
 ---
@@ -38,9 +36,7 @@ else.
 3. Re-run the same test. The same test turning GREEN again confirms the fix.
    Then run the relevant suite of
    `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md`.
-4. The fix and the re-run are recorded in
-   `.qfai/evidence/implement-BF-NNNN.md` for the bound flow, after the entries
-   already there, with `common-evidence-record`.
+4. The fix and the re-run are reported in the stage report.
 
 The stage review after the last step judges the fix. A UI-affecting fix, as
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` defines it,

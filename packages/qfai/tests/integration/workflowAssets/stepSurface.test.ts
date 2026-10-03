@@ -35,12 +35,7 @@ const VERIFY_STEPS = [
 ];
 
 /** The verify block every change route runs. */
-const VERIFY_BLOCK = [
-  "verify-change-note",
-  "verify-context",
-  "verify-qfai-gate",
-  "verify-repo-gate",
-];
+const VERIFY_BLOCK = ["verify-qfai-gate", "verify-repo-gate"];
 
 /** Every step each plan kind runs, across the built-in plans, in first-seen order. */
 async function kindSteps(kinds: string[]): Promise<{ names: string[]; passThrough: string[] }> {
@@ -142,18 +137,6 @@ describe("the skills a workflow run's steps belong to", () => {
     }
   });
 
-  // QFAI:AC-0001-0197-02
-  // QFAI:EX-0001-0197-02
-  it("runs only qfai-atdd's own steps in the acceptance stages", async () => {
-    const owned = await skillSteps("qfai-atdd");
-    expect(owned).toEqual(["atdd-scaffold", "atdd-credentials", "atdd-author", "atdd-test-fix"]);
-    const acceptance = await kindSteps(["acceptance"]);
-    expect(acceptance.names.filter((step) => !owned.includes(step))).toEqual([]);
-    for (const route of ["repair-test", "quarantine-flaky"]) {
-      expect((await stageNames(route, "test_fix")).flat(), route).toContain("atdd-test-fix");
-    }
-  });
-
   // QFAI:AC-0001-0200-02
   // QFAI:EX-0001-0200-02
   it("runs only qfai-implement's own steps, and never the seam step, in the plans", async () => {
@@ -179,9 +162,12 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-dep-bump",
         "implement-tooling",
         "implement-backport",
+        "implement-scaffold",
+        "implement-credentials",
+        "implement-acceptance",
       ].sort(),
     );
-    const implement = await kindSteps(["diagnose", "implement", "regression_fix"]);
+    const implement = await kindSteps(["diagnose", "implement", "test_fix", "regression_fix"]);
     expect(implement.names.filter((step) => !owned.includes(step))).toEqual([]);
     expect((await stageNames("repair-test", "test_fix")).flat()).toContain("implement-test-fix");
     const every = await kindSteps(Object.keys(await everyKind()));
@@ -204,7 +190,6 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0208-07
   // QFAI:EX-0001-0208-08
-  // QFAI:EX-0001-0216-06
   it("lists qfai-verify's nine steps and runs the whole verify block in every change route", async () => {
     expect(await skillSteps("qfai-verify")).toEqual(VERIFY_STEPS);
     let changeRoutes = 0;
@@ -216,7 +201,7 @@ describe("the skills a workflow run's steps belong to", () => {
       changeRoutes += 1;
       expect(blocks, route).toEqual([VERIFY_BLOCK]);
     }
-    expect(changeRoutes).toBe(26);
+    expect(changeRoutes).toBe(23);
   });
 
   // QFAI:AC-0001-0199-03
@@ -232,7 +217,7 @@ describe("the skills a workflow run's steps belong to", () => {
     ]);
     const discussion = await kindSteps(["discussion"]);
     expect(discussion.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect(discussion.passThrough).toEqual(["discussion-uiux"]);
+    expect(discussion.passThrough).toEqual(["discussion-pack", "discussion-uiux"]);
     const uiux = await readShipped("step/discussion-uiux/STEP.md");
     expect(sectionOf(uiux, "## Skipped when")).toBe("");
     expect(flat(sectionOf(uiux, "## Passes when"))).toMatch(
@@ -248,12 +233,9 @@ describe("the skills a workflow run's steps belong to", () => {
       "prototyping-grill",
       "prototyping-preflight",
       "prototyping-loop",
-      "prototyping-recover",
       "prototyping-handoff",
     ]);
-    expect(await stageNames("prototype-feature", "prototype")).toEqual([
-      owned.filter((step) => step !== "prototyping-recover"),
-    ]);
+    expect(await stageNames("prototype-feature", "prototype")).toEqual([owned]);
   });
 });
 
@@ -273,31 +255,41 @@ describe("a parent skill invoked by name", () => {
     );
     for (const skill of PLAN_STEP_OWNERS) {
       const front = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`));
-      expect(front.requires, skill).toContain("common-review-cycle");
+      if (skill !== "qfai-triage") expect(front.requires, skill).toContain("common-review-cycle");
     }
     const byName = flat(sectionOf(baseline, "### A parent skill invoked by name"));
     expect(byName).toMatch(/take the steps from the parent's `steps:` list, in that order/i);
     expect(byName).toMatch(/read that step's `STEP\.md` and no other, run it/i);
-    expect(byName).toMatch(/after the last step, run one review through `common-review-cycle`/i);
     expect(byName).toMatch(
-      /the union of the reviewers the profiles of the steps that ran require/i,
+      /after the last step, run the one review the parent names, through `common-review-cycle`/i,
     );
+    expect(byName).toMatch(
+      /the specification review for `qfai-sdd` and `qfai-discussion`, the code review for a parent that changed code, tests or a change note, and none for `qfai-triage` or for a `qfai-verify` run that wrote nothing/i,
+    );
+    expect(byName).not.toMatch(/union of the reviewers/i);
   });
 
   // QFAI:EX-0001-0195-10
-  it("runs the verify block and reviews it once with completion-reviewer and qa-gatekeeper", async () => {
+  it("runs the verify block and no review", async () => {
     const skill = await readShipped("skill/qfai-verify/SKILL.md");
     const steps = (await skillSteps("qfai-verify")).filter((step) =>
       /\| Never/.test(rowOf(skill, `| \`${step}\``)),
     );
-    expect(steps).toEqual(VERIFY_BLOCK);
+    expect(steps).toEqual([
+      "verify-change-note",
+      "verify-context",
+      "verify-qfai-gate",
+      "verify-repo-gate",
+    ]);
     const context = frontMatterOf(await readShipped("step/verify-context/STEP.md"));
     expect(context["routing-profile"]).toBeUndefined();
     for (const step of ["verify-qfai-gate", "verify-repo-gate"]) {
       const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
       expect(front["routing-profile"], step).toBe("runtime-heavy");
     }
-    expect(await unionOfReviewers(steps)).toEqual(["completion-reviewer", "qa-gatekeeper"]);
+    expect(flat(sectionOf(skill, "## Review"))).toMatch(
+      /a run that wrote no tracked file holds no review/i,
+    );
   });
 
   // QFAI:EX-0001-0195-11
@@ -315,7 +307,7 @@ describe("a parent skill invoked by name", () => {
     const skill = await readShipped("skill/qfai-sdd/SKILL.md");
     expect(rowOf(skill, "| `common-design-md`")).toMatch(/The flow is not UI-bearing/);
     const ran = steps.filter((step) => step !== "common-design-md");
-    expect(await unionOfReviewers(ran)).toEqual(["architecture-reviewer", "completion-reviewer"]);
+    expect(await unionOfReviewers(ran)).toEqual(["architecture-reviewer", "requirements-reviewer"]);
   });
 });
 

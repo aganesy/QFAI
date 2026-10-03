@@ -164,46 +164,6 @@ describe("check-readme-alignment.mjs", () => {
   });
 });
 
-describe("README content the guard now keeps in sync", () => {
-  it("documents exit code 66 and the review.json evidence in both files", async () => {
-    const { readFile } = await import("node:fs/promises");
-    const [root, pkg] = await Promise.all([
-      readFile(path.join(REPO_ROOT, "README.md"), "utf-8"),
-      readFile(path.join(REPO_ROOT, "packages/qfai/README.md"), "utf-8"),
-    ]);
-    for (const body of [root, pkg]) {
-      expect(body).toMatch(/66 \(license-verify failure\)/);
-      expect(body).toMatch(/<screen>\.review\.json/);
-    }
-    // The stale root README promised artifacts the CLI never writes.
-    expect(root).not.toMatch(/`screenshot\.png` \+ `index\.html`/);
-  });
-
-  it("lists the plan and context files the CLI writes every cycle, not just the review", async () => {
-    // `prototypingIterate.ts` writes `iter-NN/iterate-plan.json`
-    // unconditionally (right after the iteration dir is created, before any
-    // opt-in capture), and from cycle 1 onward it also writes the advisory
-    // `iterate-context.json`. Calling `<screen>.review.json` "the only
-    // per-cycle artifact" told operators to collect a subset of the
-    // directory and drop the plan/context the next cycle reads.
-    const { readFile } = await import("node:fs/promises");
-    const [root, pkg] = await Promise.all([
-      readFile(path.join(REPO_ROOT, "README.md"), "utf-8"),
-      readFile(path.join(REPO_ROOT, "packages/qfai/README.md"), "utf-8"),
-    ]);
-    for (const body of [root, pkg]) {
-      expect(body).toMatch(/`iterate-plan\.json`/);
-      expect(body).toMatch(/`iterate-context\.json`/);
-      // The refuted claim must not come back in either file.
-      expect(body).not.toMatch(/is the only per-cycle artifact/);
-      // Over-correction pin: the opt-in capture artifacts stay documented
-      // as opt-in (thread r3832734116) and `interaction.json` stays denied.
-      expect(body).toMatch(/`--capture`/);
-      expect(body).toMatch(/`interaction\.json` is written on any path/);
-    }
-  });
-});
-
 /**
  * The second oracle.
  *

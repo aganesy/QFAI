@@ -2,7 +2,7 @@
 
 ## Criterion
 
-A RED observation belongs to one example and one test selector. The test must load, reach an assertion or an expected-exception check, and fail on the behavior that the example states. Record the command, failure output, and revision under that example in .qfai/evidence/implement-BF-NNNN.md.
+A RED observation belongs to one example and one test selector. The test must load, reach an assertion or an expected-exception check, and fail on the behavior that the example states. Report the command, failure output, and revision under that example in the stage report.
 
 A collection error, import error, syntax error, missing fixture, timeout before the assertion, or unconditional throw is a missing seam. Repair the seam and repeat RED before production behavior is added.
 

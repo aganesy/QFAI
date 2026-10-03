@@ -59,15 +59,24 @@ is not a substitute for the required assertions.
 | Acceptance criterion | `QFAI:AC-NNNN-NNNN-NN` | Integration or API         |
 | Example              | `QFAI:EX-NNNN-NNNN-NN` | Selected non-E2E test file |
 
-These are the only coverage annotation kinds. `/qfai-atdd` authors the BF
-and AC acceptance tests. `/qfai-implement` selects an uncovered EX and
-writes the smallest behavioral test that proves it, usually in a unit or
+These are the only coverage annotation kinds. `/qfai-implement` writes the
+BF and AC acceptance tests with empty bodies through `implement-scaffold`,
+and their bodies through `implement-acceptance`. It selects an uncovered EX
+and writes the smallest behavioral test that proves it, usually in a unit or
 component layer. A test may carry more than one annotation only when its
 assertions independently prove every named obligation.
 
 A misplaced annotation is not coverage. A missing or invalid story-tree ID
 is not coverage. An annotation-only file, skipped placeholder, or assertion
-that cannot fail for the intended behavior is not behavioral proof. Check
+that cannot fail for the intended behavior is not behavioral proof.
+
+An acceptance test with an empty body raises no finding, whoever wrote it:
+`npx qfai atdd scaffold` writes acceptance tests that way, and
+`implement-acceptance` writes their assertions later. Validation cannot tell
+who wrote an empty body, so the exemption covers every one. It is still not
+behavioral proof until its assertions are written.
+
+Check
 `.qfai/report/validate.json#issues` by finding code and inspect the test
 it names. An unreadable or truncated test scan cannot certify absence of
 remaining obligations.
@@ -121,7 +130,7 @@ fast test job, Integration and API tests to jobs with their required services,
 and E2E tests to a journey job. The full verification gate runs every
 applicable lane and `npx qfai validate --profile verify --fail-on error`.
 A missing lane or an unrun command is UNRUN, not PASS. Record exact commands,
-results, and revisions in the stage evidence.
+results, and revisions in the stage report.
 
 ## Anti-patterns
 

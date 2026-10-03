@@ -8,5 +8,5 @@ Feature: Cross-skill documentation realignment to implementation
   Scenario: Cross-skill docs realigned to implementation with zero stale references
     Given a change to cross-skill behaviour is implemented,
     When the implementing PR lands,
-    Then `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten in the same atomic PR to match the chosen implementations, and `qfai validate --report` MUST report every stale reference remaining at HEAD, at severity warning. spec-0015 owns this cross-skill documentation-governance obligation.
+    Then `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md` and each affected SKILL.md MUST be rewritten in the same atomic PR to match the chosen implementations, and `qfai validate --report` MUST report every stale reference remaining at HEAD, at severity warning.
 ```

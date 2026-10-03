@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import {
@@ -21,7 +21,6 @@ import { validateStoryTreeContractReferences } from "./validators/contractRefere
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
-import { PROTOTYPING_EVIDENCE_REL } from "./prototyping/paths.js";
 import { issue } from "./validators/utils.js";
 import type {
   Issue,
@@ -35,23 +34,12 @@ import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
-import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
-import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
-import {
-  DISCUSSION_PACK_PRODUCERS,
-  SDD_PACK_PRODUCERS,
-  validateReviewArtifacts,
-  type ReviewArtifactsScope,
-} from "./validators/reviewArtifacts.js";
-import {
-  scaffoldPlaceholderReportedFilter,
-  validateScaffoldPlaceholder,
-} from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -60,31 +48,18 @@ import {
   validateDiscussionVisuals,
   validateHtmlMock,
   validateMermaidScreenFlow,
-  validatePrototypingEvidence,
-  validateScreenIdCasing,
-  validateCompletionCertificateIssues,
-  validatePrototypingDelegationMap,
   validateConfigReferenceIntegrity,
-  validatePrototypingArtifactRefIntegrity,
-  validateSpecIdLinkage,
-  validateFrozenSurfaceReachability,
   validateResearchSummary,
   validateRepositoryHygiene,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validateRenderCritique,
-  validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
-  validateUiEvidenceArtifacts,
   validateTestTodoStubs,
   validateAssistantTreeMigration,
   validateSkillDocReferences,
-  validateReviewerJustification,
-  validateReviewerGate,
   detectMockHrefDrift,
-  detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
@@ -178,7 +153,6 @@ export async function validateProject(
     timingsSink,
     options.platform,
     storyModel,
-    flowScope,
   );
   const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
@@ -230,11 +204,11 @@ function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boo
  */
 function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
   switch (profile) {
-    // `validateSkillsIntegrity` and `validateAssistantAssets` walk the
+    // `validateAssistantAssets` walks the
     // **skills** directory the configuration names — the same one `sdd` walks,
     // and nothing wider. Returning its parent matched a sibling's damage too:
-    // a regular file at `.qfai/assistant/agent` stopped `full` on a tree those
-    // validators never open, while `validateAgentDefinition` turns a missing
+    // a regular file at `.qfai/assistant/agent` stopped `full` on a tree that
+    // validator never opens, while `validateAgentDefinition` turns a missing
     // agent into an ordinary finding rather than an exception. The extra
     // profiles here differ in what else they run, not in how far into the
     // assistant tree they reach.
@@ -432,7 +406,6 @@ async function runProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
   storyModel?: StoryTreeModel,
-  flowScope?: FlowScope,
 ): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
@@ -497,15 +470,7 @@ async function runProfileValidators(
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     if (!storyModel) return [];
-    return runStoryProfileValidators(
-      root,
-      config,
-      profile,
-      storyModel,
-      timings,
-      platformOption,
-      flowScope,
-    );
+    return runStoryProfileValidators(root, config, profile, storyModel, timings, platformOption);
   }
 }
 
@@ -516,7 +481,6 @@ async function runStoryProfileValidators(
   model: StoryTreeModel,
   timings: TimingsSink,
   platformOption?: string,
-  flowScope?: FlowScope,
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
@@ -524,28 +488,16 @@ async function runStoryProfileValidators(
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
-    ...(await validateSddDesignContractReadiness(root, config)),
+    ...(await validateDesignContractReadiness(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
-    ...(await validateReviewerJustification(root, config)),
-    ...(await validateReviewerGate(root, config)),
     ...(await validateAutopilotPolicy(root, { config })),
     ...(await runPackageSelfGovernanceValidators(root)),
     ...(await validateStaleReferences(root, { config })),
-    ...(await validateReviewArtifacts(root, {
-      specScope: undefined,
-      specsRoot: resolvePath(root, config, "specsDir"),
-      flowScope,
-      producers: SDD_PACK_PRODUCERS,
-    })),
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
-    ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
-    ...(await validateTestTodoStubs(root, config, {
-      ...acceptanceStubScan(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    })),
+    ...(await validateTestTodoStubs(root, config, acceptanceStubScan(root, config))),
   ];
   const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "tdd", model)),
@@ -567,12 +519,11 @@ async function runStoryProfileValidators(
       return dedupeStubFindings(
         dedupeStoryFindings([
           ...(await validateRepositoryHygiene(root, config)),
-          ...(await validateSkillsIntegrity(root, config)),
           ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
-          ...(await runDiscussionValidators(root, config, "all")),
+          ...(await runDiscussionValidators(root, config)),
           ...(await sdd(false)),
-          ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
+          ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
           ...(await validatePrototypingSkill(root, config)),
@@ -621,10 +572,6 @@ async function runSaasPackage(
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
-  // Which review packs this run owns. The discussion profile is the gate for
-  // its own cycle only; `full` composes this runner and passes `"all"` so the
-  // repo-wide scan keeps judging every pack.
-  reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
     // A project reaching this profile may already carry a root DESIGN.md —
@@ -640,51 +587,10 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
-    // The RCP footer names `--profile discussion` as the review-cycle gate and
-    // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
-    // breath. Without this the command it prescribes could not see the
-    // artifacts it prescribes, so an incomplete pack passed the gate silently.
-    ...(await validateReviewArtifacts(
-      root,
-      reviewArtifactsScope(root, config, reviewPackProducers),
-    )),
   ];
 }
 
-/** Which review packs a profile is the gate for, or `"all"` for a full scan. */
-type ReviewPackProducers = ReadonlySet<string> | "all";
-
-/**
- * Scope handed to `validateReviewArtifacts`.
- *
- * `sdd` and `discussion` are each the hard gate for their own review cycle,
- * so each judges the packs its stage produced. A full run judges every pack.
- */
-function reviewArtifactsScope(
-  root: string,
-  config: ConfigLoadResult["config"],
-  reviewPackProducers: ReviewPackProducers,
-): ReviewArtifactsScope {
-  return {
-    specScope: undefined,
-    specsRoot: resolvePath(root, config, "specsDir"),
-    discussionRoot: resolvePath(root, config, "discussionDir"),
-    producers: reviewPackProducers === "all" ? undefined : reviewPackProducers,
-  };
-}
-
-/**
- * The prototyping issue set at its validators' declared severity.
- *
- * `full` / `verify` call this one. The exploration relaxation belongs to the
- * prototyping profile, not to this validator group: its trigger is a local
- * file in the working tree under test
- * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
- * the project leaves the prototyping stage, and the last explicit mode is
- * inherited forward — so applying it here let an abandoned exploration loop
- * downgrade four gates of the verification profile permanently. Callers that
- * want the relaxation go through `runPrototypingProfileValidators`.
- */
+/** The prototyping issue set: the UI contracts, the mocks and root `DESIGN.md`. */
 async function runPrototypingValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -694,77 +600,14 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    // Reviewer-gate finding on the prototyping surface. The detector
-    // no-ops in a consumer repo without the validator source, so the
-    // prototyping profile stays safe to run on a fresh project.
-    ...(await detectEvidenceMutationUnlogged(root)),
-    ...(await validatePrototypingEvidence(root, config)),
-    ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
-    ...(await validateUiEvidenceArtifacts(root, config)),
-    ...(await validateRenderCritique(root, config)),
-    ...(await validatePrototypingDesignContractReadiness(root, config)),
-    ...(await validateCompletionCertificateIssues(root, config)),
+    ...(await validateDesignContractReadiness(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...(await validatePrototypingArtifactRefIntegrity(root)),
-    ...(await validateSpecIdLinkage(root, config)),
-    ...(await validateFrozenSurfaceReachability(root, config)),
-    // `QFAI-PROT-311` — delegationMap entries must name a role from the
-    // SKILL.md Delegation Scope Table. No-ops when prototyping.json has no
-    // executionPlan, so bootstrap projects are unaffected.
-    ...(await validatePrototypingDelegationMap(root)),
   ];
-}
-
-/** The findings that say a prototyping output is missing from the checkout. */
-const EVIDENCE_PRESENCE_CODES: ReadonlySet<string> = new Set([
-  "QFAI-PROT-001",
-  "QFAI-UIE-001",
-  "QFAI-UIE-002",
-]);
-
-/**
- * The prototyping issue set as `full` / `verify` report it.
- *
- * The prototyping outputs are local and untracked, so a fresh checkout, which
- * is where CI runs, has no `.qfai/evidence/prototyping/`. With that directory
- * absent, prototyping was not run in this checkout and the presence gates have
- * nothing to check. The `prototyping` and `saas-package` profiles do not go
- * through here and keep them.
- */
-async function runPrototypingValidatorsForCi(
-  root: string,
-  config: ConfigLoadResult["config"],
-  timings: TimingsSink,
-  platformOption?: string,
-): Promise<Issue[]> {
-  const issues = await runPrototypingValidators(root, config, timings, platformOption);
-  if (await evidenceDirectoryExists(root)) return issues;
-  return issues.filter((finding) => !EVIDENCE_PRESENCE_CODES.has(finding.code));
-}
-
-/**
- * Whether the prototyping evidence directory may hold output. Only a missing
- * path counts as absent: one that cannot be read is treated as present, so the
- * presence gates keep running rather than hide behind a permission error.
- */
-async function evidenceDirectoryExists(root: string): Promise<boolean> {
-  try {
-    await stat(path.join(root, PROTOTYPING_EVIDENCE_REL));
-    return true;
-  } catch (error) {
-    return !isEnoent(error);
-  }
 }
 
 /**
  * The prototyping issue set as the `prototyping` (and `saas-package`) profile
  * reports it.
- *
- * Prototyping-mode relaxation: under `mode: exploration` the
- * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030) downgrade
- * error → warning. Schema / path / license gates stay hard error.
- * The mode is read from `prototyping.json#mode` written by iterate
- * at cycle 0 (absent → legacy "convergence" interpretation).
  */
 async function runPrototypingProfileValidators(
   root: string,
@@ -772,33 +615,14 @@ async function runPrototypingProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const raw = [
+  return [
     ...(await runPrototypingValidators(root, config, timings, platformOption)),
-    // The profile certification accepts, so an entry no screen is read from is
-    // reported here too, and so is a UI contract that does not parse. Kept out
-    // of `runPrototypingValidators`: `full` also runs `validateContracts`, which
-    // reports both already.
+    // An entry no screen is read from is reported here too, and so is a UI
+    // contract that does not parse. Kept out of `runPrototypingValidators`:
+    // `full` also runs `validateContracts`, which reports both already.
     ...(await validateUiScreenEntries(root, config)),
     ...(await validateUiContractParse(root, config)),
   ];
-  return await relaxPrototypingIssuesIfExploration(root, raw);
-}
-
-async function relaxPrototypingIssuesIfExploration(
-  root: string,
-  issues: Issue[],
-): Promise<Issue[]> {
-  const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
-  const mode = await readPrototypingModeForRelax(root);
-  if (mode !== "exploration") return issues;
-  const { relaxIssuesForMode, buildExplorationRelaxationNotice } =
-    await import("./prototyping/mode.js");
-  const relaxed = [...relaxIssuesForMode(issues, mode)];
-  // Weakening a gate is auditable the way a waiver is: the downgraded
-  // findings carry `relaxedFrom` and this notice puts the mode, its
-  // source file and the affected codes into validate.json + stdout.
-  const notice = buildExplorationRelaxationNotice(relaxed, mode);
-  return notice === null ? relaxed : [...relaxed, notice];
 }
 
 /**

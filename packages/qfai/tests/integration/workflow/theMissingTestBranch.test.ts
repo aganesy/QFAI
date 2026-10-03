@@ -1,6 +1,7 @@
 // QFAI:AC-0001-0186-01
 // QFAI:EX-0001-0186-01
-// QFAI:EX-0001-0186-13
+// QFAI:AC-0001-0220-05
+// QFAI:EX-0001-0220-22
 
 import { expect, it } from "vitest";
 
@@ -14,8 +15,8 @@ it("Load the shipped fix-defect", async () => {
     append: fixDefect?.stages[1]?.steps,
     last: fixDefect?.stages.at(-1)?.steps.map((step) => step.name),
   }).toEqual({
-    stages: ["diagnose", "sdd_append", "acceptance", "implement", "verify"],
+    stages: ["diagnose", "sdd_append", "implement", "verify", "verify"],
     append: [{ name: "sdd-story", passThrough: true }, { name: "sdd-gate" }],
-    last: ["verify-change-note", "verify-context", "verify-qfai-gate", "verify-repo-gate"],
+    last: ["verify-qfai-gate", "verify-repo-gate"],
   });
 });

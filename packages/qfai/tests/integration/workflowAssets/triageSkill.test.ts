@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
+import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
 import { parseAutopilotPolicy } from "../../../src/core/validators/autopilotPolicy.js";
 import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
@@ -50,7 +51,6 @@ describe("qfai-triage as a stage skill", () => {
     expect(description).not.toMatch(/[<>]/);
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");
-    expect(front.requires).toContain("common-review-cycle");
 
     const stepRoles: string[] = [];
     for (const name of steps) {
@@ -76,7 +76,6 @@ describe("qfai-triage as a stage skill", () => {
       expect(stepReview(effective, name).profile, name).toBe(expected);
     }
     expect(stepReview(effective, "triage-decompose").alwaysRequired.sort()).toEqual([
-      "completion-reviewer",
       "requirements-reviewer",
     ]);
   });
@@ -116,6 +115,40 @@ describe("qfai-triage invoked by name", () => {
       "### Reviewer remit",
     );
     expect(rowOf(remit, "`/qfai-triage`")).toMatch(/no tracked file changed/);
+  });
+});
+
+describe("a question answered without a change", () => {
+  // QFAI:AC-0001-0214-01
+  // QFAI:EX-0001-0214-01
+  it("answers in one triage stage with no verify stage and no review, and never says a change is done", async () => {
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "answer-question");
+    expect(
+      plan?.stages.map((stage) => [stage.kind, stage.review, stage.steps.map((s) => s.name)]),
+    ).toEqual([["triage", undefined, ["triage-investigate", "triage-answer", "triage-close"]]]);
+
+    const close = await step("triage-close");
+    expect(rowOf(close, "| `answered`")).toMatch(/The question was answered/);
+    expect(flat(sectionOf(close, "## Gate"))).toMatch(/never says a change is done/);
+    expect(flat(sectionOf(await step("triage-answer"), "## What it writes"))).toMatch(
+      /No file git tracks/,
+    );
+  });
+
+  // QFAI:AC-0001-0214-02
+  // QFAI:EX-0001-0214-03
+  it("records a documentation gap the answer shows as a follow-up, and plans nothing for it", async () => {
+    expect(flat(sectionOf(await step("triage-answer"), "## Procedure"))).toMatch(
+      /such as an option the documentation never mentions, record it as a follow-up for `triage-close`\. Do not fix it here/,
+    );
+    const close = await step("triage-close");
+    const procedure = flat(sectionOf(close, "## Procedure"));
+    expect(procedure).toMatch(/a gap in the documentation an answer exposed/);
+    expect(procedure).toMatch(/Each follow-up states its goal and the reason it exists/);
+    expect(procedure).toMatch(/no step is added to the run for it/);
+    expect(flat(sectionOf(close, "## What it writes"))).toMatch(
+      /the report states the outcome and lists each follow-up/,
+    );
   });
 });
 

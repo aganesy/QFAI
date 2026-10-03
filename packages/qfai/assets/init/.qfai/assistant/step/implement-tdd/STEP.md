@@ -6,7 +6,6 @@ requires:
   - common-steering-refresh
   - common-gate-run
   - common-grilling-record
-  - common-evidence-record
 roles:
   - delivery-planner
   - test-design-analyst
@@ -16,7 +15,6 @@ roles:
   - devops-ci-engineer
   - implementation-reviewer
   - qa-gatekeeper
-  - completion-reviewer
   - product-surface-reviewer
 routing-profile: implementation-heavy
 ---
@@ -27,6 +25,12 @@ Work within one `BF-NNNN` flow. An EX is the unit of implementation review;
 the BF is the unit of scoped completion. Inside a workflow run, a work order
 whose `target` binds a flow supplies the flow, and no question asks which flow.
 Otherwise the invocation's BF argument names it.
+
+## Passes when
+
+Read first: a fresh validate result for the flow. The step passes when it
+reports no owed example, so no example needs a Red, Green and Refactor cycle.
+The pass names the validate run.
 
 ## Reads
 
@@ -66,12 +70,10 @@ states the case is worked as an EX no test annotates, and where none does,
    section, and run each gate with `common-gate-run`. Read its
    `## Architecture` table too: place each new module in one layer, and
    import only from the layers that layer's row lists.
-3. Read the current `/qfai-atdd` handoff in
-   `.qfai/evidence/atdd-BF-NNNN.md`. The file is local; where this checkout
-   lacks it, find the tests by their `QFAI:BF-NNNN` and
-   `QFAI:AC-NNNN-NNNN-NN` annotations. Confirm the BF E2E and AC integration
-   or API tests and their observed results. A deliberate acceptance RED is
-   handed to the matching implementation; it is not a passing test.
+3. Find the flow's acceptance tests by their `QFAI:BF-NNNN` and
+   `QFAI:AC-NNNN-NNNN-NN` annotations. `implement-scaffold` wrote them with
+   empty bodies; an empty body proves no behaviour, and its body is
+   `implement-acceptance`'s to write.
 4. Check test roots, `validation.traceability.testFileGlobs`, and
    exclusions. An EX test must be collected by the runner and by validation.
    A test with only an annotation or placeholder is not behavioral proof.
@@ -94,8 +96,7 @@ to the user; other decisions follow the recorded griller recommendation.
   change through `.qfai/assistant/rule/drift-protocol.md`; the run solves
   local obstacles.
 
-Record the sessions with `common-grilling-record` in
-`.qfai/evidence/implement-BF-NNNN.md`. Do not reopen settled requirements as
+Record the sessions with `common-grilling-record`. Do not reopen settled requirements as
 implementation preferences.
 
 ## Select the next example
@@ -135,7 +136,7 @@ integrated result after slices join.
 
 For the selected EX, create or strengthen a test in a non-acceptance layer and
 annotate it `QFAI:EX-NNNN-NNNN-NN`. Preserve the BF E2E and AC integration
-or API coverage owned by `/qfai-atdd`. Put the test where the observable
+or API tests `implement-scaffold` wrote. Put the test where the observable
 behavior belongs. Use
 `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md` and
 `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md` to choose
@@ -165,19 +166,17 @@ the smallest useful seam and a falsifiable assertion.
 The qa-gatekeeper checks the observed RED and GREEN evidence of each example
 as it is taken: RED before any production code for the example exists, GREEN
 before Refactor. It is blocking there, because neither observation can be made
-later. The implementation-reviewer checks code and tests; the
-completion-reviewer checks
-obligation, commands, and evidence independently. Route UI-affecting work to
+later. The implementation-reviewer checks code and tests. Route UI-affecting work to
 the product-surface-reviewer under
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`, and review
 rendered HTML or screenshots at desktop and mobile sizes against `DESIGN.md`
 and the UI contracts; source code alone does not prove the user-visible
-result. Those three review once, at the end of the stage, as
+result. They review once, at the end of the stage, as
 [Stage review](#stage-review) states. Use
 `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md` for
 affected suite selection. A reviewer
-REVISE follows `.qfai/assistant/rule/review-convergence.md`; repair and
-re-review the current revision. The author does not certify their own result.
+REVISE follows `.qfai/assistant/rule/review-convergence.md`: fix or answer each
+finding and record the disposition, with no re-review. The author does not certify their own result.
 
 ## Align the other surfaces
 
@@ -196,38 +195,28 @@ other surfaces follow it once the examples are done:
 
 Change nothing on the surface that owns the truth.
 
-## Evidence
+## Report
 
-Write `.qfai/evidence/implement-BF-NNNN.md` with `common-evidence-record`.
-Give each example its own
-`### EX-NNNN-NNNN-NN` section with the obligation, test path and selector,
-RED, GREEN, and Refactor commands and observed results, revisions, hashes,
-reviewer verdicts, and open findings. Keep prior rounds as history; new work
-gets a new round. Evidence without a command and result pair does not prove a
-gate. Follow
-`.qfai/assistant/skill/qfai-implement/references/evidence-revision.md` and
-`.qfai/assistant/skill/qfai-implement/references/round-evidence.md` for
-freshness and round fields.
+The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
+the obligation, test path and selector,
+RED, GREEN, and Refactor commands and observed results, revisions,
+reviewer verdicts, and open findings.
+Evidence without a command and result pair does not prove a gate.
 
 ## Stage review
 
 The stage is reviewed once, after its last step, through `common-review-cycle`,
-over every example the stage implemented. The reviewers are the union of the
-stage's steps' reviewers: the implementation-reviewer, the completion-reviewer,
-the qa-gatekeeper for the recorded RED and GREEN evidence, and the
-product-surface-reviewer where an example is UI-affecting.
+over every example the stage implemented: the code review, by the
+implementation-reviewer, with the qa-gatekeeper for the recorded RED and GREEN
+evidence and the product-surface-reviewer where an example is UI-affecting.
 
-The stage's review pack identifies the BF, every EX the stage implemented, the
-evidence path, the revision and the requested reviewers.
-Each required reviewer must pass the same final revision.
-Record the pack path and its seal in the current round of each example it
-covers, following
-`.qfai/assistant/skill/qfai-implement/references/review-artifact-layout.md`
-and
-`.qfai/assistant/skill/qfai-implement/references/finding-classification.md`.
-A blocking REVISE opens the next round of the examples it names.
-A record correction follows `.qfai/assistant/rule/drift-protocol.md` and
-never changes a sealed pack.
+The review request identifies the BF, every EX the stage implemented, the
+revision and the requested reviewers.
+Each reviewer reads the same final revision.
+Classify findings as
+`.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
+says. A blocking REVISE is fixed or answered for the examples it names, with no re-review.
+A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 Record explicit PASS or REVISE for the current revision.
 
 ## Gate

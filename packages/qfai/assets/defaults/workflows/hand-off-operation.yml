@@ -13,7 +13,6 @@ stages:
     kind: triage
     steps: [triage-close]
     after: [handoff]
-defaultModifiers: [gate:release]
 decisionPoints: []
 releasePoint: triage-handoff
 branchPoints: []
