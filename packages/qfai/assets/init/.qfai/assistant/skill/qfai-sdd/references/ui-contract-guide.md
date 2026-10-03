@@ -20,7 +20,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 
 ## `screens[].primary_tasks` shape
 
-Each entry in `screens[]` MUST carry a `primary_tasks:` slot. Each
+Each entry in `screens[]` must carry a `primary_tasks:` slot. Each
 slot entry is a mapping with exactly three required keys, no additional
 keys allowed:
 

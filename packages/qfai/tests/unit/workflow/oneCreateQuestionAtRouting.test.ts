@@ -181,7 +181,6 @@ it("After a proceed answer, drive the feature plan to its last stage with canned
       expectedSequence: next.verdict.run.sequence,
       outcome: "accepted",
     };
-    resultDocuments.set(`results/${resultId}.json`, cannedResult);
     const accepted = decide(
       runningSnapshot,
       {
@@ -192,6 +191,17 @@ it("After a proceed answer, drive the feature plan to its last stage with canned
     );
     postRoutingEvents.push(...accepted.events);
     if (!accepted.verdict.ok || !accepted.verdict.run) break;
+    const published = accepted.events.find(
+      (event) =>
+        event.type === "accept-nonfinal-result" &&
+        event.stageInstanceId === candidate.stageInstanceId,
+    );
+    const publishedRef = published?.resultRef;
+    if (typeof publishedRef !== "string" || !publishedRef) {
+      replayFailure = "accepted stage has no published result reference";
+      break;
+    }
+    resultDocuments.set(publishedRef, cannedResult);
 
     const issuedWorkOrders = new Map<
       string,

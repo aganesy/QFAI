@@ -96,9 +96,9 @@ asks nothing and records explicit assumptions in its stage evidence.
 - Spend **at most 5 clarifying questions per invocation**, the unit being one top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`, `/web-research`, …), counted per question item rather than per AskUserQuestion call — one call carrying three question items spends three — after which the skill proceeds with labelled assumptions instead of asking. Classify each
   question, not the prompt: a question asked because a document requires a recorded human decision (an SDD triage `Approved By`, a reviewer-gate escalation) is an **approval** and spends nothing, and bundling one into a prompt does not exempt the clarifications beside it. On exhaustion, do not ask a sixth clarification — proceed with explicit, labelled assumptions and record them in the
   output, as `--auto` does; a required approval may still be asked. See `.qfai/assistant/rule/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
-- When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask via plain text. Proceed with explicit assumptions and record them in the outputs. Proceeding presupposes evidence to assume from — when a step has none, it is a hard blocker: stop there and report it as a blocker instead of asking or guessing.
+- When `--auto` is active, ask nothing: do not use AskUserQuestion and do not ask via plain text. Proceed with explicit assumptions and record them in the outputs. Proceeding presupposes evidence to assume from — when a step has none, it is a hard blocker: stop there and report it as a blocker instead of asking or guessing.
   How such a run may end its turn: `#unattended-runs-ending-a-turn` below.
-- Mandatory approval questions and `hard-required` inputs are exempt from the budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this invocation actually consumes** MUST be asked for rather than assumed — if it stays missing, stop instead of guessing. A `hard-required` input the requested path never reads is neither
+- Mandatory approval questions and `hard-required` inputs are exempt from the budget, and exhaustion does not waive either: approvals must still be asked, and a missing `hard-required` input **that this invocation actually consumes** must be asked for rather than assumed — if it stays missing, stop instead of guessing. A `hard-required` input the requested path never reads is neither
   asked for nor a blocker. Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so these questions survive both. Under an explicit `--auto` the question is not asked at all — that run stops and names the missing input instead of inventing one. See `.qfai/assistant/rule/constitution.md` Article VI.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside the interview `.agents/rules/grilling.md` defines spends no budget, and a session runs to its own end condition — for a user session an empty frontier and the user's confirmation, which is itself in the exempt class, and for a delegated one no open node and an answer to every critical decision — rather than to a count.
   An exhausted budget does not close one, because its questions never opened it. A
@@ -110,7 +110,7 @@ asks nothing and records explicit assumptions in its stage evidence.
 
 Under `--auto` nobody is there to reply. A message with no tool call in it ends the turn, and an ended turn stops the run whether or not the work is done. The Completion Contract below cannot catch this: the stage is incomplete, and nothing is left running to notice.
 
-While work is still owed, a turn MUST NOT end with any of these:
+While work is still owed, a turn must not end with any of these:
 
 1. A summary that announces the next step and does not take it.
 2. An offer to carry on unless the user would prefer otherwise. Nobody is there to answer it.
@@ -157,7 +157,7 @@ adds nothing carries no section.
 naming the operations its own run cannot authorize for itself. For an interview
 skill, its frontier. Under `hard-required`, the undefaultable inputs this skill
 itself consumes: they are declared per skill, and the policy check fails when a
-skill's section no longer names one. A skill MUST NOT introduce an entry outside
+skill's section no longer names one. A skill must not introduce an entry outside
 the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 **An entry a skill never reaches costs nothing.** A decision the skill does not
@@ -453,7 +453,7 @@ Keep what the user said close to their own words. Your own reasoning may be cond
 
 ## Completion Contract (Shared)
 
-Before declaring completion, you MUST:
+Before declaring completion:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated — a table with no rows or a `- None.` list counts where the template allows it;

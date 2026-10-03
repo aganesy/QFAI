@@ -146,11 +146,11 @@ be handed to a database and does not contradict itself about what it defines —
 it does not mean the schema is right. Cross-contract agreement remains the
 authoring obligation below.
 
-## Cross-contract Reconciliation (MUST)
+## Cross-contract Reconciliation
 
 Contracts are validated per file; agreement _between_ contracts is an authoring obligation.
 
-- Every terminal state, status enum value, and error code an API contract mandates MUST have a
+- Every terminal state, status enum value, and error code an API contract mandates must have a
   representable counterpart in the paired DB contract. An outcome the API requires but the DB
   domain (`CHECK (... IN (...))`, `CREATE TYPE ... AS ENUM`, inline `ENUM(...)`) cannot store is a
   contradiction, not an implementation detail.
@@ -212,7 +212,7 @@ The format is new, so the first authors to use it are answering another finding 
 will get the grammar wrong in the ways the message exists to teach. The message names the exact
 shape it wants for that reason.
 
-## Executability (MUST)
+## Executability
 
 A contract this file calls "downstream execution truth" has to have been
 executed. Everything else qfai asserts about a `db/` contract — one

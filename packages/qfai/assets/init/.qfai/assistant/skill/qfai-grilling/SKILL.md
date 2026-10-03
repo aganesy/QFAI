@@ -295,7 +295,7 @@ delegated session. It holds how several authors answer a round, where a fact
 only the user holds goes, and how the griller's recommendation settles a
 decision. Not needed in a user session.
 
-### Orchestrator Protocol (MUST)
+### Orchestrator Protocol
 
 - The orchestrator computes the frontier and reads the answers. It does not
   decide a frontier question on anyone's behalf.
@@ -303,14 +303,14 @@ decision. Not needed in a user session.
   user, the orchestrator puts it. Between agents, the griller puts it and the
   orchestrator does not — a session where both do is one where an author is
   asked twice and the two answers have no tie-break.
-- It MUST NOT record an answer **as the user's** that the user did not give, and
-  MUST NOT self-approve the session's end condition. An author's answer in an
+- It must not record an answer **as the user's** that the user did not give, and
+  must not self-approve the session's end condition. An author's answer in an
   agent-to-agent round is recorded as that author's position, with whose it is:
   the round cannot be recomputed, a disagreement cannot be kept, and an
   escalation cannot carry the positions to the user unless the answers are
   held.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 1. Attempt the first fact lookup a decision waits on at session start.
 2. Treat that real delegation attempt as the capability check.
@@ -327,7 +327,7 @@ Read `references/work-orders-summary.md` when the session dispatched a fact
 lookup. It holds the table the invoking stage's artifact then carries. Not
 needed otherwise.
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 Read `references/reviewer-gate.md` when you review a session. It holds what the
 invoking stage's gate confirms about it. Not needed to run one.

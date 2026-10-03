@@ -35,13 +35,13 @@ When you declare DONE, include:
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Evidence file exists and is complete.
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not modify the config.
 
-## Completion Checklist (MUST)
+## Completion Checklist
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
@@ -49,7 +49,7 @@ When you declare DONE, include:
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 
-## Completion Message & Next Actions (MUST)
+## Completion Message & Next Actions
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 

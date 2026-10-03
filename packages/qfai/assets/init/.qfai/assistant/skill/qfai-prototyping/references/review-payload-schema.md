@@ -170,7 +170,7 @@ rejects. A failing re-audit exits `2` (`completion-certificate:
 MISMATCH`) and names each payload and reason; re-run the cycle that
 produced it, then `npx qfai prototyping certify` again.
 
-`impressions.*` prose is not deterministic and MUST NOT be asserted for
+`impressions.*` prose is not deterministic. Do not assert it for
 exact equality. The stable surfaces are `blockingFindings`,
 `layoutAntiPatternsDetected`, `designMdViolations`, and the existence
 of `<screen>.review.json` itself.

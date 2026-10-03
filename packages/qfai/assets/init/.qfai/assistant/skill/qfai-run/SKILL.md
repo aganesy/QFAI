@@ -95,12 +95,12 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-a
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Orchestrator Protocol (MUST)
+### Orchestrator Protocol
 
 - This skill creates no work order of its own: it hands on the ones `next` returns, integrates the results and presents them.
 - Each stage runs in a sub-agent holding its work order and the steps it names.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 The first stage's delegation is the capability check. A result reporting it `unavailable` blocks the run.
 
@@ -118,7 +118,7 @@ Report one row per work order handed on.
 | ---- | ---------------- | --------------- | ------------------ | -------------- | ---------------- | ---------------------------- |
 | 1    | `<stage worker>` | `<instance id>` | `<stage in words>` | The work order | The stage result | PASS/REVISE                  |
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 This skill writes no artifact, so it runs no Reviewer of its own. A work order's reviewers, where it names any, return PASS or
 REVISE on that stage's work, and `accept` refuses a result whose reviewer is not independent.
