@@ -7,6 +7,20 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 ---
 
+## Contents
+
+- Archetype: Minimal
+- Archetype: Bold
+- Archetype: Corporate
+- Archetype: Playful
+- Archetype: Organic
+- Archetype: Tech
+- Archetype: Elegant
+- Archetype: Casual
+- Patterns to avoid
+- Typeface candidates
+- Selection Guide
+
 ## Archetype: Minimal
 
 - representative_brand: Apple, Notion, Linear
@@ -91,8 +105,8 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 ## Patterns to avoid
 
-`design-anti-patterns.md` lists the patterns that mark a design as generated,
-by aspect, and the substitutes a model falls back to once one is banned. Read it
+The anti-pattern list groups the patterns that mark a design as generated
+by aspect, with the substitutes a model falls back to once one is banned. Read it
 before turning an archetype's defaults into `DESIGN.md` values. A value that
 produces a listed pattern stays only where the recorded brand direction asks for
 it.
