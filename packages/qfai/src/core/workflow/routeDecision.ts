@@ -32,8 +32,9 @@ function choicesOf(extraction: WorkflowExtraction): RouteChoice[] {
   return choices;
 }
 
-// The route and modifiers routing gives an extraction. A low-confidence request with two or
-// more candidate routes is asked about; any other takes the main reading's route.
+// The route and modifiers routing gives an extraction. A low-confidence request is always asked
+// about, with one candidate when every reading reaches the same route; any other takes the main
+// reading's route.
 export function routingOutcome(extraction: WorkflowExtraction): RoutingOutcome {
   const candidates = choicesOf(extraction);
   const [main] = candidates;
