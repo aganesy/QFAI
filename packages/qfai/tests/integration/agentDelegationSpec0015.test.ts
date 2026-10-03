@@ -180,7 +180,7 @@ describe("the session agent holds the work and delegates by choice", () => {
   // QFAI:AC-0001-0224-02
   // QFAI:EX-0001-0224-02
   it("lets the session author any artifact and keeps every review with a non-author", async () => {
-    for (const section of await baselineSections("### Orchestrator Protocol (MUST)")) {
+    for (const section of await baselineSections("### Orchestrator Protocol")) {
       expect(section).toContain("may author any artifact itself");
       expect(section).toContain("sub-agents that run in parallel");
       expect(section).toContain(
