@@ -52,7 +52,7 @@ describe("reviewer convergence", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: a stage is reviewed once and the author fixes or answers each finding`, async () => {
       const content = await read(tree, CONVERGENCE);
-      expectPhrase(content, "## One review (MUST)");
+      expectPhrase(content, "## One review");
       expectPhrase(content, "The review runs once, after the stage's last step.");
       expectPhrase(content, "The author fixes or answers every finding");
       expectPhrase(content, "There is no re-review and no `REVISE` loop.");

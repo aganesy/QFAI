@@ -125,7 +125,7 @@ Who records which status:
   nothing. It adds nothing to the summary, and the user is told that pair
   was not reviewed.
 
-`impressions.*` prose is not deterministic and MUST NOT be asserted for
+`impressions.*` prose is not deterministic. Do not assert it for
 exact equality. The stable surfaces are `blockingFindings`,
 `layoutAntiPatternsDetected`, `designMdViolations`, and the existence
 of `<screen>.review.json` itself.

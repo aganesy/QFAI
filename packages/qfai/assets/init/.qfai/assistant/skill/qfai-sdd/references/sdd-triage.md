@@ -30,6 +30,8 @@ the user made. A row is appended once the user has approved what it records. A d
 took, an approval-free change and a finding it dropped append no row; the final report lists the
 decisions the agent took.
 
+A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
+
 A change request is a decision row whose Content begins Change request: and names the paths or IDs
 it changes. Its Approach names the operation and target BF or US, the source as
 discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
