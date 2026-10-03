@@ -112,6 +112,21 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(page.screenshot).not.toHaveBeenCalled();
   });
 
+  it("REJECTS a 400 response, the first status of the rejection boundary", async () => {
+    const dir = await newTempDir();
+    const page = makeStubPage({ status: () => 400 });
+    vi.doMock("playwright", () => makeStubModule(page));
+    const result = await defaultCaptureScreen({
+      screenId: "bad",
+      url: "http://localhost/bad",
+      pngPath: path.join(dir, "bad.png"),
+      htmlPath: path.join(dir, "bad.html"),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/HTTP 400/);
+    expect(page.screenshot).not.toHaveBeenCalled();
+  });
+
   it("REJECTS a null response (no navigation occurred)", async () => {
     const dir = await newTempDir();
     const page = makeStubPage(null);
@@ -138,6 +153,7 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
       htmlPath: path.join(dir, "x.html"),
     });
     expect(result.ok).toBe(true);
+    expect(page.screenshot).toHaveBeenCalledTimes(1);
   });
 
   it("ACCEPTS a 399 response, the last status below the 400 rejection boundary", async () => {
@@ -151,5 +167,6 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
       htmlPath: path.join(dir, "x.html"),
     });
     expect(result.ok).toBe(true);
+    expect(page.screenshot).toHaveBeenCalledTimes(1);
   });
 });

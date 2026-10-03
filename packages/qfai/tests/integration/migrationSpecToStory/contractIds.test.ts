@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "../../../src/core/config.js";
+import { validateProject } from "../../../src/core/validate.js";
 import { validateDocumentSchema } from "../../../src/core/validators/documentSchema.js";
 import {
   executePlannedStep,
@@ -17,6 +18,8 @@ import {
 import { OLD_CONTRACT_TOKEN } from "../../../src/migration/specToStory/contractIds.js";
 import { step03 } from "../../../src/migration/specToStory/step03MoveCatalog.js";
 import { step04 } from "../../../src/migration/specToStory/step04RenumberIds.js";
+import { step05 } from "../../../src/migration/specToStory/step05CasesToExamples.js";
+import { step06 } from "../../../src/migration/specToStory/step06DeriveAcRefs.js";
 import { step07 } from "../../../src/migration/specToStory/step07RulesToContracts.js";
 import { step08 } from "../../../src/migration/specToStory/step08RewriteAnnotations.js";
 import { isMigrationReportPath } from "../../helpers/migrationReport.js";
@@ -877,6 +880,146 @@ describe("migration step 3 groups what it lists for a person", () => {
     expect(identifiers?.items[0]).toContain("TC-02 is now TC-01");
 
     expect(personGroups(contentOnly.output).map((group) => group.heading)).toEqual(["Content"]);
+  });
+});
+
+describe("migration step 7 writes contracts that validate", () => {
+  const limit = "An order total is never negative, and it is at most the credit limit.";
+  const cap = "An order is refused above the limit, with no partial receipt.";
+  const sectionRules =
+    "# Rules\n\n## BR-0001-0001: Order total\n\n- **Rule**: An order total is never negative,\n  and it is at most the credit limit.\n- **Notes**: Totals are rounded.\n- **NFRs**: NFR-0030\n- **Contracts**: DB-0001\n\n## BR-0001-0002: Order limit\n\n- **Rule**: An order is refused above the limit,\n  with no partial receipt.\n- **Notes**: Limits are per account.\n- **NFRs**: NFR-0030\n- **Contracts**: API-0001\n";
+  const tableRules = `# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | ${limit} |\n| BR-0001-0002 | ${cap} |\n`;
+
+  /** A project whose plan places the first rule in the DB contract and the second in the API one. */
+  async function ruleProject(rules: string): Promise<string> {
+    const root = await project();
+    await putPack(root, "As a buyer, I place an order.", limit, "db/db-0001-orders.sql");
+    await put(root, ".qfai/spec/spec-0001/04_Business-Rules.md", rules);
+    await put(
+      root,
+      ".qfai/spec/spec-0001/05_Examples.md",
+      "# Examples\n\n| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001, BR-0001-0002 | one item | accepted |\n",
+    );
+    await put(
+      root,
+      `${EVIDENCE}/plan.yaml`,
+      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: db/db-0001-orders.sql\n  - id: BR-0001-0002\n    contract: api/api-0001-orders.yaml\n",
+    );
+    return root;
+  }
+
+  /** Steps 3 to 7; step 7 leaves no old pack behind, so validation reads the story tree. */
+  async function migrate(root: string): Promise<void> {
+    for (const step of [step03, step04, step05, step06, step07]) await run(step, root);
+  }
+
+  /**
+   * The first `-- Rule` line of a SQL contract and the line under it, each with its whitespace
+   * runs collapsed and the rule ID shown as `BR-N`. A rule comment that runs over several lines
+   * puts something else under the first line.
+   */
+  function ruleComment(sql: string): string[] {
+    const lines = sql.split("\n");
+    const start = lines.findIndex((line) => /^-- Rule BR-\d{4}-\d{4}:/.test(line));
+    return start < 0
+      ? []
+      : lines.slice(start, start + 2).map((line) =>
+          line
+            .replace(/BR-\d{4}-\d{4}/, "BR-N")
+            .replace(/\s+/g, " ")
+            .trim(),
+        );
+  }
+
+  /** The IDs a YAML contract's `x-qfai-depends-on` holds as a flow list on one line, or `null`. */
+  function dependsOnList(contract: string): string[] | null {
+    const list = /^x-qfai-depends-on:[ \t]*\[([^\]\n]*)\][ \t]*$/m.exec(contract)?.[1];
+    return list === undefined ? null : list.split(",").map((id) => id.trim());
+  }
+
+  /** The messages of the findings with `code`, only those about `file` when one is given. */
+  async function findings(root: string, code: string, file?: string): Promise<string[]> {
+    const result = await validateProject(root, undefined, { profile: "sdd" });
+    const aboutFile = (issue: { file?: string; message: string }): boolean =>
+      file === undefined ||
+      `${issue.file ?? ""}\n${issue.message}`.replaceAll("\\", "/").includes(file);
+    return result.issues
+      .filter((issue) => issue.code === code && aboutFile(issue))
+      .map((issue) => issue.message);
+  }
+
+  /** The validator read the story tree: it did not stop at the old-layout finding. */
+  async function expectTreeRead(root: string): Promise<void> {
+    expect(await findings(root, "QFAI-LAYOUT-001")).toEqual([]);
+  }
+
+  it("reads the examples of a SQL rule written from a section and keeps its statement to the Rule value", async () => {
+    // QFAI:EX-0004-0009-18
+    const sqlContract = `${CONTRACTS}/db/db-0003-orders.sql`;
+    const apiContract = `${CONTRACTS}/api/api-0002-orders.yaml`;
+    const table = await ruleProject(tableRules);
+    await migrate(table);
+    expect(ruleComment(await text(table, sqlContract))).toEqual([
+      `-- Rule BR-N: ${limit}`,
+      "-- Examples: EX-0001-0001-01",
+    ]);
+    await expectTreeRead(table);
+    expect(await findings(table, "QFAI-STORY-005")).toEqual([]);
+
+    const section = await ruleProject(sectionRules);
+    await migrate(section);
+    expect(ruleComment(await text(section, sqlContract))).toEqual([
+      `-- Rule BR-N: ${limit}`,
+      "-- Examples: EX-0001-0001-01",
+    ]);
+    expect(await text(section, sqlContract)).not.toMatch(/Notes|NFR|\*\*|Order total/);
+    const rules: unknown = parseYaml(await text(section, apiContract));
+    const written =
+      typeof rules === "object" && rules !== null ? Reflect.get(rules, "x-qfai-rules") : undefined;
+    expect(
+      Array.isArray(written)
+        ? written.map((rule) => String(Reflect.get(rule, "statement")).replace(/\s+/g, " ").trim())
+        : written,
+    ).toEqual([cap]);
+    await expectTreeRead(section);
+    expect(await findings(section, "QFAI-STORY-005")).toEqual([]);
+  });
+
+  it("keeps a dependency list of eight IDs on one line so the contract declares them", async () => {
+    // QFAI:EX-0004-0009-19
+    const root = await ruleProject(tableRules);
+    const ids = Array.from(
+      { length: 8 },
+      (_, index) => `CON-DB-${String(index + 1).padStart(4, "0")}`,
+    );
+    const api = `${CONTRACTS}/api/api-0001-orders.yaml`;
+    await put(
+      root,
+      api,
+      (await text(root, api)).replace(
+        "x-qfai-depends-on: [CON-DB-0001]",
+        `x-qfai-depends-on: [${ids.join(", ")}]`,
+      ),
+    );
+    for (const [index, id] of ids.entries()) {
+      if (index === 0) continue;
+      await put(
+        root,
+        `${CONTRACTS}/db/table${index}.sql`,
+        `-- QFAI-CONTRACT-ID: ${id}\n-- Depends on: -\nCREATE TABLE table${index} (id INT);\n`,
+      );
+    }
+    const contract = `${CONTRACTS}/api/api-0002-orders.yaml`;
+    await run(step03, root);
+    // Control: step 3 writes the renumbered list on one line.
+    const renumbered = dependsOnList(await text(root, contract));
+    expect(renumbered).toHaveLength(8);
+    expect(renumbered?.every((id) => /^DB-\d{4}$/.test(id))).toBe(true);
+    for (const step of [step04, step05, step06, step07]) await run(step, root);
+    expect(await text(root, contract)).toContain("x-qfai-rules:");
+    await expectTreeRead(root);
+    expect(await findings(root, "QFAI-CONTRACT-015", "api/api-0002-orders.yaml")).toEqual([]);
+    expect(dependsOnList(await text(root, contract))).toEqual(renumbered);
   });
 });
 

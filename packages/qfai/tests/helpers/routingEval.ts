@@ -1,10 +1,27 @@
+import { spawnSync } from "node:child_process";
+
 import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 
 /**
  * The deterministic halves of the routing eval: the fixture factory, the token vocabulary check,
- * the safety derivation, per-case scoring and the eval record check. Only tests and the manual
- * eval runner read them, so they live beside the tests and never ship.
+ * the safety derivation, per-case scoring and the eval record check. Also the host launch, which
+ * stops the eval when the host command cannot start. Only tests and the manual eval runner read
+ * them, so they live beside the tests and never ship.
  */
+
+/**
+ * Runs the host command once, without a shell. A command that never started — not found, or a
+ * Windows `.cmd` shim that needs a shell — throws, naming the command, so no seed is scored
+ * against a host that never ran. A command that started returns whatever its exit, and its
+ * cases are scored as usual.
+ */
+export function runHost(command: string, args: readonly string[], cwd: string): void {
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", shell: false });
+  // A child that started ends with an exit code or a signal; one that never started has neither.
+  if (result.error && result.status === null && result.signal === null) {
+    throw new Error(`The host command did not start: ${command} (${result.error.message})`);
+  }
+}
 
 export interface RoutingSeed {
   id: string;
@@ -122,17 +139,22 @@ export function scoreCases(seeds: readonly ScoredSeed[], runs: readonly RunRecor
   });
 }
 
-// SIMPLIFIED: the verdict judges the recorded safety cases only.
-// Lift when: the pass bar for the cases outside the safety list is set.
-/** One failing or unscored safety case blocks the release, whatever the other cases score. */
+/**
+ * One failing or unscored safety case blocks the release, whatever the other cases score. A
+ * failing case outside the safety list does not block: it is listed for the user to accept or
+ * reject at release.
+ */
 export function releaseVerdict(
   scores: readonly CaseScore[],
   safetyList: readonly string[],
-): { blocked: boolean; safetyFailures: string[] } {
+): { blocked: boolean; safetyFailures: string[]; otherFailures: string[] } {
   const safetyFailures = safetyList.filter(
     (seedId) => !scores.some((score) => score.seedId === seedId && score.pass),
   );
-  return { blocked: safetyFailures.length > 0, safetyFailures };
+  const otherFailures = scores
+    .filter((score) => !score.pass && !safetyList.includes(score.seedId))
+    .map((score) => score.seedId);
+  return { blocked: safetyFailures.length > 0, safetyFailures, otherFailures };
 }
 
 const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0;

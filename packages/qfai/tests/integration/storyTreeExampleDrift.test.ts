@@ -3,10 +3,30 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
+
+const scan = vi.hoisted(() => ({
+  capped: undefined as "empty" | "prefix" | undefined,
+  fault: undefined as Error | undefined,
+}));
+
+vi.mock("../../src/core/validators/storyTreeObligations.js", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../../src/core/validators/storyTreeObligations.js")>();
+  return {
+    ...original,
+    readStoryTests: async (...args: Parameters<typeof original.readStoryTests>) => {
+      if (scan.fault) throw scan.fault;
+      const read = await original.readStoryTests(...args);
+      return scan.capped
+        ? { ...read, files: scan.capped === "empty" ? [] : read.files, truncated: true }
+        : read;
+    },
+  };
+});
 
 let root: string;
 const specs = ".qfai/spec";
@@ -52,6 +72,8 @@ async function warned(): Promise<boolean> {
 }
 
 beforeEach(async () => {
+  scan.capped = undefined;
+  scan.fault = undefined;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-example-drift-"));
   git("init", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -64,10 +86,91 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  scan.capped = undefined;
+  scan.fault = undefined;
   await rm(root, { recursive: true, force: true });
 });
 
 describe("an example rewritten on the branch", () => {
+  it("does not warn for a newly appended example", async () => {
+    await put(
+      examples,
+      `${header}| ${example} | AC-0001-0001-01 | an order | it is paid |\n| EX-0001-0001-02 | AC-0001-0001-01 | a new order | it is paid |\n`,
+    );
+    commit("append an example");
+    const findings = await validateStoryTreeDrift(root, config(), "drift");
+    expect(findings.some(({ code }) => code === "QFAI-DRIFT-002")).toBe(false);
+  });
+
+  it.each(["tests/e2e/order.test.ts", "tests/unit/order.md"])(
+    "does not let a changed ineligible annotation in %s suppress the warning",
+    async (file) => {
+      await put(
+        examples,
+        `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`,
+      );
+      await put(file, `// ${["QFAI", example].join(":")}\n`);
+      commit("change an ineligible carrier");
+      expect(await warned()).toBe(true);
+    },
+  );
+
+  it("detects internal cell-space changes next to an escaped pipe", async () => {
+    await put(examples, `${header}| ${example} | AC-0001-0001-01 | a\\| b | it is paid |\n`);
+    commit("base escaped pipe");
+    git("branch", "-f", "main", "HEAD");
+    await put(examples, `${header}| ${example} | AC-0001-0001-01 | a\\|b | it is paid |\n`);
+    commit("change internal cell space");
+    expect(await warned()).toBe(true);
+  });
+
+  it("ignores a removed trailing table delimiter", async () => {
+    await put(examples, `${header}| ${example} | AC-0001-0001-01 | an order | it is paid\n`);
+    commit("remove trailing delimiter");
+    expect(await warned()).toBe(false);
+  });
+
+  it.each(["empty", "prefix"] as const)(
+    "reports a capped %s test scan without example-change conclusions",
+    async (capped) => {
+      await put(
+        examples,
+        `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`,
+      );
+      commit("rewrite the example");
+      scan.capped = capped;
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({ code: "QFAI-SCAN-002", severity: "error" }),
+      );
+      expect(findings.some(({ code }) => code === "QFAI-DRIFT-002")).toBe(false);
+    },
+  );
+
+  it.each(["EACCES", "EIO"])(
+    "reports a %s reader fault without an example-change conclusion",
+    async (code) => {
+      await put(
+        examples,
+        `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`,
+      );
+      commit("rewrite the example");
+      const fault = Object.assign(new Error(`test scan failed: ${code} at tests`), { code });
+      scan.fault = fault;
+      const findings = await validateStoryTreeDrift(root, config(), "drift");
+      expect(findings).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-SCAN-002",
+          severity: "error",
+          message: expect.stringContaining(fault.message),
+        }),
+      );
+      expect(findings.some(({ code: findingCode }) => findingCode === "QFAI-DRIFT-002")).toBe(
+        false,
+      );
+    },
+  );
+
   // QFAI:EX-0001-0054-12
   // QFAI:AC-0001-0054-07
   it("warns until a test annotating the example changes too", async () => {

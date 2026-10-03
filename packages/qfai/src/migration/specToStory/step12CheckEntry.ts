@@ -10,6 +10,7 @@ import { allPlanRefusals, type PlanRefusal } from "../../core/workflow/plans.js"
 import { isRecord } from "../../core/workflow/parse.js";
 import { EVIDENCE_DIR, reincludesEvidence, trackedEvidence } from "./evidenceIndex.js";
 import type { MigrationContext, MigrationStep } from "./harness.js";
+import { scanOldPaths } from "./step12OldPaths.js";
 import { linksToSkill } from "./step11InstallEntry.js";
 
 const RUN_SKILL = "qfai-run";
@@ -102,23 +103,29 @@ async function runLinkItems(context: MigrationContext): Promise<string[]> {
 
 /**
  * Makes the project checks `npx qfai workflow start` makes before it creates a
- * run, checks what step 11 installs, and checks that git keeps `.qfai/evidence/`
- * out of the index as step 10 leaves it. It writes nothing and repairs nothing.
+ * run, checks what step 11 installs, checks that git keeps `.qfai/evidence/`
+ * out of the index as step 10 leaves it, and lists each line of a tracked
+ * project file that still names a 1.x path. It writes nothing and repairs
+ * nothing.
  */
 export const step12: MigrationStep = {
   number: 12,
   writeSet: [],
-  sections: ["For a person"],
+  sections: ["Files scanned", "For a person"],
   async plan(context) {
+    // Read git first: a git failure ends the step before any other check reads the index.
+    const scan = await scanOldPaths(context);
     const refusals = await allPlanRefusals(context.root, context.config);
     return {
       operations: [],
+      filesScanned: [scan.scanned],
       forAPerson: [
         ...refusals.map(refusalItem),
         ...(await modeItems(context)),
         ...(await gitignoreItems(context)),
         ...(await runLinkItems(context)),
         ...trackedEvidenceItems(context),
+        ...scan.items,
       ],
     };
   },

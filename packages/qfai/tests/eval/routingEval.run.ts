@@ -5,10 +5,18 @@
  *   QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' \
  *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
  *
+ *   QFAI_EVAL_HOST=codex \
+ *     QFAI_EVAL_COMMAND='["codex", "exec", "--sandbox", "workspace-write", "{prompt}"]' \
+ *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
+ *
+ * `codex exec` starts in a read-only sandbox, where `npx qfai` cannot write its run, so the
+ * Codex command asks for a writable workspace.
+ *
  * `QFAI_EVAL_COMMAND` is the host's argv as a JSON array, `{prompt}` standing for the seed's
- * prompt. It is spawned without a shell. Each seed's fixture is built from one `qfai init` base
- * with the local launcher installed; a route evaluation seed runs on the base as it is. The
- * runner reads what each run recorded, scores every case and writes the eval record to
+ * prompt. It is spawned without a shell, so on Windows it names an executable such as
+ * `codex.exe`, not a `.cmd` shim. Each seed's fixture is built from one `qfai init` base with
+ * the local launcher installed; a route evaluation seed runs on the base as it is. The runner
+ * reads what each run recorded, scores every case and writes the eval record to
  * `tests/eval/records/<host>-<version>.json`. A failing route evaluation blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
@@ -26,6 +34,7 @@ import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   UnknownFactKeyError,
   type RunRecord,
@@ -211,7 +220,7 @@ async function observeRoutes(root: string, seedId: string): Promise<RouteRun> {
 function spawnHost(root: string, prompt: string, argv: string[]): number {
   const [command = "", ...args] = argv.map((each) => (each === "{prompt}" ? prompt : each));
   const started = Date.now();
-  spawnSync(command, args, { cwd: root, encoding: "utf8", shell: false });
+  runHost(command, args, root);
   return Date.now() - started;
 }
 
@@ -286,9 +295,13 @@ async function runEval(): Promise<void> {
     .map((seed) => seed.id);
   const baseRoot = await base();
   const runs: Record<string, Awaited<ReturnType<typeof runSeed>>> = {};
-  for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
-  const routes = await routeEval(baseRoot, argv);
-  await removeTempTree(baseRoot);
+  let routes: Awaited<ReturnType<typeof routeEval>>;
+  try {
+    for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
+    routes = await routeEval(baseRoot, argv);
+  } finally {
+    await removeTempTree(baseRoot);
+  }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
   const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
   const verdict = releaseVerdict(cases, safetyList);

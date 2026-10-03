@@ -75,8 +75,8 @@ it("A file changed outside the boundary while the implement work order is outsta
 });
 
 // An add-feature run whose verify result is blocked on a finding in `docs/guide.md`, which lies
-// outside the run's scope, repaired outside the run under a change request at WIP.
-async function repairedOutsideTheRun(unapproved?: string) {
+// outside the run's scope, repaired outside the run under a change request in the given status.
+async function repairedOutsideTheRun(unapproved?: string, status: "WIP" | "TODO" = "WIP") {
   const root = await initProject();
   // The finding's owning flow has to exist in the tree.
   const flow = ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md";
@@ -100,26 +100,60 @@ async function repairedOutsideTheRun(unapproved?: string) {
   );
   expect(field(blocked.json, "halt.blocker"), blocked.stdout).toBe("scope-dependency");
   await write(root, "docs/guide.md", "The new export.\n");
-  const row = "| DEC-0001 | Change request: docs/guide.md | Approved by the operator | WIP |\n";
+  const row = `| DEC-0001 | Change request: docs/guide.md | Approved by the operator | ${status} |\n`;
   await appendFile(path.join(root, ".qfai", "spec", "decisions.md"), row);
   if (unapproved) await write(root, unapproved, "Nobody approved this.\n");
-  return workflow(root, ["resume", "--run", runId]);
+  return { root, runId, resumed: workflow(root, ["resume", "--run", runId]) };
 }
 
 it("resume after the finding's file was repaired under a change request, and nothing else", async () => {
-  const resumed = await repairedOutsideTheRun();
+  const { root, runId, resumed } = await repairedOutsideTheRun();
 
   expect({
     state: field(resumed.json, "run.state"),
     stage: field(resumed.json, "workOrder.stageKind"),
   }).toEqual({ state: "running", stage: "verify" });
+
+  const finished = workflow(root, ["finish", "--run", runId]);
+  expect(outOfScope(finished.json)).toEqual([]);
 });
 
 it("resume after the same repair and a change no change request approves", async () => {
-  const resumed = await repairedOutsideTheRun("docs/other.md");
+  const { resumed } = await repairedOutsideTheRun("docs/other.md");
 
   expect({
     code: field(resumed.json, "error.code"),
     cause: field(resumed.json, "error.cause"),
   }).toEqual({ code: "fail-closed", cause: "invariant-violation" });
+});
+
+function outOfScope(finished: unknown): unknown[] {
+  const unmet = field(finished, "unmet");
+  expect(Array.isArray(unmet)).toBe(true);
+  return (Array.isArray(unmet) ? unmet : [])
+    .filter((entry) => field(entry, "condition") === "diff-out-of-scope")
+    .map((entry) => field(entry, "subject"));
+}
+
+it("a repair whose change request is not in force stays outside the boundary", async () => {
+  const { root, runId, resumed } = await repairedOutsideTheRun(undefined, "TODO");
+
+  expect({
+    code: field(resumed.json, "error.code"),
+    cause: field(resumed.json, "error.cause"),
+  }).toEqual({ code: "fail-closed", cause: "invariant-violation" });
+
+  const finished = workflow(root, ["finish", "--run", runId]);
+  const subjects = outOfScope(finished.json);
+  expect(subjects).toHaveLength(1);
+  expect(subjects[0]).toBe("docs/guide.md");
+});
+
+it("finish refuses a repair changed again after resume admitted its digest", async () => {
+  const { root, runId, resumed } = await repairedOutsideTheRun();
+  expect(field(resumed.json, "run.state")).toBe("running");
+  await write(root, "docs/guide.md", "An unapproved later edit.\n");
+
+  const finished = workflow(root, ["finish", "--run", runId]);
+  expect(outOfScope(finished.json)).toEqual(expect.arrayContaining(["docs/guide.md"]));
 });

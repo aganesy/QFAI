@@ -31,8 +31,10 @@ function findingKey(finding: FindingIdentity): string {
   return JSON.stringify([finding.code, finding.file, [...finding.refs].sort()]);
 }
 
+// Under `failOn: never` no finding fails the gate, while each still keeps its debt open.
 function failingFindings(completion: WorkflowCompletionFacts): FindingIdentity[] {
   const { failOn, findings } = completion.validate;
+  if (failOn === "never") return [];
   return findings
     .filter((finding) => SEVERITY_RANK[finding.severity] >= SEVERITY_RANK[failOn])
     .map(({ code, file, refs }) => ({ code, file, refs }));
