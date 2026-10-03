@@ -196,8 +196,8 @@ Change nothing on the surface that owns the truth.
 
 The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
 the obligation, test path and selector,
-RED, GREEN, and Refactor commands and observed results, revisions, reviewer
-verdicts, and open findings.
+RED, GREEN, and Refactor commands and observed results, revisions,
+reviewer verdicts, and open findings.
 Evidence without a command and result pair does not prove a gate.
 
 ## Stage review
@@ -215,7 +215,7 @@ Classify findings as
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
 says. A blocking REVISE opens the next round of the examples it names.
 A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
-Report explicit PASS or REVISE for the current revision.
+Record explicit PASS or REVISE for the current revision.
 
 ## Gate
 

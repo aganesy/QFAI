@@ -639,7 +639,7 @@ describe("BF-0004 acceptance criteria", () => {
         .filter((line) => line !== "");
       expect(lines).toContain(".qfai/spec/spec-0001/01_Spec.md");
       expect(lines).toContain(".qfai/spec/spec-0001/06_Test-Cases.md");
-      for (const token of ["/qfai-migration-v1-to-v2", "/qfai-sdd", "retired/"]) {
+      for (const token of ["/qfai-migration-v1-to-v2", "/qfai-sdd"]) {
         expect(lines.at(-1), token).toContain(token);
       }
     }

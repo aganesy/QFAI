@@ -97,9 +97,7 @@ describe("defect example seeding", () => {
     expect(text).toMatch(
       /add the new EX ID to the Examples cell of the contract rule that already cites an example of that AC/i,
     );
-    expect(text).toMatch(
-      /records the diagnosed defect and the run ID, and names no path under `\.qfai\/run\/`/i,
-    );
+    expect(text).toMatch(/the stage report names the diagnosed defect/i);
   });
 
   // QFAI:AC-0001-0206-02

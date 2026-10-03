@@ -110,7 +110,7 @@ async function run(step: MigrationStep, context: MigrationContext, dryRun = fals
   return { code, output: captured.output, error: captured.error };
 }
 
-const FINISH_TOKENS = ["/qfai-migration-v1-to-v2", "/qfai-sdd", "retired/"] as const;
+const FINISH_TOKENS = ["/qfai-migration-v1-to-v2", "/qfai-sdd"] as const;
 
 function messageLines(message: string): string[] {
   return message

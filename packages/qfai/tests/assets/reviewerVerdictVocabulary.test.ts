@@ -98,7 +98,7 @@ describe("reviewer verdict vocabulary", () => {
       readShipped("step/implement-checkpoint/STEP.md"),
     ]);
     for (const content of tdd) {
-      expect(content).toContain("Report explicit PASS or REVISE for the current revision");
+      expect(content).toContain("Record explicit PASS or REVISE for the current revision");
       expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
     }
     for (const content of checkpoint) {

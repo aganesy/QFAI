@@ -116,7 +116,7 @@ describe("TC-0014-0009: verify holds completion behind a reviewer PASS", () => {
     it(`${copy}: the reviewer answers only PASS or REVISE`, async () => {
       const baseline = await readFile(path.join(root, BASELINE_REL), "utf-8");
       expect(section(baseline, "### Verdict vocabulary")).toContain(
-        "- Reviewer responses in-flight use `Result: PASS | REVISE` (this file).",
+        "- Reviewer responses use `Result: PASS | REVISE` (this file).",
       );
     });
 

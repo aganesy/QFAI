@@ -1,15 +1,19 @@
 ---
 name: common-review-cycle
 owner: common
-purpose: "Review what a stage wrote, once, after its last step: dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and report the result."
+purpose: "Run a review the route or the parent skill calls for: dispatch the independent reviewers, repair and re-review until every blocking reviewer passes, and report the result."
 requires: []
 roles: []
 ---
 
 # common-review-cycle
 
-A stage runs this once, after its last step. It reviews everything the stage's
-steps wrote in this invocation, against one revision.
+A route runs this only where its plan marks a stage `review: spec` or
+`review: code`, after that stage's last step: the specification review when the
+stage changed a story-tree or contract file, and the code review over the
+route's whole diff. No other stage of a route is reviewed. A parent skill
+invoked by name runs it once, after its last step. Each run reviews its target
+against one revision.
 
 The reviewer rules themselves are
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`
