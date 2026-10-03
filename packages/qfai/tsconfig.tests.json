@@ -42,6 +42,7 @@
     "tests/assets/assets.test.ts",
     "tests/assets/rowNamesItsTestFile.test.ts",
     "tests/assets/atddConDbOwnership.test.ts",
+    "tests/assets/atddVolumeSignalDefinition.test.ts",
     "tests/assets/atddRequiredScope.test.ts",
     "tests/assets/atddScaffoldTunableSeed.test.ts",
     "tests/assets/auditedEvidenceHashSerialization.test.ts",
