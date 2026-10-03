@@ -35,6 +35,10 @@ type Found = Map<string, Map<string, number>>;
 type Pinned = Record<string, Record<string, number>>;
 
 type Guard = {
+  assertCompleteValidationReport: (report: {
+    issues: Issue[];
+    profileValidatorsRan?: boolean;
+  }) => void;
   findingKey: (issue: Issue) => string;
   compareAgainstPin: (
     found: Found,
@@ -80,6 +84,56 @@ const untested = (id: string, file = PINNED): Issue => ({
 
 const found = (entries: Record<string, Record<string, number>>): Found =>
   new Map(Object.entries(entries).map(([file, keys]) => [file, new Map(Object.entries(keys))]));
+
+describe("assertCompleteValidationReport", () => {
+  it.each(["error", "warning", "info"])(
+    "refuses an incomplete scan at %s severity with an absent or true profile flag",
+    async (severity) => {
+      const { assertCompleteValidationReport } = await load();
+      const issues = [{ code: "QFAI-SCAN-002", severity, message: "scan interrupted" }];
+
+      expect(() => assertCompleteValidationReport({ issues })).toThrow("QFAI-SCAN-002");
+      expect(() => assertCompleteValidationReport({ issues, profileValidatorsRan: true })).toThrow(
+        "QFAI-SCAN-002",
+      );
+    },
+  );
+
+  it("refuses an explicitly unexecuted profile without an incomplete-scan finding", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() =>
+      assertCompleteValidationReport({
+        issues: [{ code: "QFAI-LAYOUT-001", severity: "error", message: "old layout" }],
+        profileValidatorsRan: false,
+      }),
+    ).toThrow("did not run profile validators");
+    expect(() =>
+      assertCompleteValidationReport({ issues: [], profileValidatorsRan: false }),
+    ).toThrow("did not run profile validators");
+  });
+
+  it("accepts ordinary error debt and a legitimate profile notice after validators ran", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() =>
+      assertCompleteValidationReport({
+        issues: [
+          untested("EX-0001-0001-01"),
+          { code: "QFAI-PROFILE-001", severity: "info", message: "selected profile gates" },
+        ],
+        profileValidatorsRan: true,
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts ordinary findings when the optional profile claim is absent", async () => {
+    const { assertCompleteValidationReport } = await load();
+
+    expect(() => assertCompleteValidationReport(report(untested("EX-0001-0001-01")))).not.toThrow();
+    expect(() => assertCompleteValidationReport(report())).not.toThrow();
+  });
+});
 
 describe("findingKey", () => {
   it("keys a finding by its code and the IDs it names, not by its wording", async () => {
