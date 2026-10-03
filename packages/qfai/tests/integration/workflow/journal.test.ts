@@ -272,6 +272,111 @@ function runDirOf(root: string, runId: string): string {
   return path.join(root, RUNS, runId);
 }
 
+// QFAI:EX-0001-0189-25
+it("case-distinct result IDs keep separate complete receipts without changing the first", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const runDir = runDirOf(root, runId);
+  const receipts = [
+    { id: "result-1", ref: "results/~726573756c742d31.json" },
+    { id: "RESULT-1", ref: "results/~524553554c542d31.json" },
+  ];
+  let firstBytes: Buffer | undefined;
+  let firstDigest: string | undefined;
+  for (const { id, ref } of receipts) {
+    const issued = workflow(root, ["next", "--run", runId]);
+    const result = resultFor(issued.json, id, {
+      outcome: "unrun",
+      testObservation: "unrun",
+      delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+    });
+    const processed = await submit(root, runId, "accept", result);
+    expect(field(processed.json, "run.state")).toBe("running");
+    const journal = await readJournal(runDir);
+    expect(journal.ok ? journal.records.at(-1)?.resultRef : undefined).toBe(ref);
+    const bytes = await readFile(path.join(runDir, ...ref.split("/")));
+    expect(JSON.parse(bytes.toString("utf8"))).toEqual(result);
+    if (firstBytes === undefined) {
+      firstBytes = bytes;
+      firstDigest = createHash("sha256").update(bytes).digest("hex");
+    }
+  }
+  const first = await readFile(path.join(runDir, "results", "~726573756c742d31.json"));
+  expect(first).toEqual(firstBytes);
+  expect(createHash("sha256").update(first).digest("hex")).toBe(firstDigest);
+});
+
+// QFAI:EX-0001-0189-26
+it.each([
+  { id: "CON", ref: "results/~434f4e.json" },
+  { id: "x".repeat(64), ref: `results/~${"78".repeat(64)}.json` },
+])("a valid $id result keeps its complete receipt at $ref", async ({ id, ref }) => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const result = resultFor(issued.json, id, {
+    actor: { agentInstance: "receipt-agent" },
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+  });
+  const processed = await submit(root, runId, "accept", result);
+  expect(field(processed.json, "run.state")).toBe("running");
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  expect(journal.ok ? journal.records.at(-1)?.resultRef : undefined).toBe(ref);
+  expect(JSON.parse(await readFile(path.join(runDir, ...ref.split("/")), "utf8"))).toEqual(result);
+});
+
+// QFAI:EX-0001-0189-27
+it("continuing a run preserves a literal historical receipt beside a new encoded receipt", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const runDir = runDirOf(root, runId);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const historical = resultFor(issued.json, "61", {
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(issued.json, "workOrder.attempt") },
+  });
+  const first = await submit(root, runId, "accept", historical);
+  expect(field(first.json, "run.state")).toBe("running");
+  const published = await readJournal(runDir);
+  const event = published.ok ? published.records.at(-1) : undefined;
+  if (!event || typeof event.resultRef !== "string") throw new Error("No historical receipt");
+  const oldFile = path.join(runDir, ...event.resultRef.split("/"));
+  const literalFile = path.join(runDir, "results", "61.json");
+  const historicalBytes = await readFile(oldFile);
+  await writeFile(literalFile, historicalBytes);
+  if (oldFile !== literalFile) await rm(oldFile);
+  await rewriteEvent(root, runId, event.sequence, (record) => ({
+    ...record,
+    resultRef: "results/61.json",
+  }));
+
+  const next = workflow(root, ["next", "--run", runId]);
+  const current = resultFor(next.json, "a", {
+    outcome: "unrun",
+    testObservation: "unrun",
+    delegation: { status: "saturated", attempt: field(next.json, "workOrder.attempt") },
+  });
+  const second = await submit(root, runId, "accept", current);
+  expect(field(second.json, "run.state")).toBe("running");
+  const continued = await readJournal(runDir);
+  const references = continued.ok
+    ? continued.records
+        .filter((record) => record.event === "retry-scheduled")
+        .map((record) => record.resultRef)
+    : [];
+  expect(references).toEqual(["results/61.json", "results/~61.json"]);
+  expect(await readFile(literalFile)).toEqual(historicalBytes);
+  expect(JSON.parse(historicalBytes.toString("utf8"))).toEqual(historical);
+  expect(JSON.parse(await readFile(path.join(runDir, "results", "~61.json"), "utf8"))).toEqual(
+    current,
+  );
+  expect(field(workflow(root, ["status", "--run", runId]).json, "run.state")).toBe("running");
+});
+
 // A decide-design run routed and ready, whose journal holds four events.
 async function readyRun() {
   const root = await minimalProject();
