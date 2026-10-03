@@ -839,8 +839,8 @@ async function runConfiguredStep(
 }
 
 /**
- * A tree with no trace of the old layout. Step 9 still plans its own work, so
- * it says what it found from that work.
+ * A tree with no trace of the old layout. Steps 9 and 10 still plan their own
+ * work, so each says what it found from that work.
  */
 async function runWithoutLayout(
   step: MigrationStepNumber,
@@ -850,13 +850,15 @@ async function runWithoutLayout(
   layoutTrace: boolean,
 ): Promise<0 | 2 | 3> {
   const selected = await loadStep(step);
-  if (step === 9) {
-    // Step 1 moved the directories the host links pointed at, so an old
-    // link outlives every other trace of the old layout.
+  const ownWork =
+    step === 9 || (step === 10 && (await pathExists(path.join(context.root, ".gitignore"))));
+  if (ownWork) {
+    // An old host link outlives every other trace of the old layout, and an
+    // existing managed .gitignore block can be out of date on any tree.
     const plan = await selected.plan(context);
     if (plan.operations.length > 0 || (plan.forAPerson?.length ?? 0) > 0) {
-      const linkStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
-      return await executePlannedStep(linkStep, context, dryRun, io, layoutTrace);
+      const ownStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
+      return await executePlannedStep(ownStep, context, dryRun, io, layoutTrace);
     }
   }
   const layout = layoutTrace ? "found" : "none";

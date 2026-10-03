@@ -40,6 +40,38 @@ describe("migration managed gitignore update", () => {
     });
   });
 
+  it("resets an outdated managed block on a story-tree project with no 1.x layout", async () => {
+    // QFAI:EX-0004-0011-02
+    const root = await mkdtemp(path.join(tmpdir(), "qfai-migration-gitignore-"));
+    roots.push(root);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      "utf8",
+    );
+    await writeFile(path.join(root, ".gitignore"), "project-only\n", "utf8");
+    let output = "";
+    const io = {
+      cwd: root,
+      stdout: { write: (value: string) => (output += value) },
+      stderr: {
+        write: (value: string) => {
+          throw new Error(value);
+        },
+      },
+    };
+    expect(await runStep(10, [], io)).toBe(0);
+    expect(output.split("\n")[0]).toBe("1.x layout found, migrating");
+    expect(output).toContain("- .gitignore: reset the managed QFAI block");
+    const updated = await readFile(path.join(root, ".gitignore"), "utf8");
+    expect(updated).toContain("project-only\n");
+    expect(updated).toContain("QFAI managed");
+    output = "";
+    expect(await runStep(10, [], io)).toBe(0);
+    expect(output).toContain("## Operations\nnone");
+    expect(await readFile(path.join(root, ".gitignore"), "utf8")).toBe(updated);
+  });
+
   it("plans only the managed block and leaves a current file unchanged", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "qfai-migration-gitignore-"));
     roots.push(root);
