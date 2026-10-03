@@ -57,7 +57,9 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * segment is a checkout being run directly — the operator named the file and
  * nothing was resolved ambiently — so it is not reported. That also keeps the
  * whole test harness quiet, whose temp roots are outside the source tree by
- * construction.
+ * construction. Nor is an installed copy reached through a linked
+ * `node_modules` of the project, or of the directory that declares qfai: the
+ * link points where the project chose ({@link reachedThroughLinkedNodeModules}).
  *
  * One package directory with no such segment is still reported: one reached
  * through the nearest `node_modules/qfai` at or above `root`, a link, where that
@@ -89,13 +91,14 @@ export async function locateToolAgainstProject(
   const linkingNodeModules = needsLink
     ? await findLinkingNodeModules(realRoot, realPackageDir)
     : null;
-  const outside = classifyToolLocation(
+  const classified = classifyToolLocation(
     realRoot,
     realPackageDir,
     linkingNodeModules === null
       ? null
       : { nodeModules: linkingNodeModules, declaringDir: await findDeclaringDir(realRoot) },
   );
+  const outside = classified && !(await reachedThroughLinkedNodeModules(realRoot, realPackageDir));
   return {
     packageDir,
     outside,
@@ -128,7 +131,49 @@ export async function locateToolAgainstProject(
  */
 async function resolvesAgainstDeclaration(root: string, packageDir: string): Promise<boolean> {
   const declaringDir = await findDeclaringDir(root);
-  return declaringDir !== null && classifyAgainstDeclaration(declaringDir, packageDir);
+  return (
+    declaringDir !== null &&
+    classifyAgainstDeclaration(declaringDir, packageDir) &&
+    !(await resolvesThroughOwnNodeModules(declaringDir, packageDir))
+  );
+}
+
+/**
+ * Whether `packageDir` was reached through a linked `node_modules` of the
+ * project: the one under `root`, or the one under the nearest directory at or
+ * above `root` that declares qfai. A workspace package inside a worktree whose
+ * top-level `node_modules` is linked to another checkout's is covered by the
+ * second.
+ */
+export async function reachedThroughLinkedNodeModules(
+  root: string,
+  packageDir: string,
+): Promise<boolean> {
+  if (await resolvesThroughOwnNodeModules(root, packageDir)) return true;
+  const declaringDir = await findDeclaringDir(root);
+  return declaringDir !== null && (await resolvesThroughOwnNodeModules(declaringDir, packageDir));
+}
+
+/**
+ * Whether `packageDir` sits under what `<dir>/node_modules` really points at.
+ *
+ * A worktree often links its `node_modules` to the main checkout's rather than
+ * installing a second copy. Node then reports the package at its real path,
+ * outside the worktree, although the worktree's own `node_modules` entry is
+ * what resolved it. That link is a choice the project made, not a parent walk
+ * by `npx`, so the copy behind it counts as the project's own.
+ *
+ * Only a `node_modules` that really lies outside `dir` counts, so a real
+ * directory under `dir`, or one that does not exist, never does: a copy hoisted
+ * into a real parent `node_modules` is not a choice this project made.
+ * `packageDir` must already be a real path.
+ */
+export async function resolvesThroughOwnNodeModules(
+  dir: string,
+  packageDir: string,
+): Promise<boolean> {
+  const ownModules = await toRealPath(path.join(dir, "node_modules"));
+  return isOutside(dir, ownModules) && !classifyAgainstDeclaration(ownModules, packageDir);
 }
 
 /**

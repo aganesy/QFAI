@@ -150,7 +150,11 @@ the smallest useful seam and a falsifiable assertion.
    `.qfai/assistant/skill/qfai-implement/references/red-not-observable.md`
    when existing behavior prevents an ordinary RED.
 2. **Green:** Write the minimum production code that makes this test pass.
-   Do not generalize to an untested case. Run the same selector and record
+   Do not generalize to an untested case. Minimal is measured against the
+   example's obligation, not the test's inputs: a value hard-coded to match
+   the test meets neither
+   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
+   Run the same selector and record
    command, outcome, and revision. Failures outside the selected EX receive
    an owner and a repair path.
 3. **Refactor:** Improve the tested code without changing its behavior.

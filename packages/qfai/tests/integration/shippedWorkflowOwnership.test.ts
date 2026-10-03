@@ -15,6 +15,7 @@ import { mkdir, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
@@ -1136,6 +1137,30 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
     }
     return source.slice(braceStart + 1, end - 1);
   }
+
+  it.each(["", 'const marker = "}";', "/* } */"])(
+    "the ownership scan detects a call planted in the actual recorder body after %s",
+    async (prefix) => {
+      const source = await readInitSource();
+      const parsed = ts.createSourceFile(
+        "init.ts",
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+      );
+      const recorder = parsed.statements
+        .filter(ts.isFunctionDeclaration)
+        .find((statement) => statement.name?.text === "recordInstalledWorkflows");
+      if (!recorder?.body) throw new Error("init.ts must define the workflow recorder body");
+      const at = recorder.body.getStart(parsed) + 1;
+      const planted =
+        source.slice(0, at) + "\n" + prefix + '\nrm("mutation-probe");\n' + source.slice(at);
+      const body = extractFunctionBody(planted, "recordInstalledWorkflows");
+      if (body === undefined) throw new Error("the planted recorder body must remain observable");
+      expect(forbiddenCalls(body)).toEqual(["rm("]);
+    },
+  );
 
   /**
    * Extracts the argument text of every CALL site of `callee(`, paren

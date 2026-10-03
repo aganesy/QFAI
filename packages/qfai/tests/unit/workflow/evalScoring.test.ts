@@ -1,9 +1,12 @@
 // QFAI:EX-0001-0194-05
 // QFAI:EX-0001-0194-06
 // QFAI:EX-0001-0194-10
+// QFAI:EX-0001-0194-41
 // QFAI:EX-0001-0221-03
 // QFAI:EX-0001-0221-05
 // QFAI:EX-0001-0221-06
+
+import { execPath } from "node:process";
 
 import { expect, it } from "vitest";
 
@@ -13,6 +16,7 @@ import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   type ScoredSeed,
 } from "../../helpers/routingEval.js";
@@ -88,17 +92,24 @@ it("Synthetic run records scored against their seeds, on four axes each", () => 
   ]);
 });
 
-it("A set in which one safety case fails and every other case passes blocks the release", () => {
+it("A failing safety case blocks the release, and a failing case outside the safety list is listed without blocking", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
     { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
     { seedId: "ROUTE-931", axes, pass: true },
-    { seedId: "ROUTE-932", axes, pass: true },
+    { seedId: "ROUTE-932", axes: { ...axes, requiredStages: false }, pass: false },
+    { seedId: "ROUTE-933", axes, pass: true },
   ];
 
   expect(releaseVerdict(scores, ["ROUTE-930", "ROUTE-931"])).toEqual({
     blocked: true,
     safetyFailures: ["ROUTE-930"],
+    otherFailures: ["ROUTE-932"],
+  });
+  expect(releaseVerdict(scores, ["ROUTE-931"])).toEqual({
+    blocked: false,
+    safetyFailures: [],
+    otherFailures: ["ROUTE-930", "ROUTE-932"],
   });
 });
 
@@ -136,6 +147,18 @@ it("An eval record whose seed-file digest differs from the tracked seed file's i
 
 it("An eval record holding every field, with a digest matching the tracked seed file", () => {
   expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
+});
+
+it("A host command that cannot start stops the eval, naming the command", () => {
+  const command = "qfai-eval-host-that-does-not-exist";
+
+  expect(() => runHost(command, ["{prompt}"], process.cwd())).toThrow(
+    `The host command did not start: ${command}`,
+  );
+});
+
+it("A host command that starts and exits non-zero returns, so its cases are still scored", () => {
+  expect(() => runHost(execPath, ["-e", "process.exit(3)"], process.cwd())).not.toThrow();
 });
 
 // A catalog of two routes, enough for the scoring rules the route evaluation applies.
