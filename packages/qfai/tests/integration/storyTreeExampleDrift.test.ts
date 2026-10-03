@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import type * as StoryObligations from "../../src/core/validators/storyTreeObligations.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
 
 const scan = vi.hoisted(() => ({
@@ -14,8 +15,7 @@ const scan = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/core/validators/storyTreeObligations.js", async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import("../../src/core/validators/storyTreeObligations.js")>();
+  const original = await importOriginal<typeof StoryObligations>();
   return {
     ...original,
     readStoryTests: async (...args: Parameters<typeof original.readStoryTests>) => {
