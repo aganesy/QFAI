@@ -121,6 +121,21 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
+  for (const { legacy, target } of readiness.unmigratedFiles) {
+    issues.push(
+      issue(
+        "QFAI-DPACK-003",
+        `${legacy} still holds content that ${target} now carries`,
+        "error",
+        path.join(readiness.latestPackDir, legacy),
+        "discussionPack.unmigratedFile",
+        [legacy, target],
+        "change",
+        `Move the content of ${legacy} into ${target}, then delete ${legacy}.`,
+      ),
+    );
+  }
+
   if (readiness.blockingOqIds.length > 0) {
     const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(
@@ -137,18 +152,18 @@ export async function validateDiscussionPackReadiness(
     );
   }
 
-  if (readiness.deferredWithoutDetails.length > 0) {
-    const deferredPath = path.join(readiness.latestPackDir, "13_Deferred.md");
+  if (readiness.incompleteDeferredOqIds.length > 0) {
+    const oqPath = path.join(readiness.latestPackDir, "11_OQ-Register.md");
     issues.push(
       issue(
         "QFAI-DPACK-007",
-        `Deferred OQs in 11_OQ-Register.md are missing from 13_Deferred.md: ${readiness.deferredWithoutDetails.join(", ")}`,
+        `Deferred OQs in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
         "error",
-        deferredPath,
-        "discussionPack.deferredCoverage",
-        readiness.deferredWithoutDetails,
+        oqPath,
+        "discussionPack.deferredDetails",
+        readiness.incompleteDeferredOqIds,
         "change",
-        "List each OQ that the OQ register defers in 13_Deferred.md under the same OQ ID.",
+        "For each deferred OQ, write in `Resolution` what is decided now, and in `Next-Decision-Point` when and by what signal it is reopened.",
       ),
     );
   }
