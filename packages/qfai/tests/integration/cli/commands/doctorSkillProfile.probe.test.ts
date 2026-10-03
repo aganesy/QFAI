@@ -5,7 +5,7 @@
 // project's node_modules for each entry. Missing deps are surfaced as
 // findings with an `npm install <name>` install command.
 
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -222,13 +222,3 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     expect(finding.message).toMatch(/not JSON/u);
   });
 });
-
-async function _existsHelperFootnote(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-void _existsHelperFootnote;
