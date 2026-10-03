@@ -71,7 +71,7 @@ and the interview covers only the product scope it leaves unresolved.
 
 ## Writes that are not authoring
 
-**Authoring the pack** — the fifteen mandatory files and the UI sidecars, as the
+**Authoring the pack** — the nine mandatory files and the UI sidecars, as the
 artifacts a reader takes the design from — does not start until the session has
 ended. Three writes are not that authoring, and happen when the process reaches
 them:
@@ -134,7 +134,7 @@ Write the stage evidence's `## Grilling Session` row in the shape
 `.qfai/assistant/step/common-grilling-record/STEP.md#one-session` sets out, and
 write `Ended at` before the first pack file. The reviewer reads the session condition
 off that row. Without it a skipped session and a completed one present the same
-pack — fifteen files, every topic covered, every open question registered — so
+pack — nine files, every topic covered, every open question registered — so
 the reviewer would have to block every run or accept a claim it cannot check.
 
 A `stopped` session writes no row: the ending is reported, and no later step

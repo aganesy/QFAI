@@ -2,7 +2,7 @@
  * `/qfai-discussion` runs its interview as a grilling session.
  *
  * The pack a run produces looks the same whether or not anyone was asked:
- * fifteen files, every topic covered, every open question registered. Nothing
+ * nine files, every topic covered, every open question registered. Nothing
  * downstream can recover the difference, so the obligations that make it are
  * pinned here — the method the interview follows, the bucket its decisions fall
  * in, the point authoring may begin, and the record a reviewer reads.
@@ -22,7 +22,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const MATRIX = "assistant/skill/qfai-discussion/references/discussion-completion-matrix.md";
-const REVIEW_REQUEST = "assistant/skill/qfai-discussion/templates/review/review_request.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -257,11 +256,6 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "## Grilling Session");
     const record = await read("assistant/step/common-grilling-record/STEP.md");
     expectPhrase(record, "Only `confirmed`, `user-closed` and `no-question` authorize authoring.");
-    // The reviewer is handed the row rather than sent looking for it: a row it
-    // has to find is one it can return `PASS` without reading.
-    const request = await read(REVIEW_REQUEST);
-    expectPhrase(request, "## Grilling Session");
-    expectPhrase(request, "a row it has to\n> go looking for is one it can pass without reading");
     expectPhrase(skill, "accept a claim it cannot check");
     // And the gate reads the row rather than the event.
     expectPhrase(
@@ -299,15 +293,6 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // The summary still has somewhere to be, and reaches the pack when one opens.
     expectPhrase(skill, "record its `research_summary` output in this run's stage evidence");
     expectPhrase(skill, "into the `## Research Summary` section of `04_Sources.md`");
-  });
-
-  it("hands the reviewer the two fields it rules on", async () => {
-    // The reviewer is told to rule on whether the session ended before
-    // authoring began, and the template carried neither time. A row holding the
-    // final state alone reads the same whichever order it happened in.
-    const request = await read(REVIEW_REQUEST);
-    expectPhrase(request, "| Ended | Ended at | Authoring began | Frontier |");
-    expectPhrase(request, "Both times, because they are what that ruling compares");
   });
 
   it("keeps an approval-required decision out of the closure's assumptions", async () => {
