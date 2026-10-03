@@ -116,6 +116,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Journal directory read errors retain their original cause** (#2841).
+  Missing directories still identify a legacy run. Busy or denied reads reach
+  the workflow's I/O refusal; other errors propagate.
+  An initial busy or denied read is attempted once and reports no run metadata.
+  Later failures retain metadata verified by a successful journal read.
+
 - **Journal test reads preserve filesystem errors** (#2846).
   Required artifact reads keep their original error instead of replacing it
   with an empty result; rebuilt-snapshot checks still clean up after failure.
