@@ -89,6 +89,7 @@
     "tests/assets/packGateQualifier.test.ts",
     "tests/assets/projectMemoryReadScope.test.ts",
     "tests/assets/qaGatekeeperEvidenceField.test.ts",
+    "tests/assets/qaGatekeeperRegressionPower.test.ts",
     "tests/assets/prototypingGrilling.test.ts",
     "tests/assets/passingTestIsNotTheSolution.test.ts",
     "tests/assets/prototypingScopeFloorHome.test.ts",
