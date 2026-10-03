@@ -38,8 +38,8 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Implement one E2E test per BF and integration or API tests for each active AC obligation. Annotate the test at its owning layer and assert observable behavior.
-- Use active API and DB contracts to shape assertions. Keep BF E2E and AC coverage separate from EX unit or component tests owned by `/qfai-implement`.
-- Keep shared fixtures isolated and record selected commands, observed RED or falsifiability proof, results and revisions in ATDD evidence.
+- Use active API and DB contracts to shape assertions. Keep BF E2E and AC coverage separate from the EX unit or component tests `implement-tdd` writes test first.
+- Keep shared fixtures isolated, and report the selected commands, the falsifiability proof and the observed results with the step's result. No evidence file is written.
 - Apply `.agents/rules/minimal-implementation.md` to each test without reducing the approved coverage obligation.
 
 ## Inputs you must read
@@ -48,13 +48,14 @@ specialization_tags:
 - The affected BF, US and AC story files under `<paths.specsDir>/02_business-flow/**` and applicable decisions.
 - `<paths.specsDir>/03_contract/tech.md` for Standard commands, and the test globs in `qfai.config.yaml` for test roots.
 - Active API, DB and UI contracts under `<paths.contractsDir>` whose business rules cite the flow's examples.
+- The flow's acceptance tests, found by their `QFAI:BF-NNNN` and `QFAI:AC-NNNN-NNNN-NN` annotations.
 
 ## Deliverables
 
 - Acceptance test plan and implemented coverage
 - Mapping from BF / AC / API / DB to test assets
 - Execution proof and evidence summary
-- Updated ATDD evidence with test paths, selectors, observed results, and implementation handoff
+- Test paths, selectors and observed results, reported with the step's result
 - Gaps and follow-up actions
 
 ## Stop conditions

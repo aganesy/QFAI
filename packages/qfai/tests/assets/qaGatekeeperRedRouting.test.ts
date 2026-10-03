@@ -53,7 +53,7 @@ describe.each(ROUTING_FILES)("%s — implement-tdd routing", (rel) => {
     const phases = await implementPhases(rel);
     const red = phases.find((p) => p.id === "red");
     expect(red, "no `red` phase: the RED observation has nowhere to happen").toBeDefined();
-    // Conditional, not mandatory: `/qfai-atdd` invokes this phase for step 3a
+    // Conditional, not mandatory: an acceptance test invokes this phase for step 3a
     // alone when a new surface needs its seam, and that trip has no RED for the
     // gate to judge — listed as mandatory it could only return REVISE and the
     // round trip stopped. It is present in the phase either way.
@@ -89,7 +89,7 @@ describe.each(ROUTING_FILES)("%s — implement-tdd routing", (rel) => {
     // and the skill gave opposite instructions about the same role — and the
     // phase right after Phase Red's handback licensed exactly the edit that
     // handback exists to prevent. No step in the skill enters `test`, so the
-    // role's answer here is "nothing", and it is routed by `qfai-atdd` instead.
+    // role's answer here is "nothing", and the acceptance steps route it instead.
     const phases = await implementPhases(rel);
     for (const phase of phases) {
       expect(phase.mandatory_agents ?? [], `phase ${phase.id ?? "?"}`).not.toContain(
@@ -138,12 +138,12 @@ describe.each(ASSISTANT_DIRS)("%s — the implementation steps say where the gat
     expect(skill).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
   });
 
-  it("keeps acceptance test authorship in ATDD", async () => {
+  it("keeps acceptance test authorship out of implement-tdd", async () => {
     const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     const frontmatter = skill.slice(0, skill.indexOf("\n---", 4));
     expect(frontmatter).not.toContain("acceptance-test-engineer");
     expect(skill).toContain("Preserve the BF E2E and AC integration");
-    expect(skill).toContain("or API coverage owned by `/qfai-atdd`");
+    expect(skill).toContain("or API tests `implement-scaffold` wrote");
   });
 
   it("asks the gatekeeper to check both observed outcomes", async () => {

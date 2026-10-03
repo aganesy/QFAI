@@ -83,7 +83,6 @@ describe("reviewer convergence", () => {
       for (const stage of [
         "/qfai-discussion",
         "/qfai-sdd",
-        "/qfai-atdd",
         "/qfai-implement",
         "/qfai-configure",
         "/qfai-verify",

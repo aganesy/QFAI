@@ -41,8 +41,8 @@ signals; this one decides. It records failures and repairs none of them:
 
 This gate is full-scan, in CI and everywhere else. A partial profile does not
 satisfy it, and no waiver or environment makes it satisfy it. That is not a
-ban on narrow profiles in CI: `qfai-discussion` and `qfai-atdd` each use one as
-their own stage gate, those runs are legitimate under `CI=true`, and
+ban on narrow profiles in CI: `qfai-discussion` and `implement-scaffold` each
+use one as their own gate, those runs are legitimate under `CI=true`, and
 `QFAI-VALIDATE-017` (`warning`) marks them as not full-scan rather than
 blocking them. The prototyping profile runs only locally, before `certify`: it
 reads loop outputs that are never committed.

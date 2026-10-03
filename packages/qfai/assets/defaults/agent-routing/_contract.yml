@@ -39,8 +39,8 @@ schema_version: "1.0"
 # no routing file routes anything to is an error too (`QFAI-AGENT-017`): a
 # deleted or misspelled entry — or one left with no usable `phases:` — leaves a
 # unit that can dispatch no one. One that declares no `routing-profile:` is
-# exempt: a step with no review of its own (`verify-context`, `atdd-scaffold`)
-# and the deliberately un-routed `web-research`.
+# exempt: a step with no review of its own (`verify-context`) and the
+# deliberately un-routed `web-research`.
 # That `routing-profile:` must also name the same profile the entry's
 # `review_profile:` gives it, and one `review-profiles.yml` defines
 # (`QFAI-AGENT-018`): otherwise the two sides state different review gates.

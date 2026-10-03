@@ -184,10 +184,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   exceptional scores on all four UX axes with no layout or design-token
   violations. The primary UI contract is a selection pin, not a limit on
   coverage.
-- **qfai-atdd**: Write E2E tests for each BF and integration or API tests for
-  each AC of the selected flow.
 - **qfai-implement**: Implement a BF through EX tests and a Red, Green,
-  Refactor cycle for each example.
+  Refactor cycle for each example. Its E2E test for the BF and its integration
+  test for each AC are written first with empty bodies, and their
+  bodies later.
 - **qfai-migration-v1-to-v2**: Move an existing spec-pack project to the
   story tree with twelve bundled scripts. Preview and apply each step, then
   resolve items retained in the migration reports. The last two install the

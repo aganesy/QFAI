@@ -71,9 +71,9 @@ states the case is worked as an EX no test annotates, and where none does,
    `## Architecture` table too: place each new module in one layer, and
    import only from the layers that layer's row lists.
 3. Find the flow's acceptance tests by their `QFAI:BF-NNNN` and
-   `QFAI:AC-NNNN-NNNN-NN` annotations. Confirm the BF E2E and AC integration
-   or API tests and their observed results. A deliberate acceptance RED is
-   handed to the matching implementation; it is not a passing test.
+   `QFAI:AC-NNNN-NNNN-NN` annotations. `implement-scaffold` wrote them with
+   empty bodies; an empty body proves no behaviour, and its body is
+   `implement-acceptance`'s to write.
 4. Check test roots, `validation.traceability.testFileGlobs`, and
    exclusions. An EX test must be collected by the runner and by validation.
    A test with only an annotation or placeholder is not behavioral proof.
@@ -136,7 +136,7 @@ integrated result after slices join.
 
 For the selected EX, create or strengthen a test in a non-acceptance layer and
 annotate it `QFAI:EX-NNNN-NNNN-NN`. Preserve the BF E2E and AC integration
-or API coverage owned by `/qfai-atdd`. Put the test where the observable
+or API tests `implement-scaffold` wrote. Put the test where the observable
 behavior belongs. Use
 `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md` and
 `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md` to choose

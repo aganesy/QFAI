@@ -66,8 +66,9 @@ routing:
           - [frontend-engineer, backend-engineer]
         blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
-      # `acceptance-test-engineer` is not listed: acceptance tests belong to the
-      # `atdd-*` steps, and this step does not author them.
+      # `acceptance-test-engineer` is not listed: acceptance tests belong to
+      # `implement-scaffold` and `implement-acceptance`, and this step does not
+      # author them.
       - id: test
         iteration: per-ledger-item
         mandatory_agents: []
@@ -108,7 +109,7 @@ routing:
     phases:
       - id: fix
         mandatory_agents: []
-        conditional_agents: [frontend-engineer, backend-engineer]
+        conditional_agents: [frontend-engineer, backend-engineer, acceptance-test-engineer]
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
@@ -354,3 +355,47 @@ routing:
         blocking_agents: [implementation-reviewer, qa-gatekeeper]
         rerun_policy: changed-scope-dependents
     review_profile: implementation-heavy
+
+  # Writes the acceptance tests a flow lacks, each with an empty body.
+  - step: implement-scaffold
+    phases:
+      - id: coverage
+        mandatory_agents: [test-design-analyst]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [test-design-analyst]
+        rerun_policy: failed-agents-only
+    review_profile: default
+
+  - step: implement-credentials
+    phases:
+      - id: implementation
+        mandatory_agents: [acceptance-test-engineer]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [implementation-reviewer, qa-gatekeeper]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [implementation-reviewer, qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+    review_profile: implementation-heavy
+
+  # Writes the bodies of empty acceptance tests, keeping each annotation.
+  - step: implement-acceptance
+    phases:
+      - id: implementation
+        mandatory_agents: [acceptance-test-engineer]
+        conditional_agents: [devops-ci-engineer]
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: [implementation-reviewer]
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
+    review_profile: runtime-heavy

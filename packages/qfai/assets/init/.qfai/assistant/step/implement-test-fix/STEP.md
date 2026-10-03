@@ -1,7 +1,7 @@
 ---
 name: implement-test-fix
 owner: qfai-implement
-purpose: "Repair a defective test whose annotation names an example, so that it checks what the example states and nothing else."
+purpose: "Repair a defective test, at whatever layer, so that it checks what its business flow, criterion or example states and nothing else."
 requires:
   - common-steering-refresh
   - common-gate-run
@@ -9,6 +9,7 @@ requires:
 roles:
   - frontend-engineer
   - backend-engineer
+  - acceptance-test-engineer
   - implementation-reviewer
   - qa-gatekeeper
 routing-profile: runtime-heavy
@@ -16,20 +17,21 @@ routing-profile: runtime-heavy
 
 # implement-test-fix
 
-A diagnosis found a test defective. This step repairs it at the example layer.
+A diagnosis found a test defective. This step repairs it, whatever layer the
+first ID of the diagnosis's `matchedIds` names:
+`.qfai/assistant/rule/test-layers.md` maps a BF to an E2E test, an AC to an
+integration or API test, and an EX to every other layer.
 
 ## Passes when
 
-Read first: the diagnosis that found the test defective, and the first ID of
-its `matchedIds`. This step repairs the test when that ID is an EX. When it is
-a BF or an AC, this layer holds no defect: the step passes, naming that ID, and
-`atdd-test-fix` repairs the test, as `.qfai/assistant/rule/test-layers.md` maps
-those layers. A pass while the first matched ID is an EX is refused.
+Read first: the diagnosis, and the test it names. The step passes when the
+diagnosis names no defective test. The pass names the diagnosis it read. A
+pass while the diagnosis names a defective test is refused.
 
 ## Reads
 
 - The diagnosis: its reproduction record and the test it names.
-- The example the test annotates, and its acceptance criterion.
+- The BF, AC or EX the test annotates, and its owning contracts.
 - `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md`, for
   what a sound assertion is.
 - The commands of `common-gate-run`.
@@ -44,9 +46,8 @@ those layers. A pass while the first matched ID is an EX is refused.
 
 The stage review after the last step judges the fix.
 
-A fix after which the expectation would check a different ID returns
-`needs_repair`, listing that finding in `debts` with `qfai-sdd` as its
-`resolvingOwner`. No accepted test fix is returned for it.
+A fix after which the expectation would check a different ID is not made.
+The session stops and names `/qfai-sdd` as the owner of the change.
 
 A contradiction found here opens an on-detection session under Article IX of
 `.qfai/assistant/rule/constitution.md`, recorded with `common-grilling-record`.
