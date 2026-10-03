@@ -1,7 +1,6 @@
 /**
  * Integration: spec-0004 CHG-005 — Profile-suffixed validate output +
- * SSOT-sync pair-changed CI lane + Reviewer-Gate justification
- * ingestion gate.
+ * SSOT-sync pair-changed CI lane.
  *
  * Covers TC-0004-0055..0066.
  */
@@ -10,8 +9,6 @@
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0001-0047-02
 // QFAI:EX-0002-0010-02
-// QFAI:EX-0001-0048-01
-// QFAI:EX-0001-0048-01
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -23,8 +20,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
-import { loadConfig } from "../../src/core/config.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
@@ -40,21 +35,6 @@ async function pathExists(p: string): Promise<boolean> {
 
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-spec0004-chg005-${prefix}-`));
-}
-
-async function getConfig(root: string) {
-  const r = await loadConfig(root);
-  return r.config;
-}
-
-async function seedReviewerReport(root: string, body: unknown): Promise<void> {
-  const dir = path.join(root, ".qfai", "review", "review-2026-05-25");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "reviewer-completion.json"),
-    JSON.stringify(body, null, 2),
-    "utf-8",
-  );
 }
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
@@ -254,41 +234,6 @@ describe("TC-0004-0062: pair-changed lane passes when neither half changes", () 
     const result = await runCheckScript(["--changed", "README.md"]);
     expect(result.code).toBe(0);
     expect(result.stdout).not.toMatch(/R-PROMPT-SCANNER-DRIFT/);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// REQ-0125 — Justification ingestion gate
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("TC-0004-0063: validate rejects empty-justification R-PROMPT-SCANNER-DRIFT", () => {
-  it("whitespace-only justification exits validate error severity", async () => {
-    await seedReviewerReport(root, {
-      findings: [{ code: "R-PROMPT-SCANNER-DRIFT", justification: "   " }],
-    });
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    expect(drift.length).toBe(1);
-    expect(drift[0]?.severity).toBe("error");
-  });
-});
-
-describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-DRIFT", () => {
-  it("modified file + counterpart + clause justification is accepted", async () => {
-    await seedReviewerReport(root, {
-      findings: [
-        {
-          code: "R-PROMPT-SCANNER-DRIFT",
-          justification:
-            "modified=packages/qfai/src/core/prototyping/designMdViolations.ts, " +
-            `un-paired=${PROMPT_REL}, ` +
-            "clause=color-literal-ban",
-        },
-      ],
-    });
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    expect(drift).toEqual([]);
   });
 });
 

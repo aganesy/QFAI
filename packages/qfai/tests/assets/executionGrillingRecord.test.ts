@@ -7,22 +7,18 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const RECORD = "assistant/step/common-grilling-record/STEP.md";
-const stages = [
-  { skill: "qfai-implement", evidence: "implement-BF-NNNN.md" },
-  { skill: "qfai-verify", evidence: "verify-<run-id>.md" },
-];
+const stages = [{ skill: "qfai-implement" }, { skill: "qfai-verify" }];
 const read = (tree: string, relative: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, relative), "utf-8");
 const flatten = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
 describe.each(trees)("%s — execution stage grilling records", (tree) => {
   it.each(stages)(
-    "$skill records sessions in the evidence its reviewer reads",
-    async ({ skill, evidence }) => {
+    "$skill records sessions in run blocks of its stage report",
+    async ({ skill }) => {
       const record = await read(tree, RECORD);
+      expect(record).toContain("The record goes in the stage report, under `## Grilling Session`");
       const row = record.split("\n").find((line) => line.includes(`\`${skill}\``)) ?? "";
-      expect(row).toContain(`.qfai/evidence/${evidence}`);
-      expect(row).toContain("## Grilling Session");
       expect(row).toContain("Run blocks");
     },
   );
@@ -33,7 +29,7 @@ describe.each(trees)("%s — execution stage grilling records", (tree) => {
     expect(body).toContain("Work Orders Summary");
     expect(body).toMatch(/run start/i);
     expect(body).toMatch(/millisecond/);
-    expect(body).toContain("working-tree+<hash>");
+    expect(body).toContain("`working-tree`");
     expect(body).toContain("Ended at");
     expect(body).toContain("Work resumed");
   });

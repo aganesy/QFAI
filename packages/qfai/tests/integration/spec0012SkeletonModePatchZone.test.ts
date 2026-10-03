@@ -18,7 +18,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runPrototypingIterate } from "../../src/cli/commands/prototypingIterate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
 import { buildSkeletonsForUnion } from "../../src/core/prototyping/emitSkeletons.js";
-import { detectEvidenceMutationUnlogged } from "../../src/core/validators/evidenceMutationUnlogged.js";
 import {
   TASK_FIDELITY_REQUIRED_KEYWORDS,
   TASK_FIDELITY_SECTION_NAME,
@@ -330,7 +329,7 @@ describe("iterate --capture emits a taskFidelity template with named sections", 
   });
 });
 
-// ─── mutation-log + R-EVIDENCE-MUTATION-UNLOGGED ─
+// ─── mutation-log ─
 
 describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
   // QFAI:EX-0001-0146-01
@@ -369,21 +368,5 @@ describe("--cycle 0 --force appends a mutation-log line per moved file", () => {
     const moved = entries.find((entry) => entry.path === reviewRel);
     expect(typeof moved?.ts).toBe("string");
     expect(Number.isNaN(Date.parse(String(moved?.ts)))).toBe(false);
-  });
-});
-
-describe("R-EVIDENCE-MUTATION-UNLOGGED source-pair scan", () => {
-  it("the SSOT-sync pair scan emits exactly zero findings for the in-tree symmetric pair (current state)", async () => {
-    // Run the detector against the real repo root. Today both
-    // mutation tokens (`await rename(iter00Abs` + `clearEvidenceIterDirs`
-    // rm) are paired with the log token (`logEvidenceMove` /
-    // `logEvidenceDelete`), so the detector emits zero findings.
-    // Regressions surface as a non-zero issue array immediately.
-    const repoRoot = path.resolve(__dirname, "..", "..", "..", "..");
-    const issues = await detectEvidenceMutationUnlogged(repoRoot);
-    // Filter to the pair-scan findings only; other validators in the
-    // suite are out of scope here.
-    const pairFindings = issues.filter((i) => i.code === "R-EVIDENCE-MUTATION-UNLOGGED");
-    expect(pairFindings).toEqual([]);
   });
 });

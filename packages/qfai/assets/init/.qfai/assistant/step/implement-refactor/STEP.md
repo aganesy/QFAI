@@ -5,7 +5,6 @@ purpose: "Move code into a better structure while every test stays green, adding
 requires:
   - common-steering-refresh
   - common-gate-run
-  - common-evidence-record
 roles:
   - frontend-engineer
   - backend-engineer
@@ -52,8 +51,7 @@ changing it and report a branch:
 
 - The moved code, and a test's reference to a moved name, listed in
   `changedFiles`.
-- A record of each move and each suite run, written with
-  `common-evidence-record`.
+- A record of each move and each suite run, in the stage report.
 
 ## Gate
 

@@ -53,7 +53,7 @@ specialization_tags:
 - `rule/**`, including routing, test layers and drift.
 - `qfai.config.yaml`, the affected BF, US, AC and EX files under `<paths.specsDir>/02_business-flow/**`, and their active contracts.
 - `<paths.specsDir>/03_contract/tech.md` for commands and entrypoints.
-- The fresh `npx qfai validate --profile tdd --flow BF-NNNN` JSON findings and current ATDD handoff.
+- The fresh `npx qfai validate --profile tdd --flow BF-NNNN` JSON findings and the flow's acceptance tests.
 - Applicable discussion source, requirements and open-question records.
 
 ## Deliverables
@@ -61,7 +61,6 @@ specialization_tags:
 - Phased plan with owners, dependencies, and risks
 - Explicit DoD and gate commands
 - Parallelization decision and rerun policy
-- Evidence summary for `.qfai/evidence/`
 
 ## Stop conditions
 

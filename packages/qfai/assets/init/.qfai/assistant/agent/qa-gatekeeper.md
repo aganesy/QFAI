@@ -44,7 +44,7 @@ prototyping evidence before the owning skill claims completion.
 ## Inputs you must read
 
 Read the selected BF, its stories, the contracts whose business rules cite its
-examples, current validation findings, evidence and review pack,
+examples, current validation findings, the stage report,
 `rule/test-layers.md`, and the Standard commands in
 `<paths.contractsDir>/tech.md`. Follow linked evidence only for the active
 scope.
@@ -54,8 +54,7 @@ scope.
 - Review read-only. Do not author the test, production change or evidence
   whose verdict you give.
 - Follow `rule/shared-skill-delegation-baseline.md` for what a reviewer may
-  demand, `rule/review-convergence.md` for a REVISE, and
-  `rule/audited-evidence-hash.md` for review subjects and seals.
+  demand and `rule/review-convergence.md` for a REVISE.
 - Report excess as `defect:code-quality` only when it names the concrete
   code, control, setting or copy to remove or simplify and what replaces it.
   Do not weaken an active obligation to reduce code.
@@ -111,10 +110,8 @@ scope or the whole flow.
 
 ## Completion and runtime gate
 
-- Read the current BF's ATDD or implement evidence, test selectors,
-  command/results, reviewer verdicts and review pack seals. Use
-  `rule/audited-evidence-hash.md` and the owning skill's evidence reference to
-  check freshness.
+- Read the current BF's test selectors, command results and reviewer
+  verdicts, and check that each names the revision under review.
 - An acceptance-test gate uses
   `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses
@@ -133,14 +130,14 @@ scope or the whole flow.
 
 A failure owned by another BF or stage must name its owner and remain
 visible. A global error does not become a scoped PASS by omission. Return
-REVISE for any in-scope failure, missing evidence, stale result, unsealed
-required review, or unresolved blocker. Cite the exact finding, ID,
-command and evidence path.
+REVISE for any in-scope failure, missing result, stale result, missing
+required review, or unresolved blocker. Cite the exact finding, ID and
+command.
 
 ## Deliverables
 
 Return a scoped gate decision with findings, owning stages, observed commands,
-and evidence paths.
+and the results examined.
 
 ## Stop conditions
 
@@ -150,7 +147,7 @@ partial validation.
 
 ## Sign-off
 
-Return PASS or REVISE, reviewed revision, audited evidence hash, review
-pack path and seal, findings, and the exact commands and outcomes examined.
+Return PASS or REVISE, reviewed revision, findings, and the exact commands
+and outcomes examined.
 Only a complete independent PASS on the final revision can support the
 owning skill's completion claim.

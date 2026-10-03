@@ -66,11 +66,9 @@ export const ARTICLE_XI_TMP_SAMPLE_PATH = "tmp/scratch.txt";
 /**
  * Gitignore entries qfai init writes alongside the marker.
  *
- * Recommended, not required: QFAI-REVIEW-008 reports a missing one at
- * info. A project may legitimately choose to track .qfai/review/** or
- * .qfai/discussion/**, and failing validation for that is the wrong answer.
- * Named for that semantics — the old _REQUIRED_ read as a hard gate this
- * has not been since the severity moved to info.
+ * Recommended, not required: QFAI-HYG-003 reports a missing one at info. A
+ * project may legitimately choose to track `.qfai/discussion/**`, and failing
+ * validation for that is the wrong answer.
  */
 export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   ".qfai/report/*",
@@ -594,23 +592,17 @@ export function effectivelyIgnores(lines: readonly string[], samplePath: string)
 }
 
 /**
- * The recommended entries `content` does not satisfy, for `QFAI-REVIEW-008`.
+ * The recommended entries `content` does not satisfy, for `QFAI-HYG-003`.
  *
- * One function because two readings of "satisfied" would drift. The `.qfai/**`
- * entries are literal paths under a directory QFAI owns, and a project that
- * ignores one from its own section satisfies the recommendation just as well —
- * so containment is the right question for them, and reporting a rule the author
- * already has would only push them to duplicate it.
+ * The `.qfai/**` entries are literal paths under a directory QFAI owns, and a
+ * project that ignores one from its own section satisfies the recommendation
+ * just as well, so containment is the question for them.
  *
- * {@link ARTICLE_XI_TMP_ENTRY} is not like that, and containment answers the
- * wrong question for it. The entry is spelled unanchored while the block writes
- * the anchored `/tmp/`, so the substring `tmp/` is also inside a project's own
- * `src/tmp/` — a directory Article XI makes no claim about — inside prose that
- * merely mentions `tmp/`, and inside a later `!/tmp/` that cancels the ignore
- * outright. In all three the root staging area is still tracked while the notice
- * that exists to say so is suppressed. So this entry is decided by asking git's
- * question — is {@link ARTICLE_XI_TMP_SAMPLE_PATH} ignored once the whole file
- * has had its say — which both spellings of a real ignore still answer yes to.
+ * {@link ARTICLE_XI_TMP_ENTRY} is decided by asking git's question instead —
+ * is {@link ARTICLE_XI_TMP_SAMPLE_PATH} ignored once the whole file has had its
+ * say. The substring `tmp/` also sits inside a project's own `src/tmp/`, inside
+ * a comment, and inside a later `!/tmp/` that cancels the ignore, and in all
+ * three the root staging area is still tracked.
  */
 export function missingRecommendedGitignoreEntries(content: string): string[] {
   const lines = content.split(/\r?\n/);

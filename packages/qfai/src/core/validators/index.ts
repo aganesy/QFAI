@@ -31,7 +31,6 @@ export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js"
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
 export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
-export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateDesignToken } from "./designToken.js";
 export { validateHtmlMock } from "./htmlMock.js";
 export type { HtmlMockTiming } from "./htmlMock.js";
@@ -79,9 +78,7 @@ export {
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
-export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
-export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
 export {
@@ -102,12 +99,6 @@ export {
   unevaluatedPackageSelfGovernanceFamilies,
   runPackageSelfGovernanceValidators,
 } from "./packageSelfGovernance.js";
-export {
-  CATALOG_ADVISORY_FAILING_CODES,
-  JUSTIFICATION_CATALOG,
-  isAdvisoryFailingCatalogCode,
-} from "./justificationCatalog.js";
-export type { JustificationCatalogEntry } from "./justificationCatalog.js";
 export { STALE_REFERENCES, validateStaleReferences } from "./staleReferences.js";
 export type { StaleReferenceEntry } from "./staleReferences.js";
 export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";

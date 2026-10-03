@@ -51,9 +51,8 @@ fix it forward.
 ## What it writes
 
 - The step changes no file git tracks, and the result names no changed file.
-- The record under `.qfai/evidence/` holds the command, both ends, each
-  revision tested with its result, and the culprit. It is git-ignored and is
-  named in `artifactRefs`.
+- The stage report holds the command, both ends, each
+  revision tested with its result, and the culprit.
 
 ## Gate
 

@@ -81,7 +81,7 @@ describe("the steps the routes add to qfai-implement", () => {
     for (const name of ["implement-bisect", "implement-minimize", "implement-benchmark"]) {
       const written = flat(sectionOf(await stepText(name), "## What it writes"));
       expect(written, name).toMatch(/the step changes no file git tracks/i);
-      expect(written, name).toMatch(/named in `artifactRefs`/i);
+      expect(written, name).toMatch(/the stage report holds/i);
     }
     for (const name of ["implement-stress-harness", "implement-oracle-parity"]) {
       expect(flat(await stepText(name)), name).toMatch(/the step changes no production code/i);

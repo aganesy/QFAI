@@ -81,7 +81,7 @@ describe.each(TREES)("%s", (tree) => {
     const mandating = skills.filter((skill) => UPDATE_MANDATE.test(skill.body));
     // Guards the predicate itself: if the phrase is reworded away, this test
     // would otherwise pass vacuously.
-    expect(mandating.map((skill) => skill.id).sort()).toEqual(["qfai-configure", "qfai-verify"]);
+    expect(mandating.map((skill) => skill.id).sort()).toEqual(["qfai-verify"]);
     const missing = mandating
       .filter((skill) => !skill.allowedTools.includes("Edit"))
       .map((skill) => skill.id);

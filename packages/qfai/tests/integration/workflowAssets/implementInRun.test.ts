@@ -92,7 +92,7 @@ describe("qfai-implement in a workflow run", () => {
     const text = await step(DIAGNOSE);
     expect(text).toMatch(/changes no file git tracks/i);
     expect(text).toMatch(/the result names no changed file/i);
-    expect(text).toMatch(/named in `artifactRefs`, not in `changedFiles`/i);
+    expect(text).toMatch(/reproduction record goes in the stage report, not in a file/i);
   });
 
   // QFAI:AC-0001-0201-02
@@ -143,7 +143,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(
       /`testId` names that test, `rerunRef` its GREEN re-run, `reviewRef` its independent review/i,
     );
-    expect(text).toMatch(/recorded in `\.qfai\/evidence\/implement-BF-NNNN\.md`/);
+    expect(text).toMatch(/reported in the stage report/i);
   });
 
   // QFAI:AC-0001-0203-01
@@ -153,7 +153,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/`citedBefore`, `citedAfter`/);
     expect(text).toMatch(/the fixed test annotates the same IDs as before/i);
     expect(text).toMatch(/no story, contract or `decisions\.md` file changes/i);
-    expect(text).toMatch(/recorded in `\.qfai\/evidence\/implement-BF-NNNN\.md`/);
+    expect(text).toMatch(/reported in the stage report/i);
   });
 
   // QFAI:AC-0001-0203-02

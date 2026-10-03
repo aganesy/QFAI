@@ -2933,7 +2933,7 @@ describe("qfai init", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       // A project that tracks its whole audit trail deletes `.qfai/evidence/*`.
-      // QFAI-REVIEW-008 says that is fine; re-init must not undo it.
+      // That is the project's choice; re-init must not undo it.
       const tracked = [
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",

@@ -14,7 +14,7 @@ read, without forcing an early visual direction.
 
 ## Precondition
 
-The same as `discussion-pack`: this run's stage evidence holds the
+The same as `discussion-pack`: this run's stage report holds the
 `## Grilling Session` row, its `Ended at` is written, and `Ended` is
 `confirmed`, `user-closed` or `no-question`. Without that row, or with
 `Ended: stopped`, write nothing and stop.

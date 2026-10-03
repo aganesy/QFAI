@@ -1,9 +1,9 @@
 /**
  * Integration: concrete `qfai doctor` examples of BF-0003 that no older suite
  * asserts — configuration discovery and loading, output routing, the Playwright
- * npx fallback, the advisory grouping and review-pack TTL.
+ * npx fallback and the advisory grouping.
  */
-import { chmod, mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -428,34 +428,5 @@ describe("BF-0003 failure threshold", () => {
       failOn: "warning",
     });
     expect(exitCode).toBe(1);
-  });
-});
-
-describe("BF-0003 review-pack TTL", () => {
-  async function cleanAgedPack(config: string): Promise<{ pack: string; archived: string }> {
-    const root = await newTempDir("ttl");
-    await put(root, "qfai.config.yaml", config);
-    const name = "review-20260501000000000";
-    const pack = path.join(root, ".qfai", "review", name);
-    await put(pack, "summary.md", "# Review\n");
-    const aged = new Date(Date.now() - 26 * 24 * 60 * 60 * 1000);
-    await utimes(pack, aged, aged);
-    await captureStdout(async () => {
-      await runDoctor({ root, rootExplicit: true, format: "text", clean: true, failOn: "never" });
-    });
-    return { pack, archived: path.join(root, ".qfai", "review", "_archive", name) };
-  }
-
-  it("keeps a 26-day-old pack when review.staleTtlDays is 30", async () => {
-    // QFAI:EX-0003-0008-03
-    const kept = await cleanAgedPack("review:\n  staleTtlDays: 30\n");
-    await expect(readFile(path.join(kept.pack, "summary.md"), "utf-8")).resolves.toContain(
-      "Review",
-    );
-    // Control: under the default TTL the same pack is archived.
-    const moved = await cleanAgedPack("paths:\n  specsDir: .qfai/spec\n");
-    await expect(readFile(path.join(moved.archived, "summary.md"), "utf-8")).resolves.toContain(
-      "Review",
-    );
   });
 });

@@ -45,7 +45,7 @@ describe("E2E: completion contract hardening", () => {
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
-    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("The stage report gives each example its own");
     expect(content).toContain("RED, GREEN, and Refactor commands and observed results");
     expect(content).toContain("Evidence without a command and result pair does not prove a");
   });

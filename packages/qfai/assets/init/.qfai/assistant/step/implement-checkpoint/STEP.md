@@ -2,7 +2,7 @@
 name: implement-checkpoint
 owner: qfai-implement
 purpose: "Close one business flow: run the relevant suite, the project gates and the scoped validation on the integrated tree, and report the flow complete only when all of them hold."
-requires: [common-gate-run, common-evidence-record]
+requires: [common-gate-run]
 roles:
   - devops-ci-engineer
   - qa-strategist
@@ -19,8 +19,6 @@ or at once when none was owed.
 
 ## Reads
 
-- `.qfai/evidence/implement-BF-NNNN.md`, with every example section the flow
-  has.
 - `.qfai/assistant/skill/qfai-implement/references/checkpoint-verification.md`
   and
   `.qfai/assistant/skill/qfai-implement/references/relevant-test-suite.md`.
@@ -38,7 +36,7 @@ or at once when none was owed.
 4. Run `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` and
    read its fresh JSON result with the freshness checks `implement-tdd` uses
    for selection.
-5. Record each command, exit code and output with `common-evidence-record`.
+5. Report each command, exit code and output in the stage report.
 
 The stage review runs after this step, once, over every example the stage
 implemented. The completion reviewer checks the integrated BF and its evidence
@@ -63,5 +61,5 @@ When no EX work remains at entry, still run the current flow checkpoint;
 report "nothing to do" only after the scoped gate and applicable commands
 have passed. Record unresolved risks and upstream findings without calling
 them complete. Give the user the changed EX IDs, test paths, command results,
-review verdicts and evidence path.
+and review verdicts.
 `/qfai-verify` owns the repository-wide gate.

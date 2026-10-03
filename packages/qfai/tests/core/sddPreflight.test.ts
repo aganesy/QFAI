@@ -67,6 +67,44 @@ describe("runSddPreflight", () => {
     }
   });
 
+  // QFAI:AC-0001-0148-01
+  it("selects an imported specification when no discussion pack exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const imported = path.join(root, "docs", "imported-spec.md");
+      await mkdir(path.dirname(imported), { recursive: true });
+      await writeFile(imported, "# Imported specification\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { importPath: imported });
+
+      expect(result.status).toBe("ready");
+      expect(result.source).toBe("import-lite");
+      expect(result.selectedInputPath).toBe(imported);
+      expect(result.importedReqCount).toBeNull();
+      expect(result.blockers).toEqual([]);
+      expect(result.nextCommands).toEqual(["/qfai-sdd"]);
+      const summary = await readFile(result.preflightSummaryPath, "utf-8");
+      expect(summary).toContain("source: import-lite");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:AC-0001-0148-01
+  it("stays blocked and names an imported specification that is not a readable file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      const missing = path.join(root, "docs", "missing.md");
+      const result = await runSddPreflight(root, defaultConfig, { importPath: missing });
+
+      expect(result.status).toBe("blocked");
+      expect(result.source).toBe("discussion-pack");
+      expect(result.blockers.some((item) => item.includes(missing))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps carry-over open questions in the summary a blocked run writes", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
