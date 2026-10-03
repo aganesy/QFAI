@@ -1,12 +1,20 @@
-import { lstat, mkdir, readdir, readlink, realpath, rename, stat } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  readFile,
+  readdir,
+  readlink,
+  realpath,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import { collectTemplateFiles, copyTemplatePaths } from "../../core/fs/templateCopy.js";
-import { hashAssistantAssetFile } from "../../core/assistantAssetProvenance.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import {
   collectCanonicalSkillIds,
-  SKILL_ARCHIVE_DIR,
   SKILL_INTEGRATION_DIRS,
 } from "../../core/init/integrationDirs.js";
 import { createSkillLink } from "../../core/init/managedLink.js";
@@ -21,20 +29,8 @@ import {
   CLAUDE_SETTINGS_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
-import { describeError, findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
-import {
-  AGENTS_RULES_DIR,
-  keptDeletedRuleMastersNote,
-  keptRuleMasterNote,
-  planRuleMasterUpdates,
-  readRuleLock,
-  REMINDERS_BASENAME,
-  RULE_LOCK_BASENAME,
-  type RuleMasterPlan,
-  UNEDITED_RULE_MASTER,
-  writeRuleLock,
-} from "../../core/ruleMasterUpdates.js";
-import { replaceGovernedAsset } from "../../core/init/governedWrite.js";
+import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
+import { AGENTS_RULES_DIR, REMINDERS_BASENAME } from "../../core/ruleMasterUpdates.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
 import { step10 } from "./step10UpdateGitignore.js";
@@ -50,9 +46,6 @@ export async function shippedSkillIds(): Promise<string[]> {
 
 /** The two assistant layers step 11 installs: the skills, and the steps they run. */
 type Layer = "skill" | "step";
-
-/** Where a step directory that was replaced is kept whole, beside the skill archive. */
-export const STEP_ARCHIVE_DIR = path.join(path.dirname(SKILL_ARCHIVE_DIR), "step");
 
 /** Each step the package ships: a directory under `assistant/step/` holding a `STEP.md`. */
 export async function shippedStepIds(): Promise<string[]> {
@@ -73,20 +66,21 @@ function layerDir(context: MigrationContext, layer: Layer, id: string): string {
   return path.join(context.root, ".qfai", "assistant", layer, id);
 }
 
-function archiveDir(context: MigrationContext, layer: Layer, id: string): string {
-  return path.join(context.root, layer === "skill" ? SKILL_ARCHIVE_DIR : STEP_ARCHIVE_DIR, id);
-}
-
 function projectPath(context: MigrationContext, absolute: string): string {
   return path.relative(context.root, absolute).split(path.sep).join("/");
 }
 
+/** A file's text with CRLF line endings read as LF, as `qfai init` compares a skill. */
+async function normalizedText(file: string): Promise<string> {
+  return (await readFile(file, "utf8")).replace(/\r\n/g, "\n");
+}
+
 /**
- * Each regular file under `dir`, by its path relative to `dir`, with its hash
- * ignoring line endings as init compares a skill. Any other entry hashes to
- * `null` and so never equals a file. `null` when `dir` is absent.
+ * Each regular file under `dir`, by its path relative to `dir`, with its text
+ * ignoring line endings. Any other entry maps to `null` and so never equals a
+ * file. `null` when `dir` is absent.
  */
-async function treeHashes(dir: string): Promise<Map<string, string | null> | null> {
+async function treeTexts(dir: string): Promise<Map<string, string | null> | null> {
   let entries;
   try {
     entries = await readdir(dir, { recursive: true, withFileTypes: true });
@@ -94,40 +88,32 @@ async function treeHashes(dir: string): Promise<Map<string, string | null> | nul
     if (isEnoent(error)) return null;
     throw error;
   }
-  const hashes = new Map<string, string | null>();
+  const texts = new Map<string, string | null>();
   for (const entry of entries) {
     if (entry.isDirectory()) continue;
     const file = path.join(entry.parentPath, entry.name);
-    hashes.set(path.relative(dir, file), await hashAssistantAssetFile(file));
+    texts.set(path.relative(dir, file), entry.isFile() ? await normalizedText(file) : null);
   }
-  return hashes;
-}
-
-/** Whether every file of `part` is in `whole` with the same content. */
-function containedIn(
-  part: ReadonlyMap<string, string | null>,
-  whole: ReadonlyMap<string, string | null>,
-): boolean {
-  return [...part].every(([file, hash]) => hash !== null && whole.get(file) === hash);
+  return texts;
 }
 
 function sameTree(
   left: ReadonlyMap<string, string | null>,
   right: ReadonlyMap<string, string | null>,
 ): boolean {
-  return left.size === right.size && containedIn(left, right);
+  return (
+    left.size === right.size &&
+    [...left].every(([file, text]) => text !== null && right.get(file) === text)
+  );
 }
 
-async function packageHashes(layer: Layer, id: string): Promise<Map<string, string | null>> {
+async function packageTexts(layer: Layer, id: string): Promise<Map<string, string>> {
   const dir = path.join(packageQfaiAssets(), "assistant", layer, id);
-  const hashes = new Map<string, string | null>();
+  const texts = new Map<string, string>();
   for (const file of await collectTemplateFiles(dir)) {
-    hashes.set(
-      path.relative(dir, file),
-      await hashAssistantAssetFile(file, { allowSymlink: true }),
-    );
+    texts.set(path.relative(dir, file), await normalizedText(file));
   }
-  return hashes;
+  return texts;
 }
 
 function installOperation(
@@ -163,29 +149,19 @@ function installOperation(
   };
 }
 
-function archiveOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
-  const source = layerDir(context, layer, id);
-  const archive = archiveDir(context, layer, id);
+function removeOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
+  const dir = layerDir(context, layer, id);
   return {
     kind: "delegate",
-    target: projectPath(context, source),
-    targets: [projectPath(context, source), projectPath(context, archive)],
-    description: "archive the project's copy",
-    apply: async () => {
-      await mkdir(path.dirname(archive), { recursive: true });
-      // SIMPLIFIED: a rename, so the skill tree and the archive share a volume.
-      // Lift when: a project keeps `.qfai/evidence/` on another volume, which
-      // fails here with EXDEV and changes nothing.
-      await rename(source, archive);
-    },
+    target: projectPath(context, dir),
+    description: "delete the project's copy",
+    apply: () => rm(dir, { recursive: true }),
   };
 }
 
 /**
  * What bringing one shipped skill or step up to the package's copy takes. A
- * copy that differs is archived whole first. Where the archive already exists,
- * the directory is either the remainder of an interrupted install, which is
- * finished, or a second project copy, which is left for a person.
+ * copy that differs is deleted whole, then installed from the package.
  */
 async function planLayerEntry(
   context: MigrationContext,
@@ -193,25 +169,11 @@ async function planLayerEntry(
   id: string,
   plan: StepPlan,
 ): Promise<void> {
-  const dir = layerDir(context, layer, id);
-  const archive = archiveDir(context, layer, id);
-  const shipped = await packageHashes(layer, id);
-  const current = await treeHashes(dir);
+  const shipped = await packageTexts(layer, id);
+  const current = await treeTexts(layerDir(context, layer, id));
   if (current !== null && sameTree(current, shipped)) return;
-  const archived = await treeHashes(archive);
-  if (current !== null && archived !== null && !containedIn(current, shipped)) {
-    const reason = sameTree(current, archived)
-      ? `the archive already holds this copy; delete the ${layer} directory and run step 11 again`
-      : "the archive already holds a different copy; keep the one you need, delete the other and run step 11 again";
-    plan.forAPerson?.push(
-      `${projectPath(context, dir)} and ${projectPath(context, archive)}: ${reason}`,
-    );
-    return;
-  }
-  const resume = current !== null && archived !== null;
-  if (current !== null && !resume) plan.operations.push(archiveOperation(context, layer, id));
-  const files = [...shipped.keys()].filter((file) => !resume || !current.has(file)).sort();
-  const install = installOperation(context, layer, id, files);
+  if (current !== null) plan.operations.push(removeOperation(context, layer, id));
+  const install = installOperation(context, layer, id, [...shipped.keys()].sort());
   if (install !== null) plan.operations.push(install);
 }
 
@@ -313,98 +275,46 @@ async function planReminderHookFiles(context: MigrationContext, plan: StepPlan):
   }
 }
 
-async function recordReminderText(projectDir: string, hash: string): Promise<void> {
-  await writeRuleLock(projectDir, {
-    ...(await readRuleLock(projectDir)),
-    [REMINDERS_BASENAME]: hash,
-  });
-}
-
 /**
- * The text the reminder hooks print, brought to this release the way `qfai
- * init` brings a shipped rule master: through the record of what an earlier
- * run wrote. A file that still holds the recorded text is replaced, an absent
- * one is written, and one the project edited or removed is kept and named.
+ * The text the reminder hooks print, brought to this release as `qfai init
+ * --force` brings a shipped rule master: the file is replaced with the shipped
+ * text, and an absent one is written.
  */
 async function planReminderText(context: MigrationContext, plan: StepPlan): Promise<void> {
   const shown = `${AGENTS_RULES_DIR}/${REMINDERS_BASENAME}`;
-  const lockShown = `${AGENTS_RULES_DIR}/${RULE_LOCK_BASENAME}`;
-  for (const relative of [shown, lockShown]) {
-    if ((await findUnsafeHostFileComponent(context.root, relative.split("/"))) !== undefined) {
-      plan.forAPerson?.push(
-        `${relative} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
-      );
-      return;
-    }
-  }
-  const shippedDir = path.join(getInitAssetsDir(), "root", ...AGENTS_RULES_DIR.split("/"));
-  const projectDir = path.join(context.root, ...AGENTS_RULES_DIR.split("/"));
-  let plans: RuleMasterPlan[];
-  try {
-    plans = await planRuleMasterUpdates(shippedDir, projectDir);
-  } catch (error) {
+  if ((await findUnsafeHostFileComponent(context.root, shown.split("/"))) !== undefined) {
     plan.forAPerson?.push(
-      `${shown}: rule masters were not checked for updates (${describeError(error)})`,
+      `${shown} was left unchanged: it, or a directory above it, is a symbolic link or not a directory, so the reminder text is not refreshed.`,
     );
     return;
   }
-  const reminder = plans.find((entry) => entry.name === REMINDERS_BASENAME);
-  if (reminder === undefined) return;
-  switch (reminder.verdict) {
-    case "keep":
-      plan.reminderHooks?.push(keptRuleMasterNote(shown));
-      return;
-    case "removed":
-      plan.reminderHooks?.push(keptDeletedRuleMastersNote([shown], lockShown));
-      return;
-    case "current":
-      if (reminder.recordedHash === reminder.shippedHash) return;
-      plan.operations.push({
-        kind: "delegate",
-        target: lockShown,
-        description: "record the shipped reminder text",
-        apply: () => recordReminderText(projectDir, reminder.shippedHash),
-      });
-      return;
-    case "written":
-    case "update": {
-      const create = reminder.verdict === "written";
-      const description = create ? "write from the package" : `update (${UNEDITED_RULE_MASTER})`;
-      plan.operations.push({
-        kind: "delegate",
-        target: shown,
-        targets: [shown, lockShown],
-        description,
-        report: [`${shown}: ${description}`, `${lockShown}: record the shipped reminder text`],
-        apply: async () => {
-          const outcome = await replaceGovernedAsset(
-            path.join(shippedDir, REMINDERS_BASENAME),
-            path.join(projectDir, REMINDERS_BASENAME),
-            reminder.currentHash ?? undefined,
-            create ? "create-only" : "replace",
-          );
-          if (outcome === "target-changed") {
-            throw new Error(`${shown} changed while step 11 was deciding; run step 11 again`);
-          }
-          await recordReminderText(projectDir, reminder.shippedHash);
-        },
-      });
-    }
-  }
+  const shipped = await readFile(
+    path.join(getInitAssetsDir(), "root", ...AGENTS_RULES_DIR.split("/"), REMINDERS_BASENAME),
+    "utf8",
+  );
+  const target = path.join(context.root, ...shown.split("/"));
+  const current = await readFile(target, "utf8").catch((error: unknown) => {
+    if (isEnoent(error)) return null;
+    throw error;
+  });
+  if (current === shipped) return;
+  const description =
+    current === null ? "write from the package" : "replace with the package's text";
+  plan.operations.push({
+    kind: "delegate",
+    target: shown,
+    description,
+    apply: async () => {
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, shipped, "utf8");
+    },
+  });
+  plan.reminderHooks?.push(`${shown}: ${description}`);
 }
 
 export const step11: MigrationStep = {
   number: 11,
-  writeSet: [
-    "skills",
-    "skill-archive",
-    "steps",
-    "step-archive",
-    "skill-links",
-    "gitignore",
-    "gitignore-staging",
-    "reminder-hooks",
-  ],
+  writeSet: ["skills", "steps", "skill-links", "gitignore", "reminder-hooks"],
   sections: ["Reminder hooks", "For a person"],
   async plan(context) {
     const plan: StepPlan = { operations: [], forAPerson: [], reminderHooks: [] };

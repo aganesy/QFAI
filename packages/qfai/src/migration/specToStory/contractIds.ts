@@ -50,7 +50,6 @@ export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+(?!-?\w)/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
 const FILE_LIMIT = 200_000;
 /** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */
-const RETIRED = ".qfai/evidence/migration-spec-to-story/retired/contract";
 
 /**
  * Why step 3 writes no contract from a file under the contracts directory, or
@@ -99,9 +98,9 @@ async function contractFiles(context: MigrationContext): Promise<string[]> {
 }
 
 /**
- * Moves every 1.x file step 3 writes no contract from to `retired/contract/`,
- * and names each for a person: a Markdown file under `api/`, `db/` or `ui/`,
- * and every file of `design/`, which moves as one directory.
+ * Deletes every 1.x file step 3 writes no contract from, and names each for a
+ * person: a Markdown file under `api/`, `db/` or `ui/`, and every file of
+ * `design/`, which goes as one directory.
  */
 async function retireNonContracts(
   context: MigrationContext,
@@ -113,16 +112,15 @@ async function retireNonContracts(
     const reason = notAContract(relative);
     if (reason === null) continue;
     const source = contractRepoPath(context, relative);
-    const archive = `${RETIRED}/${relative}`;
     if (relative.startsWith(`${DESIGN}/`)) design = true;
-    else operations.push({ kind: "move", source, target: archive });
-    forAPerson.push(`${source}: ${reason}; rewrite what it states by hand (kept at ${archive})`);
+    else operations.push({ kind: "remove", target: source, description: "delete" });
+    forAPerson.push(`${source}: ${reason}; rewrite what it states by hand`);
   }
   if (design)
     operations.unshift({
-      kind: "move",
-      source: contractRepoPath(context, DESIGN),
-      target: `${RETIRED}/${DESIGN}`,
+      kind: "remove",
+      target: contractRepoPath(context, DESIGN),
+      description: "delete",
     });
   return { operations, forAPerson };
 }
@@ -309,15 +307,12 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     let text = oldText === null ? current : rewriteContract(oldText, relative, entry.id, oldIds);
     if (text === null) continue;
     if (oldText !== null && kindOf(relative) === "CLI" && /\.md$/i.test(relative)) {
-      const archive = `${RETIRED}/${relative}`;
       const shaped = await shapeCliContract(text, {
         target: contractRepoPath(context, entry.path),
         source: contractRepoPath(context, relative),
-        archive,
       });
       text = shaped.content;
       forAPerson.push(...shaped.forAPerson);
-      if (shaped.cut) operations.push({ kind: "write", target: archive, content: oldText });
     }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));

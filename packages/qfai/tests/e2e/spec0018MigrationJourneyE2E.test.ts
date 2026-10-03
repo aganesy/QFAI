@@ -33,7 +33,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse, stringify } from "yaml";
 
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
-import { isMigrationReportAncestor, isMigrationReportPath } from "../helpers/migrationReport.js";
 import { atLocation } from "../helpers/reportLocation.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -122,14 +121,13 @@ async function fingerprint(
     for (const name of (await readdir(directory)).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).replace(/\\/g, "/");
-      if (excluded.has(relative) || isMigrationReportPath(relative)) continue;
+      if (excluded.has(relative)) continue;
       const stats = await lstat(file);
-      const holdsOnlyReports = isMigrationReportAncestor(relative);
-      if (!holdsOnlyReports) hash.update(`${relative}\0${stats.mode}\0`);
+      hash.update(`${relative}\0${stats.mode}\0`);
       if (stats.isSymbolicLink()) {
         hash.update(`link\0${await readlink(file)}\0`);
       } else if (stats.isDirectory()) {
-        if (!holdsOnlyReports) hash.update("directory\0");
+        hash.update("directory\0");
         await visit(file);
       } else {
         hash.update("file\0");
@@ -222,9 +220,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** The EX the ID map gives an old test case of the first spec pack. */
 async function mappedExample(root: string, oldId: string): Promise<string> {
-  const map: unknown = JSON.parse(
-    await textAt(root, ".qfai/evidence/migration-spec-to-story/id-map.json"),
-  );
+  const map: unknown = JSON.parse(await textAt(root, "tmp/qfai-migration/id-map.json"));
   const ids = isRecord(map) && isRecord(map.ids) ? map.ids["spec-0001"] : undefined;
   const example = isRecord(ids) ? ids[oldId] : undefined;
   if (typeof example !== "string") throw new Error(`The ID map holds no ${oldId}`);
@@ -298,23 +294,13 @@ async function applyPreparedResolution(root: string): Promise<void> {
 
 /**
  * Step 7 leaves a retired pack's unplaced rules and examples in place and lists
- * them for a person. The guide has that person keep them until their content is
- * accounted for, and validation reports the old layout until the pack is gone.
- * Removing it only after each remaining file matches its archived copy models
- * that resolution without discarding anything.
+ * them for a person, and validation reports the old layout until the pack is
+ * gone. A person who has accounted for its content deletes it; git history
+ * keeps it.
  */
 async function removeAccountedRetiredPack(root: string, id: string): Promise<void> {
   const pack = path.join(root, ".qfai/spec", id);
-  const archive = path.join(root, ".qfai/evidence/migration-spec-to-story/retired", id);
-  const remaining = await readdir(pack);
-  if (remaining.length === 0) throw new Error(`${id} has no remaining file to account for`);
-  for (const name of remaining) {
-    const [left, archived] = await Promise.all([
-      readFile(path.join(pack, name)),
-      readFile(path.join(archive, name)),
-    ]);
-    if (!left.equals(archived)) throw new Error(`${id}/${name} differs from its archived copy`);
-  }
+  if ((await readdir(pack)).length === 0) throw new Error(`${id} has no remaining file`);
   await rm(pack, { recursive: true });
 }
 
@@ -429,14 +415,11 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(await textAt(journey.root, "src/index.ts")).toContain('projectOwned = "unchanged"');
   });
 
-  it("moves owned directories and keeps the retired pack", async () => {
+  it("moves owned directories and writes nothing under the evidence tree", async () => {
     expect(await textAt(journey.root, "qfai.config.yaml")).toContain("specsDir: .qfai/spec");
-    expect(
-      await textAt(
-        journey.root,
-        ".qfai/evidence/migration-spec-to-story/retired/spec-0002/01_Spec.md",
-      ),
-    ).toContain("Status: superseded");
+    await expect(lstat(path.join(journey.root, ".qfai/evidence"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
     expect(
       await textAt(journey.root, ".qfai/assistant/skill.local/order-review/SKILL.md"),
     ).toContain("receipt wording");
@@ -450,7 +433,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(questions).toContain("OQ-0001-0001");
   });
 
-  it("merges policy and catalog facts and archives obsolete assistant directories", async () => {
+  it("merges policy and catalog facts and deletes obsolete assistant directories", async () => {
     expect(await textAt(journey.root, ".qfai/spec/01_policy/objective.md")).toContain(
       "reliable receipt",
     );
@@ -460,22 +443,15 @@ describe("spec-0018: one shipped-script migration journey", () => {
     await expect(
       lstat(path.join(journey.root, ".qfai/spec/01_policy/principle.md")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(
-      await textAt(
-        journey.root,
-        ".qfai/evidence/migration-spec-to-story/retired/_policies/11_Slice-Policy.md",
-      ),
-    ).toContain("one source for each order decision");
-    expect(
-      await textAt(
-        journey.root,
-        ".qfai/evidence/migration-spec-to-story/retired/assistant/process/review.md",
-      ),
-    ).toContain("Review Process");
+    for (const removed of [".qfai/spec/_policies", ".qfai/assistant/process"]) {
+      await expect(lstat(path.join(journey.root, removed)), removed).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    }
   });
 
   it("uses the plan and ID map to build one flow with its old diagram", async () => {
-    const map = await textAt(journey.root, ".qfai/evidence/migration-spec-to-story/id-map.json");
+    const map = await textAt(journey.root, "tmp/qfai-migration/id-map.json");
     const flow = await textAt(
       journey.root,
       ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md",
