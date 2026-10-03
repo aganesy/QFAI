@@ -96,6 +96,58 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
   );
 });
 
+describe("the implementation reviewer reads silent failure and type design", () => {
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s names both review items on the card and in the remit",
+    async (tree) => {
+      const card = await readFile(
+        path.join(ROOT, tree, "assistant/agent/implementation-reviewer.md"),
+        "utf-8",
+      );
+      const flat = card.replace(/\s+/g, " ");
+      expect(flat).toContain(
+        "Read the whole of every file the change touches for silent failure and type design",
+      );
+      expect(flat).toContain("not only the lines the change adds or alters");
+      expect(flat).toContain("A finding on what the change added or altered can block.");
+      expect(flat).toContain(
+        "A finding on code that was already there is recorded and deferred, never blocking",
+      );
+      expect(flat).toContain("give no rating per check");
+      expect(flat).toContain("`.agents/rules/minimal-implementation.md` § 2 and § 3");
+      for (const check of [
+        "an empty catch or a silent return",
+        "a catch that also catches errors it did not expect",
+        "a fallback that masks the problem instead of handling it",
+        "which should propagate instead",
+        "a log entry without enough context to debug from",
+        "user feedback that does not say what to do next",
+        "one without them is an unmarked simplification",
+        "mutable internals exposed to outside code",
+        "an invariant held only by documentation",
+        "validation missing at construction",
+        "enforcement that differs from one mutation to another",
+        "outside code left to maintain an invariant the type should own",
+      ]) {
+        expect(flat).toContain(check);
+      }
+      const baseline = await readFile(
+        path.join(ROOT, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
+        "utf-8",
+      );
+      const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
+      expect(rows).toHaveLength(1);
+      const row = rows[0]?.replace(/\s+/g, " ");
+      expect(row).toContain(
+        "silent failure and type design across the whole of every file the change touches",
+      );
+      expect(row).toContain(
+        "a finding on code in a touched file that the change did not add or alter",
+      );
+    },
+  );
+});
+
 describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
@@ -452,7 +504,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/documentation-clarity|Documentation Clarity/i);
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
-      for (const clause of [/#123|GH-123/, /git (history|log)/, /PostToolUse/]) {
+      for (const clause of [
+        /#123|GH-123/,
+        /git (history|log)/,
+        /PostToolUse/,
+        /State\s+the\s+point\s+directly,\s+not\s+through\s+a\s+metaphor\s+or\s+a\s+flourish/,
+      ]) {
         expect(text).toMatch(clause);
       }
     });
@@ -1527,6 +1584,48 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("the reporting contract covers what an agent says while it works", () => {
+  // The final report's shape alone leaves the running commentary and the
+  // handling of an earlier mistake to each agent's defaults.
+  it.each([
+    ".qfai/assistant/rule/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/communication.md",
+  ])("%s states cadence, correction and outcome-first", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/^Lead with the outcome\./m);
+    expect(text).toMatch(/^## While the work runs$/m);
+    expect(text).toMatch(
+      /^- Before\s+the\s+first\s+tool\s+call,\s+say\s+in\s+one\s+sentence\s+what\s+is\s+about\s+to\s+happen\.$/m,
+    );
+    expect(text).toMatch(
+      /^- Give\s+a\s+brief\s+update\s+when\s+something\s+important\s+is\s+found\s+or\s+the\s+direction\s+changes\.\s+Stay\s+quiet\s+otherwise\.$/m,
+    );
+    expect(text).toMatch(/^## Correcting an earlier statement$/m);
+    expect(text).toMatch(
+      /^- Correct\s+an\s+earlier\s+statement\s+when\s+the\s+error\s+would\s+change\s+the\s+user's\s+code,\s+conclusions\s+or\s+decisions\.\s+State\s+the\s+correction\s+plainly\s+and\s+continue\.$/m,
+    );
+    expect(text).toMatch(/Fix a slip that changes none of those without mentioning it/);
+  });
+
+  // The .instruction tree states no rule of its own. A second set of report
+  // sections there is a copy that drifts from the article.
+  it(".instruction/00_universal/communication.md points at the article for reports", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/communication.md"),
+      "utf-8",
+    );
+    const section = text.split(/^## Progress and completion reports\r?\n/m)[1];
+    expect(section, "no pointer section for reports").toBeDefined();
+    expect(section).toContain(".qfai/assistant/rule/communication.md");
+    // The pointer is the last section and carries no list of its own.
+    expect(section).not.toMatch(/^## /m);
+    expect(section).not.toMatch(/^- /m);
+    // Four sections: principles, when to stop and ask, the question pointer,
+    // and the report pointer. A restored report section adds a fifth.
+    expect(text.match(/^## /gm)).toHaveLength(4);
+  });
+});
+
 describe("this repository's pull-request description", () => {
   it("keeps the operative adoption bar in the existing policy and template", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
@@ -1699,6 +1798,22 @@ describe("rule overlays", () => {
         // The override, and the unpinned case.
         "coordinated release",
         "On an unpinned branch",
+        // The default release path, and that the user names its version.
+        "this is the default path",
+        "never chooses one",
+        // The merge is the tag instruction; publishing waits on approval.
+        "Merging that pull request is the instruction for the tag",
+        "publishes only after a reviewer of",
+        // No hand bump before the dispatch, no hand tag on that path, and
+        // re-publishing an existing tag.
+        "Do not bump the manifest by hand first",
+        "Never push a tag by hand on this path",
+        "To publish a tag that already exists again",
+        // The pin edits belong to the manual path, and a pin is no tag.
+        "What a pin authorizes on the manual path",
+        "version, never a tag",
+        // Only a merge from the exact release branch is tagged.
+        "exactly `release/vX.Y.Z`",
       ],
     },
     {

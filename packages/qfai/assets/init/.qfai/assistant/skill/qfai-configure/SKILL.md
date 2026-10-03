@@ -69,11 +69,11 @@ When unsure, read inputs in this order:
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
-### Orchestrator Protocol (MUST)
+### Orchestrator Protocol
 
 - No additional overrides.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 - No additional overrides.
 
@@ -81,17 +81,17 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 - No additional overrides.
 
-### Work Orders Summary (MANDATORY evidence)
+### Work Orders Summary (evidence)
 
 Use the shared schema.
 
-### Stage Minimum Roles (MUST)
+### Stage Minimum Roles
 
 - Author: the orchestrator writes the artifacts itself, or gives independent parts to sub-agents that run in parallel.
 - Integrate: the orchestrator presents the result to the user for confirmation.
 - Gate: a reviewer that did not author the work returns only `PASS` or `REVISE`. The orchestrator never approves its own work.
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 - Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
@@ -125,11 +125,11 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#stage-0---steeri
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-guard-mandatory`.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.
-- You MUST run the mandatory checks listed below and record outcomes.
-- You MUST stop and escalate if tooling choices or runnable path remain ambiguous. This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget — with the budget spent and the ambiguity unresolved, escalate rather than picking a runner.
+- Run the mandatory checks listed below and record outcomes.
+- Stop and escalate if tooling choices or runnable path remain ambiguous. This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget — with the budget spent and the ambiguity unresolved, escalate rather than picking a runner.
 - Completion must be approved by a reviewer who did not modify the config.
 
 ## Completion Contract (Shared)
@@ -150,7 +150,7 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
 - `validation.traceability.testFileGlobs` reflects the real test layout.
   - `npx qfai init` ships this empty on purpose. Detect the stack before setting it — `pyproject.toml` / `setup.cfg` (Python), `go.mod` (Go), `pom.xml` / `build.gradle` (JVM), `Cargo.toml` (Rust), `package.json` (JS/TS), `Gemfile` (Ruby), `composer.json` (PHP) — and derive globs from the test paths that actually exist, not from the language's convention alone.
   - Cross-check the matched files against the business flows, acceptance criteria, and examples under `.qfai/spec/02_business-flow/`. BF needs E2E coverage, AC needs integration or API coverage, and EX needs a selected non-E2E test.
-  - The final report MUST show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
+  - The final report must show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
   - A scan failure is `QFAI-SCAN-002`; the run is not done until the configured selection scans completely. `QFAI-STORY-006` through `QFAI-STORY-009` report uncovered BF, AC, and EX obligations for the testing stages.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
 - A validation checklist with evidence (sample matched files) is produced.
@@ -167,7 +167,7 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
 - Tool selection rationale missing.
 - Minimum runnable path missing or unverifiable.
 
-## Final report (MANDATORY)
+## Final report
 
 The final report includes:
 
@@ -212,7 +212,7 @@ Do not create `.qfai/**/README.md` files as scaffold or format documentation; ke
 
 ## Absolute Rule - Output Language
 
-**All outputs MUST be written in the user's working language for this session.**
+**Write all outputs in the user's working language for this session.**
 
 - If the user writes in Japanese, output Japanese.
 - If the user writes in English, output English.
@@ -389,13 +389,13 @@ When you declare DONE, include:
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Evidence file exists and is complete.
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
 - [ ] Completion approved by a reviewer who did not modify the config.
 
-## Completion Checklist (MUST)
+## Completion Checklist
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
@@ -403,7 +403,7 @@ When you declare DONE, include:
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 
-## Completion Message & Next Actions (MUST)
+## Completion Message & Next Actions
 
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
@@ -432,7 +432,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - a business-flow ID when the user requests flow-scoped configuration and the target cannot be inferred
   - a `testFileGlobs` proposal that matches at least one real file (Step 5)
-  - a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)
+  - a resolved tooling choice with a runnable path (Hard Constraints)
     — neither this nor the proposal above has a defensible default, and a guess
     is saved as if it were evidence
 

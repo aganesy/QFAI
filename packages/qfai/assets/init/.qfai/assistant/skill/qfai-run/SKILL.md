@@ -122,7 +122,7 @@ Report one row per part given to a sub-agent.
 | ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
 | 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 Each review a plan names returns PASS or REVISE on that stage's work. Under
 the Drift Protocol, a step that would change a story, a contract or a decision

@@ -49,7 +49,7 @@ specialization_tags:
 - <paths.specsDir>/decisions.md and open-questions.md (DEC rows and unresolved questions)
 - The affected BF/US/AC/EX story files, active contracts and stage reports
 
-## Deliverables (MANDATORY)
+## Deliverables
 
 - Governing DEC rows and rejected-option check (or an approved reopening decision)
 - A work order for each delegation made, if any (scope, inputs, outputs, gates)

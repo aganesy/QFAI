@@ -1,10 +1,10 @@
 # Review Convergence
 
 How a stage's review ends, and what may follow it. Referenced from
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#review-convergence-must`,
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#review-convergence`,
 which owns the delegation rules these sit beside.
 
-## One review (MUST)
+## One review
 
 - The review runs once, after the stage's last step.
 - The author fixes or answers every finding: a fix in the finding's owning
@@ -65,7 +65,7 @@ and the baseline's `none` path is the right one for it.
 
 This section is the one place an obligation-traced finding is `advisory`, and
 both provenance contracts name it:
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance-must`
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#finding-provenance`
 and `.qfai/assistant/rule/drift-protocol.md#provenance-and-routing`. There
 the trace class bounds which findings may block, and the declared severity settles
 whether one does, so an item carried under this section is not also a defect

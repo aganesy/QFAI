@@ -20,8 +20,8 @@ routing-profile: architecture-heavy
 
 ## User Questions (AskUserQuestion Protocol)
 
-Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
-for every user question. With `--auto`, they MUST ask nothing and record
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, ask nothing and record
 explicit assumptions in the migration report.
 
 Read `references/migration-guide.md` before changing the project. Run this

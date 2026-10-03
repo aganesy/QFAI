@@ -12,4 +12,4 @@ Review exploration artifacts as comparison inputs, not a fixed option-comparison
 ### Trend-derived conversion check
 
 - Reference-pool inputs are translated into deviate-from pressure (not imitate-this).
-- Stale / overused AI slop avoidance is reflected in the global anti-slop pattern list (`reviewer-prompt.md`).
+- No direction shows a pattern listed in `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md` that the recorded brand direction does not ask for. Name the pattern when flagging one.

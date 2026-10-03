@@ -21,4 +21,7 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 - Settle a critical question before the affected author writes.
 - The stage's final report lists each decision a checkpoint adopted, with its reason. A skipped checkpoint fails the gate; it is not an implicit approval.
 
+Each decision record carries the four labelled Approach items stated at the top of
+`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+
 Pre-draft grilling settles a premise before drafting. The independent reviewer gate then checks the written artifact, its traceability, and its validation evidence. Both are required.

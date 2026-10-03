@@ -47,7 +47,7 @@ A routed role names the expertise a phase needs, not a required hand-off. The
 session agent may do an authoring role's work itself, reading that role's card
 as it does. It delegates to a role only for work that runs in parallel, and for
 a review that someone other than the author should do, as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#orchestrator-protocol-must`
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#orchestrator-protocol`
 states.
 
 For MCP search and retrieval choices, see the MCP Integration section of

@@ -64,7 +64,7 @@ them; it is the procedure that applies them.
 5. **Complete** once every reviewer has responded and every finding is fixed or
    answered. A reviewer returns `PASS` or `REVISE`; there is no third verdict. A finding the author cannot fix goes in the stage's final report;
    a critical decision goes to the user
-   (`.qfai/assistant/rule/review-convergence.md#one-review-must`).
+   (`.qfai/assistant/rule/review-convergence.md#one-review`).
 
 ## Rounds of tested results
 

@@ -68,6 +68,9 @@ authored artifact. Record an unresolved choice in `open-questions.md` with its
 next action. Record a rejected option as a REJECTED decision row, so it stays
 excluded on reruns.
 
+Each decision record carries the four labelled Approach items stated at the top of
+`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+
 ## One session
 
 A stage whose interview is its work holds one session per run. The row is

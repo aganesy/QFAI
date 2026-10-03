@@ -199,7 +199,7 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "6d36fddf258728af9622dced3ab7b00566948df93b298a61f884cb40670e8bbc",
+        ".github/actions/setup/action.yml": "0d43e94b95ebd6b61073d62fc39e9e6b9ad29ae0eb1164ba0a16767f171d8478",
         ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
         ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
         "scripts/check-bidi.mjs": "b006fcaaa399a3718a55f6e85f12fb3e4f87f22e067d159f6ef05c0f9739e9f4",
@@ -273,8 +273,8 @@
         "file says, and no file under either pinned root is missing from it."
       ],
       "closureActions": [
-        "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
-        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
       ],
       "closureActionsNote": [
         "The EXTERNAL actions a step in this context's closure may invoke directly, as",
@@ -290,7 +290,7 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444"],
+      "nestedActions": ["actions/setup-node@820762786026740c76f36085b0efc47a31fe5020"],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -314,7 +314,7 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"]
+        "mayPrecede": ["actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -397,13 +397,13 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "522124f8c654d9a4",
+        "Verify the toolchain action before running it": "0194eae763422622",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "c9eb0cba6fcc16d2",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "789e930d0d948215",
-        "QFAI self-validate this repo (dogfooding — TDD gates)": "5efd5b99feb24ee6",
-        "QFAI self-validate this repo (dogfooding — SDD gates)": "4ee4a3dec81d6bdd",
-        "QFAI self-validate this repo (dogfooding — full profile)": "a27f5d778a1f4a42",
+        "QFAI self-validate this repo (dogfooding — TDD gates)": "3565d681909c770d",
+        "QFAI self-validate this repo (dogfooding — SDD gates)": "1664bcfa021579ec",
+        "QFAI self-validate this repo (dogfooding — full profile)": "bfc25b7eb55dd393",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
         "Run lint gate": "ab9c742eb85d80bc",
         "Run type check": "51c5eeee942920dc",
@@ -469,7 +469,7 @@
       ],
       "codePathCostPin": {
         "instances": 22,
-        "timeoutMinutesSum": 305,
+        "timeoutMinutesSum": 295,
         "installInstances": 20,
         "buildJobs": ["build", "node-floor", "test", "windows-parity"]
       },
