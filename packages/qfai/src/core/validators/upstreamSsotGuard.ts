@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { getChangedFilesAgainstBase, normalizeRepoPath, readFileAtBase } from "../gitChanges.js";
+import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, diffRecordTables, parseRecordTable } from "../storyTree/tables.js";
 import type { Issue } from "../types.js";
@@ -31,10 +33,14 @@ export async function validateStoryTreeDrift(
 
   const currentDecisions = await readSafePath(path.join(root, decisions));
   const rows = parseRecordTable(currentDecisions, "decisions").rows;
+  const baseStatus = new Map(
+    parseRecordTable(baseDecisions, "decisions").rows.map((row) => [row.id, row.status]),
+  );
   const authorised = new Map<string, string>();
   for (const row of rows) {
     const classified = classifyRecordRow(row);
     if (classified.kind !== "change-request" || !classified.inForce) continue;
+    if (!authorisesThisBranch(row.status, baseStatus.get(row.id))) continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
   const issues: Issue[] = [];
@@ -128,16 +134,40 @@ async function examplesWithoutTestChange(
     }
   }
   if (rewritten.length === 0) return [];
-  const tests = (await readStoryTests(root, config)).files.filter(countsForExample);
+  let scan: Awaited<ReturnType<typeof readStoryTests>>;
+  try {
+    scan = await readStoryTests(root, config);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return [
+      issue(
+        "QFAI-SCAN-002",
+        `Story-tree test scan failed: ${reason}`,
+        "error",
+        root,
+        "storyTree.testScan",
+      ),
+    ];
+  }
+  if (scan.truncated) {
+    return [
+      issue(
+        "QFAI-SCAN-002",
+        `Story-tree test scan stopped at the ${DEFAULT_GLOB_FILE_LIMIT} file limit; example-change coverage is incomplete`,
+        "error",
+        root,
+        "storyTree.testScan",
+      ),
+    ];
+  }
+  const changedExamples = new Set<string>();
+  for (const test of scan.files) {
+    if (!countsForExample(test) || !changed.has(normalizeRepoPath(path.relative(root, test.file))))
+      continue;
+    for (const id of parseStoryTestAnnotations(test.content).EX) changedExamples.add(id);
+  }
   return rewritten
-    .filter(({ id }) => {
-      const annotating = tests.filter((test) =>
-        parseStoryTestAnnotations(test.content).EX.includes(id),
-      );
-      return !annotating.some((test) =>
-        changed.has(normalizeRepoPath(path.relative(root, test.file))),
-      );
-    })
+    .filter(({ id }) => !changedExamples.has(id))
     .map(({ id, file }) =>
       issue(
         "QFAI-DRIFT-002",
@@ -153,12 +183,20 @@ async function examplesWithoutTestChange(
 /** Each example row by EX ID, cells trimmed so a re-padded table reads as unchanged. */
 function exampleRows(content: string): Map<string, string> {
   const rows = new Map<string, string>();
-  for (const line of content.split(/\r?\n/)) {
-    const cells = line.split("|").map((cell) => cell.trim());
-    const id = cells[1] ?? "";
-    if (/^EX-\d{4}-\d{4}-\d{2}$/.test(id)) rows.set(id, cells.join("|"));
+  for (const table of parseAllMarkdownTables(content)) {
+    const idColumn = table.headers.indexOf("EX-ID");
+    if (idColumn === -1) continue;
+    for (const cells of table.rows) {
+      const id = cells[idColumn] ?? "";
+      if (/^EX-\d{4}-\d{4}-\d{2}$/.test(id)) rows.set(id, JSON.stringify(cells));
+    }
   }
   return rows;
+}
+
+/** A DONE request applies only while newly appended or advanced from base WIP. */
+function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
+  return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
 }
 
 function withoutChangeRequestRows(content: string): string {

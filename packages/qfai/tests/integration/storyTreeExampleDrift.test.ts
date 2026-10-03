@@ -51,10 +51,10 @@ function commit(message: string): void {
   git("commit", "-m", message);
 }
 
-function config() {
+function config(specsDir = specs) {
   const value = structuredClone(defaultConfig);
-  value.paths.specsDir = specs;
-  value.paths.contractsDir = `${specs}/03_contract`;
+  value.paths.specsDir = specsDir;
+  value.paths.contractsDir = path.posix.join(specsDir, "03_contract");
   value.validation.traceability.testFileGlobs = ["tests/**/*.test.ts"];
   value.baseBranch = "main";
   return value;
@@ -92,6 +92,23 @@ afterEach(async () => {
 });
 
 describe("an example rewritten on the branch", () => {
+  it("reports a rewritten example when the spec tree is at the repository root", async () => {
+    const rootExample = path.posix.relative(specs, examples);
+    git("mv", `${specs}/decisions.md`, "decisions.md");
+    git("mv", path.posix.join(specs, "02_business-flow"), "02_business-flow");
+    commit("move the spec tree to the repository root");
+    git("branch", "-f", "main", "HEAD");
+    await put(
+      rootExample,
+      `${header}| ${example} | AC-0001-0001-01 | an order | it is refunded |\n`,
+    );
+    commit("rewrite the root example");
+    const findings = await validateStoryTreeDrift(root, config("."), "tdd");
+    expect(findings).toContainEqual(
+      expect.objectContaining({ code: "QFAI-DRIFT-002", file: rootExample, refs: [example] }),
+    );
+  });
+
   it("does not warn for a newly appended example", async () => {
     await put(
       examples,
