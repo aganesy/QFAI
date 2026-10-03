@@ -9,7 +9,6 @@ import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 
 const DISCUSSION_PACK_FILES = [
   "01_Context.md",
-  "02_Inception-Deck.md",
   "03_Story-Workshop.md",
   "04_Sources.md",
   "05_Scope.md",
@@ -17,12 +16,7 @@ const DISCUSSION_PACK_FILES = [
   "07_NFR.md",
   "08_Glossary.md",
   "09_Constraints.md",
-  "10_Policy.md",
   "11_OQ-Register.md",
-  "12_OQ-Resolution-Log.md",
-  "13_Deferred.md",
-  "14_Review-Request.md",
-  "99_delta.md",
 ] as const;
 
 describe("runSddPreflight", () => {
@@ -151,25 +145,27 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("lists a deferred OQ with no entry in 13_Deferred.md as a gap", async () => {
+  it("lists a deferred OQ that names no reopening point as a gap", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203030", {
         "11_OQ-Register.md": [
           "# 11 OQ Register",
           "",
-          "| OQ-ID   | Question                   | Disposition | Gate       | Reason                             |",
-          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- |",
-          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred |",
+          "| OQ-ID   | Question                   | Disposition | Gate       | Rationale                          | Resolution | Next-Decision-Point |",
+          "| ------- | -------------------------- | ----------- | ---------- | ---------------------------------- | ---------- | ------------------- |",
+          "| OQ-0007 | How should contract versioning be decided | deferred | discussion | Does not affect starting implementation, so it is deferred | Ship unversioned contracts for now | TBD |",
           "",
-          "Note: an OQ marked deferred needs its details under the same OQ-ID in 13_Deferred.md.",
+          "Note: an OQ marked deferred names when and by what signal it is reopened.",
         ].join("\n"),
       });
 
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("ready");
-      expect(result.packGaps.some((item) => item.includes("13_Deferred.md"))).toBe(true);
+      expect(
+        result.packGaps.some((item) => item.includes("lack a Resolution or a Next-Decision-Point")),
+      ).toBe(true);
       expect(result.packGaps.some((item) => item.includes("OQ-0007"))).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -245,6 +241,8 @@ describe("runSddPreflight", () => {
           "### OQ-0010: rollout memo refinement",
           "- Disposition: deferred",
           "- Gate: discussion",
+          "- Resolution: keep the current rollout memo.",
+          "- Next-Decision-Point: before the rollout starts.",
           "- Reason: supporting information before implementation starts, so it can be deferred in this phase.",
           "",
         ].join("\n"),
@@ -663,20 +661,11 @@ function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[n
         "### OQ-0001: contract versioning policy",
         "- Disposition: deferred",
         "- Gate: discussion",
+        "- Resolution: ship without contract versioning for now.",
+        "- Next-Decision-Point: the next cycle review, or the first breaking contract change.",
         "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
         "",
         "Note: this does not meet the blocking condition (Disposition=open).",
-      ].join("\n");
-    case "13_Deferred.md":
-      return [
-        "# 13 Deferred",
-        "",
-        "### OQ-0001: contract versioning policy",
-        "",
-        "- Reason: it does not affect starting the v1.4.36 implementation at this stage, so it is deferred.",
-        "- Next decision point: v1.5.x cycle review",
-        "",
-        "Note: deferred OQs from 11_OQ-Register.md are recorded in this file.",
       ].join("\n");
     default:
       return [
