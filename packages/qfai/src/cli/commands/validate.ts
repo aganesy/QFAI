@@ -537,7 +537,6 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "design-contract-readiness",
     "sdd",
     "reviewer-gate-sdd",
-    "reviewer-gate-shared",
     "contracts",
     "ui-screen-entries",
     "contract-parse",
@@ -984,7 +983,8 @@ export function gitHubLevel(issue: Issue): GitHubLevel {
   return issue.severity === "warning" ? "warning" : "notice";
 }
 
-function emitGitHub(issue: Issue, failOn: FailOn): void {
+/** One issue as a GitHub workflow command on stdout. */
+export function emitGitHub(issue: Issue, failOn: FailOn): void {
   const level = gitHubLevel(issue);
   // The location metadata is ESCAPED, and by the property rules rather than the message
   // ones. `issue.file` can name a path a pull request chose — so a
@@ -1498,6 +1498,6 @@ function escapeGitHubCommandValue(value: string): string {
  * The message escapes above plus `:` and `,`, which are the separators GitHub parses the
  * metadata block with — `%` first, or it would re-encode the escapes that follow it.
  */
-export function escapeGitHubCommandProperty(value: string): string {
+function escapeGitHubCommandProperty(value: string): string {
   return escapeGitHubCommandValue(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
 }

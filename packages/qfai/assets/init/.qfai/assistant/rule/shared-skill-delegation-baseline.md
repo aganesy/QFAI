@@ -148,7 +148,7 @@ context removes the memory, not the disposition — which is why role name alone
 
 **A reviewer cannot attest to what it cannot see.** A reset instance does not know what an earlier one recommended, so the record supplies it: a session that settled a decision agent-to-agent records, in the stage's Work Orders Summary, the decision and the `Agent instance` that recommended it. `Recommended and unadjudicated` is read off that record, not off recollection.
 
-**The record answers either way, and silence answers nothing.** The question the field asks is whether any decision was settled agent-to-agent, so the record answers that and not whether a session ran. A stage that settled none writes one row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that escalated every decision and settled nothing. An evidence file
+**The record answers either way, and silence answers nothing.** The question the field asks is whether any decision was settled agent-to-agent, so the record answers that and not whether a session ran. A stage that settled none writes one row reading `grilling(-/none): none` — whether it ran no session at all, or ran one that escalated every decision and settled nothing. A stage report
 holding several invocations keys it to the run it answers for, `grilling(-@<run key>/none): none`, as it keys that run's decision rows. A stage that
 settled some writes a row per decision. A summary carrying neither is incomplete, and that is the `REVISE` — not an inference in either direction. Absence of rows cannot be read as evidence for `none`, because a table that omitted a required row looks exactly like a table that had none to write, and the reviewer would attest `none` over the very decision the record exists to expose.
 

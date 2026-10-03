@@ -1,7 +1,7 @@
 ---
 name: sdd-gate
 owner: qfai-sdd
-purpose: "Validate each affected business flow on its own and write its SDD evidence."
+purpose: "Validate each affected business flow on its own and report its result."
 requires: [common-gate-run]
 roles: [completion-reviewer, qa-gatekeeper]
 routing-profile: default

@@ -2770,9 +2770,7 @@ async function clearEvidenceIterDirs(
       const mod = await import("../../core/prototyping/mutationLog.js");
       logEvidenceDelete = mod.logEvidenceDelete;
     } catch {
-      // Best-effort: a failed import still surfaces the SSOT-sync
-      // reviewer-gate finding R-EVIDENCE-MUTATION-UNLOGGED at the
-      // next validate pass; the cleanup itself proceeds.
+      // Best-effort: the cleanup proceeds without the log entry.
       logEvidenceDelete = null;
     }
   }

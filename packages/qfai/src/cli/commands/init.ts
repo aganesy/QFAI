@@ -1896,7 +1896,6 @@ const UPGRADE_RULE_FILES = new Set([
   "shared-skill-delegation-baseline.md",
   "shared-skill-operating-baseline.md",
   "review-convergence.md",
-  "audited-evidence-hash.md",
   "quality.md",
   "test-layers.md",
   "change-classification.md",
