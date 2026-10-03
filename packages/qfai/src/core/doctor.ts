@@ -713,7 +713,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await checkDocsLane(root));
   const mutationProofs = await checkMutationProofs(root, config);
-  if (mutationProofs) addCheck(checks, mutationProofs);
+  if (mutationProofs)
+    addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
 
