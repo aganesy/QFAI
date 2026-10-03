@@ -52,7 +52,7 @@ specialization_tags:
 ## Deliverables (MANDATORY)
 
 - Governing DEC rows and rejected-option check (or an approved reopening decision)
-- Work Orders for each subagent (scope, inputs, outputs, gates)
+- A work order for each delegation made, if any (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
 - Evidence summary for `.qfai/evidence/`. The evidence stays local and is never
@@ -76,7 +76,7 @@ specialization_tags:
 ## Output format (structured)
 
 - Governing DEC rows / rejected check
-- Work Orders
+- Work orders, for each delegation made
 - Stage Gates status
 - Completion report (DoD)
 - Evidence summary

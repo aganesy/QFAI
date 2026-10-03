@@ -2,7 +2,7 @@
 name: sdd-contract
 owner: qfai-sdd
 purpose: "Write the contracts and business rules the flow's examples need, or repair one named contract."
-requires: [common-grilling-record]
+requires: []
 roles:
   [
     solution-architect,
@@ -53,7 +53,7 @@ states.
 
 1. Run the pre-draft grilling checkpoint for `Contracts and rules` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and record it with `common-grilling-record`.
+   the first write, and list each decision it adopted in the final report.
 2. Write a BR only after the EX it cites exists. Every BR cites at least one
    full EX ID, and nothing but EX IDs; every EX is cited by at least one BR.
    The relation may be many-to-many.

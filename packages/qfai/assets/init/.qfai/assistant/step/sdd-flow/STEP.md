@@ -2,7 +2,7 @@
 name: sdd-flow
 owner: qfai-sdd
 purpose: "Write the policy and technology facts and the business flows the triage decided to change."
-requires: [common-grilling-record]
+requires: []
 roles: [requirements-analyst, solution-architect, product-experience-architect, completion-reviewer]
 routing-profile: default
 ---
@@ -38,7 +38,7 @@ states.
 
 1. Run the pre-draft grilling checkpoint for `Policy and flows` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and record it with `common-grilling-record`.
+   the first write, and list each decision it adopted in the final report.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md` and `03_contract/tech.md`.
 3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and

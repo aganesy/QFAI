@@ -2,7 +2,7 @@
 name: sdd-story
 owner: qfai-sdd
 purpose: "Write the stories, acceptance criteria and examples of each affected flow, or append the one example a diagnosed defect needs."
-requires: [common-grilling-record, common-evidence-record]
+requires: [common-evidence-record]
 roles:
   [
     requirements-analyst,
@@ -44,7 +44,7 @@ states.
 
 1. Run the pre-draft grilling checkpoint for `Stories and examples` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and record it with `common-grilling-record`.
+   the first write, and list each decision it adopted in the final report.
 2. Write the story index and the three files of each affected story, each in
    its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
@@ -64,9 +64,6 @@ states.
    acceptance tests in this step.
 7. Retire a story by removing its directory under the change request that names
    it, and never recycle its IDs.
-
-Inside a run, a `new_story` target's result reports one `bindings` entry per
-slot, naming the flow and the stories it created.
 
 ## Passes when
 

@@ -2,7 +2,7 @@
 name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
-requires: [common-steering-refresh, common-grilling-record]
+requires: [common-steering-refresh]
 roles: [delivery-planner, requirements-analyst, completion-reviewer]
 routing-profile: default
 ---
@@ -163,9 +163,10 @@ rule over the tree, not a new command.
 ## Pre-draft grilling
 
 Before this step's first mutation, run the checkpoint for `Triage and records`
-in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` and
-record it with `common-grilling-record`. Each later design-writing step runs its
-own checkpoint the same way.
+in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. Put
+each critical decision it holds to the user, and list each decision it adopted
+in the final report. Each later design-writing step runs its own checkpoint the
+same way.
 
 ## A change to the story tree
 
