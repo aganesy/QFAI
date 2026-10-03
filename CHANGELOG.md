@@ -335,7 +335,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that is a readable file inside the root at the file's current digest. An
   input that has since gone missing, become unreadable or left the root keeps
   the digest recorded earlier. The `sdd_append` work order after a
-  missing-test diagnosis names the reproduction record as its input.
+  missing-test diagnosis names the reproduction record as its input when that
+  record is a readable file inside the root.
 - **A fact question may offer its candidates as a choice (#2346).** The route
   proposal schema allowed options on a fact question, but the parser refused
   them. A fact is now either a choice, with options and a selection and no
@@ -348,21 +349,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flow and story files, each criterion's scenario block, each example's table
   row, and each business rule citing one of the flow's examples. An edit
   elsewhere in a criteria or example file leaves the digest as it was. Every
-  receipt also holds `qfai.config.yaml`, the root lockfiles, the assistant rule
-  tree, the skill that owns the work order's steps, each step's directory, the
-  tool, and the selected discussion pack with its files. In a receipt for a
+  receipt also holds `qfai.config.yaml`, the root `pnpm-lock.yaml`,
+  `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` and `bun.lock`, the
+  assistant rule tree, the skill that owns the work order's steps, each step's
+  directory, the tool, and the selected discussion pack with its files. In a receipt for a
   result that observed a test, a changed file the stage deleted is held as
   absent, so the receipt goes stale when the file comes back.
 - **`qfai workflow` judges a run's changes against where the run started**
   (#2340, #2344). `start` now records `HEAD` and the state of every path that
-  was dirty or untracked then. Every write operation and `finish` compare the
-  tree against that record, so a change the run commits outside its write scope
-  blocks the run with `invariant-violation` and is reported as
+  was dirty or untracked then, apart from the run's own records under
+  `.qfai/run/` and `.qfai/evidence/workflow/`. Every write operation and
+  `finish` compare the tree against that record, so a change the run commits
+  outside its write scope blocks the run with `invariant-violation` and is reported as
   `diff-out-of-scope`. A path that was dirty at `start` counts only once its
-  content changes; a change to its file type or mode alone is not seen.
-  `uncommitted` names only the run's own
-  changes. Under `validation.failOn: never`, `finish` still reads the
-  validate findings to decide whether a debt is settled, so a debt whose
+  content or kind changes: a regular file, a symbolic link and its target, a
+  directory, or another kind. A change to its mode alone is not seen.
+  `uncommitted` names only the run's own changes. Under
+  `validation.failOn: never`, `finish` still reads the validate findings to
+  decide whether a debt is settled, so a debt whose
   finding remains stays `debt-open` while the validate gate passes. Before,
   every finding was dropped, so every debt closed.
 - **A route proposal cannot reach a protected path by spelling it differently
