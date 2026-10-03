@@ -50,6 +50,6 @@ Feature: A stage skill picked up by free text hands over
     When it runs
     Then it runs its listed steps one at a time, in order, skipping only a step whose skip condition holds
     And it reads each step's `STEP.md` only when that step starts
-    And after its last step it runs one review, whose reviewers are the union of the reviewers of the steps it ran
+    And after its last step it runs one review: the specification review for qfai-sdd and qfai-discussion, the code review for a skill that changed code, tests or a change note, and none for qfai-triage or for a qfai-verify run that wrote nothing
     And no review runs between two of its steps
 ```

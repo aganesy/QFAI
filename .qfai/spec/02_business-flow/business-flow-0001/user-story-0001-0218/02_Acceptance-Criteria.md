@@ -37,9 +37,15 @@ Feature: Refuse a route catalog a session cannot use
     Then it is refused
 
   # AC-0001-0218-06
-  Scenario: A stage drops its reviewers only when it is a triage stage
+  Scenario: A triage stage carries no review
     Given a plan whose stage carries `review`
-    When the core loads it
-    Then `none` on a triage stage is admitted
-    And any other value, or `none` on a stage of another kind, is refused
+    When `plan` loads it
+    Then `spec` or `code` on a stage that is not a triage stage is admitted
+    And any other value, or any `review` on a triage stage, is refused
+
+  # AC-0001-0218-07
+  Scenario: A stage is listed after the stages it depends on
+    Given a plan whose stage names in `after` a stage listed after it
+    When `plan` loads it
+    Then the plan is refused, naming both stages
 ```
