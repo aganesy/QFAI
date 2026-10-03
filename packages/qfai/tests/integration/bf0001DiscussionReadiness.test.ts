@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -92,6 +92,55 @@ it("blocks an open question and a deferred one that names no reopening point", a
     const planned = await validateDiscussionPackReadiness(root, defaultConfig);
     expect(namesOq(planned, "QFAI-DPACK-004")).toBe(false);
     expect(namesOq(planned, "QFAI-DPACK-007")).toBe(false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0014-02
+it.each([
+  ["a dash", oqRegister("deferred", "-")],
+  ["an em dash", oqRegister("deferred", "—")],
+  ["an empty cell", oqRegister("deferred", "")],
+  [
+    "no Next-Decision-Point column",
+    [
+      "# OQ Register",
+      "",
+      "| OQ-ID | Question | Disposition | Gate | Rationale |",
+      "| --- | --- | --- | --- | --- |",
+      "| OQ-0001 | Which launch route? | deferred | discussion | The owner weighed both routes. |",
+      "",
+      filler,
+    ].join("\n"),
+  ],
+])("blocks a deferred question whose reopening point is %s", async (_label, register) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    await writeFile(path.join(pack, "11_OQ-Register.md"), register, "utf8");
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(namesOq(findings, "QFAI-DPACK-007")).toBe(true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0014-02
+it("blocks the shipped register template's sample deferred row until it is filled in", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    const template = await readFile(
+      path.join(
+        import.meta.dirname,
+        "../../assets/init/.qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
+      ),
+      "utf8",
+    );
+    await writeFile(path.join(pack, "11_OQ-Register.md"), template, "utf8");
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(namesOq(findings, "QFAI-DPACK-007")).toBe(true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

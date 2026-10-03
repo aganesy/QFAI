@@ -4,9 +4,9 @@
 
 ## OQ Table
 
-| OQ-ID   | Title | Gate       | Disposition | Owner | Rationale | Options                              | Recommendation | Resolution | Next-Decision-Point                    | Due        | Evidence         |
-| ------- | ----- | ---------- | ----------- | ----- | --------- | ------------------------------------ | -------------- | ---------- | -------------------------------------- | ---------- | ---------------- |
-| OQ-0001 | TBD   | discussion | deferred    | user  | TBD       | Option A / Option B (recommended: A) | Option A       | —          | When and by what signal it is reopened | YYYY-MM-DD | Conversation log |
+| OQ-ID   | Title | Gate       | Disposition | Owner | Rationale | Options                              | Recommendation | Resolution | Next-Decision-Point                        | Due        | Evidence         |
+| ------- | ----- | ---------- | ----------- | ----- | --------- | ------------------------------------ | -------------- | ---------- | ------------------------------------------ | ---------- | ---------------- |
+| OQ-0001 | TBD   | discussion | deferred    | user  | TBD       | Option A / Option B (recommended: A) | Option A       | —          | <when, and by what signal, it is reopened> | YYYY-MM-DD | Conversation log |
 
 ## Rules
 
