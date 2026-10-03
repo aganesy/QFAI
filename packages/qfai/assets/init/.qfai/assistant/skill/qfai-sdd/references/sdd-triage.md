@@ -46,7 +46,9 @@ in Approach. It takes effect only at DONE; it never exempts descendant items.
 
 ## Approval and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, append no row, stop before the dependent writes, and report every pending operation with its target. Approval-free changes may proceed only if they do not depend on a pending operation.
+Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve.
+In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, stop before the dependent writes, and report every pending operation with its target as open.
+Approval-free changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
 
