@@ -13,13 +13,31 @@ If multiple languages appear, choose the user's dominant language.
 
 ## Reporting format (default)
 
+Lead with the outcome. The first sentence of the report answers what happened
+or what was found, and the detail comes after it.
+
 Use concise, structured bullet points:
 
-- **Summary**: what changed / decided
+- **Summary**: the outcome, written as the answer to what was asked
 - **Evidence**: key file paths / commands / logs referenced
 - **Impact**: user-visible changes, risks
 - **Verification**: what you ran and expected result
 - **Open Questions**: unresolved items (if any)
+
+## While the work runs
+
+On a long turn, the text between tool calls is what the user sees.
+
+- Before the first tool call, say in one sentence what is about to happen.
+- Give a brief update when something important is found or the direction
+  changes. Stay quiet otherwise.
+
+## Correcting an earlier statement
+
+- Correct an earlier statement when the error would change the user's code,
+  conclusions or decisions. State the correction plainly and continue.
+- Fix a slip that changes none of those without mentioning it. Narrating every
+  correction spends the user's attention on the agent's own process.
 
 ## Writing quality bar
 
