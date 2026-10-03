@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Context summaries preserve requests, decisions, open work and stage state**
+  (#2243), including question and review budgets. User wording stays close to
+  verbatim.
+
 ### Changed
 
 - **The patterns that mark a design as generated are named** (#2241). A new
