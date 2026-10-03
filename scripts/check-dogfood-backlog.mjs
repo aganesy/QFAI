@@ -55,6 +55,16 @@ const PIN_PATH = path.join(repoRoot, "scripts", "dogfood-backlog.json");
 const CLI = path.join(repoRoot, "packages/qfai/dist/cli/index.mjs");
 const REPORT = path.join(repoRoot, ".qfai", "report", "validate.json");
 
+/** Refuse incomplete validation artifacts before accepting a measurement. */
+export function assertCompleteValidationReport(report) {
+  if (report.profileValidatorsRan === false) {
+    throw new Error("Root report did not run profile validators.");
+  }
+  if (report.issues.some((issue) => issue.code === "QFAI-SCAN-002")) {
+    throw new Error("Root report contains an incomplete validation run (QFAI-SCAN-002).");
+  }
+}
+
 /**
  * What makes one finding the same finding on the next run: its code and the
  * IDs it names. The message stands in only for a finding that names none.

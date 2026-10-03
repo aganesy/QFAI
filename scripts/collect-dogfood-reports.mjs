@@ -9,6 +9,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertCompleteValidationReport } from "./check-dogfood-backlog.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const { parse } = require("../packages/qfai/node_modules/yaml");
@@ -21,6 +23,7 @@ const manifest = {
   runAttempt: process.env.GITHUB_RUN_ATTEMPT,
   job: process.env.GITHUB_JOB,
   nodeVersion: process.version,
+  complete: false,
   snapshots: [],
 };
 
@@ -213,16 +216,18 @@ function main() {
       );
       const source = path.join(cwd, ".qfai", "report", "validate.json");
       const bytes = readFileSync(source);
-      const parsed = JSON.parse(bytes.toString("utf8"));
-      if (!Array.isArray(parsed.issues)) throw new Error("Root report has no issues array.");
       const filename = label + "-" + profile + ".json";
       copyFileSync(source, path.join(output, filename));
+      snapshot.pendingReport = { profile, filename, sha256: digest(bytes) };
+      saveManifest();
+      const parsed = JSON.parse(bytes.toString("utf8"));
+      if (!Array.isArray(parsed.issues)) throw new Error("Root report has no issues array.");
+      assertCompleteValidationReport(parsed);
       snapshot.reports.push({
-        profile,
-        filename,
-        sha256: digest(bytes),
+        ...snapshot.pendingReport,
         issueCount: parsed.issues.length,
       });
+      delete snapshot.pendingReport;
       saveManifest();
     }
   }
