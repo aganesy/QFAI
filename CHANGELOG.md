@@ -146,6 +146,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **BF and AC coverage requires the configured test-file selection** (#2160).
+  An annotation must match its E2E, integration or API layer and
+  `validation.traceability.testFileGlobs`, as EX coverage already requires.
+  The obsolete Markdown annotation lists are removed.
+
 - **`qfai workflow` keeps each stage result it records under the run's
   `results/`** (#2348). Complete JSON is stored before its journal event.
   New filenames use `~` followed by the result ID's UTF-8 hex encoding, so
