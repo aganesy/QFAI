@@ -1,12 +1,10 @@
 /**
- * E2E: spec-0004 CHG-005 — profile-suffixed validate output, SSOT-sync
- * pair-changed CI lane, R-PROMPT-SCANNER-DRIFT justification ingestion
- * gate. Exercises the user-story surfaces end-to-end against tmpdir
+ * E2E: spec-0004 CHG-005 — profile-suffixed validate output and the SSOT-sync
+ * pair-changed CI lane. Exercises the user-story surfaces end-to-end against tmpdir
  * fixtures.
  */
 // QFAI:BF-0001
 // QFAI:BF-0002
-// QFAI:BF-0001
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -18,7 +16,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { loadConfig } from "../../src/core/config.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
@@ -99,39 +96,5 @@ describe("US-0004-0035: SSOT-sync pair-changed CI lane rejects single-half edits
 
     const both = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
     expect(both.code).toBe(0);
-  });
-});
-
-describe("US-0004-0036: qfai validate rejects R-PROMPT-SCANNER-DRIFT with empty justification", () => {
-  it("validate exits error when the finding has whitespace-only justification; accepts 3-part justification", async () => {
-    const dir = path.join(root, ".qfai/review/review-2026-05-25");
-    await mkdir(dir, { recursive: true });
-
-    // Empty-justification report → error.
-    await writeFile(
-      path.join(dir, "reviewer-completion.json"),
-      JSON.stringify({ findings: [{ code: "R-PROMPT-SCANNER-DRIFT", justification: "" }] }),
-      "utf-8",
-    );
-    const { config } = await loadConfig(root);
-    const empty = await validateReviewerJustification(root, config);
-    expect(empty.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT")[0]?.severity).toBe("error");
-
-    // 3-part justification → no error issue.
-    await writeFile(
-      path.join(dir, "reviewer-completion.json"),
-      JSON.stringify({
-        findings: [
-          {
-            code: "R-PROMPT-SCANNER-DRIFT",
-            justification:
-              "modified=designMdViolations.ts, un-paired=generator-prompt.md, clause=color-literal-ban",
-          },
-        ],
-      }),
-      "utf-8",
-    );
-    const populated = await validateReviewerJustification(root, config);
-    expect(populated.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT")).toEqual([]);
   });
 });

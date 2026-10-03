@@ -1,7 +1,6 @@
 /**
  * Integration: Reviewer-Gate R-PROMPT-SCANNER-DRIFT emission with
- * mandatory 3-part justification, plus downstream rejection of
- * empty-justification variants.
+ * mandatory 3-part justification.
  *
  * The SSOT-sync pair: designMdViolations.ts (scanner) ↔
  * generator-prompt.md (prompt). When a contract clause is present in
@@ -9,10 +8,6 @@
  * R-PROMPT-SCANNER-DRIFT (error) with justification naming:
  *   (1) the modified file, (2) the un-paired counterpart,
  *   (3) the Tailwind contract clause whose match cannot be confirmed.
- *
- * The downstream cross-spec assertion against BR-0014-0030 (empty
- * justification rejection on advisory-failing codes) is exercised
- * via the existing `validateReviewerJustification` validator.
  */
 // QFAI:EX-0001-0168-01
 
@@ -25,7 +20,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/core/config.js";
 import { PROMPT_SCANNER_PAIRS } from "../../src/core/validators/promptScannerPairs.js";
 import { validateReviewerGate } from "../../src/core/validators/reviewerGate.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
@@ -67,16 +61,6 @@ async function seedPair(
   await mkdir(path.dirname(promptAbs), { recursive: true });
   await writeFile(scannerAbs, options.scanner ?? SCANNER_SCAFFOLD, "utf-8");
   await writeFile(promptAbs, options.prompt ?? PROMPT_SCAFFOLD, "utf-8");
-}
-
-async function seedReviewerReport(root: string, body: unknown): Promise<void> {
-  const dir = path.join(root, ".qfai", "review", "review-2026-05-25");
-  await mkdir(dir, { recursive: true });
-  await writeFile(
-    path.join(dir, "reviewer-completion.json"),
-    JSON.stringify(body, null, 2),
-    "utf-8",
-  );
 }
 
 let root: string;
@@ -159,28 +143,6 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     );
   });
 
-  it("downstream qfai validate ingestion rejects empty justification variants (cross-spec assertion vs BR-0014-0030)", async () => {
-    // Seed a reviewer-completion.json containing a R-PROMPT-SCANNER-DRIFT
-    // finding with an empty justification. The reviewerJustification
-    // validator must surface this as an error. (We piggy-back on the
-    // advisory-failing-codes mechanism — adding R-PROMPT-SCANNER-DRIFT
-    // to that set is the implementation tie-in.)
-    await seedReviewerReport(root, {
-      findings: [
-        { code: "R-PROMPT-SCANNER-DRIFT", justification: "" },
-        {
-          code: "R-PROMPT-SCANNER-DRIFT",
-          justification:
-            "modified=packages/.../designMdViolations.ts, un-paired=.../generator-prompt.md, clause=color-literal-ban",
-        },
-      ],
-    });
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    // Exactly one (the empty one) — the populated one must pass.
-    expect(drift.length).toBe(1);
-    expect(drift[0]?.severity).toBe("error");
-  });
 });
 
 /**

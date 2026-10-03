@@ -42,8 +42,7 @@ const SKIP_DIRS = new Set(["node_modules", "dist", ".git"]);
  * Every suppression directive, as `<path> :: <rule>`.
  *
  * A directive is a comment whose FIRST token is `eslint-disable…`. Prose that merely mentions the
- * word — this file's own docblock, or the comment in `reviewerJustification.ts` explaining why the
- * suppression was removed — is not a directive and must not be counted as one, or the census
+ * word — this file's own docblock, for one — is not a directive and must not be counted as one, or the census
  * becomes impossible to write about.
  */
 function suppressions(): string[] {
@@ -121,21 +120,4 @@ describe("the source tree adds no ESLint suppression nobody approved", () => {
     ).toEqual([...PINNED]);
   });
 
-  it("carries no suppression in `reviewerJustification.ts`, which is where [133] found one", () => {
-    // Named separately from the census because it is the case the finding was about: a control
-    // character check written as a regular expression needed `no-control-regex`, and reading code
-    // points needs nothing.
-    const source = readFileSync(
-      path.join(REPO_ROOT, "packages/qfai/src/core/validators/reviewerJustification.ts"),
-      "utf-8",
-    );
-    const directives = source
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => /^\/[/*]+\s*eslint-disable/.test(line));
-    expect(directives, "the control-character check must need no suppression").toEqual([]);
-    expect(source, "and it must still refuse a control character, by scanning code points").toMatch(
-      /codePointAt/,
-    );
-  });
 });

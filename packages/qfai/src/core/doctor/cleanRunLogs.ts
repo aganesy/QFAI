@@ -8,9 +8,8 @@
  * covered by the managed gitignore block, which is exactly why no
  * checkout, `git clean` or CI step ever bounds it.
  *
- * Unlike review packs — which are human evidence and are therefore
- * moved, never deleted — run logs are machine-regenerable derived
- * output, so the stale ones are removed outright. That is the only
+ * Run logs are machine-regenerable derived output, so the stale ones
+ * are removed outright. That is the only
  * shape that actually reclaims the space and de-noises a recursive
  * grep over the report directory. Three guards keep the removal from
  * being blind:

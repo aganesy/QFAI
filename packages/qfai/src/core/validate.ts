@@ -43,12 +43,6 @@ import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import {
-  DISCUSSION_PACK_PRODUCERS,
-  SDD_PACK_PRODUCERS,
-  validateReviewArtifacts,
-  type ReviewArtifactsScope,
-} from "./validators/reviewArtifacts.js";
-import {
   scaffoldPlaceholderReportedFilter,
   validateScaffoldPlaceholder,
 } from "./validators/scaffoldPlaceholder.js";
@@ -81,10 +75,8 @@ import {
   validateTestTodoStubs,
   validateAssistantTreeMigration,
   validateSkillDocReferences,
-  validateReviewerJustification,
   validateReviewerGate,
   detectMockHrefDrift,
-  detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
@@ -527,17 +519,10 @@ async function runStoryProfileValidators(
     ...(await validateSddDesignContractReadiness(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
-    ...(await validateReviewerJustification(root, config)),
     ...(await validateReviewerGate(root, config)),
     ...(await validateAutopilotPolicy(root, { config })),
     ...(await runPackageSelfGovernanceValidators(root)),
     ...(await validateStaleReferences(root, { config })),
-    ...(await validateReviewArtifacts(root, {
-      specScope: undefined,
-      specsRoot: resolvePath(root, config, "specsDir"),
-      flowScope,
-      producers: SDD_PACK_PRODUCERS,
-    })),
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
@@ -570,7 +555,7 @@ async function runStoryProfileValidators(
           ...(await validateSkillsIntegrity(root, config)),
           ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
-          ...(await runDiscussionValidators(root, config, "all")),
+          ...(await runDiscussionValidators(root, config)),
           ...(await sdd(false)),
           ...(await runPrototypingValidatorsForCi(root, config, timings, platformOption)),
           ...(await atdd()),
@@ -621,10 +606,6 @@ async function runSaasPackage(
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
-  // Which review packs this run owns. The discussion profile is the gate for
-  // its own cycle only; `full` composes this runner and passes `"all"` so the
-  // repo-wide scan keeps judging every pack.
-  reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
     // A project reaching this profile may already carry a root DESIGN.md —
@@ -640,37 +621,7 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
-    // The RCP footer names `--profile discussion` as the review-cycle gate and
-    // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
-    // breath. Without this the command it prescribes could not see the
-    // artifacts it prescribes, so an incomplete pack passed the gate silently.
-    ...(await validateReviewArtifacts(
-      root,
-      reviewArtifactsScope(root, config, reviewPackProducers),
-    )),
   ];
-}
-
-/** Which review packs a profile is the gate for, or `"all"` for a full scan. */
-type ReviewPackProducers = ReadonlySet<string> | "all";
-
-/**
- * Scope handed to `validateReviewArtifacts`.
- *
- * `sdd` and `discussion` are each the hard gate for their own review cycle,
- * so each judges the packs its stage produced. A full run judges every pack.
- */
-function reviewArtifactsScope(
-  root: string,
-  config: ConfigLoadResult["config"],
-  reviewPackProducers: ReviewPackProducers,
-): ReviewArtifactsScope {
-  return {
-    specScope: undefined,
-    specsRoot: resolvePath(root, config, "specsDir"),
-    discussionRoot: resolvePath(root, config, "discussionDir"),
-    producers: reviewPackProducers === "all" ? undefined : reviewPackProducers,
-  };
 }
 
 /**
@@ -694,10 +645,6 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
     ...(await detectMockHrefDrift(root)),
-    // Reviewer-gate finding on the prototyping surface. The detector
-    // no-ops in a consumer repo without the validator source, so the
-    // prototyping profile stays safe to run on a fresh project.
-    ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),

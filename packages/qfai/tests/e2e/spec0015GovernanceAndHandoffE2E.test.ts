@@ -2,13 +2,8 @@
  * E2E acceptance for spec-0015 CHG-006 user stories US-0015-0009..0015:
  *   - US-0015-0009: SKILL.md `## Default Autopilot Policy` section /
  *     R-AUTOPILOT-POLICY-MISSING.
- *   - US-0015-0010: envelope-deviation AskUserQuestion audit-log
- *     decision record.
  *   - US-0015-0011: canonical cross-skill handoff schema /
  *     R-HANDOFF-SCHEMA-DRIFT.
- *   - US-0015-0012: seven-code Reviewer-Gate finding catalog (mandatory
- *     non-empty justification).
- *   - US-0015-0013: `qfai audit log` CLI surface.
  *   - US-0015-0015: cross-skill documentation realignment / zero stale
  *     references.
  *
@@ -23,9 +18,6 @@
 // QFAI:BF-0001
 // QFAI:BF-0001
 // QFAI:BF-0001
-// QFAI:BF-0001
-// QFAI:BF-0001
-// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,16 +25,12 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runAuditLog } from "../../src/cli/commands/auditLog.js";
-import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
 import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
 import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
 import {
   HANDOFF_SCHEMA_REL,
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
-import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCatalog.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import { validateStaleReferences } from "../../src/core/validators/staleReferences.js";
 import { loadConfig } from "../../src/core/config.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -97,38 +85,6 @@ describe("spec-0015 US-0015-0009 autopilot policy (E2E, deterministic temp-fixtu
   });
 });
 
-describe("spec-0015 US-0015-0010 envelope audit-log (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: an envelope AskUserQuestion writes evidence/decision/<ISO>.json", async () => {
-    const r = await writeDecisionRecord({
-      root,
-      question: "expand scope?",
-      answer: "yes",
-      scope: "scope-expansion",
-      operatorIdentity: "tester",
-      envelopeContractClause: "scope-expansion: extra spec",
-    });
-    expect(r.written).toBe(true);
-    expect(r.path).toBeDefined();
-    if (r.path) {
-      expect(path.dirname(r.path)).toBe(path.join(root, ".qfai", "evidence", "decision"));
-      const body = JSON.parse(await readFile(r.path, "utf-8")) as Record<string, unknown>;
-      expect(body.envelopeContractClause).toMatch(/scope-expansion/);
-    }
-  });
-
-  it("QFAI:BF-0001 — boundary: a non-envelope question writes no record (no fail-open)", async () => {
-    const r = await writeDecisionRecord({
-      root,
-      question: "format pick?",
-      answer: "yes",
-      scope: "routine",
-      operatorIdentity: "tester",
-      envelopeContractClause: "routine-format-question",
-    });
-    expect(r.written).toBe(false);
-  });
-});
-
 describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture)", () => {
   it("QFAI:BF-0001 — error: asymmetric Pair IV edit emits R-HANDOFF-SCHEMA-DRIFT", async () => {
     // Schema declares the canonical token; writer omits its expected token.
@@ -169,81 +125,6 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
     }
     const issues = await detectHandoffSchemaDrift(root);
     expect(issues.find((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toBeUndefined();
-  });
-});
-
-describe("spec-0015 US-0015-0012 finding-code catalog (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: all 7 catalog codes are registered", () => {
-    const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
-    expect(codes).toContain("R-AUTOPILOT-POLICY-MISSING");
-    expect(codes).toContain("R-HANDOFF-SCHEMA-DRIFT");
-    expect(codes).toContain("R-EVIDENCE-MUTATION-UNLOGGED");
-    expect(codes).toContain("R-PACK-LOCATION-DRIFT");
-    expect(codes).toContain("R-SKILL-MANIFEST-DRIFT");
-    expect(codes).toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
-    expect(codes).toContain("R-MOCK-HREF-DRIFT");
-    expect(codes).toHaveLength(7);
-  });
-
-  it("QFAI:BF-0001 — error: empty justification on a catalog code is rejected by validate ingestion", async () => {
-    const dir = path.join(root, ".qfai", "review");
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "report.json"),
-      JSON.stringify({
-        findings: [{ code: "R-AUTOPILOT-POLICY-MISSING", justification: "" }],
-      }),
-      "utf-8",
-    );
-    const { config } = await loadConfig(root);
-    const issues = await validateReviewerJustification(root, config);
-    expect(issues.some((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBe(true);
-  });
-});
-
-describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:BF-0001 — normal: qfai audit log lists records newest-first and filters via --scope", async () => {
-    await writeDecisionRecord({
-      root,
-      question: "Q1",
-      answer: "a",
-      scope: "scope-expansion",
-      operatorIdentity: "alice",
-      envelopeContractClause: "scope-expansion: x",
-      now: () => new Date("2026-05-28T10:00:00Z"),
-    });
-    await writeDecisionRecord({
-      root,
-      question: "Q2",
-      answer: "a",
-      scope: "architectural-decision",
-      operatorIdentity: "bob",
-      envelopeContractClause: "architectural-decision: y",
-      now: () => new Date("2026-05-29T10:00:00Z"),
-    });
-    const written: string[] = [];
-    const exit = await runAuditLog({
-      root,
-      format: "json",
-      write: (m) => written.push(m),
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    const parsed = JSON.parse(written[0] ?? "[]") as Array<Record<string, string>>;
-    expect(parsed).toHaveLength(2);
-    expect(parsed[0]?.scope).toBe("architectural-decision");
-  });
-
-  it("QFAI:BF-0001 — boundary: empty store yields empty result and exit 0", async () => {
-    const written: string[] = [];
-    const exit = await runAuditLog({
-      root,
-      format: "json",
-      write: (m) => written.push(m),
-      writeErr: () => undefined,
-    });
-    expect(exit).toBe(0);
-    expect(JSON.parse(written[0] ?? "null")).toEqual([]);
   });
 });
 

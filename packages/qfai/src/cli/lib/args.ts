@@ -52,9 +52,9 @@ export type ParsedArgs = {
      * here so the doctor command can probe the named skill manifest.
      */
     doctorSkillProfile?: string;
-    /** `qfai doctor --clean`: archive TTL-expired review packs. */
+    /** `qfai doctor --clean`: prune TTL-expired validate run logs. */
     doctorClean?: boolean;
-    /** `qfai doctor --autoremediate`: orchestrate install + clean + config. */
+    /** `qfai doctor --autoremediate`: orchestrate install + clean. */
     doctorAutoremediate?: boolean;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
@@ -150,16 +150,6 @@ export type ParsedArgs = {
      * are rejected via markInvalid(reason).
      */
     prototypingMode?: "convergence" | "exploration";
-    /** Subcommand for `qfai audit <log>`. */
-    auditAction?: "log";
-    /** --scope filter for `qfai audit log`. */
-    auditScope?: string;
-    /** --operator filter for `qfai audit log`. */
-    auditOperator?: string;
-    /** --clause filter for `qfai audit log`. */
-    auditClause?: string;
-    /** --format <table|json> for `qfai audit log`. */
-    auditFormat?: "table" | "json";
     /** Subcommand for `qfai sdd <preflight>`. */
     sddAction?: "preflight";
     /** --format <text|json> for `qfai sdd preflight`. */
@@ -364,19 +354,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  // `qfai audit <subcommand>` — currently only `log` is supported.
-  if (command === "audit") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      if (candidate === "log") {
-        options.auditAction = candidate;
-      } else {
-        markInvalid(subcommandReason("audit", candidate));
-      }
-      args.shift();
-    }
-  }
-
   // `qfai sdd <subcommand>` — currently only `preflight` is supported.
   if (command === "sdd") {
     const candidate = args[0];
@@ -554,14 +531,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             options.discussionFormat = next;
           } else {
             markInvalid(badValue("--format", next, "text|json"));
-          }
-          break;
-        }
-        if (command === "audit") {
-          if (next === "table" || next === "json") {
-            options.auditFormat = next;
-          } else {
-            markInvalid(badValue("--format", next, "table|json"));
           }
           break;
         }
@@ -1022,9 +991,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--scope"));
           break;
         }
-        if (command === "audit") {
-          options.auditScope = next;
-        } else if (command === "prototyping" && options.prototypingAction === "certify") {
+        if (command === "prototyping" && options.prototypingAction === "certify") {
           if (next === "saas-package" || next === "full") {
             options.prototypingScope = next;
           } else {
@@ -1049,32 +1016,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           }
         } else {
           markInvalid(notValidHere("--upgrade-scope"));
-        }
-        break;
-      }
-      case "--operator": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--operator"));
-          break;
-        }
-        if (command === "audit") {
-          options.auditOperator = next;
-        } else {
-          markInvalid(notValidHere("--operator"));
-        }
-        break;
-      }
-      case "--clause": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--clause"));
-          break;
-        }
-        if (command === "audit") {
-          options.auditClause = next;
-        } else {
-          markInvalid(notValidHere("--clause"));
         }
         break;
       }
@@ -1108,9 +1049,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "discussion" && !options.help && !options.discussionAction) {
     markInvalid(subcommandReason("discussion", null));
   }
-  if (command === "audit" && !options.help && !options.auditAction) {
-    markInvalid(subcommandReason("audit", null));
-  }
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
   }
@@ -1131,7 +1069,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
-  ["audit", "log"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],

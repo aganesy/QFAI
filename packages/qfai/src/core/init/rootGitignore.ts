@@ -34,10 +34,6 @@ import { formatReportPath } from "./reportPath.js";
 /**
  * Rewrite the managed `.gitignore` block, adding any governance negation it is
  * missing.
- *
- * Exported because the legacy-review-pack migration needs it: it writes a
- * governance record under `.qfai/review/`, and an existing repository still
- * carries the older block whose `.qfai/review/*` would ignore it.
  */
 export async function ensureRootGitignoreEntries(
   destRoot: string,
@@ -499,8 +495,7 @@ function rebuildManagedBlock(existingBlock: string, omit: readonly string[]): st
   // never re-add an ignore line the block does not have.
   //
   // The cost is that a project on an old block does not pick up a newly shipped
-  // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
-  // consequence is generated files showing in `git status` — noisy. Silently
+  // *recommended* ignore. The consequence is generated files showing in `git status` — noisy. Silently
   // re-hiding records the project chose to track is not noisy, which is
   // why it is the side to err on.
   const kept = lines.filter(

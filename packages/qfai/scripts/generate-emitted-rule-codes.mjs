@@ -1043,9 +1043,8 @@ function conditionalBranches(raw) {
  * Every `(code, severity)` pair one factory call can produce.
  *
  * A call that picks both its code and its severity off the same condition —
- * `issue(declaresForm ? "QFAI-REVIEW-007": "QFAI-REVIEW-009", …, declaresForm
- * ? "error": "warning", …)` in `reviewArtifacts.ts` — is read branch by
- * branch, so each code keeps the severity it is actually raised at. Pairing
+ * `issue(flag ? "CODE-A" : "CODE-B", …, flag ? "error" : "warning", …)` — is
+ * read branch by branch, so each code keeps the severity it is actually raised at. Pairing
  * them off the cross-product instead would leave every such code's severity
  * unknown and drop it from {@link renderEmittedRuleCodesModule}'s error-only
  * list, weakening `QFAI-WAIVER-002` for a rule that only ever fails hard.

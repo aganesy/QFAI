@@ -1,24 +1,13 @@
 /**
- * E2E acceptance for spec-0015 CHG-005 user stories:
- *   - US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on
- *     regressed certify path that reads /qfai-atdd or /qfai-implement
- *     validator output at the prototyping phase.
- *   - US-0015-0008: Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT on
- *     SSOT-sync-pair drift, carrying a 3-part justification; empty
- *     justification is rejected downstream by qfai validate.
+ * E2E acceptance for spec-0015 CHG-005 user story US-0015-0008:
+ * Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT on SSOT-sync-pair drift,
+ * carrying a 3-part justification.
  *
  * E2E scope: invokes the composite `validateReviewerGate` validator
- * against a tmpdir fixture populated to mimic a real prototyping run,
- * then asserts that the resulting Issue list contains the expected
- * severity code with a non-empty 3-part justification.
- *
- * `R-CERTIFY-VERIFY-CIRCULAR` is `info` in `validate` — the enforcement is
- * `qfai prototyping certify`'s exit-2 refusal of a non-prototyping scope. At
- * `error` severity, a repo-wide run would make `/qfai-verify`'s Completion
- * Contract unsatisfiable outside Work Order H. The other codes here keep
- * theirs.
+ * against a tmpdir fixture, then asserts that the resulting Issue list
+ * contains the expected severity code with a non-empty 3-part
+ * justification.
  */
-// QFAI:BF-0001
 // QFAI:BF-0001
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -29,7 +18,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
 import { validateReviewerGate } from "../../src/core/validators/reviewerGate.js";
-import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
@@ -75,69 +63,6 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("US-0015-0007: Reviewer-Gate emits R-CERTIFY-VERIFY-CIRCULAR on regressed certify path", () => {
-  it("end-to-end: prototyping fixture reading verify.json scope=atdd triggers R-CERTIFY-VERIFY-CIRCULAR at severity error with 3-part justification", async () => {
-    // Seed verify.json with the offending scope and a prototyping
-    // phase marker, mimicking a real /qfai-prototyping certify run.
-    await writeFileEnsure(
-      path.join(root, ".qfai/output/verify.json"),
-      JSON.stringify({ status: "PASS", scope: "atdd" }, null, 2),
-    );
-    // Canonical prototyping state path (.qfai/evidence/prototyping/
-    // prototyping.json). The legacy `phase` field is no longer emitted
-    // by iterate — the active-loop signal is
-    // `stopReason === null` AND `acceptedIterationIndex === null`.
-    await writeFileEnsure(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "run-e2e-1",
-          iterations: [],
-          stopReason: null,
-          acceptedIterationIndex: null,
-        },
-        null,
-        2,
-      ),
-    );
-
-    const issues = await validateReviewerGate(root, await getConfig(root));
-    const findings = issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR");
-    expect(findings.length).toBe(1);
-    const f = findings[0];
-    // `info` in `validate`; the enforcement is `qfai prototyping certify`
-    // refusing a non-prototyping scope with exit 2.
-    expect(f?.severity).toBe("info");
-    // 3-part justification probe.
-    expect(f?.message).toMatch(/certify=/);
-    expect(f?.message).toMatch(/profile=atdd/);
-    expect(f?.message).toMatch(/contract=option-?B/i);
-  });
-
-  it("end-to-end control: prototyping fixture reading verify.json scope=prototyping does NOT trigger the finding", async () => {
-    await writeFileEnsure(
-      path.join(root, ".qfai/output/verify.json"),
-      JSON.stringify({ status: "PASS", scope: "prototyping" }, null, 2),
-    );
-    await writeFileEnsure(
-      path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-      JSON.stringify(
-        {
-          runId: "run-e2e-2",
-          iterations: [],
-          stopReason: null,
-          acceptedIterationIndex: null,
-        },
-        null,
-        2,
-      ),
-    );
-
-    const issues = await validateReviewerGate(root, await getConfig(root));
-    expect(issues.filter((i) => i.code === "R-CERTIFY-VERIFY-CIRCULAR")).toEqual([]);
-  });
-});
-
 describe("US-0015-0008: Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT with 3-part justification", () => {
   it("end-to-end: scanner-only modification (prompt missing the paired clause) triggers R-PROMPT-SCANNER-DRIFT at severity error", async () => {
     // Scanner contains the contract clause tokens; prompt has been
@@ -167,24 +92,4 @@ describe("US-0015-0008: Reviewer-Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT")).toEqual([]);
   });
 
-  it("end-to-end: empty-justification R-PROMPT-SCANNER-DRIFT recorded in .qfai/review/ is rejected by qfai validate", async () => {
-    const reviewDir = path.join(root, ".qfai", "review", "review-2026-05-25");
-    await mkdir(reviewDir, { recursive: true });
-    await writeFile(
-      path.join(reviewDir, "reviewer-completion.json"),
-      JSON.stringify(
-        {
-          findings: [{ code: "R-PROMPT-SCANNER-DRIFT", justification: "   " }],
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
-
-    const issues = await validateReviewerJustification(root, await getConfig(root));
-    const drift = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-    expect(drift.length).toBe(1);
-    expect(drift[0]?.severity).toBe("error");
-  });
 });

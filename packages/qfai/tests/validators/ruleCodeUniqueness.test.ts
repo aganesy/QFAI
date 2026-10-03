@@ -54,12 +54,6 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
-  // Two, not one. The second site is the workflow-set ingestion branch: it emits the
-  // finding's own code at `info` while that code's catalog registration is deferred,
-  // and the code it emits is the same `code` local the rejection site below uses. The
-  // two codes it can reach are declared in `justificationCatalog.ts` — which this scan
-  // reads as their owner — rather than restated here.
-  ["validators/reviewerJustification.ts", new Map([["code", 2]])],
   // Story-tree validators select a code from a closed, module-declared table.
   ["validators/storyTreeStructure.ts", new Map([["code", 1]])],
 ]);
@@ -125,14 +119,6 @@ const RETIRED_CODES: readonly string[] = [
 const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
   [
-    // Deliberately re-emits the finding's own code so the justification gap is
-    // reported under the code it applies to. `reviewerGate.ts` owns the first
-    // two as literals; `R-REJECTED-READOPT` reaches this gate only from a
-    // reviewer report.
-    "validators/reviewerJustification.ts",
-    ["R-CERTIFY-VERIFY-CIRCULAR", "R-PROMPT-SCANNER-DRIFT", "R-REJECTED-READOPT"],
-  ],
-  [
     "validators/storyTreeStructure.ts",
     [
       "QFAI-SPACK-102",
@@ -172,12 +158,9 @@ const ISSUE_FIRST_ARG =
  * The literal-or-identifier pattern above cannot see this. Its identifier
  * alternative matches `cond` and then demands a comma, which is not there — so
  * the call site produced no match at all, and both codes behind it went
- * unattributed and unchecked. `validators/reviewArtifacts.ts` emits
- * `QFAI-REVIEW-007` / `QFAI-REVIEW-009` exactly this way, twice.
+ * unattributed and unchecked.
  *
- * Nothing is currently hidden by it, and that is luck rather than design: both
- * codes are baseline, and both also appear as literal first arguments
- * elsewhere in the same file. The risk is structural: a NEW hard error emitted
+ * The risk is structural: a NEW hard error emitted
  * through a ternary would be registered nowhere and owned by nothing, despite
  * following the house style.
  *
@@ -191,7 +174,7 @@ const ISSUE_TERNARY_FIRST_ARG =
 /**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
  * (or becomes) an `Issue`. Several validators build the object directly instead
- * of calling `issue()` — `skillsIntegrity.ts`, `justificationCatalog.ts` — and
+ * of calling `issue()` — `skillsIntegrity.ts`, for one — and
  * a scan that only follows `issue()` records no
  * owner for those codes at all. `ruleId` is the same declaration on
  * `designAudit.ts`'s `DesignFinding`, whose codes reach `issue()` only through
@@ -205,14 +188,6 @@ const OBJECT_LITERAL_CODE =
 
 /** Any double-quoted string, used to harvest a dynamic site's reachable codes. */
 const STRING_LITERAL = /"([^"\n]+)"/g;
-
-/**
- * Modules that *declare* codes without emitting findings.
- * `justificationCatalog.ts` is a registry of every `R-*` code and its
- * justification contract, so counting it as an owner would make every
- * catalogued code look like a collision with its real emitter.
- */
-const DECLARATION_ONLY_MODULES = new Set(["validators/justificationCatalog.ts"]);
 
 /** `code: string` in a type declaration is a field type, not a rule code. */
 const TYPE_ANNOTATIONS = new Set(["string", "number", "boolean", "unknown", "any"]);
@@ -316,10 +291,6 @@ async function scanIssueSources(): Promise<Scan> {
       if (name !== undefined && value !== undefined) {
         constants.set(name, value);
       }
-    }
-
-    if (DECLARATION_ONLY_MODULES.has(relative)) {
-      continue;
     }
 
     const tokens = [
