@@ -17,7 +17,7 @@ Feature: Close, answer or hand back a request without a change
     Given a route that found work it does not do
     When `triage-close` returns
     Then its result records the outcome and each follow-up request
-    And no step is added to the run and no follow-up is routed inside it
+    And no step is added to the route and no follow-up is routed inside it
 
   # AC-0001-0214-03
   Scenario: A request waiting for information is routed again once it arrives
@@ -34,14 +34,14 @@ Feature: Close, answer or hand back a request without a change
 
   # AC-0001-0214-05
   Scenario: Release notes are drafted and stop for release approval
-    Given a `draft-release-notes` run
+    Given a `draft-release-notes` route
     When its draft is written
-    Then the run waits for release approval with no verify stage
+    Then the route waits for release approval with no verify stage
     And nothing is tagged or published
 
   # AC-0001-0214-06
   Scenario: A split request records its children as follow-ups
     Given a request that `triage-decompose` splits
-    When the run closes
-    Then each child is a follow-up request with its dependencies, and none is routed inside the run
+    When the route closes
+    Then each child is a follow-up request with its dependencies, and none is routed inside the route
 ```

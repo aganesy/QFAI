@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: 15-file discussion-pack structure
+Feature: Nine-file discussion-pack structure
   # AC-0001-0013-01
   Scenario: The discussion pack holds the nine required files
     Given a discussion-pack directory

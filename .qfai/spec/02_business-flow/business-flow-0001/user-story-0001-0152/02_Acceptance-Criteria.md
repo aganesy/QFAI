@@ -15,5 +15,5 @@ Feature: Active Design Contract Surface Reduction
   Scenario: Active Design Contract Index = {DESIGN.md}
     Given the design inputs the shipped `qfai-sdd` and `qfai-prototyping` skills name
     When the active design contracts are listed
-    Then the set is root `DESIGN.md` alone, which `common-design-md` authors and validates, and the prototyping handoff is recorded in `prototyping.json#handoff` rather than under `<paths.contractsDir>/design/`
+    Then the set is root `DESIGN.md` alone, which `common-design-md` authors and validates, and the prototyping handoff is recorded in `.qfai/prototype/final/handoff.json` rather than under `<paths.contractsDir>/design/`
 ```

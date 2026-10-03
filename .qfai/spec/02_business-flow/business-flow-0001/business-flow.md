@@ -13,7 +13,9 @@ the decisions that led to them.
 flowchart TD
   Need[Project need] --> Discuss[Discuss scope and open decisions]
   Request[Free-text change request] --> Route[Plan the route and announce it]
-  Route -->|Follow the planned stages| SDD
+  Route -->|Plan with a specification stage| SDD
+  Route -->|Plan with no specification stage| Implement
+  Route -->|Plan ending at triage-close| Close[Answer, close or hand over the request]
   Discuss --> SDD[Author flows, stories, criteria and contracts]
   SDD --> Validate[Validate current story tree]
   Validate --> Ready{Valid and decisions closed?}
@@ -22,7 +24,7 @@ flowchart TD
   Ready -->|Yes| SpecReview[Review the specification change]
   SpecReview --> UI{UI contracts declare screens?}
   UI -->|Yes| Prototype[Prototype until the user confirms it]
-  UI -->|No| Implement[Write empty acceptance tests and run EX-scoped TDD cycles]
+  UI -->|No| Implement[Make the planned change, with acceptance tests and EX-scoped TDD cycles where the plan holds them]
   Prototype --> Implement
   Implement --> CodeReview[Review the whole diff]
   CodeReview --> Verify[Run the repository gates]
